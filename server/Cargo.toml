@@ -1,0 +1,12 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+streaming = { path = "../streaming" }
+tokio = { version = "1.26.0", features = ["full"] }
+clap = { version = "4.1.11", features = ["derive"] }
+tracing = { version = "0.1.37"}
+tracing-subscriber = {version = "0.3.16"}
+chrono = "0.4.24"

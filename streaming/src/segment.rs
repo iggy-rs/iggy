@@ -1,6 +1,6 @@
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::{error, info};
+use tracing::info;
 use crate::message::Message;
 use crate::stream_error::StreamError;
 use crate::timestamp;
@@ -60,18 +60,15 @@ impl Segment {
 
     pub async fn save_on_disk(&self) -> Result<(), StreamError> {
         if File::create(&self.log_path).await.is_err() {
-            error!("Failed to create partition segment log file for path {}.", self.log_path);
-            return Err(StreamError::CannotCreatePartitionLogFile);
+            return Err(StreamError::CannotCreatePartitionSegmentLogFile(self.log_path.clone()));
         }
 
         if File::create(&self.index_path).await.is_err() {
-            error!("Failed to create partition segment index file for path {}.", self.log_path);
-            return Err(StreamError::CannotCreatePartitionIndexFile);
+            return Err(StreamError::CannotCreatePartitionSegmentIndexFile(self.log_path.clone()));
         }
 
         if File::create(&self.timeindex_path).await.is_err() {
-            error!("Failed to create partition segment time index file for path {}.", self.log_path);
-            return Err(StreamError::CannotCreatePartitionTimeIndexFile);
+            return Err(StreamError::CannotCreatePartitionSegmentTimeIndexFile(self.log_path.clone()));
         }
 
         info!("Created partition segment log file for partition path {}.", self.partition_path);

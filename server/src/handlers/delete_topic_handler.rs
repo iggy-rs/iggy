@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use streaming::stream::Stream;
@@ -14,9 +15,6 @@ pub async fn handle(input: &[u8], socket: &UdpSocket, address: SocketAddr, strea
 
     let id = u32::from_le_bytes(input[..4].try_into().unwrap());
     stream.delete_topic(id).await?;
-    if socket.send_to(STATUS_OK, address).await.is_err() {
-        return Err(StreamError::NetworkError);
-    }
-
+    socket.send_to(STATUS_OK, address).await?;
     Ok(())
 }

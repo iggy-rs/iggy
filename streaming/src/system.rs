@@ -1,5 +1,5 @@
 use std::path::Path;
-use tracing::info;
+use tracing::{error, info};
 use crate::{get_base_path, get_topics_path};
 use crate::stream::Stream;
 use crate::stream_error::StreamError;
@@ -32,6 +32,7 @@ async fn load_topics_from_disk(stream: &mut Stream) {
         info!("Loading topic with ID: {} from disk...", topic_id);
         let topic = Topic::load_from_disk(topic_id).await;
         if topic.is_err() {
+            error!("{}", topic.err().unwrap());
             continue;
         }
 

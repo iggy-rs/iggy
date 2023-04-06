@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::net::SocketAddr;
 use std::str::from_utf8;
 use tokio::net::UdpSocket;
@@ -25,9 +26,6 @@ pub async fn handle(input: &[u8], socket: &UdpSocket, address: SocketAddr, strea
     }
 
     stream.create_topic(id, name, partitions).await?;
-    if socket.send_to(STATUS_OK, address).await.is_err() {
-        return Err(StreamError::NetworkError);
-    }
-
+    socket.send_to(STATUS_OK, address).await?;
     Ok(())
 }

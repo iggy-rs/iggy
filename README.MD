@@ -98,7 +98,7 @@ Server restart
 
 #### SDK
 
-- [ ] Implement basic the SDK for the client
+- [ ] Implement the basic SDK for the client
 - [ ] Make use of the SDK in client project
 - [ ] Implement another SDK in C# for dotnet clients
 

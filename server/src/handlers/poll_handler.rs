@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use tracing::info;
@@ -76,11 +77,7 @@ pub async fn handle(input: &[u8], socket: &UdpSocket, address: SocketAddr, strea
         .collect::<Vec<Vec<u8>>>()
         .concat();
 
-    if socket.send_to([STATUS_OK, messages_count.to_le_bytes().as_slice(),
-                          data.as_slice()].concat().as_slice(), address).await.is_err() {
-        return Err(StreamError::NetworkError);
-    }
-
+    socket.send_to([STATUS_OK, messages_count.to_le_bytes().as_slice(), data.as_slice()].concat().as_slice(), address).await?;
     info!("Polled {} message(s) from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}, messages: {:?}", messages_count, topic, kind, value, count, messages);
     Ok(())
 }

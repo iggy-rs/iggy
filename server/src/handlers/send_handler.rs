@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use tracing::info;
@@ -23,14 +24,11 @@ pub async fn handle(input: &[u8], socket: &UdpSocket, address: SocketAddr, strea
     let message = Message::create(payload.to_vec());
     let stream_topic = stream.topics.get_mut(&topic);
     if stream_topic.is_none() {
-        return Err(StreamError::TopicNotFound);
+        return Err(StreamError::TopicNotFound(topic));
     }
 
     let stream_topic = stream_topic.unwrap();
     stream_topic.send_message(key_value, message).await?;
-    if socket.send_to(STATUS_OK, address).await.is_err() {
-        return Err(StreamError::NetworkError);
-    }
-
+    socket.send_to(STATUS_OK, address).await?;
     Ok(())
 }

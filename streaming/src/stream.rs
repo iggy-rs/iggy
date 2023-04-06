@@ -28,12 +28,12 @@ impl Stream {
     pub async fn delete_topic(&mut self, id: u32) -> Result<(), StreamError> {
         let topic = self.topics.remove(&id);
         if topic.is_none() {
-            return Err(StreamError::TopicNotFound);
+            return Err(StreamError::TopicNotFound(id));
         }
 
         let topic = topic.unwrap();
         if topic.delete().await.is_err() {
-            return Err(StreamError::CannotDeleteTopic);
+            return Err(StreamError::CannotDeleteTopic(id));
         }
 
         info!("Deleted topic: {:?} with ID: {:?}", topic.name, id);
@@ -43,7 +43,7 @@ impl Stream {
     pub fn get_messages(&mut self, topic_id: u32, partition_id: u32, offset: u64, count: u32) -> Result<Vec<&Message>, StreamError> {
         let topic = self.topics.get_mut(&topic_id);
         if topic.is_none() {
-            return Err(StreamError::TopicNotFound);
+            return Err(StreamError::TopicNotFound(topic_id));
         }
 
         topic.unwrap().get_messages(partition_id, offset, count)

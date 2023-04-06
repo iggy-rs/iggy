@@ -3,10 +3,10 @@ mod handlers;
 mod topic;
 mod message;
 
+use anyhow::Result;
 use clap::Parser;
 use std::io;
 use std::net::SocketAddr;
-// use streaming::{stream::Stream, Consumer, Message, Producer};
 use tokio::net::UdpSocket;
 use tracing::{error, info};
 
@@ -21,7 +21,7 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
+async fn main() -> Result<(), io::Error> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     let socket = UdpSocket::bind(args.address.parse::<SocketAddr>().unwrap()).await?;

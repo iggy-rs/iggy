@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::path::Path;
-use tokio::{fs};
+use tokio::fs;
 use tokio::fs::{OpenOptions};
-use tracing::{error, info};
+use tracing::info;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use crate::{get_topics_path, TOPIC_INFO};
 use crate::message::Message;
@@ -40,13 +40,11 @@ impl Topic {
 
     pub async fn save_on_disk(&self) -> Result<(), StreamError> {
         if Path::new(&self.path).exists() {
-            info!("Topic with ID {} already exists.", self.id);
-            return Err(StreamError::TopicAlreadyExists);
+            return Err(StreamError::TopicAlreadyExists(self.id));
         }
 
         if std::fs::create_dir(&self.path).is_err() {
-            error!("Failed to create directory for topic with ID {}.", self.id);
-            return Err(StreamError::CannotCreateTopicDirectory);
+            return Err(StreamError::CannotCreateTopicDirectory(self.id));
         }
 
         info!("Topic with ID {} was saved, path: {}", self.id, self.path);
@@ -59,20 +57,17 @@ impl Topic {
             .await;
 
         if topic_info_file.is_err() {
-            error!("Failed to create topic info file for topic with ID {}.", self.id);
-            return Err(StreamError::CannotCreateTopicInfo);
+            return Err(StreamError::CannotCreateTopicInfo(self.id));
         }
 
         if topic_info_file.unwrap().write_all(self.name.as_bytes()).await.is_err() {
-            error!("Failed to write topic info for topic with ID {}.", self.id);
-            return Err(StreamError::CannotCreateTopicInfo);
+            return Err(StreamError::CannotUpdateTopicInfo(self.id));
         }
 
         info!("Creating {} partition(s) for topic with ID: {}...", self.partitions.len(), &self.id);
         for partition in self.partitions.iter() {
             if std::fs::create_dir(&partition.1.path).is_err() {
-                error!("Failed to create directory for partition with ID {} for topic with ID {}.", partition.0, self.id);
-                return Err(StreamError::CannotCreatePartitionDirectory);
+                return Err(StreamError::CannotCreatePartitionDirectory(*partition.0, self.id));
             }
 
             partition.1.save_on_disk().await?;
@@ -85,8 +80,7 @@ impl Topic {
     pub async fn delete(&self) -> Result<(), StreamError> {
         info!("Deleting topic directory with ID: {}...", &self.id);
         if fs::remove_dir_all(&self.path).await.is_err() {
-            error!("Failed to delete topic directory with ID: {}.", &self.id);
-            return Err(StreamError::CannotDeleteTopicDirectory);
+            return Err(StreamError::CannotDeleteTopicDirectory(self.id));
         }
 
         Ok(())
@@ -95,8 +89,7 @@ impl Topic {
     pub async fn send_message(&mut self, partition_id: u32, message: Message) -> Result<(), StreamError>{
         let partition = self.partitions.get_mut(&partition_id);
         if partition.is_none() {
-            error!("Partition with ID {} was not found.", partition_id);
-            return Ok(());
+            return Err(StreamError::PartitionNotFound(partition_id))
         }
 
         let partition = partition.unwrap();
@@ -107,8 +100,7 @@ impl Topic {
     pub fn get_messages(&self, partition_id: u32, offset: u64, count: u32) -> Result<Vec<&Message>, StreamError> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
-            error!("Partition with ID {} was not found.", partition_id);
-            return Err(StreamError::PartitionNotFound);
+            return Err(StreamError::PartitionNotFound(partition_id));
         }
 
         let partition = partition.unwrap();
@@ -130,8 +122,7 @@ impl Topic {
         let topic_info_path = format!("{}/{}", topic_path, TOPIC_INFO);
 
         if !Path::new(&topic_path).exists() {
-            error!("Topic directory with ID {} was not found.", id);
-            return Err(StreamError::TopicNotFound);
+            return Err(StreamError::TopicNotFound(id));
         }
 
         let topic_info_file = OpenOptions::new()
@@ -140,20 +131,17 @@ impl Topic {
             .await;
 
         if topic_info_file.is_err() {
-            error!("Failed to open topic info file for topic with ID {}.", id);
-            return Err(StreamError::CannotOpenTopicInfo);
+            return Err(StreamError::CannotOpenTopicInfo(id));
         }
 
         let mut topic_info = String::new();
         if topic_info_file.unwrap().read_to_string(&mut topic_info).await.is_err() {
-            error!("Failed to read topic info file for topic with ID {}.", id);
-            return Err(StreamError::CannotReadTopicInfo);
+            return Err(StreamError::CannotReadTopicInfo(id));
         }
 
         let dir_files = fs::read_dir(&topic_path).await;
         if dir_files.is_err() {
-            error!("Failed to read directory files for topic with ID {}.", id);
-            return Err(StreamError::CannotReadPartitions);
+            return Err(StreamError::CannotReadPartitions(id));
         }
 
         let mut topic = Topic::create(id, &topic_info, 0);

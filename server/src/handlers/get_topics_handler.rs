@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use tracing::info;
@@ -19,9 +20,6 @@ pub async fn handle(socket: &UdpSocket, address: SocketAddr, stream: &mut Stream
         ].concat())
         .collect::<Vec<u8>>();
 
-    if socket.send_to([STATUS_OK, topics.as_slice()].concat().as_slice(), address).await.is_err() {
-        return Err(StreamError::NetworkError);
-    }
-    
+    socket.send_to([STATUS_OK, topics.as_slice()].concat().as_slice(), address).await?;
     Ok(())
 }

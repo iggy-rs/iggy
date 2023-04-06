@@ -1,14 +1,14 @@
+use crate::message::Message;
+use crate::segment::{Segment, LOG_EXTENSION, SEGMENT_SIZE};
+use crate::stream_error::StreamError;
 use tokio::fs;
 use tracing::info;
-use crate::message::Message;
-use crate::segment::{LOG_EXTENSION, Segment, SEGMENT_SIZE};
-use crate::stream_error::StreamError;
 
 #[derive(Debug)]
 pub struct Partition {
     pub id: u32,
     pub path: String,
-    pub segments: Vec<Segment>
+    pub segments: Vec<Segment>,
 }
 
 impl Partition {
@@ -16,7 +16,7 @@ impl Partition {
         let mut partition = Partition {
             id,
             path,
-            segments: vec![]
+            segments: vec![],
         };
 
         if with_segment {
@@ -47,10 +47,14 @@ impl Partition {
             end_offset = max_offset;
         }
 
-        let segments = self.segments.iter()
-            .filter(|segment| (segment.start_offset >= offset && segment.end_offset <= end_offset)
-                || (segment.start_offset <= offset && segment.end_offset >= offset)
-                || (segment.start_offset <= end_offset && segment.end_offset >= end_offset))
+        let segments = self
+            .segments
+            .iter()
+            .filter(|segment| {
+                (segment.start_offset >= offset && segment.end_offset <= end_offset)
+                    || (segment.start_offset <= offset && segment.end_offset >= offset)
+                    || (segment.start_offset <= end_offset && segment.end_offset >= end_offset)
+            })
             .collect::<Vec<&Segment>>();
 
         if segments.is_empty() {
@@ -80,12 +84,16 @@ impl Partition {
 
         let segment = segment.unwrap();
         if segment.is_full() {
-            info!("Current segment is full, creating new segment for partition with ID: {}", self.id);
+            info!(
+                "Current segment is full, creating new segment for partition with ID: {}",
+                self.id
+            );
             let start_offset = segment.end_offset + 1;
             let new_segment = Segment::create(start_offset, SEGMENT_SIZE, &self.path);
             new_segment.save_on_disk().await?;
             self.segments.push(new_segment);
-            self.segments.sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
+            self.segments
+                .sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
         }
 
         let segment = self.segments.last_mut();
@@ -93,7 +101,10 @@ impl Partition {
     }
 
     pub async fn load_from_disk(id: u32, path: &str) -> Result<Partition, StreamError> {
-        info!("Loading partition with ID: {} from disk, for path: {}", id, path);
+        info!(
+            "Loading partition with ID: {} from disk, for path: {}",
+            id, path
+        );
         let dir_files = fs::read_dir(&path).await;
         let mut dir_files = dir_files.unwrap();
         let mut partition = Partition::create(id, path.to_string(), false);
@@ -115,12 +126,20 @@ impl Partition {
                 }
             }
 
-            let log_file_name = dir_entry.file_name().into_string().unwrap().replace(&format!(".{}", LOG_EXTENSION), "");
+            let log_file_name = dir_entry
+                .file_name()
+                .into_string()
+                .unwrap()
+                .replace(&format!(".{}", LOG_EXTENSION), "");
             let offset = log_file_name.parse::<u64>().unwrap();
-            partition.segments.push(Segment::load_from_disk(offset, &partition.path).await?);
+            partition
+                .segments
+                .push(Segment::load_from_disk(offset, &partition.path).await?);
         }
 
-        partition.segments.sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
+        partition
+            .segments
+            .sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
 
         Ok(partition)
     }

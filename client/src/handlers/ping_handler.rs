@@ -1,6 +1,6 @@
+use crate::handlers::response_handler::handle_status;
 use std::io;
 use tokio::net::UdpSocket;
-use crate::handlers::response_handler::handle_status;
 
 const COMMAND: &[u8] = &[1];
 

@@ -37,7 +37,12 @@ pub enum Command {
 }
 
 impl Command {
-    pub async fn try_handle(request: &[u8], socket: &UdpSocket, address: SocketAddr, stream: &mut Stream) {
+    pub async fn try_handle(
+        request: &[u8],
+        socket: &UdpSocket,
+        address: SocketAddr,
+        stream: &mut Stream,
+    ) {
         if request.len() < LENGTH {
             handle_error(StreamError::InvalidCommand, socket, address).await;
             return;
@@ -101,7 +106,11 @@ impl Command {
 
 async fn handle_error(error: StreamError, socket: &UdpSocket, address: SocketAddr) {
     error!("{}", error);
-    if socket.send_to(&error.code().to_le_bytes(), address).await.is_err() {
+    if socket
+        .send_to(&error.code().to_le_bytes(), address)
+        .await
+        .is_err()
+    {
         error!("Could not send error to client: {:?}", address);
     }
 }

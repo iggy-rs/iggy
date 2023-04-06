@@ -1,15 +1,20 @@
+use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use std::net::SocketAddr;
 use std::str::from_utf8;
-use tokio::net::UdpSocket;
 use streaming::stream::Stream;
 use streaming::stream_error::StreamError;
-use crate::handlers::STATUS_OK;
+use tokio::net::UdpSocket;
 
 pub const COMMAND: &[u8] = &[11];
 const LENGTH: usize = 5;
 
-pub async fn handle(input: &[u8], socket: &UdpSocket, address: SocketAddr, stream: &mut Stream) -> Result<(), StreamError>  {
+pub async fn handle(
+    input: &[u8],
+    socket: &UdpSocket,
+    address: SocketAddr,
+    stream: &mut Stream,
+) -> Result<(), StreamError> {
     if input.len() < LENGTH {
         return Err(StreamError::InvalidCommand);
     }

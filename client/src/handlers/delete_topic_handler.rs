@@ -1,13 +1,16 @@
+use crate::handlers::response_handler::handle_status;
 use std::io;
 use tokio::net::UdpSocket;
-use crate::handlers::response_handler::handle_status;
 
 const COMMAND: &[u8] = &[12];
 const PARTS: usize = 1;
 
 pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024]) -> io::Result<()> {
     if input.len() != PARTS {
-        return Err(io::Error::new(io::ErrorKind::Other, format!("Invalid delete topic command, expected {} parts.", PARTS)));
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("Invalid delete topic command, expected {} parts.", PARTS),
+        ));
     }
 
     let id = input[0].parse::<u32>();

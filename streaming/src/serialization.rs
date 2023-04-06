@@ -4,5 +4,5 @@ pub struct SerializedMessage {
     pub timestamp: u64,
     pub crc: u64,
     pub length: u64,
-    pub body: Vec<u8>
+    pub body: Vec<u8>,
 }

@@ -76,7 +76,7 @@ pub enum StreamError {
     #[error("Cannot read message length")]
     CannotReadMessageLength,
     #[error("Cannot read message payload")]
-    CannotReadMessagePayload
+    CannotReadMessagePayload,
 }
 
 //TODO: Categorize errors in the meaningful way.
@@ -119,7 +119,7 @@ impl StreamError {
             StreamError::CannotReadMessage => 33,
             StreamError::CannotReadMessageTimestamp => 34,
             StreamError::CannotReadMessageLength => 35,
-            StreamError::CannotReadMessagePayload => 36
+            StreamError::CannotReadMessagePayload => 36,
         }
     }
 }

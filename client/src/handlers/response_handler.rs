@@ -13,5 +13,8 @@ pub fn handle_status(buffer: &mut [u8; 1024]) -> io::Result<()> {
         return Ok(());
     }
 
-    Err(Error::new(ErrorKind::Other, format!("Invalid status response: {}.", status)))
+    Err(Error::new(
+        ErrorKind::Other,
+        format!("Invalid status response: {}.", status),
+    ))
 }

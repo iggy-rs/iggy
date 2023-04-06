@@ -1,13 +1,13 @@
-pub mod topic;
-pub mod timestamp;
-pub mod partition;
-pub mod message;
 pub mod index;
+pub mod message;
+pub mod partition;
+mod segment;
 pub mod serialization;
 pub mod stream;
-pub mod system;
 pub mod stream_error;
-mod segment;
+pub mod system;
+pub mod timestamp;
+pub mod topic;
 
 const DATA_PATH: &str = "local_data";
 const TOPICS_PATH: &str = "topics";

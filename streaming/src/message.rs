@@ -2,7 +2,7 @@
 pub struct Message {
     pub offset: u64,
     pub timestamp: u64,
-    pub body: Vec<u8>
+    pub body: Vec<u8>,
 }
 
 impl Message {
@@ -10,7 +10,7 @@ impl Message {
         Message {
             offset: 0,
             timestamp: 0,
-            body
+            body,
         }
     }
 }

@@ -2,13 +2,13 @@ mod args;
 mod command;
 mod handlers;
 
+use crate::command::Command;
 use anyhow::Result;
 use clap::Parser;
+use streaming::system;
 use tokio::io;
 use tokio::net::UdpSocket;
-use crate::command::Command;
-use tracing::{info};
-use streaming::{system};
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {

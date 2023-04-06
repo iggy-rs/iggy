@@ -1,10 +1,10 @@
+use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use std::net::SocketAddr;
-use tokio::net::UdpSocket;
-use tracing::info;
 use streaming::stream::Stream;
 use streaming::stream_error::StreamError;
-use crate::handlers::STATUS_OK;
+use tokio::net::UdpSocket;
+use tracing::info;
 
 pub const COMMAND: &[u8] = &[2];
 
@@ -51,7 +51,12 @@ pub const COMMAND: &[u8] = &[2];
 
 const LENGTH: usize = 21;
 
-pub async fn handle(input: &[u8], socket: &UdpSocket, address: SocketAddr, stream: &mut Stream) -> Result<(), StreamError> {
+pub async fn handle(
+    input: &[u8],
+    socket: &UdpSocket,
+    address: SocketAddr,
+    stream: &mut Stream,
+) -> Result<(), StreamError> {
     if input.len() != LENGTH {
         return Err(StreamError::InvalidCommand);
     }
@@ -65,19 +70,39 @@ pub async fn handle(input: &[u8], socket: &UdpSocket, address: SocketAddr, strea
         return Err(StreamError::InvalidMessagesCount);
     }
 
-    info!("Polling from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}", topic, kind, value, count);
+    info!(
+        "Polling from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
+        topic, kind, value, count
+    );
 
     let messages = stream.get_messages(topic, partition_id, value, count)?;
     let messages_count = messages.len() as u32;
-    let data = messages.iter().map(|message| [
-        message.offset.to_le_bytes().as_slice(),
-        message.timestamp.to_le_bytes().as_slice(),
-        (message.body.len() as u64).to_le_bytes().as_slice(),
-        message.body.as_slice()].concat())
+    let data = messages
+        .iter()
+        .map(|message| {
+            [
+                message.offset.to_le_bytes().as_slice(),
+                message.timestamp.to_le_bytes().as_slice(),
+                (message.body.len() as u64).to_le_bytes().as_slice(),
+                message.body.as_slice(),
+            ]
+            .concat()
+        })
         .collect::<Vec<Vec<u8>>>()
         .concat();
 
-    socket.send_to([STATUS_OK, messages_count.to_le_bytes().as_slice(), data.as_slice()].concat().as_slice(), address).await?;
+    socket
+        .send_to(
+            [
+                STATUS_OK,
+                messages_count.to_le_bytes().as_slice(),
+                data.as_slice(),
+            ]
+            .concat()
+            .as_slice(),
+            address,
+        )
+        .await?;
     info!("Polled {} message(s) from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}, messages: {:?}", messages_count, topic, kind, value, count, messages);
     Ok(())
 }

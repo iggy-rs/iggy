@@ -1,7 +1,7 @@
 mod command;
 mod handlers;
-mod topic;
 mod message;
+mod topic;
 
 use anyhow::Result;
 use clap::Parser;
@@ -27,7 +27,10 @@ async fn main() -> Result<(), io::Error> {
     let socket = UdpSocket::bind(args.address.parse::<SocketAddr>().unwrap()).await?;
     let remote_addr = args.server.parse::<SocketAddr>().unwrap();
     let mut user_input = String::new();
-    info!("Iggy client has started on: {:?}, connecting to server: {:?}...", args.address, args.server);
+    info!(
+        "Iggy client has started on: {:?}, connecting to server: {:?}...",
+        args.address, args.server
+    );
     socket.connect(remote_addr).await?;
     info!("Connected to the server {:?}.", args.server);
 

@@ -8,7 +8,8 @@ use tracing::info;
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
-pub const SEGMENT_SIZE: u64 = 10;
+pub const SEGMENT_SIZE: u64 = 4;
+pub const MESSAGES_IN_BUFFER_THRESHOLD: u64 = 2;
 
 #[derive(Debug)]
 pub struct Segment {
@@ -20,6 +21,8 @@ pub struct Segment {
     pub log_path: String,
     pub timeindex_path: String,
     pub messages: Vec<Message>,
+    pub unsaved_messages_count: u64,
+    pub should_increment_offset: bool,
 }
 
 impl Segment {
@@ -43,6 +46,8 @@ impl Segment {
             timeindex_path,
             log_path,
             messages: vec![],
+            unsaved_messages_count: 0,
+            should_increment_offset: false,
         }
     }
 
@@ -97,36 +102,61 @@ impl Segment {
         self.current_offset == self.end_offset
     }
 
-    //TODO: Make it more efficient by not opening the file for each message
     pub async fn append_message(&mut self, mut message: Message) -> Result<(), StreamError> {
-        let log_file = OpenOptions::new().append(true).open(&self.log_path).await;
-
-        if log_file.is_err() {
-            return Err(StreamError::LogFileNotFound);
-        }
-
-        if self.is_full() {
-            return Err(StreamError::SegmentFull);
-        }
-
-        if !self.messages.is_empty() {
+        // Do not increment offset for the very first message
+        if self.should_increment_offset {
             self.current_offset += 1;
+        } else {
+            self.should_increment_offset = true;
         }
 
         message.offset = self.current_offset;
         message.timestamp = timestamp::get();
-
-        let payload = message.body.as_slice();
-        let offset = &message.offset.to_le_bytes();
-        let timestamp = &message.timestamp.to_le_bytes();
-        let length = &(payload.len() as u64).to_le_bytes();
-        let data = [offset, timestamp, length, payload].concat();
-
         self.messages.push(message);
+        self.unsaved_messages_count += 1;
 
-        if log_file.unwrap().write_all(data.as_slice()).await.is_err() {
-            return Err(StreamError::CannotAppendMessage);
+        if self.unsaved_messages_count >= MESSAGES_IN_BUFFER_THRESHOLD {
+            self.save_messages_on_disk().await?;
         }
+
+        Ok(())
+    }
+
+    async fn save_messages_on_disk(&mut self) -> Result<(), StreamError> {
+        info!(
+            "Saving {} messages on disk...",
+            MESSAGES_IN_BUFFER_THRESHOLD
+        );
+        let log_file = OpenOptions::new().append(true).open(&self.log_path).await;
+        if log_file.is_err() {
+            return Err(StreamError::LogFileNotFound);
+        }
+
+        let mut log_file = log_file.unwrap();
+        let messages_count = self.messages.len();
+        let payload = &self.messages
+            [messages_count - MESSAGES_IN_BUFFER_THRESHOLD as usize..messages_count]
+            .iter()
+            .map(|message| {
+                let payload = message.body.as_slice();
+                let offset = &message.offset.to_le_bytes();
+                let timestamp = &message.timestamp.to_le_bytes();
+                let length = &(payload.len() as u64).to_le_bytes();
+                [offset, timestamp, length, payload].concat()
+            })
+            .collect::<Vec<Vec<u8>>>()
+            .concat();
+
+        if log_file.write_all(payload).await.is_err() {
+            return Err(StreamError::CannotSaveMessagesToSegment);
+        }
+
+        self.unsaved_messages_count = 0;
+        info!(
+            "Saved {} messages on disk, total bytes written: {}",
+            MESSAGES_IN_BUFFER_THRESHOLD,
+            payload.len()
+        );
 
         Ok(())
     }
@@ -180,6 +210,7 @@ impl Segment {
         }
 
         segment.messages = messages;
+        segment.should_increment_offset = segment.current_offset > 0;
         info!(
             "Loaded {} messages from segment log file for offsets {}...{} and partition path: {}.",
             segment.messages.len(),

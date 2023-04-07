@@ -1,3 +1,4 @@
+use crate::segment::{MESSAGES_IN_BUFFER_THRESHOLD, SEGMENT_SIZE};
 use crate::stream::Stream;
 use crate::stream_error::StreamError;
 use crate::topic::Topic;
@@ -14,6 +15,16 @@ pub async fn init() -> Result<Stream, StreamError> {
     let topics_path = &get_topics_path();
     if !Path::new(topics_path).exists() && std::fs::create_dir(topics_path).is_err() {
         return Err(StreamError::CannotCreateTopicsDirectory);
+    }
+
+    // TODO: Move the const values to dedicated configuration
+    if SEGMENT_SIZE < MESSAGES_IN_BUFFER_THRESHOLD
+        || SEGMENT_SIZE % MESSAGES_IN_BUFFER_THRESHOLD != 0
+    {
+        return Err(StreamError::InvalidSegmentSize(
+            SEGMENT_SIZE,
+            MESSAGES_IN_BUFFER_THRESHOLD,
+        ));
     }
 
     let mut stream = Stream::create();

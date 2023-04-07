@@ -69,6 +69,8 @@ pub enum StreamError {
     SegmentNotFound,
     #[error("Segment full")]
     SegmentFull,
+    #[error("Segment size is invalid regarding the message buffer: {0} < {1} OR {0} mod {1} != 0")]
+    InvalidSegmentSize(u64, u64),
     #[error("Cannot read message")]
     CannotReadMessage,
     #[error("Cannot read message timestamp")]
@@ -77,9 +79,11 @@ pub enum StreamError {
     CannotReadMessageLength,
     #[error("Cannot read message payload")]
     CannotReadMessagePayload,
+    #[error("Cannot save messages to segment")]
+    CannotSaveMessagesToSegment,
 }
 
-//TODO: Categorize errors in the meaningful way.
+// TODO: Categorize errors in the meaningful way.
 impl StreamError {
     pub fn code(&self) -> u8 {
         match self {
@@ -116,10 +120,12 @@ impl StreamError {
             StreamError::MessagesNotFound => 30,
             StreamError::SegmentNotFound => 31,
             StreamError::SegmentFull => 32,
-            StreamError::CannotReadMessage => 33,
-            StreamError::CannotReadMessageTimestamp => 34,
-            StreamError::CannotReadMessageLength => 35,
-            StreamError::CannotReadMessagePayload => 36,
+            StreamError::InvalidSegmentSize(_, _) => 33,
+            StreamError::CannotReadMessage => 34,
+            StreamError::CannotReadMessageTimestamp => 35,
+            StreamError::CannotReadMessageLength => 36,
+            StreamError::CannotReadMessagePayload => 37,
+            StreamError::CannotSaveMessagesToSegment => 38,
         }
     }
 }

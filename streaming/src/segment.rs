@@ -22,6 +22,7 @@ pub struct Segment {
     pub timeindex_path: String,
     pub messages: Vec<Message>,
     pub unsaved_messages_count: u64,
+    pub current_unsaved_messages_threshold: u64,
     pub should_increment_offset: bool,
 }
 
@@ -47,6 +48,7 @@ impl Segment {
             log_path,
             messages: vec![],
             unsaved_messages_count: 0,
+            current_unsaved_messages_threshold: MESSAGES_IN_BUFFER_THRESHOLD,
             should_increment_offset: false,
         }
     }
@@ -115,18 +117,22 @@ impl Segment {
         self.messages.push(message);
         self.unsaved_messages_count += 1;
 
-        if self.unsaved_messages_count >= MESSAGES_IN_BUFFER_THRESHOLD {
-            self.save_messages_on_disk().await?;
+        if self.unsaved_messages_count == self.current_unsaved_messages_threshold {
+            self.append_unsaved_messages().await?;
         }
 
         Ok(())
     }
 
-    async fn save_messages_on_disk(&mut self) -> Result<(), StreamError> {
-        info!(
-            "Saving {} messages on disk...",
-            MESSAGES_IN_BUFFER_THRESHOLD
-        );
+    async fn append_unsaved_messages(&mut self) -> Result<(), StreamError> {
+        self.save_messages_on_disk().await?;
+        self.unsaved_messages_count = 0;
+        self.current_unsaved_messages_threshold = MESSAGES_IN_BUFFER_THRESHOLD;
+        Ok(())
+    }
+
+    pub async fn save_messages_on_disk(&self) -> Result<(), StreamError> {
+        info!("Saving {} messages on disk...", self.unsaved_messages_count);
         let log_file = OpenOptions::new().append(true).open(&self.log_path).await;
         if log_file.is_err() {
             return Err(StreamError::LogFileNotFound);
@@ -135,7 +141,7 @@ impl Segment {
         let mut log_file = log_file.unwrap();
         let messages_count = self.messages.len();
         let payload = &self.messages
-            [messages_count - MESSAGES_IN_BUFFER_THRESHOLD as usize..messages_count]
+            [messages_count - self.unsaved_messages_count as usize..messages_count]
             .iter()
             .map(|message| {
                 let payload = message.body.as_slice();
@@ -151,10 +157,9 @@ impl Segment {
             return Err(StreamError::CannotSaveMessagesToSegment);
         }
 
-        self.unsaved_messages_count = 0;
         info!(
             "Saved {} messages on disk, total bytes written: {}",
-            MESSAGES_IN_BUFFER_THRESHOLD,
+            self.unsaved_messages_count,
             payload.len()
         );
 
@@ -211,6 +216,19 @@ impl Segment {
 
         segment.messages = messages;
         segment.should_increment_offset = segment.current_offset > 0;
+
+        let loaded_messages_count = segment.messages.len() as u64;
+        let remaining_messages_count = SEGMENT_SIZE - loaded_messages_count;
+        if remaining_messages_count == 0 {
+            segment.current_unsaved_messages_threshold = 0;
+        } else if loaded_messages_count == 0
+            || remaining_messages_count > MESSAGES_IN_BUFFER_THRESHOLD
+        {
+            segment.current_unsaved_messages_threshold = MESSAGES_IN_BUFFER_THRESHOLD;
+        } else {
+            segment.current_unsaved_messages_threshold = remaining_messages_count;
+        }
+
         info!(
             "Loaded {} messages from segment log file for offsets {}...{} and partition path: {}.",
             segment.messages.len(),

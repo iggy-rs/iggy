@@ -2,8 +2,8 @@ use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use std::net::SocketAddr;
 use streaming::message::Message;
-use streaming::stream::Stream;
 use streaming::stream_error::StreamError;
+use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::info;
 
@@ -14,7 +14,7 @@ pub async fn handle(
     input: &[u8],
     socket: &UdpSocket,
     address: SocketAddr,
-    stream: &mut Stream,
+    system: &mut System,
 ) -> Result<(), StreamError> {
     if input.len() < LENGTH {
         return Err(StreamError::InvalidCommand);
@@ -30,13 +30,10 @@ pub async fn handle(
     );
 
     let message = Message::create(payload.to_vec());
-    let stream_topic = stream.topics.get_mut(&topic);
-    if stream_topic.is_none() {
-        return Err(StreamError::TopicNotFound(topic));
-    }
-
-    let stream_topic = stream_topic.unwrap();
-    stream_topic.send_message(key_value, message).await?;
+    system
+        .stream
+        .send_message(topic, key_value, message)
+        .await?;
     socket.send_to(STATUS_OK, address).await?;
     Ok(())
 }

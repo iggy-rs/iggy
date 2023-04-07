@@ -1,7 +1,7 @@
 use crate::handlers::*;
 use std::net::SocketAddr;
-use streaming::stream::Stream;
 use streaming::stream_error::StreamError;
+use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::{error, info};
 
@@ -41,7 +41,7 @@ impl Command {
         request: &[u8],
         socket: &UdpSocket,
         address: SocketAddr,
-        stream: &mut Stream,
+        system: &mut System,
     ) {
         if request.len() < LENGTH {
             handle_error(StreamError::InvalidCommand, socket, address).await;
@@ -58,7 +58,7 @@ impl Command {
 
         let result = command
             .unwrap()
-            .handle(input, socket, address, stream)
+            .handle(input, socket, address, system)
             .await;
 
         if result.is_err() {
@@ -83,7 +83,7 @@ impl Command {
         input: &[u8],
         socket: &UdpSocket,
         address: SocketAddr,
-        stream: &mut Stream,
+        system: &mut System,
     ) -> Result<(), StreamError> {
         info!(
             "Handling command '{:?}' from client: {:?}...",
@@ -91,14 +91,14 @@ impl Command {
         );
         match self {
             Command::Ping => ping_handler::handle(socket, address).await,
-            Command::Poll => poll_handler::handle(input, socket, address, stream).await,
-            Command::Send => send_handler::handle(input, socket, address, stream).await,
-            Command::GetTopics => get_topics_handler::handle(socket, address, stream).await,
+            Command::Poll => poll_handler::handle(input, socket, address, system).await,
+            Command::Send => send_handler::handle(input, socket, address, system).await,
+            Command::GetTopics => get_topics_handler::handle(socket, address, system).await,
             Command::CreateTopic => {
-                create_topic_handler::handle(input, socket, address, stream).await
+                create_topic_handler::handle(input, socket, address, system).await
             }
             Command::DeleteTopic => {
-                delete_topic_handler::handle(input, socket, address, stream).await
+                delete_topic_handler::handle(input, socket, address, system).await
             }
         }
     }

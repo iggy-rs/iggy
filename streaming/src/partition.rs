@@ -8,7 +8,7 @@ use tracing::info;
 pub struct Partition {
     pub id: u32,
     pub path: String,
-    pub segments: Vec<Segment>,
+    segments: Vec<Segment>,
 }
 
 impl Partition {
@@ -29,6 +29,10 @@ impl Partition {
 
     pub fn empty() -> Partition {
         Partition::create(0, "".to_string(), false)
+    }
+
+    pub fn get_segments(&self) -> &Vec<Segment> {
+        &self.segments
     }
 
     pub async fn save_on_disk(&self) -> Result<(), StreamError> {

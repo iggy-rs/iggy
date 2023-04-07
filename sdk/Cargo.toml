@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bytes = "1.4.0"
 streaming = { path = "../streaming" }
 thiserror = "1.0.40"
 tokio = { version = "1.26.0", features = ["full"] }

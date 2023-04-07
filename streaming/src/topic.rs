@@ -13,9 +13,8 @@ use tracing::info;
 pub struct Topic {
     pub id: u32,
     pub name: String,
-    pub messages_count: u64,
-    pub partitions: HashMap<u32, Partition>,
     pub path: String,
+    partitions: HashMap<u32, Partition>,
 }
 
 impl Topic {
@@ -23,7 +22,6 @@ impl Topic {
         let mut topic = Topic {
             id,
             name: name.to_string(),
-            messages_count: 0,
             partitions: HashMap::new(),
             path: format!("{}/{:0>10}", get_topics_path(), id),
         };
@@ -37,6 +35,10 @@ impl Topic {
             .collect();
 
         topic
+    }
+
+    pub fn get_partitions(&self) -> Vec<&Partition> {
+        self.partitions.values().collect()
     }
 
     pub async fn save_on_disk(&self) -> Result<(), StreamError> {

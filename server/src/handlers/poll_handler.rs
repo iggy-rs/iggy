@@ -1,8 +1,8 @@
 use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use std::net::SocketAddr;
-use streaming::stream::Stream;
 use streaming::stream_error::StreamError;
+use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::info;
 
@@ -55,7 +55,7 @@ pub async fn handle(
     input: &[u8],
     socket: &UdpSocket,
     address: SocketAddr,
-    stream: &mut Stream,
+    system: &mut System,
 ) -> Result<(), StreamError> {
     if input.len() != LENGTH {
         return Err(StreamError::InvalidCommand);
@@ -75,7 +75,9 @@ pub async fn handle(
         topic, kind, value, count
     );
 
-    let messages = stream.get_messages(topic, partition_id, value, count)?;
+    let messages = system
+        .stream
+        .get_messages(topic, partition_id, value, count)?;
     let messages_count = messages.len() as u32;
     let data = messages
         .iter()

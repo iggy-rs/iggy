@@ -41,6 +41,20 @@ impl Topic {
         self.partitions.values().collect()
     }
 
+    pub fn get_partitions_mut(&mut self) -> Vec<&mut Partition> {
+        self.partitions.values_mut().collect()
+    }
+
+    pub async fn save_existing_messages(&mut self) -> Result<(), StreamError> {
+        for partition in self.get_partitions_mut() {
+            for segment in partition.get_segments_mut() {
+                segment.save_messages_on_disk().await?;
+            }
+        }
+
+        Ok(())
+    }
+
     pub async fn save_on_disk(&self) -> Result<(), StreamError> {
         if Path::new(&self.path).exists() {
             return Err(StreamError::TopicAlreadyExists(self.id));

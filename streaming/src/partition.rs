@@ -20,7 +20,7 @@ impl Partition {
         };
 
         if with_segment {
-            let segment = Segment::create(0, SEGMENT_SIZE, &partition.path);
+            let segment = Segment::create(id, 0, SEGMENT_SIZE, &partition.path);
             partition.segments.push(segment);
         }
 
@@ -33,6 +33,10 @@ impl Partition {
 
     pub fn get_segments(&self) -> &Vec<Segment> {
         &self.segments
+    }
+
+    pub fn get_segments_mut(&mut self) -> &mut Vec<Segment> {
+        &mut self.segments
     }
 
     pub async fn save_on_disk(&self) -> Result<(), StreamError> {
@@ -93,7 +97,7 @@ impl Partition {
                 self.id
             );
             let start_offset = segment.end_offset + 1;
-            let new_segment = Segment::create(start_offset, SEGMENT_SIZE, &self.path);
+            let new_segment = Segment::create(self.id, start_offset, SEGMENT_SIZE, &self.path);
             new_segment.save_on_disk().await?;
             self.segments.push(new_segment);
             self.segments
@@ -138,7 +142,7 @@ impl Partition {
             let offset = log_file_name.parse::<u64>().unwrap();
             partition
                 .segments
-                .push(Segment::load_from_disk(offset, &partition.path).await?);
+                .push(Segment::load_from_disk(id, offset, &partition.path).await?);
         }
 
         partition

@@ -80,9 +80,9 @@ Server restart
 - [x] Create a basic UDP server
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
+- [x] Allow multiple clients to connect to the server
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
-- [ ] Allow multiple clients to connect to the server
 
 #### Client
 

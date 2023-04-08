@@ -9,10 +9,11 @@ pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
 pub const SEGMENT_SIZE: u64 = 4;
-pub const MESSAGES_IN_BUFFER_THRESHOLD: u64 = 2;
+pub const MESSAGES_IN_BUFFER_THRESHOLD: u64 = 4;
 
 #[derive(Debug)]
 pub struct Segment {
+    pub partition_id: u32,
     pub start_offset: u64,
     pub current_offset: u64,
     pub end_offset: u64,
@@ -27,7 +28,12 @@ pub struct Segment {
 }
 
 impl Segment {
-    pub fn create(start_offset: u64, size: u64, partition_path: &str) -> Segment {
+    pub fn create(
+        partition_id: u32,
+        start_offset: u64,
+        size: u64,
+        partition_path: &str,
+    ) -> Segment {
         let index_path = format!(
             "{}/{:0>20}.{}",
             partition_path, start_offset, INDEX_EXTENSION
@@ -39,6 +45,7 @@ impl Segment {
         let log_path = format!("{}/{:0>20}.{}", partition_path, start_offset, LOG_EXTENSION);
 
         Segment {
+            partition_id,
             start_offset,
             current_offset: start_offset,
             end_offset: start_offset + size - 1,
@@ -93,10 +100,9 @@ impl Segment {
         }
 
         info!(
-            "Created partition segment log file for partition path {}.",
-            self.partition_path
+            "Created partition segment log file for offset: {} and partition with ID: {} and path: {}.",
+            self.start_offset, self.partition_id, self.partition_path
         );
-
         Ok(())
     }
 
@@ -118,26 +124,31 @@ impl Segment {
         self.unsaved_messages_count += 1;
 
         if self.unsaved_messages_count == self.current_unsaved_messages_threshold {
-            self.append_unsaved_messages().await?;
+            self.save_messages_on_disk().await?;
         }
-
         Ok(())
     }
 
-    async fn append_unsaved_messages(&mut self) -> Result<(), StreamError> {
-        self.save_messages_on_disk().await?;
-        self.unsaved_messages_count = 0;
-        self.current_unsaved_messages_threshold = MESSAGES_IN_BUFFER_THRESHOLD;
-        Ok(())
-    }
-
-    pub async fn save_messages_on_disk(&self) -> Result<(), StreamError> {
-        info!("Saving {} messages on disk...", self.unsaved_messages_count);
+    pub async fn save_messages_on_disk(&mut self) -> Result<(), StreamError> {
         let log_file = OpenOptions::new().append(true).open(&self.log_path).await;
         if log_file.is_err() {
             return Err(StreamError::LogFileNotFound);
         }
 
+        if self.unsaved_messages_count == 0 {
+            if !self.is_full() {
+                info!(
+                    "No existing messages to save on disk in segment {}...{} for partition {}",
+                    self.start_offset, self.end_offset, self.partition_id
+                );
+            }
+            return Ok(());
+        }
+
+        info!(
+            "Saving {} messages on disk in segment {}...{} for partition {}",
+            self.unsaved_messages_count, self.start_offset, self.end_offset, self.partition_id
+        );
         let mut log_file = log_file.unwrap();
         let messages_count = self.messages.len();
         let payload = &self.messages
@@ -158,20 +169,29 @@ impl Segment {
         }
 
         info!(
-            "Saved {} messages on disk, total bytes written: {}",
+            "Saved {} messages on disk in segment {}...{} for partition {}, total bytes written: {}",
             self.unsaved_messages_count,
+            self.start_offset,
+            self.end_offset,
+            self.partition_id,
             payload.len()
         );
 
+        self.unsaved_messages_count = 0;
+        self.current_unsaved_messages_threshold = MESSAGES_IN_BUFFER_THRESHOLD;
         Ok(())
     }
 
-    pub async fn load_from_disk(offset: u64, partition_path: &str) -> Result<Segment, StreamError> {
+    pub async fn load_from_disk(
+        partition_id: u32,
+        offset: u64,
+        partition_path: &str,
+    ) -> Result<Segment, StreamError> {
         info!(
-            "Loading segment from disk for offset {} and partition path {}...",
-            offset, partition_path
+            "Loading segment from disk for offset: {} and partition with ID: {}...",
+            offset, partition_id
         );
-        let mut segment = Segment::create(offset, SEGMENT_SIZE, partition_path);
+        let mut segment = Segment::create(partition_id, offset, SEGMENT_SIZE, partition_path);
         let log_file = OpenOptions::new().read(true).open(&segment.log_path).await;
 
         if log_file.is_err() {
@@ -185,8 +205,8 @@ impl Segment {
         let mut length_buffer = [0; 8];
 
         info!(
-            "Loading messages from segment log file for offset {} and partition path: {}...",
-            offset, partition_path
+            "Loading messages from segment log file for offset: {} and partition with ID: {}...",
+            offset, partition_id
         );
         while log_file.read_exact(&mut offset_buffer).await.is_ok() {
             if log_file.read_exact(&mut timestamp_buffer).await.is_err() {
@@ -230,11 +250,11 @@ impl Segment {
         }
 
         info!(
-            "Loaded {} messages from segment log file for offsets {}...{} and partition path: {}.",
+            "Loaded {} messages from segment log file for offsets {}...{} and partition with ID: {}.",
             segment.messages.len(),
             segment.start_offset,
             segment.end_offset,
-            partition_path
+            partition_id
         );
 
         Ok(segment)

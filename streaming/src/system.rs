@@ -39,16 +39,16 @@ impl System {
     }
 
     // TODO: Implement a proper server shutdown
-    pub async fn shutdown(&self) -> Result<(), StreamError> {
-        info!("Shutting down Iggy server...");
-        for topic in self.stream.get_topics() {
-            for partition in topic.get_partitions() {
-                for segment in partition.get_segments() {
-                    segment.save_messages_on_disk().await?;
-                }
-            }
-        }
+    pub async fn shutdown(&mut self) -> Result<(), StreamError> {
+        self.save_existing_messages().await?;
+        Ok(())
+    }
 
+    pub async fn save_existing_messages(&mut self) -> Result<(), StreamError> {
+        info!("Saving existing messages on disk...");
+        for topic in self.stream.get_topics_mut() {
+            topic.save_existing_messages().await?;
+        }
         Ok(())
     }
 }

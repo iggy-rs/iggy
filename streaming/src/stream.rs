@@ -37,6 +37,10 @@ impl Stream {
         self.topics.values().collect()
     }
 
+    pub fn get_topics_mut(&mut self) -> Vec<&mut Topic> {
+        self.topics.values_mut().collect()
+    }
+
     pub async fn send_message(
         &mut self,
         topic_id: u32,

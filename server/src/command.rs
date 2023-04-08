@@ -23,7 +23,7 @@ const LENGTH: usize = 1;
 
 /*
   RESPONSE: |   STATUS  |   DATA    |
-            |  4 bytes  |  n bytes  |
+            |   1 byte  |  n bytes  |
 */
 
 #[derive(Debug, PartialEq)]

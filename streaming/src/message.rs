@@ -13,4 +13,8 @@ impl Message {
             body,
         }
     }
+
+    pub fn get_size_bytes(&self) -> u64 {
+        8 + 8 + self.body.len() as u64
+    }
 }

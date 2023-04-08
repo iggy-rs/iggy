@@ -67,10 +67,10 @@ pub enum StreamError {
     MessagesNotFound,
     #[error("Segment not found")]
     SegmentNotFound,
-    #[error("Segment full")]
-    SegmentFull,
-    #[error("Segment size is invalid regarding the message buffer: {0} < {1} OR {0} mod {1} != 0")]
-    InvalidSegmentSize(u64, u64),
+    #[error("Segment with start offset: {0} and partition ID: {1} is full")]
+    SegmentFull(u64, u32),
+    #[error("Segment size is invalid")]
+    InvalidSegmentSize(u64),
     #[error("Cannot read message")]
     CannotReadMessage,
     #[error("Cannot read message timestamp")]
@@ -119,8 +119,8 @@ impl StreamError {
             StreamError::MessageNotFound => 29,
             StreamError::MessagesNotFound => 30,
             StreamError::SegmentNotFound => 31,
-            StreamError::SegmentFull => 32,
-            StreamError::InvalidSegmentSize(_, _) => 33,
+            StreamError::SegmentFull(_, _) => 32,
+            StreamError::InvalidSegmentSize(_) => 33,
             StreamError::CannotReadMessage => 34,
             StreamError::CannotReadMessageTimestamp => 35,
             StreamError::CannotReadMessageLength => 36,

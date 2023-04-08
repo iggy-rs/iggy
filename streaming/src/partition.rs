@@ -1,5 +1,5 @@
 use crate::message::Message;
-use crate::segment::{Segment, LOG_EXTENSION, SEGMENT_SIZE};
+use crate::segment::{Segment, LOG_EXTENSION};
 use crate::stream_error::StreamError;
 use tokio::fs;
 use tracing::info;
@@ -20,7 +20,7 @@ impl Partition {
         };
 
         if with_segment {
-            let segment = Segment::create(id, 0, SEGMENT_SIZE, &partition.path);
+            let segment = Segment::create(id, 0, &partition.path);
             partition.segments.push(segment);
         }
 
@@ -49,8 +49,12 @@ impl Partition {
     }
 
     pub fn get_messages(&self, offset: u64, count: u32) -> Option<Vec<&Message>> {
+        if self.segments.is_empty() {
+            return None;
+        }
+
         let mut end_offset = offset + (count - 1) as u64;
-        let max_offset = self.segments.last().unwrap().end_offset;
+        let max_offset = self.segments.last().unwrap().current_offset;
         if end_offset > max_offset {
             end_offset = max_offset;
         }
@@ -59,9 +63,9 @@ impl Partition {
             .segments
             .iter()
             .filter(|segment| {
-                (segment.start_offset >= offset && segment.end_offset <= end_offset)
-                    || (segment.start_offset <= offset && segment.end_offset >= offset)
-                    || (segment.start_offset <= end_offset && segment.end_offset >= end_offset)
+                (segment.start_offset >= offset && segment.current_offset <= end_offset)
+                    || (segment.start_offset <= offset && segment.current_offset >= offset)
+                    || (segment.start_offset <= end_offset && segment.current_offset >= end_offset)
             })
             .collect::<Vec<&Segment>>();
 
@@ -97,7 +101,7 @@ impl Partition {
                 self.id
             );
             let start_offset = segment.end_offset + 1;
-            let new_segment = Segment::create(self.id, start_offset, SEGMENT_SIZE, &self.path);
+            let new_segment = Segment::create(self.id, start_offset, &self.path);
             new_segment.save_on_disk().await?;
             self.segments.push(new_segment);
             self.segments
@@ -148,6 +152,27 @@ impl Partition {
         partition
             .segments
             .sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
+
+        let end_offsets = partition
+            .segments
+            .iter()
+            .skip(1)
+            .map(|segment| segment.start_offset - 1)
+            .collect::<Vec<u64>>();
+
+        let segments_count = partition.segments.len();
+        for (end_offset_index, segment) in partition.get_segments_mut().iter_mut().enumerate() {
+            if end_offset_index == segments_count - 1 {
+                break;
+            }
+
+            segment.end_offset = end_offsets[end_offset_index];
+        }
+
+        let last_segment = partition.segments.last_mut().unwrap();
+        if last_segment.is_full() {
+            last_segment.end_offset = last_segment.current_offset;
+        }
 
         Ok(partition)
     }

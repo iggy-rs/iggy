@@ -1,0 +1,14 @@
+{
+  "address": "127.0.0.1:8080",
+  "stream": {
+    "topic": {
+      "partition": {
+        "segment": {
+          "size_bytes": 1000,
+          "messages_required_to_save": 4,
+          "messages_buffer": 10
+        }
+      }
+    }
+  }
+}

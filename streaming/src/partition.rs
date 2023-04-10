@@ -1,6 +1,8 @@
+use crate::config::PartitionConfig;
 use crate::message::Message;
 use crate::segment::{Segment, LOG_EXTENSION};
 use crate::stream_error::StreamError;
+use std::sync::Arc;
 use tokio::fs;
 use tracing::info;
 
@@ -9,26 +11,33 @@ pub struct Partition {
     pub id: u32,
     pub path: String,
     segments: Vec<Segment>,
+    config: Arc<PartitionConfig>,
 }
 
 impl Partition {
-    pub fn create(id: u32, path: String, with_segment: bool) -> Partition {
+    pub fn create(
+        id: u32,
+        path: String,
+        with_segment: bool,
+        config: Arc<PartitionConfig>,
+    ) -> Partition {
         let mut partition = Partition {
             id,
             path,
             segments: vec![],
+            config,
         };
 
         if with_segment {
-            let segment = Segment::create(id, 0, &partition.path);
+            let segment = Segment::create(id, 0, &partition.path, partition.config.segment.clone());
             partition.segments.push(segment);
         }
 
         partition
     }
 
-    pub fn empty() -> Partition {
-        Partition::create(0, "".to_string(), false)
+    pub fn empty(config: Arc<PartitionConfig>) -> Partition {
+        Partition::create(0, "".to_string(), false, config)
     }
 
     pub fn get_segments(&self) -> &Vec<Segment> {
@@ -101,7 +110,12 @@ impl Partition {
                 self.id
             );
             let start_offset = segment.end_offset + 1;
-            let new_segment = Segment::create(self.id, start_offset, &self.path);
+            let new_segment = Segment::create(
+                self.id,
+                start_offset,
+                &self.path,
+                self.config.segment.clone(),
+            );
             new_segment.save_on_disk().await?;
             self.segments.push(new_segment);
             self.segments
@@ -112,14 +126,18 @@ impl Partition {
         segment.unwrap().append_message(message).await
     }
 
-    pub async fn load_from_disk(id: u32, path: &str) -> Result<Partition, StreamError> {
+    pub async fn load_from_disk(
+        id: u32,
+        path: &str,
+        config: Arc<PartitionConfig>,
+    ) -> Result<Partition, StreamError> {
         info!(
             "Loading partition with ID: {} from disk, for path: {}",
             id, path
         );
         let dir_files = fs::read_dir(&path).await;
         let mut dir_files = dir_files.unwrap();
-        let mut partition = Partition::create(id, path.to_string(), false);
+        let mut partition = Partition::create(id, path.to_string(), false, config);
         loop {
             let dir_entry = dir_files.next_entry().await;
             if dir_entry.is_err() {
@@ -144,9 +162,15 @@ impl Partition {
                 .unwrap()
                 .replace(&format!(".{}", LOG_EXTENSION), "");
             let offset = log_file_name.parse::<u64>().unwrap();
-            partition
-                .segments
-                .push(Segment::load_from_disk(id, offset, &partition.path).await?);
+            partition.segments.push(
+                Segment::load_from_disk(
+                    id,
+                    offset,
+                    &partition.path,
+                    partition.config.segment.clone(),
+                )
+                .await?,
+            );
         }
 
         partition

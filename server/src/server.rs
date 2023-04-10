@@ -1,5 +1,6 @@
 use crate::command::Command;
 use crate::server_command::ServerCommand;
+use crate::server_config::ServerConfig;
 use anyhow::Result;
 use bytes::BytesMut;
 use std::io;
@@ -12,33 +13,31 @@ use tokio::{task, time};
 use tracing::{error, info};
 
 pub struct Server {
-    pub address: String,
     pub system: System,
     pub socket: Arc<UdpSocket>,
     pub sender: mpsc::Sender<ServerCommand>,
     pub receiver: mpsc::Receiver<ServerCommand>,
 }
 
-pub async fn init(address: String) -> Result<Server, io::Error> {
-    let socket = UdpSocket::bind(address.clone()).await?;
+pub async fn init(config: ServerConfig) -> Result<Server, io::Error> {
+    let socket = UdpSocket::bind(config.address.clone()).await?;
     let socket = Arc::new(socket);
     let (sender, receiver) = mpsc::channel::<ServerCommand>(1024);
 
-    let system = System::init().await;
+    let system = System::init(config.stream).await;
     if let Err(error) = system {
         panic!("Iggy server has finished, due to an error: {}.", error);
     }
 
     let system = system.unwrap();
     let server = Server {
-        address,
         system,
         socket,
         sender,
         receiver,
     };
 
-    info!("Iggy server has started on: {:?}", server.address);
+    info!("Iggy server has started on: {:?}", config.address);
     Ok(server)
 }
 

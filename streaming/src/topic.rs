@@ -1,9 +1,11 @@
+use crate::config::TopicConfig;
 use crate::message::Message;
 use crate::partition::Partition;
 use crate::stream_error::StreamError;
 use crate::{get_topics_path, TOPIC_INFO};
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -14,22 +16,24 @@ pub struct Topic {
     pub id: u32,
     pub name: String,
     pub path: String,
+    config: Arc<TopicConfig>,
     partitions: HashMap<u32, Partition>,
 }
 
 impl Topic {
-    pub fn create(id: u32, name: &str, partitions_count: u32) -> Topic {
+    pub fn create(id: u32, name: &str, partitions_count: u32, config: Arc<TopicConfig>) -> Topic {
         let mut topic = Topic {
             id,
             name: name.to_string(),
             partitions: HashMap::new(),
             path: format!("{}/{:0>10}", get_topics_path(), id),
+            config: config.clone(),
         };
 
         topic.partitions = (0..partitions_count)
             .map(|id| {
                 let path = format!("{}/{:0>10}", topic.path, id);
-                let partition = Partition::create(id, path, true);
+                let partition = Partition::create(id, path, true, config.partition.clone());
                 (id, partition)
             })
             .collect();
@@ -158,7 +162,7 @@ impl Topic {
         Ok(messages)
     }
 
-    pub async fn load_from_disk(id: u32) -> Result<Topic, StreamError> {
+    pub async fn load_from_disk(id: u32, config: Arc<TopicConfig>) -> Result<Topic, StreamError> {
         let topic_path = format!("{}/{:0>10}", get_topics_path(), id);
         let topic_info_path = format!("{}/{}", topic_path, TOPIC_INFO);
 
@@ -187,7 +191,7 @@ impl Topic {
             return Err(StreamError::CannotReadPartitions(id));
         }
 
-        let mut topic = Topic::create(id, &topic_info, 0);
+        let mut topic = Topic::create(id, &topic_info, 0, config);
         let mut dir_files = dir_files.unwrap();
         loop {
             let dir_entry = dir_files.next_entry().await;
@@ -218,7 +222,8 @@ impl Topic {
                 .unwrap()
                 .parse::<u32>()
                 .unwrap();
-            let partition = Partition::load_from_disk(id, path).await;
+            let partition =
+                Partition::load_from_disk(id, path, topic.config.partition.clone()).await;
             if partition.is_err() {
                 continue;
             }

@@ -1,18 +1,22 @@
+use crate::config::StreamConfig;
+use crate::get_topics_path;
 use crate::message::Message;
 use crate::stream_error::StreamError;
 use crate::topic::Topic;
-use crate::{get_topics_path, topic};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct Stream {
     pub topics: HashMap<u32, Topic>,
+    config: Arc<StreamConfig>,
 }
 
 impl Stream {
-    pub fn create() -> Self {
+    pub fn create(config: StreamConfig) -> Self {
         Stream {
+            config: Arc::new(config),
             topics: HashMap::new(),
         }
     }
@@ -23,7 +27,7 @@ impl Stream {
         name: &str,
         partitions: u32,
     ) -> Result<(), StreamError> {
-        let topic = topic::Topic::create(id, name, partitions);
+        let topic = Topic::create(id, name, partitions, self.config.topic.clone());
         topic.save_on_disk().await?;
         self.topics.insert(id, topic);
         info!(
@@ -101,7 +105,7 @@ impl Stream {
                 .parse::<u32>()
                 .unwrap();
             info!("Loading topic with ID: {} from disk...", topic_id);
-            let topic = Topic::load_from_disk(topic_id).await;
+            let topic = Topic::load_from_disk(topic_id, self.config.topic.clone()).await;
             if topic.is_err() {
                 error!("{}", topic.err().unwrap());
                 continue;

@@ -1,6 +1,8 @@
+use crate::config::SegmentConfig;
 use crate::message::Message;
 use crate::stream_error::StreamError;
 use crate::timestamp;
+use std::sync::Arc;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::info;
@@ -8,8 +10,6 @@ use tracing::info;
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
-pub const SEGMENT_SIZE_BYTES: u64 = 50;
-pub const MESSAGES_COUNT_REQUIRED_TO_SAVE: u64 = 4;
 
 #[derive(Debug)]
 pub struct Segment {
@@ -23,12 +23,18 @@ pub struct Segment {
     pub timeindex_path: String,
     pub messages: Vec<Message>,
     pub unsaved_messages_count: u64,
-    pub size_bytes: u64,
+    pub current_size_bytes: u64,
     pub should_increment_offset: bool,
+    config: Arc<SegmentConfig>,
 }
 
 impl Segment {
-    pub fn create(partition_id: u32, start_offset: u64, partition_path: &str) -> Segment {
+    pub fn create(
+        partition_id: u32,
+        start_offset: u64,
+        partition_path: &str,
+        config: Arc<SegmentConfig>,
+    ) -> Segment {
         let index_path = format!(
             "{}/{:0>20}.{}",
             partition_path, start_offset, INDEX_EXTENSION
@@ -50,13 +56,14 @@ impl Segment {
             log_path,
             messages: vec![],
             unsaved_messages_count: 0,
-            size_bytes: 0,
+            current_size_bytes: 0,
             should_increment_offset: false,
+            config,
         }
     }
 
     pub fn is_full(&self) -> bool {
-        self.size_bytes >= SEGMENT_SIZE_BYTES
+        self.current_size_bytes >= self.config.size_bytes
     }
 
     // TODO: Load messages from cache and if not found, load them from disk.
@@ -120,7 +127,7 @@ impl Segment {
 
         info!(
             "Appending the message, current segment size is {} bytes",
-            self.size_bytes
+            self.current_size_bytes
         );
 
         // Do not increment offset for the very first message
@@ -132,18 +139,16 @@ impl Segment {
 
         message.offset = self.current_offset;
         message.timestamp = timestamp::get();
-        self.size_bytes += message.get_size_bytes();
+        self.current_size_bytes += message.get_size_bytes();
         self.messages.push(message);
         self.unsaved_messages_count += 1;
 
         info!(
             "Appended the message, current segment size is {} bytes",
-            self.size_bytes
+            self.current_size_bytes
         );
 
-        if self.unsaved_messages_count >= MESSAGES_COUNT_REQUIRED_TO_SAVE
-            || self.size_bytes >= SEGMENT_SIZE_BYTES
-        {
+        if self.unsaved_messages_count >= self.config.messages_required_to_save || self.is_full() {
             self.save_messages_on_disk().await?;
         }
 
@@ -180,7 +185,7 @@ impl Segment {
             [messages_count - self.unsaved_messages_count as usize..messages_count]
             .iter()
             .map(|message| {
-                let payload = message.body.as_slice();
+                let payload = message.payload.as_slice();
                 let offset = &message.offset.to_le_bytes();
                 let timestamp = &message.timestamp.to_le_bytes();
                 let length = &(payload.len() as u64).to_le_bytes();
@@ -209,14 +214,15 @@ impl Segment {
         partition_id: u32,
         start_offset: u64,
         partition_path: &str,
+        config: Arc<SegmentConfig>,
     ) -> Result<Segment, StreamError> {
         info!(
             "Loading segment from disk for offset: {} and partition with ID: {}...",
             start_offset, partition_id
         );
-        let mut segment = Segment::create(partition_id, start_offset, partition_path);
+        let mut segment =
+            Segment::create(partition_id, start_offset, partition_path, config.clone());
         let log_file = OpenOptions::new().read(true).open(&segment.log_path).await;
-
         if log_file.is_err() {
             return Err(StreamError::LogFileNotFound);
         }
@@ -247,23 +253,19 @@ impl Segment {
             }
 
             let offset = u64::from_le_bytes(offset_buffer);
-            let message = Message {
-                offset,
-                timestamp: u64::from_le_bytes(timestamp_buffer),
-                body: payload,
-            };
-
+            let timestamp = u64::from_le_bytes(timestamp_buffer);
+            let message = Message::create(offset, timestamp, payload);
             messages.push(message);
             segment.current_offset = offset;
         }
 
         segment.messages = messages;
         segment.should_increment_offset = segment.current_offset > 0;
-        segment.size_bytes = log_file.metadata().await.unwrap().len();
+        segment.current_size_bytes = log_file.metadata().await.unwrap().len();
 
         info!(
             "Loaded {} bytes from segment log file with start offset {} and partition ID: {}.",
-            segment.size_bytes, segment.start_offset, partition_id
+            segment.current_size_bytes, segment.start_offset, partition_id
         );
 
         Ok(segment)

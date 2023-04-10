@@ -82,7 +82,7 @@ Server restart
 - [x] Define the custom binary protocol for communication
 - [x] Allow multiple clients to connect to the server
 - [x] Provide configuration via terminal arguments
-- [ ] Provide configuration via custom configuration file
+- [x] Provide configuration via custom configuration file
 
 #### Client
 

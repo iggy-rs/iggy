@@ -1,7 +1,8 @@
+pub mod config;
 pub mod index;
 pub mod message;
 pub mod partition;
-mod segment;
+pub mod segment;
 pub mod serialization;
 pub mod stream;
 pub mod stream_error;

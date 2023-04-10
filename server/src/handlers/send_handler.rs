@@ -29,7 +29,7 @@ pub async fn handle(
         topic, key_kind, key_value, payload
     );
 
-    let message = Message::create(payload.to_vec());
+    let message = Message::new(payload.to_vec());
     system
         .stream
         .send_message(topic, key_value, message)

@@ -8,8 +8,13 @@ use tracing::info;
 const COMMAND: &[u8] = &[2];
 const PARTS: usize = 5;
 
+enum Format {
+    Binary,
+    String,
+}
+
 pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024]) -> io::Result<()> {
-    if input.len() != PARTS {
+    if input.len() < PARTS {
         return Err(io::Error::new(
             io::ErrorKind::Other,
             format!("Invalid poll command, expected {} parts.", PARTS),
@@ -46,6 +51,15 @@ pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024])
     let kind = &kind.unwrap().to_le_bytes();
     let value = &value.unwrap().to_le_bytes();
     let count = &count.unwrap().to_le_bytes();
+    let format = match input.get(5) {
+        Some(format) => match *format {
+            "b" => Format::Binary,
+            "s" => Format::String,
+            _ => return Err(io::Error::new(io::ErrorKind::Other, "Invalid format.")),
+        },
+        None => Format::Binary,
+    };
+
     socket
         .send(
             [COMMAND, topic, partition_id, kind, value, count]
@@ -53,11 +67,15 @@ pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024])
                 .as_slice(),
         )
         .await?;
-    handle_response(socket, buffer).await?;
+    handle_response(socket, buffer, format).await?;
     Ok(())
 }
 
-async fn handle_response(socket: &UdpSocket, buffer: &mut [u8; 1024]) -> io::Result<()> {
+async fn handle_response(
+    socket: &UdpSocket,
+    buffer: &mut [u8; 1024],
+    format: Format,
+) -> io::Result<()> {
     let payload_length = socket.recv(buffer).await?;
     handle_status(buffer)?;
 
@@ -78,13 +96,14 @@ async fn handle_response(socket: &UdpSocket, buffer: &mut [u8; 1024]) -> io::Res
             u64::from_le_bytes(payload[position + 8..position + 16].try_into().unwrap());
         let message_length =
             u64::from_le_bytes(payload[position + 16..position + 24].try_into().unwrap()) as usize;
-        let message = from_utf8(&payload[position + 24..position + 24 + message_length]).unwrap();
+        let payload = payload[position + 24..position + 24 + message_length].to_vec();
+
         position = position + 24 + message_length;
         messages.push(Message {
             offset,
             timestamp,
             length: message_length as u64,
-            payload: message.to_string(),
+            payload,
         });
         if position >= payload_length {
             break;
@@ -92,7 +111,19 @@ async fn handle_response(socket: &UdpSocket, buffer: &mut [u8; 1024]) -> io::Res
     }
 
     messages.sort_by(|x, y| x.offset.cmp(&y.offset));
-    info!("Messages: {:#?}", messages);
+
+    for message in messages {
+        let mut text = format!(
+            "offset: {}, timestamp: {}, length: {}, payload: ",
+            message.offset, message.timestamp, message.length
+        );
+        match format {
+            Format::Binary => text += format!("{:?}", message.payload).as_str(),
+            Format::String => text += from_utf8(&message.payload).unwrap(),
+        }
+
+        info!("{}", text);
+    }
 
     Ok(())
 }

@@ -32,7 +32,7 @@ pub async fn handle(
     let message = Message::new(payload.to_vec());
     system
         .stream
-        .send_message(topic, key_value, message)
+        .append_messages(topic, key_value, message)
         .await?;
     socket.send_to(STATUS_OK, address).await?;
     Ok(())

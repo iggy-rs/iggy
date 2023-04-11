@@ -25,6 +25,7 @@ pub struct Segment {
     pub unsaved_messages_count: u64,
     pub current_size_bytes: u64,
     pub should_increment_offset: bool,
+    log_file: Option<File>,
     config: Arc<SegmentConfig>,
 }
 
@@ -58,6 +59,7 @@ impl Segment {
             unsaved_messages_count: 0,
             current_size_bytes: 0,
             should_increment_offset: false,
+            log_file: None,
             config,
         }
     }
@@ -91,7 +93,7 @@ impl Segment {
         Some(messages)
     }
 
-    pub async fn save_on_disk(&self) -> Result<(), StreamError> {
+    pub async fn save_on_disk(&mut self) -> Result<(), StreamError> {
         if File::create(&self.log_path).await.is_err() {
             return Err(StreamError::CannotCreatePartitionSegmentLogFile(
                 self.log_path.clone(),
@@ -114,10 +116,17 @@ impl Segment {
             "Created partition segment log file for offset: {} and partition with ID: {} and path: {}.",
             self.start_offset, self.partition_id, self.partition_path
         );
+
+        let log_file = OpenOptions::new().append(true).open(&self.log_path).await;
+        if log_file.is_err() {
+            return Err(StreamError::LogFileNotFound);
+        }
+
+        self.log_file = Some(log_file.unwrap());
         Ok(())
     }
 
-    pub async fn append_message(&mut self, mut message: Message) -> Result<(), StreamError> {
+    pub async fn append_messages(&mut self, mut message: Message) -> Result<(), StreamError> {
         if self.is_full() {
             return Err(StreamError::SegmentFull(
                 self.start_offset,
@@ -154,14 +163,14 @@ impl Segment {
 
         if self.is_full() {
             self.end_offset = self.current_offset;
+            self.log_file = None;
         }
 
         Ok(())
     }
 
     pub async fn save_messages_on_disk(&mut self) -> Result<(), StreamError> {
-        let log_file = OpenOptions::new().append(true).open(&self.log_path).await;
-        if log_file.is_err() {
+        if self.log_file.is_none() {
             return Err(StreamError::LogFileNotFound);
         }
 
@@ -179,7 +188,6 @@ impl Segment {
             "Saving {} messages on disk in segment {} for partition {}",
             self.unsaved_messages_count, self.start_offset, self.partition_id
         );
-        let mut log_file = log_file.unwrap();
         let messages_count = self.messages.len();
         let payload = &self.messages
             [messages_count - self.unsaved_messages_count as usize..messages_count]
@@ -188,12 +196,13 @@ impl Segment {
                 let payload = message.payload.as_slice();
                 let offset = &message.offset.to_le_bytes();
                 let timestamp = &message.timestamp.to_le_bytes();
-                let length = &(payload.len() as u64).to_le_bytes();
+                let length = &message.length.to_le_bytes();
                 [offset, timestamp, length, payload].concat()
             })
             .collect::<Vec<Vec<u8>>>()
             .concat();
 
+        let log_file = self.log_file.as_mut().unwrap();
         if log_file.write_all(payload).await.is_err() {
             return Err(StreamError::CannotSaveMessagesToSegment);
         }
@@ -262,6 +271,7 @@ impl Segment {
         segment.messages = messages;
         segment.should_increment_offset = segment.current_offset > 0;
         segment.current_size_bytes = log_file.metadata().await.unwrap().len();
+        segment.log_file = Some(log_file);
 
         info!(
             "Loaded {} bytes from segment log file with start offset {} and partition ID: {}.",

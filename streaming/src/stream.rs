@@ -27,7 +27,7 @@ impl Stream {
         name: &str,
         partitions: u32,
     ) -> Result<(), StreamError> {
-        let topic = Topic::create(id, name, partitions, self.config.topic.clone());
+        let mut topic = Topic::create(id, name, partitions, self.config.topic.clone());
         topic.save_on_disk().await?;
         self.topics.insert(id, topic);
         info!(
@@ -45,7 +45,7 @@ impl Stream {
         self.topics.values_mut().collect()
     }
 
-    pub async fn send_message(
+    pub async fn append_messages(
         &mut self,
         topic_id: u32,
         partition_id: u32,
@@ -57,7 +57,7 @@ impl Stream {
         }
 
         let topic = topic.unwrap();
-        topic.send_message(partition_id, message).await?;
+        topic.append_messages(partition_id, message).await?;
         Ok(())
     }
 

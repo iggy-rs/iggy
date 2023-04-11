@@ -59,7 +59,7 @@ impl Topic {
         Ok(())
     }
 
-    pub async fn save_on_disk(&self) -> Result<(), StreamError> {
+    pub async fn save_on_disk(&mut self) -> Result<(), StreamError> {
         if Path::new(&self.path).exists() {
             return Err(StreamError::TopicAlreadyExists(self.id));
         }
@@ -95,7 +95,7 @@ impl Topic {
             self.partitions.len(),
             &self.id
         );
-        for partition in self.partitions.iter() {
+        for partition in self.partitions.iter_mut() {
             if std::fs::create_dir(&partition.1.path).is_err() {
                 return Err(StreamError::CannotCreatePartitionDirectory(
                     *partition.0,
@@ -122,7 +122,7 @@ impl Topic {
         Ok(())
     }
 
-    pub async fn send_message(
+    pub async fn append_messages(
         &mut self,
         partition_id: u32,
         message: Message,
@@ -133,7 +133,7 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
-        partition.append_message(message).await?;
+        partition.append_messages(message).await?;
         Ok(())
     }
 

@@ -85,7 +85,7 @@ pub async fn handle(
             [
                 message.offset.to_le_bytes().as_slice(),
                 message.timestamp.to_le_bytes().as_slice(),
-                (message.payload.len() as u64).to_le_bytes().as_slice(),
+                message.length.to_le_bytes().as_slice(),
                 message.payload.as_slice(),
             ]
             .concat()

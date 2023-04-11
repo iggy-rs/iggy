@@ -48,8 +48,8 @@ impl Partition {
         &mut self.segments
     }
 
-    pub async fn save_on_disk(&self) -> Result<(), StreamError> {
-        for segment in &self.segments {
+    pub async fn save_on_disk(&mut self) -> Result<(), StreamError> {
+        for segment in self.get_segments_mut() {
             info!("Saving segment with start offset: {}", segment.start_offset);
             segment.save_on_disk().await?;
         }
@@ -97,7 +97,7 @@ impl Partition {
         Some(messages)
     }
 
-    pub async fn append_message(&mut self, message: Message) -> Result<(), StreamError> {
+    pub async fn append_messages(&mut self, message: Message) -> Result<(), StreamError> {
         let segment = self.segments.last_mut();
         if segment.is_none() {
             return Err(StreamError::SegmentNotFound);
@@ -110,7 +110,7 @@ impl Partition {
                 self.id
             );
             let start_offset = segment.end_offset + 1;
-            let new_segment = Segment::create(
+            let mut new_segment = Segment::create(
                 self.id,
                 start_offset,
                 &self.path,
@@ -123,7 +123,7 @@ impl Partition {
         }
 
         let segment = self.segments.last_mut();
-        segment.unwrap().append_message(message).await
+        segment.unwrap().append_messages(message).await
     }
 
     pub async fn load_from_disk(

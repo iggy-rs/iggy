@@ -16,6 +16,8 @@ async fn main() -> Result<(), io::Error> {
 
     let config = server_config::load(&args.config);
     let server = server::init(config).await?;
+
+    server::handle_shutdown(server.sender.clone());
     server::start_watcher(server.sender.clone());
     server::start_channel(server.system, server.receiver, server.socket.clone());
     server::start_listener(server.socket, server.sender).await?;

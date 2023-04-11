@@ -83,6 +83,7 @@ Server restart
 - [x] Allow multiple clients to connect to the server
 - [x] Provide configuration via terminal arguments
 - [x] Provide configuration via custom configuration file
+- [x] Implement the graceful shutdown
 
 #### Client
 

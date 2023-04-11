@@ -5,4 +5,5 @@ use std::net::SocketAddr;
 pub enum ServerCommand {
     HandleRequest(Bytes, SocketAddr),
     SaveMessages,
+    Shutdown,
 }

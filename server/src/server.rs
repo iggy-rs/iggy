@@ -3,9 +3,9 @@ use crate::server_command::ServerCommand;
 use crate::server_config::ServerConfig;
 use anyhow::Result;
 use bytes::BytesMut;
-use std::io;
 use std::sync::Arc;
 use std::time::Duration;
+use std::{io, process};
 use streaming::system::System;
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc;
@@ -41,6 +41,16 @@ pub async fn init(config: ServerConfig) -> Result<Server, io::Error> {
     Ok(server)
 }
 
+pub fn handle_shutdown(sender: mpsc::Sender<ServerCommand>) {
+    ctrlc::set_handler(move || {
+        info!("Shutting down Iggy server...");
+        let runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
+        let shutdown = sender.send(ServerCommand::Shutdown);
+        runtime.block_on(shutdown).unwrap();
+    })
+    .expect("Error setting Ctrl-C handler");
+}
+
 // TODO: Make this configurable.
 pub fn start_watcher(sender: mpsc::Sender<ServerCommand>) {
     task::spawn(async move {
@@ -73,6 +83,14 @@ pub fn start_channel(
                     if system.save_existing_messages().await.is_err() {
                         error!("Couldn't save existing messages on disk.");
                     }
+                }
+                ServerCommand::Shutdown => {
+                    if system.save_existing_messages().await.is_err() {
+                        error!("Couldn't save existing messages on disk.");
+                        process::exit(1);
+                    }
+                    info!("Iggy server has shutdown successfully.");
+                    process::exit(0);
                 }
             }
         }

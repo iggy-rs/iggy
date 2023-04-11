@@ -114,15 +114,11 @@ impl Segment {
 
         info!(
             "Created partition segment log file for offset: {} and partition with ID: {} and path: {}.",
-            self.start_offset, self.partition_id, self.partition_path
+            self.start_offset, self.partition_id, self.log_path
         );
 
-        let log_file = OpenOptions::new().append(true).open(&self.log_path).await;
-        if log_file.is_err() {
-            return Err(StreamError::LogFileNotFound);
-        }
+        self.set_files_in_append_mode().await;
 
-        self.log_file = Some(log_file.unwrap());
         Ok(())
     }
 
@@ -163,7 +159,7 @@ impl Segment {
 
         if self.is_full() {
             self.end_offset = self.current_offset;
-            self.log_file = None;
+            self.set_files_in_read_only_mode().await;
         }
 
         Ok(())
@@ -216,6 +212,10 @@ impl Segment {
         );
 
         self.unsaved_messages_count = 0;
+        if self.is_full() {
+            self.set_files_in_read_only_mode().await;
+        }
+
         Ok(())
     }
 
@@ -231,13 +231,8 @@ impl Segment {
         );
         let mut segment =
             Segment::create(partition_id, start_offset, partition_path, config.clone());
-        let log_file = OpenOptions::new().read(true).open(&segment.log_path).await;
-        if log_file.is_err() {
-            return Err(StreamError::LogFileNotFound);
-        }
-
         let mut messages = vec![];
-        let mut log_file = log_file.unwrap();
+        let mut log_file = Segment::read_file(&segment.log_path, true).await;
         let mut offset_buffer = [0; 8];
         let mut timestamp_buffer = [0; 8];
         let mut length_buffer = [0; 8];
@@ -271,7 +266,11 @@ impl Segment {
         segment.messages = messages;
         segment.should_increment_offset = segment.current_offset > 0;
         segment.current_size_bytes = log_file.metadata().await.unwrap().len();
-        segment.log_file = Some(log_file);
+        if segment.is_full() {
+            segment.set_files_in_read_only_mode().await;
+        } else {
+            segment.set_files_in_append_mode().await;
+        }
 
         info!(
             "Loaded {} bytes from segment log file with start offset {} and partition ID: {}.",
@@ -279,5 +278,22 @@ impl Segment {
         );
 
         Ok(segment)
+    }
+
+    async fn set_files_in_append_mode(&mut self) {
+        self.log_file = Some(Segment::read_file(&self.log_path, true).await);
+    }
+
+    async fn set_files_in_read_only_mode(&mut self) {
+        self.log_file = Some(Segment::read_file(&self.log_path, false).await);
+    }
+
+    async fn read_file(path: &str, append: bool) -> File {
+        OpenOptions::new()
+            .read(true)
+            .append(append)
+            .open(path)
+            .await
+            .unwrap()
     }
 }

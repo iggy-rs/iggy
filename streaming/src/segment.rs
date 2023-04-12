@@ -24,8 +24,11 @@ pub struct Segment {
     pub messages: Vec<Message>,
     pub unsaved_messages_count: u64,
     pub current_size_bytes: u64,
+    pub saved_bytes: u64,
     pub should_increment_offset: bool,
     log_file: Option<File>,
+    index_file: Option<File>,
+    timeindex_file: Option<File>,
     config: Arc<SegmentConfig>,
 }
 
@@ -58,8 +61,11 @@ impl Segment {
             messages: vec![],
             unsaved_messages_count: 0,
             current_size_bytes: 0,
+            saved_bytes: 0,
             should_increment_offset: false,
             log_file: None,
+            index_file: None,
+            timeindex_file: None,
             config,
         }
     }
@@ -100,16 +106,23 @@ impl Segment {
             ));
         }
 
-        if File::create(&self.index_path).await.is_err() {
+        if File::create(&self.timeindex_path).await.is_err() {
+            return Err(StreamError::CannotCreatePartitionSegmentTimeIndexFile(
+                self.log_path.clone(),
+            ));
+        }
+
+        let index_file = File::create(&self.index_path).await;
+        if index_file.is_err() {
             return Err(StreamError::CannotCreatePartitionSegmentIndexFile(
                 self.log_path.clone(),
             ));
         }
 
-        if File::create(&self.timeindex_path).await.is_err() {
-            return Err(StreamError::CannotCreatePartitionSegmentTimeIndexFile(
-                self.log_path.clone(),
-            ));
+        let mut index_file = index_file.unwrap();
+        let zero_index = 0u64.to_le_bytes();
+        if index_file.write_all(&zero_index).await.is_err() {
+            return Err(StreamError::CannotSaveIndexToSegment);
         }
 
         info!(
@@ -184,9 +197,12 @@ impl Segment {
             "Saving {} messages on disk in segment {} for partition {}",
             self.unsaved_messages_count, self.start_offset, self.partition_id
         );
+
         let messages_count = self.messages.len();
-        let payload = &self.messages
-            [messages_count - self.unsaved_messages_count as usize..messages_count]
+        let messages =
+            &self.messages[messages_count - self.unsaved_messages_count as usize..messages_count];
+
+        let log_file_data = messages
             .iter()
             .map(|message| {
                 let payload = message.payload.as_slice();
@@ -199,19 +215,48 @@ impl Segment {
             .concat();
 
         let log_file = self.log_file.as_mut().unwrap();
-        if log_file.write_all(payload).await.is_err() {
+        if log_file.write_all(&log_file_data).await.is_err() {
             return Err(StreamError::CannotSaveMessagesToSegment);
         }
 
+        // TODO: Refactor saving indexes
+
+        let mut current_position = self.saved_bytes;
+        let index_file_data = messages.iter().fold(vec![], |mut acc, message| {
+            current_position += message.get_size_bytes();
+            acc.extend_from_slice(&current_position.to_le_bytes());
+            acc
+        });
+
+        let time_index_file_data = messages
+            .iter()
+            .map(|message| message.timestamp.to_le_bytes().to_vec())
+            .collect::<Vec<Vec<u8>>>()
+            .concat();
+
+        let index_file = self.index_file.as_mut().unwrap();
+        if index_file.write_all(&index_file_data).await.is_err() {
+            return Err(StreamError::CannotSaveIndexToSegment);
+        }
+
+        let time_index_file = self.timeindex_file.as_mut().unwrap();
+        if time_index_file
+            .write_all(&time_index_file_data)
+            .await
+            .is_err()
+        {
+            return Err(StreamError::CannotSaveTimeIndexToSegment);
+        }
+
+        let saved_bytes = log_file_data.len() as u64;
+
         info!(
             "Saved {} messages on disk in segment {} for partition {}, total bytes written: {}",
-            self.unsaved_messages_count,
-            self.start_offset,
-            self.partition_id,
-            payload.len()
+            self.unsaved_messages_count, self.start_offset, self.partition_id, saved_bytes
         );
 
         self.unsaved_messages_count = 0;
+        self.saved_bytes += saved_bytes;
         if self.is_full() {
             self.set_files_in_read_only_mode().await;
         }
@@ -232,7 +277,9 @@ impl Segment {
         let mut segment =
             Segment::create(partition_id, start_offset, partition_path, config.clone());
         let mut messages = vec![];
-        let mut log_file = Segment::read_file(&segment.log_path, true).await;
+        let mut log_file = Segment::open_file(&segment.log_path, false).await;
+        let mut index_file = Segment::open_file(&segment.index_path, false).await;
+        let mut timeindex_file = Segment::open_file(&segment.timeindex_path, false).await;
         let mut offset_buffer = [0; 8];
         let mut timestamp_buffer = [0; 8];
         let mut length_buffer = [0; 8];
@@ -263,9 +310,32 @@ impl Segment {
             segment.current_offset = offset;
         }
 
+        // TODO: Cleanup and refactor loading indexes from disk
+
+        let index_file_len = index_file.metadata().await.unwrap().len();
+        let index_file_buffer = &mut vec![0; index_file_len as usize];
+        let _ = index_file.read(index_file_buffer).await.unwrap();
+        let indexes = index_file_buffer
+            .chunks(8)
+            .map(|chunk| u64::from_le_bytes(chunk.try_into().unwrap()))
+            .collect::<Vec<u64>>();
+
+        info!("Indexes per offset: {:?}", indexes);
+
+        let timeindex_file_len = timeindex_file.metadata().await.unwrap().len();
+        let timeindex_file_buffer = &mut vec![0; timeindex_file_len as usize];
+        let _ = timeindex_file.read(timeindex_file_buffer).await.unwrap();
+        let timestamps = timeindex_file_buffer
+            .chunks(8)
+            .map(|chunk| u64::from_le_bytes(chunk.try_into().unwrap()))
+            .collect::<Vec<u64>>();
+
+        info!("Timestamps per offset: {:?}", timestamps);
+
         segment.messages = messages;
         segment.should_increment_offset = segment.current_offset > 0;
         segment.current_size_bytes = log_file.metadata().await.unwrap().len();
+        segment.saved_bytes = segment.current_size_bytes;
         if segment.is_full() {
             segment.set_files_in_read_only_mode().await;
         } else {
@@ -281,14 +351,20 @@ impl Segment {
     }
 
     async fn set_files_in_append_mode(&mut self) {
-        self.log_file = Some(Segment::read_file(&self.log_path, true).await);
+        self.set_files_in_mode(true).await;
     }
 
     async fn set_files_in_read_only_mode(&mut self) {
-        self.log_file = Some(Segment::read_file(&self.log_path, false).await);
+        self.set_files_in_mode(false).await;
     }
 
-    async fn read_file(path: &str, append: bool) -> File {
+    async fn set_files_in_mode(&mut self, append: bool) {
+        self.log_file = Some(Segment::open_file(&self.log_path, append).await);
+        self.index_file = Some(Segment::open_file(&self.index_path, append).await);
+        self.timeindex_file = Some(Segment::open_file(&self.timeindex_path, append).await);
+    }
+
+    async fn open_file(path: &str, append: bool) -> File {
         OpenOptions::new()
             .read(true)
             .append(append)

@@ -112,6 +112,7 @@ Server restart
 - [x] Implement `Partition` consisting of multiple `Segments`
 - [x] Store `Topic → Partition → Segment` structures on the disk in separate directories
 - [x] Store messages on disk as append-only log using binary format
+- [x] Store messages index + timeindex on disk for fast access
 - [x] Automatically create new partition segments when the current one is full
 - [x] Allow clients to create/read/delete topics
 - [x] Allow clients to send messages to the specific topic and partition

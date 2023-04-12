@@ -81,6 +81,10 @@ pub enum StreamError {
     CannotReadMessagePayload,
     #[error("Cannot save messages to segment")]
     CannotSaveMessagesToSegment,
+    #[error("Cannot save index to segment")]
+    CannotSaveIndexToSegment,
+    #[error("Cannot save time index to segment")]
+    CannotSaveTimeIndexToSegment,
 }
 
 // TODO: Categorize errors in the meaningful way.
@@ -126,6 +130,8 @@ impl StreamError {
             StreamError::CannotReadMessageLength => 36,
             StreamError::CannotReadMessagePayload => 37,
             StreamError::CannotSaveMessagesToSegment => 38,
+            StreamError::CannotSaveIndexToSegment => 39,
+            StreamError::CannotSaveTimeIndexToSegment => 40,
         }
     }
 }

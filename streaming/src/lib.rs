@@ -1,8 +1,10 @@
+use crate::stream_error::StreamError;
+
 pub mod config;
 pub mod index;
 pub mod message;
 pub mod partition;
-pub mod segment;
+pub mod segments;
 pub mod serialization;
 pub mod stream;
 pub mod stream_error;
@@ -20,4 +22,12 @@ pub fn get_base_path() -> String {
 
 pub fn get_topics_path() -> String {
     format!("{}/{}", &get_base_path(), TOPICS_PATH)
+}
+
+pub trait Loadable {
+    fn load(&mut self, path: &str) -> Result<(), StreamError>;
+}
+
+pub trait Saveable {
+    fn save(&self, path: &str) -> Result<(), StreamError>;
 }

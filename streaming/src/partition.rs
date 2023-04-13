@@ -1,6 +1,7 @@
 use crate::config::PartitionConfig;
 use crate::message::Message;
-use crate::segment::{Segment, LOG_EXTENSION};
+use crate::segments;
+use crate::segments::segment::{Segment, LOG_EXTENSION};
 use crate::stream_error::StreamError;
 use std::sync::Arc;
 use tokio::fs;
@@ -163,7 +164,7 @@ impl Partition {
                 .replace(&format!(".{}", LOG_EXTENSION), "");
             let offset = log_file_name.parse::<u64>().unwrap();
             partition.segments.push(
-                Segment::load_from_disk(
+                segments::segment_file::load_from_disk(
                     id,
                     offset,
                     &partition.path,

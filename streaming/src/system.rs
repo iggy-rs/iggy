@@ -28,7 +28,6 @@ impl System {
         Ok(system)
     }
 
-    // TODO: Implement a proper server shutdown
     pub async fn shutdown(&mut self) -> Result<(), StreamError> {
         self.save_existing_messages().await?;
         Ok(())

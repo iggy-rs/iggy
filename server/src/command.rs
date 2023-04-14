@@ -1,6 +1,6 @@
 use crate::handlers::*;
 use std::net::SocketAddr;
-use streaming::stream_error::StreamError;
+use streaming::error::Error;
 use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::{error, info};
@@ -44,7 +44,7 @@ impl Command {
         system: &mut System,
     ) {
         if request.len() < LENGTH {
-            handle_error(StreamError::InvalidCommand, socket, address).await;
+            handle_error(Error::InvalidCommand, socket, address).await;
             return;
         }
 
@@ -52,7 +52,7 @@ impl Command {
         let input = &request[LENGTH..];
         let command = Command::from(received_command);
         if command.is_none() {
-            handle_error(StreamError::InvalidCommand, socket, address).await;
+            handle_error(Error::InvalidCommand, socket, address).await;
             return;
         }
 
@@ -84,7 +84,7 @@ impl Command {
         socket: &UdpSocket,
         address: SocketAddr,
         system: &mut System,
-    ) -> Result<(), StreamError> {
+    ) -> Result<(), Error> {
         info!(
             "Handling command '{:?}' from client: {:?}...",
             self, address
@@ -104,7 +104,7 @@ impl Command {
     }
 }
 
-async fn handle_error(error: StreamError, socket: &UdpSocket, address: SocketAddr) {
+async fn handle_error(error: Error, socket: &UdpSocket, address: SocketAddr) {
     error!("{}", error);
     if socket
         .send_to(&error.code().to_le_bytes(), address)

@@ -1,9 +1,7 @@
+use crate::error::Error;
 use crate::message::Message;
 use crate::segments::segment::Segment;
-use crate::segments::segment_index::save_indexes;
-use crate::segments::segment_log::save_log;
-use crate::segments::segment_timeindex::save_time_indexes;
-use crate::stream_error::StreamError;
+use crate::segments::*;
 use crate::timestamp;
 use tracing::info;
 
@@ -33,12 +31,9 @@ impl Segment {
         Some(messages)
     }
 
-    pub async fn append_messages(&mut self, mut message: Message) -> Result<(), StreamError> {
+    pub async fn append_messages(&mut self, mut message: Message) -> Result<(), Error> {
         if self.is_full() {
-            return Err(StreamError::SegmentFull(
-                self.start_offset,
-                self.partition_id,
-            ));
+            return Err(Error::SegmentFull(self.start_offset, self.partition_id));
         }
 
         info!(
@@ -65,20 +60,20 @@ impl Segment {
         );
 
         if self.unsaved_messages_count >= self.config.messages_required_to_save || self.is_full() {
-            self.save_messages_on_disk().await?;
+            self.persist_messages().await?;
         }
 
         if self.is_full() {
             self.end_offset = self.current_offset;
-            self.set_files_in_read_only_mode().await;
+            self.set_read_only_mode().await;
         }
 
         Ok(())
     }
 
-    pub async fn save_messages_on_disk(&mut self) -> Result<(), StreamError> {
+    pub async fn persist_messages(&mut self) -> Result<(), Error> {
         if self.log_file.is_none() {
-            return Err(StreamError::LogFileNotFound);
+            return Err(Error::LogFileNotFound);
         }
 
         if self.unsaved_messages_count == 0 {
@@ -101,9 +96,9 @@ impl Segment {
             &self.messages[messages_count - self.unsaved_messages_count as usize..messages_count];
         let current_bytes = self.saved_bytes;
 
-        let saved_bytes = save_log(self.log_file.as_mut().unwrap(), messages).await?;
-        save_indexes(self.index_file.as_mut().unwrap(), current_bytes, messages).await?;
-        save_time_indexes(self.timeindex_file.as_mut().unwrap(), messages).await?;
+        let saved_bytes = log::persist(self.log_file.as_mut().unwrap(), messages).await?;
+        index::persist(self.index_file.as_mut().unwrap(), current_bytes, messages).await?;
+        time_index::persist(self.time_index_file.as_mut().unwrap(), messages).await?;
 
         info!(
             "Saved {} messages on disk in segment {} for partition {}, total bytes written: {}",
@@ -113,7 +108,7 @@ impl Segment {
         self.unsaved_messages_count = 0;
         self.saved_bytes += saved_bytes;
         if self.is_full() {
-            self.set_files_in_read_only_mode().await;
+            self.set_read_only_mode().await;
         }
 
         Ok(())

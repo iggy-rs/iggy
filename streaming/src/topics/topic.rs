@@ -1,8 +1,7 @@
 use crate::config::TopicConfig;
+use crate::error::Error;
 use crate::message::Message;
-use crate::partition::Partition;
-use crate::stream_error::StreamError;
-use crate::{get_topics_path, TOPIC_INFO};
+use crate::partitions::partition::Partition;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -11,29 +10,55 @@ use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::info;
 
+const TOPIC_INFO: &str = "topic.info";
+
 #[derive(Debug)]
 pub struct Topic {
     pub id: u32,
     pub name: String,
     pub path: String,
+    info_path: String,
     config: Arc<TopicConfig>,
     partitions: HashMap<u32, Partition>,
 }
 
 impl Topic {
-    pub fn create(id: u32, name: &str, partitions_count: u32, config: Arc<TopicConfig>) -> Topic {
+    pub fn empty(id: u32, topics_path: &str, config: Arc<TopicConfig>) -> Topic {
+        let path = Topic::get_path(topics_path, id);
+        let info_path = Topic::get_info_path(&path);
+
+        Topic {
+            id,
+            info_path,
+            path,
+            name: "".to_string(),
+            partitions: HashMap::new(),
+            config,
+        }
+    }
+
+    pub fn create(
+        id: u32,
+        base_path: &str,
+        name: &str,
+        partitions_count: u32,
+        config: Arc<TopicConfig>,
+    ) -> Topic {
+        let path = Topic::get_path(base_path, id);
+        let info_path = Topic::get_info_path(&path);
+
         let mut topic = Topic {
             id,
             name: name.to_string(),
             partitions: HashMap::new(),
-            path: format!("{}/{:0>10}", get_topics_path(), id),
+            path,
+            info_path,
             config: config.clone(),
         };
 
         topic.partitions = (0..partitions_count)
             .map(|id| {
-                let path = format!("{}/{:0>10}", topic.path, id);
-                let partition = Partition::create(id, path, true, config.partition.clone());
+                let partition = Partition::create(id, &topic.path, true, config.partition.clone());
                 (id, partition)
             })
             .collect();
@@ -49,23 +74,23 @@ impl Topic {
         self.partitions.values_mut().collect()
     }
 
-    pub async fn save_existing_messages(&mut self) -> Result<(), StreamError> {
+    pub async fn persist_messages(&mut self) -> Result<(), Error> {
         for partition in self.get_partitions_mut() {
             for segment in partition.get_segments_mut() {
-                segment.save_messages_on_disk().await?;
+                segment.persist_messages().await?;
             }
         }
 
         Ok(())
     }
 
-    pub async fn save_on_disk(&mut self) -> Result<(), StreamError> {
+    pub async fn persist(&mut self) -> Result<(), Error> {
         if Path::new(&self.path).exists() {
-            return Err(StreamError::TopicAlreadyExists(self.id));
+            return Err(Error::TopicAlreadyExists(self.id));
         }
 
         if std::fs::create_dir(&self.path).is_err() {
-            return Err(StreamError::CannotCreateTopicDirectory(self.id));
+            return Err(Error::CannotCreateTopicDirectory(self.id));
         }
 
         info!("Topic with ID {} was saved, path: {}", self.id, self.path);
@@ -78,7 +103,7 @@ impl Topic {
             .await;
 
         if topic_info_file.is_err() {
-            return Err(StreamError::CannotCreateTopicInfo(self.id));
+            return Err(Error::CannotCreateTopicInfo(self.id));
         }
 
         if topic_info_file
@@ -87,7 +112,7 @@ impl Topic {
             .await
             .is_err()
         {
-            return Err(StreamError::CannotUpdateTopicInfo(self.id));
+            return Err(Error::CannotUpdateTopicInfo(self.id));
         }
 
         info!(
@@ -97,13 +122,10 @@ impl Topic {
         );
         for partition in self.partitions.iter_mut() {
             if std::fs::create_dir(&partition.1.path).is_err() {
-                return Err(StreamError::CannotCreatePartitionDirectory(
-                    *partition.0,
-                    self.id,
-                ));
+                return Err(Error::CannotCreatePartitionDirectory(*partition.0, self.id));
             }
 
-            partition.1.save_on_disk().await?;
+            partition.1.persist().await?;
             info!(
                 "Partition with ID {} for topic with ID: {} was saved, path: {}",
                 partition.0, &self.id, partition.1.path
@@ -113,10 +135,10 @@ impl Topic {
         Ok(())
     }
 
-    pub async fn delete(&self) -> Result<(), StreamError> {
+    pub async fn delete(&self) -> Result<(), Error> {
         info!("Deleting topic directory with ID: {}...", &self.id);
         if fs::remove_dir_all(&self.path).await.is_err() {
-            return Err(StreamError::CannotDeleteTopicDirectory(self.id));
+            return Err(Error::CannotDeleteTopicDirectory(self.id));
         }
 
         Ok(())
@@ -126,10 +148,10 @@ impl Topic {
         &mut self,
         partition_id: u32,
         message: Message,
-    ) -> Result<(), StreamError> {
+    ) -> Result<(), Error> {
         let partition = self.partitions.get_mut(&partition_id);
         if partition.is_none() {
-            return Err(StreamError::PartitionNotFound(partition_id));
+            return Err(Error::PartitionNotFound(partition_id));
         }
 
         let partition = partition.unwrap();
@@ -142,38 +164,35 @@ impl Topic {
         partition_id: u32,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<&Message>, StreamError> {
+    ) -> Result<Vec<&Message>, Error> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
-            return Err(StreamError::PartitionNotFound(partition_id));
+            return Err(Error::PartitionNotFound(partition_id));
         }
 
         let partition = partition.unwrap();
         let messages = partition.get_messages(offset, count);
         if messages.is_none() {
-            return Err(StreamError::MessagesNotFound);
+            return Err(Error::MessagesNotFound);
         }
 
         let messages = messages.unwrap();
         if messages.is_empty() {
-            return Err(StreamError::MessagesNotFound);
+            return Err(Error::MessagesNotFound);
         }
 
         Ok(messages)
     }
 
-    pub async fn load_from_disk(id: u32, config: Arc<TopicConfig>) -> Result<Topic, StreamError> {
-        let topic_path = format!("{}/{:0>10}", get_topics_path(), id);
-        let topic_info_path = format!("{}/{}", topic_path, TOPIC_INFO);
-
-        if !Path::new(&topic_path).exists() {
-            return Err(StreamError::TopicNotFound(id));
+    pub async fn load(&mut self) -> Result<(), Error> {
+        info!("Loading topic with ID: {} from disk...", &self.id);
+        if !Path::new(&self.path).exists() {
+            return Err(Error::TopicNotFound(self.id));
         }
 
-        let topic_info_file = OpenOptions::new().read(true).open(topic_info_path).await;
-
+        let topic_info_file = OpenOptions::new().read(true).open(&self.info_path).await;
         if topic_info_file.is_err() {
-            return Err(StreamError::CannotOpenTopicInfo(id));
+            return Err(Error::CannotOpenTopicInfo(self.id));
         }
 
         let mut topic_info = String::new();
@@ -183,15 +202,15 @@ impl Topic {
             .await
             .is_err()
         {
-            return Err(StreamError::CannotReadTopicInfo(id));
+            return Err(Error::CannotReadTopicInfo(self.id));
         }
 
-        let dir_files = fs::read_dir(&topic_path).await;
+        let dir_files = fs::read_dir(&self.path).await;
         if dir_files.is_err() {
-            return Err(StreamError::CannotReadPartitions(id));
+            return Err(Error::CannotReadPartitions(self.id));
         }
 
-        let mut topic = Topic::create(id, &topic_info, 0, config);
+        self.name = topic_info;
         let mut dir_files = dir_files.unwrap();
         loop {
             let dir_entry = dir_files.next_entry().await;
@@ -214,24 +233,28 @@ impl Topic {
                 continue;
             }
 
-            let path = dir_entry.path();
-            let path = path.to_str().unwrap();
             let id = dir_entry
                 .file_name()
                 .to_str()
                 .unwrap()
                 .parse::<u32>()
                 .unwrap();
-            let partition =
-                Partition::load_from_disk(id, path, topic.config.partition.clone()).await;
-            if partition.is_err() {
-                continue;
-            }
-
-            let partition = partition.unwrap();
-            topic.partitions.insert(partition.id, partition);
+            let mut partition =
+                Partition::create(id, &self.path, false, self.config.partition.clone());
+            partition.load().await?;
+            self.partitions.insert(partition.id, partition);
         }
 
-        Ok(topic)
+        info!("Loaded topic with ID: {} from disk.", &self.id);
+
+        Ok(())
+    }
+
+    fn get_path(topics_path: &str, id: u32) -> String {
+        format!("{}/{:0>10}", topics_path, id)
+    }
+
+    fn get_info_path(topic_path: &str) -> String {
+        format!("{}/{}", topic_path, TOPIC_INFO)
     }
 }

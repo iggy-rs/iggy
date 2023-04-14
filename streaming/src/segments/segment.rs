@@ -16,7 +16,7 @@ pub struct Segment {
     pub partition_path: String,
     pub index_path: String,
     pub log_path: String,
-    pub timeindex_path: String,
+    pub time_index_path: String,
     pub messages: Vec<Message>,
     pub unsaved_messages_count: u64,
     pub current_size_bytes: u64,
@@ -24,7 +24,7 @@ pub struct Segment {
     pub should_increment_offset: bool,
     pub log_file: Option<File>,
     pub index_file: Option<File>,
-    pub timeindex_file: Option<File>,
+    pub time_index_file: Option<File>,
     pub config: Arc<SegmentConfig>,
 }
 
@@ -39,7 +39,7 @@ impl Segment {
             "{}/{:0>20}.{}",
             partition_path, start_offset, INDEX_EXTENSION
         );
-        let timeindex_path = format!(
+        let time_index_path = format!(
             "{}/{:0>20}.{}",
             partition_path, start_offset, TIME_INDEX_EXTENSION
         );
@@ -52,7 +52,7 @@ impl Segment {
             end_offset: 0,
             partition_path: partition_path.to_string(),
             index_path,
-            timeindex_path,
+            time_index_path,
             log_path,
             messages: vec![],
             unsaved_messages_count: 0,
@@ -61,7 +61,7 @@ impl Segment {
             should_increment_offset: false,
             log_file: None,
             index_file: None,
-            timeindex_file: None,
+            time_index_file: None,
             config,
         }
     }

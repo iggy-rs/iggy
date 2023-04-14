@@ -1,7 +1,7 @@
 use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use std::net::SocketAddr;
-use streaming::stream_error::StreamError;
+use streaming::error::Error;
 use streaming::system::System;
 use tokio::net::UdpSocket;
 
@@ -13,9 +13,9 @@ pub async fn handle(
     socket: &UdpSocket,
     address: SocketAddr,
     system: &mut System,
-) -> Result<(), StreamError> {
+) -> Result<(), Error> {
     if input.len() != LENGTH {
-        return Err(StreamError::InvalidCommand);
+        return Err(Error::InvalidCommand);
     }
 
     let id = u32::from_le_bytes(input[..4].try_into().unwrap());

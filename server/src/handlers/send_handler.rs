@@ -1,8 +1,8 @@
 use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use std::net::SocketAddr;
+use streaming::error::Error;
 use streaming::message::Message;
-use streaming::stream_error::StreamError;
 use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::info;
@@ -15,9 +15,9 @@ pub async fn handle(
     socket: &UdpSocket,
     address: SocketAddr,
     system: &mut System,
-) -> Result<(), StreamError> {
+) -> Result<(), Error> {
     if input.len() < LENGTH {
-        return Err(StreamError::InvalidCommand);
+        return Err(Error::InvalidCommand);
     }
 
     let topic = u32::from_le_bytes(input[..4].try_into().unwrap());
@@ -29,7 +29,7 @@ pub async fn handle(
         topic, key_kind, key_value, payload
     );
 
-    let message = Message::new(payload.to_vec());
+    let message = Message::empty(payload.to_vec());
     system
         .stream
         .append_messages(topic, key_value, message)

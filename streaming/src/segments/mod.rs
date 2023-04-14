@@ -1,6 +1,6 @@
+pub mod index;
+pub mod log;
+pub mod messaging;
+pub mod persistence;
 pub mod segment;
-pub mod segment_file;
-pub mod segment_index;
-pub mod segment_log;
-pub mod segment_messages;
-pub mod segment_timeindex;
+pub mod time_index;

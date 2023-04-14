@@ -20,6 +20,7 @@ pub struct Server {
 }
 
 pub async fn init(config: ServerConfig) -> Result<Server, io::Error> {
+    info!("Initializing Iggy server...");
     let socket = UdpSocket::bind(config.address.clone()).await?;
     let socket = Arc::new(socket);
     let (sender, receiver) = mpsc::channel::<ServerCommand>(1024);
@@ -80,12 +81,12 @@ pub fn start_channel(
                     Command::try_handle(&bytes, &socket, address, &mut system).await;
                 }
                 ServerCommand::SaveMessages => {
-                    if system.save_existing_messages().await.is_err() {
+                    if system.persist_messages().await.is_err() {
                         error!("Couldn't save existing messages on disk.");
                     }
                 }
                 ServerCommand::Shutdown => {
-                    if system.save_existing_messages().await.is_err() {
+                    if system.persist_messages().await.is_err() {
                         error!("Couldn't save existing messages on disk.");
                         process::exit(1);
                     }

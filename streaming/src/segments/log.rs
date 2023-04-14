@@ -1,9 +1,9 @@
+use crate::error::Error;
 use crate::message::Message;
-use crate::stream_error::StreamError;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
-pub async fn save_log(file: &mut File, messages: &[Message]) -> Result<u64, StreamError> {
+pub async fn persist(file: &mut File, messages: &[Message]) -> Result<u64, Error> {
     let log_file_data = messages
         .iter()
         .map(|message| {
@@ -18,7 +18,7 @@ pub async fn save_log(file: &mut File, messages: &[Message]) -> Result<u64, Stre
 
     let saved_bytes = log_file_data.len() as u64;
     if file.write_all(&log_file_data).await.is_err() {
-        return Err(StreamError::CannotSaveMessagesToSegment);
+        return Err(Error::CannotSaveMessagesToSegment);
     }
 
     Ok(saved_bytes)

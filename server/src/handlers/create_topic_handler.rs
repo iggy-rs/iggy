@@ -2,7 +2,7 @@ use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use std::net::SocketAddr;
 use std::str::from_utf8;
-use streaming::stream_error::StreamError;
+use streaming::error::Error;
 use streaming::system::System;
 use tokio::net::UdpSocket;
 
@@ -14,20 +14,20 @@ pub async fn handle(
     socket: &UdpSocket,
     address: SocketAddr,
     system: &mut System,
-) -> Result<(), StreamError> {
+) -> Result<(), Error> {
     if input.len() < LENGTH {
-        return Err(StreamError::InvalidCommand);
+        return Err(Error::InvalidCommand);
     }
 
     let id = u32::from_le_bytes(input[..4].try_into().unwrap());
     let partitions = u32::from_le_bytes(input[4..8].try_into().unwrap());
     let name = from_utf8(&input[8..]).unwrap();
     if name.len() > 100 {
-        return Err(StreamError::InvalidTopicName);
+        return Err(Error::InvalidTopicName);
     }
 
     if !(1..=100).contains(&partitions) {
-        return Err(StreamError::InvalidTopicPartitions);
+        return Err(Error::InvalidTopicPartitions);
     }
 
     system.stream.create_topic(id, name, partitions).await?;

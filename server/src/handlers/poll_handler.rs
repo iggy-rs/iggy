@@ -1,7 +1,7 @@
 use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use std::net::SocketAddr;
-use streaming::stream_error::StreamError;
+use streaming::error::Error;
 use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::info;
@@ -56,9 +56,9 @@ pub async fn handle(
     socket: &UdpSocket,
     address: SocketAddr,
     system: &mut System,
-) -> Result<(), StreamError> {
+) -> Result<(), Error> {
     if input.len() != LENGTH {
-        return Err(StreamError::InvalidCommand);
+        return Err(Error::InvalidCommand);
     }
 
     let topic = u32::from_le_bytes(input[..4].try_into().unwrap());
@@ -67,11 +67,11 @@ pub async fn handle(
     let value = u64::from_le_bytes(input[9..17].try_into().unwrap());
     let count = u32::from_le_bytes(input[17..21].try_into().unwrap());
     if count == 0 {
-        return Err(StreamError::InvalidMessagesCount);
+        return Err(Error::InvalidMessagesCount);
     }
 
     info!(
-        "Polling from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
+        "Polling messages from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
         topic, kind, value, count
     );
 
@@ -105,6 +105,9 @@ pub async fn handle(
             address,
         )
         .await?;
-    info!("Polled {} message(s) from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}, messages: {:?}", messages_count, topic, kind, value, count, messages);
+    info!(
+        "Polled {} message(s) from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
+        messages_count, topic, kind, value, count
+    );
     Ok(())
 }

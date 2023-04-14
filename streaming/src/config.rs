@@ -3,11 +3,13 @@ use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct StreamConfig {
+    pub path: String,
     pub topic: Arc<TopicConfig>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TopicConfig {
+    pub path: String,
     pub partition: Arc<PartitionConfig>,
 }
 

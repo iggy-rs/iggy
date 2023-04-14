@@ -1,7 +1,9 @@
 {
   "address": "127.0.0.1:8080",
   "stream": {
+    "path": "local_data",
     "topic": {
+      "path": "topics",
       "partition": {
         "segment": {
           "size_bytes": 1000,

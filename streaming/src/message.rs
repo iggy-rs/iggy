@@ -7,7 +7,7 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn new(payload: Vec<u8>) -> Self {
+    pub fn empty(payload: Vec<u8>) -> Self {
         Message::create(0, 0, payload)
     }
 

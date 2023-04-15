@@ -93,7 +93,6 @@ async fn handle_response(
     let payload = &buffer[1..payload_length];
     let payload_length = payload.len();
     let messages_count = u32::from_le_bytes(payload[..4].try_into().unwrap());
-    info!("Received messages: {}", messages_count);
     let mut position = 4;
     let mut messages = Vec::new();
     while position < payload_length {
@@ -118,18 +117,19 @@ async fn handle_response(
 
     messages.sort_by(|x, y| x.offset.cmp(&y.offset));
 
+    let mut text = format!("Received {} messages:", messages_count);
     for message in messages {
-        let mut text = format!(
-            "offset: {}, timestamp: {}, length: {}, payload: ",
+        text += &format!(
+            "\noffset: {}, timestamp: {}, length: {}, payload: ",
             message.offset, message.timestamp, message.length
         );
         match format {
-            Format::Binary => text += format!("{:?}", message.payload).as_str(),
+            Format::Binary => text += &format!("{:?}", message.payload),
             Format::String => text += from_utf8(&message.payload).unwrap(),
         }
-
-        info!("{}", text);
     }
+
+    info!("{}", text);
 
     Ok(())
 }

@@ -45,7 +45,6 @@ impl Stream {
             return Err(Error::CannotDeleteTopic(id));
         }
 
-        info!("Deleted topic: {:?} with ID: {:?}", topic.name, id);
         Ok(())
     }
 }

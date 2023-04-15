@@ -1,3 +1,3 @@
-pub mod messaging;
+pub mod messages;
 pub mod partition;
 pub mod persistence;

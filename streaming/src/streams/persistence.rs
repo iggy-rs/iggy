@@ -2,6 +2,7 @@ use crate::error::Error;
 use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
 use std::path::Path;
+use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::info;
@@ -91,6 +92,16 @@ impl Stream {
             "Loaded stream: '{}' with ID: {} from disk.",
             &self.name, &self.id
         );
+
+        Ok(())
+    }
+
+    pub async fn delete(&self) -> Result<(), Error> {
+        info!("Deleting stream with ID: {}...", &self.id);
+        if fs::remove_dir_all(&self.path).await.is_err() {
+            return Err(Error::CannotDeleteStreamDirectory(self.id));
+        }
+        info!("Deleted stream with ID: {}.", &self.id);
 
         Ok(())
     }

@@ -12,6 +12,8 @@ use tokio::sync::mpsc;
 use tokio::{task, time};
 use tracing::{error, info};
 
+const NAME: &str = "Iggy";
+
 pub struct Server {
     pub system: System,
     pub socket: Arc<UdpSocket>,
@@ -20,14 +22,14 @@ pub struct Server {
 }
 
 pub async fn init(config: ServerConfig) -> Result<Server, io::Error> {
-    info!("Initializing Iggy server...");
+    info!("Initializing {} server...", NAME);
     let socket = UdpSocket::bind(config.address.clone()).await?;
     let socket = Arc::new(socket);
     let (sender, receiver) = mpsc::channel::<ServerCommand>(1024);
 
     let system = System::init(config.system).await;
     if let Err(error) = system {
-        panic!("Iggy server has finished, due to an error: {}.", error);
+        panic!("{} server has finished, due to an error: {}.", NAME, error);
     }
 
     let system = system.unwrap();
@@ -38,13 +40,13 @@ pub async fn init(config: ServerConfig) -> Result<Server, io::Error> {
         receiver,
     };
 
-    info!("Iggy server has started on: {:?}", config.address);
+    info!("{} server has started on: {:?}", NAME, config.address);
     Ok(server)
 }
 
 pub fn handle_shutdown(sender: mpsc::Sender<ServerCommand>) {
     ctrlc::set_handler(move || {
-        info!("Shutting down Iggy server...");
+        info!("Shutting down {} server...", NAME);
         let runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
         let shutdown = sender.send(ServerCommand::Shutdown);
         runtime.block_on(shutdown).unwrap();
@@ -55,10 +57,10 @@ pub fn handle_shutdown(sender: mpsc::Sender<ServerCommand>) {
 // TODO: Make this configurable.
 pub fn start_watcher(sender: mpsc::Sender<ServerCommand>) {
     task::spawn(async move {
-        let duration = Duration::from_secs(10);
+        let duration = Duration::from_secs(30);
         let mut interval = time::interval(duration);
         info!(
-            "Existing messages will be automatically saved every: {:?}.",
+            "Buffered messages will be automatically saved every: {:?}.",
             duration
         );
         interval.tick().await;
@@ -82,15 +84,15 @@ pub fn start_channel(
                 }
                 ServerCommand::SaveMessages => {
                     if system.persist_messages().await.is_err() {
-                        error!("Couldn't save existing messages on disk.");
+                        error!("Couldn't save buffered messages on disk.");
                     }
                 }
                 ServerCommand::Shutdown => {
                     if system.persist_messages().await.is_err() {
-                        error!("Couldn't save existing messages on disk.");
+                        error!("Couldn't save buffered messages on disk.");
                         process::exit(1);
                     }
-                    info!("Iggy server has shutdown successfully.");
+                    info!("{} server has shutdown successfully.", NAME);
                     process::exit(0);
                 }
             }

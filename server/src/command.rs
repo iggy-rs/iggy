@@ -1,4 +1,7 @@
-use crate::handlers::*;
+use crate::handlers::messages::*;
+use crate::handlers::streams::*;
+use crate::handlers::system::*;
+use crate::handlers::topics::*;
 use std::net::SocketAddr;
 use streaming::error::Error;
 use streaming::system::System;
@@ -31,9 +34,9 @@ pub enum Command {
     Ping,
     Poll,
     Send,
-    // GetStreams,
+    GetStreams,
     CreateStream,
-    // DeleteStream,
+    DeleteStream,
     GetTopics,
     CreateTopic,
     DeleteTopic,
@@ -74,7 +77,9 @@ impl Command {
             ping_handler::COMMAND => Some(Command::Ping),
             poll_handler::COMMAND => Some(Command::Poll),
             send_handler::COMMAND => Some(Command::Send),
+            get_streams_handler::COMMAND => Some(Command::GetStreams),
             create_stream_handler::COMMAND => Some(Command::CreateStream),
+            delete_stream_handler::COMMAND => Some(Command::DeleteStream),
             get_topics_handler::COMMAND => Some(Command::GetTopics),
             create_topic_handler::COMMAND => Some(Command::CreateTopic),
             delete_topic_handler::COMMAND => Some(Command::DeleteTopic),
@@ -97,8 +102,12 @@ impl Command {
             Command::Ping => ping_handler::handle(socket, address).await,
             Command::Poll => poll_handler::handle(input, socket, address, system).await,
             Command::Send => send_handler::handle(input, socket, address, system).await,
+            Command::GetStreams => get_streams_handler::handle(socket, address, system).await,
             Command::CreateStream => {
                 create_stream_handler::handle(input, socket, address, system).await
+            }
+            Command::DeleteStream => {
+                delete_stream_handler::handle(input, socket, address, system).await
             }
             Command::GetTopics => get_topics_handler::handle(input, socket, address, system).await,
             Command::CreateTopic => {

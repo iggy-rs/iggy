@@ -1,6 +1,7 @@
 mod command;
 mod handlers;
 mod message;
+mod stream;
 mod topic;
 
 use anyhow::Result;
@@ -9,6 +10,8 @@ use std::io;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
 use tracing::{error, info};
+
+const NAME: &str = "Iggy";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -28,12 +31,11 @@ async fn main() -> Result<(), io::Error> {
     let remote_addr = args.server.parse::<SocketAddr>().unwrap();
     let mut user_input = String::new();
     info!(
-        "Iggy client has started on: {:?}, connecting to server: {:?}...",
-        args.address, args.server
+        "{} client has started on: {:?}, server address: {:?}",
+        NAME, args.address, args.server
     );
-    socket.connect(remote_addr).await?;
-    info!("Connected to the server {:?}.", args.server);
 
+    socket.connect(remote_addr).await?;
     let stdin = io::stdin();
     let mut buffer = [0; 1024];
 

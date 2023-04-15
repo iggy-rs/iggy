@@ -56,6 +56,10 @@ impl System {
         Ok(())
     }
 
+    pub fn get_streams(&self) -> Vec<&Stream> {
+        self.streams.values().collect()
+    }
+
     pub fn get_stream(&self, id: u32) -> Result<&Stream, Error> {
         let stream = self.streams.get(&id);
         if stream.is_none() {
@@ -81,13 +85,20 @@ impl System {
         Ok(())
     }
 
+    pub async fn delete_stream(&mut self, id: u32) -> Result<(), Error> {
+        let stream = self.get_stream_mut(id)?;
+        stream.delete().await?;
+        self.streams.remove(&id);
+        Ok(())
+    }
+
     pub async fn shutdown(&mut self) -> Result<(), Error> {
         self.persist_messages().await?;
         Ok(())
     }
 
     pub async fn persist_messages(&mut self) -> Result<(), Error> {
-        info!("Saving existing messages on disk...");
+        info!("Saving buffered messages on disk...");
         for stream in self.streams.values_mut() {
             stream.persist_messages().await?;
         }

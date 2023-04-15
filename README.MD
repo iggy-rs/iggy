@@ -28,37 +28,45 @@ Start the client
 
 Create a stream `dev` with ID 1
 
-`create_stream|1|dev`
+`stream.create|1|dev`
+
+List available streams
+
+`stream.list`
 
 Create a topic `dummy` with ID 1 and 2 partitions (IDs 0 and 1) for stream `dev` (ID 1)
 
-`create_topic|1|1|2|dummy`
-
-Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 0
-
-`send|1|1|0|0|hello world`
-
-Send another message
-
-`send|1|1|0|0|lorem ipsum`
+`topic.create|1|1|2|dummy`
 
 List available topics for stream `dev` (ID 1)
 
-`get_topics|1`
+`topic.list|1`
 
-Poll 2 messages from the topic `dummy` (ID 1) and partition 0 starting with offset 0 using string format `s`
+Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 0
 
-`poll|1|1|0|0|0|2|s`
+`message.send|1|1|0|0|hello world`
+
+Send another message
+
+`message.send|1|1|0|0|lorem ipsum`
+
+Poll 2 messages from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition 0 starting with offset 0 using string format `s`
+
+`message.poll|1|1|0|0|0|2|s`
 
 Finally, restart the server to see it is able to load the persisted data.
 
 **See the images below**
 
-Server
+Files structure
+
+![files structure](assets/files_structure.png)
+
+Server start
 
 ![server start](assets/server_start.png)
 
-Client
+Client start
 
 ![client start](assets/client_start.png)
 

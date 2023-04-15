@@ -79,7 +79,7 @@ impl Segment {
         if self.unsaved_messages_count == 0 {
             if !self.is_full() {
                 info!(
-                    "No existing messages to save on disk in segment {} for partition {}",
+                    "No buffered messages to save on disk in segment {} for partition {}",
                     self.start_offset, self.partition_id
                 );
             }

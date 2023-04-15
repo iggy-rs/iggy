@@ -2,6 +2,12 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct SystemConfig {
+    pub path: String,
+    pub stream: Arc<StreamConfig>,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct StreamConfig {
     pub path: String,
     pub topic: Arc<TopicConfig>,

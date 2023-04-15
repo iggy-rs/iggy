@@ -6,7 +6,7 @@ use tokio::net::UdpSocket;
 use tracing::info;
 
 const COMMAND: &[u8] = &[2];
-const PARTS: usize = 5;
+const PARTS: usize = 6;
 
 enum Format {
     Binary,
@@ -21,37 +21,43 @@ pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024])
         ));
     }
 
-    let topic = input[0].parse::<u32>();
+    let stream = input[0].parse::<u32>();
+    if let Err(error) = stream {
+        return Err(io::Error::new(io::ErrorKind::Other, error));
+    }
+
+    let topic = input[1].parse::<u32>();
     if let Err(error) = topic {
         return Err(io::Error::new(io::ErrorKind::Other, error));
     }
 
-    let partition_id = input[1].parse::<u32>();
+    let partition_id = input[2].parse::<u32>();
     if let Err(error) = partition_id {
         return Err(io::Error::new(io::ErrorKind::Other, error));
     }
 
-    let kind = input[2].parse::<u8>();
+    let kind = input[3].parse::<u8>();
     if let Err(error) = kind {
         return Err(io::Error::new(io::ErrorKind::Other, error));
     }
 
-    let value = input[3].parse::<u64>();
+    let value = input[4].parse::<u64>();
     if let Err(error) = value {
         return Err(io::Error::new(io::ErrorKind::Other, error));
     }
 
-    let count = input[4].parse::<u32>();
+    let count = input[5].parse::<u32>();
     if let Err(error) = count {
         return Err(io::Error::new(io::ErrorKind::Other, error));
     }
 
+    let stream = &stream.unwrap().to_le_bytes();
     let topic = &topic.unwrap().to_le_bytes();
     let partition_id = &partition_id.unwrap().to_le_bytes();
     let kind = &kind.unwrap().to_le_bytes();
     let value = &value.unwrap().to_le_bytes();
     let count = &count.unwrap().to_le_bytes();
-    let format = match input.get(5) {
+    let format = match input.get(6) {
         Some(format) => match *format {
             "b" => Format::Binary,
             "s" => Format::String,
@@ -62,7 +68,7 @@ pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024])
 
     socket
         .send(
-            [COMMAND, topic, partition_id, kind, value, count]
+            [COMMAND, stream, topic, partition_id, kind, value, count]
                 .concat()
                 .as_slice(),
         )

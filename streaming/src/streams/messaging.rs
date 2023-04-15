@@ -4,13 +4,13 @@ use crate::streams::stream::Stream;
 
 impl Stream {
     pub fn get_messages(
-        &mut self,
+        &self,
         topic_id: u32,
         partition_id: u32,
         offset: u64,
         count: u32,
     ) -> Result<Vec<&Message>, Error> {
-        let topic = self.topics.get_mut(&topic_id);
+        let topic = self.topics.get(&topic_id);
         if topic.is_none() {
             return Err(Error::TopicNotFound(topic_id));
         }

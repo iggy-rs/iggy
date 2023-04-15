@@ -26,25 +26,29 @@ Start the client
 
 `cargo run --bin client`
 
-Create a topic `dummy` with ID 1 and 2 partitions (IDs 0 and 1)
+Create a stream `dev` with ID 1
 
-`create_topic|1|2|dummy`
+`create_stream|1|dev`
 
-Send a message to the topic `dummy` (ID 1) and partition 0
+Create a topic `dummy` with ID 1 and 2 partitions (IDs 0 and 1) for stream `dev` (ID 1)
 
-`send|1|0|0|hello world`
+`create_topic|1|1|2|dummy`
+
+Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 0
+
+`send|1|1|0|0|hello world`
 
 Send another message
 
-`send|1|0|0|lorem ipsum`
+`send|1|1|0|0|lorem ipsum`
 
-List available topics
+List available topics for stream `dev` (ID 1)
 
-`get_topics`
+`get_topics|1`
 
-Poll 2 messages from the topic `dummy` (ID 1) and partition 0 starting with offset 0
+Poll 2 messages from the topic `dummy` (ID 1) and partition 0 starting with offset 0 using string format `s`
 
-`poll|1|0|0|0|2`
+`poll|1|1|0|0|0|2|s`
 
 Finally, restart the server to see it is able to load the persisted data.
 
@@ -108,6 +112,7 @@ Server restart
 - [x] Implement basic structures such as `stream`, `topic`, `partition`, `segment` etc.
 - [x] Encapsulate the logic of reading and writing to the stream
 - [x] Persist the stream structure to the disk & load it on startup
+- [x] Implement `Streams` consisting of multiple `Topics`
 - [x] Implement `Topic` consisting of multiple `Partitions`
 - [x] Implement `Partition` consisting of multiple `Segments`
 - [x] Store `Topic → Partition → Segment` structures on the disk in separate directories

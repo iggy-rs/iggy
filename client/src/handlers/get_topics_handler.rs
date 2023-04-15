@@ -5,10 +5,24 @@ use std::str::from_utf8;
 use tokio::net::UdpSocket;
 use tracing::info;
 
-const COMMAND: &[u8] = &[10];
+const COMMAND: &[u8] = &[20];
+const PARTS: usize = 1;
 
-pub async fn handle(socket: &UdpSocket, buffer: &mut [u8; 1024]) -> io::Result<()> {
-    socket.send(COMMAND).await?;
+pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024]) -> io::Result<()> {
+    if input.len() != PARTS {
+        return Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("Invalid get topics command, expected {} parts.", PARTS),
+        ));
+    }
+
+    let stream = input[0].parse::<u32>();
+    if let Err(error) = stream {
+        return Err(io::Error::new(io::ErrorKind::Other, error));
+    }
+
+    let stream = &stream.unwrap().to_le_bytes();
+    socket.send([COMMAND, stream].concat().as_slice()).await?;
     let payload_length = socket.recv(buffer).await?;
     handle_status(buffer)?;
 

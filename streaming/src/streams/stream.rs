@@ -3,25 +3,37 @@ use crate::topics::topic::Topic;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+const STREAM_INFO: &str = "stream.info";
+
 #[derive(Debug)]
 pub struct Stream {
     pub id: u32,
     pub name: String,
     pub topics: HashMap<u32, Topic>,
-    pub(crate) config: Arc<StreamConfig>,
+    pub(crate) path: String,
     pub(crate) topics_path: String,
+    pub(crate) config: Arc<StreamConfig>,
+    pub(crate) info_path: String,
 }
 
-//TODO: Allow multiple streams to be created e.g. dev, test, prod etc.
 impl Stream {
-    pub fn create(config: StreamConfig) -> Self {
-        let topics_path = format!("{}/{}", &config.path, &config.topic.path);
+    pub fn empty(id: u32, streams_path: &str, config: Arc<StreamConfig>) -> Self {
+        Stream::create(id, "", streams_path, config)
+    }
+
+    pub fn create(id: u32, name: &str, streams_path: &str, config: Arc<StreamConfig>) -> Self {
+        let path = format!("{}/{}", streams_path, id);
+        let info_path = format!("{}/{}", path, STREAM_INFO);
+        let topics_path = format!("{}/{}", path, &config.topic.path);
+
         Stream {
-            id: 1,
-            name: "default".to_string(),
-            config: Arc::new(config),
-            topics: HashMap::new(),
+            id,
+            name: name.to_string(),
+            path,
             topics_path,
+            info_path,
+            config,
+            topics: HashMap::new(),
         }
     }
 }

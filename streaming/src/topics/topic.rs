@@ -24,28 +24,18 @@ pub struct Topic {
 
 impl Topic {
     pub fn empty(id: u32, topics_path: &str, config: Arc<TopicConfig>) -> Topic {
-        let path = Topic::get_path(topics_path, id);
-        let info_path = Topic::get_info_path(&path);
-
-        Topic {
-            id,
-            info_path,
-            path,
-            name: "".to_string(),
-            partitions: HashMap::new(),
-            config,
-        }
+        Topic::create(id, topics_path, "", 0, config)
     }
 
     pub fn create(
         id: u32,
-        base_path: &str,
+        topics_path: &str,
         name: &str,
         partitions_count: u32,
         config: Arc<TopicConfig>,
     ) -> Topic {
-        let path = Topic::get_path(base_path, id);
-        let info_path = Topic::get_info_path(&path);
+        let path = format!("{}/{}", topics_path, id);
+        let info_path = format!("{}/{}", path, TOPIC_INFO);
 
         let mut topic = Topic {
             id,
@@ -95,11 +85,10 @@ impl Topic {
 
         info!("Topic with ID {} was saved, path: {}", self.id, self.path);
 
-        let topic_info_path = &format!("{}/{}", &self.path, TOPIC_INFO);
         let topic_info_file = OpenOptions::new()
             .write(true)
             .create(true)
-            .open(topic_info_path)
+            .open(&self.info_path)
             .await;
 
         if topic_info_file.is_err() {
@@ -205,12 +194,12 @@ impl Topic {
             return Err(Error::CannotReadTopicInfo(self.id));
         }
 
+        self.name = topic_info;
         let dir_files = fs::read_dir(&self.path).await;
         if dir_files.is_err() {
             return Err(Error::CannotReadPartitions(self.id));
         }
 
-        self.name = topic_info;
         let mut dir_files = dir_files.unwrap();
         loop {
             let dir_entry = dir_files.next_entry().await;
@@ -245,16 +234,11 @@ impl Topic {
             self.partitions.insert(partition.id, partition);
         }
 
-        info!("Loaded topic with ID: {} from disk.", &self.id);
+        info!(
+            "Loaded topic: '{}' with ID: {} from disk.",
+            &self.name, &self.id
+        );
 
         Ok(())
-    }
-
-    fn get_path(topics_path: &str, id: u32) -> String {
-        format!("{}/{:0>10}", topics_path, id)
-    }
-
-    fn get_info_path(topic_path: &str) -> String {
-        format!("{}/{}", topic_path, TOPIC_INFO)
     }
 }

@@ -17,7 +17,7 @@ impl Partition {
         with_segment: bool,
         config: Arc<PartitionConfig>,
     ) -> Partition {
-        let path = format!("{}/{:0>10}", topic_path, id);
+        let path = format!("{}/{}", topic_path, id);
         let mut partition = Partition {
             id,
             path,

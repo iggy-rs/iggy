@@ -6,8 +6,8 @@ use streaming::error::Error;
 use streaming::system::System;
 use tokio::net::UdpSocket;
 
-pub const COMMAND: &[u8] = &[11];
-const LENGTH: usize = 5;
+pub const COMMAND: &[u8] = &[21];
+const LENGTH: usize = 13;
 
 pub async fn handle(
     input: &[u8],
@@ -19,9 +19,10 @@ pub async fn handle(
         return Err(Error::InvalidCommand);
     }
 
-    let id = u32::from_le_bytes(input[..4].try_into().unwrap());
-    let partitions = u32::from_le_bytes(input[4..8].try_into().unwrap());
-    let name = from_utf8(&input[8..]).unwrap();
+    let stream = u32::from_le_bytes(input[..4].try_into().unwrap());
+    let topic = u32::from_le_bytes(input[4..8].try_into().unwrap());
+    let partitions = u32::from_le_bytes(input[8..12].try_into().unwrap());
+    let name = from_utf8(&input[12..]).unwrap();
     if name.len() > 100 {
         return Err(Error::InvalidTopicName);
     }
@@ -30,7 +31,10 @@ pub async fn handle(
         return Err(Error::InvalidTopicPartitions);
     }
 
-    system.stream.create_topic(id, name, partitions).await?;
+    system
+        .get_stream_mut(stream)?
+        .create_topic(topic, name, partitions)
+        .await?;
     socket.send_to(STATUS_OK, address).await?;
     Ok(())
 }

@@ -9,7 +9,6 @@ pub async fn handle(input: &str, socket: &UdpSocket, buffer: &mut [u8; 1024]) ->
     info!("Handling '{:#}' command...", command);
     match command {
         "ping" => handlers::ping_handler::handle(socket, buffer).await,
-        "get_topics" => handlers::get_topics_handler::handle(socket, buffer).await,
         _ => {
             if parts.len() < 2 {
                 return Err(io::Error::new(
@@ -20,6 +19,10 @@ pub async fn handle(input: &str, socket: &UdpSocket, buffer: &mut [u8; 1024]) ->
 
             let input = &parts[1..];
             match command {
+                "create_stream" => {
+                    handlers::create_stream_handler::handle(input, socket, buffer).await
+                }
+                "get_topics" => handlers::get_topics_handler::handle(input, socket, buffer).await,
                 "create_topic" => {
                     handlers::create_topic_handler::handle(input, socket, buffer).await
                 }

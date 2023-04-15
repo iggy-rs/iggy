@@ -9,11 +9,14 @@ use tracing::info;
 pub const COMMAND: &[u8] = &[2];
 
 /*
-    |  POLL   |   TOPIC   |    KIND   |   VALUE   |   COUNT   |
-    | 1 byte  |  4 bytes  |   1 byte  |  8 bytes  |  4 bytes  |
+    |  POLL   |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |
+    | 1 byte  |  4 bytes  |  4 bytes  |   4 bytes |   1 byte  |  8 bytes  |  4 bytes  |
 
     POLL
         - Constant 1 byte of value 2
+
+    STREAM:
+        - Unique Stream ID to poll the messages from.
 
     TOPIC:
         - Unique Topic ID to poll the messages from.
@@ -33,23 +36,23 @@ pub const COMMAND: &[u8] = &[2];
     COUNT:
         - Number of messages to poll in a single chunk.
 
-    Poll the message(s) from topic: 1, using kind: first, value is ignored, messages count is 1.
-    |    2    |     1     |     0     |     0     |     1     |
+    Poll the message(s) from stream: 1, topic: 1, partition: 1, using kind: first, value is ignored, messages count is 1.
+    |    2    |     1     |     1     |     1     |     0     |     0     |     1     |
 
-    Poll the message(s) from topic: 1, using kind: last, value is ignored, messages count is 1.
-    |    2    |     1     |     1     |     0     |     1     |
+    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: last, value is ignored, messages count is 1.
+    |    2    |     1     |     1     |     1     |     1     |     0     |     1     |
 
-    Poll the message(s) from topic: 1, using kind: next, value is ignored, messages count is 1.
-    |    2    |     1     |     2     |     0     |     1     |
+    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: next, value is ignored, messages count is 1.
+    |    2    |     1     |     1     |     1     |     2     |     0     |     1     |
 
-    Poll the message(s) from topic: 1, using kind: offset, value is 1, messages count is 1.
-    |    2    |     1     |     3     |     1     |     1     |
+    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: offset, value is 1, messages count is 1.
+    |    2    |     1     |     1     |     1     |     3     |     1     |     1     |
 
-    Poll the message(s) from topic: 1, using kind: timestamp, value is 1679997285, messages count is 1.
-    |    2    |     1     |     4     |1679997285 |     1     |
+    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: timestamp, value is 1679997285, messages count is 1.
+    |    2    |     1     |     1     |     1     |     4     |1679997285 |     1     |
 */
 
-const LENGTH: usize = 21;
+const LENGTH: usize = 25;
 
 pub async fn handle(
     input: &[u8],
@@ -61,22 +64,23 @@ pub async fn handle(
         return Err(Error::InvalidCommand);
     }
 
-    let topic = u32::from_le_bytes(input[..4].try_into().unwrap());
-    let partition_id = u32::from_le_bytes(input[4..8].try_into().unwrap());
-    let kind = input[8];
-    let value = u64::from_le_bytes(input[9..17].try_into().unwrap());
-    let count = u32::from_le_bytes(input[17..21].try_into().unwrap());
+    let stream = u32::from_le_bytes(input[..4].try_into().unwrap());
+    let topic = u32::from_le_bytes(input[4..8].try_into().unwrap());
+    let partition_id = u32::from_le_bytes(input[8..12].try_into().unwrap());
+    let kind = input[12];
+    let value = u64::from_le_bytes(input[13..21].try_into().unwrap());
+    let count = u32::from_le_bytes(input[21..25].try_into().unwrap());
     if count == 0 {
         return Err(Error::InvalidMessagesCount);
     }
 
     info!(
-        "Polling messages from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
-        topic, kind, value, count
+        "Polling messages from stream: {:?}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
+        stream, topic, kind, value, count
     );
 
     let messages = system
-        .stream
+        .get_stream(stream)?
         .get_messages(topic, partition_id, value, count)?;
     let messages_count = messages.len() as u32;
     let data = messages

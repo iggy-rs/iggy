@@ -3,13 +3,13 @@ use figment::{
     Error, Figment,
 };
 use serde::{Deserialize, Serialize};
-use streaming::config::StreamConfig;
+use streaming::config::SystemConfig;
 use tracing::info;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerConfig {
     pub address: String,
-    pub stream: StreamConfig,
+    pub system: SystemConfig,
 }
 
 pub fn load(path: &str) -> ServerConfig {

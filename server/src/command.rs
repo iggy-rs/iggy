@@ -14,11 +14,11 @@ const LENGTH: usize = 1;
 1. PING: | COMMAND |
          | 1 byte  |
 
-2. POLL: | COMMAND |   TOPIC   |    KIND   |   VALUE   |   COUNT   |
-         | 1 byte  |  4 bytes  |   1 byte  |  8 bytes  |  4 bytes  |
+2. POLL: | COMMAND |   STREAM  |   TOPIC   |    KIND   |   VALUE   |   COUNT   |
+         | 1 byte  |  4 bytes  |  4 bytes  |   1 byte  |  8 bytes  |  4 bytes  |
 
-3. SEND: | COMMAND |   TOPIC   |    KIND   |    KEY    |  PAYLOAD  |
-         | 1 byte  |  4 bytes  |   1 byte  |  8 bytes  |  n bytes  |
+3. SEND: | COMMAND |   STREAM  |    TOPIC   |    KIND   |    KEY    |  PAYLOAD  |
+         | 1 byte  |  4 bytes  |   4 bytes  |   1 byte  |  8 bytes  |  n bytes  |
 */
 
 /*
@@ -31,6 +31,9 @@ pub enum Command {
     Ping,
     Poll,
     Send,
+    // GetStreams,
+    CreateStream,
+    // DeleteStream,
     GetTopics,
     CreateTopic,
     DeleteTopic,
@@ -71,6 +74,7 @@ impl Command {
             ping_handler::COMMAND => Some(Command::Ping),
             poll_handler::COMMAND => Some(Command::Poll),
             send_handler::COMMAND => Some(Command::Send),
+            create_stream_handler::COMMAND => Some(Command::CreateStream),
             get_topics_handler::COMMAND => Some(Command::GetTopics),
             create_topic_handler::COMMAND => Some(Command::CreateTopic),
             delete_topic_handler::COMMAND => Some(Command::DeleteTopic),
@@ -93,7 +97,10 @@ impl Command {
             Command::Ping => ping_handler::handle(socket, address).await,
             Command::Poll => poll_handler::handle(input, socket, address, system).await,
             Command::Send => send_handler::handle(input, socket, address, system).await,
-            Command::GetTopics => get_topics_handler::handle(socket, address, system).await,
+            Command::CreateStream => {
+                create_stream_handler::handle(input, socket, address, system).await
+            }
+            Command::GetTopics => get_topics_handler::handle(input, socket, address, system).await,
             Command::CreateTopic => {
                 create_topic_handler::handle(input, socket, address, system).await
             }

@@ -25,7 +25,7 @@ pub async fn init(config: ServerConfig) -> Result<Server, io::Error> {
     let socket = Arc::new(socket);
     let (sender, receiver) = mpsc::channel::<ServerCommand>(1024);
 
-    let system = System::init(config.stream).await;
+    let system = System::init(config.system).await;
     if let Err(error) = system {
         panic!("Iggy server has finished, due to an error: {}.", error);
     }

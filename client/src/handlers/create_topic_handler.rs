@@ -3,8 +3,8 @@ use std::io;
 use std::str::from_utf8;
 use tokio::net::UdpSocket;
 
-const COMMAND: &[u8] = &[11];
-const PARTS: usize = 3;
+const COMMAND: &[u8] = &[21];
+const PARTS: usize = 4;
 
 pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024]) -> io::Result<()> {
     if input.len() != PARTS {
@@ -14,12 +14,17 @@ pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024])
         ));
     }
 
-    let id = input[0].parse::<u32>();
-    if let Err(error) = id {
+    let stream = input[0].parse::<u32>();
+    if let Err(error) = stream {
         return Err(io::Error::new(io::ErrorKind::Other, error));
     }
 
-    let partitions_count = input[1].parse::<u32>();
+    let topic = input[1].parse::<u32>();
+    if let Err(error) = topic {
+        return Err(io::Error::new(io::ErrorKind::Other, error));
+    }
+
+    let partitions_count = input[2].parse::<u32>();
     if let Err(error) = partitions_count {
         return Err(io::Error::new(io::ErrorKind::Other, error));
     }
@@ -35,7 +40,7 @@ pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024])
         ));
     }
 
-    let name = from_utf8(input[2].as_bytes()).unwrap();
+    let name = from_utf8(input[3].as_bytes()).unwrap();
     if name.len() > 100 {
         return Err(io::Error::new(
             io::ErrorKind::Other,
@@ -46,12 +51,17 @@ pub async fn handle(input: &[&str], socket: &UdpSocket, buffer: &mut [u8; 1024])
         ));
     }
 
-    let id = &id.unwrap().to_le_bytes();
+    let stream = &stream.unwrap().to_le_bytes();
+    let topic = &topic.unwrap().to_le_bytes();
     let partitions_count = &partitions_count.to_le_bytes();
     let name = name.as_bytes();
 
     socket
-        .send([COMMAND, id, partitions_count, name].concat().as_slice())
+        .send(
+            [COMMAND, stream, topic, partitions_count, name]
+                .concat()
+                .as_slice(),
+        )
         .await?;
     handle_response(socket, buffer).await?;
     Ok(())

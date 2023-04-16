@@ -1,5 +1,10 @@
 {
+  "name": "Iggy",
   "address": "127.0.0.1:8080",
+  "watcher": {
+    "enabled": true,
+    "interval": 30
+  },
   "system": {
     "path": "local_data",
     "stream": {

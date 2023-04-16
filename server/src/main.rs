@@ -1,10 +1,13 @@
 mod args;
 mod command;
+mod components;
 mod handlers;
 mod server;
 mod server_command;
 mod server_config;
 
+use crate::server::*;
+use crate::server_config::ServerConfig;
 use anyhow::Result;
 use clap::Parser;
 use tokio::io;
@@ -14,13 +17,9 @@ async fn main() -> Result<(), io::Error> {
     let args = args::Args::parse();
     tracing_subscriber::fmt::init();
 
-    let config = server_config::load(&args.config);
-    let server = server::init(config).await?;
-
-    server::handle_shutdown(server.sender.clone());
-    server::start_watcher(server.sender.clone());
-    server::start_channel(server.system, server.receiver, server.socket.clone());
-    server::start_listener(server.socket, server.sender).await?;
+    let config = ServerConfig::load(&args.config);
+    let server = ServerSystem::init(config).await?;
+    server.start().await?;
 
     Ok(())
 }

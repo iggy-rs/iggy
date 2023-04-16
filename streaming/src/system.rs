@@ -3,16 +3,17 @@ use crate::error::Error;
 use crate::streams::stream::Stream;
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::Arc;
 use tracing::info;
 
 pub struct System {
     pub streams: HashMap<u32, Stream>,
-    pub(crate) config: SystemConfig,
+    pub(crate) config: Arc<SystemConfig>,
     streams_path: String,
 }
 
 impl System {
-    pub async fn init(config: SystemConfig) -> Result<System, Error> {
+    pub async fn init(config: Arc<SystemConfig>) -> Result<System, Error> {
         let base_path = &config.path;
         if !Path::new(base_path).exists() && std::fs::create_dir(base_path).is_err() {
             return Err(Error::CannotCreateBaseDirectory);

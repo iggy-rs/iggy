@@ -4,7 +4,7 @@
 
 ---
 
-Iggy is the streaming platform written in Rust, using UDP as a transport protocol with a custom binary specification. Currently, running as a single server, it allows creating topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
+Iggy is the streaming platform written in Rust, using UDP as a transport protocol with a custom binary specification. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
 
 The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to handle millions of messages per second, and will be able to scale horizontally.
 
@@ -105,14 +105,13 @@ Server restart
 - [x] Communicate with the server using established binary protocol
 - [x] Allow to send commands to the server via simple CLI
 - [x] Parse input from the CLI & handle the received response
-- [ ] Refactor input parsing logic to the dedicated SDK project
 - [ ] Keep the history of the commands in the CLI
 - [ ] Create a simple terminal UI for the client
 
 #### SDK
 
-- [ ] Implement the basic SDK for the client
-- [ ] Make use of the SDK in client project
+- [X] Implement the basic SDK for the client
+- [X] Make use of the SDK in client project
 - [ ] Implement another SDK in C# for dotnet clients
 
 #### Streaming

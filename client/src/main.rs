@@ -1,17 +1,13 @@
+mod client_error;
 mod command;
 mod handlers;
-mod message;
-mod stream;
-mod topic;
 
+use crate::client_error::ClientError;
 use anyhow::Result;
 use clap::Parser;
+use sdk::client::Client;
 use std::io;
-use std::net::SocketAddr;
-use tokio::net::UdpSocket;
 use tracing::{error, info};
-
-const NAME: &str = "Iggy";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -24,23 +20,19 @@ struct Args {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), io::Error> {
+async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
-    let socket = UdpSocket::bind(args.address.parse::<SocketAddr>().unwrap()).await?;
-    let remote_addr = args.server.parse::<SocketAddr>().unwrap();
-    let mut user_input = String::new();
-    info!(
-        "{} client has started on: {:?}, server address: {:?}",
-        NAME, args.address, args.server
-    );
 
-    socket.connect(remote_addr).await?;
+    let mut client = Client::new(&args.address, &args.server).await?;
+    client.connect().await?;
+
     let stdin = io::stdin();
-    let mut buffer = [0; 1024];
+    let mut user_input = String::new();
 
     loop {
         info!("Enter command to send to the server: ");
+        user_input.clear();
         stdin.read_line(&mut user_input)?;
         if user_input.contains('\n') {
             user_input.pop();
@@ -49,10 +41,7 @@ async fn main() -> Result<(), io::Error> {
             user_input.pop();
         }
 
-        socket.writable().await?;
-        let response = command::handle(&user_input, &socket, &mut buffer).await;
-        user_input.clear();
-        if let Err(error) = response {
+        if let Err(error) = command::handle(&user_input, &mut client).await {
             error!("Error: {:?}", error);
             continue;
         }

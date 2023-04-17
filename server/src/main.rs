@@ -5,19 +5,20 @@ mod handlers;
 mod server;
 mod server_command;
 mod server_config;
+mod server_error;
 
 use crate::server::*;
 use crate::server_config::ServerConfig;
+use crate::server_error::ServerError;
 use anyhow::Result;
 use clap::Parser;
-use tokio::io;
 
 #[tokio::main]
-async fn main() -> Result<(), io::Error> {
+async fn main() -> Result<(), ServerError> {
     let args = args::Args::parse();
     tracing_subscriber::fmt::init();
 
-    let config = ServerConfig::load(&args.config);
+    let config = ServerConfig::load(&args.config)?;
     let server = ServerSystem::init(config).await?;
     server.start().await?;
 

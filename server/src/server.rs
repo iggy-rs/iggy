@@ -1,7 +1,7 @@
 use crate::server_command::ServerCommand;
 use crate::server_config::ServerConfig;
+use crate::server_error::ServerError;
 use anyhow::Result;
-use std::io;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::net::UdpSocket;
@@ -25,21 +25,13 @@ pub struct SystemReceiver {
 }
 
 impl ServerSystem {
-    pub async fn init(config: ServerConfig) -> Result<ServerSystem, io::Error> {
+    pub async fn init(config: ServerConfig) -> Result<ServerSystem, ServerError> {
         info!("Initializing {} server...", config.name);
         let socket = UdpSocket::bind(config.address.clone()).await?;
         let socket = Arc::new(socket);
         let (sender, receiver) = mpsc::channel::<ServerCommand>(1024);
 
-        let system = System::init(config.system.clone()).await;
-        if let Err(error) = system {
-            panic!(
-                "{} server has finished, due to an error: {}.",
-                config.name, error
-            );
-        }
-
-        let system = system.unwrap();
+        let system = System::init(config.system.clone()).await?;
         let server = Server {
             socket,
             sender,
@@ -53,7 +45,7 @@ impl ServerSystem {
         })
     }
 
-    pub async fn start(self) -> Result<(), io::Error> {
+    pub async fn start(self) -> Result<(), ServerError> {
         info!(
             "{} server has started on: {:?}",
             self.server.config.name, self.server.config.address

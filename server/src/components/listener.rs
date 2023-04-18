@@ -11,10 +11,13 @@ impl Server {
             let (length, address) = self.socket.recv_from(&mut buffer).await?;
             buffer.truncate(length);
             info!("{:?} bytes received from {:?}", length, address);
-            self.sender
+            if let Err(error) = self
+                .sender
                 .send(ServerCommand::HandleRequest(buffer.freeze(), address))
                 .await
-                .unwrap();
+            {
+                info!("Error when handling the request: {:?}", error);
+            }
         }
     }
 }

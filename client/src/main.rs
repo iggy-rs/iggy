@@ -1,6 +1,7 @@
 mod client_error;
 mod command;
 mod handlers;
+mod test_mode;
 
 use crate::client_error::ClientError;
 use anyhow::Result;
@@ -17,6 +18,9 @@ struct Args {
 
     #[arg(short, long, default_value = "127.0.0.1:8080")]
     server: String,
+
+    #[arg(short, long)]
+    test: bool,
 }
 
 #[tokio::main]
@@ -26,6 +30,11 @@ async fn main() -> Result<(), ClientError> {
 
     let mut client = Client::new(&args.address, &args.server).await?;
     client.connect().await?;
+
+    if args.test {
+        test_mode::run_test(&mut client).await?;
+        return Ok(());
+    }
 
     let stdin = io::stdin();
     let mut user_input = String::new();

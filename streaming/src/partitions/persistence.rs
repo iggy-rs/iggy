@@ -1,6 +1,6 @@
-use crate::error::Error;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::{Segment, LOG_EXTENSION};
+use shared::error::Error;
 use tokio::fs;
 use tracing::info;
 

@@ -1,11 +1,9 @@
 use crate::handlers::STATUS_OK;
 use anyhow::Result;
+use shared::error::Error;
 use std::net::SocketAddr;
-use streaming::error::Error;
 use streaming::system::System;
 use tokio::net::UdpSocket;
-
-pub const COMMAND: &[u8] = &[10];
 
 pub async fn handle(
     socket: &UdpSocket,

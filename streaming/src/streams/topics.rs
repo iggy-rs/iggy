@@ -1,6 +1,6 @@
-use crate::error::Error;
 use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
+use shared::error::Error;
 use tracing::info;
 
 impl Stream {
@@ -8,20 +8,20 @@ impl Stream {
         &mut self,
         id: u32,
         name: &str,
-        partitions: u32,
+        partitions_count: u32,
     ) -> Result<(), Error> {
         let mut topic = Topic::create(
             id,
             &self.topics_path,
             name,
-            partitions,
+            partitions_count,
             self.config.topic.clone(),
         );
         topic.persist().await?;
         self.topics.insert(id, topic);
         info!(
             "Created topic: {:?} with ID: {:?}, partitions: {:?}",
-            name, id, partitions
+            name, id, partitions_count
         );
         Ok(())
     }

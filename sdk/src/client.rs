@@ -14,8 +14,8 @@ pub struct Client {
 
 impl Client {
     pub async fn new(address: &str, server: &str) -> Result<Self, Error> {
-        let address = address.parse::<SocketAddr>().unwrap();
-        let server = server.parse::<SocketAddr>().unwrap();
+        let address = address.parse::<SocketAddr>()?;
+        let server = server.parse::<SocketAddr>()?;
         let socket = UdpSocket::bind(address).await?;
         let buffer = [0; 1024];
         Ok(Self {
@@ -36,23 +36,12 @@ impl Client {
         Ok(())
     }
 
-    pub(crate) async fn send(&mut self, buffer: &[u8]) -> Result<(), Error> {
-        self.socket.send(buffer).await?;
-        self.handle_response().await?;
-        Ok(())
-    }
-
     pub(crate) async fn send_with_response(&mut self, buffer: &[u8]) -> Result<&[u8], Error> {
         self.socket.send(buffer).await?;
-        self.handle_response_with_payload().await
+        self.handle_response().await
     }
 
-    async fn handle_response(&mut self) -> Result<(), Error> {
-        self.handle_response_with_payload().await?;
-        Ok(())
-    }
-
-    async fn handle_response_with_payload(&mut self) -> Result<&[u8], Error> {
+    async fn handle_response(&mut self) -> Result<&[u8], Error> {
         let length = self.socket.recv(&mut self.buffer).await?;
         if self.buffer.is_empty() {
             return Err(Error::EmptyResponse);

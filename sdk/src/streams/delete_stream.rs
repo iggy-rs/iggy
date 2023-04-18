@@ -1,11 +1,17 @@
 use crate::client::Client;
 use crate::error::Error;
-
-const COMMAND: &[u8] = &[12];
+use shared::bytes_serializable::BytesSerializable;
+use shared::command::Command;
+use shared::streams::delete_stream::DeleteStream;
 
 impl Client {
-    pub async fn delete_stream(&mut self, stream_id: u32) -> Result<(), Error> {
-        let stream_id = &stream_id.to_le_bytes();
-        self.send([COMMAND, stream_id].concat().as_slice()).await
+    pub async fn delete_stream(&mut self, command: &DeleteStream) -> Result<(), Error> {
+        self.send_with_response(
+            [Command::DeleteStream.as_bytes(), command.as_bytes()]
+                .concat()
+                .as_slice(),
+        )
+        .await?;
+        Ok(())
     }
 }

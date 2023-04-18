@@ -1,6 +1,6 @@
-use crate::error::Error;
 use crate::partitions::partition::Partition;
 use crate::topics::topic::Topic;
+use shared::error::Error;
 use std::path::Path;
 use tokio::fs;
 use tokio::fs::OpenOptions;
@@ -49,11 +49,7 @@ impl Topic {
 
             let dir_entry = dir_entry.unwrap();
             let metadata = dir_entry.metadata().await;
-            if metadata.is_err() {
-                continue;
-            }
-
-            if metadata.unwrap().is_file() {
+            if metadata.is_err() || metadata.unwrap().is_file() {
                 continue;
             }
 

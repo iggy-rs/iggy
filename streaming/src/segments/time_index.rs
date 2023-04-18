@@ -1,5 +1,5 @@
-use crate::error::Error;
 use crate::message::Message;
+use shared::error::Error;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 

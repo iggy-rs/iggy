@@ -1,5 +1,4 @@
 pub mod config;
-pub mod error;
 pub mod message;
 pub mod partitions;
 pub mod segments;

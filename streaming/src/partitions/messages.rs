@@ -1,7 +1,7 @@
-use crate::error::Error;
 use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::Segment;
+use shared::error::Error;
 use tracing::info;
 
 impl Partition {

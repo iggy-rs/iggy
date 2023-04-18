@@ -1,4 +1,4 @@
-use crate::command::Command;
+use crate::command;
 use crate::server::{Server, SystemReceiver};
 use crate::server_command::ServerCommand;
 use std::process;
@@ -12,8 +12,12 @@ impl Server {
             while let Some(server_command) = system_receiver.receiver.recv().await {
                 match server_command {
                     ServerCommand::HandleRequest(bytes, address) => {
-                        Command::try_handle(&bytes, &socket, address, &mut system_receiver.system)
-                            .await;
+                        if let Err(error) =
+                            command::handle(&bytes, &socket, address, &mut system_receiver.system)
+                                .await
+                        {
+                            command::handle_error(error, &socket, address).await;
+                        }
                     }
                     ServerCommand::SaveMessages => {
                         if system_receiver.system.persist_messages().await.is_err() {

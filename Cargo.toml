@@ -1,8 +1,9 @@
 [workspace]
 
 members = [
-    "streaming",
+    "client",
     "sdk",
     "server",
-    "client"
+    "shared",
+    "streaming"
 ]

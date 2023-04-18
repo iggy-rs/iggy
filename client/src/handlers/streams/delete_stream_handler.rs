@@ -1,14 +1,8 @@
 use crate::client_error::ClientError;
 use sdk::client::Client;
+use shared::streams::delete_stream::DeleteStream;
 
-const PARTS: usize = 1;
-
-pub async fn handle(client: &mut Client, input: &[&str]) -> Result<(), ClientError> {
-    if input.len() != PARTS {
-        return Err(ClientError::InvalidCommandParts);
-    }
-
-    let stream_id = input[0].parse::<u32>()?;
-    client.delete_stream(stream_id).await?;
+pub async fn handle(command: DeleteStream, client: &mut Client) -> Result<(), ClientError> {
+    client.delete_stream(&command).await?;
     Ok(())
 }

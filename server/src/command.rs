@@ -2,13 +2,20 @@ use crate::handlers::messages::*;
 use crate::handlers::streams::*;
 use crate::handlers::system::*;
 use crate::handlers::topics::*;
+use shared::bytes_serializable::BytesSerializable;
+use shared::command::Command;
+use shared::error::Error;
+use shared::messages::poll_messages::PollMessages;
+use shared::messages::send_message::SendMessage;
+use shared::streams::create_stream::CreateStream;
+use shared::streams::delete_stream::DeleteStream;
+use shared::topics::create_topic::CreateTopic;
+use shared::topics::delete_topic::DeleteTopic;
+use shared::topics::get_topics::GetTopics;
 use std::net::SocketAddr;
-use streaming::error::Error;
 use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::{error, info};
-
-const LENGTH: usize = 1;
 
 /*
   FRAME: | COMMAND |   DATA    |
@@ -29,98 +36,69 @@ const LENGTH: usize = 1;
             |   1 byte  |  n bytes  |
 */
 
-#[derive(Debug, PartialEq)]
-pub enum Command {
-    Ping,
-    Poll,
-    Send,
-    GetStreams,
-    CreateStream,
-    DeleteStream,
-    GetTopics,
-    CreateTopic,
-    DeleteTopic,
+const LENGTH: usize = 1;
+
+pub async fn handle(
+    request: &[u8],
+    socket: &UdpSocket,
+    address: SocketAddr,
+    system: &mut System,
+) -> Result<(), Error> {
+    if request.len() < LENGTH {
+        return Err(Error::InvalidCommand);
+    }
+
+    let command = Command::from_bytes(&request[..LENGTH])?;
+    let bytes = &request[LENGTH..];
+    try_handle(command, bytes, socket, address, system).await
 }
 
-impl Command {
-    pub async fn try_handle(
-        request: &[u8],
-        socket: &UdpSocket,
-        address: SocketAddr,
-        system: &mut System,
-    ) {
-        if request.len() < LENGTH {
-            handle_error(Error::InvalidCommand, socket, address).await;
-            return;
+async fn try_handle(
+    command: Command,
+    bytes: &[u8],
+    socket: &UdpSocket,
+    address: SocketAddr,
+    system: &mut System,
+) -> Result<(), Error> {
+    info!(
+        "Handling command '{:?}' from client: {:?}...",
+        command, address
+    );
+    match command {
+        Command::Ping => ping_handler::handle(socket, address).await,
+        Command::SendMessage => {
+            let command = SendMessage::from_bytes(bytes)?;
+            send_message_handler::handle(command, socket, address, system).await
         }
-
-        let received_command = &request[..LENGTH];
-        let input = &request[LENGTH..];
-        let command = Command::from(received_command);
-        if command.is_none() {
-            handle_error(Error::InvalidCommand, socket, address).await;
-            return;
+        Command::PollMessages => {
+            let command = PollMessages::from_bytes(bytes)?;
+            poll_messages_handler::handle(command, socket, address, system).await
         }
-
-        let result = command
-            .unwrap()
-            .handle(input, socket, address, system)
-            .await;
-
-        if result.is_err() {
-            handle_error(result.err().unwrap(), socket, address).await;
+        Command::GetStreams => get_streams_handler::handle(socket, address, system).await,
+        Command::CreateStream => {
+            let command = CreateStream::from_bytes(bytes)?;
+            create_stream_handler::handle(command, socket, address, system).await
         }
-    }
-
-    fn from(command: &[u8]) -> Option<Command> {
-        match command {
-            ping_handler::COMMAND => Some(Command::Ping),
-            poll_handler::COMMAND => Some(Command::Poll),
-            send_handler::COMMAND => Some(Command::Send),
-            get_streams_handler::COMMAND => Some(Command::GetStreams),
-            create_stream_handler::COMMAND => Some(Command::CreateStream),
-            delete_stream_handler::COMMAND => Some(Command::DeleteStream),
-            get_topics_handler::COMMAND => Some(Command::GetTopics),
-            create_topic_handler::COMMAND => Some(Command::CreateTopic),
-            delete_topic_handler::COMMAND => Some(Command::DeleteTopic),
-            _ => None,
+        Command::DeleteStream => {
+            let command = DeleteStream::from_bytes(bytes)?;
+            delete_stream_handler::handle(command, socket, address, system).await
         }
-    }
-
-    async fn handle(
-        &self,
-        input: &[u8],
-        socket: &UdpSocket,
-        address: SocketAddr,
-        system: &mut System,
-    ) -> Result<(), Error> {
-        info!(
-            "Handling command '{:?}' from client: {:?}...",
-            self, address
-        );
-        match self {
-            Command::Ping => ping_handler::handle(socket, address).await,
-            Command::Poll => poll_handler::handle(input, socket, address, system).await,
-            Command::Send => send_handler::handle(input, socket, address, system).await,
-            Command::GetStreams => get_streams_handler::handle(socket, address, system).await,
-            Command::CreateStream => {
-                create_stream_handler::handle(input, socket, address, system).await
-            }
-            Command::DeleteStream => {
-                delete_stream_handler::handle(input, socket, address, system).await
-            }
-            Command::GetTopics => get_topics_handler::handle(input, socket, address, system).await,
-            Command::CreateTopic => {
-                create_topic_handler::handle(input, socket, address, system).await
-            }
-            Command::DeleteTopic => {
-                delete_topic_handler::handle(input, socket, address, system).await
-            }
+        Command::GetTopics => {
+            let command = GetTopics::from_bytes(bytes)?;
+            get_topics_handler::handle(command, socket, address, system).await
+        }
+        Command::CreateTopic => {
+            let command = CreateTopic::from_bytes(bytes)?;
+            create_topic_handler::handle(command, socket, address, system).await
+        }
+        Command::DeleteTopic => {
+            let command = DeleteTopic::from_bytes(bytes)?;
+            delete_topic_handler::handle(command, socket, address, system).await
         }
     }
 }
 
-async fn handle_error(error: Error, socket: &UdpSocket, address: SocketAddr) {
+pub async fn handle_error(error: Error, socket: &UdpSocket, address: SocketAddr) {
     error!("{}", error);
     if socket
         .send_to(&error.code().to_le_bytes(), address)

@@ -1,6 +1,6 @@
-use crate::error::Error;
 use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
+use shared::error::Error;
 use std::path::Path;
 use tokio::fs;
 use tokio::fs::OpenOptions;

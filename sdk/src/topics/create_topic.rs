@@ -1,34 +1,17 @@
 use crate::client::Client;
 use crate::error::Error;
-
-const COMMAND: &[u8] = &[21];
+use shared::bytes_serializable::BytesSerializable;
+use shared::command::Command;
+use shared::topics::create_topic::CreateTopic;
 
 impl Client {
-    pub async fn create_topic(
-        &mut self,
-        stream_id: u32,
-        topic_id: u32,
-        partitions_count: u32,
-        name: &str,
-    ) -> Result<(), Error> {
-        if partitions_count > 100 {
-            return Err(Error::TooManyPartitions);
-        }
-
-        if name.len() > 100 {
-            return Err(Error::InvalidTopicName);
-        }
-
-        let stream_id = &stream_id.to_le_bytes();
-        let topic_id = &topic_id.to_le_bytes();
-        let partitions_count = &partitions_count.to_le_bytes();
-        let name = name.as_bytes();
-
-        self.send(
-            [COMMAND, stream_id, topic_id, partitions_count, name]
+    pub async fn create_topic(&mut self, command: &CreateTopic) -> Result<(), Error> {
+        self.send_with_response(
+            [Command::CreateTopic.as_bytes(), command.as_bytes()]
                 .concat()
                 .as_slice(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 }

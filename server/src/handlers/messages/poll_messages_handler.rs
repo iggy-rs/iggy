@@ -1,12 +1,11 @@
 use crate::handlers::STATUS_OK;
 use anyhow::Result;
+use shared::error::Error;
+use shared::messages::poll_messages::PollMessages;
 use std::net::SocketAddr;
-use streaming::error::Error;
 use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::info;
-
-pub const COMMAND: &[u8] = &[2];
 
 /*
     |  POLL   |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |
@@ -52,36 +51,27 @@ pub const COMMAND: &[u8] = &[2];
     |    2    |     1     |     1     |     1     |     4     |1679997285 |     1     |
 */
 
-const LENGTH: usize = 25;
-
 pub async fn handle(
-    input: &[u8],
+    command: PollMessages,
     socket: &UdpSocket,
     address: SocketAddr,
     system: &mut System,
 ) -> Result<(), Error> {
-    if input.len() != LENGTH {
-        return Err(Error::InvalidCommand);
-    }
-
-    let stream = u32::from_le_bytes(input[..4].try_into().unwrap());
-    let topic = u32::from_le_bytes(input[4..8].try_into().unwrap());
-    let partition_id = u32::from_le_bytes(input[8..12].try_into().unwrap());
-    let kind = input[12];
-    let value = u64::from_le_bytes(input[13..21].try_into().unwrap());
-    let count = u32::from_le_bytes(input[21..25].try_into().unwrap());
-    if count == 0 {
+    if command.count == 0 {
         return Err(Error::InvalidMessagesCount);
     }
 
     info!(
         "Polling messages from stream: {:?}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
-        stream, topic, kind, value, count
+        command.stream_id, command.topic_id, command.kind, command.value, command.count
     );
 
-    let messages = system
-        .get_stream(stream)?
-        .get_messages(topic, partition_id, value, count)?;
+    let messages = system.get_stream(command.stream_id)?.get_messages(
+        command.topic_id,
+        command.partition_id,
+        command.value,
+        command.count,
+    )?;
     let messages_count = messages.len() as u32;
     let data = messages
         .iter()
@@ -110,8 +100,13 @@ pub async fn handle(
         )
         .await?;
     info!(
-        "Polled {} message(s) from stream, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
-        messages_count, topic, kind, value, count
+        "Polled {} message(s) from stream: {}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
+        messages_count,
+        command.stream_id,
+        command.topic_id,
+        command.kind,
+        command.value,
+        command.count
     );
     Ok(())
 }

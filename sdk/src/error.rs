@@ -1,3 +1,6 @@
+use std::array::TryFromSliceError;
+use std::net::AddrParseError;
+use std::str::Utf8Error;
 use thiserror::Error;
 use tokio::io;
 
@@ -9,12 +12,10 @@ pub enum Error {
     EmptyResponse,
     #[error("Invalid response: {0}")]
     InvalidResponse(u8),
-    #[error("Invalid stream name")]
-    InvalidStreamName,
-    #[error("Invalid topic name")]
-    InvalidTopicName,
-    #[error("Too many partitions")]
-    TooManyPartitions,
-    #[error("Too big payload")]
-    TooBigPayload,
+    #[error("Cannot parse integer")]
+    CannotParseSlice(#[from] TryFromSliceError),
+    #[error("Cannot parse UTF8")]
+    CannotParseUtf8(#[from] Utf8Error),
+    #[error("Cannot parse address")]
+    CannotParseAddress(#[from] AddrParseError),
 }

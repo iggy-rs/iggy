@@ -1,6 +1,6 @@
-use crate::error::Error;
 use crate::message::Message;
 use crate::segments::segment::Segment;
+use shared::error::Error;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::info;

@@ -1,8 +1,8 @@
-use crate::error::Error;
 use crate::message::Message;
 use crate::segments::segment::Segment;
 use crate::segments::*;
 use crate::timestamp;
+use shared::error::Error;
 use tracing::info;
 
 impl Segment {

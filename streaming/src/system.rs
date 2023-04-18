@@ -1,6 +1,6 @@
 use crate::config::SystemConfig;
-use crate::error::Error;
 use crate::streams::stream::Stream;
+use shared::error::Error;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -83,6 +83,7 @@ impl System {
         let stream = Stream::create(id, name, &self.streams_path, self.config.stream.clone());
         stream.persist().await?;
         self.streams.insert(stream.id, stream);
+        info!("Created stream with ID: {}, name: '{}'.", id, name);
         Ok(())
     }
 

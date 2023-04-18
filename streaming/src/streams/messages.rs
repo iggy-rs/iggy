@@ -1,6 +1,6 @@
-use crate::error::Error;
 use crate::message::Message;
 use crate::streams::stream::Stream;
+use shared::error::Error;
 
 impl Stream {
     pub fn get_messages(

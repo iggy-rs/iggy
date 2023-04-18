@@ -13,8 +13,8 @@
         "path": "topics",
         "partition": {
           "segment": {
-            "size_bytes": 1000,
-            "messages_required_to_save": 4,
+            "size_bytes": 1000000,
+            "messages_required_to_save": 10,
             "messages_buffer": 10
           }
         }

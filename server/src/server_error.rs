@@ -8,5 +8,5 @@ pub enum ServerError {
     #[error("Cannot load configuration")]
     CannotLoadConfiguration,
     #[error("System error")]
-    SystemError(#[from] streaming::error::Error),
+    SystemError(#[from] shared::error::Error),
 }

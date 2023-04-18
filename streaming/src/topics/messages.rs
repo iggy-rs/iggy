@@ -1,6 +1,6 @@
-use crate::error::Error;
 use crate::message::Message;
 use crate::topics::topic::Topic;
+use shared::error::Error;
 
 impl Topic {
     pub fn get_messages(

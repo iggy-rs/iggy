@@ -32,11 +32,10 @@ impl BytesSerializable for CreateStream {
     type Type = CreateStream;
 
     fn as_bytes(&self) -> Vec<u8> {
-        let stream_id = &self.stream_id.to_le_bytes();
-        let name = self.name.as_bytes();
-
-        let bytes: Vec<&[u8]> = vec![stream_id, name];
-        bytes.concat()
+        let mut bytes = Vec::with_capacity(4 + self.name.len());
+        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
+        bytes.extend_from_slice(self.name.as_bytes());
+        bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {

@@ -28,11 +28,10 @@ impl BytesSerializable for DeleteTopic {
     type Type = DeleteTopic;
 
     fn as_bytes(&self) -> Vec<u8> {
-        let stream_id = &self.stream_id.to_le_bytes();
-        let topic_id = &self.topic_id.to_le_bytes();
-
-        let bytes: Vec<&[u8]> = vec![stream_id, topic_id];
-        bytes.concat()
+        let mut bytes = Vec::with_capacity(8);
+        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
+        bytes.extend_from_slice(&self.topic_id.to_le_bytes());
+        bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {

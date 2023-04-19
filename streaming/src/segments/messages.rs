@@ -22,6 +22,7 @@ impl Segment {
             .messages
             .iter()
             .filter(|message| message.offset >= offset && message.offset <= end_offset)
+            .take(count as usize)
             .collect::<Vec<&Message>>();
 
         if messages.is_empty() {

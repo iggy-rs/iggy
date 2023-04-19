@@ -46,13 +46,12 @@ impl BytesSerializable for CreateTopic {
     type Type = CreateTopic;
 
     fn as_bytes(&self) -> Vec<u8> {
-        let stream_id = &self.stream_id.to_le_bytes();
-        let topic_id = &self.topic_id.to_le_bytes();
-        let partitions_count = &self.partitions_count.to_le_bytes();
-        let name = &self.name.as_bytes();
-
-        let bytes: Vec<&[u8]> = vec![stream_id, topic_id, partitions_count, name];
-        bytes.concat()
+        let mut bytes = Vec::with_capacity(12 + self.name.len());
+        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
+        bytes.extend_from_slice(&self.topic_id.to_le_bytes());
+        bytes.extend_from_slice(&self.partitions_count.to_le_bytes());
+        bytes.extend_from_slice(self.name.as_bytes());
+        bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {

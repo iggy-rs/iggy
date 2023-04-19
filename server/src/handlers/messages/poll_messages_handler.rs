@@ -7,6 +7,8 @@ use streaming::system::System;
 use tokio::net::UdpSocket;
 use tracing::info;
 
+const MAX_BUFFER_SIZE: u64 = 1024;
+
 /*
     |  POLL   |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |
     | 1 byte  |  4 bytes  |  4 bytes  |   4 bytes |   1 byte  |  8 bytes  |  4 bytes  |
@@ -62,8 +64,8 @@ pub async fn handle(
     }
 
     info!(
-        "Polling messages from stream: {:?}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
-        command.stream_id, command.topic_id, command.kind, command.value, command.count
+        "Polling {} messages from stream: {:?}, topic: {:?}, kind: {:?}, value: {:?}...",
+        command.count, command.stream_id, command.topic_id, command.kind, command.value,
     );
 
     let messages = system.get_stream(command.stream_id)?.get_messages(
@@ -72,17 +74,27 @@ pub async fn handle(
         command.value,
         command.count,
     )?;
-    let messages_count = messages.len() as u32;
+
+    let mut total_size = 0;
+    let mut messages_count: u32 = 0;
     let data = messages
         .iter()
-        .map(|message| {
-            [
-                message.offset.to_le_bytes().as_slice(),
-                message.timestamp.to_le_bytes().as_slice(),
-                message.length.to_le_bytes().as_slice(),
-                message.payload.as_slice(),
-            ]
-            .concat()
+        .map_while(|message| {
+            total_size += message.get_size_bytes();
+            if total_size > MAX_BUFFER_SIZE {
+                return None;
+            }
+
+            messages_count += 1;
+            Some(
+                [
+                    message.offset.to_le_bytes().as_slice(),
+                    message.timestamp.to_le_bytes().as_slice(),
+                    message.length.to_le_bytes().as_slice(),
+                    message.payload.as_slice(),
+                ]
+                .concat(),
+            )
         })
         .collect::<Vec<Vec<u8>>>()
         .concat();

@@ -57,15 +57,14 @@ impl BytesSerializable for PollMessages {
     type Type = PollMessages;
 
     fn as_bytes(&self) -> Vec<u8> {
-        let stream_id = &self.stream_id.to_le_bytes();
-        let topic_id = &self.topic_id.to_le_bytes();
-        let partition_id = &self.partition_id.to_le_bytes();
-        let kind = &self.kind.to_le_bytes();
-        let value = &self.value.to_le_bytes();
-        let count = &self.count.to_le_bytes();
-
-        let bytes: Vec<&[u8]> = vec![stream_id, topic_id, partition_id, kind, value, count];
-        bytes.concat()
+        let mut bytes = Vec::with_capacity(25);
+        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
+        bytes.extend_from_slice(&self.topic_id.to_le_bytes());
+        bytes.extend_from_slice(&self.partition_id.to_le_bytes());
+        bytes.extend_from_slice(&self.kind.to_le_bytes());
+        bytes.extend_from_slice(&self.value.to_le_bytes());
+        bytes.extend_from_slice(&self.count.to_le_bytes());
+        bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {

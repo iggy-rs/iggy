@@ -23,7 +23,9 @@ impl BytesSerializable for DeleteStream {
     type Type = DeleteStream;
 
     fn as_bytes(&self) -> Vec<u8> {
-        self.stream_id.to_le_bytes().to_vec()
+        let mut bytes = Vec::with_capacity(4);
+        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
+        bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {

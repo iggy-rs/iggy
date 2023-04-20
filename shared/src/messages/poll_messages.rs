@@ -1,5 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct PollMessages {
@@ -19,20 +20,21 @@ pub enum Format {
     String,
 }
 
-impl TryFrom<&[&str]> for PollMessages {
-    type Error = Error;
-    fn try_from(input: &[&str]) -> Result<Self, Self::Error> {
-        if input.len() < 6 {
+impl FromStr for PollMessages {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let parts = input.split('|').collect::<Vec<&str>>();
+        if parts.len() < 6 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = input[0].parse::<u32>()?;
-        let topic_id = input[1].parse::<u32>()?;
-        let partition_id = input[2].parse::<u32>()?;
-        let kind = input[3].parse::<u8>()?;
-        let value = input[4].parse::<u64>()?;
-        let count = input[5].parse::<u32>()?;
-        let format = match input.get(6) {
+        let stream_id = parts[0].parse::<u32>()?;
+        let topic_id = parts[1].parse::<u32>()?;
+        let partition_id = parts[2].parse::<u32>()?;
+        let kind = parts[3].parse::<u8>()?;
+        let value = parts[4].parse::<u64>()?;
+        let count = parts[5].parse::<u32>()?;
+        let format = match parts.get(6) {
             Some(format) => match *format {
                 "b" => Format::Binary,
                 "s" => Format::String,

@@ -1,7 +1,6 @@
 use crate::config::SegmentConfig;
 use crate::message::Message;
 use std::sync::Arc;
-use tokio::fs::File;
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
@@ -22,9 +21,6 @@ pub struct Segment {
     pub current_size_bytes: u64,
     pub saved_bytes: u64,
     pub should_increment_offset: bool,
-    pub log_file: Option<File>,
-    pub index_file: Option<File>,
-    pub time_index_file: Option<File>,
     pub config: Arc<SegmentConfig>,
 }
 
@@ -59,9 +55,6 @@ impl Segment {
             current_size_bytes: 0,
             saved_bytes: 0,
             should_increment_offset: false,
-            log_file: None,
-            index_file: None,
-            time_index_file: None,
             config,
         }
     }

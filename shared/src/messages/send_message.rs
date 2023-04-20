@@ -1,5 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
+use std::str::FromStr;
 
 pub const MAX_PAYLOAD_SIZE: usize = 1000;
 
@@ -12,18 +13,19 @@ pub struct SendMessage {
     pub payload: Vec<u8>,
 }
 
-impl TryFrom<&[&str]> for SendMessage {
-    type Error = Error;
-    fn try_from(input: &[&str]) -> Result<Self, Self::Error> {
-        if input.len() != 5 {
+impl FromStr for SendMessage {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let parts = input.split('|').collect::<Vec<&str>>();
+        if parts.len() != 5 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = input[0].parse::<u32>()?;
-        let topic_id = input[1].parse::<u32>()?;
-        let key_kind = input[2].parse::<u8>()?;
-        let key_value = input[3].parse::<u32>()?;
-        let payload = input[4].as_bytes().to_vec();
+        let stream_id = parts[0].parse::<u32>()?;
+        let topic_id = parts[1].parse::<u32>()?;
+        let key_kind = parts[2].parse::<u8>()?;
+        let key_value = parts[3].parse::<u32>()?;
+        let payload = parts[4].as_bytes().to_vec();
 
         if payload.len() > MAX_PAYLOAD_SIZE {
             return Err(Error::TooBigPayload);

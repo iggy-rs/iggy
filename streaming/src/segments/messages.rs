@@ -66,17 +66,12 @@ impl Segment {
 
         if self.is_full() {
             self.end_offset = self.current_offset;
-            self.set_read_only_mode().await;
         }
 
         Ok(())
     }
 
     pub async fn persist_messages(&mut self) -> Result<(), Error> {
-        if self.log_file.is_none() {
-            return Err(Error::LogFileNotFound);
-        }
-
         if self.unsaved_messages_count == 0 {
             if !self.is_full() {
                 info!(
@@ -97,9 +92,12 @@ impl Segment {
             &self.messages[messages_count - self.unsaved_messages_count as usize..messages_count];
         let current_bytes = self.saved_bytes;
 
-        let saved_bytes = log::persist(self.log_file.as_mut().unwrap(), messages).await?;
-        index::persist(self.index_file.as_mut().unwrap(), current_bytes, messages).await?;
-        time_index::persist(self.time_index_file.as_mut().unwrap(), messages).await?;
+        let mut log_file = Segment::open_file(&self.log_path, true).await;
+        let mut index_file = Segment::open_file(&self.index_path, true).await;
+        let mut time_index_file = Segment::open_file(&self.time_index_path, true).await;
+        let saved_bytes = log::persist(&mut log_file, messages).await?;
+        index::persist(&mut index_file, current_bytes, messages).await?;
+        time_index::persist(&mut time_index_file, messages).await?;
 
         info!(
             "Saved {} messages on disk in segment {} for partition {}, total bytes written: {}",
@@ -108,9 +106,6 @@ impl Segment {
 
         self.unsaved_messages_count = 0;
         self.saved_bytes += saved_bytes;
-        if self.is_full() {
-            self.set_read_only_mode().await;
-        }
 
         Ok(())
     }

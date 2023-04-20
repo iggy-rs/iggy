@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
-use std::str::from_utf8;
+use std::str::{from_utf8, FromStr};
 
 pub const MAX_NAME_LENGTH: usize = 100;
 pub const MAX_PARTITIONS_COUNT: u32 = 100000;
@@ -13,17 +13,18 @@ pub struct CreateTopic {
     pub name: String,
 }
 
-impl TryFrom<&[&str]> for CreateTopic {
-    type Error = Error;
-    fn try_from(input: &[&str]) -> Result<Self, Self::Error> {
-        if input.len() != 4 {
+impl FromStr for CreateTopic {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let parts = input.split('|').collect::<Vec<&str>>();
+        if parts.len() != 4 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = input[0].parse::<u32>()?;
-        let topic_id = input[1].parse::<u32>()?;
-        let partitions_count = input[2].parse::<u32>()?;
-        let name = input[3].to_string();
+        let stream_id = parts[0].parse::<u32>()?;
+        let topic_id = parts[1].parse::<u32>()?;
+        let partitions_count = parts[2].parse::<u32>()?;
+        let name = parts[3].to_string();
 
         if !(1..=MAX_PARTITIONS_COUNT).contains(&partitions_count) {
             return Err(Error::InvalidTopicPartitions);

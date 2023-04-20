@@ -1,5 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
+use std::str::FromStr;
 
 #[derive(Debug)]
 pub struct DeleteTopic {
@@ -7,15 +8,16 @@ pub struct DeleteTopic {
     pub topic_id: u32,
 }
 
-impl TryFrom<&[&str]> for DeleteTopic {
-    type Error = Error;
-    fn try_from(input: &[&str]) -> Result<Self, Self::Error> {
-        if input.len() != 2 {
+impl FromStr for DeleteTopic {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let parts = input.split('|').collect::<Vec<&str>>();
+        if parts.len() != 2 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = input[0].parse::<u32>()?;
-        let topic_id = input[1].parse::<u32>()?;
+        let stream_id = parts[0].parse::<u32>()?;
+        let topic_id = parts[1].parse::<u32>()?;
 
         Ok(DeleteTopic {
             stream_id,

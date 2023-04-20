@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
-use std::str::from_utf8;
+use std::str::{from_utf8, FromStr};
 
 pub const MAX_NAME_LENGTH: usize = 100;
 
@@ -10,15 +10,16 @@ pub struct CreateStream {
     pub name: String,
 }
 
-impl TryFrom<&[&str]> for CreateStream {
-    type Error = Error;
-    fn try_from(input: &[&str]) -> Result<Self, Self::Error> {
-        if input.len() != 2 {
+impl FromStr for CreateStream {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let parts = input.split('|').collect::<Vec<&str>>();
+        if parts.len() != 2 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = input[0].parse::<u32>()?;
-        let name = input[1].to_string();
+        let stream_id = parts[0].parse::<u32>()?;
+        let name = parts[1].to_string();
 
         if name.len() > MAX_NAME_LENGTH {
             return Err(Error::InvalidStreamName);

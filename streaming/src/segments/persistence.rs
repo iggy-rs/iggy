@@ -71,11 +71,6 @@ impl Segment {
         self.should_increment_offset = self.current_offset > 0;
         self.current_size_bytes = log_file.metadata().await.unwrap().len();
         self.saved_bytes = self.current_size_bytes;
-        if self.is_full() {
-            self.set_read_only_mode().await;
-        } else {
-            self.set_append_mode().await;
-        }
 
         info!(
             "Loaded {} bytes from segment log file with start offset {} and partition ID: {}.",
@@ -117,23 +112,7 @@ impl Segment {
             self.start_offset, self.partition_id, self.log_path
         );
 
-        self.set_append_mode().await;
-
         Ok(())
-    }
-
-    pub async fn set_append_mode(&mut self) {
-        self.set_files_in_mode(true).await;
-    }
-
-    pub async fn set_read_only_mode(&mut self) {
-        self.set_files_in_mode(false).await;
-    }
-
-    async fn set_files_in_mode(&mut self, append: bool) {
-        self.log_file = Some(Segment::open_file(&self.log_path, append).await);
-        self.index_file = Some(Segment::open_file(&self.index_path, append).await);
-        self.time_index_file = Some(Segment::open_file(&self.time_index_path, append).await);
     }
 
     pub async fn open_file(path: &str, append: bool) -> File {

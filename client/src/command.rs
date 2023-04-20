@@ -16,52 +16,39 @@ use std::str::FromStr;
 use tracing::info;
 
 pub async fn handle(input: &str, client: &mut Client) -> Result<(), ClientError> {
-    let parts = input.split('|').collect::<Vec<&str>>();
-    let command = Command::from_str(parts[0]);
-    if command.is_err() {
-        return Err(ClientError::InvalidCommand);
-    }
-
-    let command = command.unwrap();
+    let (command, input) = input.split_once('|').unwrap_or((input, ""));
+    let command = Command::from_str(command).map_err(|_| ClientError::InvalidCommand)?;
     info!("Handling '{:?}' command...", command);
-    if parts.len() == 1 {
-        match command {
-            Command::Ping => ping_handler::handle(client).await,
-            Command::GetStreams => get_streams_handler::handle(client).await,
-            _ => Err(ClientError::InvalidCommand),
+    match command {
+        Command::Ping => ping_handler::handle(client).await,
+        Command::GetStreams => get_streams_handler::handle(client).await,
+        Command::SendMessage => {
+            let command = SendMessage::from_str(input)?;
+            send_message_handler::handle(command, client).await
         }
-    } else {
-        let input = &parts[1..];
-        match command {
-            Command::SendMessage => {
-                let command = SendMessage::try_from(input)?;
-                send_message_handler::handle(command, client).await
-            }
-            Command::PollMessages => {
-                let command = PollMessages::try_from(input)?;
-                poll_messages_handler::handle(command, client).await
-            }
-            Command::CreateStream => {
-                let command = CreateStream::try_from(input)?;
-                create_stream_handler::handle(command, client).await
-            }
-            Command::DeleteStream => {
-                let command = DeleteStream::try_from(input)?;
-                delete_stream_handler::handle(command, client).await
-            }
-            Command::GetTopics => {
-                let command = GetTopics::try_from(input)?;
-                get_topics_handler::handle(command, client).await
-            }
-            Command::CreateTopic => {
-                let command = CreateTopic::try_from(input)?;
-                create_topic_handler::handle(command, client).await
-            }
-            Command::DeleteTopic => {
-                let command = DeleteTopic::try_from(input)?;
-                delete_topic_handler::handle(command, client).await
-            }
-            _ => Err(ClientError::InvalidCommand),
+        Command::PollMessages => {
+            let command = PollMessages::from_str(input)?;
+            poll_messages_handler::handle(command, client).await
+        }
+        Command::CreateStream => {
+            let command = CreateStream::from_str(input)?;
+            create_stream_handler::handle(command, client).await
+        }
+        Command::DeleteStream => {
+            let command = DeleteStream::from_str(input)?;
+            delete_stream_handler::handle(command, client).await
+        }
+        Command::GetTopics => {
+            let command = GetTopics::from_str(input)?;
+            get_topics_handler::handle(command, client).await
+        }
+        Command::CreateTopic => {
+            let command = CreateTopic::from_str(input)?;
+            create_topic_handler::handle(command, client).await
+        }
+        Command::DeleteTopic => {
+            let command = DeleteTopic::from_str(input)?;
+            delete_topic_handler::handle(command, client).await
         }
     }
 }

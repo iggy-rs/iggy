@@ -2,7 +2,7 @@ use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::Segment;
 use shared::error::Error;
-use tracing::info;
+use tracing::trace;
 
 impl Partition {
     pub fn get_messages(&self, offset: u64, count: u32) -> Option<Vec<&Message>> {
@@ -53,7 +53,7 @@ impl Partition {
 
         let segment = segment.unwrap();
         if segment.is_full() {
-            info!(
+            trace!(
                 "Current segment is full, creating new segment for partition with ID: {}",
                 self.id
             );

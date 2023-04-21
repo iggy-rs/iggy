@@ -6,7 +6,7 @@ use std::net::SocketAddr;
 use streaming::message::Message;
 use streaming::system::System;
 use tokio::net::UdpSocket;
-use tracing::info;
+use tracing::trace;
 
 pub async fn handle(
     command: SendMessage,
@@ -14,8 +14,8 @@ pub async fn handle(
     address: SocketAddr,
     system: &mut System,
 ) -> Result<(), Error> {
-    info!(
-        "Sending message to stream: {:?}, topic: {:?}, key kind: {:?}, key value: {:?}, payload: {:?}",
+    trace!(
+        "Appending message to stream: {:?}, topic: {:?}, key kind: {:?}, key value: {:?}, payload: {:?}",
         command.stream_id, command.topic_id, command.key_kind, command.key_value, command.payload
     );
 

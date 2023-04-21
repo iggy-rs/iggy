@@ -5,7 +5,7 @@ use shared::messages::poll_messages::PollMessages;
 use std::net::SocketAddr;
 use streaming::system::System;
 use tokio::net::UdpSocket;
-use tracing::info;
+use tracing::trace;
 
 const MAX_BUFFER_SIZE: u64 = 1024;
 
@@ -63,9 +63,13 @@ pub async fn handle(
         return Err(Error::InvalidMessagesCount);
     }
 
-    info!(
+    trace!(
         "Polling {} messages from stream: {:?}, topic: {:?}, kind: {:?}, value: {:?}...",
-        command.count, command.stream_id, command.topic_id, command.kind, command.value,
+        command.count,
+        command.stream_id,
+        command.topic_id,
+        command.kind,
+        command.value,
     );
 
     let messages = system.get_stream(command.stream_id)?.get_messages(
@@ -111,7 +115,7 @@ pub async fn handle(
             address,
         )
         .await?;
-    info!(
+    trace!(
         "Polled {} message(s) from stream: {}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
         messages_count,
         command.stream_id,

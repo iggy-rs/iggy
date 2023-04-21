@@ -3,7 +3,7 @@ use crate::segments::segment::Segment;
 use crate::segments::*;
 use crate::timestamp;
 use shared::error::Error;
-use tracing::info;
+use tracing::trace;
 
 impl Segment {
     // TODO: Load messages from cache and if not found, load them from disk.
@@ -37,7 +37,7 @@ impl Segment {
             return Err(Error::SegmentFull(self.start_offset, self.partition_id));
         }
 
-        info!(
+        trace!(
             "Appending the message, current segment size is {} bytes",
             self.current_size_bytes
         );
@@ -55,7 +55,7 @@ impl Segment {
         self.messages.push(message);
         self.unsaved_messages_count += 1;
 
-        info!(
+        trace!(
             "Appended the message, current segment size is {} bytes",
             self.current_size_bytes
         );
@@ -74,17 +74,20 @@ impl Segment {
     pub async fn persist_messages(&mut self) -> Result<(), Error> {
         if self.unsaved_messages_count == 0 {
             if !self.is_full() {
-                info!(
+                trace!(
                     "No buffered messages to save on disk in segment {} for partition {}",
-                    self.start_offset, self.partition_id
+                    self.start_offset,
+                    self.partition_id
                 );
             }
             return Ok(());
         }
 
-        info!(
+        trace!(
             "Saving {} messages on disk in segment {} for partition {}",
-            self.unsaved_messages_count, self.start_offset, self.partition_id
+            self.unsaved_messages_count,
+            self.start_offset,
+            self.partition_id
         );
 
         let messages_count = self.messages.len();
@@ -99,9 +102,12 @@ impl Segment {
         index::persist(&mut index_file, current_bytes, messages).await?;
         time_index::persist(&mut time_index_file, messages).await?;
 
-        info!(
+        trace!(
             "Saved {} messages on disk in segment {} for partition {}, total bytes written: {}",
-            self.unsaved_messages_count, self.start_offset, self.partition_id, saved_bytes
+            self.unsaved_messages_count,
+            self.start_offset,
+            self.partition_id,
+            saved_bytes
         );
 
         self.unsaved_messages_count = 0;

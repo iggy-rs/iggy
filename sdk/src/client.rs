@@ -1,7 +1,7 @@
 use crate::error::Error;
 use std::net::SocketAddr;
 use tokio::net::UdpSocket;
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 const NAME: &str = "Iggy";
 
@@ -49,7 +49,7 @@ impl Client {
 
         let status = self.buffer[0];
         if status == 0 {
-            info!("Status: OK.");
+            trace!("Status: OK.");
             return Ok(&self.buffer[1..length]);
         }
 

@@ -56,6 +56,10 @@ Poll 2 messages from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partit
 
 Finally, restart the server to see it is able to load the persisted data.
 
+To see the detailed logs from the client/server, run it with `RUST_LOG=trace` environment variable.
+
+To quick test the project, first start the server and then run the client with `--test` argument.
+
 **See the images below**
 
 Files structure
@@ -90,6 +94,7 @@ Server restart
 #### Server
 
 - [x] Create a basic UDP server
+- [ ] Make use of QUIC protocol
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
 - [x] Allow multiple clients to connect to the server
@@ -100,6 +105,7 @@ Server restart
 #### Client
 
 - [x] Create a basic UDP client
+- [ ] Make use of QUIC protocol
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
 - [x] Communicate with the server using established binary protocol

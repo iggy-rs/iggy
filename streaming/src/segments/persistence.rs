@@ -3,7 +3,7 @@ use crate::segments::segment::Segment;
 use shared::error::Error;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::info;
+use tracing::{info, trace};
 
 impl Segment {
     pub async fn load(&mut self) -> Result<(), Error> {
@@ -55,7 +55,7 @@ impl Segment {
             .map(|chunk| u64::from_le_bytes(chunk.try_into().unwrap()))
             .collect::<Vec<u64>>();
 
-        info!("Indexes per offset: {:?}", indexes);
+        trace!("Indexes per offset: {:?}", indexes);
 
         let time_index_file_len = time_index_file.metadata().await.unwrap().len();
         let time_index_file_buffer = &mut vec![0; time_index_file_len as usize];
@@ -65,7 +65,7 @@ impl Segment {
             .map(|chunk| u64::from_le_bytes(chunk.try_into().unwrap()))
             .collect::<Vec<u64>>();
 
-        info!("Timestamps per offset: {:?}", timestamps);
+        trace!("Timestamps per offset: {:?}", timestamps);
 
         self.messages = messages;
         self.should_increment_offset = self.current_offset > 0;

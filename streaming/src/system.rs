@@ -4,7 +4,7 @@ use shared::error::Error;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{info, trace};
 
 pub struct System {
     pub streams: HashMap<u32, Stream>,
@@ -100,7 +100,7 @@ impl System {
     }
 
     pub async fn persist_messages(&mut self) -> Result<(), Error> {
-        info!("Saving buffered messages on disk...");
+        trace!("Saving buffered messages on disk...");
         for stream in self.streams.values_mut() {
             stream.persist_messages().await?;
         }

@@ -15,7 +15,7 @@ use shared::topics::get_topics::GetTopics;
 use std::net::SocketAddr;
 use streaming::system::System;
 use tokio::net::UdpSocket;
-use tracing::{error, info};
+use tracing::{error, trace};
 
 /*
   FRAME: | COMMAND |   DATA    |
@@ -60,9 +60,10 @@ async fn try_handle(
     address: SocketAddr,
     system: &mut System,
 ) -> Result<(), Error> {
-    info!(
+    trace!(
         "Handling command '{:?}' from client: {:?}...",
-        command, address
+        command,
+        address
     );
     match command {
         Command::Ping => ping_handler::handle(socket, address).await,

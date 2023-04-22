@@ -10,3 +10,5 @@ thiserror = "1.0.40"
 tokio = { version = "1.26.0", features = ["full"] }
 tracing = { version = "0.1.37"}
 tracing-subscriber = {version = "0.3.16"}
+quinn = "0.9.3"
+rustls = { version = "0.20.8", features = ["dangerous_configuration", "quic"] }

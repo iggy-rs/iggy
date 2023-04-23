@@ -2,14 +2,11 @@ use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use shared::error::Error;
 use shared::topics::get_topics::GetTopics;
-use std::net::SocketAddr;
 use streaming::system::System;
-use tokio::net::UdpSocket;
 
 pub async fn handle(
     command: GetTopics,
-    socket: &UdpSocket,
-    address: SocketAddr,
+    send: &mut quinn::SendStream,
     system: &mut System,
 ) -> Result<(), Error> {
     let topics = system
@@ -27,8 +24,7 @@ pub async fn handle(
         })
         .collect::<Vec<u8>>();
 
-    socket
-        .send_to([STATUS_OK, topics.as_slice()].concat().as_slice(), address)
+    send.write_all([STATUS_OK, topics.as_slice()].concat().as_slice())
         .await?;
     Ok(())
 }

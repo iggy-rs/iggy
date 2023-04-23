@@ -2,12 +2,10 @@ use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use shared::error::Error;
 use shared::messages::poll_messages::PollMessages;
-use std::net::SocketAddr;
 use streaming::system::System;
-use tokio::net::UdpSocket;
 use tracing::trace;
 
-const MAX_BUFFER_SIZE: u64 = 1024;
+const MAX_BUFFER_SIZE: u64 = 64 * 1024;
 
 /*
     |  POLL   |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |
@@ -55,8 +53,7 @@ const MAX_BUFFER_SIZE: u64 = 1024;
 
 pub async fn handle(
     command: PollMessages,
-    socket: &UdpSocket,
-    address: SocketAddr,
+    send: &mut quinn::SendStream,
     system: &mut System,
 ) -> Result<(), Error> {
     if command.count == 0 {
@@ -103,18 +100,16 @@ pub async fn handle(
         .collect::<Vec<Vec<u8>>>()
         .concat();
 
-    socket
-        .send_to(
-            [
-                STATUS_OK,
-                messages_count.to_le_bytes().as_slice(),
-                data.as_slice(),
-            ]
-            .concat()
-            .as_slice(),
-            address,
-        )
-        .await?;
+    send.write_all(
+        [
+            STATUS_OK,
+            messages_count.to_le_bytes().as_slice(),
+            data.as_slice(),
+        ]
+        .concat()
+        .as_slice(),
+    )
+    .await?;
     trace!(
         "Polled {} message(s) from stream: {}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
         messages_count,

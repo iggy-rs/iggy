@@ -7,16 +7,24 @@ use tracing::{error, info};
 impl Server {
     pub fn start_channel(&self, mut system_receiver: SystemReceiver) {
         let name = self.config.name.clone();
-        let socket = self.socket.clone();
         tokio::spawn(async move {
             while let Some(server_command) = system_receiver.receiver.recv().await {
                 match server_command {
-                    ServerCommand::HandleRequest(bytes, address) => {
-                        if let Err(error) =
-                            command::handle(&bytes, &socket, address, &mut system_receiver.system)
-                                .await
+                    ServerCommand::HandleRequest((mut send, recv)) => {
+                        let request = recv.read_to_end(64 * 1024).await;
+                        if request.is_err() {
+                            error!("Error when reading the request: {:?}", request);
+                            continue;
+                        }
+
+                        if let Err(error) = command::handle(
+                            &request.unwrap(),
+                            &mut send,
+                            &mut system_receiver.system,
+                        )
+                        .await
                         {
-                            command::handle_error(error, &socket, address).await;
+                            error!("Error when handling the request: {:?}", error);
                         }
                     }
                     ServerCommand::SaveMessages => {

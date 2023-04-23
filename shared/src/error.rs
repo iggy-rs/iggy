@@ -1,3 +1,4 @@
+use quinn::WriteError;
 use std::array::TryFromSliceError;
 use std::num::ParseIntError;
 use std::str::Utf8Error;
@@ -122,6 +123,8 @@ pub enum Error {
     CannotParseUtf8(#[from] Utf8Error),
     #[error("Too big payload")]
     TooBigPayload,
+    #[error("Write error")]
+    WriteError(#[from] WriteError),
 }
 
 // TODO: Categorize errors in the meaningful way.
@@ -186,6 +189,7 @@ impl Error {
             Error::CannotParseInt(_) => 55,
             Error::CannotParseSlice(_) => 56,
             Error::TooBigPayload => 57,
+            Error::WriteError(_) => 58,
         }
     }
 }

@@ -28,7 +28,7 @@ async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
 
-    let mut client = Client::new(&args.address, &args.server).await?;
+    let mut client = Client::new(&args.address, &args.server, "localhost").await?;
     client.connect().await?;
 
     if args.test {

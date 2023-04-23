@@ -4,7 +4,7 @@
 
 ---
 
-Iggy is the streaming platform written in Rust, using UDP as a transport protocol with a custom binary specification. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
+Iggy is the streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) as a transport protocol with a custom binary specification. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
 
 The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to handle millions of messages per second, and will be able to scale horizontally.
 
@@ -94,7 +94,7 @@ Server restart
 #### Server
 
 - [x] Create a basic UDP server
-- [ ] Make use of QUIC protocol
+- [x] Make use of QUIC protocol
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
 - [x] Allow multiple clients to connect to the server
@@ -105,7 +105,7 @@ Server restart
 #### Client
 
 - [x] Create a basic UDP client
-- [ ] Make use of QUIC protocol
+- [x] Make use of QUIC protocol
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
 - [x] Communicate with the server using established binary protocol

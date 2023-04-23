@@ -2,11 +2,12 @@ use crate::server_command::ServerCommand;
 use crate::server_config::ServerConfig;
 use crate::server_error::ServerError;
 use anyhow::Result;
+use quinn::Endpoint;
+use std::error::Error;
 use std::sync::Arc;
 use streaming::system::System;
-use tokio::net::UdpSocket;
 use tokio::sync::mpsc;
-use tracing::info;
+use tracing::{error, info};
 
 pub struct ServerSystem {
     pub server: Server,
@@ -14,8 +15,8 @@ pub struct ServerSystem {
 }
 
 pub struct Server {
-    pub socket: Arc<UdpSocket>,
-    pub sender: mpsc::Sender<ServerCommand>,
+    pub endpoint: Endpoint,
+    pub sender: Arc<mpsc::Sender<ServerCommand>>,
     pub config: ServerConfig,
 }
 
@@ -27,14 +28,18 @@ pub struct SystemReceiver {
 impl ServerSystem {
     pub async fn init(config: ServerConfig) -> Result<ServerSystem, ServerError> {
         info!("Initializing {} server...", config.name);
-        let socket = UdpSocket::bind(config.address.clone()).await?;
-        let socket = Arc::new(socket);
-        let (sender, receiver) = mpsc::channel::<ServerCommand>(1024);
+        let quic_config = configure_quic();
+        if let Err(error) = quic_config {
+            error!("Error when configuring QUIC: {:?}", error);
+            return Err(ServerError::CannotStartServer);
+        }
+        let endpoint = Endpoint::server(quic_config.unwrap(), config.address.parse().unwrap())?;
+        let (sender, receiver) = mpsc::channel::<ServerCommand>(64 * 1024);
 
         let system = System::init(config.system.clone()).await?;
         let server = Server {
-            socket,
-            sender,
+            endpoint,
+            sender: Arc::new(sender),
             config,
         };
         let system_receiver = SystemReceiver { system, receiver };
@@ -56,4 +61,14 @@ impl ServerSystem {
         self.server.start_listener().await?;
         Ok(())
     }
+}
+
+fn configure_quic() -> Result<quinn::ServerConfig, Box<dyn Error>> {
+    let certificate = rcgen::generate_simple_self_signed(vec!["localhost".into()]).unwrap();
+    let certificate_der = certificate.serialize_der().unwrap();
+    let private_key = certificate.serialize_private_key_der();
+    let private_key = rustls::PrivateKey(private_key);
+    let cert_chain = vec![rustls::Certificate(certificate_der)];
+    let server_config = quinn::ServerConfig::with_single_cert(cert_chain, private_key)?;
+    Ok(server_config)
 }

@@ -1,3 +1,4 @@
+use quinn::{ConnectionError, ReadError, WriteError};
 use std::array::TryFromSliceError;
 use std::net::AddrParseError;
 use std::str::Utf8Error;
@@ -18,4 +19,10 @@ pub enum Error {
     CannotParseUtf8(#[from] Utf8Error),
     #[error("Cannot parse address")]
     CannotParseAddress(#[from] AddrParseError),
+    #[error("Write error")]
+    WriteError(#[from] WriteError),
+    #[error("Read error")]
+    ReadError(#[from] ReadError),
+    #[error("Connection error")]
+    ConnectionError(#[from] ConnectionError),
 }

@@ -2,16 +2,13 @@ use crate::handlers::STATUS_OK;
 use anyhow::Result;
 use shared::error::Error;
 use shared::messages::send_message::SendMessage;
-use std::net::SocketAddr;
 use streaming::message::Message;
 use streaming::system::System;
-use tokio::net::UdpSocket;
 use tracing::trace;
 
 pub async fn handle(
     command: SendMessage,
-    socket: &UdpSocket,
-    address: SocketAddr,
+    send: &mut quinn::SendStream,
     system: &mut System,
 ) -> Result<(), Error> {
     trace!(
@@ -24,6 +21,6 @@ pub async fn handle(
         .get_stream_mut(command.stream_id)?
         .append_messages(command.topic_id, command.key_value, message)
         .await?;
-    socket.send_to(STATUS_OK, address).await?;
+    send.write_all(STATUS_OK).await?;
     Ok(())
 }

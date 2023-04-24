@@ -2,6 +2,7 @@ mod args;
 mod command;
 mod components;
 mod handlers;
+mod sender;
 mod server;
 mod server_command;
 mod server_config;

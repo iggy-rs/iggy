@@ -1,4 +1,4 @@
-use crate::handlers::STATUS_OK;
+use crate::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::messages::send_message::SendMessage;
@@ -8,7 +8,7 @@ use tracing::trace;
 
 pub async fn handle(
     command: SendMessage,
-    send: &mut quinn::SendStream,
+    sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
     trace!(
@@ -21,6 +21,6 @@ pub async fn handle(
         .get_stream_mut(command.stream_id)?
         .append_messages(command.topic_id, command.key_value, message)
         .await?;
-    send.write_all(STATUS_OK).await?;
+    sender.send_empty_ok_response().await?;
     Ok(())
 }

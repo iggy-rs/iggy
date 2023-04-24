@@ -1,8 +1,8 @@
-use crate::handlers::STATUS_OK;
+use crate::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 
-pub async fn handle(send: &mut quinn::SendStream) -> Result<(), Error> {
-    send.write_all(STATUS_OK).await?;
+pub async fn handle(sender: &mut Sender) -> Result<(), Error> {
+    sender.send_empty_ok_response().await?;
     Ok(())
 }

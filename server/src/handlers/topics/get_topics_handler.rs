@@ -1,4 +1,4 @@
-use crate::handlers::STATUS_OK;
+use crate::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::topics::get_topics::GetTopics;
@@ -6,7 +6,7 @@ use streaming::system::System;
 
 pub async fn handle(
     command: GetTopics,
-    send: &mut quinn::SendStream,
+    sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
     let topics = system
@@ -24,7 +24,6 @@ pub async fn handle(
         })
         .collect::<Vec<u8>>();
 
-    send.write_all([STATUS_OK, topics.as_slice()].concat().as_slice())
-        .await?;
+    sender.send_ok_response(&topics).await?;
     Ok(())
 }

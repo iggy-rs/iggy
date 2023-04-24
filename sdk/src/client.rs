@@ -1,4 +1,5 @@
 use crate::error::Error;
+use bytes::Bytes;
 use quinn::{ClientConfig, Connection, Endpoint, RecvStream};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -38,11 +39,13 @@ impl Client {
             .unwrap()
             .await
             .unwrap();
+
         info!(
             "{} client has connected to server: {}",
             NAME,
             connection.remote_address()
         );
+
         self.connection = Some(connection);
         Ok(())
     }
@@ -56,6 +59,7 @@ impl Client {
     }
 
     async fn handle_response(&mut self, recv: &mut RecvStream) -> Result<&[u8], Error> {
+        // recv.read_chunk(&mut self.bytes).await?;
         let length = recv.read(&mut self.buffer).await?;
         if self.buffer.is_empty() {
             return Err(Error::EmptyResponse);

@@ -13,7 +13,7 @@ use tracing::{error, info};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value = "127.0.0.1:8081")]
+    #[arg(short, long, default_value = "127.0.0.1:0")]
     address: String,
 
     #[arg(short, long, default_value = "127.0.0.1:8080")]

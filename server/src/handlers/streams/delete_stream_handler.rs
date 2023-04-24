@@ -1,4 +1,4 @@
-use crate::handlers::STATUS_OK;
+use crate::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::streams::delete_stream::DeleteStream;
@@ -6,10 +6,10 @@ use streaming::system::System;
 
 pub async fn handle(
     command: DeleteStream,
-    send: &mut quinn::SendStream,
+    sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
     system.delete_stream(command.stream_id).await?;
-    send.write_all(STATUS_OK).await?;
+    sender.send_empty_ok_response().await?;
     Ok(())
 }

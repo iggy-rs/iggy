@@ -1,9 +1,9 @@
-use crate::handlers::STATUS_OK;
+use crate::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use streaming::system::System;
 
-pub async fn handle(send: &mut quinn::SendStream, system: &mut System) -> Result<(), Error> {
+pub async fn handle(sender: &mut Sender, system: &mut System) -> Result<(), Error> {
     let streams = system
         .get_streams()
         .iter()
@@ -18,7 +18,8 @@ pub async fn handle(send: &mut quinn::SendStream, system: &mut System) -> Result
         })
         .collect::<Vec<u8>>();
 
-    send.write_all([STATUS_OK, streams.as_slice()].concat().as_slice())
+    sender
+        .send_ok_response([streams.as_slice()].concat().as_slice())
         .await?;
     Ok(())
 }

@@ -2,6 +2,7 @@ use crate::handlers::messages::*;
 use crate::handlers::streams::*;
 use crate::handlers::system::*;
 use crate::handlers::topics::*;
+use crate::sender::Sender;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::error::Error;
@@ -13,7 +14,7 @@ use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
 use streaming::system::System;
-use tracing::{error, trace};
+use tracing::trace;
 
 /*
   FRAME: | COMMAND |   DATA    |
@@ -36,71 +37,59 @@ use tracing::{error, trace};
 
 const LENGTH: usize = 1;
 
-pub async fn handle(
-    request: &[u8],
-    send: &mut quinn::SendStream,
-    system: &mut System,
-) -> Result<(), Error> {
+pub async fn handle(request: &[u8], sender: &mut Sender, system: &mut System) -> Result<(), Error> {
     if request.len() < LENGTH {
         return Err(Error::InvalidCommand);
     }
 
     let command = Command::from_bytes(&request[..LENGTH])?;
     let bytes = &request[LENGTH..];
-    let result = try_handle(command, bytes, send, system).await;
+    let result = try_handle(command, bytes, sender, system).await;
     if result.is_ok() {
-        send.finish().await?;
         return Ok(());
     }
 
-    handle_error(result.err().unwrap(), send).await?;
+    sender.send_error_response(result.err().unwrap()).await?;
     Ok(())
 }
 
 async fn try_handle(
     command: Command,
     bytes: &[u8],
-    send: &mut quinn::SendStream,
+    sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
     trace!("Handling command '{:?}'...", command,);
     match command {
-        Command::Ping => ping_handler::handle(send).await,
+        Command::Ping => ping_handler::handle(sender).await,
         Command::SendMessage => {
             let command = SendMessage::from_bytes(bytes)?;
-            send_message_handler::handle(command, send, system).await
+            send_message_handler::handle(command, sender, system).await
         }
         Command::PollMessages => {
             let command = PollMessages::from_bytes(bytes)?;
-            poll_messages_handler::handle(command, send, system).await
+            poll_messages_handler::handle(command, sender, system).await
         }
-        Command::GetStreams => get_streams_handler::handle(send, system).await,
+        Command::GetStreams => get_streams_handler::handle(sender, system).await,
         Command::CreateStream => {
             let command = CreateStream::from_bytes(bytes)?;
-            create_stream_handler::handle(command, send, system).await
+            create_stream_handler::handle(command, sender, system).await
         }
         Command::DeleteStream => {
             let command = DeleteStream::from_bytes(bytes)?;
-            delete_stream_handler::handle(command, send, system).await
+            delete_stream_handler::handle(command, sender, system).await
         }
         Command::GetTopics => {
             let command = GetTopics::from_bytes(bytes)?;
-            get_topics_handler::handle(command, send, system).await
+            get_topics_handler::handle(command, sender, system).await
         }
         Command::CreateTopic => {
             let command = CreateTopic::from_bytes(bytes)?;
-            create_topic_handler::handle(command, send, system).await
+            create_topic_handler::handle(command, sender, system).await
         }
         Command::DeleteTopic => {
             let command = DeleteTopic::from_bytes(bytes)?;
-            delete_topic_handler::handle(command, send, system).await
+            delete_topic_handler::handle(command, sender, system).await
         }
     }
-}
-
-async fn handle_error(error: Error, send: &mut quinn::SendStream) -> Result<(), Error> {
-    error!("{}", error);
-    send.write_all(&error.code().to_le_bytes()).await?;
-    send.finish().await?;
-    Ok(())
 }

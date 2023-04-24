@@ -1,11 +1,9 @@
-use crate::handlers::STATUS_OK;
+use crate::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::messages::poll_messages::PollMessages;
 use streaming::system::System;
 use tracing::trace;
-
-const MAX_BUFFER_SIZE: u64 = 64 * 1024;
 
 /*
     |  POLL   |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |
@@ -53,7 +51,7 @@ const MAX_BUFFER_SIZE: u64 = 64 * 1024;
 
 pub async fn handle(
     command: PollMessages,
-    send: &mut quinn::SendStream,
+    sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
     if command.count == 0 {
@@ -76,16 +74,10 @@ pub async fn handle(
         command.count,
     )?;
 
-    let mut total_size = 0;
     let mut messages_count: u32 = 0;
     let data = messages
         .iter()
         .map_while(|message| {
-            total_size += message.get_size_bytes();
-            if total_size > MAX_BUFFER_SIZE {
-                return None;
-            }
-
             messages_count += 1;
             Some(
                 [
@@ -100,16 +92,13 @@ pub async fn handle(
         .collect::<Vec<Vec<u8>>>()
         .concat();
 
-    send.write_all(
-        [
-            STATUS_OK,
-            messages_count.to_le_bytes().as_slice(),
-            data.as_slice(),
-        ]
-        .concat()
-        .as_slice(),
-    )
-    .await?;
+    sender
+        .send_ok_response(
+            [messages_count.to_le_bytes().as_slice(), data.as_slice()]
+                .concat()
+                .as_slice(),
+        )
+        .await?;
     trace!(
         "Polled {} message(s) from stream: {}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
         messages_count,

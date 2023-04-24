@@ -1,4 +1,5 @@
 use crate::command;
+use crate::sender::Sender;
 use crate::server::{Server, SystemReceiver};
 use crate::server_command::ServerCommand;
 use std::process;
@@ -10,7 +11,7 @@ impl Server {
         tokio::spawn(async move {
             while let Some(server_command) = system_receiver.receiver.recv().await {
                 match server_command {
-                    ServerCommand::HandleRequest((mut send, recv)) => {
+                    ServerCommand::HandleRequest((send, recv)) => {
                         let request = recv.read_to_end(64 * 1024).await;
                         if request.is_err() {
                             error!("Error when reading the request: {:?}", request);
@@ -19,7 +20,7 @@ impl Server {
 
                         if let Err(error) = command::handle(
                             &request.unwrap(),
-                            &mut send,
+                            &mut Sender { send },
                             &mut system_receiver.system,
                         )
                         .await

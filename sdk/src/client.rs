@@ -1,5 +1,4 @@
 use crate::error::Error;
-use bytes::Bytes;
 use quinn::{ClientConfig, Connection, Endpoint, RecvStream};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -7,32 +6,38 @@ use tracing::{error, info, trace};
 
 const NAME: &str = "Iggy";
 
-pub struct Client {
+pub struct DisconnectedClient {
     pub(crate) server: SocketAddr,
     pub(crate) server_name: String,
     pub(crate) endpoint: Endpoint,
-    pub(crate) connection: Option<Connection>,
+}
+
+pub struct ConnectedClient {
+    pub(crate) endpoint: Endpoint,
+    pub(crate) connection: Connection,
     pub(crate) buffer: [u8; 64 * 1024],
 }
 
-impl Client {
-    pub async fn new(address: &str, server: &str, server_name: &str) -> Result<Self, Error> {
-        let address = address.parse::<SocketAddr>()?;
-        let server = server.parse::<SocketAddr>()?;
+impl DisconnectedClient {
+    pub fn new(address: &str, server: &str, server_name: &str) -> Result<Self, Error> {
+        let client_address = address.parse::<SocketAddr>()?;
+        let server_address = server.parse::<SocketAddr>()?;
         let config = configure();
-        let mut endpoint = Endpoint::client(address)?;
+        let mut endpoint = Endpoint::client(client_address)?;
         endpoint.set_default_client_config(config);
 
         Ok(Self {
             endpoint,
-            server,
+            server: server_address,
             server_name: server_name.to_string(),
-            connection: None,
-            buffer: [0; 64 * 1024],
         })
     }
 
-    pub async fn connect(&mut self) -> Result<(), Error> {
+    pub async fn connect(&self) -> Result<ConnectedClient, Error> {
+        info!(
+            "{} client is connecting to server: {}",
+            NAME, self.server_name
+        );
         let connection = self
             .endpoint
             .connect(self.server, &self.server_name)
@@ -46,20 +51,30 @@ impl Client {
             connection.remote_address()
         );
 
-        self.connection = Some(connection);
+        Ok(ConnectedClient {
+            endpoint: self.endpoint.clone(),
+            connection,
+            buffer: [0; 64 * 1024],
+        })
+    }
+}
+
+impl ConnectedClient {
+    pub async fn disconnect(&self) -> Result<(), Error> {
+        info!("{} client is disconnecting from server.", NAME);
+        self.endpoint.wait_idle().await;
+        info!("{} client has disconnected from server.", NAME);
         Ok(())
     }
 
     pub(crate) async fn send_with_response(&mut self, buffer: &[u8]) -> Result<&[u8], Error> {
-        let connection = self.connection.as_mut().unwrap();
-        let (mut send, mut recv) = connection.open_bi().await?;
+        let (mut send, mut recv) = self.connection.open_bi().await?;
         send.write_all(buffer).await?;
         send.finish().await?;
         self.handle_response(&mut recv).await
     }
 
     async fn handle_response(&mut self, recv: &mut RecvStream) -> Result<&[u8], Error> {
-        // recv.read_chunk(&mut self.bytes).await?;
         let length = recv.read(&mut self.buffer).await?;
         if self.buffer.is_empty() {
             return Err(Error::EmptyResponse);
@@ -82,7 +97,13 @@ fn configure() -> ClientConfig {
         .with_custom_certificate_verifier(SkipServerVerification::new())
         .with_no_client_auth();
 
-    ClientConfig::new(Arc::new(crypto))
+    let mut transport = quinn::TransportConfig::default();
+    transport.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
+
+    let mut config = ClientConfig::new(Arc::new(crypto));
+    config.transport_config(Arc::new(transport));
+
+    config
 }
 
 struct SkipServerVerification;

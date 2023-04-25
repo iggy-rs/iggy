@@ -1,12 +1,12 @@
 use crate::client_error::ClientError;
-use sdk::client::Client;
+use sdk::client::ConnectedClient;
 use shared::messages::send_message::SendMessage;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::topics::create_topic::CreateTopic;
 use tracing::info;
 
-pub async fn run_test(client: &mut Client) -> Result<(), ClientError> {
+pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
     let stream_id: u32 = 9999;
     let topic_id: u32 = 1;
     let partitions_count: u32 = 1;
@@ -42,7 +42,7 @@ pub async fn run_test(client: &mut Client) -> Result<(), ClientError> {
         .await?;
 
     info!("Sending {} test messages...", messages_count);
-    for i in 1..messages_count {
+    for i in 0..messages_count {
         let payload = format!("Test message #{}", i).as_bytes().to_vec();
         let command = SendMessage {
             stream_id,

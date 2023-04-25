@@ -1,11 +1,11 @@
-use crate::client::Client;
+use crate::client::ConnectedClient;
 use crate::error::Error;
 use crate::message::Message;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
 
-impl Client {
+impl ConnectedClient {
     pub async fn poll_messages(&mut self, command: &PollMessages) -> Result<Vec<Message>, Error> {
         let response = self
             .send_with_response(

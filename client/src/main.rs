@@ -6,18 +6,21 @@ mod test_mode;
 use crate::client_error::ClientError;
 use anyhow::Result;
 use clap::Parser;
-use sdk::client::Client;
+use sdk::client::DisconnectedClient;
 use std::io;
 use tracing::{error, info};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short, long, default_value = "127.0.0.1:0")]
-    address: String,
+    #[arg(long, default_value = "127.0.0.1:0")]
+    client_address: String,
 
-    #[arg(short, long, default_value = "127.0.0.1:8080")]
-    server: String,
+    #[arg(long, default_value = "127.0.0.1:8080")]
+    server_address: String,
+
+    #[arg(long, default_value = "localhost")]
+    server_name: String,
 
     #[arg(short, long)]
     test: bool,
@@ -28,8 +31,12 @@ async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
 
-    let mut client = Client::new(&args.address, &args.server, "localhost").await?;
-    client.connect().await?;
+    let client = DisconnectedClient::new(
+        &args.client_address,
+        &args.server_address,
+        &args.server_name,
+    )?;
+    let mut client = client.connect().await?;
 
     if args.test {
         test_mode::run_test(&mut client).await?;

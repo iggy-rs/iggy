@@ -3,7 +3,7 @@ use crate::handlers::messages::*;
 use crate::handlers::streams::*;
 use crate::handlers::system::*;
 use crate::handlers::topics::*;
-use sdk::client::Client;
+use sdk::client::ConnectedClient;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_message::SendMessage;
@@ -15,7 +15,7 @@ use shared::topics::get_topics::GetTopics;
 use std::str::FromStr;
 use tracing::info;
 
-pub async fn handle(input: &str, client: &mut Client) -> Result<(), ClientError> {
+pub async fn handle(input: &str, client: &mut ConnectedClient) -> Result<(), ClientError> {
     let (command, input) = input.split_once('|').unwrap_or((input, ""));
     let command = Command::from_str(command).map_err(|_| ClientError::InvalidCommand)?;
     info!("Handling '{:?}' command...", command);

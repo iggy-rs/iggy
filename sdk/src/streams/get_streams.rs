@@ -1,11 +1,11 @@
-use crate::client::Client;
+use crate::client::ConnectedClient;
 use crate::error::Error;
 use crate::stream::Stream;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use std::str::from_utf8;
 
-impl Client {
+impl ConnectedClient {
     pub async fn get_streams(&mut self) -> Result<Vec<Stream>, Error> {
         let response = self
             .send_with_response(&Command::GetStreams.as_bytes())

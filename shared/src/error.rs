@@ -127,9 +127,8 @@ pub enum Error {
     WriteError(#[from] WriteError),
 }
 
-// TODO: Categorize errors in the meaningful way.
 impl Error {
-    pub fn code(&self) -> u8 {
+    pub fn as_code(&self) -> u8 {
         match self {
             Error::Error => 0,
             Error::IoError(_) => 1,

@@ -18,7 +18,8 @@ impl Sender {
     }
 
     pub async fn send_error_response(&mut self, error: Error) -> Result<(), Error> {
-        self.send_response(&error.code().to_le_bytes(), &[]).await
+        self.send_response(&error.as_code().to_le_bytes(), &[])
+            .await
     }
 
     async fn send_response(&mut self, status: &[u8], payload: &[u8]) -> Result<(), Error> {

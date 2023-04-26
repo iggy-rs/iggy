@@ -12,20 +12,21 @@ impl Server {
             while let Some(server_command) = system_receiver.receiver.recv().await {
                 match server_command {
                     ServerCommand::HandleRequest((send, recv)) => {
-                        let request = recv.read_to_end(64 * 1024).await;
+                        let request = recv.read_to_end(1024 * 1024).await;
                         if request.is_err() {
                             error!("Error when reading the request: {:?}", request);
                             continue;
                         }
 
-                        if let Err(error) = command::handle(
+                        let result = command::handle(
                             &request.unwrap(),
                             &mut Sender { send },
                             &mut system_receiver.system,
                         )
-                        .await
-                        {
-                            error!("Error when handling the request: {:?}", error);
+                        .await;
+                        if result.is_err() {
+                            error!("Error when handling the request: {:?}", result);
+                            continue;
                         }
                     }
                     ServerCommand::SaveMessages => {

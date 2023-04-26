@@ -14,13 +14,18 @@ pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
     let topic_name = "test".to_string();
     let messages_count = 1000;
 
-    info!("Deleting the test stream (if exists)...");
-    if client
-        .delete_stream(&DeleteStream { stream_id })
-        .await
-        .is_ok()
-    {
-        info!("Deleted the test stream.");
+    info!("Getting the list of streams...");
+    let streams = client.get_streams().await?;
+
+    if streams.iter().any(|s| s.id == stream_id) {
+        info!("Deleting the test stream");
+        if client
+            .delete_stream(&DeleteStream { stream_id })
+            .await
+            .is_ok()
+        {
+            info!("Deleted the test stream.");
+        }
     }
 
     info!("Creating the test stream...");

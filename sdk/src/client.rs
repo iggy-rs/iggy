@@ -15,7 +15,7 @@ pub struct DisconnectedClient {
 pub struct ConnectedClient {
     pub(crate) endpoint: Endpoint,
     pub(crate) connection: Connection,
-    pub(crate) buffer: [u8; 64 * 1024],
+    pub(crate) buffer: Vec<u8>,
 }
 
 impl DisconnectedClient {
@@ -54,7 +54,7 @@ impl DisconnectedClient {
         Ok(ConnectedClient {
             endpoint: self.endpoint.clone(),
             connection,
-            buffer: [0; 64 * 1024],
+            buffer: vec![0; 1024 * 1024],
         })
     }
 }

@@ -34,7 +34,7 @@ impl ServerSystem {
             return Err(ServerError::CannotStartServer);
         }
         let endpoint = Endpoint::server(quic_config.unwrap(), config.address.parse().unwrap())?;
-        let (sender, receiver) = mpsc::channel::<ServerCommand>(64 * 1024);
+        let (sender, receiver) = mpsc::channel::<ServerCommand>(10000);
 
         let system = System::init(config.system.clone()).await?;
         let server = Server {

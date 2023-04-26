@@ -42,14 +42,26 @@ pub async fn handle(request: &[u8], sender: &mut Sender, system: &mut System) ->
         return Err(Error::InvalidCommand);
     }
 
+    trace!("Trying to read command...");
     let command = Command::from_bytes(&request[..LENGTH])?;
     let bytes = &request[LENGTH..];
+    trace!(
+        "Received command: '{:?}', payload size: {}, trying to handle...",
+        command,
+        bytes.len()
+    );
     let result = try_handle(command, bytes, sender, system).await;
     if result.is_ok() {
+        trace!("Command was handled successfully.");
         return Ok(());
     }
 
-    sender.send_error_response(result.err().unwrap()).await?;
+    let error = result.err().unwrap();
+    trace!(
+        "Command was not handled successfully, error: '{:?}'.",
+        error
+    );
+    sender.send_error_response(error).await?;
     Ok(())
 }
 

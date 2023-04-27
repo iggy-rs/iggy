@@ -46,11 +46,11 @@ impl BytesSerializable for SendMessage {
 
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(13 + self.payload.len());
-        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
-        bytes.extend_from_slice(&self.topic_id.to_le_bytes());
-        bytes.extend_from_slice(&self.key_kind.to_le_bytes());
-        bytes.extend_from_slice(&self.key_value.to_le_bytes());
-        bytes.extend_from_slice(&self.payload);
+        bytes.extend(self.stream_id.to_le_bytes());
+        bytes.extend(self.topic_id.to_le_bytes());
+        bytes.extend(self.key_kind.to_le_bytes());
+        bytes.extend(self.key_value.to_le_bytes());
+        bytes.extend(&self.payload);
         bytes
     }
 

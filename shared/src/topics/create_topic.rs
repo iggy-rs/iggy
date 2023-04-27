@@ -48,10 +48,10 @@ impl BytesSerializable for CreateTopic {
 
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(12 + self.name.len());
-        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
-        bytes.extend_from_slice(&self.topic_id.to_le_bytes());
-        bytes.extend_from_slice(&self.partitions_count.to_le_bytes());
-        bytes.extend_from_slice(self.name.as_bytes());
+        bytes.extend(self.stream_id.to_le_bytes());
+        bytes.extend(self.topic_id.to_le_bytes());
+        bytes.extend(self.partitions_count.to_le_bytes());
+        bytes.extend(self.name.as_bytes());
         bytes
     }
 

@@ -17,7 +17,7 @@ impl Segment {
         let mut time_index_file = Segment::open_file(&self.time_index_path, false).await;
         let mut offset_buffer = [0; 8];
         let mut timestamp_buffer = [0; 8];
-        let mut length_buffer = [0; 8];
+        let mut length_buffer = [0; 4];
 
         info!(
             "Loading messages from segment log file for start offset: {} and partition ID: {}...",
@@ -32,7 +32,7 @@ impl Segment {
                 return Err(Error::CannotReadMessageLength);
             }
 
-            let length = u64::from_le_bytes(length_buffer);
+            let length = u32::from_le_bytes(length_buffer);
             let mut payload = vec![0; length as usize];
             if log_file.read_exact(&mut payload).await.is_err() {
                 return Err(Error::CannotReadMessagePayload);
@@ -51,11 +51,11 @@ impl Segment {
         let index_file_buffer = &mut vec![0; index_file_len as usize];
         let _ = index_file.read(index_file_buffer).await.unwrap();
         let indexes = index_file_buffer
-            .chunks(8)
-            .map(|chunk| u64::from_le_bytes(chunk.try_into().unwrap()))
-            .collect::<Vec<u64>>();
+            .chunks(4)
+            .map(|chunk| u32::from_le_bytes(chunk.try_into().unwrap()))
+            .collect::<Vec<u32>>();
 
-        trace!("Indexes per offset: {:?}", indexes);
+        trace!("Indexes (relative) per offset: {:?}", indexes);
 
         let time_index_file_len = time_index_file.metadata().await.unwrap().len();
         let time_index_file_buffer = &mut vec![0; time_index_file_len as usize];
@@ -69,7 +69,7 @@ impl Segment {
 
         self.messages = messages;
         self.should_increment_offset = self.current_offset > 0;
-        self.current_size_bytes = log_file.metadata().await.unwrap().len();
+        self.current_size_bytes = log_file.metadata().await.unwrap().len() as u32;
         self.saved_bytes = self.current_size_bytes;
 
         info!(

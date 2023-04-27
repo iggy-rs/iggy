@@ -74,31 +74,20 @@ pub async fn handle(
         command.count,
     )?;
 
-    let mut messages_count: u32 = 0;
-    let data = messages
+    let messages_count = messages.len() as u32;
+    let messages_size = messages
         .iter()
-        .map_while(|message| {
-            messages_count += 1;
-            Some(
-                [
-                    message.offset.to_le_bytes().as_slice(),
-                    message.timestamp.to_le_bytes().as_slice(),
-                    message.length.to_le_bytes().as_slice(),
-                    message.payload.as_slice(),
-                ]
-                .concat(),
-            )
-        })
-        .collect::<Vec<Vec<u8>>>()
-        .concat();
+        .map(|message| message.get_size_bytes())
+        .sum::<u32>();
 
-    sender
-        .send_ok_response(
-            [messages_count.to_le_bytes().as_slice(), data.as_slice()]
-                .concat()
-                .as_slice(),
-        )
-        .await?;
+    let mut bytes = Vec::with_capacity(4 + messages_size as usize);
+    bytes.extend(messages_count.to_le_bytes());
+    for message in messages {
+        message.extend(&mut bytes);
+    }
+
+    sender.send_ok_response(&bytes).await?;
+
     trace!(
         "Polled {} message(s) from stream: {}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
         messages_count,

@@ -23,7 +23,7 @@ fn handle_response(response: &[u8]) -> Result<Vec<Message>, Error> {
         return Ok(Vec::new());
     }
 
-    const PROPERTIES_SIZE: usize = 24;
+    const PROPERTIES_SIZE: usize = 20;
     let length = response.len();
     let mut position = 4;
     let mut messages = Vec::new();
@@ -31,7 +31,7 @@ fn handle_response(response: &[u8]) -> Result<Vec<Message>, Error> {
         let offset = u64::from_le_bytes(response[position..position + 8].try_into()?);
         let timestamp = u64::from_le_bytes(response[position + 8..position + 16].try_into()?);
         let message_length =
-            u64::from_le_bytes(response[position + 16..position + PROPERTIES_SIZE].try_into()?)
+            u32::from_le_bytes(response[position + 16..position + PROPERTIES_SIZE].try_into()?)
                 as usize;
 
         let payload_range = position + PROPERTIES_SIZE..position + PROPERTIES_SIZE + message_length;

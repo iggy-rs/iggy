@@ -31,8 +31,8 @@ impl BytesSerializable for DeleteTopic {
 
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(8);
-        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
-        bytes.extend_from_slice(&self.topic_id.to_le_bytes());
+        bytes.extend(self.stream_id.to_le_bytes());
+        bytes.extend(self.topic_id.to_le_bytes());
         bytes
     }
 

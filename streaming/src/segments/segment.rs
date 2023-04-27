@@ -17,9 +17,9 @@ pub struct Segment {
     pub log_path: String,
     pub time_index_path: String,
     pub messages: Vec<Message>,
-    pub unsaved_messages_count: u64,
-    pub current_size_bytes: u64,
-    pub saved_bytes: u64,
+    pub unsaved_messages_count: u32,
+    pub current_size_bytes: u32,
+    pub saved_bytes: u32,
     pub should_increment_offset: bool,
     pub config: Arc<SegmentConfig>,
 }

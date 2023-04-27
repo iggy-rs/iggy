@@ -26,7 +26,7 @@ impl BytesSerializable for DeleteStream {
 
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(4);
-        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
+        bytes.extend(self.stream_id.to_le_bytes());
         bytes
     }
 

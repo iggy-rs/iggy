@@ -5,9 +5,13 @@ use shared::error::Error;
 use tracing::trace;
 
 impl Partition {
-    pub fn get_messages(&self, offset: u64, count: u32) -> Option<Vec<&Message>> {
+    pub async fn get_messages(
+        &self,
+        offset: u64,
+        count: u32,
+    ) -> Result<Option<Vec<Message>>, Error> {
         if self.segments.is_empty() {
-            return None;
+            return Ok(None);
         }
 
         let mut end_offset = offset + (count - 1) as u64;
@@ -27,12 +31,12 @@ impl Partition {
             .collect::<Vec<&Segment>>();
 
         if segments.is_empty() {
-            return None;
+            return Ok(None);
         }
 
         let mut messages = Vec::new();
         for segment in segments {
-            let segment_messages = segment.get_messages(offset, count);
+            let segment_messages = segment.get_messages(offset, count).await?;
             if segment_messages.is_none() {
                 continue;
             }
@@ -42,7 +46,7 @@ impl Partition {
             }
         }
 
-        Some(messages)
+        Ok(Some(messages))
     }
 
     pub async fn append_messages(&mut self, message: Message) -> Result<(), Error> {

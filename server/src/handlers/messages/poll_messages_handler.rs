@@ -67,12 +67,15 @@ pub async fn handle(
         command.value,
     );
 
-    let messages = system.get_stream(command.stream_id)?.get_messages(
-        command.topic_id,
-        command.partition_id,
-        command.value,
-        command.count,
-    )?;
+    let messages = system
+        .get_stream(command.stream_id)?
+        .get_messages(
+            command.topic_id,
+            command.partition_id,
+            command.value,
+            command.count,
+        )
+        .await?;
 
     let messages_count = messages.len() as u32;
     let messages_size = messages

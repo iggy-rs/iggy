@@ -3,33 +3,63 @@ use crate::segments::segment::Segment;
 use crate::segments::*;
 use crate::timestamp;
 use shared::error::Error;
+use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tracing::trace;
 
 impl Segment {
     // TODO: Load messages from cache and if not found, load them from disk.
-    pub fn get_messages(&self, offset: u64, count: u32) -> Option<Vec<&Message>> {
-        let mut end_offset: u64;
-        if self.is_full() {
-            end_offset = offset + (count - 1) as u64;
-            if end_offset > self.end_offset {
-                end_offset = self.end_offset;
-            }
-        } else {
-            end_offset = self.current_offset;
+    pub async fn get_messages(
+        &self,
+        offset: u64,
+        count: u32,
+    ) -> Result<Option<Vec<Message>>, Error> {
+        let mut end_offset = offset + count as u64;
+        if self.is_full() && end_offset > self.end_offset {
+            end_offset = self.end_offset;
         }
 
-        let messages = self
-            .messages
-            .iter()
-            .filter(|message| message.offset >= offset && message.offset <= end_offset)
-            .take(count as usize)
-            .collect::<Vec<&Message>>();
+        let mut log_file = Segment::open_file(&self.log_path, false).await;
+        let mut index_file = Segment::open_file(&self.index_path, false).await;
+        let index_range =
+            index::load_range(&mut index_file, self.start_offset, offset, end_offset).await?;
+
+        let mut offset_buffer = [0; 8];
+        let mut timestamp_buffer = [0; 8];
+        let mut length_buffer = [0; 4];
+
+        let buffer_size = index_range.end_position - index_range.start_position;
+        let mut buffer = vec![0; buffer_size as usize];
+        log_file
+            .seek(std::io::SeekFrom::Start(index_range.start_position as u64))
+            .await?;
+        log_file.read_exact(&mut buffer).await?;
+
+        let length = buffer.len();
+        let mut position = 0;
+
+        let mut messages = Vec::new();
+        while position < length {
+            offset_buffer.copy_from_slice(&buffer[position..position + 8]);
+            position += 8;
+            timestamp_buffer.copy_from_slice(&buffer[position..position + 8]);
+            position += 8;
+            length_buffer.copy_from_slice(&buffer[position..position + 4]);
+            position += 4;
+
+            let offset = u64::from_le_bytes(offset_buffer);
+            let timestamp = u64::from_le_bytes(timestamp_buffer);
+            let length = u32::from_le_bytes(length_buffer);
+            let mut payload = vec![0; length as usize];
+            payload.copy_from_slice(&buffer[position..position + length as usize]);
+            messages.push(Message::create(offset, timestamp, payload));
+            position += length as usize;
+        }
 
         if messages.is_empty() {
-            return None;
+            return Ok(None);
         }
 
-        Some(messages)
+        Ok(Some(messages))
     }
 
     pub async fn append_messages(&mut self, mut message: Message) -> Result<(), Error> {

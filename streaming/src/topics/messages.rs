@@ -3,19 +3,19 @@ use crate::topics::topic::Topic;
 use shared::error::Error;
 
 impl Topic {
-    pub fn get_messages(
+    pub async fn get_messages(
         &self,
         partition_id: u32,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<&Message>, Error> {
+    ) -> Result<Vec<Message>, Error> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
             return Err(Error::PartitionNotFound(partition_id));
         }
 
         let partition = partition.unwrap();
-        let messages = partition.get_messages(offset, count);
+        let messages = partition.get_messages(offset, count).await?;
         if messages.is_none() {
             return Err(Error::MessagesNotFound);
         }

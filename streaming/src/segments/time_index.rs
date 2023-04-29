@@ -8,7 +8,7 @@ pub struct TimeIndex {
     pub timestamp: u64,
 }
 
-pub async fn persist(file: &mut File, messages: &[Message]) -> Result<(), Error> {
+pub async fn persist(file: &mut File, messages: &[&Message]) -> Result<(), Error> {
     let mut bytes = Vec::with_capacity(messages.len() * 8);
     for message in messages {
         bytes.extend(message.timestamp.to_le_bytes());

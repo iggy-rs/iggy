@@ -12,6 +12,8 @@ pub enum ServerError {
     ConnectionError(#[from] ConnectionError),
     #[error("Cannot load configuration")]
     CannotLoadConfiguration,
+    #[error("Invalid configuration")]
+    InvalidConfiguration,
     #[error("System error")]
     SystemError(#[from] shared::error::Error),
     #[error("Write error")]

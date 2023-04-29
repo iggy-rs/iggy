@@ -52,7 +52,7 @@ pub async fn load_range(
 pub async fn persist(
     file: &mut File,
     current_bytes: u32,
-    messages: &[Message],
+    messages: &[&Message],
 ) -> Result<(), Error> {
     let mut bytes = Vec::with_capacity(messages.len() * 4);
     let mut current_position = current_bytes;

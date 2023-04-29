@@ -2,17 +2,16 @@ use crate::message::Message;
 use crate::segments::segment::Segment;
 use crate::segments::*;
 use crate::timestamp;
+use ringbuffer::{RingBuffer, RingBufferWrite};
 use shared::error::Error;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tracing::trace;
 
+const EMPTY_MESSAGES: Vec<Message> = vec![];
+
 impl Segment {
     // TODO: Load messages from cache and if not found, load them from disk.
-    pub async fn get_messages(
-        &self,
-        offset: u64,
-        count: u32,
-    ) -> Result<Option<Vec<Message>>, Error> {
+    pub async fn get_messages(&self, offset: u64, count: u32) -> Result<Vec<Message>, Error> {
         let mut end_offset = offset + count as u64;
         if self.is_full() && end_offset > self.end_offset {
             end_offset = self.end_offset;
@@ -32,7 +31,10 @@ impl Segment {
         log_file
             .seek(std::io::SeekFrom::Start(index_range.start_position as u64))
             .await?;
-        log_file.read_exact(&mut buffer).await?;
+        let read_bytes = log_file.read_exact(&mut buffer).await?;
+        if read_bytes == 0 {
+            return Ok(EMPTY_MESSAGES);
+        }
 
         let length = buffer.len();
         let mut position = 0;
@@ -55,11 +57,7 @@ impl Segment {
             position += length as usize;
         }
 
-        if messages.is_empty() {
-            return Ok(None);
-        }
-
-        Ok(Some(messages))
+        Ok(messages)
     }
 
     pub async fn append_messages(&mut self, mut message: Message) -> Result<(), Error> {
@@ -120,17 +118,30 @@ impl Segment {
             self.partition_id
         );
 
-        let messages_count = self.messages.len();
-        let messages =
-            &self.messages[messages_count - self.unsaved_messages_count as usize..messages_count];
-        let current_bytes = self.saved_bytes;
+        let mut messages = Vec::with_capacity(self.unsaved_messages_count as usize);
 
+        for i in self.next_saved_message_index
+            ..self.next_saved_message_index + self.unsaved_messages_count
+        {
+            let message = &self.messages[i as isize];
+            messages.push(message);
+            self.next_saved_message_index = i;
+        }
+
+        let buffer_capacity = self.messages.capacity() as u32;
+        if self.next_saved_message_index >= buffer_capacity - 1 {
+            self.next_saved_message_index = buffer_capacity - self.unsaved_messages_count;
+        } else {
+            self.next_saved_message_index += 1;
+        }
+
+        let current_bytes = self.saved_bytes;
         let mut log_file = Segment::open_file(&self.log_path, true).await;
         let mut index_file = Segment::open_file(&self.index_path, true).await;
         let mut time_index_file = Segment::open_file(&self.time_index_path, true).await;
-        let saved_bytes = log::persist(&mut log_file, messages).await?;
-        index::persist(&mut index_file, current_bytes, messages).await?;
-        time_index::persist(&mut time_index_file, messages).await?;
+        let saved_bytes = log::persist(&mut log_file, &messages).await?;
+        index::persist(&mut index_file, current_bytes, &messages).await?;
+        time_index::persist(&mut time_index_file, &messages).await?;
 
         trace!(
             "Saved {} messages on disk in segment {} for partition {}, total bytes written: {}",

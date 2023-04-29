@@ -13,9 +13,9 @@
         "path": "topics",
         "partition": {
           "segment": {
-            "size_bytes": 1000000,
-            "messages_required_to_save": 10,
-            "messages_buffer": 10
+            "size_bytes": 100000000,
+            "messages_required_to_save": 4,
+            "messages_buffer": 16
           }
         }
       }

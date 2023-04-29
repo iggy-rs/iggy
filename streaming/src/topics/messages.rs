@@ -16,15 +16,6 @@ impl Topic {
 
         let partition = partition.unwrap();
         let messages = partition.get_messages(offset, count).await?;
-        if messages.is_none() {
-            return Err(Error::MessagesNotFound);
-        }
-
-        let messages = messages.unwrap();
-        if messages.is_empty() {
-            return Err(Error::MessagesNotFound);
-        }
-
         Ok(messages)
     }
 

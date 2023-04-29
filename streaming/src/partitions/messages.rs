@@ -4,14 +4,12 @@ use crate::segments::segment::Segment;
 use shared::error::Error;
 use tracing::trace;
 
+const EMPTY_MESSAGES: Vec<Message> = vec![];
+
 impl Partition {
-    pub async fn get_messages(
-        &self,
-        offset: u64,
-        count: u32,
-    ) -> Result<Option<Vec<Message>>, Error> {
+    pub async fn get_messages(&self, offset: u64, count: u32) -> Result<Vec<Message>, Error> {
         if self.segments.is_empty() {
-            return Ok(None);
+            return Ok(EMPTY_MESSAGES);
         }
 
         let mut end_offset = offset + (count - 1) as u64;
@@ -31,22 +29,24 @@ impl Partition {
             .collect::<Vec<&Segment>>();
 
         if segments.is_empty() {
-            return Ok(None);
+            return Ok(EMPTY_MESSAGES);
+        }
+
+        if segments.len() == 1 {
+            let segment = segments.first().unwrap();
+            let messages = segment.get_messages(offset, count).await?;
+            return Ok(messages);
         }
 
         let mut messages = Vec::new();
         for segment in segments {
             let segment_messages = segment.get_messages(offset, count).await?;
-            if segment_messages.is_none() {
-                continue;
-            }
-
-            for message in segment_messages.unwrap() {
+            for message in segment_messages {
                 messages.push(message);
             }
         }
 
-        Ok(Some(messages))
+        Ok(messages)
     }
 
     pub async fn append_messages(&mut self, message: Message) -> Result<(), Error> {

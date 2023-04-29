@@ -128,14 +128,14 @@ Server restart
 - [x] Implement `Streams` consisting of multiple `Topics`
 - [x] Implement `Topic` consisting of multiple `Partitions`
 - [x] Implement `Partition` consisting of multiple `Segments`
-- [x] Store `Topic → Partition → Segment` structures on the disk in separate directories
+- [x] Store `Stream → Topic → Partition → Segment` structures on the disk in the separate directories
 - [x] Store messages on disk as append-only log using binary format
 - [x] Store messages index + timeindex on disk for fast access
 - [x] Automatically create new partition segments when the current one is full
 - [x] Allow clients to create/read/delete topics
 - [x] Allow clients to send messages to the specific topic and partition
 - [x] Allow clients to poll messages from the specific topic and partition
-- [ ] Cache in-memory only part of the latest messages to allow fast access to them
+- [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them
 - [ ] Index messages by their offset to allow fast access to the specific messages
 - [ ] Index messages by their timestamp to allow fast access to the specific messages
 - [ ] Implement efficient message writing on disk

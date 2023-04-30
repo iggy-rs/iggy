@@ -18,7 +18,7 @@ pub struct Segment {
     pub index_path: String,
     pub log_path: String,
     pub time_index_path: String,
-    pub messages: AllocRingBuffer<Message>,
+    pub messages: AllocRingBuffer<Arc<Message>>,
     pub unsaved_messages_count: u32,
     pub next_saved_message_index: u32,
     pub current_size_bytes: u32,

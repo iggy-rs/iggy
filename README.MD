@@ -136,7 +136,7 @@ Server restart
 - [x] Allow clients to send messages to the specific topic and partition
 - [x] Allow clients to poll messages from the specific topic and partition
 - [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them
-- [ ] Index messages by their offset to allow fast access to the specific messages
+- [X] Index messages by their offset to allow fast access to the specific messages
 - [ ] Index messages by their timestamp to allow fast access to the specific messages
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk

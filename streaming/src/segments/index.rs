@@ -1,5 +1,6 @@
 use crate::message::Message;
 use shared::error::Error;
+use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 
@@ -52,7 +53,7 @@ pub async fn load_range(
 pub async fn persist(
     file: &mut File,
     current_bytes: u32,
-    messages: &[&Message],
+    messages: &Vec<&Arc<Message>>,
 ) -> Result<(), Error> {
     let mut bytes = Vec::with_capacity(messages.len() * 4);
     let mut current_position = current_bytes;

@@ -1,9 +1,10 @@
 use crate::message::Message;
 use shared::error::Error;
+use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
-pub async fn persist(file: &mut File, messages: &[&Message]) -> Result<u32, Error> {
+pub async fn persist(file: &mut File, messages: &Vec<&Arc<Message>>) -> Result<u32, Error> {
     let messages_size = messages
         .iter()
         .map(|message| message.get_size_bytes())

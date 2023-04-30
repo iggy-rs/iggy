@@ -2,6 +2,7 @@ use crate::message::Message;
 use crate::segments::segment::Segment;
 use ringbuffer::{AllocRingBuffer, RingBufferWrite};
 use shared::error::Error;
+use std::sync::Arc;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::info;
@@ -41,7 +42,7 @@ impl Segment {
             let offset = u64::from_le_bytes(offset_buffer);
             let timestamp = u64::from_le_bytes(timestamp_buffer);
             let message = Message::create(offset, timestamp, payload);
-            messages.push(message);
+            messages.push(Arc::new(message));
             self.current_offset = offset;
             self.next_saved_message_index += 1;
         }

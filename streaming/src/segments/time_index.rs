@@ -1,5 +1,6 @@
 use crate::message::Message;
 use shared::error::Error;
+use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 
@@ -8,7 +9,7 @@ pub struct TimeIndex {
     pub timestamp: u64,
 }
 
-pub async fn persist(file: &mut File, messages: &[&Message]) -> Result<(), Error> {
+pub async fn persist(file: &mut File, messages: &Vec<&Arc<Message>>) -> Result<(), Error> {
     let mut bytes = Vec::with_capacity(messages.len() * 8);
     for message in messages {
         bytes.extend(message.timestamp.to_le_bytes());

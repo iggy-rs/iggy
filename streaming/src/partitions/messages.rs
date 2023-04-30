@@ -2,12 +2,13 @@ use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::Segment;
 use shared::error::Error;
+use std::sync::Arc;
 use tracing::trace;
 
-const EMPTY_MESSAGES: Vec<Message> = vec![];
+const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
 impl Partition {
-    pub async fn get_messages(&self, offset: u64, count: u32) -> Result<Vec<Message>, Error> {
+    pub async fn get_messages(&self, offset: u64, count: u32) -> Result<Vec<Arc<Message>>, Error> {
         if self.segments.is_empty() {
             return Ok(EMPTY_MESSAGES);
         }

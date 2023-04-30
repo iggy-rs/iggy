@@ -6,8 +6,8 @@ use figment::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use streaming::config::SystemConfig;
-use tracing::{error, info};
 use streaming::segments::segment;
+use tracing::{error, info};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerConfig {
@@ -45,10 +45,13 @@ impl ServerConfig {
     fn validate_config(config: &ServerConfig) -> Result<(), ServerError> {
         let segment_config = &config.system.stream.topic.partition.segment;
         if segment_config.size_bytes > segment::MAX_SIZE_BYTES {
-            error!("Segment configuration -> size cannot be greater than: {} bytes.", segment::MAX_SIZE_BYTES);
+            error!(
+                "Segment configuration -> size cannot be greater than: {} bytes.",
+                segment::MAX_SIZE_BYTES
+            );
             return Err(ServerError::InvalidConfiguration);
         }
-        
+
         if segment_config.messages_required_to_save > segment_config.messages_buffer {
             error!("Segment configuration -> messages required to save cannot be greater than messages buffer.");
             return Err(ServerError::InvalidConfiguration);

@@ -1,6 +1,7 @@
 use crate::message::Message;
 use crate::topics::topic::Topic;
 use shared::error::Error;
+use std::sync::Arc;
 
 impl Topic {
     pub async fn get_messages(
@@ -8,7 +9,7 @@ impl Topic {
         partition_id: u32,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<Message>, Error> {
+    ) -> Result<Vec<Arc<Message>>, Error> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
             return Err(Error::PartitionNotFound(partition_id));

@@ -2,25 +2,62 @@ use crate::message::Message;
 use crate::segments::segment::Segment;
 use crate::segments::*;
 use crate::timestamp;
-use ringbuffer::{RingBuffer, RingBufferWrite};
+use ringbuffer::{RingBuffer, RingBufferExt, RingBufferWrite};
 use shared::error::Error;
+use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
 use tracing::trace;
 
-const EMPTY_MESSAGES: Vec<Message> = vec![];
+const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
 impl Segment {
-    // TODO: Load messages from cache and if not found, load them from disk.
-    pub async fn get_messages(&self, offset: u64, count: u32) -> Result<Vec<Message>, Error> {
+    pub async fn get_messages(&self, offset: u64, count: u32) -> Result<Vec<Arc<Message>>, Error> {
         let mut end_offset = offset + count as u64;
         if self.is_full() && end_offset > self.end_offset {
             end_offset = self.end_offset;
         }
 
+        let first_buffered_offset = self.messages[0].offset;
+        if offset >= first_buffered_offset {
+            return self.load_messages_from_cache(offset, end_offset);
+        }
+
+        self.load_messages_from_disk(offset, end_offset).await
+    }
+
+    fn load_messages_from_cache(
+        &self,
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Result<Vec<Arc<Message>>, Error> {
+        trace!(
+            "Loading messages from cache, start offset: {}, end offset: {}...",
+            start_offset,
+            end_offset
+        );
+        let messages = self
+            .messages
+            .iter()
+            .filter(|message| message.offset >= start_offset && message.offset <= end_offset)
+            .map(Arc::clone)
+            .collect();
+        Ok(messages)
+    }
+
+    async fn load_messages_from_disk(
+        &self,
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Result<Vec<Arc<Message>>, Error> {
+        trace!(
+            "Loading messages from disk, start offset: {}, end offset: {}...",
+            start_offset,
+            end_offset
+        );
         let mut log_file = Segment::open_file(&self.log_path, false).await;
         let mut index_file = Segment::open_file(&self.index_path, false).await;
         let index_range =
-            index::load_range(&mut index_file, self.start_offset, offset, end_offset).await?;
+            index::load_range(&mut index_file, self.start_offset, start_offset, end_offset).await?;
 
         let mut offset_buffer = [0; 8];
         let mut timestamp_buffer = [0; 8];
@@ -39,7 +76,7 @@ impl Segment {
         let length = buffer.len();
         let mut position = 0;
 
-        let mut messages = Vec::new();
+        let mut messages: Vec<Arc<Message>> = Vec::new();
         while position < length {
             offset_buffer.copy_from_slice(&buffer[position..position + 8]);
             position += 8;
@@ -53,7 +90,7 @@ impl Segment {
             let length = u32::from_le_bytes(length_buffer);
             let mut payload = vec![0; length as usize];
             payload.copy_from_slice(&buffer[position..position + length as usize]);
-            messages.push(Message::create(offset, timestamp, payload));
+            messages.push(Arc::new(Message::create(offset, timestamp, payload)));
             position += length as usize;
         }
 
@@ -80,7 +117,7 @@ impl Segment {
         message.offset = self.current_offset;
         message.timestamp = timestamp::get();
         self.current_size_bytes += message.get_size_bytes();
-        self.messages.push(message);
+        self.messages.push(Arc::new(message));
         self.unsaved_messages_count += 1;
 
         trace!(

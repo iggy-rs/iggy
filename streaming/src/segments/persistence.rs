@@ -4,7 +4,7 @@ use ringbuffer::{AllocRingBuffer, RingBufferWrite};
 use shared::error::Error;
 use std::sync::Arc;
 use tokio::fs::{File, OpenOptions};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tracing::info;
 
 impl Segment {
@@ -14,34 +14,38 @@ impl Segment {
             self.start_offset, self.partition_id
         );
         let mut messages = AllocRingBuffer::with_capacity(self.config.messages_buffer as usize);
-        let mut log_file = Segment::open_file(&self.log_path, false).await;
-        let mut offset_buffer = [0; 8];
-        let mut timestamp_buffer = [0; 8];
-        let mut length_buffer = [0; 4];
+        let log_file = Segment::open_file(&self.log_path, false).await;
+        let file_size = log_file.metadata().await.unwrap().len() as u32;
 
         info!(
             "Loading messages from segment log file for start offset: {} and partition ID: {}...",
             self.start_offset, self.partition_id
         );
 
-        while log_file.read_exact(&mut offset_buffer).await.is_ok() {
-            if log_file.read_exact(&mut timestamp_buffer).await.is_err() {
+        let mut reader = BufReader::new(log_file);
+        loop {
+            let offset = reader.read_u64_le().await;
+            if offset.is_err() {
+                break;
+            }
+
+            let timestamp = reader.read_u64_le().await;
+            if timestamp.is_err() {
                 return Err(Error::CannotReadMessageTimestamp);
             }
 
-            if log_file.read_exact(&mut length_buffer).await.is_err() {
+            let length = reader.read_u32_le().await;
+            if length.is_err() {
                 return Err(Error::CannotReadMessageLength);
             }
 
-            let length = u32::from_le_bytes(length_buffer);
-            let mut payload = vec![0; length as usize];
-            if log_file.read_exact(&mut payload).await.is_err() {
+            let mut payload = vec![0; length.unwrap() as usize];
+            if reader.read_exact(&mut payload).await.is_err() {
                 return Err(Error::CannotReadMessagePayload);
             }
 
-            let offset = u64::from_le_bytes(offset_buffer);
-            let timestamp = u64::from_le_bytes(timestamp_buffer);
-            let message = Message::create(offset, timestamp, payload);
+            let offset = offset.unwrap();
+            let message = Message::create(offset, timestamp.unwrap(), payload);
             messages.push(Arc::new(message));
             self.current_offset = offset;
             self.next_saved_message_index += 1;
@@ -49,7 +53,7 @@ impl Segment {
 
         self.messages = messages;
         self.should_increment_offset = self.current_offset > 0;
-        self.current_size_bytes = log_file.metadata().await.unwrap().len() as u32;
+        self.current_size_bytes = file_size;
         self.saved_bytes = self.current_size_bytes;
 
         info!(

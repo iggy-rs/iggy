@@ -11,13 +11,27 @@ use tracing::trace;
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
 impl Segment {
-    pub async fn get_messages(&self, offset: u64, count: u32) -> Result<Vec<Arc<Message>>, Error> {
+    pub async fn get_messages(
+        &self,
+        mut offset: u64,
+        count: u32,
+    ) -> Result<Vec<Arc<Message>>, Error> {
         let mut end_offset = offset + count as u64;
         if self.is_full() && end_offset > self.end_offset {
             end_offset = self.end_offset;
         }
 
         let first_buffered_offset = self.messages[0].offset;
+        trace!(
+            "First buffered offset: {} for segment: {}",
+            first_buffered_offset,
+            self.start_offset
+        );
+
+        if offset < self.start_offset {
+            offset = self.start_offset;
+        }
+
         if offset >= first_buffered_offset {
             return self.load_messages_from_cache(offset, end_offset);
         }

@@ -12,7 +12,7 @@ impl Server {
             while let Some(server_command) = system_receiver.receiver.recv().await {
                 match server_command {
                     ServerCommand::HandleRequest((send, recv)) => {
-                        let request = recv.read_to_end(1024 * 1024).await;
+                        let request = recv.read_to_end(1024 * 1024 * 1024).await;
                         if request.is_err() {
                             error!("Error when reading the request: {:?}", request);
                             continue;

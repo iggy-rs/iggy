@@ -6,7 +6,7 @@ use crate::handlers::topics::*;
 use sdk::client::ConnectedClient;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
-use shared::messages::send_message::SendMessage;
+use shared::messages::send_messages::SendMessages;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::topics::create_topic::CreateTopic;
@@ -23,8 +23,8 @@ pub async fn handle(input: &str, client: &mut ConnectedClient) -> Result<(), Cli
         Command::Ping => ping_handler::handle(client).await,
         Command::GetStreams => get_streams_handler::handle(client).await,
         Command::SendMessage => {
-            let command = SendMessage::from_str(input)?;
-            send_message_handler::handle(command, client).await
+            let command = SendMessages::from_str(input)?;
+            send_messages_handler::handle(command, client).await
         }
         Command::PollMessages => {
             let command = PollMessages::from_str(input)?;

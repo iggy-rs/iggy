@@ -26,15 +26,23 @@ impl Stream {
         &mut self,
         topic_id: u32,
         partition_id: u32,
-        message: Message,
+        messages: Vec<Message>,
     ) -> Result<(), Error> {
+        if messages.is_empty() {
+            return Ok(());
+        }
+
+        if messages.len() > self.max_messages_in_batch {
+            return Err(Error::TooManyMessages);
+        }
+
         let topic = self.topics.get_mut(&topic_id);
         if topic.is_none() {
             return Err(Error::TopicNotFound(topic_id));
         }
 
         let topic = topic.unwrap();
-        topic.append_messages(partition_id, message).await?;
+        topic.append_messages(partition_id, messages).await?;
         Ok(())
     }
 }

@@ -54,7 +54,7 @@ impl DisconnectedClient {
         Ok(ConnectedClient {
             endpoint: self.endpoint.clone(),
             connection,
-            buffer: vec![0; 1024 * 1024],
+            buffer: vec![0; 1024 * 1024 * 1024],
         })
     }
 }

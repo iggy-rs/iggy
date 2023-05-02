@@ -111,33 +111,35 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn append_messages(&mut self, mut message: Message) -> Result<(), Error> {
+    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {
         if self.is_full() {
             return Err(Error::SegmentFull(self.start_offset, self.partition_id));
         }
 
-        trace!(
-            "Appending the message, current segment size is {} bytes",
-            self.current_size_bytes
-        );
+        for mut message in messages {
+            trace!(
+                "Appending the message, current segment size is {} bytes",
+                self.current_size_bytes
+            );
 
-        // Do not increment offset for the very first message
-        if self.should_increment_offset {
-            self.current_offset += 1;
-        } else {
-            self.should_increment_offset = true;
+            // Do not increment offset for the very first message
+            if self.should_increment_offset {
+                self.current_offset += 1;
+            } else {
+                self.should_increment_offset = true;
+            }
+
+            message.offset = self.current_offset;
+            message.timestamp = timestamp::get();
+            self.current_size_bytes += message.get_size_bytes();
+            self.messages.push(Arc::new(message));
+            self.unsaved_messages_count += 1;
+
+            trace!(
+                "Appended the message, current segment size is {} bytes",
+                self.current_size_bytes
+            );
         }
-
-        message.offset = self.current_offset;
-        message.timestamp = timestamp::get();
-        self.current_size_bytes += message.get_size_bytes();
-        self.messages.push(Arc::new(message));
-        self.unsaved_messages_count += 1;
-
-        trace!(
-            "Appended the message, current segment size is {} bytes",
-            self.current_size_bytes
-        );
 
         if self.unsaved_messages_count >= self.config.messages_required_to_save || self.is_full() {
             self.persist_messages().await?;
@@ -180,7 +182,9 @@ impl Segment {
         }
 
         let buffer_capacity = self.messages.capacity() as u32;
-        if self.next_saved_message_index >= buffer_capacity - 1 {
+        if self.unsaved_messages_count > buffer_capacity {
+            self.next_saved_message_index = buffer_capacity - 1;
+        } else if self.next_saved_message_index >= buffer_capacity - 1 {
             self.next_saved_message_index = buffer_capacity - self.unsaved_messages_count;
         } else {
             self.next_saved_message_index += 1;

@@ -50,7 +50,7 @@ impl Partition {
         Ok(messages)
     }
 
-    pub async fn append_messages(&mut self, message: Message) -> Result<(), Error> {
+    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {
         let segment = self.segments.last_mut();
         if segment.is_none() {
             return Err(Error::SegmentNotFound);
@@ -76,6 +76,6 @@ impl Partition {
         }
 
         let segment = self.segments.last_mut();
-        segment.unwrap().append_messages(message).await
+        segment.unwrap().append_messages(messages).await
     }
 }

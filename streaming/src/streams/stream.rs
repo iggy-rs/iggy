@@ -14,6 +14,7 @@ pub struct Stream {
     pub(crate) topics_path: String,
     pub(crate) config: Arc<StreamConfig>,
     pub(crate) info_path: String,
+    pub(crate) max_messages_in_batch: usize,
 }
 
 impl Stream {
@@ -25,6 +26,7 @@ impl Stream {
         let path = format!("{}/{}", streams_path, id);
         let info_path = format!("{}/{}", path, STREAM_INFO);
         let topics_path = format!("{}/{}", path, &config.topic.path);
+        let max_messages_in_batch = config.topic.partition.segment.messages_buffer as usize;
 
         Stream {
             id,
@@ -34,6 +36,7 @@ impl Stream {
             info_path,
             config,
             topics: HashMap::new(),
+            max_messages_in_batch,
         }
     }
 }

@@ -123,6 +123,8 @@ pub enum Error {
     CannotParseUtf8(#[from] Utf8Error),
     #[error("Too big payload")]
     TooBigPayload,
+    #[error("Too many messages")]
+    TooManyMessages,
     #[error("Write error")]
     WriteError(#[from] WriteError),
 }
@@ -188,7 +190,8 @@ impl Error {
             Error::CannotParseInt(_) => 55,
             Error::CannotParseSlice(_) => 56,
             Error::TooBigPayload => 57,
-            Error::WriteError(_) => 58,
+            Error::TooManyMessages => 58,
+            Error::WriteError(_) => 59,
         }
     }
 }

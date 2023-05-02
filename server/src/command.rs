@@ -7,7 +7,7 @@ use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::error::Error;
 use shared::messages::poll_messages::PollMessages;
-use shared::messages::send_message::SendMessage;
+use shared::messages::send_messages::SendMessages;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::topics::create_topic::CreateTopic;
@@ -75,8 +75,8 @@ async fn try_handle(
     match command {
         Command::Ping => ping_handler::handle(sender).await,
         Command::SendMessage => {
-            let command = SendMessage::from_bytes(bytes)?;
-            send_message_handler::handle(command, sender, system).await
+            let command = SendMessages::from_bytes(bytes)?;
+            send_messages_handler::handle(command, sender, system).await
         }
         Command::PollMessages => {
             let command = PollMessages::from_bytes(bytes)?;

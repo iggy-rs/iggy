@@ -14,8 +14,8 @@
         "partition": {
           "segment": {
             "size_bytes": 100000000,
-            "messages_required_to_save": 4,
-            "messages_buffer": 16
+            "messages_required_to_save": 16,
+            "messages_buffer": 16384
           }
         }
       }

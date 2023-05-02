@@ -23,7 +23,7 @@ impl Topic {
     pub async fn append_messages(
         &mut self,
         partition_id: u32,
-        message: Message,
+        messages: Vec<Message>,
     ) -> Result<(), Error> {
         let partition = self.partitions.get_mut(&partition_id);
         if partition.is_none() {
@@ -31,7 +31,7 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
-        partition.append_messages(message).await?;
+        partition.append_messages(messages).await?;
         Ok(())
     }
 }

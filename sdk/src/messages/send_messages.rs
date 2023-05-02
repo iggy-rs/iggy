@@ -2,10 +2,10 @@ use crate::client::ConnectedClient;
 use crate::error::Error;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
-use shared::messages::send_message::SendMessage;
+use shared::messages::send_messages::SendMessages;
 
 impl ConnectedClient {
-    pub async fn send_message(&mut self, command: &SendMessage) -> Result<(), Error> {
+    pub async fn send_messages(&mut self, command: &SendMessages) -> Result<(), Error> {
         self.send_with_response(
             [Command::SendMessage.as_bytes(), command.as_bytes()]
                 .concat()

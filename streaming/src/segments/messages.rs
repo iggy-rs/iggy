@@ -16,7 +16,7 @@ impl Segment {
         mut offset: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
-        let mut end_offset = offset + count as u64;
+        let mut end_offset = offset + (count - 1) as u64;
         if self.is_full() && end_offset > self.end_offset {
             end_offset = self.end_offset;
         }
@@ -68,7 +68,6 @@ impl Segment {
             start_offset,
             end_offset
         );
-        let mut log_file = Segment::open_file(&self.log_path, false).await;
         let mut index_file = Segment::open_file(&self.index_path, false).await;
         let index_range =
             index::load_range(&mut index_file, self.start_offset, start_offset, end_offset).await?;
@@ -79,6 +78,8 @@ impl Segment {
 
         let buffer_size = index_range.end_position - index_range.start_position;
         let mut buffer = vec![0; buffer_size as usize];
+
+        let mut log_file = Segment::open_file(&self.log_path, false).await;
         log_file
             .seek(std::io::SeekFrom::Start(index_range.start_position as u64))
             .await?;

@@ -1,11 +1,13 @@
-use crate::message::Message;
 use crate::segments::segment::Segment;
+use crate::segments::{log, time_index};
 use ringbuffer::{AllocRingBuffer, RingBufferWrite};
 use shared::error::Error;
 use std::sync::Arc;
 use tokio::fs::{File, OpenOptions};
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::AsyncWriteExt;
 use tracing::info;
+
+const RELATIVE_START_OFFSET: u32 = 0;
 
 impl Segment {
     pub async fn load(&mut self) -> Result<(), Error> {
@@ -13,45 +15,39 @@ impl Segment {
             "Loading segment from disk for offset: {} and partition with ID: {}...",
             self.start_offset, self.partition_id
         );
-        let mut messages = AllocRingBuffer::with_capacity(self.config.messages_buffer as usize);
-        let log_file = Segment::open_file(&self.log_path, false).await;
+        let mut log_file = Segment::open_file(&self.log_path, false).await;
+        let mut time_index_file = Segment::open_file(&self.time_index_path, false).await;
         let file_size = log_file.metadata().await.unwrap().len() as u32;
+
+        info!(
+            "Loading time indexes from segment log file for start offset: {} and partition ID: {}...",
+            self.start_offset, self.partition_id
+        );
+
+        self.time_indexes = time_index::load(&mut time_index_file).await?;
 
         info!(
             "Loading messages from segment log file for start offset: {} and partition ID: {}...",
             self.start_offset, self.partition_id
         );
 
-        let mut reader = BufReader::new(log_file);
-        loop {
-            let offset = reader.read_u64_le().await;
-            if offset.is_err() {
-                break;
-            }
-
-            let timestamp = reader.read_u64_le().await;
-            if timestamp.is_err() {
-                return Err(Error::CannotReadMessageTimestamp);
-            }
-
-            let length = reader.read_u32_le().await;
-            if length.is_err() {
-                return Err(Error::CannotReadMessageLength);
-            }
-
-            let mut payload = vec![0; length.unwrap() as usize];
-            if reader.read_exact(&mut payload).await.is_err() {
-                return Err(Error::CannotReadMessagePayload);
-            }
-
-            let offset = offset.unwrap();
-            let message = Message::create(offset, timestamp.unwrap(), payload);
-            messages.push(Arc::new(message));
-            self.current_offset = offset;
-            self.next_saved_message_index += 1;
+        let relative_end_offset = (self.end_offset - self.start_offset) as u32;
+        let messages = log::load(&mut log_file, RELATIVE_START_OFFSET, relative_end_offset).await?;
+        if messages.is_empty() {
+            return Ok(());
         }
 
-        self.messages = messages;
+        self.current_offset = messages.last().unwrap().offset;
+        self.next_saved_message_index += messages.len() as u32;
+
+        let mut buffered_messages =
+            AllocRingBuffer::with_capacity(self.config.messages_buffer as usize);
+
+        for message in messages {
+            buffered_messages.push(Arc::new(message));
+        }
+
+        self.messages = buffered_messages;
         self.should_increment_offset = self.current_offset > 0;
         self.current_size_bytes = file_size;
         self.saved_bytes = self.current_size_bytes;

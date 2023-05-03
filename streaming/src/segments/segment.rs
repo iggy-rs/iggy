@@ -1,5 +1,6 @@
 use crate::config::SegmentConfig;
 use crate::message::Message;
+use crate::segments::time_index::TimeIndex;
 use ringbuffer::AllocRingBuffer;
 use std::sync::Arc;
 
@@ -8,6 +9,7 @@ pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
 pub const MAX_SIZE_BYTES: u32 = 1_000_000_000;
 
+// TODO: Move messages buffer to partition and remove from segment
 #[derive(Debug)]
 pub struct Segment {
     pub partition_id: u32,
@@ -25,6 +27,7 @@ pub struct Segment {
     pub saved_bytes: u32,
     pub should_increment_offset: bool,
     pub config: Arc<SegmentConfig>,
+    pub time_indexes: Vec<TimeIndex>,
 }
 
 impl Segment {
@@ -60,6 +63,7 @@ impl Segment {
             saved_bytes: 0,
             should_increment_offset: false,
             config,
+            time_indexes: Vec::new(),
         }
     }
 

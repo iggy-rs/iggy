@@ -1,12 +1,10 @@
 use crate::message::Message;
 use crate::segments::segment::Segment;
 use crate::segments::*;
-use crate::timestamp;
-use ringbuffer::{RingBuffer, RingBufferExt, RingBufferWrite};
 use shared::error::Error;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt};
-use tracing::trace;
+use tracing::{error, trace};
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
@@ -17,45 +15,15 @@ impl Segment {
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
         let mut end_offset = offset + (count - 1) as u64;
-        if self.is_full() && end_offset > self.end_offset {
+        if self.is_closed && end_offset > self.end_offset {
             end_offset = self.end_offset;
         }
-
-        let first_buffered_offset = self.messages[0].offset;
-        trace!(
-            "First buffered offset: {} for segment: {}",
-            first_buffered_offset,
-            self.start_offset
-        );
 
         if offset < self.start_offset {
             offset = self.start_offset;
         }
 
-        if offset >= first_buffered_offset {
-            return self.load_messages_from_cache(offset, end_offset);
-        }
-
         self.load_messages_from_disk(offset, end_offset).await
-    }
-
-    fn load_messages_from_cache(
-        &self,
-        start_offset: u64,
-        end_offset: u64,
-    ) -> Result<Vec<Arc<Message>>, Error> {
-        trace!(
-            "Loading messages from cache, start offset: {}, end offset: {}...",
-            start_offset,
-            end_offset
-        );
-        let messages = self
-            .messages
-            .iter()
-            .filter(|message| message.offset >= start_offset && message.offset <= end_offset)
-            .map(Arc::clone)
-            .collect();
-        Ok(messages)
     }
 
     async fn load_messages_from_disk(
@@ -64,7 +32,7 @@ impl Segment {
         end_offset: u64,
     ) -> Result<Vec<Arc<Message>>, Error> {
         trace!(
-            "Loading messages from disk, start offset: {}, end offset: {}...",
+            "Loading messages from disk, segment start offset: {}, end offset: {}...",
             start_offset,
             end_offset
         );
@@ -91,7 +59,8 @@ impl Segment {
         let length = buffer.len();
         let mut position = 0;
 
-        let mut messages: Vec<Arc<Message>> = Vec::new();
+        let messages_count = (1 + end_offset - start_offset) as usize;
+        let mut messages: Vec<Arc<Message>> = Vec::with_capacity(messages_count);
         while position < length {
             offset_buffer.copy_from_slice(&buffer[position..position + 8]);
             position += 8;
@@ -109,106 +78,82 @@ impl Segment {
             position += length as usize;
         }
 
+        if messages.len() != messages_count {
+            error!(
+                "Loaded {} messages from disk, expected {}.",
+                messages.len(),
+                messages_count
+            );
+        }
+
+        trace!(
+            "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
+            messages_count,
+            start_offset,
+            end_offset
+        );
+
         Ok(messages)
     }
 
-    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {
-        if self.is_full() {
-            return Err(Error::SegmentFull(self.start_offset, self.partition_id));
+    pub async fn append_message(&mut self, message: Arc<Message>) -> Result<(), Error> {
+        if self.is_closed {
+            return Err(Error::SegmentClosed(self.start_offset, self.partition_id));
         }
 
-        for mut message in messages {
-            trace!(
-                "Appending the message, current segment size is {} bytes",
-                self.current_size_bytes
-            );
-
-            // Do not increment offset for the very first message
-            if self.should_increment_offset {
-                self.current_offset += 1;
-            } else {
-                self.should_increment_offset = true;
-            }
-
-            message.offset = self.current_offset;
-            message.timestamp = timestamp::get();
-            self.current_size_bytes += message.get_size_bytes();
-            self.messages.push(Arc::new(message));
-            self.unsaved_messages_count += 1;
-
-            trace!(
-                "Appended the message, current segment size is {} bytes",
-                self.current_size_bytes
-            );
+        if self.unsaved_messages.is_none() {
+            self.unsaved_messages = Some(Vec::new());
         }
 
-        if self.unsaved_messages_count >= self.config.messages_required_to_save || self.is_full() {
-            self.persist_messages().await?;
-        }
-
-        if self.is_full() {
-            self.end_offset = self.current_offset;
-        }
+        self.current_size_bytes += message.get_size_bytes();
+        self.current_offset = message.offset;
+        self.unsaved_messages.as_mut().unwrap().push(message);
 
         Ok(())
     }
 
     pub async fn persist_messages(&mut self) -> Result<(), Error> {
-        if self.unsaved_messages_count == 0 {
-            if !self.is_full() {
-                trace!(
-                    "No buffered messages to save on disk in segment {} for partition {}",
-                    self.start_offset,
-                    self.partition_id
-                );
-            }
+        if self.unsaved_messages.is_none() {
+            return Ok(());
+        }
+
+        let unsaved_messages = self.unsaved_messages.as_ref().unwrap();
+        if unsaved_messages.is_empty() {
             return Ok(());
         }
 
         trace!(
-            "Saving {} messages on disk in segment {} for partition {}",
-            self.unsaved_messages_count,
+            "Saving {} messages on disk in segment with start offset: {} for partition with ID: {}...",
+            unsaved_messages.len(),
             self.start_offset,
             self.partition_id
         );
-
-        let mut messages = Vec::with_capacity(self.unsaved_messages_count as usize);
-
-        for i in self.next_saved_message_index
-            ..self.next_saved_message_index + self.unsaved_messages_count
-        {
-            let message = &self.messages[i as isize];
-            messages.push(message);
-            self.next_saved_message_index = i;
-        }
-
-        let buffer_capacity = self.messages.capacity() as u32;
-        if self.unsaved_messages_count > buffer_capacity {
-            self.next_saved_message_index = buffer_capacity - 1;
-        } else if self.next_saved_message_index >= buffer_capacity - 1 {
-            self.next_saved_message_index = buffer_capacity - self.unsaved_messages_count;
-        } else {
-            self.next_saved_message_index += 1;
-        }
 
         let current_bytes = self.saved_bytes;
         let mut log_file = Segment::open_file(&self.log_path, true).await;
         let mut index_file = Segment::open_file(&self.index_path, true).await;
         let mut time_index_file = Segment::open_file(&self.time_index_path, true).await;
-        let saved_bytes = log::persist(&mut log_file, &messages).await?;
-        index::persist(&mut index_file, current_bytes, &messages).await?;
-        time_index::persist(&mut time_index_file, &messages).await?;
+
+        let saved_bytes = log::persist(&mut log_file, unsaved_messages).await?;
+        index::persist(&mut index_file, current_bytes, unsaved_messages).await?;
+        time_index::persist(&mut time_index_file, unsaved_messages).await?;
+        self.saved_bytes += saved_bytes;
 
         trace!(
-            "Saved {} messages on disk in segment {} for partition {}, total bytes written: {}",
-            self.unsaved_messages_count,
+            "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
+            unsaved_messages.len(),
             self.start_offset,
             self.partition_id,
             saved_bytes
         );
 
-        self.unsaved_messages_count = 0;
-        self.saved_bytes += saved_bytes;
+        if self.is_full() {
+            self.end_offset = self.current_offset;
+            self.is_closed = true;
+            self.unsaved_messages = None;
+        } else {
+            self.unsaved_messages.as_mut().unwrap().clear();
+        }
 
         Ok(())
     }

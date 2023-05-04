@@ -65,6 +65,8 @@ impl Topic {
             self.partitions.insert(partition.id, partition);
         }
 
+        // TODO: After loading all the partitions, cache the messages from latest segment(s) based on the available buffer size.
+
         info!(
             "Loaded topic: '{}' with ID: {} from disk.",
             &self.name, &self.id

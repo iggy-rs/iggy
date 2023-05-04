@@ -48,6 +48,15 @@ impl Partition {
             let mut segment =
                 Segment::create(self.id, offset, &self.path, self.config.segment.clone());
             segment.load().await?;
+            if !segment.is_closed {
+                segment.unsaved_messages = Some(Vec::new())
+            }
+
+            // If the first segment has at least a single message, we should increment the offset.
+            if !self.should_increment_offset {
+                self.should_increment_offset = segment.current_size_bytes > 0;
+            }
+
             self.segments.push(segment);
         }
 
@@ -71,7 +80,7 @@ impl Partition {
         }
 
         let last_segment = self.segments.last_mut().unwrap();
-        if last_segment.is_full() {
+        if last_segment.is_closed {
             last_segment.end_offset = last_segment.current_offset;
         }
 

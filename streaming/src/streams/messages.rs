@@ -32,10 +32,6 @@ impl Stream {
             return Ok(());
         }
 
-        if messages.len() > self.max_messages_in_batch {
-            return Err(Error::TooManyMessages);
-        }
-
         let topic = self.topics.get_mut(&topic_id);
         if topic.is_none() {
             return Err(Error::TopicNotFound(topic_id));

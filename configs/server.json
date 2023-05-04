@@ -12,10 +12,10 @@
       "topic": {
         "path": "topics",
         "partition": {
+          "messages_required_to_save": 1000,
+          "messages_buffer": 16384,
           "segment": {
-            "size_bytes": 100000000,
-            "messages_required_to_save": 16,
-            "messages_buffer": 16384
+            "size_bytes": 100000000
           }
         }
       }

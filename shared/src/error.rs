@@ -97,8 +97,8 @@ pub enum Error {
     MessagesNotFound,
     #[error("Segment not found")]
     SegmentNotFound,
-    #[error("Segment with start offset: {0} and partition ID: {1} is full")]
-    SegmentFull(u64, u32),
+    #[error("Segment with start offset: {0} and partition ID: {1} is closed")]
+    SegmentClosed(u64, u32),
     #[error("Segment size is invalid")]
     InvalidSegmentSize(u64),
     #[error("Cannot read message")]
@@ -177,7 +177,7 @@ impl Error {
             Error::MessageNotFound => 42,
             Error::MessagesNotFound => 43,
             Error::SegmentNotFound => 44,
-            Error::SegmentFull(_, _) => 45,
+            Error::SegmentClosed(_, _) => 45,
             Error::InvalidSegmentSize(_) => 46,
             Error::CannotReadMessage => 47,
             Error::CannotReadMessageTimestamp => 48,

@@ -134,10 +134,11 @@ Server restart
 - [x] Automatically create new partition segments when the current one is full
 - [x] Allow clients to create/read/delete topics
 - [x] Allow clients to send messages to the specific topic and partition
-- [x] Allow clients to poll messages from the specific topic and partition
+- [x] Allow clients to poll messages by offsets from the specific partition
+- [ ] Allow clients to poll messages by timestamps from the specific partition
 - [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them
 - [X] Index messages by their offset to allow fast access to the specific messages
-- [ ] Index messages by their timestamp to allow fast access to the specific messages
+- [X] Index messages by their timestamp to allow fast access to the specific messages
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer

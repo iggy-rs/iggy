@@ -1,13 +1,9 @@
 use crate::segments::segment::Segment;
-use crate::segments::{log, time_index};
-use ringbuffer::{AllocRingBuffer, RingBufferWrite};
+use crate::segments::time_index;
 use shared::error::Error;
-use std::sync::Arc;
 use tokio::fs::{File, OpenOptions};
 use tokio::io::AsyncWriteExt;
 use tracing::info;
-
-const RELATIVE_START_OFFSET: u32 = 0;
 
 impl Segment {
     pub async fn load(&mut self) -> Result<(), Error> {
@@ -15,7 +11,7 @@ impl Segment {
             "Loading segment from disk for offset: {} and partition with ID: {}...",
             self.start_offset, self.partition_id
         );
-        let mut log_file = Segment::open_file(&self.log_path, false).await;
+        let log_file = Segment::open_file(&self.log_path, false).await;
         let mut time_index_file = Segment::open_file(&self.time_index_path, false).await;
         let file_size = log_file.metadata().await.unwrap().len() as u32;
 
@@ -31,26 +27,17 @@ impl Segment {
             self.start_offset, self.partition_id
         );
 
-        let relative_end_offset = (self.end_offset - self.start_offset) as u32;
-        let messages = log::load(&mut log_file, RELATIVE_START_OFFSET, relative_end_offset).await?;
-        if messages.is_empty() {
-            return Ok(());
+        if !self.time_indexes.is_empty() {
+            self.current_offset =
+                self.start_offset + self.time_indexes.last().unwrap().offset as u64;
         }
 
-        self.current_offset = messages.last().unwrap().offset;
-        self.next_saved_message_index += messages.len() as u32;
-
-        let mut buffered_messages =
-            AllocRingBuffer::with_capacity(self.config.messages_buffer as usize);
-
-        for message in messages {
-            buffered_messages.push(Arc::new(message));
-        }
-
-        self.messages = buffered_messages;
-        self.should_increment_offset = self.current_offset > 0;
         self.current_size_bytes = file_size;
         self.saved_bytes = self.current_size_bytes;
+
+        if self.current_size_bytes > self.config.size_bytes {
+            self.is_closed = true;
+        }
 
         info!(
             "Loaded {} bytes from segment log file with start offset {}, current offset: {}, and partition ID: {}.",

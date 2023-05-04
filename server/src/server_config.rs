@@ -43,8 +43,8 @@ impl ServerConfig {
     }
 
     fn validate_config(config: &ServerConfig) -> Result<(), ServerError> {
-        let segment_config = &config.system.stream.topic.partition.segment;
-        if segment_config.size_bytes > segment::MAX_SIZE_BYTES {
+        let partition_config = &config.system.stream.topic.partition;
+        if partition_config.segment.size_bytes > segment::MAX_SIZE_BYTES {
             error!(
                 "Segment configuration -> size cannot be greater than: {} bytes.",
                 segment::MAX_SIZE_BYTES
@@ -52,18 +52,10 @@ impl ServerConfig {
             return Err(ServerError::InvalidConfiguration);
         }
 
-        if segment_config.messages_required_to_save > segment_config.messages_buffer {
-            error!("Segment configuration -> messages required to save cannot be greater than messages buffer.");
-            return Err(ServerError::InvalidConfiguration);
-        }
-
-        if !Self::is_power_of_two(segment_config.messages_buffer) {
+        if partition_config.messages_buffer > 0
+            && !Self::is_power_of_two(partition_config.messages_buffer)
+        {
             error!("Segment configuration -> messages buffer must be a power of two.");
-            return Err(ServerError::InvalidConfiguration);
-        }
-
-        if !Self::is_power_of_two(segment_config.messages_required_to_save) {
-            error!("Segment configuration -> messages required to save must be a power of two.");
             return Err(ServerError::InvalidConfiguration);
         }
 

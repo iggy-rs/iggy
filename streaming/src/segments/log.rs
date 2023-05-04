@@ -40,7 +40,7 @@ pub async fn load(
     Ok(messages)
 }
 
-pub async fn persist(file: &mut File, messages: &Vec<&Arc<Message>>) -> Result<u32, Error> {
+pub async fn persist(file: &mut File, messages: &Vec<Arc<Message>>) -> Result<u32, Error> {
     let messages_size = messages
         .iter()
         .map(|message| message.get_size_bytes())

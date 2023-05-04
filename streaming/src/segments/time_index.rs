@@ -36,18 +36,18 @@ pub async fn load(file: &mut File) -> Result<Vec<TimeIndex>, Error> {
 
     if indexes.len() != indexes_count {
         error!(
-            "Loaded {} time indexes from file, expected {}.",
+            "Loaded {} time indexes from disk, expected {}.",
             indexes.len(),
             indexes_count
         );
     }
 
-    trace!("Loaded {} time indexes from file.", indexes.len());
+    trace!("Loaded {} time indexes from file.", indexes_count);
 
     Ok(indexes)
 }
 
-pub async fn persist(file: &mut File, messages: &Vec<&Arc<Message>>) -> Result<(), Error> {
+pub async fn persist(file: &mut File, messages: &Vec<Arc<Message>>) -> Result<(), Error> {
     let mut bytes = Vec::with_capacity(messages.len() * 8);
     for message in messages {
         bytes.extend(message.timestamp.to_le_bytes());

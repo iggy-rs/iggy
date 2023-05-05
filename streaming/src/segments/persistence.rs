@@ -8,41 +8,37 @@ use tracing::info;
 impl Segment {
     pub async fn load(&mut self) -> Result<(), Error> {
         info!(
-            "Loading segment from disk for offset: {} and partition with ID: {}...",
+            "Loading segment from disk for start offset: {} and partition with ID: {}...",
             self.start_offset, self.partition_id
         );
         let log_file = Segment::open_file(&self.log_path, false).await;
-        let mut time_index_file = Segment::open_file(&self.time_index_path, false).await;
         let file_size = log_file.metadata().await.unwrap().len() as u32;
 
         info!(
-            "Loading time indexes from segment log file for start offset: {} and partition ID: {}...",
+            "Segment log file for start offset {}, current offset: {}, and partition ID: {} has {} bytes of size.",
+            self.start_offset, self.current_offset, self.partition_id, self.current_size_bytes
+        );
+
+        let mut time_index_file = Segment::open_file(&self.time_index_path, false).await;
+
+        info!(
+            "Loading time indexes for segment with start offset: {} and partition ID: {}...",
             self.start_offset, self.partition_id
         );
 
         self.time_indexes = time_index::load(&mut time_index_file).await?;
 
-        info!(
-            "Loading messages from segment log file for start offset: {} and partition ID: {}...",
-            self.start_offset, self.partition_id
-        );
-
         if !self.time_indexes.is_empty() {
-            self.current_offset =
-                self.start_offset + self.time_indexes.last().unwrap().offset as u64;
+            let last_index = self.time_indexes.last().unwrap();
+            self.current_offset = self.start_offset + last_index.offset as u64;
         }
 
         self.current_size_bytes = file_size;
         self.saved_bytes = self.current_size_bytes;
 
-        if self.current_size_bytes > self.config.size_bytes {
+        if self.is_full() {
             self.is_closed = true;
         }
-
-        info!(
-            "Loaded {} bytes from segment log file with start offset {}, current offset: {}, and partition ID: {}.",
-            self.current_size_bytes, self.start_offset, self.current_offset, self.partition_id
-        );
 
         Ok(())
     }

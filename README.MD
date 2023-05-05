@@ -4,7 +4,7 @@
 
 ---
 
-Iggy is the streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) as a transport protocol with a custom binary specification. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
+Iggy is the persistent message streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) as a transport protocol with a custom binary specification. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
 
 The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to handle millions of messages per second, and will be able to scale horizontally.
 
@@ -139,6 +139,8 @@ Server restart
 - [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them
 - [X] Index messages by their offset to allow fast access to the specific messages
 - [X] Index messages by their timestamp to allow fast access to the specific messages
+- [ ] Allow parallel reading/writing from/to the distinct partitions
+- [ ] Allow storing client offset for the specific partition
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer
@@ -160,3 +162,7 @@ Server restart
 #### API
 
 - [ ] Implement REST API for the server using Axum
+
+#### UI
+
+- [ ] Build a simple UI for the server using chosen framework

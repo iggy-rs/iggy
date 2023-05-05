@@ -1,11 +1,12 @@
 use crate::partitions::partition::Partition;
 use crate::topics::topic::Topic;
+use ringbuffer::RingBufferWrite;
 use shared::error::Error;
 use std::path::Path;
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::info;
+use tracing::{info, trace};
 
 impl Topic {
     pub async fn load(&mut self) -> Result<(), Error> {
@@ -65,7 +66,7 @@ impl Topic {
             self.partitions.insert(partition.id, partition);
         }
 
-        // TODO: After loading all the partitions, cache the messages from latest segment(s) based on the available buffer size.
+        self.load_messages_to_cache().await?;
 
         info!(
             "Loaded topic: '{}' with ID: {} from disk.",
@@ -142,6 +143,51 @@ impl Topic {
         }
 
         info!("Deleted topic with ID: {}.", &self.id);
+
+        Ok(())
+    }
+
+    async fn load_messages_to_cache(&mut self) -> Result<(), Error> {
+        let messages_buffer_size = self.config.partition.messages_buffer as u64;
+        if messages_buffer_size == 0 {
+            return Ok(());
+        }
+
+        for (_, partition) in self.partitions.iter_mut() {
+            if partition.segments.is_empty() {
+                trace!("No segments found for partition ID: {}", partition.id);
+                continue;
+            }
+
+            let end_offset = partition.segments.last().unwrap().current_offset;
+            let start_offset = if end_offset + 1 >= messages_buffer_size {
+                end_offset + 1 - messages_buffer_size
+            } else {
+                0
+            };
+
+            let messages_count = (end_offset - start_offset + 1) as u32;
+            trace!(
+                "Loading {} messages for partition ID: {} from offset: {} to offset: {}...",
+                messages_count,
+                partition.id,
+                start_offset,
+                end_offset
+            );
+
+            let messages = partition.get_messages(start_offset, messages_count).await?;
+            for message in messages {
+                partition.messages.push(message);
+            }
+
+            trace!(
+                "Loaded {} messages for partition ID: {} from offset: {} to offset: {}.",
+                messages_count,
+                partition.id,
+                start_offset,
+                end_offset
+            );
+        }
 
         Ok(())
     }

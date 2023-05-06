@@ -8,7 +8,8 @@ impl Stream {
         &self,
         topic_id: u32,
         partition_id: u32,
-        offset: u64,
+        kind: u8,
+        value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
         let topic = self.topics.get(&topic_id);
@@ -18,7 +19,7 @@ impl Stream {
 
         topic
             .unwrap()
-            .get_messages(partition_id, offset, count)
+            .get_messages(partition_id, kind, value, count)
             .await
     }
 

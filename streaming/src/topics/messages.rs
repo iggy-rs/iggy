@@ -7,7 +7,8 @@ impl Topic {
     pub async fn get_messages(
         &self,
         partition_id: u32,
-        offset: u64,
+        kind: u8,
+        value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
         let partition = self.partitions.get(&partition_id);
@@ -16,8 +17,11 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
-        let messages = partition.get_messages(offset, count).await?;
-        Ok(messages)
+        match kind {
+            0 => partition.get_messages_by_offset(value, count).await,
+            1 => partition.get_messages_by_timestamp(value, count).await,
+            _ => Err(Error::InvalidCommand),
+        }
     }
 
     pub async fn append_messages(

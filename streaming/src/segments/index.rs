@@ -8,7 +8,7 @@ use tracing::trace;
 const INDEX_SIZE: u64 = 4;
 
 pub struct Index {
-    pub offset: u32,
+    pub relative_offset: u32,
     pub position: u32,
 }
 

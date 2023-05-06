@@ -72,6 +72,7 @@ pub async fn handle(
         .get_messages(
             command.topic_id,
             command.partition_id,
+            command.kind,
             command.value,
             command.count,
         )

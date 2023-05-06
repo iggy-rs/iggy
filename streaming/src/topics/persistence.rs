@@ -175,7 +175,9 @@ impl Topic {
                 end_offset
             );
 
-            let messages = partition.get_messages(start_offset, messages_count).await?;
+            let messages = partition
+                .get_messages_by_offset(start_offset, messages_count)
+                .await?;
             for message in messages {
                 partition.messages.push(message);
             }

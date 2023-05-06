@@ -135,7 +135,7 @@ Server restart
 - [x] Allow clients to create/read/delete topics
 - [x] Allow clients to send messages to the specific topic and partition
 - [x] Allow clients to poll messages by offsets from the specific partition
-- [ ] Allow clients to poll messages by timestamps from the specific partition
+- [x] Allow clients to poll messages by timestamps from the specific partition
 - [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them
 - [X] Index messages by their offset to allow fast access to the specific messages
 - [X] Index messages by their timestamp to allow fast access to the specific messages

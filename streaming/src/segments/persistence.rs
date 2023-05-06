@@ -30,7 +30,7 @@ impl Segment {
 
         if !self.time_indexes.is_empty() {
             let last_index = self.time_indexes.last().unwrap();
-            self.current_offset = self.start_offset + last_index.offset as u64;
+            self.current_offset = self.start_offset + last_index.relative_offset as u64;
         }
 
         self.current_size_bytes = file_size;

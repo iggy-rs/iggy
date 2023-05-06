@@ -1,5 +1,6 @@
 use crate::message::Message;
 use crate::segments::segment::Segment;
+use crate::segments::time_index::TimeIndex;
 use crate::segments::*;
 use shared::error::Error;
 use std::sync::Arc;
@@ -104,6 +105,12 @@ impl Segment {
         if self.unsaved_messages.is_none() {
             self.unsaved_messages = Some(Vec::new());
         }
+
+        let relative_offset = (message.offset - self.start_offset) as u32;
+        self.time_indexes.push(TimeIndex {
+            relative_offset,
+            timestamp: message.timestamp,
+        });
 
         self.current_size_bytes += message.get_size_bytes();
         self.current_offset = message.offset;

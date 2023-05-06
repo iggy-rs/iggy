@@ -7,7 +7,7 @@ use tracing::{error, trace};
 
 #[derive(Debug)]
 pub struct TimeIndex {
-    pub offset: u32,
+    pub relative_offset: u32,
     pub timestamp: u64,
 }
 
@@ -29,7 +29,7 @@ pub async fn load(file: &mut File) -> Result<Vec<TimeIndex>, Error> {
         }
 
         indexes.push(TimeIndex {
-            offset: offset as u32,
+            relative_offset: offset as u32,
             timestamp: timestamp.unwrap(),
         });
     }

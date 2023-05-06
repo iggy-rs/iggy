@@ -10,11 +10,88 @@ use tracing::{error, trace};
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
 impl Partition {
-    pub async fn get_messages(&self, offset: u64, count: u32) -> Result<Vec<Arc<Message>>, Error> {
+    pub async fn get_messages_by_timestamp(
+        &self,
+        timestamp: u64,
+        count: u32,
+    ) -> Result<Vec<Arc<Message>>, Error> {
+        trace!(
+            "Getting messages by timestamp: {} for partition: {}...",
+            timestamp,
+            self.id
+        );
         if self.segments.is_empty() {
             return Ok(EMPTY_MESSAGES);
         }
 
+        let mut maybe_start_offset = None;
+        for segment in self.segments.iter() {
+            if segment.time_indexes.is_empty() {
+                continue;
+            }
+
+            let first_timestamp = segment.time_indexes.first().unwrap().timestamp;
+            let last_timestamp = segment.time_indexes.last().unwrap().timestamp;
+            if timestamp < first_timestamp || timestamp > last_timestamp {
+                continue;
+            }
+
+            let relative_start_offset = segment
+                .time_indexes
+                .iter()
+                .find(|time_index| time_index.timestamp >= timestamp)
+                .map(|time_index| time_index.relative_offset)
+                .unwrap_or(0);
+
+            let start_offset = segment.start_offset + relative_start_offset as u64;
+            maybe_start_offset = Some(start_offset);
+            trace!(
+                "Found start offset: {} for timestamp: {}.",
+                start_offset,
+                timestamp
+            );
+
+            break;
+        }
+
+        if maybe_start_offset.is_none() {
+            trace!("Start offset for timestamp: {} was not found.", timestamp);
+            return Ok(EMPTY_MESSAGES);
+        }
+
+        self.get_messages_by_offset(maybe_start_offset.unwrap(), count)
+            .await
+    }
+
+    pub async fn get_messages_by_offset(
+        &self,
+        start_offset: u64,
+        count: u32,
+    ) -> Result<Vec<Arc<Message>>, Error> {
+        trace!(
+            "Getting messages for start offset: {} for partition: {}...",
+            start_offset,
+            self.id
+        );
+        if self.segments.is_empty() {
+            return Ok(EMPTY_MESSAGES);
+        }
+
+        let end_offset = self.get_end_offset(start_offset, count);
+        let messages = self.try_get_messages_from_cache(start_offset, end_offset);
+        if let Some(messages) = messages {
+            return Ok(messages);
+        }
+
+        let segments = self.filter_segments_by_offsets(start_offset, end_offset);
+        match segments.len() {
+            0 => Ok(EMPTY_MESSAGES),
+            1 => segments[0].get_messages(start_offset, count).await,
+            _ => Self::get_messages_from_segments(segments, start_offset, count).await,
+        }
+    }
+
+    fn get_end_offset(&self, offset: u64, count: u32) -> u64 {
         let mut end_offset = offset + (count - 1) as u64;
         let segment = self.segments.last().unwrap();
         let max_offset = segment.current_offset;
@@ -22,39 +99,25 @@ impl Partition {
             end_offset = max_offset;
         }
 
-        if !self.messages.is_empty() {
-            let first_buffered_offset = self.messages[0].offset;
-            trace!(
-                "First buffered offset: {} for partition: {}",
-                first_buffered_offset,
-                self.id
-            );
+        end_offset
+    }
 
-            if offset >= first_buffered_offset {
-                return self.load_messages_from_cache(offset, end_offset);
-            }
-        }
-
-        let segments = self
-            .segments
+    fn filter_segments_by_offsets(&self, offset: u64, end_offset: u64) -> Vec<&Segment> {
+        self.segments
             .iter()
             .filter(|segment| {
                 (segment.start_offset >= offset && segment.current_offset <= end_offset)
                     || (segment.start_offset <= offset && segment.current_offset >= offset)
                     || (segment.start_offset <= end_offset && segment.current_offset >= end_offset)
             })
-            .collect::<Vec<&Segment>>();
+            .collect::<Vec<&Segment>>()
+    }
 
-        if segments.is_empty() {
-            return Ok(EMPTY_MESSAGES);
-        }
-
-        if segments.len() == 1 {
-            let segment = segments.first().unwrap();
-            let messages = segment.get_messages(offset, count).await?;
-            return Ok(messages);
-        }
-
+    async fn get_messages_from_segments(
+        segments: Vec<&Segment>,
+        offset: u64,
+        count: u32,
+    ) -> Result<Vec<Arc<Message>>, Error> {
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
             let segment_messages = segment.get_messages(offset, count).await?;
@@ -66,11 +129,30 @@ impl Partition {
         Ok(messages)
     }
 
-    fn load_messages_from_cache(
+    fn try_get_messages_from_cache(
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Option<Vec<Arc<Message>>> {
+        if self.messages.is_empty() {
+            return None;
+        }
+
+        let first_buffered_offset = self.messages[0].offset;
+        trace!(
+            "First buffered offset: {} for partition: {}",
+            first_buffered_offset,
+            self.id
+        );
+
+        if start_offset >= first_buffered_offset {
+            return Some(self.load_messages_from_cache(start_offset, end_offset));
+        }
+
+        None
+    }
+
+    fn load_messages_from_cache(&self, start_offset: u64, end_offset: u64) -> Vec<Arc<Message>> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,
@@ -100,7 +182,7 @@ impl Partition {
             end_offset
         );
 
-        Ok(messages)
+        messages
     }
 
     pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {

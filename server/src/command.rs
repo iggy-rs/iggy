@@ -1,4 +1,5 @@
 use crate::handlers::messages::*;
+use crate::handlers::offsets::store_offset_handler;
 use crate::handlers::streams::*;
 use crate::handlers::system::*;
 use crate::handlers::topics::*;
@@ -8,6 +9,7 @@ use shared::command::Command;
 use shared::error::Error;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
+use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::topics::create_topic::CreateTopic;
@@ -71,16 +73,20 @@ async fn try_handle(
     sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
-    trace!("Handling command '{:?}'...", command,);
+    trace!("Handling command '{}'...", command);
     match command {
         Command::Ping => ping_handler::handle(sender).await,
-        Command::SendMessage => {
+        Command::SendMessages => {
             let command = SendMessages::from_bytes(bytes)?;
             send_messages_handler::handle(command, sender, system).await
         }
         Command::PollMessages => {
             let command = PollMessages::from_bytes(bytes)?;
             poll_messages_handler::handle(command, sender, system).await
+        }
+        Command::StoreOffset => {
+            let command = StoreOffset::from_bytes(bytes)?;
+            store_offset_handler::handle(command, sender, system).await
         }
         Command::GetStreams => get_streams_handler::handle(sender, system).await,
         Command::CreateStream => {

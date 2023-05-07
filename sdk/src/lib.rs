@@ -2,6 +2,7 @@ pub mod client;
 pub mod error;
 pub mod message;
 pub mod messages;
+pub mod offsets;
 pub mod stream;
 pub mod streams;
 pub mod system;

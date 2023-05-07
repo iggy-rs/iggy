@@ -1,5 +1,6 @@
 use crate::client_error::ClientError;
 use crate::handlers::messages::*;
+use crate::handlers::offsets::store_offset_handler;
 use crate::handlers::streams::*;
 use crate::handlers::system::*;
 use crate::handlers::topics::*;
@@ -7,6 +8,7 @@ use sdk::client::ConnectedClient;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
+use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::topics::create_topic::CreateTopic;
@@ -22,13 +24,17 @@ pub async fn handle(input: &str, client: &mut ConnectedClient) -> Result<(), Cli
     match command {
         Command::Ping => ping_handler::handle(client).await,
         Command::GetStreams => get_streams_handler::handle(client).await,
-        Command::SendMessage => {
+        Command::SendMessages => {
             let command = SendMessages::from_str(input)?;
             send_messages_handler::handle(command, client).await
         }
         Command::PollMessages => {
             let command = PollMessages::from_str(input)?;
             poll_messages_handler::handle(command, client).await
+        }
+        Command::StoreOffset => {
+            let command = StoreOffset::from_str(input)?;
+            store_offset_handler::handle(command, client).await
         }
         Command::CreateStream => {
             let command = CreateStream::from_str(input)?;

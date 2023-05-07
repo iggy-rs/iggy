@@ -20,7 +20,7 @@ impl Stream {
         topic.persist().await?;
         self.topics.insert(id, topic);
         info!(
-            "Created topic: {:?} with ID: {:?}, partitions: {:?}",
+            "Created topic: {} with ID: {}, partitions: {}",
             name, id, partitions_count
         );
         Ok(())

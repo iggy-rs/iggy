@@ -12,7 +12,7 @@ pub async fn handle(
     system: &mut System,
 ) -> Result<(), Error> {
     trace!(
-        "Appending {} message(s) to stream: {:?}, topic: {:?}, key kind: {:?}, key value: {:?}",
+        "Appending {} message(s) to stream: {}, topic: {}, key kind: {}, key value: {}...",
         command.messages_count,
         command.stream_id,
         command.topic_id,
@@ -34,6 +34,16 @@ pub async fn handle(
             messages,
         )
         .await?;
+
+    trace!(
+        "Appended {} message(s) to stream: {}, topic: {}, key kind: {}, key value: {:?}.",
+        command.messages_count,
+        command.stream_id,
+        command.topic_id,
+        command.key_kind,
+        command.key_value
+    );
+
     sender.send_empty_ok_response().await?;
     Ok(())
 }

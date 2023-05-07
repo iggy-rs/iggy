@@ -59,7 +59,7 @@ pub async fn handle(
     }
 
     trace!(
-        "Polling {} messages from stream: {:?}, topic: {:?}, kind: {:?}, value: {:?}...",
+        "Polling {} messages from stream: {}, topic: {}, kind: {}, value: {}...",
         command.count,
         command.stream_id,
         command.topic_id,
@@ -93,7 +93,7 @@ pub async fn handle(
     sender.send_ok_response(&bytes).await?;
 
     trace!(
-        "Polled {} message(s) from stream: {}, topic: {:?}, kind: {:?}, value: {:?}, count: {:?}",
+        "Polled {} message(s) from stream: {}, topic: {}, kind: {}, value: {}, count: {}",
         messages_count,
         command.stream_id,
         command.topic_id,

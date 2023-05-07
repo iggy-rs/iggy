@@ -27,7 +27,12 @@ pub async fn handle(
 
     system
         .get_stream_mut(command.stream_id)?
-        .append_messages(command.topic_id, command.key_value, messages)
+        .append_messages(
+            command.topic_id,
+            command.key_kind,
+            command.key_value,
+            messages,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

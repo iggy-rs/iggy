@@ -11,7 +11,6 @@ pub struct Partition {
     pub current_offset: u64,
     pub messages: AllocRingBuffer<Arc<Message>>,
     pub unsaved_messages_count: u32,
-    pub next_saved_message_index: u32,
     pub should_increment_offset: bool,
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<PartitionConfig>,
@@ -37,7 +36,6 @@ impl Partition {
             segments: vec![],
             current_offset: 0,
             unsaved_messages_count: 0,
-            next_saved_message_index: 0,
             should_increment_offset: false,
             config,
         };

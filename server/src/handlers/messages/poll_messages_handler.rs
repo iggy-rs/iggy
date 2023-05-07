@@ -19,34 +19,34 @@ use tracing::trace;
         - Unique Topic ID to poll the messages from.
 
     KIND:
-        - 0 -> first
-        - 1 -> last
-        - 2 -> next
-        - 3 -> offset
-        - 4 -> timestamp
+        - 0 -> offset
+        - 1 -> timestamp
+        - 2 -> first
+        - 3 -> last
+        - 4 -> next
 
     VALUE:
-        - when KIND is 0, 1, 2, value is ignored
-        - when KIND is 3, value is the exact offset
-        - when KIND is 4, value is the timestamp (greater than or equal to)
+        - when KIND is 0, value is the exact offset
+        - when KIND is 1, value is the timestamp (greater than or equal to)
+        - when KIND is 2, 3, 4, value is ignored
 
     COUNT:
         - Number of messages to poll in a single chunk.
 
-    Poll the message(s) from stream: 1, topic: 1, partition: 1, using kind: first, value is ignored, messages count is 1.
-    |    2    |     1     |     1     |     1     |     0     |     0     |     1     |
-
-    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: last, value is ignored, messages count is 1.
-    |    2    |     1     |     1     |     1     |     1     |     0     |     1     |
-
-    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: next, value is ignored, messages count is 1.
-    |    2    |     1     |     1     |     1     |     2     |     0     |     1     |
-
     Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: offset, value is 1, messages count is 1.
-    |    2    |     1     |     1     |     1     |     3     |     1     |     1     |
+    |    2    |     1     |     1     |     1     |     0     |     1     |     1     |
 
     Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: timestamp, value is 1679997285, messages count is 1.
-    |    2    |     1     |     1     |     1     |     4     |1679997285 |     1     |
+    |    2    |     1     |     1     |     1     |     1     |1679997285 |     1     |
+
+    Poll the message(s) from stream: 1, topic: 1, partition: 1, using kind: first, value is ignored, messages count is 1.
+    |    2    |     1     |     1     |     1     |     2     |     0     |     1     |
+
+    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: last, value is ignored, messages count is 1.
+    |    2    |     1     |     1     |     1     |     3     |     0     |     1     |
+
+    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: next, value is ignored, messages count is 1.
+    |    2    |     1     |     1     |     1     |     4     |     0     |     1     |
 */
 
 pub async fn handle(

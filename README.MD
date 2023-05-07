@@ -6,7 +6,7 @@
 
 Iggy is the persistent message streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) as a transport protocol with a custom binary specification. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
 
-The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to handle millions of messages per second, and will be able to scale horizontally.
+The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to handle millions of messages per second and scale horizontally.
 
 It is a pet project of mine to learn more about distributed systems and Rust.
 
@@ -95,6 +95,7 @@ Server restart
 
 - [x] Create a basic UDP server
 - [x] Make use of QUIC protocol
+- [ ] Extend QUIC configuration with custom certificates
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
 - [x] Allow multiple clients to connect to the server
@@ -106,6 +107,7 @@ Server restart
 
 - [x] Create a basic UDP client
 - [x] Make use of QUIC protocol
+- [ ] Extend QUIC configuration with custom certificates
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
 - [x] Communicate with the server using established binary protocol
@@ -133,7 +135,7 @@ Server restart
 - [x] Store messages index + timeindex on disk for fast access
 - [x] Automatically create new partition segments when the current one is full
 - [x] Allow clients to create/read/delete topics
-- [x] Allow clients to send messages to the specific topic and partition
+- [x] Allow clients to send messages to the specific stream, topic and partition
 - [x] Allow clients to poll messages by offsets from the specific partition
 - [x] Allow clients to poll messages by timestamps from the specific partition
 - [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them

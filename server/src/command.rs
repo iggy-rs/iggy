@@ -26,8 +26,8 @@ use tracing::trace;
 2. POLL: | COMMAND |   STREAM  |   TOPIC   |    KIND   |   VALUE   |   COUNT   |
          | 1 byte  |  4 bytes  |  4 bytes  |   1 byte  |  8 bytes  |  4 bytes  |
 
-3. SEND: | COMMAND |   STREAM  |    TOPIC   |    KIND   |    KEY    |  PAYLOAD  |
-         | 1 byte  |  4 bytes  |   4 bytes  |   1 byte  |  8 bytes  |  n bytes  |
+3. SEND: | COMMAND |   STREAM  |    TOPIC   |    KIND   |   VALUE   |   COUNT   |  PAYLOAD  |
+         | 1 byte  |  4 bytes  |   4 bytes  |   1 byte  |  8 bytes  |  4 bytes  |  n bytes  |
 */
 
 /*

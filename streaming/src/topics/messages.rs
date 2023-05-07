@@ -2,6 +2,7 @@ use crate::message::Message;
 use crate::topics::topic::Topic;
 use shared::error::Error;
 use std::sync::Arc;
+use tracing::trace;
 
 impl Topic {
     pub async fn get_messages(
@@ -26,6 +27,22 @@ impl Topic {
 
     pub async fn append_messages(
         &mut self,
+        key_kind: u8,
+        key_value: u32,
+        messages: Vec<Message>,
+    ) -> Result<(), Error> {
+        let partition_id = match key_kind {
+            0 => key_value,
+            1 => self.calculate_partition_id(key_value),
+            _ => return Err(Error::InvalidCommand),
+        };
+
+        self.append_messages_to_partition(partition_id, messages)
+            .await
+    }
+
+    async fn append_messages_to_partition(
+        &mut self,
         partition_id: u32,
         messages: Vec<Message>,
     ) -> Result<(), Error> {
@@ -37,5 +54,11 @@ impl Topic {
         let partition = partition.unwrap();
         partition.append_messages(messages).await?;
         Ok(())
+    }
+
+    fn calculate_partition_id(&self, key: u32) -> u32 {
+        let partition_id = key % self.partitions.len() as u32;
+        trace!("Calculated partition ID: {} for key: {}", partition_id, key);
+        partition_id
     }
 }

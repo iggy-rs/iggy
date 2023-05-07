@@ -26,7 +26,8 @@ impl Stream {
     pub async fn append_messages(
         &mut self,
         topic_id: u32,
-        partition_id: u32,
+        key_kind: u8,
+        key_value: u32,
         messages: Vec<Message>,
     ) -> Result<(), Error> {
         if messages.is_empty() {
@@ -39,7 +40,7 @@ impl Stream {
         }
 
         let topic = topic.unwrap();
-        topic.append_messages(partition_id, messages).await?;
+        topic.append_messages(key_kind, key_value, messages).await?;
         Ok(())
     }
 }

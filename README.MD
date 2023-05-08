@@ -50,9 +50,9 @@ Send another message
 
 `message.send|1|1|0|0|lorem ipsum`
 
-Poll 2 messages from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition 0 starting with offset 0 using string format `s`
+Poll 2 messages by consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition 0 starting with offset 0 using string format `s`
 
-`message.poll|1|1|0|0|0|2|s`
+`message.poll|0|1|1|0|0|0|2|s`
 
 Finally, restart the server to see it is able to load the persisted data.
 
@@ -146,6 +146,7 @@ Server restart
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer
+- [ ] Implement consumer groups for horizontal scaling
 
 
 #### Distribution

@@ -91,6 +91,19 @@ impl Partition {
         }
     }
 
+    pub async fn get_first_message(&self) -> Result<Vec<Arc<Message>>, Error> {
+        self.get_messages_by_offset(0, 1).await
+    }
+
+    pub async fn get_last_message(&self) -> Result<Vec<Arc<Message>>, Error> {
+        self.get_messages_by_offset(self.current_offset, 1).await
+    }
+
+    // TODO: Implement getting next message for consumer.
+    pub async fn get_next_message(&self, consumer_id: u32) -> Result<Vec<Arc<Message>>, Error> {
+        Ok(EMPTY_MESSAGES)
+    }
+
     fn get_end_offset(&self, offset: u64, count: u32) -> u64 {
         let mut end_offset = offset + (count - 1) as u64;
         let segment = self.segments.last().unwrap();

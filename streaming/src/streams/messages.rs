@@ -6,6 +6,7 @@ use std::sync::Arc;
 impl Stream {
     pub async fn get_messages(
         &self,
+        consumer_id: u32,
         topic_id: u32,
         partition_id: u32,
         kind: u8,
@@ -19,7 +20,7 @@ impl Stream {
 
         topic
             .unwrap()
-            .get_messages(partition_id, kind, value, count)
+            .get_messages(consumer_id, partition_id, kind, value, count)
             .await
     }
 
@@ -40,7 +41,6 @@ impl Stream {
         }
 
         let topic = topic.unwrap();
-        topic.append_messages(key_kind, key_value, messages).await?;
-        Ok(())
+        topic.append_messages(key_kind, key_value, messages).await
     }
 }

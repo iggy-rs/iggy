@@ -7,6 +7,7 @@ use tracing::trace;
 impl Topic {
     pub async fn get_messages(
         &self,
+        consumer_id: u32,
         partition_id: u32,
         kind: u8,
         value: u64,
@@ -21,6 +22,9 @@ impl Topic {
         match kind {
             0 => partition.get_messages_by_offset(value, count).await,
             1 => partition.get_messages_by_timestamp(value, count).await,
+            2 => partition.get_first_message().await,
+            3 => partition.get_last_message().await,
+            4 => partition.get_next_message(consumer_id).await,
             _ => Err(Error::InvalidCommand),
         }
     }

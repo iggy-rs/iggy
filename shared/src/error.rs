@@ -127,6 +127,8 @@ pub enum Error {
     TooManyMessages,
     #[error("Write error")]
     WriteError(#[from] WriteError),
+    #[error("Invalid offset: {0}")]
+    InvalidOffset(u64),
 }
 
 impl Error {
@@ -192,6 +194,7 @@ impl Error {
             Error::TooBigPayload => 57,
             Error::TooManyMessages => 58,
             Error::WriteError(_) => 59,
+            Error::InvalidOffset(_) => 60,
         }
     }
 }

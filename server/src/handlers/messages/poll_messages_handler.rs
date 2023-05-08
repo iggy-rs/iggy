@@ -6,11 +6,14 @@ use streaming::system::System;
 use tracing::trace;
 
 /*
-    |  POLL   |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |
-    | 1 byte  |  4 bytes  |  4 bytes  |   4 bytes |   1 byte  |  8 bytes  |  4 bytes  |
+    |  POLL   | CONSUMER  |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |
+    | 1 byte  |  4 bytes  |  4 bytes  |  4 bytes  |   4 bytes |   1 byte  |  8 bytes  |  4 bytes  |
 
     POLL
         - Constant 1 byte of value 2
+
+    CONSUMER:
+        - Arbitrary Consumer ID that might be used for offset tracking.
 
     STREAM:
         - Unique Stream ID to poll the messages from.
@@ -33,20 +36,20 @@ use tracing::trace;
     COUNT:
         - Number of messages to poll in a single chunk.
 
-    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: offset, value is 1, messages count is 1.
-    |    2    |     1     |     1     |     1     |     0     |     1     |     1     |
+    Poll the message(s) by consumer: 0, stream: 1, topic: 1, partition: 1, using kind: offset, value is 0, messages count is 1.
+    |    0    |    1    |     1     |     1     |     0     |     0     |     1     |
 
-    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: timestamp, value is 1679997285, messages count is 1.
-    |    2    |     1     |     1     |     1     |     1     |1679997285 |     1     |
+    Poll the message(s) by consumer: 0, stream: 1, topic: 1, partition: 1, using kind: timestamp, value is 1679997285, messages count is 1.
+    |    0    |    1    |     1     |     1     |     1     | 1679997285|     1     |
 
-    Poll the message(s) from stream: 1, topic: 1, partition: 1, using kind: first, value is ignored, messages count is 1.
-    |    2    |     1     |     1     |     1     |     2     |     0     |     1     |
+    Poll the message(s) by consumer: 0, stream: 1, topic: 1, partition: 1, using kind: first, value is ignored, messages count is 1.
+    |    0    |    1    |     1     |     1     |     2     |     0     |     1     |
 
-    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: last, value is ignored, messages count is 1.
-    |    2    |     1     |     1     |     1     |     3     |     0     |     1     |
+    Poll the message(s) by consumer: 0, stream: 1, topic: 1, partition: 1, using kind: last, value is ignored, messages count is 1.
+    |    0    |    1    |     1     |     1     |     3     |     0     |     1     |
 
-    Poll the message(s) stream: 1, topic: 1, partition: 1, using kind: next, value is ignored, messages count is 1.
-    |    2    |     1     |     1     |     1     |     4     |     0     |     1     |
+    Poll the message(s) by consumer: 0, stream: 1, topic: 1, partition: 1, using kind: next, value is ignored, messages count is 1.
+    |    0    |    1    |     1     |     1     |     4     |     0     |     1     |
 */
 
 pub async fn handle(
@@ -59,7 +62,8 @@ pub async fn handle(
     }
 
     trace!(
-        "Polling {} messages from stream: {}, topic: {}, kind: {}, value: {}...",
+        "Polling {} messages by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}...",
+        command.consumer_id,
         command.count,
         command.stream_id,
         command.topic_id,
@@ -70,6 +74,7 @@ pub async fn handle(
     let messages = system
         .get_stream(command.stream_id)?
         .get_messages(
+            command.consumer_id,
             command.topic_id,
             command.partition_id,
             command.kind,
@@ -93,8 +98,9 @@ pub async fn handle(
     sender.send_ok_response(&bytes).await?;
 
     trace!(
-        "Polled {} message(s) from stream: {}, topic: {}, kind: {}, value: {}, count: {}",
+        "Polled {} message(s) by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}, count: {}",
         messages_count,
+        command.consumer_id,
         command.stream_id,
         command.topic_id,
         command.kind,

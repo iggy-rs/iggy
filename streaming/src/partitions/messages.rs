@@ -91,17 +91,38 @@ impl Partition {
         }
     }
 
-    pub async fn get_first_message(&self) -> Result<Vec<Arc<Message>>, Error> {
-        self.get_messages_by_offset(0, 1).await
+    pub async fn get_first_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, Error> {
+        self.get_messages_by_offset(0, count).await
     }
 
-    pub async fn get_last_message(&self) -> Result<Vec<Arc<Message>>, Error> {
-        self.get_messages_by_offset(self.current_offset, 1).await
+    pub async fn get_last_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, Error> {
+        let mut count = count as u64;
+        if count > self.current_offset + 1 {
+            count = self.current_offset + 1
+        }
+
+        let start_offset = 1 + self.current_offset - count;
+        self.get_messages_by_offset(start_offset, count as u32)
+            .await
     }
 
-    // TODO: Implement getting next message for consumer.
-    pub async fn get_next_message(&self, consumer_id: u32) -> Result<Vec<Arc<Message>>, Error> {
-        Ok(EMPTY_MESSAGES)
+    pub async fn get_next_messages(
+        &self,
+        consumer_id: u32,
+        count: u32,
+    ) -> Result<Vec<Arc<Message>>, Error> {
+        let offset = self.consumer_offsets.get(&consumer_id);
+        if offset.is_none() {
+            trace!(
+                "Consumer: {} hasn't stored offset for partition: {}, returning the first messages...",
+                consumer_id,
+                self.id
+            );
+            return self.get_first_messages(count).await;
+        }
+
+        let offset = *offset.unwrap();
+        self.get_messages_by_offset(offset, count).await
     }
 
     fn get_end_offset(&self, offset: u64, count: u32) -> u64 {

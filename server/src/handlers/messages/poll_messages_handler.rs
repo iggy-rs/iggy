@@ -63,8 +63,8 @@ pub async fn handle(
 
     trace!(
         "Polling {} messages by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}...",
-        command.consumer_id,
         command.count,
+        command.consumer_id,
         command.stream_id,
         command.topic_id,
         command.kind,

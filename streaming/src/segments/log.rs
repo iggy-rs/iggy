@@ -1,17 +1,21 @@
 use crate::message::Message;
+use crate::segments::index::IndexRange;
 use shared::error::Error;
 use std::sync::Arc;
 use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
+use tracing::error;
 
-pub async fn load(
-    file: &mut File,
-    start_offset: u32,
-    end_offset: u32,
-) -> Result<Vec<Message>, Error> {
-    let mut messages = Vec::with_capacity(1 + (end_offset - start_offset) as usize);
+pub async fn load(file: &mut File, range: IndexRange) -> Result<Vec<Arc<Message>>, Error> {
+    let mut messages = Vec::with_capacity(1 + (range.end.offset - range.start.offset) as usize);
     let mut reader = BufReader::new(file);
-    loop {
+    reader
+        .seek(std::io::SeekFrom::Start(range.start.position as u64))
+        .await?;
+
+    let mut read_messages = 0;
+    let messages_count = (1 + range.end.offset - range.start.offset) as usize;
+    while read_messages < messages_count {
         let offset = reader.read_u64_le().await;
         if offset.is_err() {
             break;
@@ -33,8 +37,17 @@ pub async fn load(
         }
 
         let offset = offset.unwrap();
-        let message = Message::create(offset, timestamp.unwrap(), payload);
-        messages.push(message);
+        let timestamp = timestamp.unwrap();
+        messages.push(Arc::new(Message::create(offset, timestamp, payload)));
+        read_messages += 1;
+    }
+
+    if messages.len() != messages_count {
+        error!(
+            "Loaded {} messages from disk, expected {}.",
+            messages.len(),
+            messages_count
+        );
     }
 
     Ok(messages)

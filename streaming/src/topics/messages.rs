@@ -4,6 +4,7 @@ use shared::error::Error;
 use std::sync::Arc;
 use tracing::trace;
 
+// TODO: Resolve partition ID by consumer group if provided.
 impl Topic {
     pub async fn get_messages(
         &self,
@@ -22,9 +23,9 @@ impl Topic {
         match kind {
             0 => partition.get_messages_by_offset(value, count).await,
             1 => partition.get_messages_by_timestamp(value, count).await,
-            2 => partition.get_first_message().await,
-            3 => partition.get_last_message().await,
-            4 => partition.get_next_message(consumer_id).await,
+            2 => partition.get_first_messages(count).await,
+            3 => partition.get_last_messages(count).await,
+            4 => partition.get_next_messages(consumer_id, count).await,
             _ => Err(Error::InvalidCommand),
         }
     }

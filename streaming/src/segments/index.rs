@@ -7,14 +7,22 @@ use tracing::trace;
 
 const INDEX_SIZE: u64 = 4;
 
+#[derive(Debug)]
 pub struct Index {
     pub relative_offset: u32,
     pub position: u32,
 }
 
+#[derive(Debug)]
 pub struct IndexRange {
-    pub start_position: u32,
-    pub end_position: u32,
+    pub start: OffsetPosition,
+    pub end: OffsetPosition,
+}
+
+#[derive(Debug)]
+pub struct OffsetPosition {
+    pub offset: u32,
+    pub position: u32,
 }
 
 pub async fn load_range(
@@ -34,11 +42,10 @@ pub async fn load_range(
         index_start_offset = segment_start_offset - 1;
     }
 
-    let relative_start_offset = 1 + index_start_offset - segment_start_offset;
-    let relative_end_offset = 2 + index_end_offset - segment_start_offset;
-    let start_seek_position = relative_start_offset * INDEX_SIZE;
-    let mut end_seek_position = relative_end_offset * INDEX_SIZE;
-
+    let relative_start_offset = index_start_offset - segment_start_offset;
+    let relative_end_offset = index_end_offset - segment_start_offset;
+    let start_seek_position = (1 + relative_start_offset) * INDEX_SIZE;
+    let mut end_seek_position = (1 + relative_end_offset) * INDEX_SIZE;
     let file_length = file.metadata().await?.len();
     if end_seek_position > file_length {
         end_seek_position = file_length - INDEX_SIZE;
@@ -52,7 +59,7 @@ pub async fn load_range(
     let end_position = file.read_u32_le().await?;
 
     trace!(
-        "Index range: {}...{}, found position range: {}...{}",
+        "Loaded index range: {}...{}, position range: {}...{}",
         relative_start_offset,
         relative_end_offset,
         start_position,
@@ -60,8 +67,14 @@ pub async fn load_range(
     );
 
     Ok(IndexRange {
-        start_position,
-        end_position,
+        start: OffsetPosition {
+            offset: relative_start_offset as u32,
+            position: start_position,
+        },
+        end: OffsetPosition {
+            offset: relative_end_offset as u32,
+            position: end_position,
+        },
     })
 }
 

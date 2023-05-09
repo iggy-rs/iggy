@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
 use std::str::FromStr;
 
+// TODO: Extend with consumer group.
 #[derive(Debug)]
 pub struct PollMessages {
     pub consumer_id: u32,
@@ -25,7 +26,7 @@ impl FromStr for PollMessages {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() < 6 {
+        if parts.len() < 7 {
             return Err(Error::InvalidCommand);
         }
 

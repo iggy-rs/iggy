@@ -5,6 +5,8 @@ use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tracing::{error, trace};
 
+const EMPTY_INDEXES: Vec<TimeIndex> = vec![];
+
 #[derive(Debug)]
 pub struct TimeIndex {
     pub relative_offset: u32,
@@ -13,8 +15,12 @@ pub struct TimeIndex {
 
 pub async fn load(file: &mut File) -> Result<Vec<TimeIndex>, Error> {
     trace!("Loading time indexes from file...");
-
     let file_size = file.metadata().await?.len() as usize;
+    if file_size == 0 {
+        trace!("Time index file is empty.");
+        return Ok(EMPTY_INDEXES);
+    }
+
     let indexes_count = file_size / 8;
     let mut indexes = Vec::with_capacity(indexes_count);
     let mut reader = BufReader::new(file);

@@ -52,18 +52,20 @@ pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
 
     info!("Preparing the test messages...");
 
+    let mut message_number = 0;
     let mut message_batches: HashMap<u32, SendMessages> = HashMap::new();
 
     for i in 0..batches_count {
         let mut messages = Vec::with_capacity(messages_count as usize);
-        for j in 0..messages_per_batch_count {
-            let payload = format!("Test message #{}", (i + 1) * (j + 1))
+        for _ in 0..messages_per_batch_count {
+            let payload = format!("Test message #{}", message_number)
                 .as_bytes()
                 .to_vec();
             messages.push(Message {
                 length: payload.len() as u32,
                 payload,
             });
+            message_number += 1;
         }
 
         let command = SendMessages {

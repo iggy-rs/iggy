@@ -4,8 +4,7 @@ use crate::segments::time_index::TimeIndex;
 use crate::segments::*;
 use shared::error::Error;
 use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncSeekExt};
-use tracing::{error, trace};
+use tracing::trace;
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
@@ -41,55 +40,16 @@ impl Segment {
         let index_range =
             index::load_range(&mut index_file, self.start_offset, start_offset, end_offset).await?;
 
-        let mut offset_buffer = [0; 8];
-        let mut timestamp_buffer = [0; 8];
-        let mut length_buffer = [0; 4];
-
-        let buffer_size = index_range.end_position - index_range.start_position;
-        let mut buffer = vec![0; buffer_size as usize];
-
-        let mut log_file = Segment::open_file(&self.log_path, false).await;
-        log_file
-            .seek(std::io::SeekFrom::Start(index_range.start_position as u64))
-            .await?;
-        let read_bytes = log_file.read_exact(&mut buffer).await?;
-        if read_bytes == 0 {
+        if index_range.end.position == 0 {
             return Ok(EMPTY_MESSAGES);
         }
 
-        let length = buffer.len();
-        let mut position = 0;
-
-        let messages_count = (1 + end_offset - start_offset) as usize;
-        let mut messages: Vec<Arc<Message>> = Vec::with_capacity(messages_count);
-        while position < length {
-            offset_buffer.copy_from_slice(&buffer[position..position + 8]);
-            position += 8;
-            timestamp_buffer.copy_from_slice(&buffer[position..position + 8]);
-            position += 8;
-            length_buffer.copy_from_slice(&buffer[position..position + 4]);
-            position += 4;
-
-            let offset = u64::from_le_bytes(offset_buffer);
-            let timestamp = u64::from_le_bytes(timestamp_buffer);
-            let length = u32::from_le_bytes(length_buffer);
-            let mut payload = vec![0; length as usize];
-            payload.copy_from_slice(&buffer[position..position + length as usize]);
-            messages.push(Arc::new(Message::create(offset, timestamp, payload)));
-            position += length as usize;
-        }
-
-        if messages.len() != messages_count {
-            error!(
-                "Loaded {} messages from disk, expected {}.",
-                messages.len(),
-                messages_count
-            );
-        }
+        let mut log_file = Segment::open_file(&self.log_path, false).await;
+        let messages = log::load(&mut log_file, index_range).await?;
 
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
-            messages_count,
+            messages.len(),
             start_offset,
             end_offset
         );

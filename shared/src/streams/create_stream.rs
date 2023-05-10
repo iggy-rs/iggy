@@ -19,6 +19,10 @@ impl FromStr for CreateStream {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let name = parts[1].to_string();
 
         if name.len() > MAX_NAME_LENGTH {
@@ -45,6 +49,10 @@ impl BytesSerializable for CreateStream {
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let name = from_utf8(&bytes[4..])?.to_string();
         if name.len() > MAX_NAME_LENGTH {
             return Err(Error::InvalidStreamName);

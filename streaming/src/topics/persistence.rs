@@ -6,7 +6,7 @@ use std::path::Path;
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::{info, trace};
+use tracing::{error, info, trace};
 
 impl Topic {
     pub async fn load(&mut self) -> Result<(), Error> {
@@ -54,14 +54,21 @@ impl Topic {
                 continue;
             }
 
-            let id = dir_entry
-                .file_name()
-                .to_str()
-                .unwrap()
-                .parse::<u32>()
-                .unwrap();
-            let mut partition =
-                Partition::create(id, &self.path, false, self.config.partition.clone());
+            let name = dir_entry.file_name().into_string().unwrap();
+
+            let partition_id = name.parse::<u32>();
+            if partition_id.is_err() {
+                error!("Invalid partition ID file with name: '{}'.", name);
+                continue;
+            }
+
+            let partition_id = partition_id.unwrap();
+            let mut partition = Partition::create(
+                partition_id,
+                &self.path,
+                false,
+                self.config.partition.clone(),
+            );
             partition.load().await?;
             self.partitions.insert(partition.id, partition);
         }

@@ -49,7 +49,7 @@ impl BytesSerializable for StoreOffset {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
-        if bytes.len() != 20 {
+        if bytes.len() != 24 {
             return Err(Error::InvalidCommand);
         }
 

@@ -1,7 +1,7 @@
 use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::Segment;
-use crate::timestamp;
+use crate::utils::timestamp;
 use ringbuffer::{RingBuffer, RingBufferExt, RingBufferWrite};
 use shared::error::Error;
 use std::sync::Arc;
@@ -121,7 +121,7 @@ impl Partition {
             return self.get_first_messages(count).await;
         }
 
-        let offset = *offset.unwrap();
+        let offset = offset.unwrap().offset;
         self.get_messages_by_offset(offset, count).await
     }
 

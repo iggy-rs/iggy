@@ -4,7 +4,7 @@ use shared::error::Error;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use tracing::{info, trace};
+use tracing::{error, info, trace};
 
 pub struct System {
     pub streams: HashMap<u32, Stream>,
@@ -40,13 +40,15 @@ impl System {
         let streams = std::fs::read_dir(&self.streams_path).unwrap();
         for stream in streams {
             info!("Trying to load stream from disk...");
-            let stream_id = stream
-                .unwrap()
-                .file_name()
-                .into_string()
-                .unwrap()
-                .parse::<u32>()
-                .unwrap();
+            let name = stream.unwrap().file_name().into_string().unwrap();
+
+            let stream_id = name.parse::<u32>();
+            if stream_id.is_err() {
+                error!("Invalid stream ID file with name: '{}'.", name);
+                continue;
+            }
+
+            let stream_id = stream_id.unwrap();
             let mut stream =
                 Stream::empty(stream_id, &self.streams_path, self.config.stream.clone());
             stream.load().await?;

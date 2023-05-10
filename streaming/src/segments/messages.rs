@@ -2,6 +2,7 @@ use crate::message::Message;
 use crate::segments::segment::Segment;
 use crate::segments::time_index::TimeIndex;
 use crate::segments::*;
+use crate::utils::file;
 use shared::error::Error;
 use std::sync::Arc;
 use tracing::trace;
@@ -36,7 +37,7 @@ impl Segment {
             start_offset,
             end_offset
         );
-        let mut index_file = Segment::open_file(&self.index_path, false).await;
+        let mut index_file = file::open_file(&self.index_path, false).await;
         let index_range =
             index::load_range(&mut index_file, self.start_offset, start_offset, end_offset).await?;
 
@@ -44,7 +45,7 @@ impl Segment {
             return Ok(EMPTY_MESSAGES);
         }
 
-        let mut log_file = Segment::open_file(&self.log_path, false).await;
+        let mut log_file = file::open_file(&self.log_path, false).await;
         let messages = log::load(&mut log_file, index_range).await?;
 
         trace!(
@@ -97,9 +98,9 @@ impl Segment {
         );
 
         let current_bytes = self.saved_bytes;
-        let mut log_file = Segment::open_file(&self.log_path, true).await;
-        let mut index_file = Segment::open_file(&self.index_path, true).await;
-        let mut time_index_file = Segment::open_file(&self.time_index_path, true).await;
+        let mut log_file = file::open_file(&self.log_path, true).await;
+        let mut index_file = file::open_file(&self.index_path, true).await;
+        let mut time_index_file = file::open_file(&self.time_index_path, true).await;
 
         let saved_bytes = log::persist(&mut log_file, unsaved_messages).await?;
         index::persist(&mut index_file, current_bytes, unsaved_messages).await?;

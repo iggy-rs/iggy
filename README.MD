@@ -34,7 +34,7 @@ List available streams
 
 `stream.list`
 
-Create a topic `dummy` with ID 1 and 2 partitions (IDs 0 and 1) for stream `dev` (ID 1)
+Create a topic `dummy` with ID 1 and 2 partitions (IDs 1 and 2) for stream `dev` (ID 1)
 
 `topic.create|1|1|2|dummy`
 
@@ -42,17 +42,17 @@ List available topics for stream `dev` (ID 1)
 
 `topic.list|1`
 
-Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 0
+Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 1
 
-`message.send|1|1|0|0|hello world`
+`message.send|1|1|0|1|hello world`
 
 Send another message
 
-`message.send|1|1|0|0|lorem ipsum`
+`message.send|1|1|0|1|lorem ipsum`
 
-Poll 2 messages by consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition 0 starting with offset 0 using string format `s`
+Poll 2 messages by consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition 1 starting with offset 0 using string format `s`
 
-`message.poll|0|1|1|0|0|0|2|s`
+`message.poll|0|1|1|1|0|0|2|s`
 
 Finally, restart the server to see it is able to load the persisted data.
 

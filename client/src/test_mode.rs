@@ -11,6 +11,7 @@ use tracing::info;
 pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
     let stream_id: u32 = 9999;
     let topic_id: u32 = 1;
+    let partition_id: u32 = 1;
     let partitions_count: u32 = 1;
     let stream_name = "test".to_string();
     let topic_name = "test".to_string();
@@ -72,7 +73,7 @@ pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
             stream_id,
             topic_id,
             key_kind: 0,
-            key_value: 0,
+            key_value: partition_id,
             messages_count,
             messages,
         };

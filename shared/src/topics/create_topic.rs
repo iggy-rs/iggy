@@ -22,7 +22,15 @@ impl FromStr for CreateTopic {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let topic_id = parts[1].parse::<u32>()?;
+        if topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let partitions_count = parts[2].parse::<u32>()?;
         let name = parts[3].to_string();
 
@@ -61,7 +69,15 @@ impl BytesSerializable for CreateTopic {
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
+        if stream_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
+        if topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let partitions_count = u32::from_le_bytes(bytes[8..12].try_into()?);
         let name = from_utf8(&bytes[12..])?.to_string();
 

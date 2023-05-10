@@ -1,5 +1,6 @@
 use crate::config::PartitionConfig;
 use crate::message::Message;
+use crate::partitions::consumer_offset::ConsumerOffset;
 use crate::segments::segment::Segment;
 use ringbuffer::AllocRingBuffer;
 use std::collections::HashMap;
@@ -9,11 +10,13 @@ use std::sync::Arc;
 pub struct Partition {
     pub id: u32,
     pub path: String,
+    pub offsets_path: String,
+    pub consumer_offsets_path: String,
     pub current_offset: u64,
     pub messages: AllocRingBuffer<Arc<Message>>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
-    pub(crate) consumer_offsets: HashMap<u32, u64>,
+    pub(crate) consumer_offsets: HashMap<u32, ConsumerOffset>,
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<PartitionConfig>,
 }
@@ -26,6 +29,8 @@ impl Partition {
         config: Arc<PartitionConfig>,
     ) -> Partition {
         let path = format!("{}/{}", topic_path, id);
+        let offsets_path = format!("{}/offsets", path);
+        let consumer_offsets_path = format!("{}/consumers", offsets_path);
         let mut buffer_capacity = config.messages_buffer as usize;
         if buffer_capacity == 0 {
             buffer_capacity = 1;
@@ -34,6 +39,8 @@ impl Partition {
         let mut partition = Partition {
             id,
             path,
+            offsets_path,
+            consumer_offsets_path,
             messages: AllocRingBuffer::with_capacity(buffer_capacity),
             segments: vec![],
             current_offset: 0,

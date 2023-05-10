@@ -5,7 +5,7 @@ use std::path::Path;
 use tokio::fs;
 use tokio::fs::OpenOptions;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tracing::info;
+use tracing::{error, info};
 
 impl Stream {
     pub async fn persist(&self) -> Result<(), Error> {
@@ -76,13 +76,15 @@ impl Stream {
         self.name = stream_info;
         let topics = std::fs::read_dir(&self.topics_path).unwrap();
         for topic in topics {
-            let topic_id = topic
-                .unwrap()
-                .file_name()
-                .into_string()
-                .unwrap()
-                .parse::<u32>()
-                .unwrap();
+            let name = topic.unwrap().file_name().into_string().unwrap();
+
+            let topic_id = name.parse::<u32>();
+            if topic_id.is_err() {
+                error!("Invalid topic ID file with name: '{}'.", name);
+                continue;
+            }
+
+            let topic_id = topic_id.unwrap();
             let mut topic = Topic::empty(topic_id, &self.topics_path, self.config.topic.clone());
             topic.load().await?;
             self.topics.insert(topic_id, topic);

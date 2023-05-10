@@ -11,6 +11,14 @@ pub enum Error {
     Error,
     #[error("IO error")]
     IoError(#[from] io::Error),
+    #[error("Write error")]
+    WriteError(#[from] WriteError),
+    #[error("Cannot parse integer")]
+    CannotParseInt(#[from] ParseIntError),
+    #[error("Cannot parse integer")]
+    CannotParseSlice(#[from] TryFromSliceError),
+    #[error("Cannot parse UTF8")]
+    CannotParseUtf8(#[from] Utf8Error),
     #[error("Invalid command")]
     InvalidCommand,
     #[error("Invalid command")]
@@ -39,6 +47,8 @@ pub enum Error {
     StreamNotFound(u32),
     #[error("Stream with ID: {0} already exists.")]
     StreamAlreadyExists(u32),
+    #[error("Invalid stream ID")]
+    InvalidStreamId,
     #[error("Invalid stream name")]
     InvalidStreamName,
     #[error("Cannot create topics directory")]
@@ -65,6 +75,8 @@ pub enum Error {
     TopicNotFound(u32),
     #[error("Topic with ID: {0} already exists.")]
     TopicAlreadyExists(u32),
+    #[error("Invalid topic ID")]
+    InvalidTopicId,
     #[error("Invalid topic name")]
     InvalidTopicName,
     #[error("Invalid topic partitions")]
@@ -91,10 +103,6 @@ pub enum Error {
     PartitionNotFound(u32),
     #[error("Invalid messages count")]
     InvalidMessagesCount,
-    #[error("Message not found")]
-    MessageNotFound,
-    #[error("Messages not found")]
-    MessagesNotFound,
     #[error("Segment not found")]
     SegmentNotFound,
     #[error("Segment with start offset: {0} and partition ID: {1} is closed")]
@@ -115,18 +123,10 @@ pub enum Error {
     CannotSaveIndexToSegment,
     #[error("Cannot save time index to segment")]
     CannotSaveTimeIndexToSegment,
-    #[error("Cannot parse integer")]
-    CannotParseInt(#[from] ParseIntError),
-    #[error("Cannot parse integer")]
-    CannotParseSlice(#[from] TryFromSliceError),
-    #[error("Cannot parse UTF8")]
-    CannotParseUtf8(#[from] Utf8Error),
     #[error("Too big payload")]
     TooBigPayload,
     #[error("Too many messages")]
     TooManyMessages,
-    #[error("Write error")]
-    WriteError(#[from] WriteError),
     #[error("Invalid offset: {0}")]
     InvalidOffset(u64),
 }
@@ -176,8 +176,8 @@ impl Error {
             Error::CannotReadPartitions(_) => 39,
             Error::PartitionNotFound(_) => 40,
             Error::InvalidMessagesCount => 41,
-            Error::MessageNotFound => 42,
-            Error::MessagesNotFound => 43,
+            Error::InvalidStreamId => 42,
+            Error::InvalidTopicId => 43,
             Error::SegmentNotFound => 44,
             Error::SegmentClosed(_, _) => 45,
             Error::InvalidSegmentSize(_) => 46,

@@ -39,7 +39,7 @@ impl Topic {
             config: config.clone(),
         };
 
-        topic.partitions = (0..partitions_count)
+        topic.partitions = (1..partitions_count + 1)
             .map(|id| {
                 let partition = Partition::create(id, &topic.path, true, config.partition.clone());
                 (id, partition)

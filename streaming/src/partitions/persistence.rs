@@ -2,10 +2,28 @@ use crate::partitions::partition::Partition;
 use crate::segments::segment::{Segment, LOG_EXTENSION};
 use shared::error::Error;
 use tokio::fs;
-use tracing::info;
+use tracing::{error, info};
 
 impl Partition {
     pub async fn persist(&mut self) -> Result<(), Error> {
+        info!("Saving partition with start ID: {}", self.id);
+
+        if std::fs::create_dir(&self.offsets_path).is_err() {
+            error!(
+                "Failed to create offsets directory for partition with ID: {}",
+                self.id
+            );
+            return Err(Error::CannotCreatePartition);
+        }
+
+        if std::fs::create_dir(&self.consumer_offsets_path).is_err() {
+            error!(
+                "Failed to create consumer offsets directory for partition with ID: {}",
+                self.id
+            );
+            return Err(Error::CannotCreatePartition);
+        }
+
         for segment in self.get_segments_mut() {
             segment.persist().await?;
         }
@@ -32,10 +50,15 @@ impl Partition {
             }
 
             let dir_entry = dir_entry.unwrap();
-            if let Some(extension) = dir_entry.path().extension() {
-                if extension != LOG_EXTENSION {
-                    continue;
-                }
+            let metadata = dir_entry.metadata().await.unwrap();
+            if metadata.is_dir() {
+                continue;
+            }
+
+            let path = dir_entry.path();
+            let extension = path.extension();
+            if extension.is_none() || extension.unwrap() != LOG_EXTENSION {
+                continue;
             }
 
             let log_file_name = dir_entry
@@ -43,8 +66,8 @@ impl Partition {
                 .into_string()
                 .unwrap()
                 .replace(&format!(".{}", LOG_EXTENSION), "");
-            let offset = log_file_name.parse::<u64>().unwrap();
 
+            let offset = log_file_name.parse::<u64>().unwrap();
             let mut segment =
                 Segment::create(self.id, offset, &self.path, self.config.segment.clone());
             segment.load().await?;
@@ -83,6 +106,9 @@ impl Partition {
         if last_segment.is_closed {
             last_segment.end_offset = last_segment.current_offset;
         }
+
+        self.current_offset = last_segment.current_offset;
+        self.load_offsets().await?;
 
         Ok(())
     }

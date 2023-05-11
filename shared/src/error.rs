@@ -97,7 +97,7 @@ pub enum Error {
     CannotCreatePartitionSegmentTimeIndexFile(String),
     #[error("Cannot open partition log file")]
     CannotOpenPartitionLogFile,
-    #[error("Failed to read directory files for topic with ID: {0}")]
+    #[error("Failed to partitions directories for topic with ID: {0}")]
     CannotReadPartitions(u32),
     #[error("Partition with ID: {0} was not found.")]
     PartitionNotFound(u32),
@@ -129,6 +129,8 @@ pub enum Error {
     TooManyMessages,
     #[error("Invalid offset: {0}")]
     InvalidOffset(u64),
+    #[error("Failed to read consumers offsets  for partition with ID: {0}")]
+    CannotReadConsumerOffsets(u32),
 }
 
 impl Error {
@@ -195,6 +197,7 @@ impl Error {
             Error::TooManyMessages => 58,
             Error::WriteError(_) => 59,
             Error::InvalidOffset(_) => 60,
+            Error::CannotReadConsumerOffsets(_) => 61,
         }
     }
 }

@@ -50,9 +50,9 @@ Send another message
 
 `message.send|1|1|0|1|lorem ipsum`
 
-Poll 2 messages by consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition 1 starting with offset 0 using string format `s`
+Poll 2 messages by an arbitrary consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition with ID 1, starting with offset (`o`) 0, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload.
 
-`message.poll|0|1|1|1|0|0|2|s`
+`message.poll|0|1|1|1|o|0|2|n|s`
 
 Finally, restart the server to see it is able to load the persisted data.
 
@@ -73,6 +73,10 @@ Server start
 Client start
 
 ![client start](assets/client_start.png)
+
+Test mode
+
+![client start](assets/test_mode.png)
 
 Server restart
 
@@ -142,7 +146,7 @@ Server restart
 - [X] Index messages by their offset to allow fast access to the specific messages
 - [X] Index messages by their timestamp to allow fast access to the specific messages
 - [ ] Allow parallel reading/writing from/to the distinct partitions
-- [ ] Allow storing client offset for the specific partition
+- [X] Allow storing client offset for the specific partition
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer

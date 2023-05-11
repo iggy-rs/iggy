@@ -16,7 +16,7 @@ use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
 use streaming::system::System;
-use tracing::trace;
+use tracing::{info, trace};
 
 /*
   FRAME: | COMMAND |   DATA    |
@@ -73,7 +73,7 @@ async fn try_handle(
     sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
-    trace!("Handling command '{}'...", command);
+    info!("Handling command '{}'...", command);
     match command {
         Command::Ping => ping_handler::handle(sender).await,
         Command::SendMessages => {

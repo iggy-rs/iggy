@@ -14,6 +14,8 @@ impl Segment {
         );
         let log_file = file::open_file(&self.log_path, false).await;
         let file_size = log_file.metadata().await.unwrap().len() as u32;
+        self.current_size_bytes = file_size;
+        self.saved_bytes = self.current_size_bytes;
 
         info!(
             "Segment log file for start offset {}, current offset: {}, and partition ID: {} has {} bytes of size.",
@@ -33,9 +35,6 @@ impl Segment {
             let last_index = self.time_indexes.last().unwrap();
             self.current_offset = self.start_offset + last_index.relative_offset as u64;
         }
-
-        self.current_size_bytes = file_size;
-        self.saved_bytes = self.current_size_bytes;
 
         if self.is_full() {
             self.is_closed = true;

@@ -12,6 +12,7 @@ pub struct PollMessages {
     pub kind: u8,
     pub value: u64,
     pub count: u32,
+    pub auto_commit: bool,
     pub format: Format,
 }
 
@@ -34,13 +35,29 @@ impl FromStr for PollMessages {
         let stream_id = parts[1].parse::<u32>()?;
         let topic_id = parts[2].parse::<u32>()?;
         let partition_id = parts[3].parse::<u32>()?;
-        let kind = parts[4].parse::<u8>()?;
+        let kind = match parts[4] {
+            "o" | "offset" => 0,
+            "t" | "timestamp" => 1,
+            "f" | "first" => 2,
+            "l" | "last" => 3,
+            "n" | "next" => 4,
+            _ => return Err(Error::InvalidCommand),
+        };
+        
         let value = parts[5].parse::<u64>()?;
         let count = parts[6].parse::<u32>()?;
-        let format = match parts.get(7) {
+        let auto_commit = match parts.get(7) {
+            Some(auto_commit) => match *auto_commit {
+                "a" | "auto_commit" => true,
+                "n" | "no_commit" => false,
+                _ => return Err(Error::InvalidCommand),
+            },
+            None => false,
+        };
+        let format = match parts.get(8) {
             Some(format) => match *format {
-                "b" => Format::Binary,
-                "s" => Format::String,
+                "b" | "binary" => Format::Binary,
+                "s" | "string" => Format::String,
                 _ => return Err(Error::InvalidFormat),
             },
             None => Format::Binary,
@@ -54,6 +71,7 @@ impl FromStr for PollMessages {
             kind,
             value,
             count,
+            auto_commit,
             format,
         })
     }
@@ -63,7 +81,7 @@ impl BytesSerializable for PollMessages {
     type Type = PollMessages;
 
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(29);
+        let mut bytes = Vec::with_capacity(30);
         bytes.extend(self.consumer_id.to_le_bytes());
         bytes.extend(self.stream_id.to_le_bytes());
         bytes.extend(self.topic_id.to_le_bytes());
@@ -71,11 +89,17 @@ impl BytesSerializable for PollMessages {
         bytes.extend(self.kind.to_le_bytes());
         bytes.extend(self.value.to_le_bytes());
         bytes.extend(self.count.to_le_bytes());
+        if self.auto_commit {
+            bytes.extend(1u8.to_le_bytes());
+        } else {
+            bytes.extend(0u8.to_le_bytes());
+        }
+
         bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() != 29 {
+        if bytes.len() != 30 {
             return Err(Error::InvalidCommand);
         }
 
@@ -86,6 +110,12 @@ impl BytesSerializable for PollMessages {
         let kind = bytes[16];
         let value = u64::from_le_bytes(bytes[17..25].try_into()?);
         let count = u32::from_le_bytes(bytes[25..29].try_into()?);
+        let auto_commit = bytes[29];
+        let auto_commit = match auto_commit {
+            0 => false,
+            1 => true,
+            _ => false
+        };
 
         Ok(PollMessages {
             consumer_id,
@@ -95,6 +125,7 @@ impl BytesSerializable for PollMessages {
             kind,
             value,
             count,
+            auto_commit,
             format: Format::None,
         })
     }

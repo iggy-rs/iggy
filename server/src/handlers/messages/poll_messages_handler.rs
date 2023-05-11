@@ -6,8 +6,8 @@ use streaming::system::System;
 use tracing::trace;
 
 /*
-    |  POLL   | CONSUMER  |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |
-    | 1 byte  |  4 bytes  |  4 bytes  |  4 bytes  |   4 bytes |   1 byte  |  8 bytes  |  4 bytes  |
+    |  POLL   | CONSUMER  |   STREAM  |   TOPIC   |    PT_ID  |    KIND   |   VALUE   |   COUNT   |   COMMIT  |
+    | 1 byte  |  4 bytes  |  4 bytes  |  4 bytes  |   4 bytes |   1 byte  |  8 bytes  |  4 bytes  |   1 byte  |
 
     POLL
         - Constant 1 byte of value 2
@@ -35,6 +35,9 @@ use tracing::trace;
 
     COUNT:
         - Number of messages to poll in a single chunk.
+        
+    COMMIT:
+        - Auto commit flag, if true, the consumer offset will be stored automatically.
 
     Poll the message(s) by consumer: 0, stream: 1, topic: 1, partition: 1, using kind: offset, value is 0, messages count is 1.
     |    0    |    1    |     1     |     1     |     0     |     0     |     1     |
@@ -62,13 +65,14 @@ pub async fn handle(
     }
 
     trace!(
-        "Polling {} messages by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}...",
+        "Polling {} messages by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}, auto commit: {}...",
         command.count,
         command.consumer_id,
         command.stream_id,
         command.topic_id,
         command.kind,
         command.value,
+        command.auto_commit
     );
 
     let messages = system
@@ -91,6 +95,7 @@ pub async fn handle(
 
     let mut bytes = Vec::with_capacity(4 + messages_size as usize);
     bytes.extend(messages_count.to_le_bytes());
+    let offset = messages.last().unwrap().offset;
     for message in messages {
         message.extend(&mut bytes);
     }
@@ -98,14 +103,30 @@ pub async fn handle(
     sender.send_ok_response(&bytes).await?;
 
     trace!(
-        "Polled {} message(s) by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}, count: {}",
+        "Polled {} message(s) by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}, count: {}, auto commit: {}",
         messages_count,
         command.consumer_id,
         command.stream_id,
         command.topic_id,
         command.kind,
         command.value,
-        command.count
+        command.count,
+        command.auto_commit
     );
+
+    if command.auto_commit {
+        trace!("Automatically committing offset: {} for consumer: {} from stream: {}, topic: {}, partition: {}...",
+            offset,
+            command.consumer_id,
+            command.stream_id,
+            command.topic_id,
+            command.partition_id
+        );
+        system
+            .get_stream_mut(command.stream_id)?
+            .store_offset(command.consumer_id, command.topic_id, command.partition_id, offset)
+            .await?;
+    }
+
     Ok(())
 }

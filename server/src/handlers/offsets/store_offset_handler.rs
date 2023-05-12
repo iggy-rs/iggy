@@ -10,15 +10,7 @@ pub async fn handle(
     sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
-    trace!(
-        "Storing offset: {} for consumer: {}, stream: {}, topic: {}, partition: {}...",
-        command.offset,
-        command.consumer_id,
-        command.stream_id,
-        command.topic_id,
-        command.partition_id,
-    );
-
+    trace!("{}", command);
     system
         .get_stream_mut(command.stream_id)?
         .store_offset(
@@ -28,15 +20,6 @@ pub async fn handle(
             command.offset,
         )
         .await?;
-
-    trace!(
-        "Stored offset: {} for consumer: {}, stream: {}, topic: {}, partition: {}.",
-        command.offset,
-        command.consumer_id,
-        command.stream_id,
-        command.topic_id,
-        command.partition_id,
-    );
 
     sender.send_empty_ok_response().await?;
     Ok(())

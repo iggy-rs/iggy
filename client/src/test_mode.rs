@@ -3,6 +3,7 @@ use sdk::client::ConnectedClient;
 use shared::messages::send_messages::{Message, SendMessages};
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
+use shared::streams::get_streams::GetStreams;
 use shared::topics::create_topic::CreateTopic;
 use std::collections::HashMap;
 use std::time::Instant;
@@ -20,7 +21,7 @@ pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
     let messages_per_batch_count = messages_count / batches_count;
 
     info!("Getting the list of streams...");
-    let streams = client.get_streams().await?;
+    let streams = client.get_streams(&GetStreams {}).await?;
 
     if streams.iter().any(|s| s.id == stream_id) {
         info!("Deleting the test stream");

@@ -35,7 +35,7 @@ use tracing::trace;
 
     COUNT:
         - Number of messages to poll in a single chunk.
-        
+
     COMMIT:
         - Auto commit flag, if true, the consumer offset will be stored automatically.
 
@@ -60,20 +60,10 @@ pub async fn handle(
     sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
+    trace!("{}", command);
     if command.count == 0 {
         return Err(Error::InvalidMessagesCount);
     }
-
-    trace!(
-        "Polling {} messages by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}, auto commit: {}...",
-        command.count,
-        command.consumer_id,
-        command.stream_id,
-        command.topic_id,
-        command.kind,
-        command.value,
-        command.auto_commit
-    );
 
     let messages = system
         .get_stream(command.stream_id)?
@@ -102,29 +92,16 @@ pub async fn handle(
 
     sender.send_ok_response(&bytes).await?;
 
-    trace!(
-        "Polled {} message(s) by consumer: {} from stream: {}, topic: {}, kind: {}, value: {}, count: {}, auto commit: {}",
-        messages_count,
-        command.consumer_id,
-        command.stream_id,
-        command.topic_id,
-        command.kind,
-        command.value,
-        command.count,
-        command.auto_commit
-    );
-
     if command.auto_commit {
-        trace!("Automatically committing offset: {} for consumer: {} from stream: {}, topic: {}, partition: {}...",
-            offset,
-            command.consumer_id,
-            command.stream_id,
-            command.topic_id,
-            command.partition_id
-        );
+        trace!("Offset will be automatically stored...");
         system
             .get_stream_mut(command.stream_id)?
-            .store_offset(command.consumer_id, command.topic_id, command.partition_id, offset)
+            .store_offset(
+                command.consumer_id,
+                command.topic_id,
+                command.partition_id,
+                offset,
+            )
             .await?;
     }
 

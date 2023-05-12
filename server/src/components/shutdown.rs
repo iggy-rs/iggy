@@ -10,7 +10,7 @@ impl Server {
         ctrlc::set_handler(move || {
             info!("Shutting down {} server...", name);
             let runtime = tokio::runtime::Runtime::new().expect("Unable to create a runtime");
-            let shutdown = sender.send(ServerCommand::Shutdown);
+            let shutdown = sender.send_async(ServerCommand::Shutdown);
             let block_on = runtime.block_on(shutdown);
             if let Err(error) = block_on {
                 error!("Error when shutting down {}: {}", name, error);

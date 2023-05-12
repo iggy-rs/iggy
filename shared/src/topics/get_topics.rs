@@ -1,5 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::command::GET_TOPICS;
 use crate::error::Error;
+use std::fmt::Display;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -16,6 +18,9 @@ impl FromStr for GetTopics {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
 
         Ok(GetTopics { stream_id })
     }
@@ -36,7 +41,16 @@ impl BytesSerializable for GetTopics {
         }
 
         let stream_id = u32::from_le_bytes(bytes.try_into()?);
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
 
         Ok(GetTopics { stream_id })
+    }
+}
+
+impl Display for GetTopics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} → stream ID: {}", GET_TOPICS, self.stream_id)
     }
 }

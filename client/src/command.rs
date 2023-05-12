@@ -11,6 +11,8 @@ use shared::messages::send_messages::SendMessages;
 use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
+use shared::streams::get_streams::GetStreams;
+use shared::system::ping::Ping;
 use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
@@ -22,8 +24,14 @@ pub async fn handle(input: &str, client: &mut ConnectedClient) -> Result<(), Cli
     let command = Command::from_str(command).map_err(|_| ClientError::InvalidCommand)?;
     info!("Handling '{:?}' command...", command);
     match command {
-        Command::Ping => ping_handler::handle(client).await,
-        Command::GetStreams => get_streams_handler::handle(client).await,
+        Command::Ping => {
+            let command = Ping::from_str(input)?;
+            ping_handler::handle(command, client).await
+        }
+        Command::GetStreams => {
+            let command = GetStreams::from_str(input)?;
+            get_streams_handler::handle(command, client).await
+        }
         Command::SendMessages => {
             let command = SendMessages::from_str(input)?;
             send_messages_handler::handle(command, client).await

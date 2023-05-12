@@ -1,5 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::command::STORE_OFFSET;
 use crate::error::Error;
+use std::fmt::Display;
 use std::str::FromStr;
 
 #[derive(Debug)]
@@ -21,7 +23,15 @@ impl FromStr for StoreOffset {
 
         let consumer_id = parts[0].parse::<u32>()?;
         let stream_id = parts[1].parse::<u32>()?;
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let topic_id = parts[2].parse::<u32>()?;
+        if topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let partition_id = parts[3].parse::<u32>()?;
         let offset = parts[4].parse::<u64>()?;
 
@@ -55,7 +65,15 @@ impl BytesSerializable for StoreOffset {
 
         let consumer_id = u32::from_le_bytes(bytes[..4].try_into()?);
         let stream_id = u32::from_le_bytes(bytes[4..8].try_into()?);
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let topic_id = u32::from_le_bytes(bytes[8..12].try_into()?);
+        if topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let partition_id = u32::from_le_bytes(bytes[12..16].try_into()?);
         let offset = u64::from_le_bytes(bytes[16..24].try_into()?);
 
@@ -66,5 +84,20 @@ impl BytesSerializable for StoreOffset {
             partition_id,
             offset,
         })
+    }
+}
+
+impl Display for StoreOffset {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} → consumer ID: {}, stream ID: {}, topic ID: {}, partition ID: {}, offset: {}",
+            STORE_OFFSET,
+            self.consumer_id,
+            self.stream_id,
+            self.topic_id,
+            self.partition_id,
+            self.offset
+        )
     }
 }

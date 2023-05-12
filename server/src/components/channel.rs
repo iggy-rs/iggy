@@ -9,7 +9,14 @@ impl Server {
     pub fn start_channel(&self, mut system_receiver: SystemReceiver) {
         let name = self.config.name.clone();
         tokio::spawn(async move {
-            while let Some(server_command) = system_receiver.receiver.recv().await {
+            loop {
+                let server_command = system_receiver.receiver.recv_async().await;
+                if server_command.is_err() {
+                    error!("Error when receiving command: {:?}", server_command.err());
+                    continue;
+                }
+
+                let server_command = server_command.unwrap();
                 match server_command {
                     ServerCommand::HandleRequest((send, recv)) => {
                         let request = recv.read_to_end(1024 * 1024 * 1024).await;

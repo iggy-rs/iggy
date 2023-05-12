@@ -3,12 +3,17 @@ use crate::error::Error;
 use crate::stream::Stream;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
+use shared::streams::get_streams::GetStreams;
 use std::str::from_utf8;
 
 impl ConnectedClient {
-    pub async fn get_streams(&mut self) -> Result<Vec<Stream>, Error> {
+    pub async fn get_streams(&mut self, command: &GetStreams) -> Result<Vec<Stream>, Error> {
         let response = self
-            .send_with_response(&Command::GetStreams.as_bytes())
+            .send_with_response(
+                [Command::GetStreams.as_bytes(), command.as_bytes()]
+                    .concat()
+                    .as_slice(),
+            )
             .await?;
         handle_response(response)
     }

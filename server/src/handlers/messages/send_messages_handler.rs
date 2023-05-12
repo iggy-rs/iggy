@@ -11,15 +11,7 @@ pub async fn handle(
     sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
-    trace!(
-        "Appending {} message(s) to stream: {}, topic: {}, key kind: {}, key value: {}...",
-        command.messages_count,
-        command.stream_id,
-        command.topic_id,
-        command.key_kind,
-        command.key_value
-    );
-
+    trace!("{}", command);
     let mut messages = Vec::with_capacity(command.messages_count as usize);
     for message in command.messages {
         messages.push(Message::create(0, 0, message.payload));
@@ -34,15 +26,6 @@ pub async fn handle(
             messages,
         )
         .await?;
-
-    trace!(
-        "Appended {} message(s) to stream: {}, topic: {}, key kind: {}, key value: {:?}.",
-        command.messages_count,
-        command.stream_id,
-        command.topic_id,
-        command.key_kind,
-        command.key_value
-    );
 
     sender.send_empty_ok_response().await?;
     Ok(())

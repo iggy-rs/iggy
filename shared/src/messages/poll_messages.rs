@@ -1,5 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::command::POLL_MESSAGES;
 use crate::error::Error;
+use std::fmt::Display;
 use std::str::FromStr;
 
 // TODO: Extend with consumer group.
@@ -33,7 +35,15 @@ impl FromStr for PollMessages {
 
         let consumer_id = parts[0].parse::<u32>()?;
         let stream_id = parts[1].parse::<u32>()?;
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let topic_id = parts[2].parse::<u32>()?;
+        if topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let partition_id = parts[3].parse::<u32>()?;
         let kind = match parts[4] {
             "o" | "offset" => 0,
@@ -43,7 +53,7 @@ impl FromStr for PollMessages {
             "n" | "next" => 4,
             _ => return Err(Error::InvalidCommand),
         };
-        
+
         let value = parts[5].parse::<u64>()?;
         let count = parts[6].parse::<u32>()?;
         let auto_commit = match parts.get(7) {
@@ -105,7 +115,15 @@ impl BytesSerializable for PollMessages {
 
         let consumer_id = u32::from_le_bytes(bytes[..4].try_into()?);
         let stream_id = u32::from_le_bytes(bytes[4..8].try_into()?);
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let topic_id = u32::from_le_bytes(bytes[8..12].try_into()?);
+        if topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let partition_id = u32::from_le_bytes(bytes[12..16].try_into()?);
         let kind = bytes[16];
         let value = u64::from_le_bytes(bytes[17..25].try_into()?);
@@ -114,7 +132,7 @@ impl BytesSerializable for PollMessages {
         let auto_commit = match auto_commit {
             0 => false,
             1 => true,
-            _ => false
+            _ => false,
         };
 
         Ok(PollMessages {
@@ -128,5 +146,15 @@ impl BytesSerializable for PollMessages {
             auto_commit,
             format: Format::None,
         })
+    }
+}
+
+impl Display for PollMessages {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} → consumer ID: {}, stream ID: {}, topic ID: {}, partition ID: {}, kind: {}, value: {}, count: {}, auto commit: {}",
+            POLL_MESSAGES, self.consumer_id, self.stream_id, self.topic_id, self.partition_id, self.kind, self.value, self.count, self.auto_commit
+        )
     }
 }

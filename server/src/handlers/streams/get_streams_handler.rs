@@ -1,9 +1,16 @@
 use crate::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
+use shared::streams::get_streams::GetStreams;
 use streaming::system::System;
+use tracing::trace;
 
-pub async fn handle(sender: &mut Sender, system: &mut System) -> Result<(), Error> {
+pub async fn handle(
+    command: GetStreams,
+    sender: &mut Sender,
+    system: &mut System,
+) -> Result<(), Error> {
+    trace!("{}", command);
     let streams = system
         .get_streams()
         .iter()

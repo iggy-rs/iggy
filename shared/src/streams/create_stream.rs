@@ -1,5 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::command::CREATE_STREAM;
 use crate::error::Error;
+use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
 pub const MAX_NAME_LENGTH: usize = 100;
@@ -24,7 +26,6 @@ impl FromStr for CreateStream {
         }
 
         let name = parts[1].to_string();
-
         if name.len() > MAX_NAME_LENGTH {
             return Err(Error::InvalidStreamName);
         }
@@ -59,5 +60,15 @@ impl BytesSerializable for CreateStream {
         }
 
         Ok(CreateStream { stream_id, name })
+    }
+}
+
+impl Display for CreateStream {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} → stream ID: {}, name: {}",
+            CREATE_STREAM, self.stream_id, self.name
+        )
     }
 }

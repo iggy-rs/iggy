@@ -38,18 +38,7 @@ impl Partition {
         );
         let dir_files = fs::read_dir(&self.path).await;
         let mut dir_files = dir_files.unwrap();
-        loop {
-            let dir_entry = dir_files.next_entry().await;
-            if dir_entry.is_err() {
-                break;
-            }
-
-            let dir_entry = dir_entry.unwrap();
-            if dir_entry.is_none() {
-                break;
-            }
-
-            let dir_entry = dir_entry.unwrap();
+        while let Some(dir_entry) = dir_files.next_entry().await.unwrap_or(None) {
             let metadata = dir_entry.metadata().await.unwrap();
             if metadata.is_dir() {
                 continue;

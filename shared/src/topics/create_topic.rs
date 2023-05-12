@@ -1,5 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::command::CREATE_TOPIC;
 use crate::error::Error;
+use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
 pub const MAX_NAME_LENGTH: usize = 100;
@@ -95,5 +97,15 @@ impl BytesSerializable for CreateTopic {
             partitions_count,
             name,
         })
+    }
+}
+
+impl Display for CreateTopic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} → stream ID: {}, topic ID: {}, partitions count: {}, name: {}",
+            CREATE_TOPIC, self.stream_id, self.topic_id, self.partitions_count, self.name
+        )
     }
 }

@@ -1,5 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::command::SEND_MESSAGES;
 use crate::error::Error;
+use std::fmt::Display;
 use std::str::FromStr;
 
 pub const MAX_PAYLOAD_SIZE: usize = 1024 * 1024 * 1024;
@@ -36,7 +38,15 @@ impl FromStr for SendMessages {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let topic_id = parts[1].parse::<u32>()?;
+        if topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let key_kind = parts[2].parse::<u8>()?;
         let key_value = parts[3].parse::<u32>()?;
         let payload = parts[4].as_bytes().to_vec();
@@ -90,7 +100,15 @@ impl BytesSerializable for SendMessages {
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
+        if stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
         let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
+        if topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
         let key_kind = bytes[8];
         let key_value = u32::from_le_bytes(bytes[9..13].try_into()?);
         let messages_count = u32::from_le_bytes(bytes[13..17].try_into()?);
@@ -118,5 +136,20 @@ impl BytesSerializable for SendMessages {
             messages_count,
             messages,
         })
+    }
+}
+
+impl Display for SendMessages {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{} → stream ID: {}, topic ID: {}, key kind: {}, key value: {}, count: {}",
+            SEND_MESSAGES,
+            self.stream_id,
+            self.topic_id,
+            self.key_kind,
+            self.key_value,
+            self.messages_count
+        )
     }
 }

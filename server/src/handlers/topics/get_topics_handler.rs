@@ -3,12 +3,14 @@ use anyhow::Result;
 use shared::error::Error;
 use shared::topics::get_topics::GetTopics;
 use streaming::system::System;
+use tracing::trace;
 
 pub async fn handle(
     command: GetTopics,
     sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
+    trace!("{}", command);
     let topics = system
         .get_stream(command.stream_id)?
         .get_topics()

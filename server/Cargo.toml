@@ -8,6 +8,7 @@ shared = { path = "../shared" }
 streaming = { path = "../streaming" }
 bytes = "1.4.0"
 figment = { version = "0.10.8", features = ["json", "toml", "env"] }
+flume = "0.10.14"
 thiserror = "1.0.40"
 serde = { version = "1.0.159", features = ["derive", "rc"] }
 serde_json = "1.0.95"

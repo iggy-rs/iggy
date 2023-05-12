@@ -22,7 +22,10 @@ impl Server {
             interval.tick().await;
             loop {
                 interval.tick().await;
-                sender.send(ServerCommand::SaveMessages).await.unwrap();
+                sender
+                    .send_async(ServerCommand::SaveMessages)
+                    .await
+                    .unwrap();
             }
         });
     }

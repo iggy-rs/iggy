@@ -2,11 +2,11 @@ use crate::server_command::ServerCommand;
 use crate::server_config::ServerConfig;
 use crate::server_error::ServerError;
 use anyhow::Result;
+use flume::{Receiver, Sender};
 use quinn::Endpoint;
 use std::error::Error;
 use std::sync::Arc;
 use streaming::system::System;
-use tokio::sync::mpsc;
 use tracing::{error, info};
 
 pub struct ServerSystem {
@@ -16,13 +16,13 @@ pub struct ServerSystem {
 
 pub struct Server {
     pub endpoint: Endpoint,
-    pub sender: Arc<mpsc::Sender<ServerCommand>>,
+    pub sender: Arc<Sender<ServerCommand>>,
     pub config: ServerConfig,
 }
 
 pub struct SystemReceiver {
     pub system: System,
-    pub receiver: mpsc::Receiver<ServerCommand>,
+    pub receiver: Receiver<ServerCommand>,
 }
 
 impl ServerSystem {
@@ -34,7 +34,7 @@ impl ServerSystem {
             return Err(ServerError::CannotStartServer);
         }
         let endpoint = Endpoint::server(quic_config.unwrap(), config.address.parse().unwrap())?;
-        let (sender, receiver) = mpsc::channel::<ServerCommand>(10000);
+        let (sender, receiver) = flume::unbounded::<ServerCommand>();
 
         let system = System::init(config.system.clone()).await?;
         let server = Server {

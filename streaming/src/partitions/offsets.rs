@@ -1,8 +1,8 @@
-use tokio::fs;
 use crate::partitions::consumer_offset::ConsumerOffset;
 use crate::partitions::partition::Partition;
 use crate::utils::file;
 use shared::error::Error;
+use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tracing::{error, trace};
 
@@ -47,18 +47,7 @@ impl Partition {
         }
 
         let mut dir_files = dir_files.unwrap();
-        loop {
-            let dir_entry = dir_files.next_entry().await;
-            if dir_entry.is_err() {
-                break;
-            }
-
-            let dir_entry = dir_entry.unwrap();
-            if dir_entry.is_none() {
-                break;
-            }
-
-            let dir_entry = dir_entry.unwrap();
+        while let Some(dir_entry) = dir_files.next_entry().await.unwrap_or(None) {
             let metadata = dir_entry.metadata().await;
             if metadata.is_err() || metadata.unwrap().is_dir() {
                 continue;
@@ -83,10 +72,13 @@ impl Partition {
             let mut file = file::open_file(path, false).await;
             let offset = file.read_u64().await?;
 
-            self.consumer_offsets.insert(consumer_id, ConsumerOffset {
-                offset,
-                path: path.to_string(),
-            });
+            self.consumer_offsets.insert(
+                consumer_id,
+                ConsumerOffset {
+                    offset,
+                    path: path.to_string(),
+                },
+            );
 
             trace!(
                 "Loaded consumer offset: {} for consumer ID: {}, partition ID: {}.",

@@ -1,8 +1,8 @@
 use crate::server::Server;
 use crate::server_command::ServerCommand;
 use crate::server_error::ServerError;
+use flume::Sender;
 use std::sync::Arc;
-use tokio::sync::mpsc;
 use tracing::{error, info};
 
 impl Server {
@@ -26,7 +26,7 @@ impl Server {
 
 async fn handle_connection(
     incoming_connection: quinn::Connecting,
-    sender: Arc<mpsc::Sender<ServerCommand>>,
+    sender: Arc<Sender<ServerCommand>>,
 ) -> Result<(), ServerError> {
     let connection = incoming_connection.await?;
     async {
@@ -44,7 +44,10 @@ async fn handle_connection(
                 Ok(stream) => stream,
             };
 
-            if let Err(error) = sender.send(ServerCommand::HandleRequest(stream)).await {
+            if let Err(error) = sender
+                .send_async(ServerCommand::HandleRequest(stream))
+                .await
+            {
                 error!("Error when handling the request: {:?}", error);
             }
         }

@@ -122,6 +122,15 @@ impl Partition {
         }
 
         let offset = offset.unwrap().offset;
+        if offset == self.current_offset {
+            trace!(
+                "Consumer: {} has the latest offset for partition: {}, returning empty messages...",
+                consumer_id,
+                self.id
+            );
+            return Ok(EMPTY_MESSAGES);
+        }
+
         self.get_messages_by_offset(offset, count).await
     }
 

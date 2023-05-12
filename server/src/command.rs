@@ -12,6 +12,8 @@ use shared::messages::send_messages::SendMessages;
 use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
+use shared::streams::get_streams::GetStreams;
+use shared::system::ping::Ping;
 use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
@@ -75,7 +77,10 @@ async fn try_handle(
 ) -> Result<(), Error> {
     info!("Handling command '{}'...", command);
     match command {
-        Command::Ping => ping_handler::handle(sender).await,
+        Command::Ping => {
+            let command = Ping::from_bytes(bytes)?;
+            ping_handler::handle(command, sender).await
+        }
         Command::SendMessages => {
             let command = SendMessages::from_bytes(bytes)?;
             send_messages_handler::handle(command, sender, system).await
@@ -88,7 +93,10 @@ async fn try_handle(
             let command = StoreOffset::from_bytes(bytes)?;
             store_offset_handler::handle(command, sender, system).await
         }
-        Command::GetStreams => get_streams_handler::handle(sender, system).await,
+        Command::GetStreams => {
+            let command = GetStreams::from_bytes(bytes)?;
+            get_streams_handler::handle(command, sender, system).await
+        }
         Command::CreateStream => {
             let command = CreateStream::from_bytes(bytes)?;
             create_stream_handler::handle(command, sender, system).await

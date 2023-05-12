@@ -3,16 +3,16 @@ use crate::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-const PING: &str = "ping";
-const SEND_MESSAGES: &str = "message.send";
-const POLL_MESSAGES: &str = "message.poll";
-const STORE_OFFSET: &str = "offset.store";
-const GET_STREAMS: &str = "stream.list";
-const CREATE_STREAM: &str = "stream.create";
-const DELETE_STREAM: &str = "stream.delete";
-const GET_TOPICS: &str = "topic.list";
-const CREATE_TOPIC: &str = "topic.create";
-const DELETE_TOPIC: &str = "topic.delete";
+pub const PING: &str = "ping";
+pub const SEND_MESSAGES: &str = "message.send";
+pub const POLL_MESSAGES: &str = "message.poll";
+pub const STORE_OFFSET: &str = "offset.store";
+pub const GET_STREAMS: &str = "stream.list";
+pub const CREATE_STREAM: &str = "stream.create";
+pub const DELETE_STREAM: &str = "stream.delete";
+pub const GET_TOPICS: &str = "topic.list";
+pub const CREATE_TOPIC: &str = "topic.create";
+pub const DELETE_TOPIC: &str = "topic.delete";
 
 #[derive(Debug, PartialEq)]
 pub enum Command {

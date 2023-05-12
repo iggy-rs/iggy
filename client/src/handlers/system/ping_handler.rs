@@ -1,7 +1,8 @@
 use crate::client_error::ClientError;
 use sdk::client::ConnectedClient;
+use shared::system::ping::Ping;
 
-pub async fn handle(client: &mut ConnectedClient) -> Result<(), ClientError> {
-    client.ping().await?;
+pub async fn handle(command: Ping, client: &mut ConnectedClient) -> Result<(), ClientError> {
+    client.ping(&command).await?;
     Ok(())
 }

@@ -18,7 +18,7 @@ impl Server {
 
                 let server_command = server_command.unwrap();
                 match server_command {
-                    ServerCommand::HandleRequest((send, recv)) => {
+                    ServerCommand::HandleRequest((send, mut recv)) => {
                         let request = recv.read_to_end(1024 * 1024 * 1024).await;
                         if request.is_err() {
                             error!("Error when reading the request: {:?}", request);

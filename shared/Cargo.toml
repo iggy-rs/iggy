@@ -6,5 +6,5 @@ edition = "2021"
 [dependencies]
 thiserror = "1.0.40"
 tokio = { version = "1.26.0", features = ["full"] }
-quinn = "0.9.3"
-rustls = { version = "0.20.8", features = ["dangerous_configuration", "quic"] }
+quinn = "0.10.0"
+rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }

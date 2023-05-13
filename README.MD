@@ -14,43 +14,43 @@ It is a pet project of mine to learn more about distributed systems and Rust.
 
 ### Basic usage
 
-Build the project
+Build the project:
 
-`cargo build`
+`cargo build -r`
 
-Start the server
+Start the server:
 
-`cargo run --bin server`
+`cargo r --bin server -r`
 
-Start the client
+Start the client:
 
-`cargo run --bin client`
+`cargo r --bin client -r`
 
-Create a stream `dev` with ID 1
+Create a stream named `dev` with ID 1:
 
 `stream.create|1|dev`
 
-List available streams
+List available streams:
 
 `stream.list`
 
-Create a topic `dummy` with ID 1 and 2 partitions (IDs 1 and 2) for stream `dev` (ID 1)
+Create a topic named `dummy` with ID 1 and 2 partitions (IDs 1 and 2) for stream `dev` (ID 1):
 
 `topic.create|1|1|2|dummy`
 
-List available topics for stream `dev` (ID 1)
+List available topics for stream `dev` (ID 1):
 
 `topic.list|1`
 
-Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 1
+Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 1:
 
 `message.send|1|1|0|1|hello world`
 
-Send another message
+Send another message:
 
 `message.send|1|1|0|1|lorem ipsum`
 
-Poll 2 messages by an arbitrary consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition with ID 1, starting with offset (`o`) 0, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload.
+Poll 2 messages by an arbitrary consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition with ID 1, starting with offset (`o`) 0, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload:
 
 `message.poll|0|1|1|1|o|0|2|n|s`
 
@@ -58,7 +58,9 @@ Finally, restart the server to see it is able to load the persisted data.
 
 To see the detailed logs from the client/server, run it with `RUST_LOG=trace` environment variable.
 
-To quick test the project, first start the server and then run the client with `--test` argument.
+To quick test the project, first start the server and then run the benchmarking app:
+
+`cargo r --bin bench -r -- --messages-per-batch 1000 --message-batches 1000`
 
 **See the images below**
 
@@ -92,6 +94,7 @@ Server restart
 - [x] Create granular components with their own behavior and logic
 - [x] Define custom conventions such as error types, statuses etc.
 - [x] Make use of logging and observability crates
+- [x] Create the benchmarking app to test client/server performance
 - [ ] Implement unit tests
 - [ ] Implement integration and end-to-end tests
 

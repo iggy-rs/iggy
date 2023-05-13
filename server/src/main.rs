@@ -8,6 +8,7 @@ mod server_command;
 mod server_config;
 mod server_error;
 
+use crate::args::Args;
 use crate::server::*;
 use crate::server_config::ServerConfig;
 use crate::server_error::ServerError;
@@ -16,7 +17,7 @@ use clap::Parser;
 
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
-    let args = args::Args::parse();
+    let args = Args::parse();
     tracing_subscriber::fmt::init();
 
     let config = ServerConfig::load(&args.config)?;

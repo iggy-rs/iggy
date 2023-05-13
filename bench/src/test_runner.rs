@@ -1,5 +1,6 @@
-use crate::client_error::ClientError;
+use crate::test_args::TestArgs;
 use sdk::client::ConnectedClient;
+use sdk::error::Error;
 use shared::messages::send_messages::{Message, SendMessages};
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
@@ -9,16 +10,16 @@ use std::collections::HashMap;
 use std::time::Instant;
 use tracing::info;
 
-pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
+pub async fn run_test(client: &mut ConnectedClient, args: TestArgs) -> Result<(), Error> {
     let stream_id: u32 = 9999;
     let topic_id: u32 = 1;
     let partition_id: u32 = 1;
     let partitions_count: u32 = 1;
     let stream_name = "test".to_string();
     let topic_name = "test".to_string();
-    let messages_count: u32 = 1000000;
-    let batches_count: u32 = 1000;
-    let messages_per_batch_count = messages_count / batches_count;
+    let messages_per_batch: u32 = args.messages_per_batch;
+    let batches_count: u32 = args.message_batches;
+    let total_messages = messages_per_batch * batches_count;
 
     info!("Getting the list of streams...");
     let streams = client.get_streams(&GetStreams {}).await?;
@@ -58,8 +59,8 @@ pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
     let mut message_batches: HashMap<u32, SendMessages> = HashMap::new();
 
     for i in 0..batches_count {
-        let mut messages = Vec::with_capacity(messages_count as usize);
-        for _ in 0..messages_per_batch_count {
+        let mut messages = Vec::with_capacity(messages_per_batch as usize);
+        for _ in 0..messages_per_batch {
             let payload = format!("Test message #{}", message_number)
                 .as_bytes()
                 .to_vec();
@@ -75,7 +76,7 @@ pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
             topic_id,
             key_kind: 0,
             key_value: partition_id,
-            messages_count,
+            messages_count: messages_per_batch,
             messages,
         };
 
@@ -84,7 +85,7 @@ pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
 
     info!(
         "Sending {} test messages in {} batches of {} messages...",
-        messages_count, batches_count, messages_per_batch_count
+        total_messages, batches_count, messages_per_batch
     );
 
     let start = Instant::now();
@@ -98,9 +99,9 @@ pub async fn run_test(client: &mut ConnectedClient) -> Result<(), ClientError> {
 
     info!(
         "Sent {} test messages in {} batches of {} messages in {} ms.",
-        messages_count,
+        total_messages,
         batches_count,
-        messages_per_batch_count,
+        messages_per_batch,
         duration.as_millis()
     );
 

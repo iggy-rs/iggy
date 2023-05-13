@@ -5,7 +5,7 @@ use shared::command::Command;
 use shared::topics::delete_topic::DeleteTopic;
 
 impl ConnectedClient {
-    pub async fn delete_topic(&mut self, command: &DeleteTopic) -> Result<(), Error> {
+    pub async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
         self.send_with_response(
             [Command::DeleteTopic.as_bytes(), command.as_bytes()]
                 .concat()

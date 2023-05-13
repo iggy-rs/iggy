@@ -98,6 +98,10 @@ impl Partition {
 
         self.current_offset = last_segment.current_offset;
         self.load_offsets().await?;
+        info!(
+            "Loaded partition with ID: {}, current offset: {}",
+            self.id, self.current_offset
+        );
 
         Ok(())
     }

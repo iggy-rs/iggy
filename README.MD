@@ -60,7 +60,7 @@ To see the detailed logs from the client/server, run it with `RUST_LOG=trace` en
 
 To quick test the project, first start the server and then run the benchmarking app:
 
-`cargo r --bin bench -r -- --messages-per-batch 1000 --message-batches 1000`
+`cargo r --bin bench -r -- --messages-per-batch 1000 --message-batches 1000 --clients-count 10`
 
 **See the images below**
 

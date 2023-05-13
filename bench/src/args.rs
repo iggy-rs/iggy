@@ -19,5 +19,5 @@ pub struct Args {
     pub message_batches: u32,
 
     #[arg(long, default_value = "1")]
-    pub connections_count: u32,
+    pub clients_count: u32,
 }

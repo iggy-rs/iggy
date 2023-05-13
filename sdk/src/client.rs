@@ -6,7 +6,7 @@ use tracing::{error, info, trace};
 
 const NAME: &str = "Iggy";
 
-pub struct DisconnectedClient {
+pub struct Client {
     pub(crate) server: SocketAddr,
     pub(crate) server_name: String,
     pub(crate) endpoint: Endpoint,
@@ -15,10 +15,9 @@ pub struct DisconnectedClient {
 pub struct ConnectedClient {
     pub(crate) endpoint: Endpoint,
     pub(crate) connection: Connection,
-    pub(crate) buffer: Vec<u8>,
 }
 
-impl DisconnectedClient {
+impl Client {
     pub fn new(address: &str, server: &str, server_name: &str) -> Result<Self, Error> {
         let client_address = address.parse::<SocketAddr>()?;
         let server_address = server.parse::<SocketAddr>()?;
@@ -54,7 +53,6 @@ impl DisconnectedClient {
         Ok(ConnectedClient {
             endpoint: self.endpoint.clone(),
             connection,
-            buffer: vec![0; 1024 * 1024 * 1024],
         })
     }
 }
@@ -67,23 +65,24 @@ impl ConnectedClient {
         Ok(())
     }
 
-    pub(crate) async fn send_with_response(&mut self, buffer: &[u8]) -> Result<&[u8], Error> {
+    pub(crate) async fn send_with_response(&self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
         let (mut send, mut recv) = self.connection.open_bi().await?;
         send.write_all(buffer).await?;
         send.finish().await?;
         self.handle_response(&mut recv).await
     }
 
-    async fn handle_response(&mut self, recv: &mut RecvStream) -> Result<&[u8], Error> {
-        let length = recv.read(&mut self.buffer).await?;
-        if self.buffer.is_empty() {
+    async fn handle_response(&self, recv: &mut RecvStream) -> Result<Vec<u8>, Error> {
+        let mut buffer = vec![0; 1024 * 1024];
+        let length = recv.read(&mut buffer).await?;
+        if buffer.is_empty() {
             return Err(Error::EmptyResponse);
         }
 
-        let status = self.buffer[0];
+        let status = buffer[0];
         if status == 0 {
             trace!("Status: OK.");
-            return Ok(&self.buffer[1..length.unwrap()]);
+            return Ok(buffer[1..length.unwrap()].to_vec());
         }
 
         error!("Received an invalid response with status: {:?}.", status);

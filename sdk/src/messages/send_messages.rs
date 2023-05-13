@@ -5,7 +5,7 @@ use shared::command::Command;
 use shared::messages::send_messages::SendMessages;
 
 impl ConnectedClient {
-    pub async fn send_messages(&mut self, command: &SendMessages) -> Result<(), Error> {
+    pub async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
         self.send_with_response(
             [Command::SendMessages.as_bytes(), command.as_bytes()]
                 .concat()

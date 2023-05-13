@@ -7,7 +7,7 @@ use shared::topics::get_topics::GetTopics;
 use std::str::from_utf8;
 
 impl ConnectedClient {
-    pub async fn get_topics(&mut self, command: &GetTopics) -> Result<Vec<Topic>, Error> {
+    pub async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error> {
         let response = self
             .send_with_response(
                 [Command::GetTopics.as_bytes(), command.as_bytes()]
@@ -15,7 +15,7 @@ impl ConnectedClient {
                     .as_slice(),
             )
             .await?;
-        handle_response(response)
+        handle_response(&response)
     }
 }
 

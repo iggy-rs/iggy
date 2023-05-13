@@ -6,7 +6,7 @@ use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
 
 impl ConnectedClient {
-    pub async fn poll_messages(&mut self, command: &PollMessages) -> Result<Vec<Message>, Error> {
+    pub async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
         let response = self
             .send_with_response(
                 [Command::PollMessages.as_bytes(), command.as_bytes()]
@@ -14,7 +14,7 @@ impl ConnectedClient {
                     .as_slice(),
             )
             .await?;
-        handle_response(response)
+        handle_response(&response)
     }
 }
 

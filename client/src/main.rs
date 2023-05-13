@@ -7,7 +7,7 @@ use crate::args::Args;
 use crate::client_error::ClientError;
 use anyhow::Result;
 use clap::Parser;
-use sdk::client::DisconnectedClient;
+use sdk::client::Client;
 use std::io;
 use tracing::{error, info};
 
@@ -16,7 +16,7 @@ async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
 
-    let client = DisconnectedClient::new(
+    let client = Client::new(
         &args.client_address,
         &args.server_address,
         &args.server_name,

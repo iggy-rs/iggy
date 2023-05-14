@@ -109,3 +109,73 @@ impl Display for CreateTopic {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_bytes() {
+        let is_empty = false;
+        let command = CreateTopic {
+            stream_id: 1,
+            topic_id: 2,
+            partitions_count: 3,
+            name: "test".to_string(),
+        };
+
+        let bytes = command.as_bytes();
+        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+        let topic_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let partitions_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let name = from_utf8(&bytes[12..]).unwrap();
+
+        assert_eq!(bytes.is_empty(), is_empty);
+        assert_eq!(stream_id, command.stream_id);
+        assert_eq!(topic_id, command.topic_id);
+        assert_eq!(partitions_count, command.partitions_count);
+        assert_eq!(name, command.name);
+    }
+
+    #[test]
+    fn should_be_deserialized_from_bytes() {
+        let is_ok = true;
+        let stream_id = 1u32;
+        let topic_id = 2u32;
+        let partitions_count = 3u32;
+        let name = "test".to_string();
+        let bytes = [
+            &stream_id.to_le_bytes(),
+            &topic_id.to_le_bytes(),
+            &partitions_count.to_le_bytes(),
+            name.as_bytes(),
+        ]
+        .concat();
+        let command = CreateTopic::from_bytes(&bytes);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.partitions_count, partitions_count);
+        assert_eq!(command.name, name);
+    }
+
+    #[test]
+    fn should_be_read_from_string() {
+        let is_ok = true;
+        let stream_id = 1u32;
+        let topic_id = 2u32;
+        let partitions_count = 3u32;
+        let name = "test".to_string();
+        let input = format!("{}|{}|{}|{}", stream_id, topic_id, partitions_count, name);
+        let command = CreateTopic::from_str(&input);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.partitions_count, partitions_count);
+        assert_eq!(command.name, name);
+    }
+}

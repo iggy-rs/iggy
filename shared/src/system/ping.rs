@@ -39,3 +39,48 @@ impl Display for Ping {
         write!(f, "{}", PING)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_empty_bytes() {
+        let is_empty = true;
+        let command = Ping {};
+        let bytes = command.as_bytes();
+        assert_eq!(bytes.is_empty(), is_empty);
+    }
+
+    #[test]
+    fn should_be_deserialized_from_empty_bytes() {
+        let is_ok = true;
+        let bytes: Vec<u8> = vec![];
+        let command = Ping::from_bytes(&bytes);
+        assert_eq!(command.is_ok(), is_ok);
+    }
+
+    #[test]
+    fn should_not_be_deserialized_from_empty_bytes() {
+        let is_err = true;
+        let bytes: Vec<u8> = vec![0];
+        let command = Ping::from_bytes(&bytes);
+        assert_eq!(command.is_err(), is_err);
+    }
+
+    #[test]
+    fn should_be_read_from_empty_string() {
+        let is_ok = true;
+        let input = "";
+        let command = Ping::from_str(input);
+        assert_eq!(command.is_ok(), is_ok);
+    }
+
+    #[test]
+    fn should_not_be_read_from_non_empty_string() {
+        let is_err = true;
+        let input = " ";
+        let command = Ping::from_str(input);
+        assert_eq!(command.is_err(), is_err);
+    }
+}

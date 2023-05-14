@@ -18,6 +18,10 @@ Build the project:
 
 `cargo build -r`
 
+Run the tests:
+
+`cargo test`
+
 Start the server:
 
 `cargo r --bin server -r`

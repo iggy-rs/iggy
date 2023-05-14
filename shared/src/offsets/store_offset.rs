@@ -101,3 +101,85 @@ impl Display for StoreOffset {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_bytes() {
+        let is_empty = false;
+        let command = StoreOffset {
+            consumer_id: 1,
+            stream_id: 2,
+            topic_id: 3,
+            partition_id: 4,
+            offset: 5,
+        };
+
+        let bytes = command.as_bytes();
+        let consumer_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+        let stream_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let topic_id = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let partition_id = u32::from_le_bytes(bytes[12..16].try_into().unwrap());
+        let offset = u64::from_le_bytes(bytes[16..24].try_into().unwrap());
+
+        assert_eq!(bytes.is_empty(), is_empty);
+        assert_eq!(consumer_id, command.consumer_id);
+        assert_eq!(stream_id, command.stream_id);
+        assert_eq!(topic_id, command.topic_id);
+        assert_eq!(partition_id, command.partition_id);
+        assert_eq!(offset, command.offset);
+    }
+
+    #[test]
+    fn should_be_deserialized_from_bytes() {
+        let is_ok = true;
+        let consumer_id = 1u32;
+        let stream_id = 2u32;
+        let topic_id = 3u32;
+        let partition_id = 4u32;
+        let offset = 5u64;
+        let bytes = [
+            &consumer_id.to_le_bytes(),
+            &stream_id.to_le_bytes(),
+            &topic_id.to_le_bytes(),
+            &partition_id.to_le_bytes(),
+            &offset.to_le_bytes()[0..4],
+            &offset.to_le_bytes()[4..8],
+        ]
+        .concat();
+        let command = StoreOffset::from_bytes(&bytes);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        assert_eq!(command.consumer_id, consumer_id);
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.partition_id, partition_id);
+        assert_eq!(command.offset, offset);
+    }
+
+    #[test]
+    fn should_be_read_from_string() {
+        let is_ok = true;
+        let consumer_id = 1u32;
+        let stream_id = 2u32;
+        let topic_id = 3u32;
+        let partition_id = 4u32;
+        let offset = 5u64;
+        let input = format!(
+            "{}|{}|{}|{}|{}",
+            consumer_id, stream_id, topic_id, partition_id, offset
+        );
+        let command = StoreOffset::from_str(&input);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        assert_eq!(command.consumer_id, consumer_id);
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.partition_id, partition_id);
+        assert_eq!(command.offset, offset);
+    }
+}

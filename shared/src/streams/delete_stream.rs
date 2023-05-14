@@ -54,3 +54,44 @@ impl Display for DeleteStream {
         write!(f, "{} → stream ID: {}", DELETE_STREAM, self.stream_id)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_bytes() {
+        let is_empty = false;
+        let command = DeleteStream { stream_id: 1 };
+
+        let bytes = command.as_bytes();
+        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+
+        assert_eq!(bytes.is_empty(), is_empty);
+        assert_eq!(stream_id, command.stream_id);
+    }
+
+    #[test]
+    fn should_be_deserialized_from_bytes() {
+        let is_ok = true;
+        let stream_id = 1u32;
+        let bytes = stream_id.to_le_bytes();
+        let command = DeleteStream::from_bytes(&bytes);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        assert_eq!(command.stream_id, stream_id);
+    }
+
+    #[test]
+    fn should_be_read_from_string() {
+        let is_ok = true;
+        let stream_id = 1u32;
+        let input = format!("{}", stream_id);
+        let command = DeleteStream::from_str(&input);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        assert_eq!(command.stream_id, stream_id);
+    }
+}

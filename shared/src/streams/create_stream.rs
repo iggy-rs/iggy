@@ -72,3 +72,53 @@ impl Display for CreateStream {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_bytes() {
+        let is_empty = false;
+        let command = CreateStream {
+            stream_id: 1,
+            name: "test".to_string(),
+        };
+
+        let bytes = command.as_bytes();
+        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+        let name = from_utf8(&bytes[4..]).unwrap();
+
+        assert_eq!(bytes.is_empty(), is_empty);
+        assert_eq!(stream_id, command.stream_id);
+        assert_eq!(name, command.name);
+    }
+
+    #[test]
+    fn should_be_deserialized_from_bytes() {
+        let is_ok = true;
+        let stream_id = 1u32;
+        let name = "test".to_string();
+        let bytes = [&stream_id.to_le_bytes(), name.as_bytes()].concat();
+        let command = CreateStream::from_bytes(&bytes);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.name, name);
+    }
+
+    #[test]
+    fn should_be_read_from_string() {
+        let is_ok = true;
+        let stream_id = 1u32;
+        let name = "test".to_string();
+        let input = format!("{}|{}", stream_id, name);
+        let command = CreateStream::from_str(&input);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.name, name);
+    }
+}

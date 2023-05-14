@@ -97,3 +97,71 @@ impl Display for Command {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_bytes() {
+        assert_eq!(Command::Ping.as_bytes(), [1]);
+        assert_eq!(Command::SendMessages.as_bytes(), [2]);
+        assert_eq!(Command::PollMessages.as_bytes(), [3]);
+        assert_eq!(Command::StoreOffset.as_bytes(), [4]);
+        assert_eq!(Command::GetStreams.as_bytes(), [10]);
+        assert_eq!(Command::CreateStream.as_bytes(), [11]);
+        assert_eq!(Command::DeleteStream.as_bytes(), [12]);
+        assert_eq!(Command::GetTopics.as_bytes(), [20]);
+        assert_eq!(Command::CreateTopic.as_bytes(), [21]);
+        assert_eq!(Command::DeleteTopic.as_bytes(), [22]);
+    }
+
+    #[test]
+    fn should_be_deserialized_from_bytes() {
+        assert_eq!(Command::from_bytes(&[1]).unwrap(), Command::Ping);
+        assert_eq!(Command::from_bytes(&[2]).unwrap(), Command::SendMessages);
+        assert_eq!(Command::from_bytes(&[3]).unwrap(), Command::PollMessages);
+        assert_eq!(Command::from_bytes(&[4]).unwrap(), Command::StoreOffset);
+        assert_eq!(Command::from_bytes(&[10]).unwrap(), Command::GetStreams);
+        assert_eq!(Command::from_bytes(&[11]).unwrap(), Command::CreateStream);
+        assert_eq!(Command::from_bytes(&[12]).unwrap(), Command::DeleteStream);
+        assert_eq!(Command::from_bytes(&[20]).unwrap(), Command::GetTopics);
+        assert_eq!(Command::from_bytes(&[21]).unwrap(), Command::CreateTopic);
+        assert_eq!(Command::from_bytes(&[22]).unwrap(), Command::DeleteTopic);
+    }
+
+    #[test]
+    fn should_be_read_from_string() {
+        assert_eq!(Command::from_str(PING).unwrap(), Command::Ping);
+        assert_eq!(
+            Command::from_str(SEND_MESSAGES).unwrap(),
+            Command::SendMessages
+        );
+        assert_eq!(
+            Command::from_str(POLL_MESSAGES).unwrap(),
+            Command::PollMessages
+        );
+        assert_eq!(
+            Command::from_str(STORE_OFFSET).unwrap(),
+            Command::StoreOffset
+        );
+        assert_eq!(Command::from_str(GET_STREAMS).unwrap(), Command::GetStreams);
+        assert_eq!(
+            Command::from_str(CREATE_STREAM).unwrap(),
+            Command::CreateStream
+        );
+        assert_eq!(
+            Command::from_str(DELETE_STREAM).unwrap(),
+            Command::DeleteStream
+        );
+        assert_eq!(Command::from_str(GET_TOPICS).unwrap(), Command::GetTopics);
+        assert_eq!(
+            Command::from_str(CREATE_TOPIC).unwrap(),
+            Command::CreateTopic
+        );
+        assert_eq!(
+            Command::from_str(DELETE_TOPIC).unwrap(),
+            Command::DeleteTopic
+        );
+    }
+}

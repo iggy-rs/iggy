@@ -29,6 +29,38 @@ impl Message {
     }
 }
 
+impl BytesSerializable for Message {
+    type Type = Message;
+
+    fn as_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(self.get_size_bytes() as usize);
+        bytes.extend(self.length.to_le_bytes());
+        bytes.extend(&self.payload);
+        bytes
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+        if bytes.len() < 4 {
+            return Err(Error::InvalidCommand);
+        }
+
+        let length = u32::from_le_bytes(bytes[..4].try_into()?);
+        let payload = bytes[4..].to_vec();
+
+        Ok(Message { length, payload })
+    }
+}
+
+impl FromStr for Message {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        Ok(Message {
+            length: input.len() as u32,
+            payload: input.as_bytes().to_vec(),
+        })
+    }
+}
+
 impl FromStr for SendMessages {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -50,7 +82,6 @@ impl FromStr for SendMessages {
         let key_kind = parts[2].parse::<u8>()?;
         let key_value = parts[3].parse::<u32>()?;
         let payload = parts[4].as_bytes().to_vec();
-
         if payload.len() > MAX_PAYLOAD_SIZE {
             return Err(Error::TooBigPayload);
         }
@@ -113,7 +144,6 @@ impl BytesSerializable for SendMessages {
         let key_value = u32::from_le_bytes(bytes[9..13].try_into()?);
         let messages_count = u32::from_le_bytes(bytes[13..17].try_into()?);
         let messages_payloads = &bytes[17..];
-
         if messages_payloads.len() > MAX_PAYLOAD_SIZE {
             return Err(Error::TooBigPayload);
         }
@@ -121,11 +151,12 @@ impl BytesSerializable for SendMessages {
         let mut position = 0;
         let mut messages = Vec::with_capacity(messages_count as usize);
         while position < messages_payloads.len() - 4 {
-            let length = u32::from_le_bytes(messages_payloads[position..position + 4].try_into()?);
+            let length =
+                u32::from_le_bytes(messages_payloads[position..position + 4].try_into()?) as usize;
             position += 4;
-            let payload = messages_payloads[position..position + length as usize].to_vec();
-            position += length as usize;
-            messages.push(Message { length, payload });
+            let message = Message::from_bytes(&messages_payloads[position..position + length])?;
+            messages.push(message);
+            position += length;
         }
 
         Ok(SendMessages {
@@ -151,5 +182,137 @@ impl Display for SendMessages {
             self.key_value,
             self.messages_count
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_bytes() {
+        let is_empty = false;
+        let message_1 = Message::from_str("hello 1").unwrap();
+        let message_2 = Message::from_str("hello 2").unwrap();
+        let message_3 = Message::from_str("hello 3").unwrap();
+        let messages = vec![message_1, message_2, message_3];
+        let command = SendMessages {
+            stream_id: 1,
+            topic_id: 2,
+            key_kind: 3,
+            key_value: 4,
+            messages_count: messages.len() as u32,
+            messages,
+        };
+
+        let bytes = command.as_bytes();
+        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+        let topic_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let key_kind = bytes[8];
+        let key_value = u32::from_le_bytes(bytes[9..13].try_into().unwrap());
+        let messages_count = u32::from_le_bytes(bytes[13..17].try_into().unwrap());
+        let messages = &bytes[17..];
+        let command_messages = &command
+            .messages
+            .iter()
+            .map(|message| message.as_bytes())
+            .collect::<Vec<Vec<u8>>>()
+            .concat();
+
+        assert_eq!(bytes.is_empty(), is_empty);
+        assert_eq!(stream_id, command.stream_id);
+        assert_eq!(topic_id, command.topic_id);
+        assert_eq!(key_kind, command.key_kind);
+        assert_eq!(key_value, command.key_value);
+        assert_eq!(messages_count, command.messages_count);
+        assert_eq!(messages, command_messages)
+    }
+
+    #[test]
+    fn should_be_deserialized_from_bytes() {
+        let is_ok = true;
+        let stream_id = 1u32;
+        let topic_id = 2u32;
+        let key_kind = 3u8;
+        let key_value = 4u32;
+        let messages_count = 3u32;
+
+        let message_1 = Message::from_str("hello 1").unwrap();
+        let message_2 = Message::from_str("hello 2").unwrap();
+        let message_3 = Message::from_str("hello 3").unwrap();
+        let messages = vec![
+            message_1.as_bytes(),
+            message_2.as_bytes(),
+            message_3.as_bytes(),
+        ]
+        .concat();
+
+        let mut bytes: Vec<u8> = [stream_id.to_le_bytes(), topic_id.to_le_bytes()].concat();
+
+        bytes.extend(key_kind.to_le_bytes());
+        bytes.extend(key_value.to_le_bytes());
+        bytes.extend(messages_count.to_le_bytes());
+        bytes.extend(messages);
+
+        let command = SendMessages::from_bytes(&bytes);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let messages_payloads = &bytes[17..];
+        let mut position = 0;
+        let mut messages = Vec::with_capacity(messages_count as usize);
+        while position < messages_payloads.len() - 4 {
+            let length = u32::from_le_bytes(
+                messages_payloads[position..position + 4]
+                    .try_into()
+                    .unwrap(),
+            ) as usize;
+            position += 4;
+            let message =
+                Message::from_bytes(&messages_payloads[position..position + length]).unwrap();
+            messages.push(message);
+            position += length;
+        }
+
+        let command = command.unwrap();
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.key_kind, key_kind);
+        assert_eq!(command.key_value, key_value);
+        assert_eq!(command.messages_count, messages_count);
+        for i in 0..command.messages_count {
+            let message = &messages[i as usize];
+            let command_message = &command.messages[i as usize];
+            assert_eq!(command_message.length, message.length);
+            assert_eq!(command_message.payload, message.payload);
+        }
+    }
+
+    // For now, we only support a single payload.
+    #[test]
+    fn should_be_read_from_string() {
+        let is_ok = true;
+        let stream_id = 1u32;
+        let topic_id = 2u32;
+        let key_kind = 3u8;
+        let key_value = 4u32;
+        let messages_count = 1u32;
+        let payload = "hello";
+
+        let input = format!(
+            "{}|{}|{}|{}|{}",
+            stream_id, topic_id, key_kind, key_value, payload
+        );
+        let command = SendMessages::from_str(&input);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let command = command.unwrap();
+        let message = &command.messages[0];
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.key_kind, key_kind);
+        assert_eq!(command.key_value, key_value);
+        assert_eq!(command.messages_count, messages_count);
+        assert_eq!(message.length, payload.len() as u32);
+        assert_eq!(message.payload, payload.as_bytes());
     }
 }

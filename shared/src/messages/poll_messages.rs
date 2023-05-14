@@ -158,3 +158,131 @@ impl Display for PollMessages {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_bytes() {
+        let is_empty = false;
+        let command = PollMessages {
+            consumer_id: 1,
+            stream_id: 2,
+            topic_id: 3,
+            partition_id: 4,
+            kind: 1,
+            value: 2,
+            count: 3,
+            auto_commit: true,
+            format: Format::Binary,
+        };
+
+        let bytes = command.as_bytes();
+        let consumer_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+        let stream_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let topic_id = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let partition_id = u32::from_le_bytes(bytes[12..16].try_into().unwrap());
+        let kind = bytes[16];
+        let value = u64::from_le_bytes(bytes[17..25].try_into().unwrap());
+        let count = u32::from_le_bytes(bytes[25..29].try_into().unwrap());
+        let auto_commit = bytes[29];
+        let auto_commit = match auto_commit {
+            0 => false,
+            1 => true,
+            _ => false,
+        };
+
+        assert_eq!(bytes.is_empty(), is_empty);
+        assert_eq!(consumer_id, command.consumer_id);
+        assert_eq!(stream_id, command.stream_id);
+        assert_eq!(topic_id, command.topic_id);
+        assert_eq!(partition_id, command.partition_id);
+        assert_eq!(kind, command.kind);
+        assert_eq!(value, command.value);
+        assert_eq!(count, command.count);
+        assert_eq!(auto_commit, command.auto_commit);
+    }
+
+    #[test]
+    fn should_be_deserialized_from_bytes() {
+        let is_ok = true;
+        let consumer_id = 1u32;
+        let stream_id = 2u32;
+        let topic_id = 3u32;
+        let partition_id = 4u32;
+        let kind = 1u8;
+        let value = 2u64;
+        let count = 3u32;
+        let auto_commit = 1u8;
+        let mut bytes: Vec<u8> = [
+            consumer_id.to_le_bytes(),
+            stream_id.to_le_bytes(),
+            topic_id.to_le_bytes(),
+            partition_id.to_le_bytes(),
+        ]
+        .concat();
+
+        bytes.extend(kind.to_le_bytes());
+        bytes.extend(value.to_le_bytes());
+        bytes.extend(count.to_le_bytes());
+        bytes.extend(auto_commit.to_le_bytes());
+
+        let command = PollMessages::from_bytes(&bytes);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let auto_commit = match auto_commit {
+            0 => false,
+            1 => true,
+            _ => false,
+        };
+
+        let command = command.unwrap();
+        assert_eq!(command.consumer_id, consumer_id);
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.partition_id, partition_id);
+        assert_eq!(command.kind, kind);
+        assert_eq!(command.value, value);
+        assert_eq!(command.count, count);
+        assert_eq!(command.auto_commit, auto_commit);
+    }
+
+    #[test]
+    fn should_be_read_from_string() {
+        let is_ok = true;
+        let consumer_id = 1u32;
+        let stream_id = 2u32;
+        let topic_id = 3u32;
+        let partition_id = 4u32;
+        let kind = 1u8;
+        let kind_str = "timestamp";
+        let value = 2u64;
+        let count = 3u32;
+        let auto_commit = 1u8;
+        let auto_commit_str = "auto_commit";
+
+        let input = format!(
+            "{}|{}|{}|{}|{}|{}|{}|{}",
+            consumer_id, stream_id, topic_id, partition_id, kind_str, value, count, auto_commit_str
+        );
+        let command = PollMessages::from_str(&input);
+        assert_eq!(command.is_ok(), is_ok);
+
+        let auto_commit = match auto_commit {
+            0 => false,
+            1 => true,
+            _ => false,
+        };
+
+        let command = command.unwrap();
+        assert_eq!(command.consumer_id, consumer_id);
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.partition_id, partition_id);
+        assert_eq!(command.kind, kind);
+        assert_eq!(command.value, value);
+        assert_eq!(command.count, count);
+        assert_eq!(command.auto_commit, auto_commit);
+    }
+}

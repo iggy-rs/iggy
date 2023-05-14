@@ -20,4 +20,10 @@ pub struct Args {
 
     #[arg(long, default_value = "1")]
     pub clients_count: u32,
+
+    #[arg(long, default_value = "false")]
+    pub test_send_messages: bool,
+
+    #[arg(long, default_value = "false")]
+    pub test_poll_messages: bool,
 }

@@ -13,9 +13,11 @@
         "path": "topics",
         "partition": {
           "messages_required_to_save": 1000,
-          "messages_buffer": 16384,
+          "messages_buffer": 1048576,
           "segment": {
-            "size_bytes": 100000000
+            "size_bytes": 100000000,
+            "cache_indexes": true,
+            "cache_time_indexes": true
           }
         }
       }

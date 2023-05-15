@@ -174,8 +174,12 @@ impl Topic {
             let messages = partition
                 .get_messages_by_offset(start_offset, messages_count)
                 .await?;
-            for message in messages {
-                partition.messages.push(message);
+
+            if partition.messages.is_some() {
+                let partition_messages = partition.messages.as_mut().unwrap();
+                for message in messages {
+                    partition_messages.push(message);
+                }
             }
 
             trace!(

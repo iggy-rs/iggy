@@ -2,10 +2,12 @@ use crate::message::Message;
 use shared::error::Error;
 use std::sync::Arc;
 use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
-use tracing::trace;
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
+use tracing::{error, trace};
 
-const INDEX_SIZE: u64 = 4;
+const EMPTY_INDEXES: Vec<Index> = vec![];
+
+const INDEX_SIZE: u32 = 4;
 
 #[derive(Debug)]
 pub struct Index {
@@ -15,14 +17,48 @@ pub struct Index {
 
 #[derive(Debug)]
 pub struct IndexRange {
-    pub start: OffsetPosition,
-    pub end: OffsetPosition,
+    pub start: Index,
+    pub end: Index,
 }
 
-#[derive(Debug)]
-pub struct OffsetPosition {
-    pub offset: u32,
-    pub position: u32,
+pub async fn load(file: &mut File) -> Result<Vec<Index>, Error> {
+    trace!("Loading indexes from file...");
+    let file_size = file.metadata().await?.len() as usize;
+    if file_size == 0 {
+        trace!("Index file is empty.");
+        return Ok(EMPTY_INDEXES);
+    }
+
+    let indexes_count = file_size / 4;
+    let mut indexes = Vec::with_capacity(indexes_count);
+    let mut reader = BufReader::new(file);
+    for offset in 0..indexes_count {
+        let position = reader.read_u32_le().await;
+        if position.is_err() {
+            error!(
+                "Cannot read position from index file for offset: {}.",
+                offset
+            );
+            break;
+        }
+
+        indexes.push(Index {
+            relative_offset: offset as u32,
+            position: position.unwrap(),
+        });
+    }
+
+    if indexes.len() != indexes_count {
+        error!(
+            "Loaded {} indexes from disk, expected {}.",
+            indexes.len(),
+            indexes_count
+        );
+    }
+
+    trace!("Loaded {} indexes from file.", indexes_count);
+
+    Ok(indexes)
 }
 
 pub async fn load_range(
@@ -30,6 +66,7 @@ pub async fn load_range(
     segment_start_offset: u64,
     mut index_start_offset: u64,
     index_end_offset: u64,
+    total_size_bytes: u32,
 ) -> Result<IndexRange, Error> {
     trace!(
         "Loading index range for offsets: {} to {}, segment starts at: {}",
@@ -38,25 +75,42 @@ pub async fn load_range(
         segment_start_offset
     );
 
+    if file.metadata().await?.len() == 0 {
+        trace!("Index file is empty.");
+        return Ok(IndexRange {
+            start: Index {
+                relative_offset: 0,
+                position: 0,
+            },
+            end: Index {
+                relative_offset: 0,
+                position: 0,
+            },
+        });
+    }
+
     if index_start_offset < segment_start_offset {
         index_start_offset = segment_start_offset - 1;
     }
 
-    let relative_start_offset = index_start_offset - segment_start_offset;
-    let relative_end_offset = index_end_offset - segment_start_offset;
-    let start_seek_position = (1 + relative_start_offset) * INDEX_SIZE;
-    let mut end_seek_position = (1 + relative_end_offset) * INDEX_SIZE;
-    let file_length = file.metadata().await?.len();
+    let relative_start_offset = (index_start_offset - segment_start_offset) as u32;
+    let relative_end_offset = (index_end_offset - segment_start_offset) as u32;
+    let start_seek_position = relative_start_offset * INDEX_SIZE;
+    let mut end_seek_position = relative_end_offset * INDEX_SIZE;
+    let file_length = file.metadata().await?.len() as u32;
     if end_seek_position > file_length {
         end_seek_position = file_length - INDEX_SIZE;
     }
 
-    file.seek(std::io::SeekFrom::Start(start_seek_position))
+    file.seek(std::io::SeekFrom::Start(start_seek_position as u64))
         .await?;
     let start_position = file.read_u32_le().await?;
-    file.seek(std::io::SeekFrom::Start(end_seek_position))
+    file.seek(std::io::SeekFrom::Start(end_seek_position as u64))
         .await?;
-    let end_position = file.read_u32_le().await?;
+    let mut end_position = file.read_u32_le().await?;
+    if end_position == 0 {
+        end_position = total_size_bytes;
+    }
 
     trace!(
         "Loaded index range: {}...{}, position range: {}...{}",
@@ -67,12 +121,12 @@ pub async fn load_range(
     );
 
     Ok(IndexRange {
-        start: OffsetPosition {
-            offset: relative_start_offset as u32,
+        start: Index {
+            relative_offset: relative_start_offset,
             position: start_position,
         },
-        end: OffsetPosition {
-            offset: relative_end_offset as u32,
+        end: Index {
+            relative_offset: relative_end_offset,
             position: end_position,
         },
     })
@@ -80,15 +134,15 @@ pub async fn load_range(
 
 pub async fn persist(
     file: &mut File,
-    current_bytes: u32,
+    mut current_position: u32,
     messages: &Vec<Arc<Message>>,
 ) -> Result<(), Error> {
     let mut bytes = Vec::with_capacity(messages.len() * 4);
-    let mut current_position = current_bytes;
 
     for message in messages {
-        current_position += message.get_size_bytes();
+        trace!("Persisting index for position: {}", current_position);
         bytes.extend(current_position.to_le_bytes());
+        current_position += message.get_size_bytes();
     }
 
     if file.write_all(&bytes).await.is_err() {

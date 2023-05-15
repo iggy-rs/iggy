@@ -2,7 +2,7 @@ use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::Segment;
 use crate::utils::timestamp;
-use ringbuffer::{RingBuffer, RingBufferExt, RingBufferWrite};
+use ringbuffer::{RingBuffer, RingBufferWrite};
 use shared::error::Error;
 use std::sync::Arc;
 use tracing::{error, trace};
@@ -26,18 +26,22 @@ impl Partition {
 
         let mut maybe_start_offset = None;
         for segment in self.segments.iter() {
-            if segment.time_indexes.is_empty() {
+            if segment.time_indexes.is_none() {
                 continue;
             }
 
-            let first_timestamp = segment.time_indexes.first().unwrap().timestamp;
-            let last_timestamp = segment.time_indexes.last().unwrap().timestamp;
+            let time_indexes = segment.time_indexes.as_ref().unwrap();
+            if time_indexes.is_empty() {
+                continue;
+            }
+
+            let first_timestamp = time_indexes.first().unwrap().timestamp;
+            let last_timestamp = time_indexes.last().unwrap().timestamp;
             if timestamp < first_timestamp || timestamp > last_timestamp {
                 continue;
             }
 
-            let relative_start_offset = segment
-                .time_indexes
+            let relative_start_offset = time_indexes
                 .iter()
                 .find(|time_index| time_index.timestamp >= timestamp)
                 .map(|time_index| time_index.relative_offset)
@@ -177,11 +181,12 @@ impl Partition {
         start_offset: u64,
         end_offset: u64,
     ) -> Option<Vec<Arc<Message>>> {
-        if self.messages.is_empty() {
+        let messages = self.messages.as_ref()?;
+        if messages.is_empty() {
             return None;
         }
 
-        let first_buffered_offset = self.messages[0].offset;
+        let first_buffered_offset = messages[0].offset;
         trace!(
             "First buffered offset: {} for partition: {}",
             first_buffered_offset,
@@ -202,13 +207,24 @@ impl Partition {
             end_offset
         );
 
+        if self.messages.is_none() {
+            return EMPTY_MESSAGES;
+        }
+
+        let partition_messages = self.messages.as_ref().unwrap();
+        if partition_messages.is_empty() {
+            return EMPTY_MESSAGES;
+        }
+
         let messages_count = (1 + end_offset - start_offset) as usize;
-        let messages = self
-            .messages
-            .iter()
-            .filter(|message| message.offset >= start_offset && message.offset <= end_offset)
-            .map(Arc::clone)
-            .collect::<Vec<Arc<Message>>>();
+        let first_offset = partition_messages[0].offset;
+        let start_index = start_offset - first_offset;
+
+        let mut messages = Vec::with_capacity(messages_count);
+        for i in start_index..start_index + messages_count as u64 {
+            let message = partition_messages[i as isize].clone();
+            messages.push(message);
+        }
 
         if messages.len() != messages_count {
             error!(
@@ -270,7 +286,9 @@ impl Partition {
             message.timestamp = timestamp::get();
             let message = Arc::new(message);
             segment.append_message(message.clone()).await?;
-            self.messages.push(message);
+            if self.messages.is_some() {
+                self.messages.as_mut().unwrap().push(message);
+            }
 
             trace!(
                 "Appended the message with offset: {} to segment with start offset: {} for partition with ID: {}.",

@@ -45,7 +45,7 @@ impl BytesSerializable for Message {
         }
 
         let length = u32::from_le_bytes(bytes[..4].try_into()?);
-        let payload = bytes[4..].to_vec();
+        let payload = bytes[4..4 + length as usize].to_vec();
 
         Ok(Message { length, payload })
     }
@@ -105,13 +105,13 @@ impl BytesSerializable for SendMessages {
     type Type = SendMessages;
 
     fn as_bytes(&self) -> Vec<u8> {
-        let payloads_size = self
+        let messages_size = self
             .messages
             .iter()
-            .map(|payload| payload.get_size_bytes())
+            .map(|message| message.get_size_bytes())
             .sum::<u32>();
 
-        let mut bytes = Vec::with_capacity(17 + payloads_size as usize);
+        let mut bytes = Vec::with_capacity(17 + messages_size as usize);
         bytes.extend(self.stream_id.to_le_bytes());
         bytes.extend(self.topic_id.to_le_bytes());
         bytes.extend(self.key_kind.to_le_bytes());
@@ -126,7 +126,7 @@ impl BytesSerializable for SendMessages {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
-        if bytes.len() < 14 {
+        if bytes.len() < 18 {
             return Err(Error::InvalidCommand);
         }
 
@@ -150,13 +150,10 @@ impl BytesSerializable for SendMessages {
 
         let mut position = 0;
         let mut messages = Vec::with_capacity(messages_count as usize);
-        while position < messages_payloads.len() - 4 {
-            let length =
-                u32::from_le_bytes(messages_payloads[position..position + 4].try_into()?) as usize;
-            position += 4;
-            let message = Message::from_bytes(&messages_payloads[position..position + length])?;
+        while position < messages_payloads.len() {
+            let message = Message::from_bytes(&messages_payloads[position..])?;
+            position += message.get_size_bytes() as usize;
             messages.push(message);
-            position += length;
         }
 
         Ok(SendMessages {
@@ -225,7 +222,7 @@ mod tests {
         assert_eq!(key_kind, command.key_kind);
         assert_eq!(key_value, command.key_value);
         assert_eq!(messages_count, command.messages_count);
-        assert_eq!(messages, command_messages)
+        assert_eq!(messages, command_messages);
     }
 
     #[test]
@@ -260,17 +257,10 @@ mod tests {
         let messages_payloads = &bytes[17..];
         let mut position = 0;
         let mut messages = Vec::with_capacity(messages_count as usize);
-        while position < messages_payloads.len() - 4 {
-            let length = u32::from_le_bytes(
-                messages_payloads[position..position + 4]
-                    .try_into()
-                    .unwrap(),
-            ) as usize;
-            position += 4;
-            let message =
-                Message::from_bytes(&messages_payloads[position..position + length]).unwrap();
+        while position < messages_payloads.len() {
+            let message = Message::from_bytes(&messages_payloads[position..]).unwrap();
+            position += message.get_size_bytes() as usize;
             messages.push(message);
-            position += length;
         }
 
         let command = command.unwrap();

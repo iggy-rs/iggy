@@ -1,5 +1,6 @@
 use crate::config::SegmentConfig;
 use crate::message::Message;
+use crate::segments::index::Index;
 use crate::segments::time_index::TimeIndex;
 use std::sync::Arc;
 
@@ -20,10 +21,10 @@ pub struct Segment {
     pub time_index_path: String,
     pub unsaved_messages: Option<Vec<Arc<Message>>>,
     pub current_size_bytes: u32,
-    pub saved_bytes: u32,
     pub should_increment_offset: bool,
     pub config: Arc<SegmentConfig>,
-    pub time_indexes: Vec<TimeIndex>,
+    pub indexes: Option<Vec<Index>>,
+    pub time_indexes: Option<Vec<TimeIndex>>,
     pub is_closed: bool,
 }
 
@@ -54,12 +55,18 @@ impl Segment {
             time_index_path,
             log_path,
             current_size_bytes: 0,
-            saved_bytes: 0,
             should_increment_offset: false,
-            config,
-            time_indexes: Vec::new(),
+            indexes: match config.cache_indexes {
+                true => Some(Vec::new()),
+                false => None,
+            },
+            time_indexes: match config.cache_time_indexes {
+                true => Some(Vec::new()),
+                false => None,
+            },
             unsaved_messages: None,
             is_closed: false,
+            config,
         }
     }
 

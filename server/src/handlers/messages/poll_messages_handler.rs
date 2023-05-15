@@ -83,11 +83,14 @@ pub async fn handle(
         .map(|message| message.get_size_bytes())
         .sum::<u32>();
 
+    let mut offset = 0;
     let mut bytes = Vec::with_capacity(4 + messages_size as usize);
     bytes.extend(messages_count.to_le_bytes());
-    let offset = messages.last().unwrap().offset;
-    for message in messages {
-        message.extend(&mut bytes);
+    if messages_count > 0 {
+        offset = messages.last().unwrap().offset;
+        for message in messages {
+            message.extend(&mut bytes);
+        }
     }
 
     sender.send_ok_response(&bytes).await?;

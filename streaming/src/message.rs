@@ -22,7 +22,7 @@ impl Message {
 
     pub fn get_size_bytes(&self) -> u32 {
         // Offset + Timestamp + Length + Payload
-        8 + 8 + 4 + self.payload.len() as u32
+        8 + 8 + 4 + self.length
     }
 
     pub fn extend(&self, bytes: &mut Vec<u8>) {

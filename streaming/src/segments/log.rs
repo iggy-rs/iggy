@@ -5,16 +5,31 @@ use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
 use tracing::error;
+use tracing::log::trace;
 
-pub async fn load(file: &mut File, range: IndexRange) -> Result<Vec<Arc<Message>>, Error> {
-    let mut messages = Vec::with_capacity(1 + (range.end.offset - range.start.offset) as usize);
+const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
+
+pub async fn load(file: &mut File, index_range: &IndexRange) -> Result<Vec<Arc<Message>>, Error> {
+    let file_size = file.metadata().await?.len();
+    if file_size == 0 {
+        return Ok(EMPTY_MESSAGES);
+    }
+
+    if index_range.end.position == 0 {
+        return Ok(EMPTY_MESSAGES);
+    }
+
+    let mut messages = Vec::with_capacity(
+        1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
+    );
     let mut reader = BufReader::new(file);
     reader
-        .seek(std::io::SeekFrom::Start(range.start.position as u64))
+        .seek(std::io::SeekFrom::Start(index_range.start.position as u64))
         .await?;
 
     let mut read_messages = 0;
-    let messages_count = (1 + range.end.offset - range.start.offset) as usize;
+    let messages_count =
+        (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
     while read_messages < messages_count {
         let offset = reader.read_u64_le().await;
         if offset.is_err() {
@@ -49,6 +64,8 @@ pub async fn load(file: &mut File, range: IndexRange) -> Result<Vec<Arc<Message>
             messages_count
         );
     }
+
+    trace!("Loaded {} messages from disk.", messages.len());
 
     Ok(messages)
 }

@@ -4,6 +4,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing::{error, info, trace};
 
+const EMPTY_RESPONSE: Vec<u8> = vec![];
+
 const NAME: &str = "Iggy";
 
 pub struct Client {
@@ -80,13 +82,22 @@ impl ConnectedClient {
         }
 
         let status = buffer[0];
-        if status == 0 {
-            trace!("Status: OK.");
-            return Ok(buffer[1..length.unwrap()].to_vec());
+        if status != 0 {
+            error!("Received an invalid response with status: {:?}.", status);
+            return Err(Error::InvalidResponse(status));
         }
 
-        error!("Received an invalid response with status: {:?}.", status);
-        Err(Error::InvalidResponse(status))
+        trace!("Status: OK.");
+        if length.is_none() {
+            return Ok(EMPTY_RESPONSE);
+        }
+
+        let length = length.unwrap();
+        if length == 1 {
+            return Ok(EMPTY_RESPONSE);
+        }
+
+        Ok(buffer[1..length].to_vec())
     }
 }
 

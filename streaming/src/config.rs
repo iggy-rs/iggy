@@ -29,4 +29,6 @@ pub struct PartitionConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SegmentConfig {
     pub size_bytes: u32,
+    pub cache_indexes: bool,
+    pub cache_time_indexes: bool,
 }

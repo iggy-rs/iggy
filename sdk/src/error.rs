@@ -1,4 +1,4 @@
-use quinn::{ConnectionError, ReadError, WriteError};
+use quinn::{ConnectionError, ReadError, ReadToEndError, WriteError};
 use std::array::TryFromSliceError;
 use std::net::AddrParseError;
 use std::str::Utf8Error;
@@ -25,4 +25,6 @@ pub enum Error {
     ReadError(#[from] ReadError),
     #[error("Connection error")]
     ConnectionError(#[from] ConnectionError),
+    #[error("Read to end error")]
+    ReadToEndError(#[from] ReadToEndError),
 }

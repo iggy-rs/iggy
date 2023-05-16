@@ -75,25 +75,21 @@ impl ConnectedClient {
     }
 
     async fn handle_response(&self, recv: &mut RecvStream) -> Result<Vec<u8>, Error> {
-        let mut buffer = vec![0; 1024 * 1024];
-        let length = recv.read(&mut buffer).await?;
+        let buffer = recv.read_to_end(1024 * 1024 * 1024).await?;
         if buffer.is_empty() {
             return Err(Error::EmptyResponse);
         }
-
+        
         let status = buffer[0];
         if status != 0 {
             error!("Received an invalid response with status: {:?}.", status);
             return Err(Error::InvalidResponse(status));
         }
 
-        trace!("Status: OK.");
-        if length.is_none() {
-            return Ok(EMPTY_RESPONSE);
-        }
-
-        let length = length.unwrap();
-        if length == 1 {
+        let length = buffer.len();
+        trace!("Status: OK. Response length: {}", length);
+        
+        if length <= 1 {
             return Ok(EMPTY_RESPONSE);
         }
 

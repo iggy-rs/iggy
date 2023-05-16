@@ -24,7 +24,7 @@ impl Segment {
         let mut time_index_file = file::open_file(&self.time_index_path, false).await;
 
         if self.config.cache_indexes {
-            self.indexes = Some(index::load(&mut index_file).await?);
+            self.indexes = Some(index::load_all(&mut index_file).await?);
             info!(
                 "Loaded {} indexes for segment with start offset: {} and partition ID: {}.",
                 self.indexes.as_ref().unwrap().len(),
@@ -33,20 +33,30 @@ impl Segment {
             );
         }
 
-        let time_indexes = time_index::load(&mut time_index_file).await?;
-        if !time_indexes.is_empty() {
-            let last_index = time_indexes.last().unwrap();
-            self.current_offset = self.start_offset + last_index.relative_offset as u64;
-        }
-
         if self.config.cache_time_indexes {
-            self.time_indexes = Some(time_indexes);
+            let time_indexes = time_index::load_all(&mut time_index_file).await?;
+            if !time_indexes.is_empty() {
+                let last_index = time_indexes.last().unwrap();
+                self.current_offset = self.start_offset + last_index.relative_offset as u64;
+                self.time_indexes = Some(time_indexes);
+            }
+
             info!(
                 "Loaded {} time indexes for segment with start offset: {} and partition ID: {}.",
                 self.time_indexes.as_ref().unwrap().len(),
                 self.start_offset,
                 self.partition_id
             );
+        } else {
+            let last_index = time_index::load_last(&mut time_index_file).await?;
+            if let Some(last_index) = last_index {
+                self.current_offset = self.start_offset + last_index.relative_offset as u64;
+                info!(
+                "Loaded last time index for segment with start offset: {} and partition ID: {}.",
+                self.start_offset,
+                self.partition_id
+            );
+            }
         }
 
         if self.is_full() {

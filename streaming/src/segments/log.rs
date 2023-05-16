@@ -4,7 +4,6 @@ use shared::error::Error;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
-use tracing::error;
 use tracing::log::trace;
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
@@ -28,8 +27,7 @@ pub async fn load(file: &mut File, index_range: &IndexRange) -> Result<Vec<Arc<M
         .await?;
 
     let mut read_messages = 0;
-    let messages_count =
-        (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
+    let messages_count = (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
     while read_messages < messages_count {
         let offset = reader.read_u64_le().await;
         if offset.is_err() {
@@ -55,14 +53,6 @@ pub async fn load(file: &mut File, index_range: &IndexRange) -> Result<Vec<Arc<M
         let timestamp = timestamp.unwrap();
         messages.push(Arc::new(Message::create(offset, timestamp, payload)));
         read_messages += 1;
-    }
-
-    if messages.len() != messages_count {
-        error!(
-            "Loaded {} messages from disk, expected {}.",
-            messages.len(),
-            messages_count
-        );
     }
 
     trace!("Loaded {} messages from disk.", messages.len());

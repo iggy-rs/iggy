@@ -2,8 +2,8 @@ use crate::message::Message;
 use shared::error::Error;
 use std::sync::Arc;
 use tokio::fs::File;
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
-use tracing::{error, trace};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
+use tracing::{error, info, trace};
 
 const EMPTY_INDEXES: Vec<TimeIndex> = vec![];
 
@@ -13,7 +13,7 @@ pub struct TimeIndex {
     pub timestamp: u64,
 }
 
-pub async fn load(file: &mut File) -> Result<Vec<TimeIndex>, Error> {
+pub async fn load_all(file: &mut File) -> Result<Vec<TimeIndex>, Error> {
     trace!("Loading time indexes from file...");
     let file_size = file.metadata().await?.len() as usize;
     if file_size == 0 {
@@ -51,6 +51,29 @@ pub async fn load(file: &mut File) -> Result<Vec<TimeIndex>, Error> {
     trace!("Loaded {} time indexes from file.", indexes_count);
 
     Ok(indexes)
+}
+
+pub async fn load_last(file: &mut File) -> Result<Option<TimeIndex>, Error> {
+    trace!("Loading last time index from file...");
+    let file_size = file.metadata().await?.len() as usize;
+    if file_size == 0 {
+        trace!("Time index file is empty.");
+        return Ok(None);
+    }
+
+    let indexes_count = file_size / 8;
+    let last_index_position = file_size - 8;
+    file.seek(std::io::SeekFrom::Start(last_index_position as u64))
+        .await?;
+    let timestamp = file.read_u64_le().await?;
+    let index = TimeIndex {
+        relative_offset: indexes_count as u32 - 1,
+        timestamp,
+    };
+
+    info!("Loaded last time index from file: {:?}", index);
+
+    Ok(Some(index))
 }
 
 pub async fn persist(file: &mut File, messages: &Vec<Arc<Message>>) -> Result<(), Error> {

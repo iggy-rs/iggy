@@ -21,7 +21,7 @@ pub struct IndexRange {
     pub end: Index,
 }
 
-pub async fn load(file: &mut File) -> Result<Vec<Index>, Error> {
+pub async fn load_all(file: &mut File) -> Result<Vec<Index>, Error> {
     trace!("Loading indexes from file...");
     let file_size = file.metadata().await?.len() as usize;
     if file_size == 0 {
@@ -66,27 +66,20 @@ pub async fn load_range(
     segment_start_offset: u64,
     mut index_start_offset: u64,
     index_end_offset: u64,
-    total_size_bytes: u32,
-) -> Result<IndexRange, Error> {
+) -> Result<Option<IndexRange>, Error> {
     trace!(
         "Loading index range for offsets: {} to {}, segment starts at: {}",
-        index_start_offset,
-        index_end_offset,
-        segment_start_offset
+        index_start_offset, index_end_offset, segment_start_offset
     );
 
-    if file.metadata().await?.len() == 0 {
+    if index_start_offset > index_end_offset {
+        return Ok(None);
+    }
+
+    let file_length = file.metadata().await?.len() as u32;
+    if file_length == 0 {
         trace!("Index file is empty.");
-        return Ok(IndexRange {
-            start: Index {
-                relative_offset: 0,
-                position: 0,
-            },
-            end: Index {
-                relative_offset: 0,
-                position: 0,
-            },
-        });
+        return Ok(None);
     }
 
     if index_start_offset < segment_start_offset {
@@ -97,8 +90,7 @@ pub async fn load_range(
     let relative_end_offset = (index_end_offset - segment_start_offset) as u32;
     let start_seek_position = relative_start_offset * INDEX_SIZE;
     let mut end_seek_position = relative_end_offset * INDEX_SIZE;
-    let file_length = file.metadata().await?.len() as u32;
-    if end_seek_position > file_length {
+    if end_seek_position >= file_length {
         end_seek_position = file_length - INDEX_SIZE;
     }
 
@@ -107,20 +99,14 @@ pub async fn load_range(
     let start_position = file.read_u32_le().await?;
     file.seek(std::io::SeekFrom::Start(end_seek_position as u64))
         .await?;
-    let mut end_position = file.read_u32_le().await?;
-    if end_position == 0 {
-        end_position = total_size_bytes;
-    }
+    let end_position = file.read_u32_le().await?;
 
     trace!(
         "Loaded index range: {}...{}, position range: {}...{}",
-        relative_start_offset,
-        relative_end_offset,
-        start_position,
-        end_position
+        relative_start_offset, relative_end_offset, start_position, end_position
     );
 
-    Ok(IndexRange {
+    Ok(Some(IndexRange {
         start: Index {
             relative_offset: relative_start_offset,
             position: start_position,
@@ -129,7 +115,7 @@ pub async fn load_range(
             relative_offset: relative_end_offset,
             position: end_position,
         },
-    })
+    }))
 }
 
 pub async fn persist(

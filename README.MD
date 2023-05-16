@@ -158,7 +158,7 @@ Server restart
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer
 - [ ] Implement consumer groups for horizontal scaling
-
+- [ ] Delete old messages bases on retention policy
 
 #### Distribution
 
@@ -171,7 +171,6 @@ Server restart
 - [ ] Implement cluster state synchronization protocol
 - [ ] Implement partition replication protocol on different servers
 - [ ] Allow clients to connect to the cluster
-
 
 #### API
 

@@ -8,6 +8,8 @@ use shared::error::Error;
 use std::sync::Arc;
 use tracing::trace;
 
+const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
+
 impl Segment {
     pub async fn get_messages(
         &self,
@@ -23,7 +25,31 @@ impl Segment {
             end_offset = self.current_offset;
         }
 
-        self.load_messages_from_disk(offset, end_offset).await
+        // In case that the partition messages buffer is disabled, we need to check the unsaved messages buffer
+        if self.unsaved_messages.is_none() {
+            return self.load_messages_from_disk(offset, end_offset).await;
+        }
+
+        let unsaved_messages = self.unsaved_messages.as_ref().unwrap();
+        if unsaved_messages.is_empty() {
+            return self.load_messages_from_disk(offset, end_offset).await;
+        }
+
+        let first_offset = unsaved_messages[0].offset;
+        if end_offset < first_offset {
+            return self.load_messages_from_disk(offset, end_offset).await;
+        }
+
+        let mut messages = self.load_messages_from_disk(offset, end_offset).await?;
+        let mut buffered_messages = unsaved_messages
+            .iter()
+            .filter(|message| message.offset >= offset && message.offset <= end_offset)
+            .cloned()
+            .collect::<Vec<Arc<Message>>>();
+
+        messages.append(&mut buffered_messages);
+
+        Ok(messages)
     }
 
     async fn load_messages_from_disk(
@@ -36,6 +62,10 @@ impl Segment {
             start_offset,
             end_offset
         );
+
+        if start_offset > end_offset {
+            return Ok(EMPTY_MESSAGES);
+        }
 
         if let Some(indexes) = &self.indexes {
             let relative_start_offset = start_offset - self.start_offset;
@@ -65,16 +95,15 @@ impl Segment {
         }
 
         let mut index_file = file::open_file(&self.index_path, false).await;
-        let index_range = index::load_range(
-            &mut index_file,
-            self.start_offset,
-            start_offset,
-            end_offset,
-            self.current_size_bytes,
-        )
-        .await?;
+        let index_range =
+            index::load_range(&mut index_file, self.start_offset, start_offset, end_offset).await?;
 
-        self.load_messages_from_segment_file(&index_range).await
+        if index_range.is_none() {
+            return Ok(EMPTY_MESSAGES);
+        }
+
+        self.load_messages_from_segment_file(&index_range.unwrap())
+            .await
     }
 
     async fn load_messages_from_segment_file(

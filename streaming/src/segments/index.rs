@@ -69,7 +69,9 @@ pub async fn load_range(
 ) -> Result<Option<IndexRange>, Error> {
     trace!(
         "Loading index range for offsets: {} to {}, segment starts at: {}",
-        index_start_offset, index_end_offset, segment_start_offset
+        index_start_offset,
+        index_end_offset,
+        segment_start_offset
     );
 
     if index_start_offset > index_end_offset {
@@ -103,7 +105,10 @@ pub async fn load_range(
 
     trace!(
         "Loaded index range: {}...{}, position range: {}...{}",
-        relative_start_offset, relative_end_offset, start_position, end_position
+        relative_start_offset,
+        relative_end_offset,
+        start_position,
+        end_position
     );
 
     Ok(Some(IndexRange {

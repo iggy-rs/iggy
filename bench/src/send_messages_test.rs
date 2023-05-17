@@ -6,33 +6,42 @@ use shared::messages::send_messages::{Message, SendMessages};
 use shared::streams::create_stream::CreateStream;
 use shared::streams::get_streams::GetStreams;
 use shared::topics::create_topic::CreateTopic;
-use std::collections::HashMap;
+use std::str::FromStr;
 use tokio::task;
 use tokio::task::JoinHandle;
 use tokio::time::Instant;
 use tracing::info;
+
+const FROM_STREAM_ID: u32 = 10000;
 
 pub async fn init_send_messages(args: &Args) -> Result<Vec<JoinHandle<()>>, Error> {
     info!("Creating {} client(s)...", args.clients_count);
     let mut futures = Vec::with_capacity(args.clients_count as usize);
     let messages_per_batch = args.messages_per_batch;
     let message_batches = args.message_batches;
+    let message_size = args.message_size;
+    if message_size == 0 {
+        panic!("Message size cannot be 0.")
+    } else {
+        info!("Message size: {} bytes.", message_size);
+    }
+
     for i in 0..args.clients_count {
         let client_id = i + 1;
-        let client = create_connected_client(&args.server_address, &args.server_name).await?;
+        let client = create_connected_client(
+            &args.client_address,
+            &args.server_address,
+            &args.server_name,
+        )
+        .await?;
         let future = task::spawn(async move {
             info!("Executing the test on client #{}...", client_id);
-            let stream_id: u32 = 10000 + client_id;
-            let topic_id: u32 = 1;
-            let partition_id: u32 = 1;
             let result = execute_send_messages(
                 &client,
                 client_id,
-                stream_id,
-                topic_id,
-                partition_id,
                 messages_per_batch,
                 message_batches,
+                message_size,
             )
             .await;
             match result {
@@ -50,12 +59,13 @@ pub async fn init_send_messages(args: &Args) -> Result<Vec<JoinHandle<()>>, Erro
 async fn execute_send_messages(
     client: &ConnectedClient,
     client_id: u32,
-    stream_id: u32,
-    topic_id: u32,
-    partition_id: u32,
     messages_per_batch: u32,
     batches_count: u32,
+    message_size: u32,
 ) -> Result<(), Error> {
+    let stream_id: u32 = FROM_STREAM_ID + client_id;
+    let topic_id: u32 = 1;
+    let partition_id: u32 = 1;
     let partitions_count: u32 = 1;
     let stream_name = "test".to_string();
     let topic_name = "test".to_string();
@@ -85,33 +95,22 @@ async fn execute_send_messages(
     }
 
     info!("client #{} → preparing the test messages...", client_id);
-    let mut message_number = 0;
-    let mut message_batches: HashMap<u32, SendMessages> = HashMap::new();
 
-    for i in 0..batches_count {
-        let mut messages = Vec::with_capacity(messages_per_batch as usize);
-        for _ in 0..messages_per_batch {
-            let payload = format!("Test message #{} client {}", message_number, client_id)
-                .as_bytes()
-                .to_vec();
-            messages.push(Message {
-                length: payload.len() as u32,
-                payload,
-            });
-            message_number += 1;
-        }
-
-        let command = SendMessages {
-            stream_id,
-            topic_id,
-            key_kind: 0,
-            key_value: partition_id,
-            messages_count: messages_per_batch,
-            messages,
-        };
-
-        message_batches.insert(i, command);
+    let payload = create_payload(message_size);
+    let mut messages = Vec::with_capacity(messages_per_batch as usize);
+    for _ in 0..messages_per_batch {
+        let message = Message::from_str(&payload).unwrap();
+        messages.push(message);
     }
+
+    let command = SendMessages {
+        stream_id,
+        topic_id,
+        key_kind: 0,
+        key_value: partition_id,
+        messages_count: messages_per_batch,
+        messages,
+    };
 
     info!(
         "client #{} → sending {} test messages in {} batches of {} messages...",
@@ -120,15 +119,14 @@ async fn execute_send_messages(
 
     let start = Instant::now();
 
-    for i in 0..batches_count {
-        let command = message_batches.get(&i).unwrap();
-        client.send_messages(command).await?;
+    for _ in 0..batches_count {
+        client.send_messages(&command).await?;
     }
 
     let duration = start.elapsed();
 
     info!(
-        "client #{} → sent {} test messages in {} batches of {} messages in {} ms",
+        "client #{} → sent {} test messages in {} batches of {} messages in {} ms.",
         client_id,
         total_messages,
         batches_count,
@@ -136,5 +134,17 @@ async fn execute_send_messages(
         duration.as_millis(),
     );
 
+    client.disconnect().await?;
+
     Ok(())
+}
+
+fn create_payload(size: u32) -> String {
+    let mut payload = String::with_capacity(size as usize);
+    for i in 0..size {
+        let char = (i % 26 + 97) as u8 as char;
+        payload.push(char);
+    }
+
+    payload
 }

@@ -27,7 +27,8 @@ pub async fn load(file: &mut File, index_range: &IndexRange) -> Result<Vec<Arc<M
         .await?;
 
     let mut read_messages = 0;
-    let messages_count = (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
+    let messages_count =
+        (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
     while read_messages < messages_count {
         let offset = reader.read_u64_le().await;
         if offset.is_err() {

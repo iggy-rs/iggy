@@ -11,4 +11,7 @@ pub struct Args {
 
     #[arg(long, default_value = "localhost")]
     pub server_name: String,
+
+    #[arg(long, default_value = "1048576")]
+    pub response_buffer_size: u64,
 }

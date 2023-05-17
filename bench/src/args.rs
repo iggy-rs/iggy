@@ -18,6 +18,9 @@ pub struct Args {
     #[arg(long, default_value = "1000")]
     pub message_batches: u32,
 
+    #[arg(long, default_value = "1000")]
+    pub message_size: u32,
+
     #[arg(long, default_value = "1")]
     pub clients_count: u32,
 

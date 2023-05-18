@@ -101,7 +101,10 @@ pub async fn load_range(
     let start_position = file.read_u32_le().await?;
     file.seek(std::io::SeekFrom::Start(end_seek_position as u64))
         .await?;
-    let end_position = file.read_u32_le().await?;
+    let mut end_position = file.read_u32_le().await?;
+    if end_position == 0 {
+        end_position = file_length;
+    }
 
     trace!(
         "Loaded index range: {}...{}, position range: {}...{}",

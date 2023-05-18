@@ -2,6 +2,7 @@ mod args;
 mod poll_messages_test;
 mod send_messages_test;
 mod test_client;
+mod test_result;
 mod test_runner;
 
 use crate::args::Args;

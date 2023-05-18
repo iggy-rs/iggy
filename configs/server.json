@@ -3,7 +3,7 @@
   "address": "127.0.0.1:8080",
   "watcher": {
     "enabled": true,
-    "interval": 30
+    "interval": 1000
   },
   "system": {
     "path": "local_data",
@@ -12,10 +12,10 @@
       "topic": {
         "path": "topics",
         "partition": {
-          "messages_required_to_save": 1000,
+          "messages_required_to_save": 10000,
           "messages_buffer": 1048576,
           "segment": {
-            "size_bytes": 100000000,
+            "size_bytes": 1000000000,
             "cache_indexes": true,
             "cache_time_indexes": true
           }

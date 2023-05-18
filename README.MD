@@ -68,7 +68,7 @@ To quick test the project, first start the server and then run the benchmarking 
 
 `cargo r --bin bench -r -- --messages-per-batch 1000 --message-batches 1000 --clients-count 10 --test-poll-messages`
 
-Depending on the hardware and cache settings in `server.json`, you might expect over 200 MB/s throughput for both writes and reads.
+Depending on the hardware and cache settings in `server.json`, you might expect over 250 MB/s throughput for both writes and reads.
 
 **See the images below**
 

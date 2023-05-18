@@ -182,7 +182,7 @@ impl Partition {
         end_offset: u64,
     ) -> Option<Vec<Arc<Message>>> {
         let messages = self.messages.as_ref()?;
-        if messages.is_empty() {
+        if messages.is_empty() || start_offset > end_offset {
             return None;
         }
 
@@ -207,7 +207,7 @@ impl Partition {
             end_offset
         );
 
-        if self.messages.is_none() {
+        if self.messages.is_none() || start_offset > end_offset {
             return EMPTY_MESSAGES;
         }
 

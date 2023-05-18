@@ -18,7 +18,7 @@ use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
 use streaming::system::System;
-use tracing::{info, trace};
+use tracing::trace;
 
 /*
   FRAME: | COMMAND |   DATA    |
@@ -75,7 +75,7 @@ async fn try_handle(
     sender: &mut Sender,
     system: &mut System,
 ) -> Result<(), Error> {
-    info!("Handling command '{}'...", command);
+    trace!("Handling command '{}'...", command);
     match command {
         Command::Ping => {
             let command = Ping::from_bytes(bytes)?;

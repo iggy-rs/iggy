@@ -21,7 +21,7 @@ impl Segment {
         }
 
         let mut end_offset = offset + (count - 1) as u64;
-        if self.is_closed || end_offset > self.current_offset {
+        if end_offset > self.current_offset {
             end_offset = self.current_offset;
         }
 

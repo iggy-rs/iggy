@@ -3,7 +3,7 @@ use shared::error::Error;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
-use tracing::{error, info, trace};
+use tracing::{error, trace};
 
 const EMPTY_INDEXES: Vec<TimeIndex> = vec![];
 
@@ -71,7 +71,7 @@ pub async fn load_last(file: &mut File) -> Result<Option<TimeIndex>, Error> {
         timestamp,
     };
 
-    info!("Loaded last time index from file: {:?}", index);
+    trace!("Loaded last time index from file: {:?}", index);
 
     Ok(Some(index))
 }

@@ -31,21 +31,20 @@ fn handle_response(response: &[u8]) -> Result<Vec<Message>, Error> {
         let offset = u64::from_le_bytes(response[position..position + 8].try_into()?);
         let timestamp = u64::from_le_bytes(response[position + 8..position + 16].try_into()?);
         let message_length =
-            u32::from_le_bytes(response[position + 16..position + PROPERTIES_SIZE].try_into()?)
-                as usize;
+            u32::from_le_bytes(response[position + 16..position + PROPERTIES_SIZE].try_into()?);
 
-        let payload_range = position + PROPERTIES_SIZE..position + PROPERTIES_SIZE + message_length;
+        let payload_range = position + PROPERTIES_SIZE..position + PROPERTIES_SIZE + message_length as usize;
         if payload_range.start > length || payload_range.end > length {
             break;
         }
 
         let payload = response[payload_range].to_vec();
-        let total_size = PROPERTIES_SIZE + message_length;
+        let total_size = PROPERTIES_SIZE + message_length as usize;
         position += total_size;
         messages.push(Message {
             offset,
             timestamp,
-            length: message_length as u64,
+            length: message_length,
             payload,
         });
 

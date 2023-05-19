@@ -1,4 +1,3 @@
-use crate::partitions::consumer_offset::ConsumerOffset;
 use crate::partitions::partition::Partition;
 use crate::utils::file;
 use shared::error::Error;
@@ -19,15 +18,16 @@ impl Partition {
             return Err(Error::InvalidOffset(offset));
         }
 
-        let consumer_offset = self
-            .consumer_offsets
-            .entry(consumer_id)
-            .or_insert(ConsumerOffset {
-                offset,
-                path: format!("{}/{}", self.consumer_offsets_path, consumer_id),
-            });
+        if !self.consumer_offsets.contains_key(&consumer_id) {
+            self.consumer_offsets_paths.insert(
+                consumer_id,
+                format!("{}/{}", self.consumer_offsets_path, consumer_id),
+            );
+        }
 
-        let mut file = file::create_file(&consumer_offset.path).await;
+        self.consumer_offsets.insert(consumer_id, offset);
+        let path = self.consumer_offsets_paths.get(&consumer_id).unwrap();
+        let mut file = file::create_file(path).await;
         file.write_u64(offset).await?;
 
         trace!(
@@ -72,13 +72,9 @@ impl Partition {
             let mut file = file::open_file(path, false).await;
             let offset = file.read_u64().await?;
 
-            self.consumer_offsets.insert(
-                consumer_id,
-                ConsumerOffset {
-                    offset,
-                    path: path.to_string(),
-                },
-            );
+            self.consumer_offsets.insert(consumer_id, offset);
+            self.consumer_offsets_paths
+                .insert(consumer_id, path.to_string());
 
             trace!(
                 "Loaded consumer offset: {} for consumer ID: {}, partition ID: {}.",

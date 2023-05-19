@@ -26,7 +26,11 @@ pub async fn init_poll_messages(args: &Args) -> Vec<JoinHandle<TestResult>> {
         )
         .await;
         if client.is_err() {
-            panic!("Error when creating client #{}: {:?}", client_id, client.err().unwrap());
+            panic!(
+                "Error when creating client #{}: {:?}",
+                client_id,
+                client.err().unwrap()
+            );
         }
 
         let client = client.unwrap();
@@ -103,8 +107,8 @@ async fn execute_poll_messages(
     }
 
     let duration = start.elapsed() / clients_count;
-    let average_latency =
-        latencies.iter().sum::<Duration>().as_millis() as f64 / ((clients_count * latencies.len() as u32) as f64);
+    let average_latency = latencies.iter().sum::<Duration>().as_millis() as f64
+        / ((clients_count * latencies.len() as u32) as f64);
 
     info!(
         "client #{} → polled {} messages in {} batches of {} messages in {} ms, total size: {} bytes, average latency: {:.2} ms.",
@@ -120,6 +124,6 @@ async fn execute_poll_messages(
     Ok(TestResult {
         duration,
         average_latency,
-        total_size_bytes
+        total_size_bytes,
     })
 }

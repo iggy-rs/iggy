@@ -63,7 +63,7 @@ impl Segment {
             end_offset
         );
 
-        if start_offset > end_offset {
+        if start_offset > end_offset || end_offset > self.current_offset {
             return Ok(EMPTY_MESSAGES);
         }
 

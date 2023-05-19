@@ -41,8 +41,10 @@ async fn execute(test: Vec<JoinHandle<TestResult>>, test_name: &str, total_messa
 
     let total_size_bytes = results.iter().map(|r| r.total_size_bytes).sum::<u64>();
     let total_duration = results.iter().map(|r| r.duration).sum::<Duration>();
-    let average_latency = results.iter().map(|r| r.average_latency).sum::<f64>() / results.len() as f64;
-    let average_throughput = total_size_bytes as f64 / total_duration.as_secs_f64() / 1024.0 / 1024.0;
+    let average_latency =
+        results.iter().map(|r| r.average_latency).sum::<f64>() / results.len() as f64;
+    let average_throughput =
+        total_size_bytes as f64 / total_duration.as_secs_f64() / 1024.0 / 1024.0;
 
     info!(
             "Finished the {} test for total amount of messages: {} in {} ms, total size: {} bytes, average latency: {:.2} ms, average throughput: {:.2} MB/s.",

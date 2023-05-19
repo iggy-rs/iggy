@@ -33,7 +33,8 @@ fn handle_response(response: &[u8]) -> Result<Vec<Message>, Error> {
         let message_length =
             u32::from_le_bytes(response[position + 16..position + PROPERTIES_SIZE].try_into()?);
 
-        let payload_range = position + PROPERTIES_SIZE..position + PROPERTIES_SIZE + message_length as usize;
+        let payload_range =
+            position + PROPERTIES_SIZE..position + PROPERTIES_SIZE + message_length as usize;
         if payload_range.start > length || payload_range.end > length {
             break;
         }

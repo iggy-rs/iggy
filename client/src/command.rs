@@ -22,7 +22,7 @@ use tracing::info;
 pub async fn handle(input: &str, client: &mut ConnectedClient) -> Result<(), ClientError> {
     let (command, input) = input.split_once('|').unwrap_or((input, ""));
     let command = Command::from_str(command).map_err(|_| ClientError::InvalidCommand)?;
-    info!("Handling '{:?}' command...", command);
+    info!("Handling '{}' command...", command);
     match command {
         Command::Ping => {
             let command = Ping::from_str(input)?;

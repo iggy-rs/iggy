@@ -77,26 +77,26 @@ pub async fn handle(
         )
         .await?;
 
+    if messages.is_empty() {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    }
+
     let messages_count = messages.len() as u32;
     let messages_size = messages
         .iter()
         .map(|message| message.get_size_bytes())
         .sum::<u32>();
 
-    let mut offset = 0;
+    let offset = messages.last().unwrap().offset;
     let mut bytes = Vec::with_capacity(4 + messages_size as usize);
     bytes.extend(messages_count.to_le_bytes());
-    if messages_count > 0 {
-        offset = messages.last().unwrap().offset;
-        for message in messages {
-            message.extend(&mut bytes);
-        }
+    for message in messages {
+        message.extend(&mut bytes);
     }
 
-    sender.send_ok_response(&bytes).await?;
-
     if command.auto_commit {
-        trace!("Offset will be automatically stored...");
+        trace!("Last offset: {} will be automatically stored for consumer: {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
         system
             .get_stream_mut(command.stream_id)?
             .store_offset(
@@ -107,6 +107,8 @@ pub async fn handle(
             )
             .await?;
     }
+
+    sender.send_ok_response(&bytes).await?;
 
     Ok(())
 }

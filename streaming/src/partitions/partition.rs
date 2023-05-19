@@ -1,6 +1,5 @@
 use crate::config::PartitionConfig;
 use crate::message::Message;
-use crate::partitions::consumer_offset::ConsumerOffset;
 use crate::segments::segment::Segment;
 use ringbuffer::AllocRingBuffer;
 use std::collections::HashMap;
@@ -16,7 +15,8 @@ pub struct Partition {
     pub messages: Option<AllocRingBuffer<Arc<Message>>>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
-    pub(crate) consumer_offsets: HashMap<u32, ConsumerOffset>,
+    pub(crate) consumer_offsets: HashMap<u32, u64>,
+    pub(crate) consumer_offsets_paths: HashMap<u32, String>,
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<PartitionConfig>,
 }
@@ -50,6 +50,7 @@ impl Partition {
             unsaved_messages_count: 0,
             should_increment_offset: false,
             consumer_offsets: HashMap::new(),
+            consumer_offsets_paths: HashMap::new(),
             config,
         };
 

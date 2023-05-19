@@ -81,6 +81,10 @@ impl Partition {
             return Ok(EMPTY_MESSAGES);
         }
 
+        if start_offset > self.current_offset {
+            return Ok(EMPTY_MESSAGES);
+        }
+
         let end_offset = self.get_end_offset(start_offset, count);
         let messages = self.try_get_messages_from_cache(start_offset, end_offset);
         if let Some(messages) = messages {
@@ -125,15 +129,24 @@ impl Partition {
             return self.get_first_messages(count).await;
         }
 
-        let offset = offset.unwrap().offset;
+        let offset = *offset.unwrap();
         if offset == self.current_offset {
             trace!(
-                "Consumer: {} has the latest offset for partition: {}, returning empty messages...",
+                "Consumer: {} has the latest offset: {} for partition: {}, returning empty messages...",
                 consumer_id,
+                offset,
                 self.id
             );
             return Ok(EMPTY_MESSAGES);
         }
+
+        let offset = offset + 1;
+        trace!(
+            "Getting next messages for consumer: {} for partition: {} from offset: {}...",
+            consumer_id,
+            self.id,
+            offset
+        );
 
         self.get_messages_by_offset(offset, count).await
     }
@@ -182,7 +195,7 @@ impl Partition {
         end_offset: u64,
     ) -> Option<Vec<Arc<Message>>> {
         let messages = self.messages.as_ref()?;
-        if messages.is_empty() || start_offset > end_offset {
+        if messages.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
             return None;
         }
 

@@ -37,9 +37,13 @@ pub async fn init_send_messages(args: &Args) -> Vec<JoinHandle<TestResult>> {
         )
         .await;
         if client.is_err() {
-            panic!("Error when creating client #{}: {:?}", client_id, client.err().unwrap());
+            panic!(
+                "Error when creating client #{}: {:?}",
+                client_id,
+                client.err().unwrap()
+            );
         }
-        
+
         let client = client.unwrap();
         let clients_count = args.clients_count;
         let future = task::spawn(async move {
@@ -140,8 +144,8 @@ async fn execute_send_messages(
     }
 
     let duration = start.elapsed() / clients_count;
-    let average_latency =
-        latencies.iter().sum::<Duration>().as_millis() as f64 / ((clients_count * latencies.len() as u32) as f64);
+    let average_latency = latencies.iter().sum::<Duration>().as_millis() as f64
+        / ((clients_count * latencies.len() as u32) as f64);
     let total_size_bytes = (total_messages * message_size) as u64;
 
     info!(
@@ -158,7 +162,7 @@ async fn execute_send_messages(
     Ok(TestResult {
         duration,
         average_latency,
-        total_size_bytes
+        total_size_bytes,
     })
 }
 

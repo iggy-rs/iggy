@@ -28,14 +28,9 @@ impl Partition {
         with_segment: bool,
         config: Arc<PartitionConfig>,
     ) -> Partition {
-        let path = format!("{}/{}", topic_path, id);
-        let offsets_path = format!("{}/offsets", path);
-        let consumer_offsets_path = format!("{}/consumers", offsets_path);
-        let mut buffer_capacity = config.messages_buffer as usize;
-        if buffer_capacity == 0 {
-            buffer_capacity = 1;
-        }
-
+        let path = Self::get_path(id, topic_path);
+        let offsets_path = Self::get_offsets_path(&path);
+        let consumer_offsets_path = Self::get_consumer_offsets_path(&offsets_path);
         let mut partition = Partition {
             id,
             path,
@@ -43,7 +38,9 @@ impl Partition {
             consumer_offsets_path,
             messages: match config.messages_buffer {
                 0 => None,
-                _ => Some(AllocRingBuffer::with_capacity(buffer_capacity)),
+                _ => Some(AllocRingBuffer::with_capacity(
+                    config.messages_buffer as usize,
+                )),
             },
             segments: vec![],
             current_offset: 0,
@@ -55,7 +52,7 @@ impl Partition {
         };
 
         if with_segment {
-            let segment = Segment::create(id, 0, &partition.path, partition.config.segment.clone());
+            let segment = Segment::create(id, &partition.path, 0, partition.config.segment.clone());
             partition.segments.push(segment);
         }
 
@@ -72,5 +69,75 @@ impl Partition {
 
     pub fn get_segments_mut(&mut self) -> &mut Vec<Segment> {
         &mut self.segments
+    }
+
+    fn get_path(id: u32, topic_path: &str) -> String {
+        format!("{}/{}", topic_path, id)
+    }
+
+    fn get_offsets_path(path: &str) -> String {
+        format!("{}/offsets", path)
+    }
+
+    fn get_consumer_offsets_path(offsets_path: &str) -> String {
+        format!("{}/consumers", offsets_path)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ringbuffer::RingBuffer;
+
+    #[test]
+    fn should_be_created_with_a_single_segment_given_valid_parameters() {
+        let id = 1;
+        let topic_path = "/topics/1";
+        let with_segment = true;
+        let config = Arc::new(PartitionConfig::default());
+        let path = Partition::get_path(id, topic_path);
+        let offsets_path = Partition::get_offsets_path(&path);
+        let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
+        let messages_buffer_capacity = config.messages_buffer as usize;
+        
+        let partition = Partition::create(id, topic_path, with_segment, config);
+
+        assert_eq!(partition.id, id);
+        assert_eq!(partition.path, path);
+        assert_eq!(partition.offsets_path, offsets_path);
+        assert_eq!(partition.consumer_offsets_path, consumer_offsets_path);
+        assert_eq!(partition.current_offset, 0);
+        assert_eq!(partition.unsaved_messages_count, 0);
+        assert_eq!(partition.segments.len(), 1);
+        assert!(partition.messages.is_some());
+        assert_eq!(
+            partition.messages.as_ref().unwrap().capacity(),
+            messages_buffer_capacity
+        );
+        assert!(!partition.should_increment_offset);
+        assert!(partition.messages.as_ref().unwrap().is_empty());
+        assert!(partition.consumer_offsets.is_empty());
+        assert!(partition.consumer_offsets_paths.is_empty());
+    }
+
+    #[test]
+    fn should_not_initialize_messages_buffer_given_zero_capacity() {
+        let partition = Partition::create(
+            1,
+            "/topics/1",
+            true,
+            Arc::new(PartitionConfig {
+                messages_buffer: 0,
+                ..Default::default()
+            }),
+        );
+        assert!(partition.messages.is_none());
+    }
+
+    #[test]
+    fn should_not_initialize_segments_given_false_with_segment_parameter() {
+        let partition =
+            Partition::create(1, "/topics/1", false, Arc::new(PartitionConfig::default()));
+        assert!(partition.segments.is_empty());
     }
 }

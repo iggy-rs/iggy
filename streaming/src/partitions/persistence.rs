@@ -56,9 +56,9 @@ impl Partition {
                 .unwrap()
                 .replace(&format!(".{}", LOG_EXTENSION), "");
 
-            let offset = log_file_name.parse::<u64>().unwrap();
+            let start_offset = log_file_name.parse::<u64>().unwrap();
             let mut segment =
-                Segment::create(self.id, offset, &self.path, self.config.segment.clone());
+                Segment::create(self.id, &self.path, start_offset, self.config.segment.clone());
             segment.load().await?;
             if !segment.is_closed {
                 segment.unsaved_messages = Some(Vec::new())

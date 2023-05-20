@@ -36,7 +36,9 @@ impl ServerSystem {
         let endpoint = Endpoint::server(quic_config.unwrap(), config.address.parse().unwrap())?;
         let (sender, receiver) = flume::unbounded::<ServerCommand>();
 
-        let system = System::init(config.system.clone()).await?;
+        let mut system = System::create(config.system.clone());
+        system.init().await?;
+
         let server = Server {
             endpoint,
             sender: Arc::new(sender),

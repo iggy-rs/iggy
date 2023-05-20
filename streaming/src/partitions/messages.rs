@@ -340,8 +340,8 @@ impl Partition {
         );
         let mut new_segment = Segment::create(
             self.id,
-            start_offset,
             &self.path,
+            start_offset,
             self.config.segment.clone(),
         );
         new_segment.persist().await?;

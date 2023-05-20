@@ -7,32 +7,39 @@ use std::sync::Arc;
 use tracing::{error, info, trace};
 
 pub struct System {
-    pub streams: HashMap<u32, Stream>,
-    pub(crate) config: Arc<SystemConfig>,
+    streams: HashMap<u32, Stream>,
+    config: Arc<SystemConfig>,
+    base_path: String,
     streams_path: String,
 }
 
 impl System {
-    pub async fn init(config: Arc<SystemConfig>) -> Result<System, Error> {
-        let base_path = &config.path;
-        if !Path::new(base_path).exists() && std::fs::create_dir(base_path).is_err() {
+    pub fn create(config: Arc<SystemConfig>) -> System {
+        let base_path = config.path.to_string();
+        let streams_path = format!("{}/{}", base_path, &config.stream.path);
+
+        System {
+            config,
+            base_path,
+            streams_path,
+            streams: HashMap::new(),
+        }
+    }
+
+    pub async fn init(&mut self) -> Result<(), Error> {
+        if !Path::new(&self.base_path).exists() && std::fs::create_dir(&self.base_path).is_err() {
             return Err(Error::CannotCreateBaseDirectory);
         }
 
-        let streams_path = format!("{}/{}", base_path, &config.stream.path);
-        if !Path::new(&streams_path).exists() && std::fs::create_dir(&streams_path).is_err() {
+        if !Path::new(&self.streams_path).exists()
+            && std::fs::create_dir(&self.streams_path).is_err()
+        {
             return Err(Error::CannotCreateStreamsDirectory);
         }
 
-        let mut system = System {
-            config,
-            streams_path,
-            streams: HashMap::new(),
-        };
+        self.load_streams().await?;
 
-        system.load_streams().await?;
-
-        Ok(system)
+        Ok(())
     }
 
     async fn load_streams(&mut self) -> Result<(), Error> {

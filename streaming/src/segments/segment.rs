@@ -14,48 +14,36 @@ pub struct Segment {
     pub partition_id: u32,
     pub start_offset: u64,
     pub end_offset: u64,
-    pub(crate) current_offset: u64,
-    pub partition_path: String,
-    pub index_path: String,
-    pub log_path: String,
-    pub time_index_path: String,
-    pub unsaved_messages: Option<Vec<Arc<Message>>>,
-    pub current_size_bytes: u32,
-    pub should_increment_offset: bool,
-    pub config: Arc<SegmentConfig>,
-    pub indexes: Option<Vec<Index>>,
-    pub time_indexes: Option<Vec<TimeIndex>>,
-    pub is_closed: bool,
+    pub current_offset: u64,
+    pub(crate) index_path: String,
+    pub(crate) log_path: String,
+    pub(crate) time_index_path: String,
+    pub(crate) unsaved_messages: Option<Vec<Arc<Message>>>,
+    pub(crate) current_size_bytes: u32,
+    pub(crate) config: Arc<SegmentConfig>,
+    pub(crate) indexes: Option<Vec<Index>>,
+    pub(crate) time_indexes: Option<Vec<TimeIndex>>,
+    pub(crate) is_closed: bool,
 }
 
 impl Segment {
     pub fn create(
         partition_id: u32,
-        start_offset: u64,
         partition_path: &str,
+        start_offset: u64,
         config: Arc<SegmentConfig>,
     ) -> Segment {
-        let index_path = format!(
-            "{}/{:0>20}.{}",
-            partition_path, start_offset, INDEX_EXTENSION
-        );
-        let time_index_path = format!(
-            "{}/{:0>20}.{}",
-            partition_path, start_offset, TIME_INDEX_EXTENSION
-        );
-        let log_path = format!("{}/{:0>20}.{}", partition_path, start_offset, LOG_EXTENSION);
+        let path = Self::get_path(partition_path, start_offset);
 
         Segment {
             partition_id,
             start_offset,
             end_offset: 0,
             current_offset: start_offset,
-            partition_path: partition_path.to_string(),
-            index_path,
-            time_index_path,
-            log_path,
+            log_path: Self::get_log_path(&path),
+            index_path: Self::get_index_path(&path),
+            time_index_path: Self::get_time_index_path(&path),
             current_size_bytes: 0,
-            should_increment_offset: false,
             indexes: match config.cache_indexes {
                 true => Some(Vec::new()),
                 false => None,
@@ -72,5 +60,84 @@ impl Segment {
 
     pub fn is_full(&self) -> bool {
         self.current_size_bytes >= self.config.size_bytes
+    }
+    
+    fn get_path(partition_path: &str, start_offset: u64) -> String {
+        format!("{}/{:0>20}", partition_path, start_offset)
+    }
+    
+    fn get_log_path(path: &str) -> String {
+        format!("{}.{}", path, LOG_EXTENSION)
+    }
+
+    fn get_index_path(path: &str) -> String {
+        format!("{}.{}", path, INDEX_EXTENSION)
+    }
+
+    fn get_time_index_path(path: &str) -> String {
+        format!("{}.{}", path, TIME_INDEX_EXTENSION)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_created_given_valid_parameters() {
+        let partition_id = 1;
+        let partition_path = "/topics/1/1";
+        let start_offset = 0;
+        let config = Arc::new(SegmentConfig::default());
+        let path = Segment::get_path(partition_path, start_offset);
+        let log_path = Segment::get_log_path(&path);
+        let index_path = Segment::get_index_path(&path);
+        let time_index_path = Segment::get_time_index_path(&path);
+        
+        let segment = Segment::create(partition_id, partition_path, start_offset, config);
+
+        assert_eq!(segment.partition_id, partition_id);
+        assert_eq!(segment.start_offset, start_offset);
+        assert_eq!(segment.current_offset, 0);
+        assert_eq!(segment.end_offset, 0);
+        assert_eq!(segment.current_size_bytes, 0);
+        assert_eq!(segment.log_path, log_path);
+        assert_eq!(segment.index_path, index_path);
+        assert_eq!(segment.time_index_path, time_index_path);
+        assert!(segment.unsaved_messages.is_none());
+        assert!(segment.indexes.is_some());
+        assert!(segment.time_indexes.is_some());
+        assert!(!segment.is_closed);
+        assert!(!segment.is_full());
+    }
+
+    #[test]
+    fn should_not_initialize_indexes_cache_when_disabled() {
+        let partition_id = 1;
+        let partition_path = "/topics/1/1";
+        let start_offset = 0;
+        let config = Arc::new(SegmentConfig {
+            cache_indexes: false,
+            ..SegmentConfig::default()
+        });
+        
+        let segment = Segment::create(partition_id, partition_path, start_offset, config);
+
+        assert!(segment.indexes.is_none());
+    }
+
+    #[test]
+    fn should_not_initialize_time_indexes_cache_when_disabled() {
+        let partition_id = 1;
+        let partition_path = "/topics/1/1";
+        let start_offset = 0;
+        let config = Arc::new(SegmentConfig {
+            cache_time_indexes: false,
+            ..SegmentConfig::default()
+        });
+        
+        let segment = Segment::create(partition_id, partition_path, start_offset, config);
+
+        assert!(segment.time_indexes.is_none());
     }
 }

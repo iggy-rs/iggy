@@ -3,17 +3,17 @@ use crate::topics::topic::Topic;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-const STREAM_INFO: &str = "stream.info";
+pub const STREAM_INFO: &str = "stream.info";
 
 #[derive(Debug)]
 pub struct Stream {
     pub id: u32,
     pub name: String,
-    pub topics: HashMap<u32, Topic>,
-    pub(crate) path: String,
-    pub(crate) topics_path: String,
+    pub path: String,
+    pub topics_path: String,
+    pub info_path: String,
+    pub(crate) topics: HashMap<u32, Topic>,
     pub(crate) config: Arc<StreamConfig>,
-    pub(crate) info_path: String,
 }
 
 impl Stream {

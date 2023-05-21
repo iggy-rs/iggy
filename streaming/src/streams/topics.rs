@@ -12,9 +12,9 @@ impl Stream {
     ) -> Result<(), Error> {
         let mut topic = Topic::create(
             id,
-            &self.topics_path,
             name,
             partitions_count,
+            &self.topics_path,
             self.config.topic.clone(),
         );
         topic.persist().await?;

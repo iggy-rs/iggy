@@ -7,10 +7,10 @@ use std::sync::Arc;
 use tracing::{error, info, trace};
 
 pub struct System {
+    pub base_path: String,
+    pub streams_path: String,
     streams: HashMap<u32, Stream>,
     config: Arc<SystemConfig>,
-    base_path: String,
-    streams_path: String,
 }
 
 impl System {

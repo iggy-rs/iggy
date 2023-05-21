@@ -3,7 +3,7 @@ use crate::partitions::partition::Partition;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-const TOPIC_INFO: &str = "topic.info";
+pub const TOPIC_INFO: &str = "topic.info";
 
 #[derive(Debug)]
 pub struct Topic {
@@ -17,14 +17,14 @@ pub struct Topic {
 
 impl Topic {
     pub fn empty(id: u32, topics_path: &str, config: Arc<TopicConfig>) -> Topic {
-        Topic::create(id, topics_path, "", 0, config)
+        Topic::create(id, "", 0, topics_path, config)
     }
 
     pub fn create(
         id: u32,
-        topics_path: &str,
         name: &str,
         partitions_count: u32,
+        topics_path: &str,
         config: Arc<TopicConfig>,
     ) -> Topic {
         let path = Self::get_path(id, topics_path);
@@ -79,8 +79,8 @@ mod tests {
         let config = Arc::new(TopicConfig::default());
         let path = Topic::get_path(id, topics_path);
         let info_path = Topic::get_info_path(&path);
-        
-        let topic = Topic::create(1, topics_path, name, partitions_count, config);
+
+        let topic = Topic::create(1, name, partitions_count, topics_path, config);
 
         assert_eq!(topic.id, id);
         assert_eq!(topic.path, path);

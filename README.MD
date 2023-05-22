@@ -103,8 +103,9 @@ Server restart
 - [x] Define custom conventions such as error types, statuses etc.
 - [x] Make use of logging and observability crates
 - [x] Create the benchmarking app to test client/server performance
-- [ ] Implement unit tests
-- [ ] Implement integration and end-to-end tests
+- [x] Implement unit tests
+- [x] Implement integration tests
+- [ ] Implement end-to-end tests
 
 #### Server
 

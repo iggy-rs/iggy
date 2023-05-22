@@ -72,7 +72,7 @@ impl Topic {
         Ok(())
     }
 
-    pub async fn persist(&mut self) -> Result<(), Error> {
+    pub async fn persist(&self) -> Result<(), Error> {
         if Path::new(&self.path).exists() {
             return Err(Error::TopicAlreadyExists(self.id));
         }
@@ -107,11 +107,7 @@ impl Topic {
             self.partitions.len(),
             &self.id
         );
-        for partition in self.partitions.iter_mut() {
-            if std::fs::create_dir(&partition.1.path).is_err() {
-                return Err(Error::CannotCreatePartitionDirectory(*partition.0, self.id));
-            }
-
+        for partition in self.partitions.iter() {
             partition.1.persist().await?;
             info!(
                 "Partition with ID {} for topic with ID: {} was saved, path: {}",

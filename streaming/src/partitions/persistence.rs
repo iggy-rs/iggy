@@ -5,8 +5,11 @@ use tokio::fs;
 use tracing::{error, info};
 
 impl Partition {
-    pub async fn persist(&mut self) -> Result<(), Error> {
+    pub async fn persist(&self) -> Result<(), Error> {
         info!("Saving partition with start ID: {}", self.id);
+        if std::fs::create_dir(&self.path).is_err() {
+            return Err(Error::CannotCreatePartitionDirectory(self.id));
+        }
 
         if std::fs::create_dir(&self.offsets_path).is_err() {
             error!(
@@ -24,7 +27,7 @@ impl Partition {
             return Err(Error::CannotCreatePartition);
         }
 
-        for segment in self.get_segments_mut() {
+        for segment in self.get_segments() {
             segment.persist().await?;
         }
 
@@ -57,8 +60,12 @@ impl Partition {
                 .replace(&format!(".{}", LOG_EXTENSION), "");
 
             let start_offset = log_file_name.parse::<u64>().unwrap();
-            let mut segment =
-                Segment::create(self.id, &self.path, start_offset, self.config.segment.clone());
+            let mut segment = Segment::create(
+                self.id,
+                start_offset,
+                &self.path,
+                self.config.segment.clone(),
+            );
             segment.load().await?;
             if !segment.is_closed {
                 segment.unsaved_messages = Some(Vec::new())
@@ -103,6 +110,15 @@ impl Partition {
             self.id, self.current_offset
         );
 
+        Ok(())
+    }
+
+    pub async fn delete(&self) -> Result<(), Error> {
+        info!("Deleting partition with ID: {}...", &self.id);
+        if fs::remove_dir_all(&self.path).await.is_err() {
+            return Err(Error::CannotDeletePartitionDirectory(self.id));
+        }
+        info!("Deleted partition with ID: {}.", &self.id);
         Ok(())
     }
 }

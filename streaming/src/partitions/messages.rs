@@ -338,10 +338,10 @@ impl Partition {
             "Current segment is full, creating new segment for partition with ID: {}",
             self.id
         );
-        let mut new_segment = Segment::create(
+        let new_segment = Segment::create(
             self.id,
-            &self.path,
             start_offset,
+            &self.path,
             self.config.segment.clone(),
         );
         new_segment.persist().await?;

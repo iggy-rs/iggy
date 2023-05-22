@@ -36,15 +36,15 @@ impl Stream {
             topics: HashMap::new(),
         }
     }
-    
+
     fn get_path(id: u32, streams_path: &str) -> String {
         format!("{}/{}", streams_path, id)
     }
-    
+
     fn get_info_path(path: &str) -> String {
         format!("{}/{}", path, STREAM_INFO)
     }
-    
+
     fn get_topics_path(path: &str, topics_path: &str) -> String {
         format!("{}/{}", path, topics_path)
     }
@@ -63,9 +63,9 @@ mod tests {
         let path = Stream::get_path(id, streams_path);
         let info_path = Stream::get_info_path(&path);
         let topics_path = Stream::get_topics_path(&path, &config.topic.path);
-        
+
         let stream = Stream::create(id, name, streams_path, config);
-        
+
         assert_eq!(stream.id, id);
         assert_eq!(stream.name, name);
         assert_eq!(stream.path, path);

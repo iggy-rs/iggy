@@ -15,22 +15,22 @@ pub struct Segment {
     pub start_offset: u64,
     pub end_offset: u64,
     pub current_offset: u64,
-    pub(crate) index_path: String,
-    pub(crate) log_path: String,
-    pub(crate) time_index_path: String,
+    pub index_path: String,
+    pub log_path: String,
+    pub time_index_path: String,
+    pub current_size_bytes: u32,
+    pub is_closed: bool,
     pub(crate) unsaved_messages: Option<Vec<Arc<Message>>>,
-    pub(crate) current_size_bytes: u32,
     pub(crate) config: Arc<SegmentConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,
-    pub(crate) is_closed: bool,
 }
 
 impl Segment {
     pub fn create(
         partition_id: u32,
-        partition_path: &str,
         start_offset: u64,
+        partition_path: &str,
         config: Arc<SegmentConfig>,
     ) -> Segment {
         let path = Self::get_path(partition_path, start_offset);
@@ -61,11 +61,11 @@ impl Segment {
     pub fn is_full(&self) -> bool {
         self.current_size_bytes >= self.config.size_bytes
     }
-    
+
     fn get_path(partition_path: &str, start_offset: u64) -> String {
         format!("{}/{:0>20}", partition_path, start_offset)
     }
-    
+
     fn get_log_path(path: &str) -> String {
         format!("{}.{}", path, LOG_EXTENSION)
     }
@@ -93,8 +93,8 @@ mod tests {
         let log_path = Segment::get_log_path(&path);
         let index_path = Segment::get_index_path(&path);
         let time_index_path = Segment::get_time_index_path(&path);
-        
-        let segment = Segment::create(partition_id, partition_path, start_offset, config);
+
+        let segment = Segment::create(partition_id, start_offset, partition_path, config);
 
         assert_eq!(segment.partition_id, partition_id);
         assert_eq!(segment.start_offset, start_offset);
@@ -120,8 +120,8 @@ mod tests {
             cache_indexes: false,
             ..SegmentConfig::default()
         });
-        
-        let segment = Segment::create(partition_id, partition_path, start_offset, config);
+
+        let segment = Segment::create(partition_id, start_offset, partition_path, config);
 
         assert!(segment.indexes.is_none());
     }
@@ -135,8 +135,8 @@ mod tests {
             cache_time_indexes: false,
             ..SegmentConfig::default()
         });
-        
-        let segment = Segment::create(partition_id, partition_path, start_offset, config);
+
+        let segment = Segment::create(partition_id, start_offset, partition_path, config);
 
         assert!(segment.time_indexes.is_none());
     }

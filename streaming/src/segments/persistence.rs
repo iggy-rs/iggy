@@ -66,7 +66,7 @@ impl Segment {
         Ok(())
     }
 
-    pub async fn persist(&mut self) -> Result<(), Error> {
+    pub async fn persist(&self) -> Result<(), Error> {
         info!("Saving segment with start offset: {}", self.start_offset);
         if File::create(&self.log_path).await.is_err() {
             return Err(Error::CannotCreatePartitionSegmentLogFile(

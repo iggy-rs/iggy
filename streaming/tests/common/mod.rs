@@ -1,14 +1,14 @@
-use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
-use tokio::fs;
+use std::sync::Arc;
 use streaming::config::SystemConfig;
+use tokio::fs;
 
 static DIRECTORY_ID: AtomicUsize = AtomicUsize::new(1);
 
 pub struct TestSetup {
     pub path: String,
-    pub config: Arc<SystemConfig>
+    pub config: Arc<SystemConfig>,
 }
 
 impl TestSetup {
@@ -19,10 +19,7 @@ impl TestSetup {
             path: format!("{}/local_data", path),
             ..Default::default()
         });
-        let test_setup = TestSetup {
-            path,
-            config
-        };
+        let test_setup = TestSetup { path, config };
 
         fs::create_dir(&test_setup.path).await.unwrap();
 

@@ -22,6 +22,10 @@ pub struct Partition {
 }
 
 impl Partition {
+    pub fn empty(id: u32, topic_path: &str, config: Arc<PartitionConfig>) -> Partition {
+        Partition::create(id, topic_path, false, config)
+    }
+
     pub fn create(
         id: u32,
         topic_path: &str,
@@ -52,15 +56,11 @@ impl Partition {
         };
 
         if with_segment {
-            let segment = Segment::create(id, &partition.path, 0, partition.config.segment.clone());
+            let segment = Segment::create(id, 0, &partition.path, partition.config.segment.clone());
             partition.segments.push(segment);
         }
 
         partition
-    }
-
-    pub fn empty(config: Arc<PartitionConfig>) -> Partition {
-        Partition::create(0, "", false, config)
     }
 
     pub fn get_segments(&self) -> &Vec<Segment> {
@@ -99,7 +99,7 @@ mod tests {
         let offsets_path = Partition::get_offsets_path(&path);
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let messages_buffer_capacity = config.messages_buffer as usize;
-        
+
         let partition = Partition::create(id, topic_path, with_segment, config);
 
         assert_eq!(partition.id, id);

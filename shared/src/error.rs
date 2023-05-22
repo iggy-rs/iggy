@@ -87,8 +87,12 @@ pub enum Error {
     CannotAppendMessage,
     #[error("Cannot create partition")]
     CannotCreatePartition,
-    #[error("Failed to create directory for partition with ID: {0} for topic with ID: {1}")]
-    CannotCreatePartitionDirectory(u32, u32),
+    #[error("Failed to create directory for partition with ID: {0}")]
+    CannotCreatePartitionDirectory(u32),
+    #[error("Failed to delete partition with ID: {0}")]
+    CannotDeletePartition(u32),
+    #[error("Failed to delete partition directory with ID: {0}")]
+    CannotDeletePartitionDirectory(u32),
     #[error("Failed to create partition segment log file for path: {0}.")]
     CannotCreatePartitionSegmentLogFile(String),
     #[error("Failed to create partition segment index file for path: {0}.")]
@@ -170,7 +174,7 @@ impl Error {
             Error::LogFileNotFound => 31,
             Error::CannotAppendMessage => 32,
             Error::CannotCreatePartition => 33,
-            Error::CannotCreatePartitionDirectory(_, _) => 34,
+            Error::CannotCreatePartitionDirectory(_) => 34,
             Error::CannotCreatePartitionSegmentLogFile(_) => 35,
             Error::CannotCreatePartitionSegmentIndexFile(_) => 36,
             Error::CannotCreatePartitionSegmentTimeIndexFile(_) => 37,
@@ -198,6 +202,8 @@ impl Error {
             Error::WriteError(_) => 59,
             Error::InvalidOffset(_) => 60,
             Error::CannotReadConsumerOffsets(_) => 61,
+            Error::CannotDeletePartition(_) => 62,
+            Error::CannotDeletePartitionDirectory(_) => 63,
         }
     }
 }

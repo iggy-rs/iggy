@@ -10,7 +10,7 @@ impl Stream {
         name: &str,
         partitions_count: u32,
     ) -> Result<(), Error> {
-        let mut topic = Topic::create(
+        let topic = Topic::create(
             id,
             name,
             partitions_count,

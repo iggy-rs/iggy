@@ -22,7 +22,7 @@ async fn main() -> Result<(), ClientError> {
         server_name: args.server_name,
         response_buffer_size: args.response_buffer_size,
     })?;
-    let mut client = client.connect().await?;
+    let client = client.connect().await?;
     let stdin = io::stdin();
     let mut user_input = String::new();
 
@@ -37,7 +37,7 @@ async fn main() -> Result<(), ClientError> {
             user_input.pop();
         }
 
-        if let Err(error) = command::handle(&user_input, &mut client).await {
+        if let Err(error) = command::handle(&user_input, &client).await {
             error!("Error: {:?}", error);
             continue;
         }

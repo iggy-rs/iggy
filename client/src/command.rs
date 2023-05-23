@@ -12,6 +12,7 @@ use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::streams::get_streams::GetStreams;
+use shared::system::kill::Kill;
 use shared::system::ping::Ping;
 use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
@@ -19,11 +20,15 @@ use shared::topics::get_topics::GetTopics;
 use std::str::FromStr;
 use tracing::info;
 
-pub async fn handle(input: &str, client: &mut ConnectedClient) -> Result<(), ClientError> {
+pub async fn handle(input: &str, client: &ConnectedClient) -> Result<(), ClientError> {
     let (command, input) = input.split_once('|').unwrap_or((input, ""));
     let command = Command::from_str(command).map_err(|_| ClientError::InvalidCommand)?;
     info!("Handling '{}' command...", command);
     match command {
+        Command::Kill => {
+            let command = Kill::from_str(input)?;
+            kill_handler::handle(command, client).await
+        }
         Command::Ping => {
             let command = Ping::from_str(input)?;
             ping_handler::handle(command, client).await

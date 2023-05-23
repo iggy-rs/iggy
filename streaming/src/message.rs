@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Message {
     pub offset: u64,
     pub timestamp: u64,
@@ -7,8 +7,8 @@ pub struct Message {
 }
 
 impl Message {
-    pub fn empty(payload: Vec<u8>) -> Self {
-        Message::create(0, 0, payload)
+    pub fn empty(timestamp: u64, payload: Vec<u8>) -> Self {
+        Message::create(0, timestamp, payload)
     }
 
     pub fn create(offset: u64, timestamp: u64, payload: Vec<u8>) -> Self {

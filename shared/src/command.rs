@@ -3,6 +3,7 @@ use crate::error::Error;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+pub const KILL: &str = "kill";
 pub const PING: &str = "ping";
 pub const SEND_MESSAGES: &str = "message.send";
 pub const POLL_MESSAGES: &str = "message.poll";
@@ -16,6 +17,7 @@ pub const DELETE_TOPIC: &str = "topic.delete";
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
+    Kill,
     Ping,
     SendMessages,
     PollMessages,
@@ -32,6 +34,7 @@ impl BytesSerializable for Command {
     type Type = Command;
     fn as_bytes(&self) -> Vec<u8> {
         match self {
+            Command::Kill => [0].to_vec(),
             Command::Ping => [1].to_vec(),
             Command::SendMessages => [2].to_vec(),
             Command::PollMessages => [3].to_vec(),
@@ -47,6 +50,7 @@ impl BytesSerializable for Command {
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         match bytes {
+            [0] => Ok(Command::Kill),
             [1] => Ok(Command::Ping),
             [2] => Ok(Command::SendMessages),
             [3] => Ok(Command::PollMessages),
@@ -66,6 +70,7 @@ impl FromStr for Command {
     type Err = ();
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
+            KILL => Ok(Command::Kill),
             PING => Ok(Command::Ping),
             SEND_MESSAGES => Ok(Command::SendMessages),
             POLL_MESSAGES => Ok(Command::PollMessages),
@@ -84,6 +89,7 @@ impl FromStr for Command {
 impl Display for Command {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            Command::Kill => write!(formatter, "{}", KILL),
             Command::Ping => write!(formatter, "{}", PING),
             Command::GetStreams => write!(formatter, "{}", GET_STREAMS),
             Command::CreateStream => write!(formatter, "{}", CREATE_STREAM),
@@ -104,6 +110,7 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes() {
+        assert_eq!(Command::Kill.as_bytes(), [0]);
         assert_eq!(Command::Ping.as_bytes(), [1]);
         assert_eq!(Command::SendMessages.as_bytes(), [2]);
         assert_eq!(Command::PollMessages.as_bytes(), [3]);
@@ -118,6 +125,7 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
+        assert_eq!(Command::from_bytes(&[0]).unwrap(), Command::Kill);
         assert_eq!(Command::from_bytes(&[1]).unwrap(), Command::Ping);
         assert_eq!(Command::from_bytes(&[2]).unwrap(), Command::SendMessages);
         assert_eq!(Command::from_bytes(&[3]).unwrap(), Command::PollMessages);
@@ -132,6 +140,7 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
+        assert_eq!(Command::from_str(KILL).unwrap(), Command::Kill);
         assert_eq!(Command::from_str(PING).unwrap(), Command::Ping);
         assert_eq!(
             Command::from_str(SEND_MESSAGES).unwrap(),

@@ -13,6 +13,7 @@ use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::streams::get_streams::GetStreams;
+use shared::system::kill::Kill;
 use shared::system::ping::Ping;
 use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
@@ -77,6 +78,10 @@ async fn try_handle(
 ) -> Result<(), Error> {
     trace!("Handling command '{}'...", command);
     match command {
+        Command::Kill => {
+            let command = Kill::from_bytes(bytes)?;
+            kill_handler::handle(command, sender).await
+        }
         Command::Ping => {
             let command = Ping::from_bytes(bytes)?;
             ping_handler::handle(command, sender).await

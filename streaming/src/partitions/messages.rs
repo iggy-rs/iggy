@@ -1,7 +1,6 @@
 use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::Segment;
-use crate::utils::timestamp;
 use ringbuffer::{RingBuffer, RingBufferWrite};
 use shared::error::Error;
 use std::sync::Arc;
@@ -296,7 +295,6 @@ impl Partition {
             );
 
             message.offset = self.current_offset;
-            message.timestamp = timestamp::get();
             let message = Arc::new(message);
             segment.append_message(message.clone()).await?;
             if self.messages.is_some() {

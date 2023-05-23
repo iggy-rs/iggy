@@ -4,6 +4,7 @@ use shared::error::Error;
 use shared::messages::send_messages::SendMessages;
 use streaming::message::Message;
 use streaming::system::System;
+use streaming::utils::timestamp;
 use tracing::trace;
 
 pub async fn handle(
@@ -14,7 +15,8 @@ pub async fn handle(
     trace!("{}", command);
     let mut messages = Vec::with_capacity(command.messages_count as usize);
     for message in command.messages {
-        messages.push(Message::create(0, 0, message.payload));
+        let timestamp = timestamp::get();
+        messages.push(Message::empty(timestamp, message.payload));
     }
 
     system

@@ -23,3 +23,6 @@ ctrlc = "3.2.5"
 rcgen = "0.10.0"
 quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
+
+[features]
+allow_kill_command = []

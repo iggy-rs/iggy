@@ -134,7 +134,6 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let is_ok = true;
         let consumer_id = 1u32;
         let stream_id = 2u32;
         let topic_id = 3u32;
@@ -150,7 +149,7 @@ mod tests {
         ]
         .concat();
         let command = StoreOffset::from_bytes(&bytes);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.consumer_id, consumer_id);
@@ -162,7 +161,6 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let is_ok = true;
         let consumer_id = 1u32;
         let stream_id = 2u32;
         let topic_id = 3u32;
@@ -173,7 +171,7 @@ mod tests {
             consumer_id, stream_id, topic_id, partition_id, offset
         );
         let command = StoreOffset::from_str(&input);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.consumer_id, consumer_id);

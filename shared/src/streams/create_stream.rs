@@ -96,12 +96,11 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let is_ok = true;
         let stream_id = 1u32;
         let name = "test".to_string();
         let bytes = [&stream_id.to_le_bytes(), name.as_bytes()].concat();
         let command = CreateStream::from_bytes(&bytes);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
@@ -110,12 +109,11 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let is_ok = true;
         let stream_id = 1u32;
         let name = "test".to_string();
         let input = format!("{}|{}", stream_id, name);
         let command = CreateStream::from_str(&input);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);

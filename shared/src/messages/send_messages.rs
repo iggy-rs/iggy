@@ -10,7 +10,7 @@ pub const MAX_PAYLOAD_SIZE: usize = 1024 * 1024 * 1024;
 pub struct SendMessages {
     pub stream_id: u32,
     pub topic_id: u32,
-    pub key_kind: u8,
+    pub key_kind: KeyKind,
     pub key_value: u32,
     pub messages_count: u32,
     pub messages: Vec<Message>,
@@ -20,6 +20,40 @@ pub struct SendMessages {
 pub struct Message {
     pub length: u32,
     pub payload: Vec<u8>,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum KeyKind {
+    PartitionId,
+    CalculatePartitionId,
+}
+
+impl KeyKind {
+    pub fn as_code(&self) -> u8 {
+        match self {
+            KeyKind::PartitionId => 0,
+            KeyKind::CalculatePartitionId => 1,
+        }
+    }
+
+    pub fn from_code(code: u8) -> Result<Self, Error> {
+        match code {
+            0 => Ok(KeyKind::PartitionId),
+            1 => Ok(KeyKind::CalculatePartitionId),
+            _ => Err(Error::InvalidCommand),
+        }
+    }
+}
+
+impl FromStr for KeyKind {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        match input {
+            "p" | "partition_id" => Ok(KeyKind::PartitionId),
+            "c" | "calculate_partition_id" => Ok(KeyKind::CalculatePartitionId),
+            _ => Err(Error::InvalidCommand),
+        }
+    }
 }
 
 impl Message {
@@ -79,7 +113,8 @@ impl FromStr for SendMessages {
             return Err(Error::InvalidTopicId);
         }
 
-        let key_kind = parts[2].parse::<u8>()?;
+        let key_kind = parts[2];
+        let key_kind = KeyKind::from_str(key_kind)?;
         let key_value = parts[3].parse::<u32>()?;
         let payload = parts[4].as_bytes().to_vec();
         if payload.len() > MAX_PAYLOAD_SIZE {
@@ -114,7 +149,7 @@ impl BytesSerializable for SendMessages {
         let mut bytes = Vec::with_capacity(17 + messages_size as usize);
         bytes.extend(self.stream_id.to_le_bytes());
         bytes.extend(self.topic_id.to_le_bytes());
-        bytes.extend(self.key_kind.to_le_bytes());
+        bytes.extend(self.key_kind.as_code().to_le_bytes());
         bytes.extend(self.key_value.to_le_bytes());
         bytes.extend(self.messages_count.to_le_bytes());
         for message in &self.messages {
@@ -140,7 +175,7 @@ impl BytesSerializable for SendMessages {
             return Err(Error::InvalidTopicId);
         }
 
-        let key_kind = bytes[8];
+        let key_kind = KeyKind::from_code(bytes[8])?;
         let key_value = u32::from_le_bytes(bytes[9..13].try_into()?);
         let messages_count = u32::from_le_bytes(bytes[13..17].try_into()?);
         let messages_payloads = &bytes[17..];
@@ -182,6 +217,15 @@ impl Display for SendMessages {
     }
 }
 
+impl Display for KeyKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KeyKind::PartitionId => write!(f, "partition_id"),
+            KeyKind::CalculatePartitionId => write!(f, "calculate_parition_id"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -196,7 +240,7 @@ mod tests {
         let command = SendMessages {
             stream_id: 1,
             topic_id: 2,
-            key_kind: 3,
+            key_kind: KeyKind::PartitionId,
             key_value: 4,
             messages_count: messages.len() as u32,
             messages,
@@ -205,7 +249,7 @@ mod tests {
         let bytes = command.as_bytes();
         let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
         let topic_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
-        let key_kind = bytes[8];
+        let key_kind = KeyKind::from_code(bytes[8]).unwrap();
         let key_value = u32::from_le_bytes(bytes[9..13].try_into().unwrap());
         let messages_count = u32::from_le_bytes(bytes[13..17].try_into().unwrap());
         let messages = &bytes[17..];
@@ -227,10 +271,9 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let is_ok = true;
         let stream_id = 1u32;
         let topic_id = 2u32;
-        let key_kind = 3u8;
+        let key_kind = KeyKind::PartitionId;
         let key_value = 4u32;
         let messages_count = 3u32;
 
@@ -246,13 +289,13 @@ mod tests {
 
         let mut bytes: Vec<u8> = [stream_id.to_le_bytes(), topic_id.to_le_bytes()].concat();
 
-        bytes.extend(key_kind.to_le_bytes());
+        bytes.extend(key_kind.as_code().to_le_bytes());
         bytes.extend(key_value.to_le_bytes());
         bytes.extend(messages_count.to_le_bytes());
         bytes.extend(messages);
 
         let command = SendMessages::from_bytes(&bytes);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let messages_payloads = &bytes[17..];
         let mut position = 0;
@@ -280,10 +323,9 @@ mod tests {
     // For now, we only support a single payload.
     #[test]
     fn should_be_read_from_string() {
-        let is_ok = true;
         let stream_id = 1u32;
         let topic_id = 2u32;
-        let key_kind = 3u8;
+        let key_kind = KeyKind::PartitionId;
         let key_value = 4u32;
         let messages_count = 1u32;
         let payload = "hello";
@@ -293,7 +335,7 @@ mod tests {
             stream_id, topic_id, key_kind, key_value, payload
         );
         let command = SendMessages::from_str(&input);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         let message = &command.messages[0];

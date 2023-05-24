@@ -1,6 +1,8 @@
 use crate::message::Message;
 use crate::topics::topic::Topic;
 use shared::error::Error;
+use shared::messages::poll_messages::Kind;
+use shared::messages::send_messages::KeyKind;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -10,7 +12,7 @@ impl Topic {
         &self,
         consumer_id: u32,
         partition_id: u32,
-        kind: u8,
+        kind: Kind,
         value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
@@ -21,25 +23,23 @@ impl Topic {
 
         let partition = partition.unwrap();
         match kind {
-            0 => partition.get_messages_by_offset(value, count).await,
-            1 => partition.get_messages_by_timestamp(value, count).await,
-            2 => partition.get_first_messages(count).await,
-            3 => partition.get_last_messages(count).await,
-            4 => partition.get_next_messages(consumer_id, count).await,
-            _ => Err(Error::InvalidCommand),
+            Kind::Offset => partition.get_messages_by_offset(value, count).await,
+            Kind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
+            Kind::First => partition.get_first_messages(count).await,
+            Kind::Last => partition.get_last_messages(count).await,
+            Kind::Next => partition.get_next_messages(consumer_id, count).await,
         }
     }
 
     pub async fn append_messages(
         &mut self,
-        key_kind: u8,
+        key_kind: KeyKind,
         key_value: u32,
         messages: Vec<Message>,
     ) -> Result<(), Error> {
         let partition_id = match key_kind {
-            0 => key_value,
-            1 => self.calculate_partition_id(key_value),
-            _ => return Err(Error::InvalidCommand),
+            KeyKind::PartitionId => key_value,
+            KeyKind::CalculatePartitionId => self.calculate_partition_id(key_value),
         };
 
         self.append_messages_to_partition(partition_id, messages)

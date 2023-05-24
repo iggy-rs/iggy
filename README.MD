@@ -105,7 +105,8 @@ Server restart
 - [x] Create the benchmarking app to test client/server performance
 - [x] Implement unit tests
 - [x] Implement integration tests
-- [ ] Implement end-to-end tests
+- [x] Implement end-to-end tests
+- [ ] Make use of `async trait` once available in stable Rust
 
 #### Server
 
@@ -148,7 +149,7 @@ Server restart
 - [x] Implement `Partition` consisting of multiple `Segments`
 - [x] Store `Stream → Topic → Partition → Segment` structures on the disk in the separate directories
 - [x] Store messages on disk as append-only log using binary format
-- [x] Store messages index + timeindex on disk for fast access
+- [x] Store messages indexes and time indexes on disk for fast access
 - [x] Automatically create new partition segments when the current one is full
 - [x] Allow clients to create/read/delete topics
 - [x] Allow clients to send messages to the specific stream, topic and partition

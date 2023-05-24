@@ -11,7 +11,7 @@ pub struct PollMessages {
     pub stream_id: u32,
     pub topic_id: u32,
     pub partition_id: u32,
-    pub kind: u8,
+    pub kind: Kind,
     pub value: u64,
     pub count: u32,
     pub auto_commit: bool,
@@ -19,10 +19,56 @@ pub struct PollMessages {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum Kind {
+    Offset,
+    Timestamp,
+    First,
+    Last,
+    Next,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Format {
     None,
     Binary,
     String,
+}
+
+impl Kind {
+    pub fn as_code(&self) -> u8 {
+        match self {
+            Kind::Offset => 0,
+            Kind::Timestamp => 1,
+            Kind::First => 2,
+            Kind::Last => 3,
+            Kind::Next => 4,
+        }
+    }
+
+    pub fn from_code(code: u8) -> Result<Self, Error> {
+        match code {
+            0 => Ok(Kind::Offset),
+            1 => Ok(Kind::Timestamp),
+            2 => Ok(Kind::First),
+            3 => Ok(Kind::Last),
+            4 => Ok(Kind::Next),
+            _ => Err(Error::InvalidCommand),
+        }
+    }
+}
+
+impl FromStr for Kind {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        match input {
+            "o" | "offset" => Ok(Kind::Offset),
+            "t" | "timestamp" => Ok(Kind::Timestamp),
+            "f" | "first" => Ok(Kind::First),
+            "l" | "last" => Ok(Kind::Last),
+            "n" | "next" => Ok(Kind::Next),
+            _ => Err(Error::InvalidCommand),
+        }
+    }
 }
 
 impl FromStr for PollMessages {
@@ -45,15 +91,8 @@ impl FromStr for PollMessages {
         }
 
         let partition_id = parts[3].parse::<u32>()?;
-        let kind = match parts[4] {
-            "o" | "offset" => 0,
-            "t" | "timestamp" => 1,
-            "f" | "first" => 2,
-            "l" | "last" => 3,
-            "n" | "next" => 4,
-            _ => return Err(Error::InvalidCommand),
-        };
-
+        let kind = parts[4];
+        let kind = Kind::from_str(kind)?;
         let value = parts[5].parse::<u64>()?;
         let count = parts[6].parse::<u32>()?;
         let auto_commit = match parts.get(7) {
@@ -96,7 +135,7 @@ impl BytesSerializable for PollMessages {
         bytes.extend(self.stream_id.to_le_bytes());
         bytes.extend(self.topic_id.to_le_bytes());
         bytes.extend(self.partition_id.to_le_bytes());
-        bytes.extend(self.kind.to_le_bytes());
+        bytes.extend(self.kind.as_code().to_le_bytes());
         bytes.extend(self.value.to_le_bytes());
         bytes.extend(self.count.to_le_bytes());
         if self.auto_commit {
@@ -126,6 +165,7 @@ impl BytesSerializable for PollMessages {
 
         let partition_id = u32::from_le_bytes(bytes[12..16].try_into()?);
         let kind = bytes[16];
+        let kind = Kind::from_code(kind)?;
         let value = u64::from_le_bytes(bytes[17..25].try_into()?);
         let count = u32::from_le_bytes(bytes[25..29].try_into()?);
         let auto_commit = bytes[29];
@@ -159,6 +199,18 @@ impl Display for PollMessages {
     }
 }
 
+impl Display for Kind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Kind::Offset => write!(f, "offset"),
+            Kind::Timestamp => write!(f, "timestamp"),
+            Kind::First => write!(f, "first"),
+            Kind::Last => write!(f, "last"),
+            Kind::Next => write!(f, "next"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,7 +223,7 @@ mod tests {
             stream_id: 2,
             topic_id: 3,
             partition_id: 4,
-            kind: 1,
+            kind: Kind::Offset,
             value: 2,
             count: 3,
             auto_commit: true,
@@ -183,7 +235,7 @@ mod tests {
         let stream_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
         let topic_id = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
         let partition_id = u32::from_le_bytes(bytes[12..16].try_into().unwrap());
-        let kind = bytes[16];
+        let kind = Kind::from_code(bytes[16]).unwrap();
         let value = u64::from_le_bytes(bytes[17..25].try_into().unwrap());
         let count = u32::from_le_bytes(bytes[25..29].try_into().unwrap());
         let auto_commit = bytes[29];
@@ -206,12 +258,11 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let is_ok = true;
         let consumer_id = 1u32;
         let stream_id = 2u32;
         let topic_id = 3u32;
         let partition_id = 4u32;
-        let kind = 1u8;
+        let kind = Kind::Offset;
         let value = 2u64;
         let count = 3u32;
         let auto_commit = 1u8;
@@ -223,13 +274,13 @@ mod tests {
         ]
         .concat();
 
-        bytes.extend(kind.to_le_bytes());
+        bytes.extend(kind.as_code().to_le_bytes());
         bytes.extend(value.to_le_bytes());
         bytes.extend(count.to_le_bytes());
         bytes.extend(auto_commit.to_le_bytes());
 
         let command = PollMessages::from_bytes(&bytes);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let auto_commit = match auto_commit {
             0 => false,
@@ -250,13 +301,11 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let is_ok = true;
         let consumer_id = 1u32;
         let stream_id = 2u32;
         let topic_id = 3u32;
         let partition_id = 4u32;
-        let kind = 1u8;
-        let kind_str = "timestamp";
+        let kind = Kind::Timestamp;
         let value = 2u64;
         let count = 3u32;
         let auto_commit = 1u8;
@@ -264,10 +313,10 @@ mod tests {
 
         let input = format!(
             "{}|{}|{}|{}|{}|{}|{}|{}",
-            consumer_id, stream_id, topic_id, partition_id, kind_str, value, count, auto_commit_str
+            consumer_id, stream_id, topic_id, partition_id, kind, value, count, auto_commit_str
         );
         let command = PollMessages::from_str(&input);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let auto_commit = match auto_commit {
             0 => false,

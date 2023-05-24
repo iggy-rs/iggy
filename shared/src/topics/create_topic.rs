@@ -139,7 +139,6 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let is_ok = true;
         let stream_id = 1u32;
         let topic_id = 2u32;
         let partitions_count = 3u32;
@@ -152,7 +151,7 @@ mod tests {
         ]
         .concat();
         let command = CreateTopic::from_bytes(&bytes);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
@@ -163,14 +162,13 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let is_ok = true;
         let stream_id = 1u32;
         let topic_id = 2u32;
         let partitions_count = 3u32;
         let name = "test".to_string();
         let input = format!("{}|{}|{}|{}", stream_id, topic_id, partitions_count, name);
         let command = CreateTopic::from_str(&input);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);

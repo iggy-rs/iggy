@@ -73,11 +73,10 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let is_ok = true;
         let stream_id = 1u32;
         let bytes = stream_id.to_le_bytes();
         let command = DeleteStream::from_bytes(&bytes);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
@@ -85,11 +84,10 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let is_ok = true;
         let stream_id = 1u32;
         let input = format!("{}", stream_id);
         let command = DeleteStream::from_str(&input);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);

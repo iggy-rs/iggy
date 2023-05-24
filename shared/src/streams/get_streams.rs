@@ -54,33 +54,29 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_empty_bytes() {
-        let is_ok = true;
         let bytes: Vec<u8> = vec![];
         let command = GetStreams::from_bytes(&bytes);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
     }
 
     #[test]
     fn should_not_be_deserialized_from_empty_bytes() {
-        let is_err = true;
         let bytes: Vec<u8> = vec![0];
         let command = GetStreams::from_bytes(&bytes);
-        assert_eq!(command.is_err(), is_err);
+        assert!(command.is_err());
     }
 
     #[test]
     fn should_be_read_from_empty_string() {
-        let is_ok = true;
         let input = "";
         let command = GetStreams::from_str(input);
-        assert_eq!(command.is_ok(), is_ok);
+        assert!(command.is_ok());
     }
 
     #[test]
     fn should_not_be_read_from_non_empty_string() {
-        let is_err = true;
         let input = " ";
         let command = GetStreams::from_str(input);
-        assert_eq!(command.is_err(), is_err);
+        assert!(command.is_err());
     }
 }

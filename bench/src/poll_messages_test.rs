@@ -3,7 +3,7 @@ use crate::test_client::create_connected_client;
 use crate::test_result::TestResult;
 use sdk::client::ConnectedClient;
 use sdk::error::Error;
-use shared::messages::poll_messages::{Format, PollMessages};
+use shared::messages::poll_messages::{Format, Kind, PollMessages};
 use std::time::Duration;
 use tokio::task;
 use tokio::task::JoinHandle;
@@ -78,7 +78,7 @@ async fn execute_poll_messages(
         stream_id,
         topic_id,
         partition_id,
-        kind: 0,
+        kind: Kind::Offset,
         value: 0,
         count: messages_per_batch,
         auto_commit: false,

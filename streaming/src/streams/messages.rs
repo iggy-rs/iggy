@@ -1,6 +1,8 @@
 use crate::message::Message;
 use crate::streams::stream::Stream;
 use shared::error::Error;
+use shared::messages::poll_messages::Kind;
+use shared::messages::send_messages::KeyKind;
 use std::sync::Arc;
 
 impl Stream {
@@ -9,7 +11,7 @@ impl Stream {
         consumer_id: u32,
         topic_id: u32,
         partition_id: u32,
-        kind: u8,
+        kind: Kind,
         value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
@@ -27,7 +29,7 @@ impl Stream {
     pub async fn append_messages(
         &mut self,
         topic_id: u32,
-        key_kind: u8,
+        key_kind: KeyKind,
         key_value: u32,
         messages: Vec<Message>,
     ) -> Result<(), Error> {

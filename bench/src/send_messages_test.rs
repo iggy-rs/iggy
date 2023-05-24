@@ -3,7 +3,7 @@ use crate::test_client::create_connected_client;
 use crate::test_result::TestResult;
 use sdk::client::ConnectedClient;
 use sdk::error::Error;
-use shared::messages::send_messages::{Message, SendMessages};
+use shared::messages::send_messages::{KeyKind, Message, SendMessages};
 use shared::streams::create_stream::CreateStream;
 use shared::streams::get_streams::GetStreams;
 use shared::topics::create_topic::CreateTopic;
@@ -122,7 +122,7 @@ async fn execute_send_messages(
     let command = SendMessages {
         stream_id,
         topic_id,
-        key_kind: 0,
+        key_kind: KeyKind::PartitionId,
         key_value: partition_id,
         messages_count: messages_per_batch,
         messages,

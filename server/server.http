@@ -1,0 +1,20 @@
+@url = http://localhost:3000
+@stream_id = 1
+
+###
+GET {{url}}
+
+###
+GET {{url}}/streams
+
+###
+POST {{url}}/streams
+Content-Type: application/json
+
+{
+  "stream_id": {{stream_id}},
+  "name": "stream 1"
+}
+
+###
+DELETE {{url}}/streams/{{stream_id}}

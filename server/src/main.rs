@@ -1,19 +1,23 @@
 mod args;
-mod command;
 mod components;
-mod handlers;
-mod sender;
-mod server;
+mod http;
+mod quic;
 mod server_command;
 mod server_config;
 mod server_error;
 
 use crate::args::Args;
-use crate::server::*;
+use crate::components::{channel, message_saver, shutdown};
+use crate::http::http_server;
+use crate::quic::quic_server;
+use crate::server_command::ServerCommand;
 use crate::server_config::ServerConfig;
 use crate::server_error::ServerError;
 use anyhow::Result;
 use clap::Parser;
+use std::sync::Arc;
+use streaming::system::System;
+use tokio::sync::Mutex;
 
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
@@ -21,8 +25,30 @@ async fn main() -> Result<(), ServerError> {
     tracing_subscriber::fmt::init();
 
     let config = ServerConfig::load(&args.config)?;
-    let server = ServerSystem::init(config).await?;
-    server.start().await?;
+    let mut system = System::create(config.system.clone());
+    system.init().await?;
+    let system = Arc::new(Mutex::new(system));
+    let (sender, receiver) = flume::unbounded::<ServerCommand>();
+    message_saver::start(config.message_saver, sender.clone());
+    channel::start(system.clone(), receiver);
+    shutdown::handle(sender);
+
+    if config.http.enabled {
+        let system = system.clone();
+        let address = config.http.address.clone();
+        if config.quic.enabled {
+            tokio::spawn(async move {
+                http_server::start(address, system).await;
+            });
+        } else {
+            http_server::start(address, system).await;
+        }
+    }
+
+    if config.quic.enabled {
+        let address = config.quic.address.clone();
+        quic_server::start(address, system).await;
+    }
 
     Ok(())
 }

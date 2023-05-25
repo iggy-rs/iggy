@@ -21,7 +21,7 @@ impl TestServer {
         self.runtime.spawn(async {
             Command::new("cargo")
                 .kill_on_drop(true)
-                .args(&["r", "--manifest-path", "../server/Cargo.toml"])
+                .args(&["r", "--bin", "server"])
                 .spawn()
                 .expect("Could not start server")
                 .wait()

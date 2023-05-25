@@ -3,14 +3,13 @@ use std::array::TryFromSliceError;
 use std::net::AddrParseError;
 use std::str::Utf8Error;
 use thiserror::Error;
-use tokio::io;
 
 #[derive(Debug, Error)]
 pub enum Error {
-    #[error("IO error")]
-    IoError(#[from] io::Error),
     #[error("Empty response")]
     EmptyResponse,
+    #[error("Cannot create endpoint")]
+    CannotCreateEndpoint,
     #[error("Invalid response: {0}")]
     InvalidResponse(u8),
     #[error("Cannot parse integer")]

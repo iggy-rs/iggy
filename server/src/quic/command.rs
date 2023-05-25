@@ -1,9 +1,9 @@
-use crate::handlers::messages::*;
-use crate::handlers::offsets::store_offset_handler;
-use crate::handlers::streams::*;
-use crate::handlers::system::*;
-use crate::handlers::topics::*;
-use crate::sender::Sender;
+use crate::quic::handlers::messages::*;
+use crate::quic::handlers::offsets::*;
+use crate::quic::handlers::streams::*;
+use crate::quic::handlers::system::*;
+use crate::quic::handlers::topics::*;
+use crate::quic::sender::Sender;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::error::Error;

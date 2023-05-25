@@ -1,32 +1,31 @@
-use crate::server::Server;
-use crate::server_command::ServerCommand;
+use crate::quic::quic_command::QuicCommand;
 use crate::server_error::ServerError;
 use flume::Sender;
+use quinn::Endpoint;
 use std::sync::Arc;
 use tracing::{error, info};
 
-impl Server {
-    pub async fn start_listener(&self) -> Result<(), ServerError> {
-        while let Some(incoming_connection) = self.endpoint.accept().await {
-            info!(
-                "Incoming connection from client: {}",
-                incoming_connection.remote_address()
-            );
-            let future = handle_connection(incoming_connection, self.sender.clone());
-            tokio::spawn(async move {
-                if let Err(error) = future.await {
-                    error!("Connection has failed: {}", error.to_string())
-                }
-            });
-        }
-
-        Ok(())
+pub async fn start(endpoint: Endpoint, sender: Sender<QuicCommand>) -> Result<(), ServerError> {
+    let sender = Arc::new(sender);
+    while let Some(incoming_connection) = endpoint.accept().await {
+        info!(
+            "Incoming connection from client: {}",
+            incoming_connection.remote_address()
+        );
+        let future = handle_connection(incoming_connection, sender.clone());
+        tokio::spawn(async move {
+            if let Err(error) = future.await {
+                error!("Connection has failed: {}", error.to_string())
+            }
+        });
     }
+
+    Ok(())
 }
 
 async fn handle_connection(
     incoming_connection: quinn::Connecting,
-    sender: Arc<Sender<ServerCommand>>,
+    sender: Arc<Sender<QuicCommand>>,
 ) -> Result<(), ServerError> {
     let connection = incoming_connection.await?;
     async {
@@ -45,7 +44,10 @@ async fn handle_connection(
             };
 
             if let Err(error) = sender
-                .send_async(ServerCommand::HandleRequest(stream))
+                .send_async(QuicCommand {
+                    send: stream.0,
+                    recv: stream.1,
+                })
                 .await
             {
                 error!("Error when handling the request: {:?}", error);

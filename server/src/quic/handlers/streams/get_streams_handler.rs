@@ -1,4 +1,4 @@
-use crate::sender::Sender;
+use crate::quic::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::streams::get_streams::GetStreams;

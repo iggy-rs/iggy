@@ -1,4 +1,4 @@
-use crate::sender::Sender;
+use crate::quic::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::offsets::store_offset::StoreOffset;

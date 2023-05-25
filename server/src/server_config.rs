@@ -11,14 +11,26 @@ use tracing::{error, info};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerConfig {
-    pub name: String,
-    pub address: String,
-    pub watcher: WatcherConfig,
+    pub message_saver: MessageSaverConfig,
     pub system: Arc<SystemConfig>,
+    pub quic: QuicConfig,
+    pub http: HttpConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct WatcherConfig {
+pub struct QuicConfig {
+    pub enabled: bool,
+    pub address: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct HttpConfig {
+    pub enabled: bool,
+    pub address: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MessageSaverConfig {
     pub enabled: bool,
     pub interval: u64,
 }

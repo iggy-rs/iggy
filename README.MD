@@ -48,11 +48,11 @@ List available topics for stream `dev` (ID 1):
 
 Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 1:
 
-`message.send|1|1|0|1|hello world`
+`message.send|1|1|p|1|hello world`
 
 Send another message:
 
-`message.send|1|1|0|1|lorem ipsum`
+`message.send|1|1|p|1|lorem ipsum`
 
 Poll 2 messages by an arbitrary consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition with ID 1, starting with offset (`o`) 0, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload:
 
@@ -180,7 +180,8 @@ Server restart
 
 #### API
 
-- [ ] Implement REST API for the server using Axum
+- [x] Implement REST API for the server using Axum
+- [ ] Expose all the routes to achieve the same functionality as with the QUIC
 
 #### UI
 

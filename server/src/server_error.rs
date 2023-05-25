@@ -4,8 +4,6 @@ use tokio::io;
 
 #[derive(Debug, Error)]
 pub enum ServerError {
-    #[error("Cannot start server")]
-    CannotStartServer,
     #[error("IO error")]
     IoError(#[from] io::Error),
     #[error("Connection error")]

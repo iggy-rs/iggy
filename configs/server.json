@@ -1,7 +1,13 @@
 {
-  "name": "Iggy",
-  "address": "127.0.0.1:8080",
-  "watcher": {
+  "quic": {
+    "enabled": true,
+    "address": "127.0.0.1:8080"
+  },
+  "http": {
+    "enabled": true,
+    "address": "127.0.0.1:3000"
+  },
+  "message_saver": {
     "enabled": true,
     "interval": 1000
   },

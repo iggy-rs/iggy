@@ -4,8 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+sdk = { path = "../sdk" }
 shared = { path = "../shared" }
 streaming = { path = "../streaming" }
+axum = "0.6.18"
 bytes = "1.4.0"
 figment = { version = "0.10.8", features = ["json", "toml", "env"] }
 flume = "0.10.14"

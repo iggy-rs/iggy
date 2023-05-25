@@ -39,7 +39,13 @@ impl Client {
         let client_address = config.client_address.parse::<SocketAddr>()?;
         let server_address = config.server_address.parse::<SocketAddr>()?;
         let quic_config = configure();
-        let mut endpoint = Endpoint::client(client_address)?;
+        let endpoint = Endpoint::client(client_address);
+        if endpoint.is_err() {
+            error!("Cannot create client endpoint");
+            return Err(Error::CannotCreateEndpoint);
+        }
+
+        let mut endpoint = endpoint.unwrap();
         endpoint.set_default_client_config(quic_config);
 
         Ok(Self {

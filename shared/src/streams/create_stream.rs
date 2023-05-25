@@ -1,12 +1,13 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CREATE_STREAM;
 use crate::error::Error;
+use serde::Deserialize;
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
 pub const MAX_NAME_LENGTH: usize = 100;
 
-#[derive(Debug)]
+#[derive(Debug, Deserialize)]
 pub struct CreateStream {
     pub stream_id: u32,
     pub name: String,

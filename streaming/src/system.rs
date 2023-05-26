@@ -89,6 +89,10 @@ impl System {
     }
 
     pub async fn create_stream(&mut self, id: u32, name: &str) -> Result<(), Error> {
+        if self.streams.contains_key(&id) {
+            return Err(Error::StreamAlreadyExists(id));
+        }
+
         let stream = Stream::create(id, name, &self.streams_path, self.config.stream.clone());
         stream.persist().await?;
         self.streams.insert(stream.id, stream);

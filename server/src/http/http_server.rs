@@ -1,5 +1,5 @@
-use crate::http::streams::{create_stream, delete_stream, get_streams};
-use axum::routing::{delete, get};
+use crate::http::streams;
+use axum::routing::get;
 use axum::Router;
 use std::sync::Arc;
 use streaming::system::System;
@@ -12,9 +12,7 @@ pub async fn start(address: String, system: Arc<Mutex<System>>) {
     info!("Starting HTTP API on: {}", address);
     let app = Router::new()
         .route("/", get(|| async { NAME }))
-        .route("/streams", get(get_streams).post(create_stream))
-        .route("/streams/:id", delete(delete_stream))
-        .with_state(system);
+        .nest("/streams", streams::router(system.clone()));
 
     axum::Server::bind(&address.parse().unwrap())
         .serve(app.into_make_service())

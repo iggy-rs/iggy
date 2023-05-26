@@ -206,4 +206,79 @@ impl Error {
             Error::CannotDeletePartitionDirectory(_) => 63,
         }
     }
+
+    pub fn as_text_code(&self) -> &'static str {
+        match self {
+            Error::Error => "error",
+            Error::IoError(_) => "io_error",
+            Error::InvalidCommand => "invalid_command",
+            Error::InvalidFormat => "invalid_format",
+            Error::CannotCreateBaseDirectory => "cannot_create_base_directory",
+            Error::CannotCreateStreamsDirectory => "cannot_create_streams_directory",
+            Error::CannotCreateStreamDirectory(_) => "cannot_create_stream_directory",
+            Error::CannotCreateStreamInfo(_) => "cannot_create_stream_info",
+            Error::CannotUpdateStreamInfo(_) => "cannot_update_stream_info",
+            Error::CannotOpenStreamInfo(_) => "cannot_open_stream_info",
+            Error::CannotReadStreamInfo(_) => "cannot_read_stream_info",
+            Error::CannotCreateStream(_) => "cannot_create_stream",
+            Error::CannotDeleteStream(_) => "cannot_delete_stream",
+            Error::CannotDeleteStreamDirectory(_) => "cannot_delete_stream_directory",
+            Error::StreamNotFound(_) => "stream_not_found",
+            Error::StreamAlreadyExists(_) => "stream_already_exists",
+            Error::InvalidStreamName => "invalid_stream_name",
+            Error::CannotCreateTopicsDirectory => "cannot_create_topics_directory",
+            Error::CannotCreateTopicDirectory(_) => "cannot_create_topic_directory",
+            Error::CannotCreateTopicInfo(_) => "cannot_create_topic_info",
+            Error::CannotUpdateTopicInfo(_) => "cannot_update_topic_info",
+            Error::CannotOpenTopicInfo(_) => "cannot_open_topic_info",
+            Error::CannotReadTopicInfo(_) => "cannot_read_topic_info",
+            Error::CannotCreateTopic(_) => "cannot_create_topic",
+            Error::CannotDeleteTopic(_) => "cannot_delete_topic",
+            Error::CannotDeleteTopicDirectory(_) => "cannot_delete_topic_directory",
+            Error::CannotPollTopic => "cannot_poll_topic",
+            Error::TopicNotFound(_) => "topic_not_found",
+            Error::TopicAlreadyExists(_) => "topic_already_exists",
+            Error::InvalidTopicName => "invalid_topic_name",
+            Error::InvalidTopicPartitions => "invalid_topic_partitions",
+            Error::LogFileNotFound => "log_file_not_found",
+            Error::CannotAppendMessage => "cannot_append_message",
+            Error::CannotCreatePartition => "cannot_create_partition",
+            Error::CannotCreatePartitionDirectory(_) => "cannot_create_partition_directory",
+            Error::CannotCreatePartitionSegmentLogFile(_) => {
+                "cannot_create_partition_segment_log_file"
+            }
+            Error::CannotCreatePartitionSegmentIndexFile(_) => {
+                "cannot_create_partition_segment_index_file"
+            }
+            Error::CannotCreatePartitionSegmentTimeIndexFile(_) => {
+                "cannot_create_partition_segment_time_index_file"
+            }
+            Error::CannotOpenPartitionLogFile => "cannot_open_partition_log_file",
+            Error::CannotReadPartitions(_) => "cannot_read_partitions",
+            Error::PartitionNotFound(_) => "partition_not_found",
+            Error::InvalidMessagesCount => "invalid_messages_count",
+            Error::InvalidStreamId => "invalid_stream_id",
+            Error::InvalidTopicId => "invalid_topic_id",
+            Error::SegmentNotFound => "segment_not_found",
+            Error::SegmentClosed(_, _) => "segment_closed",
+            Error::InvalidSegmentSize(_) => "invalid_segment_size",
+            Error::CannotReadMessage => "cannot_read_message",
+            Error::CannotReadMessageTimestamp => "cannot_read_message_timestamp",
+            Error::CannotReadMessageLength => "cannot_read_message_length",
+            Error::CannotReadMessagePayload => "cannot_read_message_payload",
+            Error::CannotSaveMessagesToSegment => "cannot_save_messages_to_segment",
+            Error::CannotSaveIndexToSegment => "cannot_save_index_to_segment",
+            Error::CannotSaveTimeIndexToSegment => "cannot_save_time_index_to_segment",
+            Error::CannotParseUtf8(_) => "cannot_parse_utf8",
+            Error::CannotParseInt(_) => "cannot_parse_int",
+            Error::CannotParseSlice(_) => "cannot_parse_slice",
+            Error::TooBigPayload => "too_big_payload",
+            Error::TooManyMessages => "too_many_messages",
+            Error::WriteError(_) => "write_error",
+            Error::InvalidOffset(_) => "invalid_offset",
+            Error::CannotReadConsumerOffsets(_) => "cannot_read_consumer_offsets",
+            Error::CannotDeletePartition(_) => "cannot_delete_partition",
+            Error::CannotDeletePartitionDirectory(_) => "cannot_delete_partition_directory",
+        }
+    }
 }

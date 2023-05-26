@@ -10,6 +10,10 @@ impl Stream {
         name: &str,
         partitions_count: u32,
     ) -> Result<(), Error> {
+        if self.topics.contains_key(&id) {
+            return Err(Error::TopicAlreadyExists(id));
+        }
+
         let topic = Topic::create(
             id,
             name,

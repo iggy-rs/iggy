@@ -1,11 +1,19 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::PING;
 use crate::error::Error;
+use crate::validatable::Validatable;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Ping {}
+
+impl Validatable for Ping {
+    fn validate(&self) -> Result<(), Error> {
+        Ok(())
+    }
+}
 
 impl FromStr for Ping {
     type Err = Error;
@@ -14,7 +22,9 @@ impl FromStr for Ping {
             return Err(Error::InvalidCommand);
         }
 
-        Ok(Ping {})
+        let command = Ping {};
+        command.validate()?;
+        Ok(command)
     }
 }
 
@@ -30,7 +40,9 @@ impl BytesSerializable for Ping {
             return Err(Error::InvalidCommand);
         }
 
-        Ok(Ping {})
+        let command = Ping {};
+        command.validate()?;
+        Ok(command)
     }
 }
 

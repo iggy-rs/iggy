@@ -2,13 +2,13 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CREATE_STREAM;
 use crate::error::Error;
 use crate::validatable::Validatable;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
-pub const MAX_NAME_LENGTH: usize = 100;
+const MAX_NAME_LENGTH: usize = 1000;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CreateStream {
     pub stream_id: u32,
     pub name: String,
@@ -37,16 +37,10 @@ impl FromStr for CreateStream {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let name = parts[1].to_string();
-        if name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidStreamName);
-        }
-
-        Ok(CreateStream { stream_id, name })
+        let command = CreateStream { stream_id, name };
+        command.validate()?;
+        Ok(command)
     }
 }
 
@@ -66,16 +60,10 @@ impl BytesSerializable for CreateStream {
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let name = from_utf8(&bytes[4..])?.to_string();
-        if name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidStreamName);
-        }
-
-        Ok(CreateStream { stream_id, name })
+        let command = CreateStream { stream_id, name };
+        command.validate()?;
+        Ok(command)
     }
 }
 

@@ -1,11 +1,13 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::POLL_MESSAGES;
 use crate::error::Error;
+use crate::validatable::Validatable;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
 // TODO: Extend with consumer group.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PollMessages {
     pub consumer_id: u32,
     pub stream_id: u32,
@@ -18,7 +20,7 @@ pub struct PollMessages {
     pub format: Format,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum Kind {
     Offset,
     Timestamp,
@@ -27,11 +29,25 @@ pub enum Kind {
     Next,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum Format {
     None,
     Binary,
     String,
+}
+
+impl Validatable for PollMessages {
+    fn validate(&self) -> Result<(), Error> {
+        if self.stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
+        if self.topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
+        Ok(())
+    }
 }
 
 impl Kind {
@@ -81,15 +97,7 @@ impl FromStr for PollMessages {
 
         let consumer_id = parts[0].parse::<u32>()?;
         let stream_id = parts[1].parse::<u32>()?;
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = parts[2].parse::<u32>()?;
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let partition_id = parts[3].parse::<u32>()?;
         let kind = parts[4];
         let kind = Kind::from_str(kind)?;
@@ -112,7 +120,7 @@ impl FromStr for PollMessages {
             None => Format::Binary,
         };
 
-        Ok(PollMessages {
+        let command = PollMessages {
             consumer_id,
             stream_id,
             topic_id,
@@ -122,7 +130,9 @@ impl FromStr for PollMessages {
             count,
             auto_commit,
             format,
-        })
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 
@@ -154,15 +164,7 @@ impl BytesSerializable for PollMessages {
 
         let consumer_id = u32::from_le_bytes(bytes[..4].try_into()?);
         let stream_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = u32::from_le_bytes(bytes[8..12].try_into()?);
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let partition_id = u32::from_le_bytes(bytes[12..16].try_into()?);
         let kind = bytes[16];
         let kind = Kind::from_code(kind)?;
@@ -174,8 +176,9 @@ impl BytesSerializable for PollMessages {
             1 => true,
             _ => false,
         };
+        let format = Format::None;
 
-        Ok(PollMessages {
+        let command = PollMessages {
             consumer_id,
             stream_id,
             topic_id,
@@ -184,8 +187,10 @@ impl BytesSerializable for PollMessages {
             value,
             count,
             auto_commit,
-            format: Format::None,
-        })
+            format,
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 

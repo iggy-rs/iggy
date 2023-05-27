@@ -1,11 +1,19 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::GET_STREAMS;
 use crate::error::Error;
+use crate::validatable::Validatable;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GetStreams {}
+
+impl Validatable for GetStreams {
+    fn validate(&self) -> Result<(), Error> {
+        Ok(())
+    }
+}
 
 impl FromStr for GetStreams {
     type Err = Error;
@@ -14,6 +22,8 @@ impl FromStr for GetStreams {
             return Err(Error::InvalidCommand);
         }
 
+        let command = GetStreams {};
+        command.validate()?;
         Ok(GetStreams {})
     }
 }
@@ -30,6 +40,8 @@ impl BytesSerializable for GetStreams {
             return Err(Error::InvalidCommand);
         }
 
+        let command = GetStreams {};
+        command.validate()?;
         Ok(GetStreams {})
     }
 }

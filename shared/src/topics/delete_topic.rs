@@ -1,13 +1,29 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::DELETE_TOPIC;
 use crate::error::Error;
+use crate::validatable::Validatable;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteTopic {
     pub stream_id: u32,
     pub topic_id: u32,
+}
+
+impl Validatable for DeleteTopic {
+    fn validate(&self) -> Result<(), Error> {
+        if self.stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
+        if self.topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
+        Ok(())
+    }
 }
 
 impl FromStr for DeleteTopic {
@@ -19,19 +35,13 @@ impl FromStr for DeleteTopic {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = parts[1].parse::<u32>()?;
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
-        Ok(DeleteTopic {
+        let command = DeleteTopic {
             stream_id,
             topic_id,
-        })
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 
@@ -51,19 +61,13 @@ impl BytesSerializable for DeleteTopic {
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
-        Ok(DeleteTopic {
+        let command = DeleteTopic {
             stream_id,
             topic_id,
-        })
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 

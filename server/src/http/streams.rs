@@ -13,7 +13,7 @@ use tokio::sync::Mutex;
 pub fn router(system: Arc<Mutex<System>>) -> Router {
     Router::new()
         .route("/", get(get_streams).post(create_stream))
-        .route("/:id", delete(delete_stream))
+        .route("/:stream_id", delete(delete_stream))
         .with_state(system)
 }
 

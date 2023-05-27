@@ -1,18 +1,43 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CREATE_TOPIC;
 use crate::error::Error;
+use crate::validatable::Validatable;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
-pub const MAX_NAME_LENGTH: usize = 100;
-pub const MAX_PARTITIONS_COUNT: u32 = 100000;
+const MAX_NAME_LENGTH: usize = 1000;
+const MAX_PARTITIONS_COUNT: u32 = 100000;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CreateTopic {
+    #[serde(skip)]
     pub stream_id: u32,
     pub topic_id: u32,
     pub partitions_count: u32,
     pub name: String,
+}
+
+impl Validatable for CreateTopic {
+    fn validate(&self) -> Result<(), Error> {
+        if self.stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
+        if self.topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
+        if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
+            return Err(Error::InvalidTopicName);
+        }
+
+        if !(1..=MAX_PARTITIONS_COUNT).contains(&self.partitions_count) {
+            return Err(Error::InvalidTopicPartitions);
+        }
+
+        Ok(())
+    }
 }
 
 impl FromStr for CreateTopic {
@@ -24,32 +49,17 @@ impl FromStr for CreateTopic {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = parts[1].parse::<u32>()?;
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let partitions_count = parts[2].parse::<u32>()?;
         let name = parts[3].to_string();
-
-        if !(1..=MAX_PARTITIONS_COUNT).contains(&partitions_count) {
-            return Err(Error::InvalidTopicPartitions);
-        }
-
-        if name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidTopicName);
-        }
-
-        Ok(CreateTopic {
+        let command = CreateTopic {
             stream_id,
             topic_id,
             partitions_count,
             name,
-        })
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 
@@ -71,32 +81,17 @@ impl BytesSerializable for CreateTopic {
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        if stream_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let partitions_count = u32::from_le_bytes(bytes[8..12].try_into()?);
         let name = from_utf8(&bytes[12..])?.to_string();
-
-        if !(1..=MAX_PARTITIONS_COUNT).contains(&partitions_count) {
-            return Err(Error::InvalidTopicPartitions);
-        }
-
-        if name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidTopicName);
-        }
-
-        Ok(CreateTopic {
+        let command = CreateTopic {
             stream_id,
             topic_id,
             partitions_count,
             name,
-        })
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 

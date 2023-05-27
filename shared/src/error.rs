@@ -21,7 +21,7 @@ pub enum Error {
     CannotParseUtf8(#[from] Utf8Error),
     #[error("Invalid command")]
     InvalidCommand,
-    #[error("Invalid command")]
+    #[error("Invalid format")]
     InvalidFormat,
     #[error("Cannot create base directory")]
     CannotCreateBaseDirectory,
@@ -107,6 +107,8 @@ pub enum Error {
     PartitionNotFound(u32),
     #[error("Invalid messages count")]
     InvalidMessagesCount,
+    #[error("Invalid message payload length")]
+    InvalidMessagePayloadLength,
     #[error("Segment not found")]
     SegmentNotFound,
     #[error("Segment with start offset: {0} and partition ID: {1} is closed")]
@@ -204,6 +206,7 @@ impl Error {
             Error::CannotReadConsumerOffsets(_) => 61,
             Error::CannotDeletePartition(_) => 62,
             Error::CannotDeletePartitionDirectory(_) => 63,
+            Error::InvalidMessagePayloadLength => 64,
         }
     }
 
@@ -279,6 +282,7 @@ impl Error {
             Error::CannotReadConsumerOffsets(_) => "cannot_read_consumer_offsets",
             Error::CannotDeletePartition(_) => "cannot_delete_partition",
             Error::CannotDeletePartitionDirectory(_) => "cannot_delete_partition_directory",
+            Error::InvalidMessagePayloadLength => "invalid_message_payload_length",
         }
     }
 }

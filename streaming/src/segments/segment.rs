@@ -7,7 +7,7 @@ use std::sync::Arc;
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
-pub const MAX_SIZE_BYTES: u32 = 1_000_000_000;
+pub const MAX_SIZE_BYTES: u32 = 1024 * 1024 * 1024;
 
 #[derive(Debug)]
 pub struct Segment {

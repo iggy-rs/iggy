@@ -1,12 +1,24 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::DELETE_STREAM;
 use crate::error::Error;
+use crate::validatable::Validatable;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DeleteStream {
     pub stream_id: u32,
+}
+
+impl Validatable for DeleteStream {
+    fn validate(&self) -> Result<(), Error> {
+        if self.stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
+        Ok(())
+    }
 }
 
 impl FromStr for DeleteStream {
@@ -18,11 +30,9 @@ impl FromStr for DeleteStream {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
-        Ok(DeleteStream { stream_id })
+        let command = DeleteStream { stream_id };
+        command.validate()?;
+        Ok(command)
     }
 }
 
@@ -41,11 +51,9 @@ impl BytesSerializable for DeleteStream {
         }
 
         let stream_id = u32::from_le_bytes(bytes.try_into()?);
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
-        Ok(DeleteStream { stream_id })
+        let command = DeleteStream { stream_id };
+        command.validate()?;
+        Ok(command)
     }
 }
 

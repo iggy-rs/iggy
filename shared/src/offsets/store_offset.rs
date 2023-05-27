@@ -1,16 +1,32 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::STORE_OFFSET;
 use crate::error::Error;
+use crate::validatable::Validatable;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct StoreOffset {
     pub consumer_id: u32,
     pub stream_id: u32,
     pub topic_id: u32,
     pub partition_id: u32,
     pub offset: u64,
+}
+
+impl Validatable for StoreOffset {
+    fn validate(&self) -> Result<(), Error> {
+        if self.stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
+        if self.topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
+        Ok(())
+    }
 }
 
 impl FromStr for StoreOffset {
@@ -23,25 +39,18 @@ impl FromStr for StoreOffset {
 
         let consumer_id = parts[0].parse::<u32>()?;
         let stream_id = parts[1].parse::<u32>()?;
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = parts[2].parse::<u32>()?;
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let partition_id = parts[3].parse::<u32>()?;
         let offset = parts[4].parse::<u64>()?;
-
-        Ok(StoreOffset {
+        let command = StoreOffset {
             consumer_id,
             stream_id,
             topic_id,
             partition_id,
             offset,
-        })
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 
@@ -65,25 +74,18 @@ impl BytesSerializable for StoreOffset {
 
         let consumer_id = u32::from_le_bytes(bytes[..4].try_into()?);
         let stream_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = u32::from_le_bytes(bytes[8..12].try_into()?);
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let partition_id = u32::from_le_bytes(bytes[12..16].try_into()?);
         let offset = u64::from_le_bytes(bytes[16..24].try_into()?);
-
-        Ok(StoreOffset {
+        let command = StoreOffset {
             consumer_id,
             stream_id,
             topic_id,
             partition_id,
             offset,
-        })
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 

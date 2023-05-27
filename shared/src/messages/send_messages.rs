@@ -1,12 +1,14 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::SEND_MESSAGES;
 use crate::error::Error;
+use crate::validatable::Validatable;
+use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-pub const MAX_PAYLOAD_SIZE: usize = 1024 * 1024 * 1024;
+const MAX_PAYLOAD_SIZE: u32 = 10 * 1024 * 1024;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SendMessages {
     pub stream_id: u32,
     pub topic_id: u32,
@@ -16,16 +18,42 @@ pub struct SendMessages {
     pub messages: Vec<Message>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
     pub length: u32,
     pub payload: Vec<u8>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum KeyKind {
     PartitionId,
     CalculatePartitionId,
+}
+
+impl Validatable for SendMessages {
+    fn validate(&self) -> Result<(), Error> {
+        if self.stream_id == 0 {
+            return Err(Error::InvalidStreamId);
+        }
+
+        if self.topic_id == 0 {
+            return Err(Error::InvalidTopicId);
+        }
+
+        if self.messages_count == 0 {
+            return Err(Error::InvalidMessagesCount);
+        }
+        
+        let mut payload_size = 0;
+        for message in &self.messages {
+            payload_size += message.length;
+            if payload_size > MAX_PAYLOAD_SIZE {
+                return Err(Error::TooBigPayload);
+            }
+        }
+
+        Ok(())
+    }
 }
 
 impl KeyKind {
@@ -80,6 +108,9 @@ impl BytesSerializable for Message {
 
         let length = u32::from_le_bytes(bytes[..4].try_into()?);
         let payload = bytes[4..4 + length as usize].to_vec();
+        if payload.len() != length as usize {
+            return Err(Error::InvalidMessagePayloadLength);
+        }
 
         Ok(Message { length, payload })
     }
@@ -88,9 +119,15 @@ impl BytesSerializable for Message {
 impl FromStr for Message {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
+        let length = input.len() as u32;
+        let payload = input.as_bytes().to_vec();
+        if payload.len() != length as usize {
+            return Err(Error::InvalidMessagePayloadLength);
+        }
+        
         Ok(Message {
-            length: input.len() as u32,
-            payload: input.as_bytes().to_vec(),
+            length,
+            payload
         })
     }
 }
@@ -104,35 +141,29 @@ impl FromStr for SendMessages {
         }
 
         let stream_id = parts[0].parse::<u32>()?;
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = parts[1].parse::<u32>()?;
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let key_kind = parts[2];
         let key_kind = KeyKind::from_str(key_kind)?;
         let key_value = parts[3].parse::<u32>()?;
         let payload = parts[4].as_bytes().to_vec();
-        if payload.len() > MAX_PAYLOAD_SIZE {
-            return Err(Error::TooBigPayload);
-        }
 
         // For now, we only support a single payload.
-        Ok(SendMessages {
+        let messages_count = 1;
+        let message = Message {
+            length: payload.len() as u32,
+            payload,
+        };
+
+        let command = SendMessages {
             stream_id,
             topic_id,
             key_kind,
             key_value,
-            messages_count: 1,
-            messages: vec![Message {
-                length: payload.len() as u32,
-                payload,
-            }],
-        })
+            messages_count,
+            messages: vec![message],
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 
@@ -166,23 +197,11 @@ impl BytesSerializable for SendMessages {
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        if stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        if topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         let key_kind = KeyKind::from_code(bytes[8])?;
         let key_value = u32::from_le_bytes(bytes[9..13].try_into()?);
         let messages_count = u32::from_le_bytes(bytes[13..17].try_into()?);
         let messages_payloads = &bytes[17..];
-        if messages_payloads.len() > MAX_PAYLOAD_SIZE {
-            return Err(Error::TooBigPayload);
-        }
-
         let mut position = 0;
         let mut messages = Vec::with_capacity(messages_count as usize);
         while position < messages_payloads.len() {
@@ -191,14 +210,16 @@ impl BytesSerializable for SendMessages {
             messages.push(message);
         }
 
-        Ok(SendMessages {
+        let command = SendMessages {
             stream_id,
             topic_id,
             key_kind,
             key_value,
             messages_count,
             messages,
-        })
+        };
+        command.validate()?;
+        Ok(command)
     }
 }
 

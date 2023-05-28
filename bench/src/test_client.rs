@@ -1,5 +1,5 @@
-use sdk::client::{Client, ConnectedClient};
 use sdk::error::Error;
+use sdk::quic::client::{Client, ConnectedClient};
 use tracing::info;
 
 pub async fn create_connected_client(

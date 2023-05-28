@@ -1,8 +1,8 @@
 use crate::args::Args;
 use crate::test_client::create_connected_client;
 use crate::test_result::TestResult;
-use sdk::client::ConnectedClient;
 use sdk::error::Error;
+use sdk::quic::client::ConnectedClient;
 use shared::messages::send_messages::{KeyKind, Message, SendMessages};
 use shared::streams::create_stream::CreateStream;
 use shared::streams::get_streams::GetStreams;

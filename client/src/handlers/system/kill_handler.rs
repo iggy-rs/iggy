@@ -1,5 +1,5 @@
 use crate::client_error::ClientError;
-use sdk::client::ConnectedClient;
+use sdk::quic::client::ConnectedClient;
 use shared::system::kill::Kill;
 
 pub async fn handle(command: Kill, client: &ConnectedClient) -> Result<(), ClientError> {

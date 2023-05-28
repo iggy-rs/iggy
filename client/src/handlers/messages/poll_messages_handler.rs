@@ -1,5 +1,5 @@
 use crate::client_error::ClientError;
-use sdk::client::ConnectedClient;
+use sdk::quic::client::ConnectedClient;
 use shared::messages::poll_messages::{Format, PollMessages};
 use std::str::from_utf8;
 use tracing::info;

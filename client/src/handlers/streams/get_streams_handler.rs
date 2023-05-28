@@ -1,5 +1,5 @@
 use crate::client_error::ClientError;
-use sdk::client::ConnectedClient;
+use sdk::quic::client::ConnectedClient;
 use shared::streams::get_streams::GetStreams;
 use tracing::info;
 

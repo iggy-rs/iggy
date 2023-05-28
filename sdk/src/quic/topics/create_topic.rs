@@ -1,13 +1,13 @@
-use crate::client::ConnectedClient;
 use crate::error::Error;
+use crate::quic::client::ConnectedClient;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
-use shared::streams::delete_stream::DeleteStream;
+use shared::topics::create_topic::CreateTopic;
 
 impl ConnectedClient {
-    pub async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error> {
+    pub async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error> {
         self.send_with_response(
-            [Command::DeleteStream.as_bytes(), command.as_bytes()]
+            [Command::CreateTopic.as_bytes(), command.as_bytes()]
                 .concat()
                 .as_slice(),
         )

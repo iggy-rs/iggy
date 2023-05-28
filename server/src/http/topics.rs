@@ -1,14 +1,14 @@
 use crate::http::error::CustomError;
 use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use axum::routing::{delete, get};
 use axum::{Json, Router};
-use std::sync::Arc;
-use axum::http::StatusCode;
-use streaming::system::System;
-use tokio::sync::Mutex;
 use sdk::topic::Topic;
 use shared::topics::create_topic::CreateTopic;
 use shared::validatable::Validatable;
+use std::sync::Arc;
+use streaming::system::System;
+use tokio::sync::Mutex;
 
 pub fn router(system: Arc<Mutex<System>>) -> Router {
     Router::new()
@@ -19,7 +19,7 @@ pub fn router(system: Arc<Mutex<System>>) -> Router {
 
 async fn get_topics(
     State(system): State<Arc<Mutex<System>>>,
-    Path(stream_id): Path<u32>
+    Path(stream_id): Path<u32>,
 ) -> Result<Json<Vec<Topic>>, CustomError> {
     let topics = system
         .lock()

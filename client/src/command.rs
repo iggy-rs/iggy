@@ -4,7 +4,7 @@ use crate::handlers::offsets::store_offset_handler;
 use crate::handlers::streams::*;
 use crate::handlers::system::*;
 use crate::handlers::topics::*;
-use sdk::client::ConnectedClient;
+use sdk::quic::client::ConnectedClient;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;

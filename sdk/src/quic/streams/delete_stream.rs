@@ -1,13 +1,13 @@
-use crate::client::ConnectedClient;
 use crate::error::Error;
+use crate::quic::client::ConnectedClient;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
-use shared::system::ping::Ping;
+use shared::streams::delete_stream::DeleteStream;
 
 impl ConnectedClient {
-    pub async fn ping(&self, command: &Ping) -> Result<(), Error> {
+    pub async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error> {
         self.send_with_response(
-            [Command::Ping.as_bytes(), command.as_bytes()]
+            [Command::DeleteStream.as_bytes(), command.as_bytes()]
                 .concat()
                 .as_slice(),
         )

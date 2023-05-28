@@ -1,5 +1,5 @@
-use crate::client::ConnectedClient;
 use crate::error::Error;
+use crate::quic::client::ConnectedClient;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::topics::delete_topic::DeleteTopic;

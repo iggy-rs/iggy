@@ -1,8 +1,8 @@
 mod common;
 
 use crate::common::TestServer;
-use sdk::client::Client;
-use sdk::config::Config;
+use sdk::quic::client::Client;
+use sdk::quic::config::Config;
 use shared::messages::poll_messages::Kind::Offset;
 use shared::messages::poll_messages::{Format, PollMessages};
 use shared::messages::send_messages::{KeyKind, Message, SendMessages};

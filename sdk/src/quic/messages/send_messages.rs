@@ -1,13 +1,13 @@
-use crate::client::ConnectedClient;
 use crate::error::Error;
+use crate::quic::client::ConnectedClient;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
-use shared::offsets::store_offset::StoreOffset;
+use shared::messages::send_messages::SendMessages;
 
 impl ConnectedClient {
-    pub async fn store_offset(&self, command: &StoreOffset) -> Result<(), Error> {
+    pub async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
         self.send_with_response(
-            [Command::StoreOffset.as_bytes(), command.as_bytes()]
+            [Command::SendMessages.as_bytes(), command.as_bytes()]
                 .concat()
                 .as_slice(),
         )

@@ -135,7 +135,8 @@ Server restart
 
 #### SDK
 
-- [X] Implement the basic SDK for the client
+- [X] Implement the QUIC SDK for the client
+- [ ] Implement the HTTP SDK for the client
 - [X] Make use of the SDK in client project
 - [ ] Implement another SDK in C# for dotnet clients
 
@@ -181,7 +182,7 @@ Server restart
 #### API
 
 - [x] Implement REST API for the server using Axum
-- [ ] Expose all the routes to achieve the same functionality as with the QUIC
+- [x] Expose all the routes to achieve the same functionality as with the QUIC
 
 #### UI
 

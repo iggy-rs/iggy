@@ -1,6 +1,6 @@
-use crate::client::ConnectedClient;
 use crate::error::Error;
 use crate::message::Message;
+use crate::quic::client::ConnectedClient;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;

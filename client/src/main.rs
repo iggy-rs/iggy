@@ -7,8 +7,8 @@ use crate::args::Args;
 use crate::client_error::ClientError;
 use anyhow::Result;
 use clap::Parser;
-use sdk::client::Client;
-use sdk::config::Config;
+use sdk::quic::client::Client;
+use sdk::quic::config::Config;
 use std::io;
 use tracing::{error, info};
 

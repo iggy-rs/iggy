@@ -1,5 +1,5 @@
-use crate::config::Config;
 use crate::error::Error;
+use crate::quic::config::Config;
 use quinn::{ClientConfig, Connection, Endpoint, RecvStream};
 use std::net::SocketAddr;
 use std::sync::Arc;

@@ -3,6 +3,8 @@ use crate::command::SEND_MESSAGES;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
+use serde_with::base64::Base64;
+use serde_with::serde_as;
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -10,22 +12,30 @@ const MAX_PAYLOAD_SIZE: u32 = 10 * 1024 * 1024;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendMessages {
+    #[serde(skip)]
     pub stream_id: u32,
+    #[serde(skip)]
     pub topic_id: u32,
     pub key_kind: KeyKind,
     pub key_value: u32,
+    #[serde(skip)]
     pub messages_count: u32,
     pub messages: Vec<Message>,
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
+    #[serde(skip)]
     pub length: u32,
+    #[serde_as(as = "Base64")]
     pub payload: Vec<u8>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
+#[serde(rename_all = "snake_case")]
 pub enum KeyKind {
+    #[default]
     PartitionId,
     CalculatePartitionId,
 }
@@ -43,10 +53,10 @@ impl Validatable for SendMessages {
         if self.messages_count == 0 {
             return Err(Error::InvalidMessagesCount);
         }
-        
+
         let mut payload_size = 0;
         for message in &self.messages {
-            payload_size += message.length;
+            payload_size += message.payload.len() as u32;
             if payload_size > MAX_PAYLOAD_SIZE {
                 return Err(Error::TooBigPayload);
             }
@@ -124,11 +134,8 @@ impl FromStr for Message {
         if payload.len() != length as usize {
             return Err(Error::InvalidMessagePayloadLength);
         }
-        
-        Ok(Message {
-            length,
-            payload
-        })
+
+        Ok(Message { length, payload })
     }
 }
 

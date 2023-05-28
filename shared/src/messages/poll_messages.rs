@@ -9,19 +9,30 @@ use std::str::FromStr;
 // TODO: Extend with consumer group.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PollMessages {
+    #[serde(default = "default_consumer_id")]
     pub consumer_id: u32,
+    #[serde(skip)]
     pub stream_id: u32,
+    #[serde(skip)]
     pub topic_id: u32,
+    #[serde(default = "default_partition_id")]
     pub partition_id: u32,
+    #[serde(default = "default_kind")]
     pub kind: Kind,
+    #[serde(default = "default_value")]
     pub value: u64,
+    #[serde(default = "default_count")]
     pub count: u32,
+    #[serde(default)]
     pub auto_commit: bool,
+    #[serde(skip)]
     pub format: Format,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
+#[serde(rename_all = "snake_case")]
 pub enum Kind {
+    #[default]
     Offset,
     Timestamp,
     First,
@@ -29,11 +40,32 @@ pub enum Kind {
     Next,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
 pub enum Format {
+    #[default]
     None,
     Binary,
     String,
+}
+
+fn default_consumer_id() -> u32 {
+    0
+}
+
+fn default_partition_id() -> u32 {
+    1
+}
+
+fn default_kind() -> Kind {
+    Kind::Offset
+}
+
+fn default_value() -> u64 {
+    0
+}
+
+fn default_count() -> u32 {
+    10
 }
 
 impl Validatable for PollMessages {

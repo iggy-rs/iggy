@@ -37,7 +37,7 @@ pub struct Message {
 pub enum KeyKind {
     #[default]
     PartitionId,
-    CalculatePartitionId,
+    EntityId,
 }
 
 impl Validatable for SendMessages {
@@ -70,14 +70,14 @@ impl KeyKind {
     pub fn as_code(&self) -> u8 {
         match self {
             KeyKind::PartitionId => 0,
-            KeyKind::CalculatePartitionId => 1,
+            KeyKind::EntityId => 1,
         }
     }
 
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
             0 => Ok(KeyKind::PartitionId),
-            1 => Ok(KeyKind::CalculatePartitionId),
+            1 => Ok(KeyKind::EntityId),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -88,7 +88,7 @@ impl FromStr for KeyKind {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
             "p" | "partition_id" => Ok(KeyKind::PartitionId),
-            "c" | "calculate_partition_id" => Ok(KeyKind::CalculatePartitionId),
+            "c" | "entity_id" => Ok(KeyKind::EntityId),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -249,7 +249,7 @@ impl Display for KeyKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             KeyKind::PartitionId => write!(f, "partition_id"),
-            KeyKind::CalculatePartitionId => write!(f, "calculate_parition_id"),
+            KeyKind::EntityId => write!(f, "entity_id"),
         }
     }
 }

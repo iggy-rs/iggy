@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use tracing::info;
 
 pub async fn start(address: String, system: Arc<Mutex<System>>) {
-    info!("Starting HTTP API on: {}", address);
+    info!("Starting HTTP API on: {:?}", address);
     let app = Router::new().nest("/", system::router()).nest(
         "/streams",
         streams::router(system.clone()).nest(

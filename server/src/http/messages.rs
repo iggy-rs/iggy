@@ -19,35 +19,6 @@ pub fn router(system: Arc<Mutex<System>>) -> Router {
         .with_state(system)
 }
 
-async fn send_messages(
-    State(system): State<Arc<Mutex<System>>>,
-    Path((stream_id, topic_id)): Path<(u32, u32)>,
-    Json(mut command): Json<SendMessages>,
-) -> Result<StatusCode, CustomError> {
-    command.stream_id = stream_id;
-    command.topic_id = topic_id;
-    command.messages_count = command.messages.len() as u32;
-    command.validate()?;
-
-    let mut messages = Vec::with_capacity(command.messages_count as usize);
-    for message in command.messages {
-        let timestamp = timestamp::get();
-        messages.push(Message::empty(timestamp, message.payload));
-    }
-    system
-        .lock()
-        .await
-        .get_stream_mut(stream_id)?
-        .append_messages(
-            command.topic_id,
-            command.key_kind,
-            command.key_value,
-            messages,
-        )
-        .await?;
-    Ok(StatusCode::CREATED)
-}
-
 async fn poll_messages(
     State(system): State<Arc<Mutex<System>>>,
     Path((stream_id, topic_id)): Path<(u32, u32)>,
@@ -96,4 +67,33 @@ async fn poll_messages(
     }
 
     Ok(Json(messages))
+}
+
+async fn send_messages(
+    State(system): State<Arc<Mutex<System>>>,
+    Path((stream_id, topic_id)): Path<(u32, u32)>,
+    Json(mut command): Json<SendMessages>,
+) -> Result<StatusCode, CustomError> {
+    command.stream_id = stream_id;
+    command.topic_id = topic_id;
+    command.messages_count = command.messages.len() as u32;
+    command.validate()?;
+
+    let mut messages = Vec::with_capacity(command.messages_count as usize);
+    for message in command.messages {
+        let timestamp = timestamp::get();
+        messages.push(Message::empty(timestamp, message.payload));
+    }
+    system
+        .lock()
+        .await
+        .get_stream_mut(stream_id)?
+        .append_messages(
+            command.topic_id,
+            command.key_kind,
+            command.key_value,
+            messages,
+        )
+        .await?;
+    Ok(StatusCode::CREATED)
 }

@@ -1,33 +1,35 @@
 mod common;
 
 use crate::common::TestServer;
-use sdk::quic::client::Client;
-use sdk::quic::config::Config;
+use sdk::http::client::Client;
 use shared::messages::poll_messages::Kind::Offset;
 use shared::messages::poll_messages::{Format, PollMessages};
 use shared::messages::send_messages::{KeyKind, Message, SendMessages};
 use shared::streams::create_stream::CreateStream;
-use shared::streams::get_streams::GetStreams;
-use shared::system::ping::Ping;
+use shared::streams::delete_stream::DeleteStream;
 use shared::topics::create_topic::CreateTopic;
+use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
+use tokio::time::sleep;
 
 #[tokio::test]
-async fn stream_should_be_created_and_messages_should_be_appended_to_the_partition() {
+async fn stream_should_be_created() {
     let test_server = TestServer::default();
     test_server.start();
-    let client = Client::create(Config::default()).unwrap();
-    let client = client.connect().await.unwrap();
+    sleep(std::time::Duration::from_secs(1)).await;
+
+    let base_url = "http://localhost:3000";
+    let client = Client::create(base_url).unwrap();
     let stream_id = 1;
     let topic_id = 1;
     let partition_id = 1;
 
     // 1. Ping server
-    let ping = Ping {};
-    client.ping(&ping).await.unwrap();
+    let response = client.ping().await.unwrap();
+    assert_eq!(response, "pong");
 
     // 2. Ensure that streams do not exist
-    let streams = client.get_streams(&GetStreams {}).await.unwrap();
+    let streams = client.get_streams().await.unwrap();
     assert!(streams.is_empty());
 
     // 3. Create the stream
@@ -38,7 +40,7 @@ async fn stream_should_be_created_and_messages_should_be_appended_to_the_partiti
     client.create_stream(&create_stream).await.unwrap();
 
     // 4. Get streams and validate that created stream exists
-    let streams = client.get_streams(&GetStreams {}).await.unwrap();
+    let streams = client.get_streams().await.unwrap();
     assert_eq!(streams.len(), 1);
     let stream = streams.get(0).unwrap();
     assert_eq!(stream.id, create_stream.stream_id);
@@ -126,6 +128,25 @@ async fn stream_should_be_created_and_messages_should_be_appended_to_the_partiti
     let messages = client.poll_messages(&poll_messages).await.unwrap();
     assert!(messages.is_empty());
 
+    // 11. Delete the existing topic and ensure it doesn't exist anymore
+    client
+        .delete_topic(&DeleteTopic {
+            stream_id,
+            topic_id,
+        })
+        .await
+        .unwrap();
+    let topics = client.get_topics(&GetTopics { stream_id }).await.unwrap();
+    assert!(topics.is_empty());
+
+    // 12. Delete the existing stream and ensure it doesn't exist anymore
+    client
+        .delete_stream(&DeleteStream { stream_id })
+        .await
+        .unwrap();
+    let streams = client.get_streams().await.unwrap();
+    assert!(streams.is_empty());
+
     test_server.stop();
 }
 
@@ -133,7 +154,6 @@ fn assert_message(message: &sdk::message::Message, offset: u64) {
     let expected_payload = get_message_payload(offset);
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);
-    assert_eq!(message.length, expected_payload.len() as u32);
     assert_eq!(message.payload, expected_payload);
 }
 

@@ -39,7 +39,7 @@ impl Topic {
     ) -> Result<(), Error> {
         let partition_id = match key_kind {
             KeyKind::PartitionId => key_value,
-            KeyKind::CalculatePartitionId => self.calculate_partition_id(key_value),
+            KeyKind::EntityId => self.calculate_partition_id(key_value),
         };
 
         self.append_messages_to_partition(partition_id, messages)
@@ -61,9 +61,13 @@ impl Topic {
         Ok(())
     }
 
-    fn calculate_partition_id(&self, key: u32) -> u32 {
-        let partition_id = key % self.partitions.len() as u32;
-        trace!("Calculated partition ID: {} for key: {}", partition_id, key);
+    fn calculate_partition_id(&self, entity_id: u32) -> u32 {
+        let partition_id = entity_id % self.partitions.len() as u32;
+        trace!(
+            "Calculated partition ID: {} for key: {}",
+            partition_id,
+            entity_id
+        );
         partition_id
     }
 }

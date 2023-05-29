@@ -35,6 +35,44 @@ pub struct MessageSaverConfig {
     pub interval: u64,
 }
 
+impl Default for ServerConfig {
+    fn default() -> ServerConfig {
+        ServerConfig {
+            message_saver: MessageSaverConfig::default(),
+            system: Arc::new(SystemConfig::default()),
+            quic: QuicConfig::default(),
+            http: HttpConfig::default(),
+        }
+    }
+}
+
+impl Default for QuicConfig {
+    fn default() -> QuicConfig {
+        QuicConfig {
+            enabled: true,
+            address: "127.0.0.1:8080".to_string(),
+        }
+    }
+}
+
+impl Default for HttpConfig {
+    fn default() -> HttpConfig {
+        HttpConfig {
+            enabled: true,
+            address: "127.0.0.1:3000".to_string(),
+        }
+    }
+}
+
+impl Default for MessageSaverConfig {
+    fn default() -> MessageSaverConfig {
+        MessageSaverConfig {
+            enabled: true,
+            interval: 1000,
+        }
+    }
+}
+
 impl ServerConfig {
     pub fn load(path: &str) -> Result<ServerConfig, ServerError> {
         let config: Result<ServerConfig, Error> = Figment::new()

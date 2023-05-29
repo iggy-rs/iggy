@@ -8,8 +8,12 @@ use thiserror::Error;
 pub enum Error {
     #[error("Empty response")]
     EmptyResponse,
+    #[error("Request error")]
+    RequestError(#[from] reqwest::Error),
     #[error("Cannot create endpoint")]
     CannotCreateEndpoint,
+    #[error("Cannot parse URL")]
+    CannotParseUrl,
     #[error("Invalid response: {0}")]
     InvalidResponse(u8),
     #[error("Cannot parse integer")]

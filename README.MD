@@ -183,6 +183,7 @@ Server restart
 
 - [x] Implement REST API for the server using Axum
 - [x] Expose all the routes to achieve the same functionality as with the QUIC
+- [ ] Generate OpenAPI specification for the REST API
 
 #### UI
 

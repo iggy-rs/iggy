@@ -3,19 +3,19 @@ use reqwest::Url;
 use serde::Serialize;
 
 pub struct Client {
-    pub base_url: Url,
+    pub api_url: Url,
     client: reqwest::Client,
 }
 
 impl Client {
-    pub fn create(base_url: &str) -> Result<Self, Error> {
-        let base_url = Url::parse(base_url);
-        if base_url.is_err() {
+    pub fn create(api_url: &str) -> Result<Self, Error> {
+        let api_url = Url::parse(api_url);
+        if api_url.is_err() {
             return Err(Error::CannotParseUrl);
         }
-        let base_url = base_url.unwrap();
+        let api_url = api_url.unwrap();
         let client = reqwest::Client::builder().build()?;
-        Ok(Self { base_url, client })
+        Ok(Self { api_url, client })
     }
 
     pub async fn get(&self, path: &str) -> Result<reqwest::Response, Error> {
@@ -51,6 +51,6 @@ impl Client {
     }
 
     pub fn get_url(&self, path: &str) -> Result<Url, Error> {
-        self.base_url.join(path).map_err(|_| Error::CannotParseUrl)
+        self.api_url.join(path).map_err(|_| Error::CannotParseUrl)
     }
 }

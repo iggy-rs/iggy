@@ -1,38 +1,44 @@
-use crate::quic::quic_command::QuicCommand;
+use crate::quic::command;
 use crate::server_error::ServerError;
-use flume::Sender;
 use quinn::Endpoint;
 use std::sync::Arc;
+use streaming::system::System;
+use tokio::sync::RwLock;
 use tracing::{error, info};
 
-pub async fn start(endpoint: Endpoint, sender: Sender<QuicCommand>) -> Result<(), ServerError> {
-    let sender = Arc::new(sender);
-    while let Some(incoming_connection) = endpoint.accept().await {
-        info!(
-            "Incoming connection from client: {}",
-            incoming_connection.remote_address()
-        );
-        let future = handle_connection(incoming_connection, sender.clone());
+const LISTENERS_COUNT: u32 = 10;
+
+pub fn start(endpoint: Endpoint, system: Arc<RwLock<System>>) {
+    for _ in 0..LISTENERS_COUNT {
+        let endpoint = endpoint.clone();
+        let system = system.clone();
         tokio::spawn(async move {
-            if let Err(error) = future.await {
-                error!("Connection has failed: {}", error.to_string())
+            while let Some(incoming_connection) = endpoint.accept().await {
+                info!(
+                    "Incoming connection from client: {}",
+                    incoming_connection.remote_address()
+                );
+                let system = system.clone();
+                tokio::spawn(async move {
+                    if let Err(error) = handle_connection(incoming_connection, system).await {
+                        error!("Connection has failed: {}", error.to_string())
+                    }
+                });
             }
         });
     }
-
-    Ok(())
 }
 
 async fn handle_connection(
     incoming_connection: quinn::Connecting,
-    sender: Arc<Sender<QuicCommand>>,
+    system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
     let connection = incoming_connection.await?;
     async {
         info!("Client has connected: {}", connection.remote_address());
         loop {
             let stream = connection.accept_bi().await;
-            let stream = match stream {
+            let mut stream = match stream {
                 Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
                     info!("Connection closed");
                     return Ok(());
@@ -43,14 +49,21 @@ async fn handle_connection(
                 Ok(stream) => stream,
             };
 
-            if let Err(error) = sender
-                .send_async(QuicCommand {
-                    send: stream.0,
-                    recv: stream.1,
-                })
-                .await
-            {
-                error!("Error when handling the request: {:?}", error);
+            let request = stream.1.read_to_end(10 * 1024 * 1024).await;
+            if request.is_err() {
+                error!("Error when reading the QUIC request: {:?}", request);
+                continue;
+            }
+
+            let result = command::handle(
+                &request.unwrap(),
+                &mut crate::quic::sender::Sender { send: stream.0 },
+                system.clone(),
+            )
+            .await;
+            if result.is_err() {
+                error!("Error when handling the QUIC request: {:?}", result);
+                continue;
             }
         }
     }

@@ -1,4 +1,3 @@
-pub mod channel;
 pub mod command;
 mod handlers;
 mod listener;

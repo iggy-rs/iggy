@@ -112,9 +112,9 @@ impl System {
         Ok(())
     }
 
-    pub async fn persist_messages(&mut self) -> Result<(), Error> {
+    pub async fn persist_messages(&self) -> Result<(), Error> {
         trace!("Saving buffered messages on disk...");
-        for stream in self.streams.values_mut() {
+        for stream in self.streams.values() {
             stream.persist_messages().await?;
         }
 

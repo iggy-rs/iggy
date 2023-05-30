@@ -1,6 +1,7 @@
 use crate::args::Args;
-use crate::poll_messages_test::init_poll_messages;
-use crate::send_messages_test::init_send_messages;
+use crate::benchmark::Benchmark;
+use crate::http::http_benchmark::HttpBenchmark;
+use crate::quic::quic_benchmark::QuicBenchmark;
 use crate::test_result::TestResult;
 use futures::future::join_all;
 use sdk::error::Error;
@@ -9,26 +10,44 @@ use tokio::task::JoinHandle;
 use tracing::info;
 
 pub async fn run_tests(args: Args) -> Result<(), Error> {
-    info!("Starting the tests...");
+    info!("Starting the benchmarks...");
+    let http_benchmark = HttpBenchmark {};
+    let quic_benchmark = QuicBenchmark {};
     let total_messages =
         (args.messages_per_batch * args.message_batches * args.clients_count) as u64;
     if args.test_send_messages {
+        let test_name = "send messages";
         info!(
-            "Starting the send messages test for total amount of messages: {}...",
-            total_messages
+            "Starting the {} benchmark for total amount of messages: {}...",
+            test_name, total_messages
         );
-        let test = init_send_messages(&args).await;
-        execute(test, "send messages", total_messages).await;
+
+        if args.http {
+            let http_test = http_benchmark.send_messages(&args).await;
+            execute(http_test, test_name, total_messages).await;
+        }
+        if args.quic {
+            let quic_test = quic_benchmark.send_messages(&args).await;
+            execute(quic_test, test_name, total_messages).await;
+        }
     }
     if args.test_poll_messages {
+        let test_name = "poll messages";
         info!(
-            "Starting the poll messages test for total amount of messages: {}...",
-            total_messages
+            "Starting the {} benchmark for total amount of messages: {}...",
+            test_name, total_messages
         );
-        let test = init_poll_messages(&args).await;
-        execute(test, "poll messages", total_messages).await;
+
+        if args.http {
+            let http_test = http_benchmark.poll_messages(&args).await;
+            execute(http_test, test_name, total_messages).await;
+        }
+        if args.quic {
+            let quic_test = quic_benchmark.poll_messages(&args).await;
+            execute(quic_test, test_name, total_messages).await;
+        }
     }
-    info!("Finished the tests.");
+    info!("Finished the benchmarks.");
     Ok(())
 }
 

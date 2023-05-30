@@ -2,10 +2,11 @@ use crate::http::{messages, streams, system, topics};
 use axum::Router;
 use std::sync::Arc;
 use streaming::system::System;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
+
 use tracing::info;
 
-pub async fn start(address: String, system: Arc<Mutex<System>>) {
+pub async fn start(address: String, system: Arc<RwLock<System>>) {
     info!("Starting HTTP API on: {:?}", address);
     let app = Router::new().nest("/", system::router()).nest(
         "/streams",

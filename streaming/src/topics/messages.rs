@@ -22,6 +22,7 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
+        let partition = partition.lock().await;
         match kind {
             Kind::Offset => partition.get_messages_by_offset(value, count).await,
             Kind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
@@ -32,7 +33,7 @@ impl Topic {
     }
 
     pub async fn append_messages(
-        &mut self,
+        &self,
         key_kind: KeyKind,
         key_value: u32,
         messages: Vec<Message>,
@@ -47,16 +48,17 @@ impl Topic {
     }
 
     async fn append_messages_to_partition(
-        &mut self,
+        &self,
         partition_id: u32,
         messages: Vec<Message>,
     ) -> Result<(), Error> {
-        let partition = self.partitions.get_mut(&partition_id);
+        let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
             return Err(Error::PartitionNotFound(partition_id));
         }
 
         let partition = partition.unwrap();
+        let mut partition = partition.lock().await;
         partition.append_messages(messages).await?;
         Ok(())
     }

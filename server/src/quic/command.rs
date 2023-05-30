@@ -18,7 +18,9 @@ use shared::system::ping::Ping;
 use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
+use std::sync::Arc;
 use streaming::system::System;
+use tokio::sync::RwLock;
 use tracing::trace;
 
 /*
@@ -42,7 +44,11 @@ use tracing::trace;
 
 const LENGTH: usize = 1;
 
-pub async fn handle(request: &[u8], sender: &mut Sender, system: &mut System) -> Result<(), Error> {
+pub async fn handle(
+    request: &[u8],
+    sender: &mut Sender,
+    system: Arc<RwLock<System>>,
+) -> Result<(), Error> {
     if request.len() < LENGTH {
         return Err(Error::InvalidCommand);
     }
@@ -74,7 +80,7 @@ async fn try_handle(
     command: Command,
     bytes: &[u8],
     sender: &mut Sender,
-    system: &mut System,
+    system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("Handling command '{}'...", command);
     match command {

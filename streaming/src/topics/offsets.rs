@@ -3,16 +3,18 @@ use shared::error::Error;
 
 impl Topic {
     pub async fn store_offset(
-        &mut self,
+        &self,
         consumer_id: u32,
         partition_id: u32,
         offset: u64,
     ) -> Result<(), Error> {
-        let partition = self.partitions.get_mut(&partition_id);
+        let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
             return Err(Error::PartitionNotFound(partition_id));
         }
 
-        partition.unwrap().store_offset(consumer_id, offset).await
+        let partition = partition.unwrap();
+        let mut partition = partition.lock().await;
+        partition.store_offset(consumer_id, offset).await
     }
 }

@@ -2,7 +2,9 @@ use crate::quic::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::messages::poll_messages::PollMessages;
+use std::sync::Arc;
 use streaming::system::System;
+use tokio::sync::RwLock;
 use tracing::trace;
 
 /*
@@ -58,15 +60,16 @@ use tracing::trace;
 pub async fn handle(
     command: PollMessages,
     sender: &mut Sender,
-    system: &mut System,
+    system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
     if command.count == 0 {
         return Err(Error::InvalidMessagesCount);
     }
 
-    let messages = system
-        .get_stream(command.stream_id)?
+    let system = system.read().await;
+    let stream = system.get_stream(command.stream_id)?;
+    let messages = stream
         .get_messages(
             command.consumer_id,
             command.topic_id,
@@ -97,8 +100,7 @@ pub async fn handle(
 
     if command.auto_commit {
         trace!("Last offset: {} will be automatically stored for consumer: {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
-        system
-            .get_stream_mut(command.stream_id)?
+        stream
             .store_offset(
                 command.consumer_id,
                 command.topic_id,

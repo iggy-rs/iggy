@@ -1,7 +1,7 @@
 mod args;
-mod poll_messages_test;
-mod send_messages_test;
-mod test_client;
+mod benchmark;
+mod http;
+mod quic;
 mod test_result;
 mod test_runner;
 

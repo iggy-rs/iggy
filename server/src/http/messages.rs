@@ -10,17 +10,17 @@ use std::sync::Arc;
 use streaming::message::Message;
 use streaming::system::System;
 use streaming::utils::timestamp;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tracing::trace;
 
-pub fn router(system: Arc<Mutex<System>>) -> Router {
+pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", get(poll_messages).post(send_messages))
         .with_state(system)
 }
 
 async fn poll_messages(
-    State(system): State<Arc<Mutex<System>>>,
+    State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(u32, u32)>,
     mut query: Query<PollMessages>,
 ) -> Result<Json<Vec<sdk::message::Message>>, CustomError> {
@@ -28,8 +28,8 @@ async fn poll_messages(
     query.topic_id = topic_id;
     query.validate()?;
 
-    let mut system = system.lock().await;
-    let stream = system.get_stream_mut(stream_id)?;
+    let system = system.read().await;
+    let stream = system.get_stream(stream_id)?;
     let messages = stream
         .get_messages(
             query.consumer_id,
@@ -70,7 +70,7 @@ async fn poll_messages(
 }
 
 async fn send_messages(
-    State(system): State<Arc<Mutex<System>>>,
+    State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(u32, u32)>,
     Json(mut command): Json<SendMessages>,
 ) -> Result<StatusCode, CustomError> {
@@ -84,10 +84,10 @@ async fn send_messages(
         let timestamp = timestamp::get();
         messages.push(Message::empty(timestamp, message.payload));
     }
-    system
-        .lock()
-        .await
-        .get_stream_mut(stream_id)?
+
+    let system = system.read().await;
+    let stream = system.get_stream(stream_id)?;
+    stream
         .append_messages(
             command.topic_id,
             command.key_kind,

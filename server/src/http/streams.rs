@@ -8,9 +8,9 @@ use shared::streams::create_stream::CreateStream;
 use shared::validatable::Validatable;
 use std::sync::Arc;
 use streaming::system::System;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
-pub fn router(system: Arc<Mutex<System>>) -> Router {
+pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", get(get_streams).post(create_stream))
         .route("/:stream_id", delete(delete_stream))
@@ -18,10 +18,10 @@ pub fn router(system: Arc<Mutex<System>>) -> Router {
 }
 
 async fn get_streams(
-    State(system): State<Arc<Mutex<System>>>,
+    State(system): State<Arc<RwLock<System>>>,
 ) -> Result<Json<Vec<Stream>>, CustomError> {
     let streams = system
-        .lock()
+        .write()
         .await
         .get_streams()
         .iter()
@@ -35,12 +35,12 @@ async fn get_streams(
 }
 
 async fn create_stream(
-    State(system): State<Arc<Mutex<System>>>,
+    State(system): State<Arc<RwLock<System>>>,
     Json(command): Json<CreateStream>,
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
     system
-        .lock()
+        .write()
         .await
         .create_stream(command.stream_id, &command.name)
         .await?;
@@ -48,9 +48,9 @@ async fn create_stream(
 }
 
 async fn delete_stream(
-    State(system): State<Arc<Mutex<System>>>,
+    State(system): State<Arc<RwLock<System>>>,
     Path(stream_id): Path<u32>,
 ) -> Result<StatusCode, CustomError> {
-    system.lock().await.delete_stream(stream_id).await?;
+    system.write().await.delete_stream(stream_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

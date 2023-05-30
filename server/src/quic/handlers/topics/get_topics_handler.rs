@@ -2,15 +2,18 @@ use crate::quic::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::topics::get_topics::GetTopics;
+use std::sync::Arc;
 use streaming::system::System;
+use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
     command: GetTopics,
     sender: &mut Sender,
-    system: &mut System,
+    system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
+    let system = system.read().await;
     let topics = system
         .get_stream(command.stream_id)?
         .get_topics()

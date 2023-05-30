@@ -27,7 +27,7 @@ impl Stream {
     }
 
     pub async fn append_messages(
-        &mut self,
+        &self,
         topic_id: u32,
         key_kind: KeyKind,
         key_value: u32,
@@ -37,7 +37,7 @@ impl Stream {
             return Ok(());
         }
 
-        let topic = self.topics.get_mut(&topic_id);
+        let topic = self.topics.get(&topic_id);
         if topic.is_none() {
             return Err(Error::TopicNotFound(topic_id));
         }

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 shared = { path = "../shared" }
 sdk = { path = "../sdk" }
+async-trait = "0.1.68"
 futures = "0.3.28"
 thiserror = "1.0.40"
 tokio = { version = "1.26.0", features = ["full"] }

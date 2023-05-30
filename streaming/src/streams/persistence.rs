@@ -44,8 +44,8 @@ impl Stream {
         Ok(())
     }
 
-    pub async fn persist_messages(&mut self) -> Result<(), Error> {
-        for topic in self.get_topics_mut() {
+    pub async fn persist_messages(&self) -> Result<(), Error> {
+        for topic in self.get_topics() {
             topic.persist_messages().await?;
         }
 

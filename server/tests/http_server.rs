@@ -18,8 +18,8 @@ async fn stream_should_be_created() {
     test_server.start();
     sleep(std::time::Duration::from_secs(1)).await;
 
-    let base_url = "http://localhost:3000";
-    let client = Client::create(base_url).unwrap();
+    let api_url = "http://localhost:3000";
+    let client = Client::create(api_url).unwrap();
     let stream_id = 1;
     let topic_id = 1;
     let partition_id = 1;

@@ -7,7 +7,7 @@ mod server_config;
 mod server_error;
 
 use crate::args::Args;
-use crate::components::{channel, message_saver, shutdown};
+use crate::components::{channel, message_saver};
 use crate::http::http_server;
 use crate::quic::quic_server;
 use crate::server_command::ServerCommand;
@@ -17,7 +17,9 @@ use anyhow::Result;
 use clap::Parser;
 use std::sync::Arc;
 use streaming::system::System;
-use tokio::sync::Mutex;
+use tokio::signal;
+use tokio::sync::RwLock;
+use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
@@ -27,27 +29,34 @@ async fn main() -> Result<(), ServerError> {
     let config = ServerConfig::load(&args.config)?;
     let mut system = System::create(config.system.clone());
     system.init().await?;
-    let system = Arc::new(Mutex::new(system));
+    let system = Arc::new(RwLock::new(system));
     let (sender, receiver) = flume::unbounded::<ServerCommand>();
     message_saver::start(config.message_saver, sender.clone());
     channel::start(system.clone(), receiver);
-    shutdown::handle(sender);
 
     if config.http.enabled {
         let system = system.clone();
         let address = config.http.address.clone();
-        if config.quic.enabled {
-            tokio::spawn(async move {
-                http_server::start(address, system).await;
-            });
-        } else {
+        tokio::spawn(async move {
             http_server::start(address, system).await;
-        }
+        });
     }
 
     if config.quic.enabled {
         let address = config.quic.address.clone();
-        quic_server::start(address, system).await;
+        quic_server::start(address, system.clone());
+    }
+
+    match signal::ctrl_c().await {
+        Ok(()) => {
+            info!("Shutting down Iggy server...");
+            let mut system = system.write().await;
+            system.shutdown().await?;
+            info!("Iggy server has shutdown successfully.");
+        }
+        Err(err) => {
+            eprintln!("Unable to listen for shutdown signal: {}", err);
+        }
     }
 
     Ok(())

@@ -1,25 +1,22 @@
-use crate::quic::quic_command::QuicCommand;
-use crate::quic::{channel, listener};
+use crate::quic::listener;
 use anyhow::Result;
 use quinn::Endpoint;
 use std::error::Error;
 use std::sync::Arc;
 use streaming::system::System;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 use tracing::info;
 
-pub async fn start(address: String, system: Arc<Mutex<System>>) {
-    info!("Initializing Iggy server...");
+pub fn start(address: String, system: Arc<RwLock<System>>) {
+    info!("Initializing Iggy QUIC server...");
     let quic_config = configure_quic();
     if let Err(error) = quic_config {
         panic!("Error when configuring QUIC: {:?}", error);
     }
 
     let endpoint = Endpoint::server(quic_config.unwrap(), address.parse().unwrap()).unwrap();
-    let (sender, receiver) = flume::unbounded::<QuicCommand>();
-    info!("Iggy server has started on: {:?}", address);
-    channel::start(system, receiver);
-    listener::start(endpoint, sender).await.unwrap();
+    info!("Iggy QUIC server has started on: {:?}", address);
+    listener::start(endpoint, system)
 }
 
 fn configure_quic() -> Result<quinn::ServerConfig, Box<dyn Error>> {

@@ -1,20 +1,20 @@
-## Iggy
-
 ![iggy](assets/iggy.png)
+
+# Iggy
 
 ---
 
-Iggy is the persistent message streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) as a transport protocol with a custom binary specification. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
+Iggy is the persistent message streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) (custom binary specification) and/or HTTP (regular REST API) as a transport protocol . Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
 
 The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to handle millions of messages per second and scale horizontally.
 
-It is a pet project of mine to learn more about distributed systems and Rust.
+It is a pet project of mine to learn more about distributed systems and Rust. The name is an abbreviation for the Italian Greyhound - small yet extremely fast dogs, the best in their class. Just like mine lovely [Fabio & Cookie](https://www.instagram.com/fabio.and.cookie/) ❤️
 
 ---
 
 ### Basic usage
 
-Build the project:
+Build the project (the longer compilation time is due to [LTO](https://doc.rust-lang.org/rustc/linker-plugin-lto.html) enabled in release [profile](https://github.com/spetz/iggy/blob/master/Cargo.toml#L2)):
 
 `cargo build -r`
 
@@ -62,13 +62,13 @@ Finally, restart the server to see it is able to load the persisted data.
 
 To see the detailed logs from the client/server, run it with `RUST_LOG=trace` environment variable.
 
-To quick test the project, first start the server and then run the benchmarking app:
+To benchmark the project, first start the server and then run the benchmarking app:
 
-`cargo r --bin bench -r -- --messages-per-batch 1000 --message-batches 1000 --clients-count 10 --test-send-messages`
+`cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-send-messages`
 
-`cargo r --bin bench -r -- --messages-per-batch 1000 --message-batches 1000 --clients-count 10 --test-poll-messages`
+`cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-poll-messages`
 
-Depending on the hardware and cache settings in `server.json`, you might expect over 250 MB/s throughput for both writes and reads.
+Depending on the hardware, settings in `server.json`, transport protocol (`quic` or `http`) and payload size (`messages-per-batch * message-size`) you might expect over 2000 MB/s (e.g. 2M of 1 KB messages per second) throughput for both writes and reads. The current results have been achieved on Apple M1 Max with 64 GB RAM.
 
 **See the images below**
 
@@ -159,11 +159,12 @@ Server restart
 - [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them
 - [X] Index messages by their offset to allow fast access to the specific messages
 - [X] Index messages by their timestamp to allow fast access to the specific messages
-- [ ] Allow parallel reading/writing from/to the distinct partitions
+- [X] Allow parallel reading/writing from/to the distinct partitions
 - [X] Allow storing client offset for the specific partition
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer
+- [ ] Implement message deduplication
 - [ ] Implement consumer groups for horizontal scaling
 - [ ] Delete old messages bases on retention policy
 

@@ -8,11 +8,18 @@ use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StoreOffset {
+    #[serde(default = "default_consumer_id")]
     pub consumer_id: u32,
+    #[serde(skip)]
     pub stream_id: u32,
+    #[serde(skip)]
     pub topic_id: u32,
     pub partition_id: u32,
     pub offset: u64,
+}
+
+fn default_consumer_id() -> u32 {
+    0
 }
 
 impl Validatable for StoreOffset {

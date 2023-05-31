@@ -1,10 +1,11 @@
 use crate::http::error::CustomError;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::routing::get;
+use axum::routing::{get, put};
 use axum::{Json, Router};
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
+use shared::offsets::store_offset::StoreOffset;
 use shared::validatable::Validatable;
 use std::sync::Arc;
 use streaming::message::Message;
@@ -16,6 +17,7 @@ use tracing::trace;
 pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", get(poll_messages).post(send_messages))
+        .route("/offsets", put(store_offset))
         .with_state(system)
 }
 
@@ -96,4 +98,26 @@ async fn send_messages(
         )
         .await?;
     Ok(StatusCode::CREATED)
+}
+
+async fn store_offset(
+    State(system): State<Arc<RwLock<System>>>,
+    Path((stream_id, topic_id)): Path<(u32, u32)>,
+    mut command: Json<StoreOffset>,
+) -> Result<StatusCode, CustomError> {
+    command.stream_id = stream_id;
+    command.topic_id = topic_id;
+    command.validate()?;
+
+    let system = system.read().await;
+    let stream = system.get_stream(stream_id)?;
+    stream
+        .store_offset(
+            command.consumer_id,
+            command.topic_id,
+            command.partition_id,
+            command.offset,
+        )
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }

@@ -1,12 +1,17 @@
+use crate::client::MessageClient;
 use crate::error::Error;
 use crate::message::Message;
-use crate::quic::client::ConnectedClient;
+use crate::quic::client::QuicClient;
+use async_trait::async_trait;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
+use shared::messages::send_messages::SendMessages;
+use shared::offsets::store_offset::StoreOffset;
 
-impl ConnectedClient {
-    pub async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
+#[async_trait]
+impl MessageClient for QuicClient {
+    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
         let response = self
             .send_with_response(
                 [Command::PollMessages.as_bytes(), command.as_bytes()]
@@ -14,11 +19,31 @@ impl ConnectedClient {
                     .as_slice(),
             )
             .await?;
-        handle_response(&response)
+        handle_poll_messages_response(&response)
+    }
+
+    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
+        self.send_with_response(
+            [Command::SendMessages.as_bytes(), command.as_bytes()]
+                .concat()
+                .as_slice(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn store_offset(&self, command: &StoreOffset) -> Result<(), Error> {
+        self.send_with_response(
+            [Command::StoreOffset.as_bytes(), command.as_bytes()]
+                .concat()
+                .as_slice(),
+        )
+        .await?;
+        Ok(())
     }
 }
 
-fn handle_response(response: &[u8]) -> Result<Vec<Message>, Error> {
+fn handle_poll_messages_response(response: &[u8]) -> Result<Vec<Message>, Error> {
     if response.is_empty() {
         return Ok(Vec::new());
     }

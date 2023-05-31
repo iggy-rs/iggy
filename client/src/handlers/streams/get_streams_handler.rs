@@ -1,9 +1,9 @@
 use crate::client_error::ClientError;
-use sdk::quic::client::ConnectedClient;
+use sdk::client::Client;
 use shared::streams::get_streams::GetStreams;
 use tracing::info;
 
-pub async fn handle(command: GetStreams, client: &ConnectedClient) -> Result<(), ClientError> {
+pub async fn handle(command: GetStreams, client: &dyn Client) -> Result<(), ClientError> {
     let streams = client.get_streams(&command).await?;
     if streams.is_empty() {
         info!("No streams found");

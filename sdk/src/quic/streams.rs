@@ -1,13 +1,18 @@
+use crate::client::StreamClient;
 use crate::error::Error;
-use crate::quic::client::ConnectedClient;
+use crate::quic::client::QuicClient;
 use crate::stream::Stream;
+use async_trait::async_trait;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
+use shared::streams::create_stream::CreateStream;
+use shared::streams::delete_stream::DeleteStream;
 use shared::streams::get_streams::GetStreams;
 use std::str::from_utf8;
 
-impl ConnectedClient {
-    pub async fn get_streams(&self, command: &GetStreams) -> Result<Vec<Stream>, Error> {
+#[async_trait]
+impl StreamClient for QuicClient {
+    async fn get_streams(&self, command: &GetStreams) -> Result<Vec<Stream>, Error> {
         let response = self
             .send_with_response(
                 [Command::GetStreams.as_bytes(), command.as_bytes()]
@@ -16,6 +21,26 @@ impl ConnectedClient {
             )
             .await?;
         handle_response(&response)
+    }
+
+    async fn create_stream(&self, command: &CreateStream) -> Result<(), Error> {
+        self.send_with_response(
+            [Command::CreateStream.as_bytes(), command.as_bytes()]
+                .concat()
+                .as_slice(),
+        )
+        .await?;
+        Ok(())
+    }
+
+    async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error> {
+        self.send_with_response(
+            [Command::DeleteStream.as_bytes(), command.as_bytes()]
+                .concat()
+                .as_slice(),
+        )
+        .await?;
+        Ok(())
     }
 }
 

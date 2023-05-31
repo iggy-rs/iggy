@@ -1,8 +1,8 @@
 use crate::client_error::ClientError;
-use sdk::quic::client::ConnectedClient;
+use sdk::client::Client;
 use shared::system::ping::Ping;
 
-pub async fn handle(command: Ping, client: &ConnectedClient) -> Result<(), ClientError> {
+pub async fn handle(command: Ping, client: &dyn Client) -> Result<(), ClientError> {
     client.ping(&command).await?;
     Ok(())
 }

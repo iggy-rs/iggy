@@ -1,13 +1,20 @@
+use crate::client::Client;
 use crate::error::Error;
 use reqwest::Url;
 use serde::Serialize;
 
-pub struct Client {
+#[derive(Debug)]
+pub struct HttpClient {
     pub api_url: Url,
     client: reqwest::Client,
 }
 
-impl Client {
+impl Client for HttpClient {}
+
+unsafe impl Send for HttpClient {}
+unsafe impl Sync for HttpClient {}
+
+impl HttpClient {
     pub fn create(api_url: &str) -> Result<Self, Error> {
         let api_url = Url::parse(api_url);
         if api_url.is_err() {
@@ -41,6 +48,16 @@ impl Client {
     ) -> Result<reqwest::Response, Error> {
         let url = self.get_url(path)?;
         let response = self.client.post(url).json(payload).send().await?;
+        Ok(response)
+    }
+
+    pub async fn put<T: Serialize + ?Sized>(
+        &self,
+        path: &str,
+        payload: &T,
+    ) -> Result<reqwest::Response, Error> {
+        let url = self.get_url(path)?;
+        let response = self.client.put(url).json(payload).send().await?;
         Ok(response)
     }
 

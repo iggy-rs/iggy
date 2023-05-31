@@ -1,6 +1,17 @@
+pub mod http;
+pub mod quic;
+pub mod test_runner;
+
+use async_trait::async_trait;
+use sdk::client::Client;
 use std::fs;
 use tokio::process::Command;
 use tokio::runtime::Runtime;
+
+#[async_trait]
+pub trait ClientFactory: Sync + Send {
+    async fn create_client(&self) -> Box<dyn Client>;
+}
 
 pub struct TestServer {
     files_path: String,

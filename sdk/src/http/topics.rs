@@ -1,34 +1,32 @@
+use crate::client::TopicClient;
 use crate::error::Error;
-use crate::http::client::Client;
+use crate::http::client::HttpClient;
 use crate::topic::Topic;
+use async_trait::async_trait;
 use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
 
-impl Client {
-    pub async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error> {
-        let response = self.get(&Self::get_topics_path(command.stream_id)).await?;
+#[async_trait]
+impl TopicClient for HttpClient {
+    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error> {
+        let response = self.get(&get_path(command.stream_id)).await?;
         let topics = response.json().await?;
         Ok(topics)
     }
 
-    pub async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error> {
-        self.post(&Self::get_topics_path(command.stream_id), command)
-            .await?;
+    async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error> {
+        self.post(&get_path(command.stream_id), command).await?;
         Ok(())
     }
 
-    pub async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
-        let path = format!(
-            "{}/{}",
-            Self::get_topics_path(command.stream_id),
-            command.topic_id
-        );
+    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
+        let path = format!("{}/{}", get_path(command.stream_id), command.topic_id);
         self.delete(&path).await?;
         Ok(())
     }
+}
 
-    fn get_topics_path(stream_id: u32) -> String {
-        format!("streams/{}/topics", stream_id)
-    }
+fn get_path(stream_id: u32) -> String {
+    format!("streams/{}/topics", stream_id)
 }

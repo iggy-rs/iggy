@@ -1,10 +1,10 @@
-![iggy](assets/iggy.png)
-
 # Iggy
+
+![iggy](assets/iggy.png)
 
 ---
 
-Iggy is the persistent message streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) (custom binary specification) and/or HTTP (regular REST API) as a transport protocol . Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
+**Iggy** is the persistent message streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) (custom binary specification) and/or HTTP (regular REST API) as a transport protocol . Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
 
 The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to handle millions of messages per second and scale horizontally.
 
@@ -68,7 +68,7 @@ To benchmark the project, first start the server and then run the benchmarking a
 
 `cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-poll-messages`
 
-Depending on the hardware, settings in `server.json`, transport protocol (`quic` or `http`) and payload size (`messages-per-batch * message-size`) you might expect over 2000 MB/s (e.g. 2M of 1 KB messages per second) throughput for both writes and reads. The current results have been achieved on Apple M1 Max with 64 GB RAM.
+Depending on the hardware, settings in `server.json`, transport protocol (`quic` or `http`) and payload size (`messages-per-batch * message-size`) you might expect over 2000 MB/s (e.g. 2M of 1 KB msg/sec) throughput for both writes and reads. The current results have been achieved on Apple M1 Max with 64 GB RAM.
 
 **See the images below**
 
@@ -84,9 +84,9 @@ Client start
 
 ![client start](assets/client_start.png)
 
-Test mode
+Benchmarks
 
-![client start](assets/test_mode.png)
+![client start](assets/benchmarks.png)
 
 Server restart
 
@@ -135,9 +135,9 @@ Server restart
 
 #### SDK
 
-- [X] Implement the QUIC SDK for the client
-- [ ] Implement the HTTP SDK for the client
-- [X] Make use of the SDK in client project
+- [x] Implement the QUIC SDK for the client
+- [x] Implement the HTTP SDK for the client
+- [x] Make use of the SDK in client project
 - [ ] Implement another SDK in C# for dotnet clients
 
 #### Streaming
@@ -157,10 +157,10 @@ Server restart
 - [x] Allow clients to poll messages by offsets from the specific partition
 - [x] Allow clients to poll messages by timestamps from the specific partition
 - [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them
-- [X] Index messages by their offset to allow fast access to the specific messages
-- [X] Index messages by their timestamp to allow fast access to the specific messages
-- [X] Allow parallel reading/writing from/to the distinct partitions
-- [X] Allow storing client offset for the specific partition
+- [x] Index messages by their offset to allow fast access to the specific messages
+- [x] Index messages by their timestamp to allow fast access to the specific messages
+- [x] Allow parallel reading/writing from/to the distinct partitions
+- [x] Allow storing client offset for the specific partition
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer

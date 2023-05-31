@@ -1,6 +1,8 @@
 @url = http://localhost:3000
 @stream_id = 1
 @topic_id = 1
+@partition_id = 1
+@consumer_id = 1
 @message_1_payload_base64 = aGVsbG8=
 @message_2_payload_base64 = d29ybGQ=
 
@@ -59,4 +61,14 @@ Content-Type: application/json
 }
 
 ###
-GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages?consumer_id=1&partition_id=1&kind=offset&value=0&count=10&auto_commit=false
+GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages?consumer_id={{consumer_id}}&partition_id={{partition_id}}&kind=offset&value=0&count=10&auto_commit=false
+
+###
+PUT {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages/offsets
+Content-Type: application/json
+
+{
+  "consumer_id": {{consumer_id}},
+  "partition_id": {{partition_id}},
+  "offset": 1
+}

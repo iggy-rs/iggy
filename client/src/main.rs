@@ -7,7 +7,7 @@ use crate::args::Args;
 use crate::client_error::ClientError;
 use anyhow::Result;
 use clap::Parser;
-use sdk::quic::client::Client;
+use sdk::quic::client::QuicBaseClient;
 use sdk::quic::config::Config;
 use std::io;
 use tracing::{error, info};
@@ -16,7 +16,7 @@ use tracing::{error, info};
 async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
-    let client = Client::create(Config {
+    let client = QuicBaseClient::create(Config {
         client_address: args.client_address,
         server_address: args.server_address,
         server_name: args.server_name,

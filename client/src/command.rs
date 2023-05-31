@@ -4,7 +4,7 @@ use crate::handlers::offsets::store_offset_handler;
 use crate::handlers::streams::*;
 use crate::handlers::system::*;
 use crate::handlers::topics::*;
-use sdk::quic::client::ConnectedClient;
+use sdk::client::Client;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
@@ -20,7 +20,7 @@ use shared::topics::get_topics::GetTopics;
 use std::str::FromStr;
 use tracing::info;
 
-pub async fn handle(input: &str, client: &ConnectedClient) -> Result<(), ClientError> {
+pub async fn handle(input: &str, client: &dyn Client) -> Result<(), ClientError> {
     let (command, input) = input.split_once('|').unwrap_or((input, ""));
     let command = Command::from_str(command).map_err(|_| ClientError::InvalidCommand)?;
     info!("Handling '{}' command...", command);

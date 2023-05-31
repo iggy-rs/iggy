@@ -1,0 +1,26 @@
+use crate::args::Args;
+use crate::client_factory::ClientFactory;
+use async_trait::async_trait;
+use sdk::client::Client;
+use sdk::quic::client::QuicBaseClient;
+use std::sync::Arc;
+
+#[derive(Debug, Copy, Clone)]
+pub struct QuicClientFactory {}
+
+#[async_trait]
+impl ClientFactory for QuicClientFactory {
+    async fn create_client(&self, args: Arc<Args>) -> Box<dyn Client> {
+        let client = QuicBaseClient::new(
+            &args.quic_client_address,
+            &args.quic_server_address,
+            &args.quic_server_name,
+        )
+        .unwrap();
+        let client = client.connect().await.unwrap();
+        Box::new(client)
+    }
+}
+
+unsafe impl Send for QuicClientFactory {}
+unsafe impl Sync for QuicClientFactory {}

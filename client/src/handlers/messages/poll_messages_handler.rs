@@ -1,10 +1,10 @@
 use crate::client_error::ClientError;
-use sdk::quic::client::ConnectedClient;
+use sdk::client::Client;
 use shared::messages::poll_messages::{Format, PollMessages};
 use std::str::from_utf8;
 use tracing::info;
 
-pub async fn handle(command: PollMessages, client: &ConnectedClient) -> Result<(), ClientError> {
+pub async fn handle(command: PollMessages, client: &dyn Client) -> Result<(), ClientError> {
     let messages = client.poll_messages(&command).await?;
     if messages.is_empty() {
         info!("No messages found");

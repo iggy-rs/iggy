@@ -1,8 +1,8 @@
 use crate::client_error::ClientError;
-use sdk::quic::client::ConnectedClient;
+use sdk::client::Client;
 use shared::topics::delete_topic::DeleteTopic;
 
-pub async fn handle(command: DeleteTopic, client: &ConnectedClient) -> Result<(), ClientError> {
+pub async fn handle(command: DeleteTopic, client: &dyn Client) -> Result<(), ClientError> {
     client.delete_topic(&command).await?;
     Ok(())
 }

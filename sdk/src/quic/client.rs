@@ -1,3 +1,4 @@
+use crate::client::Client;
 use crate::error::Error;
 use crate::quic::config::Config;
 use quinn::{ClientConfig, Connection, Endpoint, RecvStream};
@@ -9,25 +10,32 @@ const EMPTY_RESPONSE: Vec<u8> = vec![];
 
 const NAME: &str = "Iggy";
 
-pub struct Client {
+#[derive(Debug)]
+pub struct QuicBaseClient {
     pub(crate) config: Config,
     pub(crate) endpoint: Endpoint,
     pub(crate) server_address: SocketAddr,
 }
 
-pub struct ConnectedClient {
+#[derive(Debug)]
+pub struct QuicClient {
     pub(crate) endpoint: Endpoint,
     pub(crate) connection: Connection,
     pub(crate) config: Config,
 }
 
-impl Client {
+impl Client for QuicClient {}
+
+unsafe impl Send for QuicClient {}
+unsafe impl Sync for QuicClient {}
+
+impl QuicBaseClient {
     pub fn new(
         client_address: &str,
         server_address: &str,
         server_name: &str,
     ) -> Result<Self, Error> {
-        Client::create(Config {
+        QuicBaseClient::create(Config {
             client_address: client_address.to_string(),
             server_address: server_address.to_string(),
             server_name: server_name.to_string(),
@@ -55,7 +63,7 @@ impl Client {
         })
     }
 
-    pub async fn connect(&self) -> Result<ConnectedClient, Error> {
+    pub async fn connect(&self) -> Result<QuicClient, Error> {
         info!(
             "{} client is connecting to server: {}",
             NAME, self.config.server_name
@@ -73,7 +81,7 @@ impl Client {
             connection.remote_address()
         );
 
-        Ok(ConnectedClient {
+        Ok(QuicClient {
             endpoint: self.endpoint.clone(),
             connection,
             config: self.config.clone(),
@@ -81,7 +89,7 @@ impl Client {
     }
 }
 
-impl ConnectedClient {
+impl QuicClient {
     pub async fn disconnect(&self) -> Result<(), Error> {
         info!("{} client is disconnecting from server...", NAME);
         self.endpoint.wait_idle().await;

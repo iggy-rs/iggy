@@ -22,7 +22,7 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
-        let partition = partition.lock().await;
+        let partition = partition.read().await;
         match kind {
             Kind::Offset => partition.get_messages_by_offset(value, count).await,
             Kind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
@@ -58,7 +58,7 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
-        let mut partition = partition.lock().await;
+        let mut partition = partition.write().await;
         partition.append_messages(messages).await?;
         Ok(())
     }

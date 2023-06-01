@@ -4,6 +4,7 @@ use crate::segments::segment::Segment;
 use ringbuffer::AllocRingBuffer;
 use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct Partition {
@@ -15,10 +16,20 @@ pub struct Partition {
     pub messages: Option<AllocRingBuffer<Arc<Message>>>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
-    pub(crate) consumer_offsets: HashMap<u32, u64>,
-    pub(crate) consumer_offsets_paths: HashMap<u32, String>,
+    pub(crate) consumer_offsets: RwLock<ConsumerOffsets>,
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<PartitionConfig>,
+}
+
+#[derive(Debug)]
+pub struct ConsumerOffsets {
+    pub(crate) offsets: HashMap<u32, RwLock<ConsumerOffset>>,
+}
+
+#[derive(Debug)]
+pub struct ConsumerOffset {
+    pub(crate) offset: u64,
+    pub(crate) path: String,
 }
 
 impl Partition {
@@ -50,8 +61,9 @@ impl Partition {
             current_offset: 0,
             unsaved_messages_count: 0,
             should_increment_offset: false,
-            consumer_offsets: HashMap::new(),
-            consumer_offsets_paths: HashMap::new(),
+            consumer_offsets: RwLock::new(ConsumerOffsets {
+                offsets: HashMap::new(),
+            }),
             config,
         };
 
@@ -116,8 +128,8 @@ mod tests {
         );
         assert!(!partition.should_increment_offset);
         assert!(partition.messages.as_ref().unwrap().is_empty());
-        assert!(partition.consumer_offsets.is_empty());
-        assert!(partition.consumer_offsets_paths.is_empty());
+        let consumer_offsets = partition.consumer_offsets.blocking_read();
+        assert!(consumer_offsets.offsets.is_empty());
     }
 
     #[test]

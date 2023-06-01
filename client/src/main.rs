@@ -1,5 +1,6 @@
 mod args;
 mod client_error;
+mod client_provider;
 mod command;
 mod handlers;
 
@@ -7,8 +8,6 @@ use crate::args::Args;
 use crate::client_error::ClientError;
 use anyhow::Result;
 use clap::Parser;
-use sdk::quic::client::QuicBaseClient;
-use sdk::quic::config::Config;
 use std::io;
 use tracing::{error, info};
 
@@ -16,13 +15,9 @@ use tracing::{error, info};
 async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
-    let client = QuicBaseClient::create(Config {
-        client_address: args.client_address,
-        server_address: args.server_address,
-        server_name: args.server_name,
-        response_buffer_size: args.response_buffer_size,
-    })?;
-    let client = client.connect().await?;
+    info!("Selected transport: {}", args.transport);
+    let client = client_provider::get_client(args).await?;
+    let client = client.as_ref();
     let stdin = io::stdin();
     let mut user_input = String::new();
 
@@ -37,7 +32,7 @@ async fn main() -> Result<(), ClientError> {
             user_input.pop();
         }
 
-        if let Err(error) = command::handle(&user_input, &client).await {
+        if let Err(error) = command::handle(&user_input, client).await {
             error!("Error: {:?}", error);
             continue;
         }

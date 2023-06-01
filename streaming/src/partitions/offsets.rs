@@ -1,12 +1,13 @@
-use crate::partitions::partition::Partition;
+use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::utils::file;
 use shared::error::Error;
 use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::RwLock;
 use tracing::{error, trace};
 
 impl Partition {
-    pub async fn store_offset(&mut self, consumer_id: u32, offset: u64) -> Result<(), Error> {
+    pub async fn store_offset(&self, consumer_id: u32, offset: u64) -> Result<(), Error> {
         trace!(
             "Storing offset: {} for consumer: {}, partition: {}, current: {}...",
             offset,
@@ -18,15 +19,36 @@ impl Partition {
             return Err(Error::InvalidOffset(offset));
         }
 
-        if !self.consumer_offsets.contains_key(&consumer_id) {
-            self.consumer_offsets_paths.insert(
-                consumer_id,
-                format!("{}/{}", self.consumer_offsets_path, consumer_id),
-            );
+        // This scope is required to avoid the potential deadlock by acquiring read lock and then write lock.
+        {
+            let consumer_offsets = self.consumer_offsets.read().await;
+            let consumer_offset = consumer_offsets.offsets.get(&consumer_id);
+            if let Some(consumer_offset) = consumer_offset {
+                let mut consumer_offset = consumer_offset.write().await;
+                consumer_offset.offset = offset;
+                self.store_offset_in_file(&consumer_offset.path, consumer_id, offset)
+                    .await?;
+                return Ok(());
+            }
         }
 
-        self.consumer_offsets.insert(consumer_id, offset);
-        let path = self.consumer_offsets_paths.get(&consumer_id).unwrap();
+        let mut consumer_offsets = self.consumer_offsets.write().await;
+        let path = format!("{}/{}", self.consumer_offsets_path, consumer_id);
+        self.store_offset_in_file(&path, consumer_id, offset)
+            .await?;
+        consumer_offsets
+            .offsets
+            .insert(consumer_id, RwLock::new(ConsumerOffset { offset, path }));
+
+        Ok(())
+    }
+
+    async fn store_offset_in_file(
+        &self,
+        path: &str,
+        consumer_id: u32,
+        offset: u64,
+    ) -> Result<(), Error> {
         let mut file = file::create_file(path).await;
         file.write_u64(offset).await?;
 
@@ -67,14 +89,15 @@ impl Partition {
                 continue;
             }
 
-            let path = path.unwrap();
+            let path = path.unwrap().to_string();
             let consumer_id = consumer_id.unwrap();
-            let mut file = file::open_file(path, false).await;
+            let mut file = file::open_file(&path, false).await;
             let offset = file.read_u64().await?;
 
-            self.consumer_offsets.insert(consumer_id, offset);
-            self.consumer_offsets_paths
-                .insert(consumer_id, path.to_string());
+            let mut consumer_offsets = self.consumer_offsets.write().await;
+            consumer_offsets
+                .offsets
+                .insert(consumer_id, RwLock::new(ConsumerOffset { offset, path }));
 
             trace!(
                 "Loaded consumer offset: {} for consumer ID: {}, partition ID: {}.",

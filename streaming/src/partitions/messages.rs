@@ -118,8 +118,9 @@ impl Partition {
         consumer_id: u32,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
-        let offset = self.consumer_offsets.get(&consumer_id);
-        if offset.is_none() {
+        let consumer_offsets = self.consumer_offsets.read().await;
+        let consumer_offset = consumer_offsets.offsets.get(&consumer_id);
+        if consumer_offset.is_none() {
             trace!(
                 "Consumer: {} hasn't stored offset for partition: {}, returning the first messages...",
                 consumer_id,
@@ -128,18 +129,18 @@ impl Partition {
             return self.get_first_messages(count).await;
         }
 
-        let offset = *offset.unwrap();
-        if offset == self.current_offset {
+        let consumer_offset = consumer_offset.unwrap().read().await;
+        if consumer_offset.offset == self.current_offset {
             trace!(
                 "Consumer: {} has the latest offset: {} for partition: {}, returning empty messages...",
                 consumer_id,
-                offset,
+                consumer_offset.offset,
                 self.id
             );
             return Ok(EMPTY_MESSAGES);
         }
 
-        let offset = offset + 1;
+        let offset = consumer_offset.offset + 1;
         trace!(
             "Getting next messages for consumer: {} for partition: {} from offset: {}...",
             consumer_id,

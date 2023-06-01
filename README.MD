@@ -12,7 +12,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 
 ---
 
-### Basic usage
+### Quick start
 
 Build the project (the longer compilation time is due to [LTO](https://doc.rust-lang.org/rustc/linker-plugin-lto.html) enabled in release [profile](https://github.com/spetz/iggy/blob/master/Cargo.toml#L2)):
 
@@ -26,9 +26,9 @@ Start the server:
 
 `cargo r --bin server -r`
 
-Start the client:
+Start the client (transports: `http`, `quic`):
 
-`cargo r --bin client -r`
+`cargo r --bin client -r --transport quic`
 
 Create a stream named `dev` with ID 1:
 
@@ -62,14 +62,6 @@ Finally, restart the server to see it is able to load the persisted data.
 
 To see the detailed logs from the client/server, run it with `RUST_LOG=trace` environment variable.
 
-To benchmark the project, first start the server and then run the benchmarking app:
-
-`cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-send-messages`
-
-`cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-poll-messages`
-
-Depending on the hardware, settings in `server.json`, transport protocol (`quic` or `http`) and payload size (`messages-per-batch * message-size`) you might expect over 2000 MB/s (e.g. 2M of 1 KB msg/sec) throughput for both writes and reads. The current results have been achieved on Apple M1 Max with 64 GB RAM.
-
 **See the images below**
 
 Files structure
@@ -84,13 +76,23 @@ Client start
 
 ![client start](assets/client_start.png)
 
-Benchmarks
-
-![client start](assets/benchmarks.png)
-
 Server restart
 
 ![server restart](assets/server_restart.png)
+
+---
+
+### Benchmarks
+
+To benchmark the project, first start the server and then run the benchmarking app:
+
+`cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-send-messages`
+
+`cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-poll-messages`
+
+Depending on the hardware, settings in `server.json`, transport protocol (`quic` or `http`) and payload size (`messages-per-batch * message-size`) you might expect over 2000 MB/s (e.g. 2M of 1 KB msg/sec) throughput for both writes and reads. The current results have been achieved on Apple M1 Max with 64 GB RAM.
+
+![client start](assets/benchmarks.png)
 
 ---
 

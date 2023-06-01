@@ -2,7 +2,7 @@ use crate::config::TopicConfig;
 use crate::partitions::partition::Partition;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
 
 pub const TOPIC_INFO: &str = "topic.info";
 
@@ -13,7 +13,7 @@ pub struct Topic {
     pub path: String,
     pub(crate) info_path: String,
     pub(crate) config: Arc<TopicConfig>,
-    pub(crate) partitions: HashMap<u32, Mutex<Partition>>,
+    pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
 }
 
 impl Topic {
@@ -43,14 +43,14 @@ impl Topic {
         topic.partitions = (1..partitions_count + 1)
             .map(|id| {
                 let partition = Partition::create(id, &topic.path, true, config.partition.clone());
-                (id, Mutex::new(partition))
+                (id, RwLock::new(partition))
             })
             .collect();
 
         topic
     }
 
-    pub fn get_partitions(&self) -> Vec<&Mutex<Partition>> {
+    pub fn get_partitions(&self) -> Vec<&RwLock<Partition>> {
         self.partitions.values().collect()
     }
 
@@ -86,7 +86,7 @@ mod tests {
         assert_eq!(topic.partitions.len(), partitions_count as usize);
 
         for (id, partition) in topic.partitions {
-            let partition = partition.blocking_lock();
+            let partition = partition.blocking_read();
             assert_eq!(partition.id, id);
             assert_eq!(partition.segments.len(), 1);
         }

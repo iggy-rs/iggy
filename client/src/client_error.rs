@@ -5,6 +5,8 @@ use tokio::io;
 pub enum ClientError {
     #[error("Invalid command")]
     InvalidCommand,
+    #[error("Invalid transport {0}")]
+    InvalidTransport(String),
     #[error("IO error")]
     IoError(#[from] io::Error),
     #[error("SDK error")]

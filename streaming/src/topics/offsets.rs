@@ -14,7 +14,7 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
-        let mut partition = partition.lock().await;
+        let partition = partition.read().await;
         partition.store_offset(consumer_id, offset).await
     }
 }

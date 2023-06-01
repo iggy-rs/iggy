@@ -2,6 +2,7 @@ mod args;
 mod benchmark;
 mod benchmark_result;
 mod benchmark_runner;
+mod benchmarks;
 mod client_factory;
 mod http;
 mod quic;

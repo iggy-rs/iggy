@@ -86,9 +86,9 @@ Server restart
 
 To benchmark the project, first start the server and then run the benchmarking app:
 
-`cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-send-messages`
+`cargo r --bin bench -r -- --http --test-send-messages --streams 10 --producers 10 --parallel-producer-streams --messages-per-batch 1000 --message-batches 1000 --message-size 1000`
 
-`cargo r --bin bench -r -- --http --messages-per-batch 1000 --message-batches 1000 --message-size 1000 --clients-count 10 --test-poll-messages`
+`cargo r --bin bench -r -- --http --test-poll-messages --streams 10 --consumers 10 --parallel-consumer-streams --messages-per-batch 1000 --message-batches 1000`
 
 Depending on the hardware, settings in `server.json`, transport protocol (`quic` or `http`) and payload size (`messages-per-batch * message-size`) you might expect over 2000 MB/s (e.g. 2M of 1 KB msg/sec) throughput for both writes and reads. The current results have been achieved on Apple M1 Max with 64 GB RAM.
 

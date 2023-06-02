@@ -1,10 +1,11 @@
 use crate::args::Args;
-use crate::benchmark;
 use crate::benchmark::{BenchmarkKind, Transport};
 use crate::benchmark_result::BenchmarkResult;
+use crate::benchmarks::send_and_poll_messages_benchmark;
 use crate::client_factory::ClientFactory;
 use crate::http::HttpClientFactory;
 use crate::quic::QuicClientFactory;
+use crate::{benchmark, initializer};
 use futures::future::join_all;
 use sdk::error::Error;
 use std::sync::Arc;
@@ -15,22 +16,29 @@ pub async fn run(args: Args) -> Result<(), Error> {
     info!("Starting the benchmarks...");
     let args = Arc::new(args);
     if args.http {
-        start(args.clone(), Transport::Http, &HttpClientFactory {}).await;
+        let client_factory = Arc::new(HttpClientFactory {});
+        start(args.clone(), Transport::Http, client_factory).await?;
     }
     if args.quic {
-        start(args.clone(), Transport::Quic, &QuicClientFactory {}).await;
+        let client_factory = Arc::new(QuicClientFactory {});
+        start(args.clone(), Transport::Quic, client_factory).await?;
     }
     info!("Finished the benchmarks.");
     Ok(())
 }
 
-async fn start(args: Arc<Args>, transport: Transport, client_factory: &dyn ClientFactory) {
+async fn start(
+    args: Arc<Args>,
+    transport: Transport,
+    client_factory: Arc<dyn ClientFactory>,
+) -> Result<(), Error> {
     if args.test_send_messages {
+        initializer::init_streams(client_factory.clone(), args.clone()).await?;
         execute(
             args.clone(),
             BenchmarkKind::SendMessages,
             transport,
-            client_factory,
+            client_factory.clone(),
         )
         .await;
     }
@@ -39,31 +47,31 @@ async fn start(args: Arc<Args>, transport: Transport, client_factory: &dyn Clien
             args.clone(),
             BenchmarkKind::PollMessages,
             transport,
-            client_factory,
+            client_factory.clone(),
         )
         .await;
     }
+    if args.test_send_and_poll_messages {
+        initializer::init_streams(client_factory.clone(), args.clone()).await?;
+        send_and_poll_messages_benchmark::run(client_factory.clone(), args.clone()).await?;
+    }
+
+    Ok(())
 }
 
 async fn execute(
     args: Arc<Args>,
     kind: BenchmarkKind,
     transport: Transport,
-    client_factory: &dyn ClientFactory,
+    client_factory: Arc<dyn ClientFactory>,
 ) {
-    let total_messages =
-        (args.messages_per_batch * args.message_batches * args.clients_count) as u64;
+    let total_messages = (args.messages_per_batch * args.message_batches * args.producers) as u64;
     info!(
         "Starting the {} benchmark for: {}, total amount of messages: {}...",
         transport, kind, total_messages
     );
 
-    let start_stream_id = match transport {
-        Transport::Http => args.http_start_stream_id,
-        Transport::Quic => args.quic_start_stream_id,
-    };
-
-    let results = benchmark::start(args.clone(), start_stream_id, client_factory, kind).await;
+    let results = benchmark::start(args.clone(), client_factory, kind).await;
     let results = join_all(results).await;
     let results = results
         .into_iter()

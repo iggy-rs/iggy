@@ -40,27 +40,37 @@ impl Display for Transport {
 
 pub async fn start(
     args: Arc<Args>,
-    start_stream_id: u32,
-    client_factory: &dyn ClientFactory,
+    client_factory: Arc<dyn ClientFactory>,
     kind: BenchmarkKind,
 ) -> Vec<JoinHandle<BenchmarkResult>> {
-    info!("Creating {} client(s)...", args.clients_count);
-    let mut futures = Vec::with_capacity(args.clients_count as usize);
-    for i in 0..args.clients_count {
-        let client_id = i + 1;
+    let clients_count = match kind {
+        BenchmarkKind::SendMessages => args.producers,
+        BenchmarkKind::PollMessages => args.consumers,
+    };
+    info!("Creating {} client(s)...", clients_count);
+    let mut futures = Vec::with_capacity(clients_count as usize);
+    for client_id in 1..=clients_count {
         let args = args.clone();
-        let client = client_factory.create_client(args.clone()).await;
+        let client_factory = client_factory.clone();
         let future = task::spawn(async move {
             info!("Executing the benchmark on client #{}...", client_id);
             let args = args.clone();
+            let start_stream_id = args.get_start_stream_id();
+            let client_factory = client_factory.clone();
             let result = match kind {
                 BenchmarkKind::SendMessages => {
-                    send_messages_benchmark::run(client.as_ref(), client_id, args, start_stream_id)
-                        .await
+                    let stream_id = match args.parallel_producer_streams {
+                        true => start_stream_id + client_id,
+                        false => start_stream_id + 1,
+                    };
+                    send_messages_benchmark::run(client_factory, client_id, args, stream_id).await
                 }
                 BenchmarkKind::PollMessages => {
-                    poll_messages_benchmark::run(client.as_ref(), client_id, args, start_stream_id)
-                        .await
+                    let stream_id = match args.parallel_consumer_streams {
+                        true => start_stream_id + client_id,
+                        false => start_stream_id + 1,
+                    };
+                    poll_messages_benchmark::run(client_factory, client_id, args, stream_id).await
                 }
             };
             match &result {
@@ -72,7 +82,7 @@ pub async fn start(
         });
         futures.push(future);
     }
-    info!("Created {} client(s).", args.clients_count);
+    info!("Created {} client(s).", clients_count);
 
     futures
 }

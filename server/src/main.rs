@@ -36,15 +36,13 @@ async fn main() -> Result<(), ServerError> {
 
     if config.http.enabled {
         let system = system.clone();
-        let address = config.http.address.clone();
         tokio::spawn(async move {
-            http_server::start(address, system).await;
+            http_server::start(config.http, system).await;
         });
     }
 
     if config.quic.enabled {
-        let address = config.quic.address.clone();
-        quic_server::start(address, system.clone());
+        quic_server::start(config.quic, system.clone());
     }
 
     match signal::ctrl_c().await {

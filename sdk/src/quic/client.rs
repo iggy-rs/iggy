@@ -1,7 +1,7 @@
 use crate::client::Client;
 use crate::error::Error;
 use crate::quic::config::Config;
-use quinn::{ClientConfig, Connection, Endpoint, RecvStream};
+use quinn::{ClientConfig, Connection, Endpoint, RecvStream, VarInt};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tracing::{error, info, trace};
@@ -39,14 +39,14 @@ impl QuicBaseClient {
             client_address: client_address.to_string(),
             server_address: server_address.to_string(),
             server_name: server_name.to_string(),
-            response_buffer_size: 1024 * 1024 * 10,
+            ..Default::default()
         })
     }
 
     pub fn create(config: Config) -> Result<Self, Error> {
         let client_address = config.client_address.parse::<SocketAddr>()?;
         let server_address = config.server_address.parse::<SocketAddr>()?;
-        let quic_config = configure();
+        let quic_config = configure(&config)?;
         let endpoint = Endpoint::client(client_address);
         if endpoint.is_err() {
             error!("Cannot create client endpoint");
@@ -129,19 +129,33 @@ impl QuicClient {
     }
 }
 
-fn configure() -> ClientConfig {
+fn configure(config: &Config) -> Result<ClientConfig, Error> {
+    let max_concurrent_bidi_streams = VarInt::try_from(config.max_concurrent_bidi_streams);
+    if max_concurrent_bidi_streams.is_err() {
+        error!(
+            "Invalid 'max_concurrent_bidi_streams': {}",
+            config.max_concurrent_bidi_streams
+        );
+        return Err(Error::InvalidConfiguration);
+    }
+
     let crypto = rustls::ClientConfig::builder()
         .with_safe_defaults()
         .with_custom_certificate_verifier(SkipServerVerification::new())
         .with_no_client_auth();
 
     let mut transport = quinn::TransportConfig::default();
+    transport.initial_mtu(config.initial_mtu);
+    transport.send_window(config.send_window);
+    transport.receive_window(VarInt::try_from(config.receive_window).unwrap());
+    transport.datagram_send_buffer_size(config.datagram_send_buffer_size);
+    transport.max_concurrent_bidi_streams(max_concurrent_bidi_streams.unwrap());
     transport.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
 
     let mut config = ClientConfig::new(Arc::new(crypto));
     config.transport_config(Arc::new(transport));
 
-    config
+    Ok(config)
 }
 
 struct SkipServerVerification;

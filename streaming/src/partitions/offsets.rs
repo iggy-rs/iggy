@@ -49,7 +49,7 @@ impl Partition {
         consumer_id: u32,
         offset: u64,
     ) -> Result<(), Error> {
-        let mut file = file::create_file(path).await;
+        let mut file = file::create_file(path).await?;
         file.write_u64(offset).await?;
 
         trace!(
@@ -91,7 +91,7 @@ impl Partition {
 
             let path = path.unwrap().to_string();
             let consumer_id = consumer_id.unwrap();
-            let mut file = file::open_file(&path, false).await;
+            let mut file = file::open_file(&path, false).await?;
             let offset = file.read_u64().await?;
 
             let mut consumer_offsets = self.consumer_offsets.write().await;

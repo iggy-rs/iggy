@@ -8,8 +8,8 @@ use thiserror::Error;
 pub enum Error {
     #[error("Empty response")]
     EmptyResponse,
-    #[error("Invalid arguments")]
-    InvalidArguments,
+    #[error("Invalid configuration")]
+    InvalidConfiguration,
     #[error("Request error")]
     RequestError(#[from] reqwest::Error),
     #[error("Cannot create endpoint")]

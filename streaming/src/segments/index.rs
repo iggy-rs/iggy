@@ -3,7 +3,7 @@ use shared::error::Error;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
-use tracing::{error, trace};
+use tracing::{error, trace, warn};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
 
@@ -75,14 +75,20 @@ pub async fn load_range(
     );
 
     if index_start_offset > index_end_offset {
+        warn!(
+            "Index start offset: {} is greater than index end offset: {}.",
+            index_start_offset, index_end_offset
+        );
         return Ok(None);
     }
 
     let file_length = file.metadata().await?.len() as u32;
     if file_length == 0 {
-        trace!("Index file is empty.");
+        warn!("Index file is empty.");
         return Ok(None);
     }
+
+    trace!("Index file length: {}.", file_length);
 
     if index_start_offset < segment_start_offset {
         index_start_offset = segment_start_offset - 1;
@@ -96,6 +102,22 @@ pub async fn load_range(
         end_seek_position = file_length - INDEX_SIZE;
     }
 
+    if start_seek_position >= end_seek_position {
+        trace!(
+            "Start seek position: {} is greater than or equal to end seek position: {}.",
+            start_seek_position,
+            end_seek_position
+        );
+        return Ok(None);
+    }
+
+    trace!(
+        "Seeking to index range: {}...{}, position range: {}...{}",
+        relative_start_offset,
+        relative_end_offset,
+        start_seek_position,
+        end_seek_position
+    );
     file.seek(std::io::SeekFrom::Start(start_seek_position as u64))
         .await?;
     let start_position = file.read_u32_le().await?;

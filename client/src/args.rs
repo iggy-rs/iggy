@@ -3,6 +3,9 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    #[arg(long, default_value = "quic")]
+    pub transport: String,
+
     #[arg(long, default_value = "http://localhost:3000")]
     pub http_api_url: String,
 
@@ -15,9 +18,21 @@ pub struct Args {
     #[arg(long, default_value = "localhost")]
     pub quic_server_name: String,
 
-    #[arg(long, default_value = "1048576")]
-    pub response_buffer_size: u64,
+    #[arg(long, default_value = "10000")]
+    pub quic_max_concurrent_bidi_streams: u64,
 
-    #[arg(long, default_value = "quic")]
-    pub transport: String,
+    #[arg(long, default_value = "100000")]
+    pub quic_datagram_send_buffer_size: usize,
+
+    #[arg(long, default_value = "1200")]
+    pub quic_initial_mtu: u16,
+
+    #[arg(long, default_value = "100000")]
+    pub quic_send_window: u64,
+
+    #[arg(long, default_value = "100000")]
+    pub quic_receive_window: u64,
+
+    #[arg(long, default_value = "1048576")]
+    pub quic_response_buffer_size: u64,
 }

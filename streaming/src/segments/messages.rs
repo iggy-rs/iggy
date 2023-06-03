@@ -6,7 +6,7 @@ use crate::segments::*;
 use crate::utils::file;
 use shared::error::Error;
 use std::sync::Arc;
-use tracing::trace;
+use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
@@ -40,16 +40,26 @@ impl Segment {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let mut messages = self.load_messages_from_disk(offset, end_offset).await?;
-        let mut buffered_messages = unsaved_messages
-            .iter()
-            .filter(|message| message.offset >= offset && message.offset <= end_offset)
-            .cloned()
-            .collect::<Vec<Arc<Message>>>();
+        let last_offset = unsaved_messages[unsaved_messages.len() - 1].offset;
+        if end_offset <= last_offset {
+            return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
+        }
 
+        let mut messages = self.load_messages_from_disk(offset, end_offset).await?;
+        let mut buffered_messages = self.load_messages_from_unsaved_buffer(offset, end_offset);
         messages.append(&mut buffered_messages);
 
         Ok(messages)
+    }
+
+    fn load_messages_from_unsaved_buffer(&self, offset: u64, end_offset: u64) -> Vec<Arc<Message>> {
+        self.unsaved_messages
+            .as_ref()
+            .unwrap()
+            .iter()
+            .filter(|message| message.offset >= offset && message.offset <= end_offset)
+            .cloned()
+            .collect::<Vec<Arc<Message>>>()
     }
 
     async fn load_messages_from_disk(
@@ -58,12 +68,17 @@ impl Segment {
         end_offset: u64,
     ) -> Result<Vec<Arc<Message>>, Error> {
         trace!(
-            "Loading messages from disk, segment start offset: {}, end offset: {}...",
+            "Loading messages from disk, segment start offset: {}, end offset: {}, current offset: {}...",
             start_offset,
-            end_offset
+            end_offset,
+            self.current_offset
         );
 
         if start_offset > end_offset || end_offset > self.current_offset {
+            warn!(
+                "Cannot load messages from disk, invalid offset range: {} - {}.",
+                start_offset, end_offset
+            );
             return Ok(EMPTY_MESSAGES);
         }
 
@@ -94,11 +109,16 @@ impl Segment {
             }
         }
 
-        let mut index_file = file::open_file(&self.index_path, false).await;
+        let mut index_file = file::open_file(&self.index_path, false).await?;
         let index_range =
             index::load_range(&mut index_file, self.start_offset, start_offset, end_offset).await?;
 
         if index_range.is_none() {
+            warn!(
+                "Cannot load messages from disk, index range not found: {} - {}.",
+                start_offset, end_offset
+            );
+
             return Ok(EMPTY_MESSAGES);
         }
 
@@ -110,7 +130,7 @@ impl Segment {
         &self,
         index_range: &IndexRange,
     ) -> Result<Vec<Arc<Message>>, Error> {
-        let mut log_file = file::open_file(&self.log_path, false).await;
+        let mut log_file = file::open_file(&self.log_path, false).await?;
         let messages = log::load(&mut log_file, index_range).await?;
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
@@ -170,9 +190,9 @@ impl Segment {
             self.partition_id
         );
 
-        let mut log_file = file::open_file(&self.log_path, true).await;
-        let mut index_file = file::open_file(&self.index_path, true).await;
-        let mut time_index_file = file::open_file(&self.time_index_path, true).await;
+        let mut log_file = file::open_file(&self.log_path, true).await?;
+        let mut index_file = file::open_file(&self.index_path, true).await?;
+        let mut time_index_file = file::open_file(&self.time_index_path, true).await?;
 
         let saved_bytes = log::persist(&mut log_file, unsaved_messages).await?;
         let current_position = self.current_size_bytes - saved_bytes;

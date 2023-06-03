@@ -1,7 +1,12 @@
 {
   "quic": {
     "enabled": true,
-    "address": "127.0.0.1:8080"
+    "address": "127.0.0.1:8080",
+    "max_concurrent_bidi_streams": 10000,
+    "datagram_send_buffer_size": 100000,
+    "initial_mtu": 1200,
+    "send_window": 100000,
+    "receive_window": 100000
   },
   "http": {
     "enabled": true,

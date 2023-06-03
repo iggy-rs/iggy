@@ -75,36 +75,36 @@ impl Args {
     pub fn validate(&self) -> Result<(), Error> {
         if !self.quic && !self.http {
             error!("At least one of the protocols must be provided: http or quic.");
-            return Err(Error::InvalidArguments);
+            return Err(Error::InvalidConfiguration);
         }
 
         if self.streams == 0 {
             error!("The number of streams must be greater than zero.");
-            return Err(Error::InvalidArguments);
+            return Err(Error::InvalidConfiguration);
         }
 
         if (self.test_send_messages || self.test_send_and_poll_messages) && self.producers == 0 {
             error!("The number of producers must be greater than zero.");
-            return Err(Error::InvalidArguments);
+            return Err(Error::InvalidConfiguration);
         }
 
         if (self.test_poll_messages || self.test_send_and_poll_messages) && self.consumers == 0 {
             error!("The number of consumers must be greater than zero.");
-            return Err(Error::InvalidArguments);
+            return Err(Error::InvalidConfiguration);
         }
 
         if self.parallel_consumer_streams && self.streams < self.consumers {
             error!(
                 "The number of streams must be greater than or equal to the number of consumers."
             );
-            return Err(Error::InvalidArguments);
+            return Err(Error::InvalidConfiguration);
         }
 
         if self.parallel_producer_streams && self.streams < self.producers {
             error!(
                 "The number of streams must be greater than or equal to the number of producers."
             );
-            return Err(Error::InvalidArguments);
+            return Err(Error::InvalidConfiguration);
         }
 
         Ok(())

@@ -58,6 +58,16 @@ pub async fn run(
             continue;
         }
 
+        if messages.len() != args.messages_per_batch as usize {
+            trace!(
+                "Consumer #{} → expected {} messages, but got {} messages, retrying...",
+                consumer_id,
+                args.messages_per_batch,
+                messages.len()
+            );
+            continue;
+        }
+
         let latency_end = latency_start.elapsed();
         received_messages += messages.len() as u32;
         latencies.push(latency_end);

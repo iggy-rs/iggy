@@ -15,7 +15,12 @@ pub async fn get_client(args: Args) -> Result<Box<dyn Client>, ClientError> {
                 client_address: args.quic_client_address.to_string(),
                 server_address: args.quic_server_address.to_string(),
                 server_name: args.quic_server_name.to_string(),
-                response_buffer_size: args.response_buffer_size,
+                response_buffer_size: args.quic_response_buffer_size,
+                max_concurrent_bidi_streams: args.quic_max_concurrent_bidi_streams,
+                datagram_send_buffer_size: args.quic_datagram_send_buffer_size,
+                initial_mtu: args.quic_initial_mtu,
+                send_window: args.quic_send_window,
+                receive_window: args.quic_receive_window,
             })?;
             let client = client.connect().await?;
             Ok(Box::new(client))

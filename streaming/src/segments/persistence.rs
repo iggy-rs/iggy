@@ -11,7 +11,7 @@ impl Segment {
             "Loading segment from disk for start offset: {} and partition with ID: {}...",
             self.start_offset, self.partition_id
         );
-        let log_file = file::open_file(&self.log_path, false).await;
+        let log_file = file::open_file(&self.log_path, false).await?;
         let file_size = log_file.metadata().await.unwrap().len() as u32;
         self.current_size_bytes = file_size;
 
@@ -20,8 +20,8 @@ impl Segment {
             self.start_offset, self.current_offset, self.partition_id, self.current_size_bytes
         );
 
-        let mut index_file = file::open_file(&self.index_path, false).await;
-        let mut time_index_file = file::open_file(&self.time_index_path, false).await;
+        let mut index_file = file::open_file(&self.index_path, false).await?;
+        let mut time_index_file = file::open_file(&self.time_index_path, false).await?;
 
         if self.config.cache_indexes {
             self.indexes = Some(index::load_all(&mut index_file).await?);

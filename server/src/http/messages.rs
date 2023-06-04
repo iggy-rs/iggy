@@ -46,6 +46,7 @@ async fn poll_messages(
         .map(|message| sdk::message::Message {
             offset: message.offset,
             timestamp: message.timestamp,
+            id: message.id,
             length: message.length,
             payload: message.payload.clone(),
         })
@@ -84,7 +85,7 @@ async fn send_messages(
     let mut messages = Vec::with_capacity(command.messages_count as usize);
     for message in command.messages {
         let timestamp = timestamp::get();
-        messages.push(Message::empty(timestamp, message.payload));
+        messages.push(Message::empty(timestamp, message.id, message.payload));
     }
 
     let system = system.read().await;

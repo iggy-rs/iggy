@@ -6,7 +6,7 @@ use crate::segments::*;
 use crate::utils::file;
 use shared::error::Error;
 use std::sync::Arc;
-use tracing::{trace, warn};
+use tracing::trace;
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
@@ -75,9 +75,10 @@ impl Segment {
         );
 
         if start_offset > end_offset || end_offset > self.current_offset {
-            warn!(
+            trace!(
                 "Cannot load messages from disk, invalid offset range: {} - {}.",
-                start_offset, end_offset
+                start_offset,
+                end_offset
             );
             return Ok(EMPTY_MESSAGES);
         }
@@ -114,9 +115,10 @@ impl Segment {
             index::load_range(&mut index_file, self.start_offset, start_offset, end_offset).await?;
 
         if index_range.is_none() {
-            warn!(
+            trace!(
                 "Cannot load messages from disk, index range not found: {} - {}.",
-                start_offset, end_offset
+                start_offset,
+                end_offset
             );
 
             return Ok(EMPTY_MESSAGES);

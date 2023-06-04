@@ -35,4 +35,10 @@ pub struct Args {
 
     #[arg(long, default_value = "1048576")]
     pub quic_response_buffer_size: u64,
+
+    #[arg(long, default_value = "5000")]
+    pub quic_keep_alive_interval: u64,
+
+    #[arg(long, default_value = "10000")]
+    pub quic_max_idle_timeout: u64,
 }

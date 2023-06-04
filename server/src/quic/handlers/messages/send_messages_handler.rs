@@ -18,7 +18,7 @@ pub async fn handle(
     let mut messages = Vec::with_capacity(command.messages_count as usize);
     for message in command.messages {
         let timestamp = timestamp::get();
-        messages.push(Message::empty(timestamp, message.payload));
+        messages.push(Message::empty(timestamp, message.id, message.payload));
     }
 
     system

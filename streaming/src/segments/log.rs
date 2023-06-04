@@ -40,6 +40,11 @@ pub async fn load(file: &mut File, index_range: &IndexRange) -> Result<Vec<Arc<M
             return Err(Error::CannotReadMessageTimestamp);
         }
 
+        let id = reader.read_u128_le().await;
+        if id.is_err() {
+            return Err(Error::CannotReadMessageId);
+        }
+
         let length = reader.read_u32_le().await;
         if length.is_err() {
             return Err(Error::CannotReadMessageLength);
@@ -52,13 +57,49 @@ pub async fn load(file: &mut File, index_range: &IndexRange) -> Result<Vec<Arc<M
 
         let offset = offset.unwrap();
         let timestamp = timestamp.unwrap();
-        messages.push(Arc::new(Message::create(offset, timestamp, payload)));
+        let id = id.unwrap();
+        messages.push(Arc::new(Message::create(offset, timestamp, id, payload)));
         read_messages += 1;
     }
 
     trace!("Loaded {} messages from disk.", messages.len());
 
     Ok(messages)
+}
+
+pub async fn load_message_ids(file: &mut File) -> Result<Vec<u128>, Error> {
+    let file_size = file.metadata().await?.len();
+    if file_size == 0 {
+        return Ok(Vec::new());
+    }
+
+    let mut message_ids = Vec::new();
+    let mut reader = BufReader::new(file);
+    loop {
+        let offset = reader.read_u64_le().await;
+        if offset.is_err() {
+            break;
+        }
+
+        _ = reader.read_u64_le().await?;
+        let id = reader.read_u128_le().await;
+        if id.is_err() {
+            return Err(Error::CannotReadMessageId);
+        }
+
+        let id = id.unwrap();
+        message_ids.push(id);
+        let length = reader.read_u32_le().await;
+        // File seek() is way too slow, just read the message payload and ignore it for now.
+        let mut payload = vec![0; length.unwrap() as usize];
+        if reader.read_exact(&mut payload).await.is_err() {
+            continue;
+        }
+    }
+
+    trace!("Loaded {} message IDs from disk.", message_ids.len());
+
+    Ok(message_ids)
 }
 
 pub async fn persist(file: &mut File, messages: &Vec<Arc<Message>>) -> Result<u32, Error> {

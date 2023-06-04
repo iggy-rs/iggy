@@ -48,15 +48,16 @@ fn handle_poll_messages_response(response: &[u8]) -> Result<Vec<Message>, Error>
         return Ok(Vec::new());
     }
 
-    const PROPERTIES_SIZE: usize = 20;
+    const PROPERTIES_SIZE: usize = 36;
     let length = response.len();
     let mut position = 4;
     let mut messages = Vec::new();
     while position < length {
         let offset = u64::from_le_bytes(response[position..position + 8].try_into()?);
         let timestamp = u64::from_le_bytes(response[position + 8..position + 16].try_into()?);
+        let id = u128::from_le_bytes(response[position + 16..position + 32].try_into()?);
         let message_length =
-            u32::from_le_bytes(response[position + 16..position + PROPERTIES_SIZE].try_into()?);
+            u32::from_le_bytes(response[position + 32..position + PROPERTIES_SIZE].try_into()?);
 
         let payload_range =
             position + PROPERTIES_SIZE..position + PROPERTIES_SIZE + message_length as usize;
@@ -70,6 +71,7 @@ fn handle_poll_messages_response(response: &[u8]) -> Result<Vec<Message>, Error>
         messages.push(Message {
             offset,
             timestamp,
+            id,
             length: message_length,
             payload,
         });

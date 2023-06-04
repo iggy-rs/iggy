@@ -12,6 +12,30 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 
 ---
 
+### Features
+
+- Highly performant, persistent append-only log for the message streaming
+- Very high throughput for both writes and reads 
+- Low latency and predictable resource usage thanks to the Rust compiled language (no GC)
+- Support for multiple streams, topics and partitions
+- Support for multiple transport protocols (QUIC, HTTP)
+- Available client SDK in Rust (more languages to come)
+- Works directly with the binary data (lack of enforced schema and serialization/deserialization)
+- Configurable server features (e.g. caching, segment size, data flush interval, transport protocols etc.)
+- Possibility of storing the consumer offsets on the server
+- Multiple ways of polling the messages:
+  - By offset (using the indexes)
+  - By timestamp (using the time indexes)
+  - First/Last N messages
+  - Next N messages for the specific consumer
+- Possibility of auto committing the offset (e.g. to achieve at-most-once delivery)
+- Additional features such as server side message deduplication
+- Built-in benchmarking app to test the performance
+- Single binary deployment (no external dependencies)
+- Running as a single node (no cluster support yet)
+
+---
+
 ### Quick start
 
 Build the project (the longer compilation time is due to [LTO](https://doc.rust-lang.org/rustc/linker-plugin-lto.html) enabled in release [profile](https://github.com/spetz/iggy/blob/master/Cargo.toml#L2)):
@@ -46,13 +70,13 @@ List available topics for stream `dev` (ID 1):
 
 `topic.list|1`
 
-Send a message to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 1:
+Send a message 'hello world' (ID 1) to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 1:
 
-`message.send|1|1|p|1|hello world`
+`message.send|1|1|p|1|1|hello world`
 
-Send another message:
+Send another message 'lorem ipsum' (ID 2) to the same stream, topic and partition:
 
-`message.send|1|1|p|1|lorem ipsum`
+`message.send|1|1|p|1|2|lorem ipsum`
 
 Poll 2 messages by an arbitrary consumer 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition with ID 1, starting with offset (`o`) 0, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload:
 
@@ -96,7 +120,7 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 
 ---
 
-### Features and TODO
+### TODO
 
 #### Project
 
@@ -166,7 +190,7 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer
-- [ ] Implement message deduplication
+- [x] Implement message deduplication
 - [ ] Implement consumer groups for horizontal scaling
 - [ ] Delete old messages bases on retention policy
 

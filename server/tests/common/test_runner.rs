@@ -65,8 +65,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let messages_count = 1000u32;
     let mut messages = Vec::new();
     for offset in 0..messages_count {
+        let id = (offset + 1) as u128;
         let payload = get_message_payload(offset as u64);
         messages.push(Message {
+            id,
             length: payload.len() as u32,
             payload,
         });

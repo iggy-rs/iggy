@@ -9,6 +9,8 @@ pub struct Config {
     pub initial_mtu: u16,
     pub send_window: u64,
     pub receive_window: u64,
+    pub keep_alive_interval: u64,
+    pub max_idle_timeout: u64,
 }
 
 impl Default for Config {
@@ -23,6 +25,8 @@ impl Default for Config {
             initial_mtu: 1200,
             send_window: 100000,
             receive_window: 100000,
+            keep_alive_interval: 5000,
+            max_idle_timeout: 10000,
         }
     }
 }

@@ -14,6 +14,7 @@ pub struct Partition {
     pub consumer_offsets_path: String,
     pub current_offset: u64,
     pub messages: Option<AllocRingBuffer<Arc<Message>>>,
+    pub message_ids: Option<HashMap<u128, bool>>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
     pub(crate) consumer_offsets: RwLock<ConsumerOffsets>,
@@ -56,6 +57,10 @@ impl Partition {
                 _ => Some(AllocRingBuffer::with_capacity(
                     config.messages_buffer as usize,
                 )),
+            },
+            message_ids: match config.deduplicate_messages {
+                true => Some(HashMap::new()),
+                false => None,
             },
             segments: vec![],
             current_offset: 0,

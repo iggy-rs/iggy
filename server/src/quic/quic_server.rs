@@ -1,9 +1,10 @@
 use crate::quic::listener;
 use crate::server_config::QuicConfig;
 use anyhow::Result;
-use quinn::{Endpoint, VarInt};
+use quinn::{Endpoint, IdleTimeout, VarInt};
 use std::error::Error;
 use std::sync::Arc;
+use std::time::Duration;
 use streaming::system::System;
 use tokio::sync::RwLock;
 use tracing::info;
@@ -30,9 +31,18 @@ fn configure_quic(config: &QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Er
     let mut transport = quinn::TransportConfig::default();
     transport.initial_mtu(config.initial_mtu);
     transport.send_window(config.send_window);
-    transport.receive_window(VarInt::try_from(config.receive_window).unwrap());
+    transport.receive_window(VarInt::try_from(config.receive_window)?);
     transport.datagram_send_buffer_size(config.datagram_send_buffer_size);
     transport.max_concurrent_bidi_streams(VarInt::try_from(config.max_concurrent_bidi_streams)?);
+    if config.keep_alive_interval > 0 {
+        transport.keep_alive_interval(Some(Duration::from_millis(config.keep_alive_interval)));
+    }
+    if config.max_idle_timeout > 0 {
+        let max_idle_timeout =
+            IdleTimeout::try_from(Duration::from_millis(config.max_idle_timeout))?;
+        transport.max_idle_timeout(Some(max_idle_timeout));
+    }
+
     server_config.transport_config(Arc::new(transport));
     Ok(server_config)
 }

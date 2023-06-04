@@ -19,8 +19,8 @@ pub async fn handle(command: PollMessages, client: &dyn Client) -> Result<(), Cl
 
     for message in messages {
         text += &format!(
-            "\noffset: {}, timestamp: {}, length: {}, payload: ",
-            message.offset, message.timestamp, message.length
+            "\noffset: {}, timestamp: {}, ID: {}, length: {}, payload: ",
+            message.offset, message.timestamp, message.id, message.length
         );
         match command.format {
             Format::Binary => text += &format!("{:?}", message.payload),

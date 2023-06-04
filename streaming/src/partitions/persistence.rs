@@ -1,5 +1,7 @@
 use crate::partitions::partition::Partition;
+use crate::segments::log;
 use crate::segments::segment::{Segment, LOG_EXTENSION};
+use crate::utils::file;
 use shared::error::Error;
 use tokio::fs;
 use tracing::{error, info};
@@ -74,6 +76,18 @@ impl Partition {
             // If the first segment has at least a single message, we should increment the offset.
             if !self.should_increment_offset {
                 self.should_increment_offset = segment.current_size_bytes > 0;
+            }
+
+            // Load the unique message IDs for the partition if the deduplication feature is enabled.
+            if self.message_ids.is_some() {
+                info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", self.id, segment.start_offset);
+                let partition_message_ids = self.message_ids.as_mut().unwrap();
+                let mut log_file = file::open_file(&segment.log_path, false).await?;
+                let message_ids = log::load_message_ids(&mut log_file).await?;
+                for message_id in message_ids {
+                    partition_message_ids.insert(message_id, true);
+                }
+                info!("Loaded: {} unique message IDs for partition with ID: {} and segment with start offset: {}...", partition_message_ids.len(), self.id, segment.start_offset);
             }
 
             self.segments.push(segment);

@@ -1,9 +1,10 @@
 use crate::client::Client;
 use crate::error::Error;
 use crate::quic::config::Config;
-use quinn::{ClientConfig, Connection, Endpoint, RecvStream, VarInt};
+use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 use tracing::{error, info, trace};
 
 const EMPTY_RESPONSE: Vec<u8> = vec![];
@@ -139,6 +140,12 @@ fn configure(config: &Config) -> Result<ClientConfig, Error> {
         return Err(Error::InvalidConfiguration);
     }
 
+    let receive_window = VarInt::try_from(config.receive_window);
+    if receive_window.is_err() {
+        error!("Invalid 'receive_window': {}", config.receive_window);
+        return Err(Error::InvalidConfiguration);
+    }
+
     let crypto = rustls::ClientConfig::builder()
         .with_safe_defaults()
         .with_custom_certificate_verifier(SkipServerVerification::new())
@@ -147,10 +154,21 @@ fn configure(config: &Config) -> Result<ClientConfig, Error> {
     let mut transport = quinn::TransportConfig::default();
     transport.initial_mtu(config.initial_mtu);
     transport.send_window(config.send_window);
-    transport.receive_window(VarInt::try_from(config.receive_window).unwrap());
+    transport.receive_window(receive_window.unwrap());
     transport.datagram_send_buffer_size(config.datagram_send_buffer_size);
     transport.max_concurrent_bidi_streams(max_concurrent_bidi_streams.unwrap());
-    transport.keep_alive_interval(Some(std::time::Duration::from_secs(5)));
+    if config.keep_alive_interval > 0 {
+        transport.keep_alive_interval(Some(Duration::from_millis(config.keep_alive_interval)));
+    }
+    if config.max_idle_timeout > 0 {
+        let max_idle_timeout =
+            IdleTimeout::try_from(Duration::from_millis(config.max_idle_timeout));
+        if max_idle_timeout.is_err() {
+            error!("Invalid 'max_idle_timeout': {}", config.max_idle_timeout);
+            return Err(Error::InvalidConfiguration);
+        }
+        transport.max_idle_timeout(Some(max_idle_timeout.unwrap()));
+    }
 
     let mut config = ClientConfig::new(Arc::new(crypto));
     config.transport_config(Arc::new(transport));

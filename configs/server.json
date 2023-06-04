@@ -6,7 +6,9 @@
     "datagram_send_buffer_size": 100000,
     "initial_mtu": 1200,
     "send_window": 100000,
-    "receive_window": 100000
+    "receive_window": 100000,
+    "keep_alive_interval": 5000,
+    "max_idle_timeout": 10000
   },
   "http": {
     "enabled": true,
@@ -23,6 +25,7 @@
       "topic": {
         "path": "topics",
         "partition": {
+          "deduplicate_messages": false,
           "messages_required_to_save": 10000,
           "messages_buffer": 1048576,
           "segment": {

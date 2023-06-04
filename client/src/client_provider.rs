@@ -21,6 +21,8 @@ pub async fn get_client(args: Args) -> Result<Box<dyn Client>, ClientError> {
                 initial_mtu: args.quic_initial_mtu,
                 send_window: args.quic_send_window,
                 receive_window: args.quic_receive_window,
+                keep_alive_interval: args.quic_keep_alive_interval,
+                max_idle_timeout: args.quic_max_idle_timeout,
             })?;
             let client = client.connect().await?;
             Ok(Box::new(client))

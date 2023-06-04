@@ -84,7 +84,7 @@ pub async fn load_range(
 
     let file_length = file.metadata().await?.len() as u32;
     if file_length == 0 {
-        warn!("Index file is empty.");
+        trace!("Index file is empty.");
         return Ok(None);
     }
 

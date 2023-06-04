@@ -92,7 +92,7 @@ impl Partition {
             let path = path.unwrap().to_string();
             let consumer_id = consumer_id.unwrap();
             let mut file = file::open_file(&path, false).await?;
-            let offset = file.read_u64().await?;
+            let offset = file.read_u64_le().await?;
 
             let mut consumer_offsets = self.consumer_offsets.write().await;
             consumer_offsets

@@ -119,6 +119,8 @@ pub enum Error {
     CannotReadMessage,
     #[error("Cannot read message timestamp")]
     CannotReadMessageTimestamp,
+    #[error("Cannot read message ID")]
+    CannotReadMessageId,
     #[error("Cannot read message length")]
     CannotReadMessageLength,
     #[error("Cannot read message payload")]
@@ -129,8 +131,10 @@ pub enum Error {
     CannotSaveIndexToSegment,
     #[error("Cannot save time index to segment")]
     CannotSaveTimeIndexToSegment,
-    #[error("Too big payload")]
-    TooBigPayload,
+    #[error("Empty message payload")]
+    EmptyMessagePayload,
+    #[error("Too big message payload")]
+    TooBigMessagePayload,
     #[error("Too many messages")]
     TooManyMessages,
     #[error("Invalid offset: {0}")]
@@ -191,22 +195,24 @@ impl Error {
             Error::InvalidSegmentSize(_) => 46,
             Error::CannotReadMessage => 47,
             Error::CannotReadMessageTimestamp => 48,
-            Error::CannotReadMessageLength => 49,
-            Error::CannotReadMessagePayload => 50,
-            Error::CannotSaveMessagesToSegment => 51,
-            Error::CannotSaveIndexToSegment => 52,
-            Error::CannotSaveTimeIndexToSegment => 53,
-            Error::CannotParseUtf8(_) => 54,
-            Error::CannotParseInt(_) => 55,
-            Error::CannotParseSlice(_) => 56,
-            Error::TooBigPayload => 57,
-            Error::TooManyMessages => 58,
-            Error::WriteError(_) => 59,
-            Error::InvalidOffset(_) => 60,
-            Error::CannotReadConsumerOffsets(_) => 61,
-            Error::CannotDeletePartition(_) => 62,
-            Error::CannotDeletePartitionDirectory(_) => 63,
-            Error::InvalidMessagePayloadLength => 64,
+            Error::CannotReadMessageId => 49,
+            Error::CannotReadMessageLength => 50,
+            Error::CannotReadMessagePayload => 51,
+            Error::CannotSaveMessagesToSegment => 52,
+            Error::CannotSaveIndexToSegment => 53,
+            Error::CannotSaveTimeIndexToSegment => 54,
+            Error::CannotParseUtf8(_) => 55,
+            Error::CannotParseInt(_) => 56,
+            Error::CannotParseSlice(_) => 57,
+            Error::TooBigMessagePayload => 58,
+            Error::TooManyMessages => 59,
+            Error::WriteError(_) => 60,
+            Error::InvalidOffset(_) => 61,
+            Error::CannotReadConsumerOffsets(_) => 62,
+            Error::CannotDeletePartition(_) => 63,
+            Error::CannotDeletePartitionDirectory(_) => 64,
+            Error::InvalidMessagePayloadLength => 65,
+            Error::EmptyMessagePayload => 67,
         }
     }
 
@@ -267,6 +273,7 @@ impl Error {
             Error::InvalidSegmentSize(_) => "invalid_segment_size",
             Error::CannotReadMessage => "cannot_read_message",
             Error::CannotReadMessageTimestamp => "cannot_read_message_timestamp",
+            Error::CannotReadMessageId => "cannot_read_message_id",
             Error::CannotReadMessageLength => "cannot_read_message_length",
             Error::CannotReadMessagePayload => "cannot_read_message_payload",
             Error::CannotSaveMessagesToSegment => "cannot_save_messages_to_segment",
@@ -275,7 +282,7 @@ impl Error {
             Error::CannotParseUtf8(_) => "cannot_parse_utf8",
             Error::CannotParseInt(_) => "cannot_parse_int",
             Error::CannotParseSlice(_) => "cannot_parse_slice",
-            Error::TooBigPayload => "too_big_payload",
+            Error::TooBigMessagePayload => "too_big_payload",
             Error::TooManyMessages => "too_many_messages",
             Error::WriteError(_) => "write_error",
             Error::InvalidOffset(_) => "invalid_offset",
@@ -283,6 +290,7 @@ impl Error {
             Error::CannotDeletePartition(_) => "cannot_delete_partition",
             Error::CannotDeletePartitionDirectory(_) => "cannot_delete_partition_directory",
             Error::InvalidMessagePayloadLength => "invalid_message_payload_length",
+            Error::EmptyMessagePayload => "empty_message_payload",
         }
     }
 }

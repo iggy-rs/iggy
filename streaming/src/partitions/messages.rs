@@ -1,10 +1,11 @@
 use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::Segment;
+use crate::utils::random_id;
 use ringbuffer::{RingBuffer, RingBufferWrite};
 use shared::error::Error;
 use std::sync::Arc;
-use tracing::{error, trace};
+use tracing::{error, trace, warn};
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
@@ -282,7 +283,24 @@ impl Partition {
             self.id
         );
 
+        let deduplicate_messages = self.message_ids.is_some();
         for mut message in messages {
+            if message.id == 0 {
+                message.id = random_id::get();
+            }
+            if deduplicate_messages {
+                let message_ids = self.message_ids.as_mut().unwrap();
+                if message_ids.contains_key(&message.id) {
+                    warn!(
+                        "Ignored the duplicated message ID: {} for partition with ID: {}.",
+                        message.id, self.id
+                    );
+                    continue;
+                }
+
+                message_ids.insert(message.id, true);
+            }
+
             if self.should_increment_offset {
                 self.current_offset += 1;
             } else {

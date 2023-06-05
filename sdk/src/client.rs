@@ -16,7 +16,10 @@ use shared::topics::delete_topic::DeleteTopic;
 use shared::topics::get_topics::GetTopics;
 
 #[async_trait]
-pub trait Client: SystemClient + StreamClient + TopicClient + MessageClient + Sync + Send {}
+pub trait Client: SystemClient + StreamClient + TopicClient + MessageClient + Sync + Send {
+    async fn connect(&mut self) -> Result<(), Error>;
+    async fn disconnect(&mut self) -> Result<(), Error>;
+}
 
 #[async_trait]
 pub trait SystemClient {

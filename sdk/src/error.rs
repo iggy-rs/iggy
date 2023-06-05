@@ -10,8 +10,12 @@ pub enum Error {
     EmptyResponse,
     #[error("Invalid configuration")]
     InvalidConfiguration,
+    #[error("Not connected")]
+    NotConnected,
     #[error("Request error")]
     RequestError(#[from] reqwest::Error),
+    #[error("Request middleware error")]
+    RequestMiddlewareError(#[from] reqwest_middleware::Error),
     #[error("Cannot create endpoint")]
     CannotCreateEndpoint,
     #[error("Cannot parse URL")]

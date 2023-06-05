@@ -1,27 +1,51 @@
 use crate::client::Client;
 use crate::error::Error;
+use crate::http::config::HttpClientConfig;
+use async_trait::async_trait;
 use reqwest::Url;
+use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
+use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::Serialize;
 
 #[derive(Debug)]
 pub struct HttpClient {
     pub api_url: Url,
-    client: reqwest::Client,
+    client: ClientWithMiddleware,
 }
 
-impl Client for HttpClient {}
+#[async_trait]
+impl Client for HttpClient {
+    async fn connect(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    async fn disconnect(&mut self) -> Result<(), Error> {
+        Ok(())
+    }
+}
 
 unsafe impl Send for HttpClient {}
 unsafe impl Sync for HttpClient {}
 
 impl HttpClient {
-    pub fn create(api_url: &str) -> Result<Self, Error> {
-        let api_url = Url::parse(api_url);
+    pub fn new(api_url: &str) -> Result<Self, Error> {
+        Self::create(HttpClientConfig {
+            api_url: api_url.to_string(),
+            ..Default::default()
+        })
+    }
+
+    pub fn create(config: HttpClientConfig) -> Result<Self, Error> {
+        let api_url = Url::parse(&config.api_url);
         if api_url.is_err() {
             return Err(Error::CannotParseUrl);
         }
         let api_url = api_url.unwrap();
-        let client = reqwest::Client::builder().build()?;
+        let retry_policy = ExponentialBackoff::builder().build_with_max_retries(config.retries);
+        let client = ClientBuilder::new(reqwest::Client::new())
+            .with(RetryTransientMiddleware::new_with_policy(retry_policy))
+            .build();
+
         Ok(Self { api_url, client })
     }
 

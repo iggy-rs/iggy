@@ -54,8 +54,10 @@ Content-Type: application/json
   "key_kind": "partition_id",
   "key_value": 1,
   "messages": [{
+    "id": 0,
     "payload": "{{message_1_payload_base64}}"
   }, {
+    "id": 0,
     "payload": "{{message_2_payload_base64}}"
   }]
 }

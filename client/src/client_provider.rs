@@ -2,8 +2,9 @@ use crate::args::Args;
 use crate::client_error::ClientError;
 use sdk::client::Client;
 use sdk::http::client::HttpClient;
-use sdk::quic::client::QuicBaseClient;
-use sdk::quic::config::Config;
+use sdk::http::config::HttpClientConfig;
+use sdk::quic::client::QuicClient;
+use sdk::quic::config::QuicClientConfig;
 
 const QUIC_TRANSPORT: &str = "quic";
 const HTTP_TRANSPORT: &str = "http";
@@ -11,7 +12,7 @@ const HTTP_TRANSPORT: &str = "http";
 pub async fn get_client(args: Args) -> Result<Box<dyn Client>, ClientError> {
     match args.transport.as_str() {
         QUIC_TRANSPORT => {
-            let client = QuicBaseClient::create(Config {
+            let mut client = QuicClient::create(QuicClientConfig {
                 client_address: args.quic_client_address.to_string(),
                 server_address: args.quic_server_address.to_string(),
                 server_name: args.quic_server_name.to_string(),
@@ -24,11 +25,14 @@ pub async fn get_client(args: Args) -> Result<Box<dyn Client>, ClientError> {
                 keep_alive_interval: args.quic_keep_alive_interval,
                 max_idle_timeout: args.quic_max_idle_timeout,
             })?;
-            let client = client.connect().await?;
+            client.connect().await?;
             Ok(Box::new(client))
         }
         HTTP_TRANSPORT => {
-            let client = HttpClient::create(&args.http_api_url)?;
+            let client = HttpClient::create(HttpClientConfig {
+                api_url: args.http_api_url.to_string(),
+                retries: args.http_retries,
+            })?;
             Ok(Box::new(client))
         }
         _ => Err(ClientError::InvalidTransport(args.transport)),

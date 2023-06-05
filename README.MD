@@ -84,6 +84,8 @@ Poll 2 messages by an arbitrary consumer 0 from the stream `dev` (ID 1) for topi
 
 Finally, restart the server to see it is able to load the persisted data.
 
+The HTTP API endpoints can be found in [server.http](https://github.com/spetz/iggy/blob/master/server/server.http) file, which can be used with [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension for VS Code.
+
 To see the detailed logs from the client/server, run it with `RUST_LOG=trace` environment variable.
 
 **See the images below**
@@ -139,6 +141,10 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [x] Create a basic UDP server
 - [x] Make use of QUIC protocol
 - [ ] Extend QUIC configuration with custom certificates
+- [x] Create a basic HTTP server
+- [x] Make use of HTTP protocol
+- [ ] Create a basic TCP server
+- [ ] Make use of TCP protocol
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
 - [x] Allow multiple clients to connect to the server
@@ -151,6 +157,10 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [x] Create a basic UDP client
 - [x] Make use of QUIC protocol
 - [ ] Extend QUIC configuration with custom certificates
+- [x] Create a basic HTTP client
+- [x] Make use of HTTP protocol
+- [ ] Create a basic TCP client
+- [ ] Make use of TCP protocol
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
 - [x] Communicate with the server using established binary protocol
@@ -163,6 +173,7 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 
 - [x] Implement the QUIC SDK for the client
 - [x] Implement the HTTP SDK for the client
+- [ ] Implement the TCP SDK for the client
 - [x] Make use of the SDK in client project
 - [ ] Implement another SDK in C# for dotnet clients
 

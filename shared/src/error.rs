@@ -282,7 +282,7 @@ impl Error {
             Error::CannotParseUtf8(_) => "cannot_parse_utf8",
             Error::CannotParseInt(_) => "cannot_parse_int",
             Error::CannotParseSlice(_) => "cannot_parse_slice",
-            Error::TooBigMessagePayload => "too_big_payload",
+            Error::TooBigMessagePayload => "too_big_message_payload",
             Error::TooManyMessages => "too_many_messages",
             Error::WriteError(_) => "write_error",
             Error::InvalidOffset(_) => "invalid_offset",

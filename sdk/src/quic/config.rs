@@ -1,5 +1,5 @@
 #[derive(Debug, Clone)]
-pub struct Config {
+pub struct QuicClientConfig {
     pub client_address: String,
     pub server_address: String,
     pub server_name: String,
@@ -13,9 +13,9 @@ pub struct Config {
     pub max_idle_timeout: u64,
 }
 
-impl Default for Config {
-    fn default() -> Config {
-        Config {
+impl Default for QuicClientConfig {
+    fn default() -> QuicClientConfig {
+        QuicClientConfig {
             client_address: "127.0.0.1:0".to_string(),
             server_address: "127.0.0.1:8080".to_string(),
             server_name: "localhost".to_string(),

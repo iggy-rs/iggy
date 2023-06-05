@@ -10,7 +10,7 @@ pub struct HttpClientFactory {}
 impl ClientFactory for HttpClientFactory {
     async fn create_client(&self) -> Box<dyn Client> {
         let api_url = "http://localhost:3000";
-        let client = HttpClient::create(api_url).unwrap();
+        let client = HttpClient::new(api_url).unwrap();
         Box::new(client)
     }
 }

@@ -1,6 +1,7 @@
 use crate::client::Client;
 use crate::error::Error;
-use crate::quic::config::Config;
+use crate::quic::config::QuicClientConfig;
+use async_trait::async_trait;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -12,31 +13,23 @@ const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
 #[derive(Debug)]
-pub struct QuicBaseClient {
-    pub(crate) config: Config,
-    pub(crate) endpoint: Endpoint,
-    pub(crate) server_address: SocketAddr,
-}
-
-#[derive(Debug)]
 pub struct QuicClient {
     pub(crate) endpoint: Endpoint,
-    pub(crate) connection: Connection,
-    pub(crate) config: Config,
+    pub(crate) connection: Option<Connection>,
+    pub(crate) config: QuicClientConfig,
+    pub(crate) server_address: SocketAddr,
 }
-
-impl Client for QuicClient {}
 
 unsafe impl Send for QuicClient {}
 unsafe impl Sync for QuicClient {}
 
-impl QuicBaseClient {
+impl QuicClient {
     pub fn new(
         client_address: &str,
         server_address: &str,
         server_name: &str,
     ) -> Result<Self, Error> {
-        QuicBaseClient::create(Config {
+        Self::create(QuicClientConfig {
             client_address: client_address.to_string(),
             server_address: server_address.to_string(),
             server_name: server_name.to_string(),
@@ -44,7 +37,7 @@ impl QuicBaseClient {
         })
     }
 
-    pub fn create(config: Config) -> Result<Self, Error> {
+    pub fn create(config: QuicClientConfig) -> Result<Self, Error> {
         let client_address = config.client_address.parse::<SocketAddr>()?;
         let server_address = config.server_address.parse::<SocketAddr>()?;
         let quic_config = configure(&config)?;
@@ -61,48 +54,20 @@ impl QuicBaseClient {
             config,
             endpoint,
             server_address,
+            connection: None,
         })
-    }
-
-    pub async fn connect(&self) -> Result<QuicClient, Error> {
-        info!(
-            "{} client is connecting to server: {}",
-            NAME, self.config.server_name
-        );
-        let connection = self
-            .endpoint
-            .connect(self.server_address, &self.config.server_name)
-            .unwrap()
-            .await
-            .unwrap();
-
-        info!(
-            "{} client has connected to server: {}",
-            NAME,
-            connection.remote_address()
-        );
-
-        Ok(QuicClient {
-            endpoint: self.endpoint.clone(),
-            connection,
-            config: self.config.clone(),
-        })
-    }
-}
-
-impl QuicClient {
-    pub async fn disconnect(&self) -> Result<(), Error> {
-        info!("{} client is disconnecting from server...", NAME);
-        self.endpoint.wait_idle().await;
-        info!("{} client has disconnected from server.", NAME);
-        Ok(())
     }
 
     pub(crate) async fn send_with_response(&self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
-        let (mut send, mut recv) = self.connection.open_bi().await?;
-        send.write_all(buffer).await?;
-        send.finish().await?;
-        self.handle_response(&mut recv).await
+        if let Some(connection) = &self.connection {
+            let (mut send, mut recv) = connection.open_bi().await?;
+            send.write_all(buffer).await?;
+            send.finish().await?;
+            return self.handle_response(&mut recv).await;
+        }
+
+        error!("Cannot send data. Client is not connected.");
+        Err(Error::NotConnected)
     }
 
     async fn handle_response(&self, recv: &mut RecvStream) -> Result<Vec<u8>, Error> {
@@ -130,7 +95,40 @@ impl QuicClient {
     }
 }
 
-fn configure(config: &Config) -> Result<ClientConfig, Error> {
+#[async_trait]
+impl Client for QuicClient {
+    async fn connect(&mut self) -> Result<(), Error> {
+        info!(
+            "{} client is connecting to server: {}",
+            NAME, self.config.server_name
+        );
+        let connection = self
+            .endpoint
+            .connect(self.server_address, &self.config.server_name)
+            .unwrap()
+            .await
+            .unwrap();
+
+        info!(
+            "{} client has connected to server: {}",
+            NAME,
+            connection.remote_address()
+        );
+
+        self.connection = Some(connection);
+
+        Ok(())
+    }
+
+    async fn disconnect(&mut self) -> Result<(), Error> {
+        info!("{} client is disconnecting from server...", NAME);
+        self.endpoint.wait_idle().await;
+        info!("{} client has disconnected from server.", NAME);
+        Ok(())
+    }
+}
+
+fn configure(config: &QuicClientConfig) -> Result<ClientConfig, Error> {
     let max_concurrent_bidi_streams = VarInt::try_from(config.max_concurrent_bidi_streams);
     if max_concurrent_bidi_streams.is_err() {
         error!(

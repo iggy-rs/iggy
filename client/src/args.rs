@@ -9,6 +9,9 @@ pub struct Args {
     #[arg(long, default_value = "http://localhost:3000")]
     pub http_api_url: String,
 
+    #[arg(long, default_value = "3")]
+    pub http_retries: u32,
+
     #[arg(long, default_value = "127.0.0.1:0")]
     pub quic_client_address: String,
 

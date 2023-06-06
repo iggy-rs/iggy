@@ -5,6 +5,8 @@ mod quic;
 mod server_command;
 mod server_config;
 mod server_error;
+mod shared;
+mod tcp;
 
 use crate::args::Args;
 use crate::components::{channel, message_saver};
@@ -13,6 +15,7 @@ use crate::quic::quic_server;
 use crate::server_command::ServerCommand;
 use crate::server_config::ServerConfig;
 use crate::server_error::ServerError;
+use crate::tcp::tcp_server;
 use anyhow::Result;
 use clap::Parser;
 use std::sync::Arc;
@@ -43,6 +46,10 @@ async fn main() -> Result<(), ServerError> {
 
     if config.quic.enabled {
         quic_server::start(config.quic, system.clone());
+    }
+
+    if config.tcp.enabled {
+        tcp_server::start(config.tcp, system.clone());
     }
 
     match signal::ctrl_c().await {

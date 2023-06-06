@@ -1,5 +1,6 @@
-use crate::quic::command;
+use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ServerError;
+use crate::shared::command;
 use quinn::Endpoint;
 use std::sync::Arc;
 use streaming::system::System;
@@ -57,12 +58,12 @@ async fn handle_connection(
 
             let result = command::handle(
                 &request.unwrap(),
-                &mut crate::quic::sender::Sender { send: stream.0 },
+                &mut QuicSender { send: stream.0 },
                 system.clone(),
             )
             .await;
             if result.is_err() {
-                error!("Error when handling the QUIC request: {:?}", result);
+                error!("Error when handling the QUIC request: {:?}", result.err());
                 continue;
             }
         }

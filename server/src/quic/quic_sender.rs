@@ -1,27 +1,36 @@
+use crate::shared::sender::Sender;
+use async_trait::async_trait;
 use quinn::SendStream;
 use shared::error::Error;
 use tracing::trace;
 
 const STATUS_OK: &[u8] = &[0];
 
-pub struct Sender {
-    pub send: SendStream,
+#[derive(Debug)]
+pub struct QuicSender {
+    pub(crate) send: SendStream,
 }
 
-impl Sender {
-    pub async fn send_empty_ok_response(&mut self) -> Result<(), Error> {
+unsafe impl Send for QuicSender {}
+unsafe impl Sync for QuicSender {}
+
+#[async_trait]
+impl Sender for QuicSender {
+    async fn send_empty_ok_response(&mut self) -> Result<(), Error> {
         self.send_ok_response(&[]).await
     }
 
-    pub async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), Error> {
+    async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), Error> {
         self.send_response(STATUS_OK, payload).await
     }
 
-    pub async fn send_error_response(&mut self, error: Error) -> Result<(), Error> {
+    async fn send_error_response(&mut self, error: Error) -> Result<(), Error> {
         self.send_response(&error.as_code().to_le_bytes(), &[])
             .await
     }
+}
 
+impl QuicSender {
     async fn send_response(&mut self, status: &[u8], payload: &[u8]) -> Result<(), Error> {
         trace!("Sending response with status: {:?}...", status);
         self.send

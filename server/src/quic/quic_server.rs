@@ -17,8 +17,8 @@ pub fn start(config: QuicConfig, system: Arc<RwLock<System>>) {
     }
 
     let endpoint = Endpoint::server(quic_config.unwrap(), config.address.parse().unwrap()).unwrap();
+    listener::start(endpoint, system);
     info!("Iggy QUIC server has started on: {:?}", config.address);
-    listener::start(endpoint, system)
 }
 
 fn configure_quic(config: &QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Error>> {

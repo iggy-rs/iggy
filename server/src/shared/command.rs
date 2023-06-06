@@ -1,9 +1,9 @@
-use crate::quic::handlers::messages::*;
-use crate::quic::handlers::offsets::*;
-use crate::quic::handlers::streams::*;
-use crate::quic::handlers::system::*;
-use crate::quic::handlers::topics::*;
-use crate::quic::sender::Sender;
+use crate::shared::handlers::messages::*;
+use crate::shared::handlers::offsets::*;
+use crate::shared::handlers::streams::*;
+use crate::shared::handlers::system::*;
+use crate::shared::handlers::topics::*;
+use crate::shared::sender::Sender;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::error::Error;
@@ -46,7 +46,7 @@ const LENGTH: usize = 1;
 
 pub async fn handle(
     request: &[u8],
-    sender: &mut Sender,
+    sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     if request.len() < LENGTH {
@@ -79,7 +79,7 @@ pub async fn handle(
 async fn try_handle(
     command: Command,
     bytes: &[u8],
-    sender: &mut Sender,
+    sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("Handling command '{}'...", command);

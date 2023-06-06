@@ -14,6 +14,7 @@ pub struct ServerConfig {
     pub message_saver: MessageSaverConfig,
     pub system: Arc<SystemConfig>,
     pub quic: QuicConfig,
+    pub tcp: TcpConfig,
     pub http: HttpConfig,
 }
 
@@ -28,6 +29,12 @@ pub struct QuicConfig {
     pub receive_window: u64,
     pub keep_alive_interval: u64,
     pub max_idle_timeout: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TcpConfig {
+    pub enabled: bool,
+    pub address: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -48,6 +55,7 @@ impl Default for ServerConfig {
             message_saver: MessageSaverConfig::default(),
             system: Arc::new(SystemConfig::default()),
             quic: QuicConfig::default(),
+            tcp: TcpConfig::default(),
             http: HttpConfig::default(),
         }
     }
@@ -65,6 +73,15 @@ impl Default for QuicConfig {
             receive_window: 100000,
             keep_alive_interval: 5000,
             max_idle_timeout: 10000,
+        }
+    }
+}
+
+impl Default for TcpConfig {
+    fn default() -> TcpConfig {
+        TcpConfig {
+            enabled: true,
+            address: "127.0.0.1:8090".to_string(),
         }
     }
 }

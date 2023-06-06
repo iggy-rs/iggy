@@ -4,11 +4,15 @@
     "address": "127.0.0.1:8080",
     "max_concurrent_bidi_streams": 10000,
     "datagram_send_buffer_size": 100000,
-    "initial_mtu": 1200,
+    "initial_mtu": 8000,
     "send_window": 100000,
     "receive_window": 100000,
     "keep_alive_interval": 5000,
     "max_idle_timeout": 10000
+  },
+  "tcp": {
+    "enabled": true,
+    "address": "127.0.0.1:8090"
   },
   "http": {
     "enabled": true,

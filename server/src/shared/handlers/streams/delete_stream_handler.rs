@@ -1,4 +1,4 @@
-use crate::quic::sender::Sender;
+use crate::shared::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::streams::delete_stream::DeleteStream;
@@ -9,7 +9,7 @@ use tracing::trace;
 
 pub async fn handle(
     command: DeleteStream,
-    sender: &mut Sender,
+    sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);

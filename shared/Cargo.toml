@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+async-trait = "0.1.68"
 thiserror = "1.0.40"
 serde = { version = "1.0.159", features = ["derive", "rc"] }
 serde_with = { version = "3.0.0", features = ["base64"] }
 serde_json = "1.0.95"
-tokio = { version = "1.26.0", features = ["full"] }
+tokio = { version = "1.28.2", features = ["full"] }
 quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }

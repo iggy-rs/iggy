@@ -18,12 +18,6 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
 
         let listener = listener.unwrap();
         loop {
-            let result = listener.accept().await;
-            if result.is_err() {
-                error!("Unable to accept socket: {:?}", result);
-                continue;
-            }
-
             match listener.accept().await {
                 Ok((stream, addr)) => {
                     info!("New connection: {}", addr);
@@ -34,7 +28,7 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
                         }
                     });
                 }
-                Err(error) => error!("Unable to accept socket: {:?}, error: {}", result, error),
+                Err(error) => error!("Unable to accept socket, error: {}", error),
             }
         }
     });
@@ -44,18 +38,21 @@ async fn handle_connection(
     stream: TcpStream,
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
-    let mut buffer = Vec::new();
+    // TODO: Refactor using the actual request length received from the client.
+    let mut buffer = vec![0; 1024 * 1024];
     let mut sender = TcpSender { stream };
+
     loop {
-        let length = sender.stream.read_to_end(&mut buffer).await;
+        let length = sender.stream.read(&mut buffer).await;
         if length.is_err() {
             error!("Error when reading the TCP request: {:?}", length.err());
             continue;
         }
 
         let length = length.unwrap();
+        info!("Received a TCP request, length: {}", length);
         if length == 0 {
-            info!("Connection closed");
+            info!("Client disconnected");
             break;
         }
 
@@ -65,6 +62,7 @@ async fn handle_connection(
             error!("Error when handling the TCP request: {:?}", result.err());
             continue;
         }
+        info!("Sent a response");
     }
     Ok(())
 }

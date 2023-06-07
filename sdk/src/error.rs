@@ -1,5 +1,6 @@
 use quinn::{ConnectionError, ReadError, ReadToEndError, WriteError};
 use std::array::TryFromSliceError;
+use std::io;
 use std::net::AddrParseError;
 use std::str::Utf8Error;
 use thiserror::Error;
@@ -10,6 +11,8 @@ pub enum Error {
     EmptyResponse,
     #[error("Invalid configuration")]
     InvalidConfiguration,
+    #[error("IO error")]
+    IoError(#[from] io::Error),
     #[error("Not connected")]
     NotConnected,
     #[error("Request error")]

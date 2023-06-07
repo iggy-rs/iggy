@@ -1,3 +1,4 @@
+use crate::binary::binary_client::BinaryClient;
 use crate::client::Client;
 use crate::error::Error;
 use crate::quic::config::QuicClientConfig;
@@ -58,18 +59,6 @@ impl QuicClient {
         })
     }
 
-    pub(crate) async fn send_with_response(&self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
-        if let Some(connection) = &self.connection {
-            let (mut send, mut recv) = connection.open_bi().await?;
-            send.write_all(buffer).await?;
-            send.finish().await?;
-            return self.handle_response(&mut recv).await;
-        }
-
-        error!("Cannot send data. Client is not connected.");
-        Err(Error::NotConnected)
-    }
-
     async fn handle_response(&self, recv: &mut RecvStream) -> Result<Vec<u8>, Error> {
         let buffer = recv
             .read_to_end(self.config.response_buffer_size as usize)
@@ -122,9 +111,25 @@ impl Client for QuicClient {
 
     async fn disconnect(&mut self) -> Result<(), Error> {
         info!("{} client is disconnecting from server...", NAME);
+        self.connection = None;
         self.endpoint.wait_idle().await;
         info!("{} client has disconnected from server.", NAME);
         Ok(())
+    }
+}
+
+#[async_trait]
+impl BinaryClient for QuicClient {
+    async fn send_with_response(&self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
+        if let Some(connection) = &self.connection {
+            let (mut send, mut recv) = connection.open_bi().await?;
+            send.write_all(buffer).await?;
+            send.finish().await?;
+            return self.handle_response(&mut recv).await;
+        }
+
+        error!("Cannot send data. Client is not connected.");
+        Err(Error::NotConnected)
     }
 }
 

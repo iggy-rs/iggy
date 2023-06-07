@@ -2,14 +2,14 @@ use crate::binary;
 use crate::client::MessageClient;
 use crate::error::Error;
 use crate::message::Message;
-use crate::quic::client::QuicClient;
+use crate::tcp::client::TcpClient;
 use async_trait::async_trait;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
 use shared::offsets::store_offset::StoreOffset;
 
 #[async_trait]
-impl MessageClient for QuicClient {
+impl MessageClient for TcpClient {
     async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
         binary::messages::poll_messages(self, command).await
     }

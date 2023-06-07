@@ -7,7 +7,7 @@ edition = "2021"
 shared = { path = "../shared" }
 sdk = { path = "../sdk" }
 thiserror = "1.0.40"
-tokio = { version = "1.26.0", features = ["full"] }
+tokio = { version = "1.28.2", features = ["full"] }
 clap = { version = "4.1.11", features = ["derive"] }
 tracing = { version = "0.1.37"}
 tracing-subscriber = {version = "0.3.16"}

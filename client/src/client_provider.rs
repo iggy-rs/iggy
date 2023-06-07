@@ -5,9 +5,12 @@ use sdk::http::client::HttpClient;
 use sdk::http::config::HttpClientConfig;
 use sdk::quic::client::QuicClient;
 use sdk::quic::config::QuicClientConfig;
+use sdk::tcp::client::TcpClient;
+use sdk::tcp::config::TcpClientConfig;
 
 const QUIC_TRANSPORT: &str = "quic";
 const HTTP_TRANSPORT: &str = "http";
+const TCP_TRANSPORT: &str = "tcp";
 
 pub async fn get_client(args: Args) -> Result<Box<dyn Client>, ClientError> {
     match args.transport.as_str() {
@@ -33,6 +36,13 @@ pub async fn get_client(args: Args) -> Result<Box<dyn Client>, ClientError> {
                 api_url: args.http_api_url.to_string(),
                 retries: args.http_retries,
             })?;
+            Ok(Box::new(client))
+        }
+        TCP_TRANSPORT => {
+            let mut client = TcpClient::create(TcpClientConfig {
+                server_address: args.tcp_server_address.to_string(),
+            })?;
+            client.connect().await?;
             Ok(Box::new(client))
         }
         _ => Err(ClientError::InvalidTransport(args.transport)),

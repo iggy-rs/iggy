@@ -9,7 +9,7 @@ use shared::offsets::store_offset::StoreOffset;
 
 #[async_trait]
 impl MessageClient for HttpClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
+    async fn poll_messages(&self, command: PollMessages) -> Result<Vec<Message>, Error> {
         let response = self
             .get_with_query(&get_path(command.stream_id, command.topic_id), &command)
             .await?;
@@ -17,14 +17,14 @@ impl MessageClient for HttpClient {
         Ok(messages)
     }
 
-    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
-        self.post(&get_path(command.stream_id, command.topic_id), command)
+    async fn send_messages(&self, command: SendMessages) -> Result<(), Error> {
+        self.post(&get_path(command.stream_id, command.topic_id), &command)
             .await?;
         Ok(())
     }
 
-    async fn store_offset(&self, command: &StoreOffset) -> Result<(), Error> {
-        self.put(&get_path(command.stream_id, command.topic_id), command)
+    async fn store_offset(&self, command: StoreOffset) -> Result<(), Error> {
+        self.put(&get_path(command.stream_id, command.topic_id), &command)
             .await?;
         Ok(())
     }

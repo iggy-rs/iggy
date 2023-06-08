@@ -1,14 +1,22 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::DELETE_STREAM;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct DeleteStream {
     pub stream_id: u32,
+}
+
+impl CommandPayload for DeleteStream {}
+
+impl Default for DeleteStream {
+    fn default() -> Self {
+        DeleteStream { stream_id: 1 }
+    }
 }
 
 impl Validatable for DeleteStream {
@@ -37,15 +45,13 @@ impl FromStr for DeleteStream {
 }
 
 impl BytesSerializable for DeleteStream {
-    type Type = DeleteStream;
-
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(4);
         bytes.extend(self.stream_id.to_le_bytes());
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<DeleteStream, Error> {
         if bytes.len() != 4 {
             return Err(Error::InvalidCommand);
         }
@@ -59,7 +65,7 @@ impl BytesSerializable for DeleteStream {
 
 impl Display for DeleteStream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} → stream ID: {}", DELETE_STREAM, self.stream_id)
+        write!(f, "{}", self.stream_id)
     }
 }
 

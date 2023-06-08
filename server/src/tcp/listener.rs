@@ -42,21 +42,19 @@ async fn handle_connection(
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
     let mut sender = TcpSender { stream };
-    let mut initial_buffer = [0u8; 5];
 
     loop {
-        sender.stream.read_exact(&mut initial_buffer).await?;
-        let command = Command::from_bytes(&initial_buffer[..1])?;
-        let length = u32::from_le_bytes(initial_buffer[1..].try_into()?);
-        trace!(
-            "Received a TCP request, length: {}, command: {:?}",
-            length,
-            command
-        );
-
+        let length = sender.stream.read_u32_le().await?;
+        trace!("Received a TCP request, length: {}", length);
         let mut command_buffer = vec![0u8; length as usize];
         sender.stream.read_exact(&mut command_buffer).await?;
-        let result = command::handle(command, &command_buffer, &mut sender, system.clone()).await;
+        let command = Command::from_bytes(&command_buffer)?;
+        trace!(
+            "Received a TCP command: {}, payload size: {}",
+            command,
+            length - 1
+        );
+        let result = command::handle(command, &mut sender, system.clone()).await;
         if result.is_err() {
             error!("Error when handling the TCP request: {:?}", result.err());
             continue;

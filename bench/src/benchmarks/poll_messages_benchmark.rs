@@ -1,4 +1,5 @@
 use crate::args::Args;
+use crate::benchmark::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
 use sdk::error::Error;
@@ -19,34 +20,32 @@ pub async fn run(
     let total_messages = args.messages_per_batch * args.message_batches;
     let client = client_factory.create_client(args.clone()).await;
     info!("Consumer #{} → preparing the test messages...", consumer_id);
-    let mut command = PollMessages {
-        consumer_id,
-        stream_id,
-        topic_id,
-        partition_id,
-        kind: Kind::Offset,
-        value: 0,
-        count: args.messages_per_batch,
-        auto_commit: false,
-        format: Format::Binary,
-    };
-
     info!(
         "Consumer #{} → polling {} messages in {} batches of {} messages...",
         consumer_id, total_messages, args.message_batches, args.messages_per_batch
     );
 
     let mut latencies: Vec<Duration> = Vec::with_capacity(args.message_batches as usize);
-    let start = Instant::now();
-
     let mut total_size_bytes = 0;
     let mut current_iteration = 0;
     let mut received_messages = 0;
     while received_messages < total_messages {
         let offset = (current_iteration * args.messages_per_batch) as u64;
+        let command = PollMessages {
+            consumer_id,
+            stream_id,
+            topic_id,
+            partition_id,
+            kind: Kind::Offset,
+            value: offset,
+            count: args.messages_per_batch,
+            auto_commit: false,
+            format: Format::Binary,
+        };
+
         let latency_start = Instant::now();
-        command.value = offset;
-        let messages = client.poll_messages(&command).await;
+        let messages = client.poll_messages(command).await;
+        let latency_end = latency_start.elapsed();
         if messages.is_err() {
             trace!("Offset: {} is not available yet, retrying...", offset);
             continue;
@@ -68,18 +67,18 @@ pub async fn run(
             continue;
         }
 
-        let latency_end = latency_start.elapsed();
-        received_messages += messages.len() as u32;
         latencies.push(latency_end);
+        received_messages += messages.len() as u32;
         for message in messages {
             total_size_bytes += message.get_size_bytes() as u64;
         }
         current_iteration += 1;
     }
 
-    let duration = start.elapsed() / args.consumers;
+    let total_latencies = latencies.iter().sum::<Duration>();
+    let duration = total_latencies / args.consumers;
     let average_latency = latencies.iter().sum::<Duration>().as_millis() as f64
-        / ((args.consumers * latencies.len() as u32) as f64);
+        / (args.consumers * latencies.len() as u32) as f64;
     let average_throughput = total_size_bytes as f64 / duration.as_secs_f64() / 1024.0 / 1024.0;
 
     info!(
@@ -98,5 +97,6 @@ pub async fn run(
         duration,
         average_latency,
         total_size_bytes,
+        kind: BenchmarkKind::PollMessages,
     })
 }

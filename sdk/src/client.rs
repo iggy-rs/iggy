@@ -23,27 +23,27 @@ pub trait Client: SystemClient + StreamClient + TopicClient + MessageClient + Sy
 
 #[async_trait]
 pub trait SystemClient {
-    async fn ping(&self, command: &Ping) -> Result<(), Error>;
-    async fn kill(&self, command: &Kill) -> Result<(), Error>;
+    async fn ping(&self, command: Ping) -> Result<(), Error>;
+    async fn kill(&self, command: Kill) -> Result<(), Error>;
 }
 
 #[async_trait]
 pub trait StreamClient {
-    async fn get_streams(&self, command: &GetStreams) -> Result<Vec<Stream>, Error>;
-    async fn create_stream(&self, command: &CreateStream) -> Result<(), Error>;
-    async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error>;
+    async fn get_streams(&self, command: GetStreams) -> Result<Vec<Stream>, Error>;
+    async fn create_stream(&self, command: CreateStream) -> Result<(), Error>;
+    async fn delete_stream(&self, command: DeleteStream) -> Result<(), Error>;
 }
 
 #[async_trait]
 pub trait TopicClient {
-    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error>;
-    async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error>;
-    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error>;
+    async fn get_topics(&self, command: GetTopics) -> Result<Vec<Topic>, Error>;
+    async fn create_topic(&self, command: CreateTopic) -> Result<(), Error>;
+    async fn delete_topic(&self, command: DeleteTopic) -> Result<(), Error>;
 }
 
 #[async_trait]
 pub trait MessageClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error>;
-    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error>;
-    async fn store_offset(&self, command: &StoreOffset) -> Result<(), Error>;
+    async fn poll_messages(&self, command: PollMessages) -> Result<Vec<Message>, Error>;
+    async fn send_messages(&self, command: SendMessages) -> Result<(), Error>;
+    async fn store_offset(&self, command: StoreOffset) -> Result<(), Error>;
 }

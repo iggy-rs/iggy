@@ -4,20 +4,8 @@ use crate::binary::handlers::streams::*;
 use crate::binary::handlers::system::*;
 use crate::binary::handlers::topics::*;
 use crate::binary::sender::Sender;
-use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::error::Error;
-use shared::messages::poll_messages::PollMessages;
-use shared::messages::send_messages::SendMessages;
-use shared::offsets::store_offset::StoreOffset;
-use shared::streams::create_stream::CreateStream;
-use shared::streams::delete_stream::DeleteStream;
-use shared::streams::get_streams::GetStreams;
-use shared::system::kill::Kill;
-use shared::system::ping::Ping;
-use shared::topics::create_topic::CreateTopic;
-use shared::topics::delete_topic::DeleteTopic;
-use shared::topics::get_topics::GetTopics;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;
@@ -44,11 +32,10 @@ use tracing::trace;
 
 pub async fn handle(
     command: Command,
-    bytes: &[u8],
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    let result = try_handle(command, bytes, sender, system).await;
+    let result = try_handle(command, sender, system).await;
     if result.is_ok() {
         trace!("Command was handled successfully.");
         return Ok(());
@@ -65,55 +52,35 @@ pub async fn handle(
 
 async fn try_handle(
     command: Command,
-    bytes: &[u8],
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("Handling command '{}'...", command);
     match command {
-        Command::Kill => {
-            let command = Kill::from_bytes(bytes)?;
-            kill_handler::handle(command, sender).await
+        Command::Kill(payload) => kill_handler::handle(payload, sender).await,
+        Command::Ping(payload) => ping_handler::handle(payload, sender).await,
+        Command::SendMessages(payload) => {
+            send_messages_handler::handle(payload, sender, system).await
         }
-        Command::Ping => {
-            let command = Ping::from_bytes(bytes)?;
-            ping_handler::handle(command, sender).await
+        Command::PollMessages(payload) => {
+            poll_messages_handler::handle(payload, sender, system).await
         }
-        Command::SendMessages => {
-            let command = SendMessages::from_bytes(bytes)?;
-            send_messages_handler::handle(command, sender, system).await
+        Command::StoreOffset(payload) => {
+            store_offset_handler::handle(payload, sender, system).await
         }
-        Command::PollMessages => {
-            let command = PollMessages::from_bytes(bytes)?;
-            poll_messages_handler::handle(command, sender, system).await
+        Command::GetStreams(payload) => get_streams_handler::handle(payload, sender, system).await,
+        Command::CreateStream(payload) => {
+            create_stream_handler::handle(payload, sender, system).await
         }
-        Command::StoreOffset => {
-            let command = StoreOffset::from_bytes(bytes)?;
-            store_offset_handler::handle(command, sender, system).await
+        Command::DeleteStream(payload) => {
+            delete_stream_handler::handle(payload, sender, system).await
         }
-        Command::GetStreams => {
-            let command = GetStreams::from_bytes(bytes)?;
-            get_streams_handler::handle(command, sender, system).await
+        Command::GetTopics(payload) => get_topics_handler::handle(payload, sender, system).await,
+        Command::CreateTopic(payload) => {
+            create_topic_handler::handle(payload, sender, system).await
         }
-        Command::CreateStream => {
-            let command = CreateStream::from_bytes(bytes)?;
-            create_stream_handler::handle(command, sender, system).await
-        }
-        Command::DeleteStream => {
-            let command = DeleteStream::from_bytes(bytes)?;
-            delete_stream_handler::handle(command, sender, system).await
-        }
-        Command::GetTopics => {
-            let command = GetTopics::from_bytes(bytes)?;
-            get_topics_handler::handle(command, sender, system).await
-        }
-        Command::CreateTopic => {
-            let command = CreateTopic::from_bytes(bytes)?;
-            create_topic_handler::handle(command, sender, system).await
-        }
-        Command::DeleteTopic => {
-            let command = DeleteTopic::from_bytes(bytes)?;
-            delete_topic_handler::handle(command, sender, system).await
+        Command::DeleteTopic(payload) => {
+            delete_topic_handler::handle(payload, sender, system).await
         }
     }
 }

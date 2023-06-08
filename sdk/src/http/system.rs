@@ -10,13 +10,13 @@ const KILL: &str = "/kill";
 
 #[async_trait]
 impl SystemClient for HttpClient {
-    async fn ping(&self, _command: &Ping) -> Result<(), Error> {
+    async fn ping(&self, _command: Ping) -> Result<(), Error> {
         self.get(PING).await?;
         Ok(())
     }
 
-    async fn kill(&self, _command: &Kill) -> Result<(), Error> {
-        self.post(KILL, _command).await?;
+    async fn kill(&self, _command: Kill) -> Result<(), Error> {
+        self.post(KILL, &_command).await?;
         Ok(())
     }
 }

@@ -1,5 +1,16 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
+use crate::messages::poll_messages::PollMessages;
+use crate::messages::send_messages::SendMessages;
+use crate::offsets::store_offset::StoreOffset;
+use crate::streams::create_stream::CreateStream;
+use crate::streams::delete_stream::DeleteStream;
+use crate::streams::get_streams::GetStreams;
+use crate::system::kill::Kill;
+use crate::system::ping::Ping;
+use crate::topics::create_topic::CreateTopic;
+use crate::topics::delete_topic::DeleteTopic;
+use crate::topics::get_topics::GetTopics;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -17,71 +28,82 @@ pub const DELETE_TOPIC: &str = "topic.delete";
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
-    Kill,
-    Ping,
-    SendMessages,
-    PollMessages,
-    StoreOffset,
-    GetStreams,
-    CreateStream,
-    DeleteStream,
-    GetTopics,
-    CreateTopic,
-    DeleteTopic,
+    Kill(Kill),
+    Ping(Ping),
+    SendMessages(SendMessages),
+    PollMessages(PollMessages),
+    StoreOffset(StoreOffset),
+    GetStreams(GetStreams),
+    CreateStream(CreateStream),
+    DeleteStream(DeleteStream),
+    GetTopics(GetTopics),
+    CreateTopic(CreateTopic),
+    DeleteTopic(DeleteTopic),
 }
 
+pub trait CommandPayload: BytesSerializable + Display {}
+
 impl BytesSerializable for Command {
-    type Type = Command;
     fn as_bytes(&self) -> Vec<u8> {
         match self {
-            Command::Kill => [0].to_vec(),
-            Command::Ping => [1].to_vec(),
-            Command::SendMessages => [2].to_vec(),
-            Command::PollMessages => [3].to_vec(),
-            Command::StoreOffset => [4].to_vec(),
-            Command::GetStreams => [10].to_vec(),
-            Command::CreateStream => [11].to_vec(),
-            Command::DeleteStream => [12].to_vec(),
-            Command::GetTopics => [20].to_vec(),
-            Command::CreateTopic => [21].to_vec(),
-            Command::DeleteTopic => [22].to_vec(),
+            Command::Kill(payload) => as_bytes(0, &payload.as_bytes()),
+            Command::Ping(payload) => as_bytes(1, &payload.as_bytes()),
+            Command::SendMessages(payload) => as_bytes(2, &payload.as_bytes()),
+            Command::PollMessages(payload) => as_bytes(3, &payload.as_bytes()),
+            Command::StoreOffset(payload) => as_bytes(4, &payload.as_bytes()),
+            Command::GetStreams(payload) => as_bytes(10, &payload.as_bytes()),
+            Command::CreateStream(payload) => as_bytes(11, &payload.as_bytes()),
+            Command::DeleteStream(payload) => as_bytes(12, &payload.as_bytes()),
+            Command::GetTopics(payload) => as_bytes(20, &payload.as_bytes()),
+            Command::CreateTopic(payload) => as_bytes(21, &payload.as_bytes()),
+            Command::DeleteTopic(payload) => as_bytes(22, &payload.as_bytes()),
         }
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        match bytes {
-            [0] => Ok(Command::Kill),
-            [1] => Ok(Command::Ping),
-            [2] => Ok(Command::SendMessages),
-            [3] => Ok(Command::PollMessages),
-            [4] => Ok(Command::StoreOffset),
-            [10] => Ok(Command::GetStreams),
-            [11] => Ok(Command::CreateStream),
-            [12] => Ok(Command::DeleteStream),
-            [20] => Ok(Command::GetTopics),
-            [21] => Ok(Command::CreateTopic),
-            [22] => Ok(Command::DeleteTopic),
+        let command = bytes[0];
+        let payload = &bytes[1..];
+        match command {
+            0 => Ok(Command::Kill(Kill::from_bytes(payload)?)),
+            1 => Ok(Command::Ping(Ping::from_bytes(payload)?)),
+            2 => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
+            3 => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
+            4 => Ok(Command::StoreOffset(StoreOffset::from_bytes(payload)?)),
+            10 => Ok(Command::GetStreams(GetStreams::from_bytes(payload)?)),
+            11 => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
+            12 => Ok(Command::DeleteStream(DeleteStream::from_bytes(payload)?)),
+            20 => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
+            21 => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
+            22 => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
             _ => Err(Error::InvalidCommand),
         }
     }
 }
 
+fn as_bytes(command: u8, payload: &[u8]) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(1 + payload.len());
+    bytes.extend([command]);
+    bytes.extend(payload);
+    bytes
+}
+
 impl FromStr for Command {
-    type Err = ();
+    type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        match input {
-            KILL => Ok(Command::Kill),
-            PING => Ok(Command::Ping),
-            SEND_MESSAGES => Ok(Command::SendMessages),
-            POLL_MESSAGES => Ok(Command::PollMessages),
-            STORE_OFFSET => Ok(Command::StoreOffset),
-            GET_STREAMS => Ok(Command::GetStreams),
-            CREATE_STREAM => Ok(Command::CreateStream),
-            DELETE_STREAM => Ok(Command::DeleteStream),
-            GET_TOPICS => Ok(Command::GetTopics),
-            CREATE_TOPIC => Ok(Command::CreateTopic),
-            DELETE_TOPIC => Ok(Command::DeleteTopic),
-            _ => Err(()),
+        let (command, payload) = input.split_once('|').unwrap_or((input, ""));
+        match command {
+            KILL => Ok(Command::Kill(Kill::from_str(payload)?)),
+            PING => Ok(Command::Ping(Ping::from_str(payload)?)),
+            SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
+            POLL_MESSAGES => Ok(Command::PollMessages(PollMessages::from_str(payload)?)),
+            STORE_OFFSET => Ok(Command::StoreOffset(StoreOffset::from_str(payload)?)),
+            GET_STREAMS => Ok(Command::GetStreams(GetStreams::from_str(payload)?)),
+            CREATE_STREAM => Ok(Command::CreateStream(CreateStream::from_str(payload)?)),
+            DELETE_STREAM => Ok(Command::DeleteStream(DeleteStream::from_str(payload)?)),
+            GET_TOPICS => Ok(Command::GetTopics(GetTopics::from_str(payload)?)),
+            CREATE_TOPIC => Ok(Command::CreateTopic(CreateTopic::from_str(payload)?)),
+            DELETE_TOPIC => Ok(Command::DeleteTopic(DeleteTopic::from_str(payload)?)),
+            _ => Err(Error::InvalidCommand),
         }
     }
 }
@@ -89,17 +111,17 @@ impl FromStr for Command {
 impl Display for Command {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Command::Kill => write!(formatter, "{}", KILL),
-            Command::Ping => write!(formatter, "{}", PING),
-            Command::GetStreams => write!(formatter, "{}", GET_STREAMS),
-            Command::CreateStream => write!(formatter, "{}", CREATE_STREAM),
-            Command::DeleteStream => write!(formatter, "{}", DELETE_STREAM),
-            Command::GetTopics => write!(formatter, "{}", GET_TOPICS),
-            Command::CreateTopic => write!(formatter, "{}", CREATE_TOPIC),
-            Command::DeleteTopic => write!(formatter, "{}", DELETE_TOPIC),
-            Command::PollMessages => write!(formatter, "{}", POLL_MESSAGES),
-            Command::SendMessages => write!(formatter, "{}", SEND_MESSAGES),
-            Command::StoreOffset => write!(formatter, "{}", STORE_OFFSET),
+            Command::Kill(payload) => write!(formatter, "{}|{}", KILL, payload),
+            Command::Ping(payload) => write!(formatter, "{}|{}", PING, payload),
+            Command::GetStreams(payload) => write!(formatter, "{}|{}", GET_STREAMS, payload),
+            Command::CreateStream(payload) => write!(formatter, "{}|{}", CREATE_STREAM, payload),
+            Command::DeleteStream(payload) => write!(formatter, "{}|{}", DELETE_STREAM, payload),
+            Command::GetTopics(payload) => write!(formatter, "{}|{}", GET_TOPICS, payload),
+            Command::CreateTopic(payload) => write!(formatter, "{}|{}", CREATE_TOPIC, payload),
+            Command::DeleteTopic(payload) => write!(formatter, "{}|{}", DELETE_TOPIC, payload),
+            Command::PollMessages(payload) => write!(formatter, "{}|{}", POLL_MESSAGES, payload),
+            Command::SendMessages(payload) => write!(formatter, "{}|{}", SEND_MESSAGES, payload),
+            Command::StoreOffset(payload) => write!(formatter, "{}|{}", STORE_OFFSET, payload),
         }
     }
 }
@@ -109,68 +131,156 @@ mod tests {
     use super::*;
 
     #[test]
-    fn should_be_serialized_as_bytes() {
-        assert_eq!(Command::Kill.as_bytes(), [0]);
-        assert_eq!(Command::Ping.as_bytes(), [1]);
-        assert_eq!(Command::SendMessages.as_bytes(), [2]);
-        assert_eq!(Command::PollMessages.as_bytes(), [3]);
-        assert_eq!(Command::StoreOffset.as_bytes(), [4]);
-        assert_eq!(Command::GetStreams.as_bytes(), [10]);
-        assert_eq!(Command::CreateStream.as_bytes(), [11]);
-        assert_eq!(Command::DeleteStream.as_bytes(), [12]);
-        assert_eq!(Command::GetTopics.as_bytes(), [20]);
-        assert_eq!(Command::CreateTopic.as_bytes(), [21]);
-        assert_eq!(Command::DeleteTopic.as_bytes(), [22]);
-    }
-
-    #[test]
-    fn should_be_deserialized_from_bytes() {
-        assert_eq!(Command::from_bytes(&[0]).unwrap(), Command::Kill);
-        assert_eq!(Command::from_bytes(&[1]).unwrap(), Command::Ping);
-        assert_eq!(Command::from_bytes(&[2]).unwrap(), Command::SendMessages);
-        assert_eq!(Command::from_bytes(&[3]).unwrap(), Command::PollMessages);
-        assert_eq!(Command::from_bytes(&[4]).unwrap(), Command::StoreOffset);
-        assert_eq!(Command::from_bytes(&[10]).unwrap(), Command::GetStreams);
-        assert_eq!(Command::from_bytes(&[11]).unwrap(), Command::CreateStream);
-        assert_eq!(Command::from_bytes(&[12]).unwrap(), Command::DeleteStream);
-        assert_eq!(Command::from_bytes(&[20]).unwrap(), Command::GetTopics);
-        assert_eq!(Command::from_bytes(&[21]).unwrap(), Command::CreateTopic);
-        assert_eq!(Command::from_bytes(&[22]).unwrap(), Command::DeleteTopic);
+    fn should_be_serialized_as_bytes_and_deserialized_from_bytes() {
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::Kill(Kill::default()),
+            0,
+            &Kill::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::Ping(Ping::default()),
+            1,
+            &Ping::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::SendMessages(SendMessages::default()),
+            2,
+            &SendMessages::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::PollMessages(PollMessages::default()),
+            3,
+            &PollMessages::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::StoreOffset(StoreOffset::default()),
+            4,
+            &StoreOffset::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetStreams(GetStreams::default()),
+            10,
+            &GetStreams::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::CreateStream(CreateStream::default()),
+            11,
+            &CreateStream::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::DeleteStream(DeleteStream::default()),
+            12,
+            &DeleteStream::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetTopics(GetTopics::default()),
+            20,
+            &GetTopics::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::CreateTopic(CreateTopic::default()),
+            21,
+            &CreateTopic::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::DeleteTopic(DeleteTopic::default()),
+            22,
+            &DeleteTopic::default(),
+        );
     }
 
     #[test]
     fn should_be_read_from_string() {
-        assert_eq!(Command::from_str(KILL).unwrap(), Command::Kill);
-        assert_eq!(Command::from_str(PING).unwrap(), Command::Ping);
-        assert_eq!(
-            Command::from_str(SEND_MESSAGES).unwrap(),
-            Command::SendMessages
+        assert_read_from_string(&Command::Kill(Kill::default()), KILL, &Kill::default());
+        assert_read_from_string(&Command::Ping(Ping::default()), PING, &Ping::default());
+        assert_read_from_string(
+            &Command::SendMessages(SendMessages::default()),
+            SEND_MESSAGES,
+            &SendMessages::default(),
         );
-        assert_eq!(
-            Command::from_str(POLL_MESSAGES).unwrap(),
-            Command::PollMessages
+        assert_read_from_string(
+            &Command::PollMessages(PollMessages::default()),
+            POLL_MESSAGES,
+            &PollMessages::default(),
         );
-        assert_eq!(
-            Command::from_str(STORE_OFFSET).unwrap(),
-            Command::StoreOffset
+        assert_read_from_string(
+            &Command::StoreOffset(StoreOffset::default()),
+            STORE_OFFSET,
+            &StoreOffset::default(),
         );
-        assert_eq!(Command::from_str(GET_STREAMS).unwrap(), Command::GetStreams);
-        assert_eq!(
-            Command::from_str(CREATE_STREAM).unwrap(),
-            Command::CreateStream
+        assert_read_from_string(
+            &Command::GetStreams(GetStreams::default()),
+            GET_STREAMS,
+            &GetStreams::default(),
         );
-        assert_eq!(
-            Command::from_str(DELETE_STREAM).unwrap(),
-            Command::DeleteStream
+        assert_read_from_string(
+            &Command::CreateStream(CreateStream::default()),
+            CREATE_STREAM,
+            &CreateStream::default(),
         );
-        assert_eq!(Command::from_str(GET_TOPICS).unwrap(), Command::GetTopics);
-        assert_eq!(
-            Command::from_str(CREATE_TOPIC).unwrap(),
-            Command::CreateTopic
+        assert_read_from_string(
+            &Command::DeleteStream(DeleteStream::default()),
+            DELETE_STREAM,
+            &DeleteStream::default(),
         );
-        assert_eq!(
-            Command::from_str(DELETE_TOPIC).unwrap(),
-            Command::DeleteTopic
+        assert_read_from_string(
+            &Command::GetTopics(GetTopics::default()),
+            GET_TOPICS,
+            &GetTopics::default(),
         );
+        assert_read_from_string(
+            &Command::CreateTopic(CreateTopic::default()),
+            CREATE_TOPIC,
+            &CreateTopic::default(),
+        );
+        assert_read_from_string(
+            &Command::DeleteTopic(DeleteTopic::default()),
+            DELETE_TOPIC,
+            &DeleteTopic::default(),
+        );
+    }
+
+    fn assert_serialized_as_bytes_and_deserialized_from_bytes(
+        command: &Command,
+        command_id: u8,
+        payload: &dyn CommandPayload,
+    ) {
+        assert_serialized_as_bytes(command, command_id, payload);
+        assert_deserialized_from_bytes(command, command_id, payload);
+    }
+
+    fn assert_serialized_as_bytes(command: &Command, command_id: u8, payload: &dyn CommandPayload) {
+        let payload = payload.as_bytes();
+        let mut bytes = Vec::with_capacity(1 + payload.len());
+        bytes.extend([command_id]);
+        bytes.extend(payload);
+        assert_eq!(command.as_bytes(), bytes);
+    }
+
+    fn assert_deserialized_from_bytes(
+        command: &Command,
+        command_id: u8,
+        payload: &dyn CommandPayload,
+    ) {
+        let payload = payload.as_bytes();
+        let mut bytes = Vec::with_capacity(1 + payload.len());
+        bytes.extend([command_id]);
+        bytes.extend(payload);
+        assert_eq!(&Command::from_bytes(&bytes).unwrap(), command);
+    }
+
+    fn assert_read_from_string(
+        command: &Command,
+        command_name: &str,
+        payload: &dyn CommandPayload,
+    ) {
+        let payload = payload.to_string();
+        let mut string = String::with_capacity(command_name.len() + payload.len());
+        string.push_str(command_name);
+        if !payload.is_empty() {
+            string.push('|');
+            string.push_str(&payload);
+        }
+        assert_eq!(&Command::from_str(&string).unwrap(), command);
     }
 }

@@ -12,7 +12,8 @@ use tokio::sync::Mutex;
 use tracing::log::trace;
 use tracing::{error, info};
 
-const INITIAL_BYTES_LENGTH: usize = 5;
+const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
+const RESPONSE_INITIAL_BYTES_LENGTH: usize = 5;
 const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
@@ -55,27 +56,28 @@ impl Client for TcpClient {
 
 #[async_trait]
 impl BinaryClient for TcpClient {
-    async fn send_with_response(&self, command: Command, payload: &[u8]) -> Result<Vec<u8>, Error> {
+    async fn send_with_response(&self, command: Command) -> Result<Vec<u8>, Error> {
         if let Some(stream) = &self.stream {
-            let length = payload.len();
-            let mut buffer = Vec::with_capacity(INITIAL_BYTES_LENGTH + length);
-            buffer.extend(command.as_bytes());
-            buffer.extend((length as u32).to_le_bytes());
-            buffer.extend(payload);
+            let bytes = command.as_bytes();
+            let payload_length = bytes.len();
+            let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
+            buffer.extend((payload_length as u32).to_le_bytes());
+            buffer.extend(bytes);
 
             let mut stream = stream.lock().await;
             trace!("Sending a TCP request...");
             stream.write_all(&buffer).await?;
             trace!("Sent a TCP request, waiting for a response...");
-            let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
-            let read_bytes = stream.read_exact(&mut initial_buffer).await?;
-            if read_bytes != INITIAL_BYTES_LENGTH {
+
+            let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
+            let read_bytes = stream.read_exact(&mut response_buffer).await?;
+            if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
                 error!("Received an invalid or empty response.");
                 return Err(Error::EmptyResponse);
             }
 
-            let status = initial_buffer[0];
-            let length = u32::from_le_bytes(initial_buffer[1..].try_into().unwrap());
+            let status = response_buffer[0];
+            let length = u32::from_le_bytes(response_buffer[1..].try_into().unwrap());
             return self.handle_response(status, length, &mut stream).await;
         }
 

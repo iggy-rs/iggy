@@ -1,14 +1,22 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::GET_TOPICS;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GetTopics {
     pub stream_id: u32,
+}
+
+impl CommandPayload for GetTopics {}
+
+impl Default for GetTopics {
+    fn default() -> Self {
+        GetTopics { stream_id: 1 }
+    }
 }
 
 impl Validatable for GetTopics {
@@ -37,15 +45,13 @@ impl FromStr for GetTopics {
 }
 
 impl BytesSerializable for GetTopics {
-    type Type = GetTopics;
-
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(4);
         bytes.extend(self.stream_id.to_le_bytes());
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<GetTopics, Error> {
         if bytes.len() != 4 {
             return Err(Error::InvalidCommand);
         }
@@ -59,7 +65,7 @@ impl BytesSerializable for GetTopics {
 
 impl Display for GetTopics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} → stream ID: {}", GET_TOPICS, self.stream_id)
+        write!(f, "{}", self.stream_id)
     }
 }
 

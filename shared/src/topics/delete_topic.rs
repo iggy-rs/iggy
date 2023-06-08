@@ -1,15 +1,26 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::DELETE_TOPIC;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct DeleteTopic {
     pub stream_id: u32,
     pub topic_id: u32,
+}
+
+impl CommandPayload for DeleteTopic {}
+
+impl Default for DeleteTopic {
+    fn default() -> Self {
+        DeleteTopic {
+            stream_id: 1,
+            topic_id: 1,
+        }
+    }
 }
 
 impl Validatable for DeleteTopic {
@@ -46,8 +57,6 @@ impl FromStr for DeleteTopic {
 }
 
 impl BytesSerializable for DeleteTopic {
-    type Type = DeleteTopic;
-
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(8);
         bytes.extend(self.stream_id.to_le_bytes());
@@ -55,7 +64,7 @@ impl BytesSerializable for DeleteTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<DeleteTopic, Error> {
         if bytes.len() != 8 {
             return Err(Error::InvalidCommand);
         }
@@ -73,11 +82,7 @@ impl BytesSerializable for DeleteTopic {
 
 impl Display for DeleteTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} → stream ID: {}, topic ID: {}",
-            DELETE_TOPIC, self.stream_id, self.topic_id
-        )
+        write!(f, "{}|{}", self.stream_id, self.topic_id)
     }
 }
 

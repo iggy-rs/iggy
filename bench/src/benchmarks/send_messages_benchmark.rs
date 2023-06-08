@@ -1,4 +1,5 @@
 use crate::args::Args;
+use crate::benchmark::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
 use sdk::error::Error;
@@ -21,20 +22,6 @@ pub async fn run(
     let client = client_factory.create_client(args.clone()).await;
     info!("Producer #{} → preparing the test messages...", producer_id);
     let payload = create_payload(args.message_size);
-    let mut messages = Vec::with_capacity(args.messages_per_batch as usize);
-    for _ in 0..args.messages_per_batch {
-        let message = Message::from_str(&payload).unwrap();
-        messages.push(message);
-    }
-
-    let command = SendMessages {
-        stream_id,
-        topic_id,
-        key_kind: KeyKind::PartitionId,
-        key_value: partition_id,
-        messages_count: args.messages_per_batch,
-        messages,
-    };
 
     info!(
         "Producer #{} → sending {} test messages in {} batches of {} messages...",
@@ -42,16 +29,31 @@ pub async fn run(
     );
 
     let mut latencies: Vec<Duration> = Vec::with_capacity(args.message_batches as usize);
-    let start = Instant::now();
 
     for _ in 0..args.message_batches {
+        let mut messages = Vec::with_capacity(args.messages_per_batch as usize);
+        for _ in 0..args.messages_per_batch {
+            let message = Message::from_str(&payload).unwrap();
+            messages.push(message);
+        }
+
+        let command = SendMessages {
+            stream_id,
+            topic_id,
+            key_kind: KeyKind::PartitionId,
+            key_value: partition_id,
+            messages_count: args.messages_per_batch,
+            messages,
+        };
+
         let latency_start = Instant::now();
-        client.send_messages(&command).await?;
+        client.send_messages(command).await?;
         let latency_end = latency_start.elapsed();
         latencies.push(latency_end);
     }
 
-    let duration = start.elapsed() / args.producers;
+    let total_latencies = latencies.iter().sum::<Duration>();
+    let duration = total_latencies / args.producers;
     let average_latency = latencies.iter().sum::<Duration>().as_millis() as f64
         / (args.producers * latencies.len() as u32) as f64;
     let total_size_bytes = (total_messages * args.message_size) as u64;
@@ -73,6 +75,7 @@ pub async fn run(
         duration,
         average_latency,
         total_size_bytes,
+        kind: BenchmarkKind::SendMessages,
     })
 }
 

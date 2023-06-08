@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CREATE_STREAM;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -8,10 +8,21 @@ use std::str::{from_utf8, FromStr};
 
 const MAX_NAME_LENGTH: usize = 1000;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateStream {
     pub stream_id: u32,
     pub name: String,
+}
+
+impl CommandPayload for CreateStream {}
+
+impl Default for CreateStream {
+    fn default() -> Self {
+        CreateStream {
+            stream_id: 1,
+            name: "stream".to_string(),
+        }
+    }
 }
 
 impl Validatable for CreateStream {
@@ -45,8 +56,6 @@ impl FromStr for CreateStream {
 }
 
 impl BytesSerializable for CreateStream {
-    type Type = CreateStream;
-
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(4 + self.name.len());
         bytes.extend(&self.stream_id.to_le_bytes());
@@ -54,7 +63,7 @@ impl BytesSerializable for CreateStream {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<CreateStream, Error> {
         if bytes.len() < 5 {
             return Err(Error::InvalidCommand);
         }
@@ -69,11 +78,7 @@ impl BytesSerializable for CreateStream {
 
 impl Display for CreateStream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{} → stream ID: {}, name: {}",
-            CREATE_STREAM, self.stream_id, self.name
-        )
+        write!(f, "{}|{}", self.stream_id, self.name)
     }
 }
 

@@ -1,13 +1,15 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::PING;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct Ping {}
+
+impl CommandPayload for Ping {}
 
 impl Validatable for Ping {
     fn validate(&self) -> Result<(), Error> {
@@ -29,13 +31,11 @@ impl FromStr for Ping {
 }
 
 impl BytesSerializable for Ping {
-    type Type = Ping;
-
     fn as_bytes(&self) -> Vec<u8> {
         Vec::with_capacity(0)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<Ping, Error> {
         if !bytes.is_empty() {
             return Err(Error::InvalidCommand);
         }
@@ -48,7 +48,7 @@ impl BytesSerializable for Ping {
 
 impl Display for Ping {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", PING)
+        write!(f, "")
     }
 }
 

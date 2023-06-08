@@ -8,11 +8,11 @@ use shared::system::ping::Ping;
 
 #[async_trait]
 impl SystemClient for QuicClient {
-    async fn ping(&self, command: &Ping) -> Result<(), Error> {
+    async fn ping(&self, command: Ping) -> Result<(), Error> {
         binary::system::ping(self, command).await
     }
 
-    async fn kill(&self, command: &Kill) -> Result<(), Error> {
+    async fn kill(&self, command: Kill) -> Result<(), Error> {
         binary::system::kill(self, command).await
     }
 }

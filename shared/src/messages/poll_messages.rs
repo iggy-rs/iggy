@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::POLL_MESSAGES;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -7,7 +7,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 // TODO: Extend with consumer group.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct PollMessages {
     #[serde(default = "default_consumer_id")]
     pub consumer_id: u32,
@@ -28,6 +28,24 @@ pub struct PollMessages {
     #[serde(skip)]
     pub format: Format,
 }
+
+impl Default for PollMessages {
+    fn default() -> Self {
+        Self {
+            consumer_id: default_consumer_id(),
+            stream_id: 1,
+            topic_id: 1,
+            partition_id: default_partition_id(),
+            kind: default_kind(),
+            value: default_value(),
+            count: default_count(),
+            auto_commit: false,
+            format: Format::None,
+        }
+    }
+}
+
+impl CommandPayload for PollMessages {}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
@@ -149,7 +167,7 @@ impl FromStr for PollMessages {
                 "s" | "string" => Format::String,
                 _ => return Err(Error::InvalidFormat),
             },
-            None => Format::Binary,
+            None => Format::None,
         };
 
         let command = PollMessages {
@@ -169,8 +187,6 @@ impl FromStr for PollMessages {
 }
 
 impl BytesSerializable for PollMessages {
-    type Type = PollMessages;
-
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(30);
         bytes.extend(self.consumer_id.to_le_bytes());
@@ -230,8 +246,15 @@ impl Display for PollMessages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} → consumer ID: {}, stream ID: {}, topic ID: {}, partition ID: {}, kind: {}, value: {}, count: {}, auto commit: {}",
-            POLL_MESSAGES, self.consumer_id, self.stream_id, self.topic_id, self.partition_id, self.kind, self.value, self.count, self.auto_commit
+            "{}|{}|{}|{}|{}|{}|{}|{}",
+            self.consumer_id,
+            self.stream_id,
+            self.topic_id,
+            self.partition_id,
+            self.kind,
+            self.value,
+            self.count,
+            auto_commit_to_string(self.auto_commit)
         )
     }
 }
@@ -245,6 +268,14 @@ impl Display for Kind {
             Kind::Last => write!(f, "last"),
             Kind::Next => write!(f, "next"),
         }
+    }
+}
+
+fn auto_commit_to_string(auto_commit: bool) -> &'static str {
+    if auto_commit {
+        "a"
+    } else {
+        "n"
     }
 }
 

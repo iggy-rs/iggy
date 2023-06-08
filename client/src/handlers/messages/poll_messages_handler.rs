@@ -5,14 +5,15 @@ use std::str::from_utf8;
 use tracing::info;
 
 pub async fn handle(command: PollMessages, client: &dyn Client) -> Result<(), ClientError> {
-    let messages = client.poll_messages(&command).await?;
+    let format = command.format;
+    let messages = client.poll_messages(command).await?;
     if messages.is_empty() {
         info!("No messages found");
         return Ok(());
     }
 
     let mut text = format!("Received {} messages.", messages.len());
-    if command.format == Format::None {
+    if format == Format::None {
         info!("{}", text);
         return Ok(());
     }
@@ -22,7 +23,7 @@ pub async fn handle(command: PollMessages, client: &dyn Client) -> Result<(), Cl
             "\noffset: {}, timestamp: {}, ID: {}, length: {}, payload: ",
             message.offset, message.timestamp, message.id, message.length
         );
-        match command.format {
+        match format {
             Format::Binary => text += &format!("{:?}", message.payload),
             Format::String => text += from_utf8(&message.payload).unwrap(),
             _ => {}

@@ -4,21 +4,36 @@ use crate::benchmarks::*;
 use crate::client_factory::ClientFactory;
 use std::fmt::{Display, Formatter};
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::task;
 use tokio::task::JoinHandle;
 use tracing::{error, info};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BenchmarkKind {
     SendMessages,
     PollMessages,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Transport {
     Http,
     Quic,
     Tcp,
+}
+
+pub fn display_results(results: Vec<BenchmarkResult>, kind: BenchmarkKind, total_messages: u64) {
+    let total_size_bytes = results.iter().map(|r| r.total_size_bytes).sum::<u64>();
+    let total_duration = results.iter().map(|r| r.duration).sum::<Duration>();
+    let average_latency =
+        results.iter().map(|r| r.average_latency).sum::<f64>() / results.len() as f64;
+    let average_throughput =
+        total_size_bytes as f64 / total_duration.as_secs_f64() / 1024.0 / 1024.0;
+
+    info!(
+            "Finished the {} benchmark for total amount of messages: {} in {} ms, total size: {} bytes, average latency: {:.2} ms, average throughput: {:.2} MB/s.",
+            kind, total_messages, total_duration.as_millis(), total_size_bytes, average_latency, average_throughput
+        );
 }
 
 impl Display for BenchmarkKind {

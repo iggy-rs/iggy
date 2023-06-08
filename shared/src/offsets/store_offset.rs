@@ -1,12 +1,12 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::STORE_OFFSET;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct StoreOffset {
     #[serde(default = "default_consumer_id")]
     pub consumer_id: u32,
@@ -17,6 +17,20 @@ pub struct StoreOffset {
     pub partition_id: u32,
     pub offset: u64,
 }
+
+impl Default for StoreOffset {
+    fn default() -> Self {
+        StoreOffset {
+            consumer_id: default_consumer_id(),
+            stream_id: 1,
+            topic_id: 1,
+            partition_id: 1,
+            offset: 0,
+        }
+    }
+}
+
+impl CommandPayload for StoreOffset {}
 
 fn default_consumer_id() -> u32 {
     0
@@ -62,8 +76,6 @@ impl FromStr for StoreOffset {
 }
 
 impl BytesSerializable for StoreOffset {
-    type Type = StoreOffset;
-
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(24);
         bytes.extend(self.consumer_id.to_le_bytes());
@@ -74,7 +86,7 @@ impl BytesSerializable for StoreOffset {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<StoreOffset, Error> {
         if bytes.len() != 24 {
             return Err(Error::InvalidCommand);
         }
@@ -100,13 +112,8 @@ impl Display for StoreOffset {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} → consumer ID: {}, stream ID: {}, topic ID: {}, partition ID: {}, offset: {}",
-            STORE_OFFSET,
-            self.consumer_id,
-            self.stream_id,
-            self.topic_id,
-            self.partition_id,
-            self.offset
+            "{}|{}|{}|{}|{}",
+            self.consumer_id, self.stream_id, self.topic_id, self.partition_id, self.offset
         )
     }
 }

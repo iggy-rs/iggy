@@ -5,5 +5,5 @@ use shared::command::Command;
 
 #[async_trait]
 pub trait BinaryClient: Client {
-    async fn send_with_response(&self, command: Command, payload: &[u8]) -> Result<Vec<u8>, Error>;
+    async fn send_with_response(&self, command: Command) -> Result<Vec<u8>, Error>;
 }

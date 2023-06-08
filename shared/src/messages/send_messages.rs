@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::SEND_MESSAGES;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,7 @@ use std::str::FromStr;
 
 const MAX_PAYLOAD_SIZE: u32 = 10 * 1024 * 1024;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SendMessages {
     #[serde(skip)]
     pub stream_id: u32,
@@ -24,7 +24,7 @@ pub struct SendMessages {
 }
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Message {
     #[serde(default = "default_message_id")]
     pub id: u128,
@@ -45,6 +45,21 @@ pub enum KeyKind {
 fn default_message_id() -> u128 {
     0
 }
+
+impl Default for SendMessages {
+    fn default() -> Self {
+        SendMessages {
+            stream_id: 1,
+            topic_id: 1,
+            key_kind: KeyKind::default(),
+            key_value: 1,
+            messages_count: 1,
+            messages: vec![Message::default()],
+        }
+    }
+}
+
+impl CommandPayload for SendMessages {}
 
 impl Validatable for SendMessages {
     fn validate(&self) -> Result<(), Error> {
@@ -111,9 +126,24 @@ impl Message {
     }
 }
 
-impl BytesSerializable for Message {
-    type Type = Message;
+impl Default for Message {
+    fn default() -> Self {
+        let payload = "hello world".as_bytes().to_vec();
+        Message {
+            id: 0,
+            length: payload.len() as u32,
+            payload,
+        }
+    }
+}
 
+impl Display for Message {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}|{}", self.id, String::from_utf8_lossy(&self.payload))
+    }
+}
+
+impl BytesSerializable for Message {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(self.get_size_bytes() as usize);
         bytes.extend(self.id.to_le_bytes());
@@ -122,7 +152,7 @@ impl BytesSerializable for Message {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if bytes.len() < 20 {
             return Err(Error::InvalidCommand);
         }
@@ -206,8 +236,6 @@ impl FromStr for SendMessages {
 }
 
 impl BytesSerializable for SendMessages {
-    type Type = SendMessages;
-
     fn as_bytes(&self) -> Vec<u8> {
         let messages_size = self
             .messages
@@ -230,7 +258,7 @@ impl BytesSerializable for SendMessages {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<SendMessages, Error> {
         if bytes.len() < 18 {
             return Err(Error::InvalidCommand);
         }
@@ -266,13 +294,16 @@ impl Display for SendMessages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} → stream ID: {}, topic ID: {}, key kind: {}, key value: {}, count: {}",
-            SEND_MESSAGES,
+            "{}|{}|{}|{}|{}",
             self.stream_id,
             self.topic_id,
             self.key_kind,
             self.key_value,
-            self.messages_count
+            self.messages
+                .iter()
+                .map(|message| message.to_string())
+                .collect::<Vec<String>>()
+                .join("|")
         )
     }
 }

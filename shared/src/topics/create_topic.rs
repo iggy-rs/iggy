@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CREATE_TOPIC;
+use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -9,13 +9,26 @@ use std::str::{from_utf8, FromStr};
 const MAX_NAME_LENGTH: usize = 1000;
 const MAX_PARTITIONS_COUNT: u32 = 100000;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateTopic {
     #[serde(skip)]
     pub stream_id: u32,
     pub topic_id: u32,
     pub partitions_count: u32,
     pub name: String,
+}
+
+impl CommandPayload for CreateTopic {}
+
+impl Default for CreateTopic {
+    fn default() -> Self {
+        CreateTopic {
+            stream_id: 1,
+            topic_id: 1,
+            partitions_count: 1,
+            name: "topic".to_string(),
+        }
+    }
 }
 
 impl Validatable for CreateTopic {
@@ -64,8 +77,6 @@ impl FromStr for CreateTopic {
 }
 
 impl BytesSerializable for CreateTopic {
-    type Type = CreateTopic;
-
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(12 + self.name.len());
         bytes.extend(self.stream_id.to_le_bytes());
@@ -75,7 +86,7 @@ impl BytesSerializable for CreateTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self::Type, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<CreateTopic, Error> {
         if bytes.len() < 13 {
             return Err(Error::InvalidCommand);
         }
@@ -99,8 +110,8 @@ impl Display for CreateTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} → stream ID: {}, topic ID: {}, partitions count: {}, name: {}",
-            CREATE_TOPIC, self.stream_id, self.topic_id, self.partitions_count, self.name
+            "{}|{}|{}|{}",
+            self.stream_id, self.topic_id, self.partitions_count, self.name
         )
     }
 }

@@ -10,22 +10,14 @@ use std::str::from_utf8;
 
 pub async fn create_topic(client: &dyn BinaryClient, command: &CreateTopic) -> Result<(), Error> {
     client
-        .send_with_response(
-            [Command::CreateTopic.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::CreateTopic, &command.as_bytes())
         .await?;
     Ok(())
 }
 
 pub async fn delete_topic(client: &dyn BinaryClient, command: &DeleteTopic) -> Result<(), Error> {
     client
-        .send_with_response(
-            [Command::DeleteTopic.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::DeleteTopic, &command.as_bytes())
         .await?;
     Ok(())
 }
@@ -35,11 +27,7 @@ pub async fn get_topics(
     command: &GetTopics,
 ) -> Result<Vec<Topic>, Error> {
     let response = client
-        .send_with_response(
-            [Command::GetTopics.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::GetTopics, &command.as_bytes())
         .await?;
     handle_response(&response)
 }

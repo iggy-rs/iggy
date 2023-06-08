@@ -1,4 +1,5 @@
 use quinn::{ConnectionError, ReadToEndError, WriteError};
+use std::array::TryFromSliceError;
 use thiserror::Error;
 use tokio::io;
 
@@ -18,4 +19,6 @@ pub enum ServerError {
     WriteError(#[from] WriteError),
     #[error("Read to end error")]
     ReadToEndError(#[from] ReadToEndError),
+    #[error("Try from slice error")]
+    TryFromSliceError(#[from] TryFromSliceError),
 }

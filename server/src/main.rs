@@ -1,11 +1,11 @@
 mod args;
+mod binary;
 mod components;
 mod http;
 mod quic;
 mod server_command;
 mod server_config;
 mod server_error;
-mod shared;
 mod tcp;
 
 use crate::args::Args;

@@ -3,7 +3,7 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    #[arg(long, default_value = "quic")]
+    #[arg(long, default_value = "tcp")]
     pub transport: String,
 
     #[arg(long, default_value = "http://localhost:3000")]

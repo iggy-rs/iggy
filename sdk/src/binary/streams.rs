@@ -13,33 +13,21 @@ pub async fn get_streams(
     command: &GetStreams,
 ) -> Result<Vec<Stream>, Error> {
     let response = client
-        .send_with_response(
-            [Command::GetStreams.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::GetStreams, &command.as_bytes())
         .await?;
     handle_response(&response)
 }
 
 pub async fn create_stream(client: &dyn BinaryClient, command: &CreateStream) -> Result<(), Error> {
     client
-        .send_with_response(
-            [Command::CreateStream.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::CreateStream, &command.as_bytes())
         .await?;
     Ok(())
 }
 
 pub async fn delete_stream(client: &dyn BinaryClient, command: &DeleteStream) -> Result<(), Error> {
     client
-        .send_with_response(
-            [Command::DeleteStream.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::DeleteStream, &command.as_bytes())
         .await?;
     Ok(())
 }

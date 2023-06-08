@@ -7,22 +7,14 @@ use shared::system::ping::Ping;
 
 pub async fn ping(client: &dyn BinaryClient, command: &Ping) -> Result<(), Error> {
     client
-        .send_with_response(
-            [Command::Ping.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::Ping, &command.as_bytes())
         .await?;
     Ok(())
 }
 
 pub async fn kill(client: &dyn BinaryClient, command: &Kill) -> Result<(), Error> {
     client
-        .send_with_response(
-            [Command::Kill.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::Kill, &command.as_bytes())
         .await?;
     Ok(())
 }

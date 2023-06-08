@@ -4,13 +4,15 @@ use crate::error::Error;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
+use shared::bytes_serializable::BytesSerializable;
+use shared::command::Command;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info, trace};
 
+const INITIAL_BYTES_LENGTH: usize = 5;
 const EMPTY_RESPONSE: Vec<u8> = vec![];
-
 const NAME: &str = "Iggy";
 
 #[derive(Debug)]
@@ -23,6 +25,61 @@ pub struct QuicClient {
 
 unsafe impl Send for QuicClient {}
 unsafe impl Sync for QuicClient {}
+
+#[async_trait]
+impl Client for QuicClient {
+    async fn connect(&mut self) -> Result<(), Error> {
+        info!(
+            "{} client is connecting to server: {}",
+            NAME, self.config.server_name
+        );
+        let connection = self
+            .endpoint
+            .connect(self.server_address, &self.config.server_name)
+            .unwrap()
+            .await
+            .unwrap();
+
+        info!(
+            "{} client has connected to server: {}",
+            NAME,
+            connection.remote_address()
+        );
+
+        self.connection = Some(connection);
+
+        Ok(())
+    }
+
+    async fn disconnect(&mut self) -> Result<(), Error> {
+        info!("{} client is disconnecting from server...", NAME);
+        self.connection = None;
+        self.endpoint.wait_idle().await;
+        info!("{} client has disconnected from server.", NAME);
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl BinaryClient for QuicClient {
+    async fn send_with_response(&self, command: Command, payload: &[u8]) -> Result<Vec<u8>, Error> {
+        if let Some(connection) = &self.connection {
+            let length = payload.len();
+            let mut buffer = Vec::with_capacity(INITIAL_BYTES_LENGTH + length);
+            buffer.extend(command.as_bytes());
+            buffer.extend((length as u32).to_le_bytes());
+            buffer.extend(payload);
+
+            let (mut send, mut recv) = connection.open_bi().await?;
+            send.write_all(&buffer).await?;
+            send.finish().await?;
+            return self.handle_response(&mut recv).await;
+        }
+
+        error!("Cannot send data. Client is not connected.");
+        Err(Error::NotConnected)
+    }
+}
 
 impl QuicClient {
     pub fn new(
@@ -81,55 +138,6 @@ impl QuicClient {
         }
 
         Ok(buffer[1..length].to_vec())
-    }
-}
-
-#[async_trait]
-impl Client for QuicClient {
-    async fn connect(&mut self) -> Result<(), Error> {
-        info!(
-            "{} client is connecting to server: {}",
-            NAME, self.config.server_name
-        );
-        let connection = self
-            .endpoint
-            .connect(self.server_address, &self.config.server_name)
-            .unwrap()
-            .await
-            .unwrap();
-
-        info!(
-            "{} client has connected to server: {}",
-            NAME,
-            connection.remote_address()
-        );
-
-        self.connection = Some(connection);
-
-        Ok(())
-    }
-
-    async fn disconnect(&mut self) -> Result<(), Error> {
-        info!("{} client is disconnecting from server...", NAME);
-        self.connection = None;
-        self.endpoint.wait_idle().await;
-        info!("{} client has disconnected from server.", NAME);
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl BinaryClient for QuicClient {
-    async fn send_with_response(&self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
-        if let Some(connection) = &self.connection {
-            let (mut send, mut recv) = connection.open_bi().await?;
-            send.write_all(buffer).await?;
-            send.finish().await?;
-            return self.handle_response(&mut recv).await;
-        }
-
-        error!("Cannot send data. Client is not connected.");
-        Err(Error::NotConnected)
     }
 }
 

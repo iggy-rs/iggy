@@ -1,4 +1,4 @@
-use crate::shared::sender::Sender;
+use crate::binary::sender::Sender;
 use async_trait::async_trait;
 use quinn::SendStream;
 use shared::error::Error;

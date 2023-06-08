@@ -7,6 +7,7 @@ mod client_factory;
 mod http;
 mod initializer;
 mod quic;
+mod tcp;
 
 use crate::args::Args;
 use anyhow::Result;

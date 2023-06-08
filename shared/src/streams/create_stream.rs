@@ -49,8 +49,8 @@ impl BytesSerializable for CreateStream {
 
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(4 + self.name.len());
-        bytes.extend_from_slice(&self.stream_id.to_le_bytes());
-        bytes.extend_from_slice(self.name.as_bytes());
+        bytes.extend(&self.stream_id.to_le_bytes());
+        bytes.extend(self.name.as_bytes());
         bytes
     }
 

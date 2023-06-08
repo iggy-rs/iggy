@@ -1,13 +1,17 @@
+use crate::binary::command;
 use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ServerError;
-use crate::shared::command;
 use quinn::Endpoint;
+use shared::bytes_serializable::BytesSerializable;
+use shared::command::Command;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;
+use tracing::log::trace;
 use tracing::{error, info};
 
 const LISTENERS_COUNT: u32 = 10;
+const INITIAL_REQUEST_LENGTH: usize = 5;
 
 pub fn start(endpoint: Endpoint, system: Arc<RwLock<System>>) {
     for _ in 0..LISTENERS_COUNT {
@@ -56,8 +60,33 @@ async fn handle_connection(
                 continue;
             }
 
+            let request = request.unwrap();
+            if request.len() < INITIAL_REQUEST_LENGTH {
+                error!("Error when reading the QUIC request command: {:?}", request);
+                continue;
+            }
+
+            trace!("Trying to read command...");
+            let command = Command::from_bytes(&request[..1]);
+            if command.is_err() {
+                error!(
+                    "Error when reading the QUIC request command: {:?}",
+                    command.err()
+                );
+                continue;
+            }
+
+            let command = command.unwrap();
+            let bytes = &request[INITIAL_REQUEST_LENGTH..];
+            trace!(
+                "Received command: '{:?}',  payload size: {}, trying to handle...",
+                command,
+                bytes.len()
+            );
+
             let result = command::handle(
-                &request.unwrap(),
+                command,
+                bytes,
                 &mut QuicSender { send: stream.0 },
                 system.clone(),
             )

@@ -1,4 +1,4 @@
-use crate::shared::sender::Sender;
+use crate::binary::sender::Sender;
 use anyhow::Result;
 use shared::error::Error;
 use shared::messages::poll_messages::PollMessages;

@@ -4,9 +4,9 @@
 
 ---
 
-**Iggy** is the persistent message streaming platform written in Rust, using [QUIC](https://www.chromium.org/quic/) (custom binary specification) and/or HTTP (regular REST API) as a transport protocol . Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The messages are stored on disk as an append-only log, and are persisted between restarts.
+**Iggy** is the persistent message streaming platform written in Rust, supporting [QUIC](https://www.chromium.org/quic/), TCP (custom binary specification) and HTTP (regular REST API) transport protocols. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The **messages are stored on disk as an append-only log**, and are persisted between restarts.
 
-The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to handle millions of messages per second and scale horizontally.
+The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to scale horizontally and handle **millions of messages per second** (actually, **it's already very fast**, see the benchmarks below).
 
 It is a pet project of mine to learn more about distributed systems and Rust. The name is an abbreviation for the Italian Greyhound - small yet extremely fast dogs, the best in their class. Just like mine lovely [Fabio & Cookie](https://www.instagram.com/fabio.and.cookie/) ❤️
 
@@ -14,24 +14,24 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 
 ### Features
 
-- Highly performant, persistent append-only log for the message streaming
-- Very high throughput for both writes and reads 
-- Low latency and predictable resource usage thanks to the Rust compiled language (no GC)
+- **Highly performant**, persistent append-only log for the message streaming
+- **Very high throughput** for both writes and reads
+- **Low latency and predictable resource usage** thanks to the Rust compiled language (no GC)
 - Support for multiple streams, topics and partitions
-- Support for multiple transport protocols (QUIC, HTTP)
+- Support for **multiple transport protocols** (QUIC, TCP, HTTP)
 - Available client SDK in Rust (more languages to come)
-- Works directly with the binary data (lack of enforced schema and serialization/deserialization)
+- **Works directly with the binary data** (lack of enforced schema and serialization/deserialization)
 - Configurable server features (e.g. caching, segment size, data flush interval, transport protocols etc.)
-- Possibility of storing the consumer offsets on the server
+- Possibility of storing the **consumer offsets** on the server
 - Multiple ways of polling the messages:
   - By offset (using the indexes)
   - By timestamp (using the time indexes)
   - First/Last N messages
   - Next N messages for the specific consumer
-- Possibility of auto committing the offset (e.g. to achieve at-most-once delivery)
-- Additional features such as server side message deduplication
+- Possibility of **auto committing the offset** (e.g. to achieve *at-most-once* delivery)
+- Additional features such as **server side message deduplication**
 - Built-in benchmarking app to test the performance
-- Single binary deployment (no external dependencies)
+- **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)
 
 ---
@@ -50,9 +50,9 @@ Start the server:
 
 `cargo r --bin server -r`
 
-Start the client (transports: `http`, `quic`):
+Start the client (transports: `quic`, `tcp`, `http`):
 
-`cargo r --bin client -r --transport quic`
+`cargo r --bin client -r --transport tcp`
 
 Create a stream named `dev` with ID 1:
 
@@ -90,19 +90,19 @@ To see the detailed logs from the client/server, run it with `RUST_LOG=trace` en
 
 **See the images below**
 
-Files structure
+*Files structure*
 
 ![files structure](assets/files_structure.png)
 
-Server start
+*Server start*
 
 ![server start](assets/server_start.png)
 
-Client start
+*Client start*
 
 ![client start](assets/client_start.png)
 
-Server restart
+*Server restart*
 
 ![server restart](assets/server_restart.png)
 
@@ -112,13 +112,19 @@ Server restart
 
 To benchmark the project, first start the server and then run the benchmarking app:
 
-`cargo r --bin bench -r -- --http --test-send-messages --streams 10 --producers 10 --parallel-producer-streams --messages-per-batch 1000 --message-batches 1000 --message-size 1000`
+`cargo r --bin bench -r -- --tcp --test-send-messages --streams 10 --producers 10 --parallel-producer-streams --messages-per-batch 1000 --message-batches 1000 --message-size 1000`
 
-`cargo r --bin bench -r -- --http --test-poll-messages --streams 10 --consumers 10 --parallel-consumer-streams --messages-per-batch 1000 --message-batches 1000`
+`cargo r --bin bench -r -- --tcp --test-poll-messages --streams 10 --consumers 10 --parallel-consumer-streams --messages-per-batch 1000 --message-batches 1000`
 
-Depending on the hardware, settings in `server.json`, transport protocol (`quic` or `http`) and payload size (`messages-per-batch * message-size`) you might expect over 2000 MB/s (e.g. 2M of 1 KB msg/sec) throughput for both writes and reads. The current results have been achieved on Apple M1 Max with 64 GB RAM.
+Depending on the hardware, settings in `server.json`, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. The current results have been achieved on Apple M1 Max with 64 GB RAM.
 
-![client start](assets/benchmarks.png)
+*Write benchmark*
+
+![write benchmark](assets/write_benchmark.png)
+
+*Read benchmark*
+
+![read benchmark](assets/read_benchmark.png)
 
 ---
 
@@ -143,8 +149,8 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [ ] Extend QUIC configuration with custom certificates
 - [x] Create a basic HTTP server
 - [x] Make use of HTTP protocol
-- [ ] Create a basic TCP server
-- [ ] Make use of TCP protocol
+- [x] Create a basic TCP server
+- [x] Make use of TCP protocol
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
 - [x] Allow multiple clients to connect to the server
@@ -159,8 +165,8 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [ ] Extend QUIC configuration with custom certificates
 - [x] Create a basic HTTP client
 - [x] Make use of HTTP protocol
-- [ ] Create a basic TCP client
-- [ ] Make use of TCP protocol
+- [x] Create a basic TCP client
+- [x] Make use of TCP protocol
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
 - [x] Communicate with the server using established binary protocol
@@ -173,7 +179,7 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 
 - [x] Implement the QUIC SDK for the client
 - [x] Implement the HTTP SDK for the client
-- [ ] Implement the TCP SDK for the client
+- [x] Implement the TCP SDK for the client
 - [x] Make use of the SDK in client project
 - [ ] Implement another SDK in C# for dotnet clients
 
@@ -220,7 +226,7 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 #### API
 
 - [x] Implement REST API for the server using Axum
-- [x] Expose all the routes to achieve the same functionality as with the QUIC
+- [x] Expose all the routes to achieve the same functionality as with the QUIC and TCP
 - [ ] Generate OpenAPI specification for the REST API
 
 #### UI

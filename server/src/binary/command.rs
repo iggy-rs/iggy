@@ -1,9 +1,9 @@
-use crate::shared::handlers::messages::*;
-use crate::shared::handlers::offsets::*;
-use crate::shared::handlers::streams::*;
-use crate::shared::handlers::system::*;
-use crate::shared::handlers::topics::*;
-use crate::shared::sender::Sender;
+use crate::binary::handlers::messages::*;
+use crate::binary::handlers::offsets::*;
+use crate::binary::handlers::streams::*;
+use crate::binary::handlers::system::*;
+use crate::binary::handlers::topics::*;
+use crate::binary::sender::Sender;
 use shared::bytes_serializable::BytesSerializable;
 use shared::command::Command;
 use shared::error::Error;
@@ -42,25 +42,12 @@ use tracing::trace;
             |   1 byte  |  n bytes  |
 */
 
-const LENGTH: usize = 1;
-
 pub async fn handle(
-    request: &[u8],
+    command: Command,
+    bytes: &[u8],
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    if request.len() < LENGTH {
-        return Err(Error::InvalidCommand);
-    }
-
-    trace!("Trying to read command...");
-    let command = Command::from_bytes(&request[..LENGTH])?;
-    let bytes = &request[LENGTH..];
-    trace!(
-        "Received command: '{:?}', payload size: {}, trying to handle...",
-        command,
-        bytes.len()
-    );
     let result = try_handle(command, bytes, sender, system).await;
     if result.is_ok() {
         trace!("Command was handled successfully.");

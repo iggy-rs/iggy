@@ -18,6 +18,7 @@ pub enum BenchmarkKind {
 pub enum Transport {
     Http,
     Quic,
+    Tcp,
 }
 
 impl Display for BenchmarkKind {
@@ -34,6 +35,7 @@ impl Display for Transport {
         match self {
             Transport::Http => write!(f, "HTTP"),
             Transport::Quic => write!(f, "QUIC"),
+            Transport::Tcp => write!(f, "TCP"),
         }
     }
 }

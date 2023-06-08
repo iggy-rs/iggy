@@ -3,14 +3,17 @@ use crate::client::Client;
 use crate::error::Error;
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
+use shared::bytes_serializable::BytesSerializable;
+use shared::command::Command;
 use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+use tracing::log::trace;
 use tracing::{error, info};
 
+const INITIAL_BYTES_LENGTH: usize = 5;
 const EMPTY_RESPONSE: Vec<u8> = vec![];
-
 const NAME: &str = "Iggy";
 
 #[derive(Debug)]
@@ -22,45 +25,6 @@ pub struct TcpClient {
 
 unsafe impl Send for TcpClient {}
 unsafe impl Sync for TcpClient {}
-
-impl TcpClient {
-    pub fn new(server_address: &str) -> Result<Self, Error> {
-        Self::create(TcpClientConfig {
-            server_address: server_address.to_string(),
-        })
-    }
-
-    pub fn create(config: TcpClientConfig) -> Result<Self, Error> {
-        let server_address = config.server_address.parse::<SocketAddr>()?;
-
-        Ok(Self {
-            config,
-            server_address,
-            stream: None,
-        })
-    }
-
-    async fn handle_response(&self, data: &[u8]) -> Result<Vec<u8>, Error> {
-        if data.is_empty() {
-            return Err(Error::EmptyResponse);
-        }
-
-        let status = data[0];
-        if status != 0 {
-            error!("Received an invalid response with status: {:?}.", status);
-            return Err(Error::InvalidResponse(status));
-        }
-
-        let length = data.len();
-        info!("Status: OK. Response length: {}", length);
-
-        if length <= 1 {
-            return Ok(EMPTY_RESPONSE);
-        }
-
-        Ok(data[1..length].to_vec())
-    }
-}
 
 #[async_trait]
 impl Client for TcpClient {
@@ -91,19 +55,70 @@ impl Client for TcpClient {
 
 #[async_trait]
 impl BinaryClient for TcpClient {
-    async fn send_with_response(&self, buffer: &[u8]) -> Result<Vec<u8>, Error> {
+    async fn send_with_response(&self, command: Command, payload: &[u8]) -> Result<Vec<u8>, Error> {
         if let Some(stream) = &self.stream {
+            let length = payload.len();
+            let mut buffer = Vec::with_capacity(INITIAL_BYTES_LENGTH + length);
+            buffer.extend(command.as_bytes());
+            buffer.extend((length as u32).to_le_bytes());
+            buffer.extend(payload);
+
             let mut stream = stream.lock().await;
-            stream.write_all(buffer).await?;
-            stream.flush().await?;
-            info!("Sent a TCP request, waiting for a response...");
-            // TODO: Refactor using the actual response length received from the server.
-            let mut buffer = vec![0; 1024 * 1024];
-            let length = stream.read(&mut buffer).await?;
-            return self.handle_response(&buffer[..length]).await;
+            trace!("Sending a TCP request...");
+            stream.write_all(&buffer).await?;
+            trace!("Sent a TCP request, waiting for a response...");
+            let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
+            let read_bytes = stream.read_exact(&mut initial_buffer).await?;
+            if read_bytes != INITIAL_BYTES_LENGTH {
+                error!("Received an invalid or empty response.");
+                return Err(Error::EmptyResponse);
+            }
+
+            let status = initial_buffer[0];
+            let length = u32::from_le_bytes(initial_buffer[1..].try_into().unwrap());
+            return self.handle_response(status, length, &mut stream).await;
         }
 
         error!("Cannot send data. Client is not connected.");
         Err(Error::NotConnected)
+    }
+}
+
+impl TcpClient {
+    pub fn new(server_address: &str) -> Result<Self, Error> {
+        Self::create(TcpClientConfig {
+            server_address: server_address.to_string(),
+        })
+    }
+
+    pub fn create(config: TcpClientConfig) -> Result<Self, Error> {
+        let server_address = config.server_address.parse::<SocketAddr>()?;
+
+        Ok(Self {
+            config,
+            server_address,
+            stream: None,
+        })
+    }
+
+    async fn handle_response(
+        &self,
+        status: u8,
+        length: u32,
+        stream: &mut TcpStream,
+    ) -> Result<Vec<u8>, Error> {
+        if status != 0 {
+            error!("Received an invalid response with status: {:?}.", status);
+            return Err(Error::InvalidResponse(status));
+        }
+
+        trace!("Status: OK. Response length: {}", length);
+        if length <= 1 {
+            return Ok(EMPTY_RESPONSE);
+        }
+
+        let mut response_buffer = vec![0u8; length as usize];
+        stream.read_exact(&mut response_buffer).await?;
+        Ok(response_buffer)
     }
 }

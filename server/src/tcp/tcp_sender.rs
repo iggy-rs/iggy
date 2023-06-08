@@ -1,4 +1,4 @@
-use crate::shared::sender::Sender;
+use crate::binary::sender::Sender;
 use async_trait::async_trait;
 use shared::error::Error;
 use tokio::io::AsyncWriteExt;
@@ -34,10 +34,10 @@ impl Sender for TcpSender {
 impl TcpSender {
     async fn send_response(&mut self, status: &[u8], payload: &[u8]) -> Result<(), Error> {
         trace!("Sending response with status: {:?}...", status);
+        let length = (payload.len() as u32).to_le_bytes();
         self.stream
-            .write_all(&[status, payload].as_slice().concat())
+            .write_all(&[status, &length, payload].as_slice().concat())
             .await?;
-        self.stream.flush().await?;
         trace!("Sent response with status: {:?}", status);
         Ok(())
     }

@@ -12,33 +12,21 @@ pub async fn poll_messages(
     command: &PollMessages,
 ) -> Result<Vec<Message>, Error> {
     let response = client
-        .send_with_response(
-            [Command::PollMessages.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::PollMessages, &command.as_bytes())
         .await?;
     handle_poll_messages_response(&response)
 }
 
 pub async fn send_messages(client: &dyn BinaryClient, command: &SendMessages) -> Result<(), Error> {
     client
-        .send_with_response(
-            [Command::SendMessages.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::SendMessages, &command.as_bytes())
         .await?;
     Ok(())
 }
 
 pub async fn store_offset(client: &dyn BinaryClient, command: &StoreOffset) -> Result<(), Error> {
     client
-        .send_with_response(
-            [Command::StoreOffset.as_bytes(), command.as_bytes()]
-                .concat()
-                .as_slice(),
-        )
+        .send_with_response(Command::StoreOffset, &command.as_bytes())
         .await?;
     Ok(())
 }

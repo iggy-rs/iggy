@@ -35,9 +35,20 @@ async fn main() -> Result<(), ClientError> {
 
         if let Err(error) = command::handle(&user_input, client).await {
             error!("Error: {:?}", error);
-            if let ClientError::SdkError(Error::ConnectionError(error)) = error {
-                error!("Connection error: {}. Client will be reconnected.", error);
-                client.connect().await?;
+            match error {
+                ClientError::SdkError(Error::NotConnected) => {
+                    error!("Client is not connected. Client will be reconnected.");
+                    client.connect().await?;
+                }
+                ClientError::SdkError(Error::ConnectionError(error)) => {
+                    error!("Connection error: {}. Client will be reconnected.", error);
+                    client.connect().await?;
+                }
+                ClientError::SdkError(Error::IoError(error)) => {
+                    error!("Connection error: {}. Client will be reconnected.", error);
+                    client.connect().await?;
+                }
+                _ => {}
             }
 
             continue;

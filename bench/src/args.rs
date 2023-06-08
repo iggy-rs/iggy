@@ -11,6 +11,12 @@ pub struct Args {
     #[arg(long, default_value = "1000000")]
     pub http_start_stream_id: u32,
 
+    #[arg(long, default_value = "127.0.0.1:8090")]
+    pub tcp_server_address: String,
+
+    #[arg(long, default_value = "3000000")]
+    pub tcp_start_stream_id: u32,
+
     #[arg(long, default_value = "127.0.0.1:0")]
     pub quic_client_address: String,
 
@@ -54,6 +60,9 @@ pub struct Args {
     pub quic: bool,
 
     #[arg(long, default_value = "false")]
+    pub tcp: bool,
+
+    #[arg(long, default_value = "false")]
     pub test_send_messages: bool,
 
     #[arg(long, default_value = "false")]
@@ -66,15 +75,20 @@ pub struct Args {
 impl Args {
     pub fn get_start_stream_id(&self) -> u32 {
         if self.http {
-            self.http_start_stream_id
-        } else {
-            self.quic_start_stream_id
+            return self.http_start_stream_id;
         }
+        if self.quic {
+            return self.quic_start_stream_id;
+        }
+        if self.tcp {
+            return self.tcp_start_stream_id;
+        }
+        panic!("Invalid protocol.")
     }
 
     pub fn validate(&self) -> Result<(), Error> {
-        if !self.quic && !self.http {
-            error!("At least one of the protocols must be provided: http or quic.");
+        if !self.quic && !self.http && !self.tcp {
+            error!("At least one of the protocols must be provided: http, quic or tcp.");
             return Err(Error::InvalidConfiguration);
         }
 

@@ -152,6 +152,7 @@ pub async fn persist(
     file: &mut File,
     mut current_position: u32,
     messages: &Vec<Arc<Message>>,
+    enforce_sync: bool,
 ) -> Result<(), Error> {
     let mut bytes = Vec::with_capacity(messages.len() * 4);
 
@@ -162,6 +163,10 @@ pub async fn persist(
     }
 
     if file.write_all(&bytes).await.is_err() {
+        return Err(Error::CannotSaveIndexToSegment);
+    }
+
+    if enforce_sync && file.sync_all().await.is_err() {
         return Err(Error::CannotSaveIndexToSegment);
     }
 

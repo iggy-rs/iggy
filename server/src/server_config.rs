@@ -46,6 +46,7 @@ pub struct HttpConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MessageSaverConfig {
     pub enabled: bool,
+    pub enforce_sync: bool,
     pub interval: u64,
 }
 
@@ -99,6 +100,7 @@ impl Default for MessageSaverConfig {
     fn default() -> MessageSaverConfig {
         MessageSaverConfig {
             enabled: true,
+            enforce_sync: true,
             interval: 1000,
         }
     }

@@ -175,7 +175,7 @@ impl Segment {
         Ok(())
     }
 
-    pub async fn persist_messages(&mut self) -> Result<(), Error> {
+    pub async fn persist_messages(&mut self, enforce_sync: bool) -> Result<(), Error> {
         if self.unsaved_messages.is_none() {
             return Ok(());
         }
@@ -196,10 +196,16 @@ impl Segment {
         let mut index_file = file::open_file(&self.index_path, true).await?;
         let mut time_index_file = file::open_file(&self.time_index_path, true).await?;
 
-        let saved_bytes = log::persist(&mut log_file, unsaved_messages).await?;
+        let saved_bytes = log::persist(&mut log_file, unsaved_messages, enforce_sync).await?;
         let current_position = self.current_size_bytes - saved_bytes;
-        index::persist(&mut index_file, current_position, unsaved_messages).await?;
-        time_index::persist(&mut time_index_file, unsaved_messages).await?;
+        index::persist(
+            &mut index_file,
+            current_position,
+            unsaved_messages,
+            enforce_sync,
+        )
+        .await?;
+        time_index::persist(&mut time_index_file, unsaved_messages, enforce_sync).await?;
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

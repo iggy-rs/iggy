@@ -30,6 +30,7 @@ pub async fn handle(
             command.key_kind,
             command.key_value,
             messages,
+            false,
         )
         .await?;
 

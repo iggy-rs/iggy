@@ -102,7 +102,11 @@ pub async fn load_message_ids(file: &mut File) -> Result<Vec<u128>, Error> {
     Ok(message_ids)
 }
 
-pub async fn persist(file: &mut File, messages: &Vec<Arc<Message>>) -> Result<u32, Error> {
+pub async fn persist(
+    file: &mut File,
+    messages: &Vec<Arc<Message>>,
+    enforce_sync: bool,
+) -> Result<u32, Error> {
     let messages_size = messages
         .iter()
         .map(|message| message.get_size_bytes())
@@ -114,6 +118,10 @@ pub async fn persist(file: &mut File, messages: &Vec<Arc<Message>>) -> Result<u3
     }
 
     if file.write_all(&bytes).await.is_err() {
+        return Err(Error::CannotSaveMessagesToSegment);
+    }
+
+    if enforce_sync && file.sync_all().await.is_err() {
         return Err(Error::CannotSaveMessagesToSegment);
     }
 

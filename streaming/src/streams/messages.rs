@@ -32,6 +32,7 @@ impl Stream {
         key_kind: KeyKind,
         key_value: u32,
         messages: Vec<Message>,
+        enforce_sync: bool,
     ) -> Result<(), Error> {
         if messages.is_empty() {
             return Ok(());
@@ -43,6 +44,8 @@ impl Stream {
         }
 
         let topic = topic.unwrap();
-        topic.append_messages(key_kind, key_value, messages).await
+        topic
+            .append_messages(key_kind, key_value, messages, enforce_sync)
+            .await
     }
 }

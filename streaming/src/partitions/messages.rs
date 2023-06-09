@@ -258,7 +258,11 @@ impl Partition {
         messages
     }
 
-    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {
+    pub async fn append_messages(
+        &mut self,
+        messages: Vec<Message>,
+        enforce_sync: bool,
+    ) -> Result<(), Error> {
         let segment = self.segments.last_mut();
         if segment.is_none() {
             return Err(Error::SegmentNotFound);
@@ -343,7 +347,8 @@ impl Partition {
             segment.start_offset,
             self.id
         );
-            segment.persist_messages().await?;
+            let enforce_sync = enforce_sync || self.config.enforce_sync;
+            segment.persist_messages(enforce_sync).await?;
             self.unsaved_messages_count = 0;
         }
 

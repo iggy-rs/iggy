@@ -31,7 +31,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     }
 
     partition.persist().await.unwrap();
-    partition.append_messages(messages).await.unwrap();
+    partition.append_messages(messages, false).await.unwrap();
     assert_eq!(partition.unsaved_messages_count, 0);
 
     let mut loaded_partition = Partition::empty(partition.id, &setup.path, config.clone());

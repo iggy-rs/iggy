@@ -96,6 +96,7 @@ async fn send_messages(
             command.key_kind,
             command.key_value,
             messages,
+            false,
         )
         .await?;
     Ok(StatusCode::CREATED)

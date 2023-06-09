@@ -48,7 +48,6 @@ impl System {
         for stream in streams {
             info!("Trying to load stream from disk...");
             let name = stream.unwrap().file_name().into_string().unwrap();
-
             let stream_id = name.parse::<u32>();
             if stream_id.is_err() {
                 error!("Invalid stream ID file with name: '{}'.", name);
@@ -108,14 +107,14 @@ impl System {
     }
 
     pub async fn shutdown(&mut self) -> Result<(), Error> {
-        self.persist_messages().await?;
+        self.persist_messages(true).await?;
         Ok(())
     }
 
-    pub async fn persist_messages(&self) -> Result<(), Error> {
+    pub async fn persist_messages(&self, enforce_sync: bool) -> Result<(), Error> {
         trace!("Saving buffered messages on disk...");
         for stream in self.streams.values() {
-            stream.persist_messages().await?;
+            stream.persist_messages(enforce_sync).await?;
         }
 
         Ok(())

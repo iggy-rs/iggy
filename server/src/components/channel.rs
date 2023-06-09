@@ -16,9 +16,9 @@ pub fn start(system: Arc<RwLock<System>>, receiver: Receiver<ServerCommand>) {
 
             let server_command = server_command.unwrap();
             match server_command {
-                ServerCommand::SaveMessages => {
+                ServerCommand::SaveMessages(sync) => {
                     let system = system.read().await;
-                    if system.persist_messages().await.is_err() {
+                    if system.persist_messages(sync).await.is_err() {
                         error!("Couldn't save buffered messages on disk.");
                         return;
                     }

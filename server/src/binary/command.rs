@@ -57,30 +57,30 @@ async fn try_handle(
 ) -> Result<(), Error> {
     trace!("Handling command '{}'...", command);
     match command {
-        Command::Kill(payload) => kill_handler::handle(payload, sender).await,
-        Command::Ping(payload) => ping_handler::handle(payload, sender).await,
-        Command::SendMessages(payload) => {
-            send_messages_handler::handle(payload, sender, system).await
+        Command::Kill(command) => kill_handler::handle(command, sender).await,
+        Command::Ping(command) => ping_handler::handle(command, sender).await,
+        Command::SendMessages(command) => {
+            send_messages_handler::handle(command, sender, system).await
         }
-        Command::PollMessages(payload) => {
-            poll_messages_handler::handle(payload, sender, system).await
+        Command::PollMessages(command) => {
+            poll_messages_handler::handle(command, sender, system).await
         }
-        Command::StoreOffset(payload) => {
-            store_offset_handler::handle(payload, sender, system).await
+        Command::StoreOffset(command) => {
+            store_offset_handler::handle(command, sender, system).await
         }
-        Command::GetStreams(payload) => get_streams_handler::handle(payload, sender, system).await,
-        Command::CreateStream(payload) => {
-            create_stream_handler::handle(payload, sender, system).await
+        Command::GetStreams(command) => get_streams_handler::handle(command, sender, system).await,
+        Command::CreateStream(command) => {
+            create_stream_handler::handle(command, sender, system).await
         }
-        Command::DeleteStream(payload) => {
-            delete_stream_handler::handle(payload, sender, system).await
+        Command::DeleteStream(command) => {
+            delete_stream_handler::handle(command, sender, system).await
         }
-        Command::GetTopics(payload) => get_topics_handler::handle(payload, sender, system).await,
-        Command::CreateTopic(payload) => {
-            create_topic_handler::handle(payload, sender, system).await
+        Command::GetTopics(command) => get_topics_handler::handle(command, sender, system).await,
+        Command::CreateTopic(command) => {
+            create_topic_handler::handle(command, sender, system).await
         }
-        Command::DeleteTopic(payload) => {
-            delete_topic_handler::handle(payload, sender, system).await
+        Command::DeleteTopic(command) => {
+            delete_topic_handler::handle(command, sender, system).await
         }
     }
 }

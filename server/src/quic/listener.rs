@@ -11,7 +11,7 @@ use tracing::log::trace;
 use tracing::{error, info};
 
 const LISTENERS_COUNT: u32 = 10;
-const INITIAL_REQUEST_LENGTH: usize = 4;
+const INITIAL_BYTES_LENGTH: usize = 4;
 
 pub fn start(endpoint: Endpoint, system: Arc<RwLock<System>>) {
     for _ in 0..LISTENERS_COUNT {
@@ -61,15 +61,18 @@ async fn handle_connection(
             }
 
             let request = request.unwrap();
-            if request.len() < INITIAL_REQUEST_LENGTH {
-                error!("Error when reading the QUIC request command: {:?}", request);
+            if request.len() < INITIAL_BYTES_LENGTH {
+                error!(
+                "Unable to read the QUIC request length, expected: {} bytes, received: {} bytes.",
+                INITIAL_BYTES_LENGTH, request.len()
+            );
                 continue;
             }
 
             trace!("Trying to read command...");
-            let length = &request[..INITIAL_REQUEST_LENGTH];
+            let length = &request[..INITIAL_BYTES_LENGTH];
             let length = u32::from_le_bytes(length.try_into().unwrap_or([0; 4]));
-            let command = Command::from_bytes(&request[INITIAL_REQUEST_LENGTH..]);
+            let command = Command::from_bytes(&request[INITIAL_BYTES_LENGTH..]);
             if command.is_err() {
                 error!(
                     "Error when reading the QUIC request command: {:?}",
@@ -80,7 +83,7 @@ async fn handle_connection(
 
             let command = command.unwrap();
             trace!(
-                "Received command: '{:?}', length: {}, trying to handle...",
+                "Received a QUIC command: {}, payload size: {}",
                 command,
                 length
             );

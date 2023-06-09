@@ -20,6 +20,7 @@
   },
   "message_saver": {
     "enabled": true,
+    "enforce_sync": true,
     "interval": 1000
   },
   "system": {
@@ -30,6 +31,7 @@
         "path": "topics",
         "partition": {
           "deduplicate_messages": false,
+          "enforce_sync": false,
           "messages_required_to_save": 10000,
           "messages_buffer": 1048576,
           "segment": {

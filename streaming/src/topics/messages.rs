@@ -37,13 +37,14 @@ impl Topic {
         key_kind: KeyKind,
         key_value: u32,
         messages: Vec<Message>,
+        enforce_sync: bool,
     ) -> Result<(), Error> {
         let partition_id = match key_kind {
             KeyKind::PartitionId => key_value,
             KeyKind::EntityId => self.calculate_partition_id(key_value),
         };
 
-        self.append_messages_to_partition(partition_id, messages)
+        self.append_messages_to_partition(partition_id, messages, enforce_sync)
             .await
     }
 
@@ -51,6 +52,7 @@ impl Topic {
         &self,
         partition_id: u32,
         messages: Vec<Message>,
+        enforce_sync: bool,
     ) -> Result<(), Error> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
@@ -59,7 +61,7 @@ impl Topic {
 
         let partition = partition.unwrap();
         let mut partition = partition.write().await;
-        partition.append_messages(messages).await?;
+        partition.append_messages(messages, enforce_sync).await?;
         Ok(())
     }
 

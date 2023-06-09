@@ -1,4 +1,4 @@
 #[derive(Debug)]
 pub enum ServerCommand {
-    SaveMessages,
+    SaveMessages(bool),
 }

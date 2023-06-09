@@ -11,6 +11,8 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;
 use tracing::{error, info, trace};
 
+const INITIAL_BYTES_LENGTH: usize = 4;
+
 pub fn start(address: &str, system: Arc<RwLock<System>>) {
     let address = address.to_string();
     tokio::spawn(async move {
@@ -42,9 +44,19 @@ async fn handle_connection(
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
     let mut sender = TcpSender { stream };
+    let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
 
     loop {
-        let length = sender.stream.read_u32_le().await?;
+        let read_length = sender.stream.read_exact(&mut initial_buffer).await?;
+        if read_length != INITIAL_BYTES_LENGTH {
+            error!(
+                "Unable to read the TCP request length, expected: {} bytes, received: {} bytes.",
+                INITIAL_BYTES_LENGTH, read_length
+            );
+            continue;
+        }
+
+        let length = u32::from_le_bytes(initial_buffer);
         trace!("Received a TCP request, length: {}", length);
         let mut command_buffer = vec![0u8; length as usize];
         sender.stream.read_exact(&mut command_buffer).await?;
@@ -52,7 +64,7 @@ async fn handle_connection(
         trace!(
             "Received a TCP command: {}, payload size: {}",
             command,
-            length - 1
+            length
         );
         let result = command::handle(command, &mut sender, system.clone()).await;
         if result.is_err() {

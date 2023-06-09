@@ -44,9 +44,9 @@ impl Stream {
         Ok(())
     }
 
-    pub async fn persist_messages(&self) -> Result<(), Error> {
+    pub async fn persist_messages(&self, enforce_sync: bool) -> Result<(), Error> {
         for topic in self.get_topics() {
-            topic.persist_messages().await?;
+            topic.persist_messages(enforce_sync).await?;
         }
 
         Ok(())

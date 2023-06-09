@@ -76,13 +76,21 @@ pub async fn load_last(file: &mut File) -> Result<Option<TimeIndex>, Error> {
     Ok(Some(index))
 }
 
-pub async fn persist(file: &mut File, messages: &Vec<Arc<Message>>) -> Result<(), Error> {
+pub async fn persist(
+    file: &mut File,
+    messages: &Vec<Arc<Message>>,
+    enforce_sync: bool,
+) -> Result<(), Error> {
     let mut bytes = Vec::with_capacity(messages.len() * 8);
     for message in messages {
         bytes.extend(message.timestamp.to_le_bytes());
     }
 
     if file.write_all(&bytes).await.is_err() {
+        return Err(Error::CannotSaveTimeIndexToSegment);
+    }
+
+    if enforce_sync && file.sync_all().await.is_err() {
         return Err(Error::CannotSaveTimeIndexToSegment);
     }
 

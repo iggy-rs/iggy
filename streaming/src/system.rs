@@ -1,9 +1,13 @@
 use crate::config::SystemConfig;
 use crate::streams::stream::Stream;
+use futures::future::join_all;
 use shared::error::Error;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
+use tokio::fs::{create_dir, read_dir};
+use tokio::sync::Mutex;
+use tokio::time::Instant;
 use tracing::{error, info, trace};
 
 pub struct System {
@@ -27,27 +31,32 @@ impl System {
     }
 
     pub async fn init(&mut self) -> Result<(), Error> {
-        if !Path::new(&self.base_path).exists() && std::fs::create_dir(&self.base_path).is_err() {
+        if !Path::new(&self.base_path).exists() && create_dir(&self.base_path).await.is_err() {
             return Err(Error::CannotCreateBaseDirectory);
         }
-
-        if !Path::new(&self.streams_path).exists()
-            && std::fs::create_dir(&self.streams_path).is_err()
+        if !Path::new(&self.streams_path).exists() && create_dir(&self.streams_path).await.is_err()
         {
             return Err(Error::CannotCreateStreamsDirectory);
         }
 
+        info!("Initializing system...");
+        let now = Instant::now();
         self.load_streams().await?;
-
+        info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
     }
 
     async fn load_streams(&mut self) -> Result<(), Error> {
         info!("Loading streams from disk...");
-        let streams = std::fs::read_dir(&self.streams_path).unwrap();
-        for stream in streams {
-            info!("Trying to load stream from disk...");
-            let name = stream.unwrap().file_name().into_string().unwrap();
+        let mut unloaded_streams = Vec::new();
+        let dir_entries = read_dir(&self.streams_path).await;
+        if dir_entries.is_err() {
+            return Err(Error::CannotReadStreams);
+        }
+
+        let mut dir_entries = dir_entries.unwrap();
+        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
+            let name = dir_entry.file_name().into_string().unwrap();
             let stream_id = name.parse::<u32>();
             if stream_id.is_err() {
                 error!("Invalid stream ID file with name: '{}'.", name);
@@ -55,10 +64,28 @@ impl System {
             }
 
             let stream_id = stream_id.unwrap();
-            let mut stream =
-                Stream::empty(stream_id, &self.streams_path, self.config.stream.clone());
-            stream.load().await?;
-            self.streams.insert(stream_id, stream);
+            let stream = Stream::empty(stream_id, &self.streams_path, self.config.stream.clone());
+            unloaded_streams.push(stream);
+        }
+
+        let loaded_streams = Arc::new(Mutex::new(Vec::new()));
+        let mut load_streams = Vec::new();
+        for mut stream in unloaded_streams {
+            let loaded_streams = loaded_streams.clone();
+            let load_stream = tokio::spawn(async move {
+                if stream.load().await.is_err() {
+                    error!("Failed to load stream with ID: {}.", stream.id);
+                    return;
+                }
+
+                loaded_streams.lock().await.push(stream);
+            });
+            load_streams.push(load_stream);
+        }
+
+        join_all(load_streams).await;
+        for stream in loaded_streams.lock().await.drain(..) {
+            self.streams.insert(stream.id, stream);
         }
 
         info!("Loaded {} stream(s) from disk.", self.streams.len());

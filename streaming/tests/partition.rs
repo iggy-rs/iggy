@@ -10,9 +10,13 @@ use tokio::fs;
 async fn should_persist_partition_with_segment() {
     let setup = TestSetup::init().await;
     let with_segment = true;
+    let stream_id = 1;
+    let topic_id = 2;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
         let partition = Partition::create(
+            stream_id,
+            topic_id,
             partition_id,
             &setup.path,
             with_segment,
@@ -29,9 +33,13 @@ async fn should_persist_partition_with_segment() {
 async fn should_load_existing_partition_from_disk() {
     let setup = TestSetup::init().await;
     let with_segment = true;
+    let stream_id = 1;
+    let topic_id = 2;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
         let partition = Partition::create(
+            stream_id,
+            topic_id,
             partition_id,
             &setup.path,
             with_segment,
@@ -41,12 +49,15 @@ async fn should_load_existing_partition_from_disk() {
         assert_persisted_partition(&partition.path, with_segment).await;
 
         let mut loaded_partition = Partition::empty(
+            stream_id,
+            topic_id,
             partition.id,
             &setup.path,
             setup.config.stream.topic.partition.clone(),
         );
         loaded_partition.load().await.unwrap();
 
+        assert_eq!(loaded_partition.stream_id, partition.stream_id);
         assert_eq!(loaded_partition.id, partition.id);
         assert_eq!(loaded_partition.path, partition.path);
         assert_eq!(loaded_partition.offsets_path, partition.offsets_path);
@@ -78,9 +89,13 @@ async fn should_load_existing_partition_from_disk() {
 async fn should_delete_existing_partition_from_disk() {
     let setup = TestSetup::init().await;
     let with_segment = true;
+    let stream_id = 1;
+    let topic_id = 2;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
         let partition = Partition::create(
+            stream_id,
+            topic_id,
             partition_id,
             &setup.path,
             with_segment,

@@ -18,7 +18,7 @@ pub async fn run(
 ) -> Result<BenchmarkResult, Error> {
     let topic_id: u32 = 1;
     let partition_id: u32 = 1;
-    let total_messages = args.messages_per_batch * args.message_batches;
+    let total_messages = (args.messages_per_batch * args.message_batches) as u64;
     let client = client_factory.create_client(args.clone()).await;
     info!("Producer #{} → preparing the test messages...", producer_id);
     let payload = create_payload(args.message_size);
@@ -56,7 +56,7 @@ pub async fn run(
     let duration = total_latencies / args.producers;
     let average_latency = latencies.iter().sum::<Duration>().as_millis() as f64
         / (args.producers * latencies.len() as u32) as f64;
-    let total_size_bytes = (total_messages * args.message_size) as u64;
+    let total_size_bytes = total_messages * args.message_size as u64;
     let average_throughput = total_size_bytes as f64 / duration.as_secs_f64() / 1024.0 / 1024.0;
 
     info!(

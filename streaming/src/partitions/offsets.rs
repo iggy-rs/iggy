@@ -63,13 +63,20 @@ impl Partition {
     }
 
     pub async fn load_offsets(&mut self) -> Result<(), Error> {
-        let dir_files = fs::read_dir(&self.consumer_offsets_path).await;
-        if dir_files.is_err() {
+        trace!(
+                "Loading consumer offsets for partition with ID: {} for topic with ID: {} and stream with ID: {}...",
+                self.id,
+                self.topic_id,
+                self.stream_id
+            );
+
+        let dir_entries = fs::read_dir(&self.consumer_offsets_path).await;
+        if dir_entries.is_err() {
             return Err(Error::CannotReadConsumerOffsets(self.id));
         }
 
-        let mut dir_files = dir_files.unwrap();
-        while let Some(dir_entry) = dir_files.next_entry().await.unwrap_or(None) {
+        let mut dir_entries = dir_entries.unwrap();
+        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
             let metadata = dir_entry.metadata().await;
             if metadata.is_err() || metadata.unwrap().is_dir() {
                 continue;
@@ -100,10 +107,12 @@ impl Partition {
                 .insert(consumer_id, RwLock::new(ConsumerOffset { offset, path }));
 
             trace!(
-                "Loaded consumer offset: {} for consumer ID: {}, partition ID: {}.",
+                "Loaded consumer offset: {} for consumer ID: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
                 offset,
                 consumer_id,
-                self.id
+                self.id,
+                self.topic_id,
+                self.stream_id
             );
         }
 

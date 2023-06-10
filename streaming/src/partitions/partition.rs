@@ -8,6 +8,8 @@ use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct Partition {
+    pub stream_id: u32,
+    pub topic_id: u32,
     pub id: u32,
     pub path: String,
     pub offsets_path: String,
@@ -34,11 +36,19 @@ pub struct ConsumerOffset {
 }
 
 impl Partition {
-    pub fn empty(id: u32, topic_path: &str, config: Arc<PartitionConfig>) -> Partition {
-        Partition::create(id, topic_path, false, config)
+    pub fn empty(
+        stream_id: u32,
+        topic_id: u32,
+        id: u32,
+        topic_path: &str,
+        config: Arc<PartitionConfig>,
+    ) -> Partition {
+        Partition::create(stream_id, topic_id, id, topic_path, false, config)
     }
 
     pub fn create(
+        stream_id: u32,
+        topic_id: u32,
         id: u32,
         topic_path: &str,
         with_segment: bool,
@@ -48,6 +58,8 @@ impl Partition {
         let offsets_path = Self::get_offsets_path(&path);
         let consumer_offsets_path = Self::get_consumer_offsets_path(&offsets_path);
         let mut partition = Partition {
+            stream_id,
+            topic_id,
             id,
             path,
             offsets_path,
@@ -73,7 +85,14 @@ impl Partition {
         };
 
         if with_segment {
-            let segment = Segment::create(id, 0, &partition.path, partition.config.segment.clone());
+            let segment = Segment::create(
+                stream_id,
+                topic_id,
+                id,
+                0,
+                &partition.path,
+                partition.config.segment.clone(),
+            );
             partition.segments.push(segment);
         }
 
@@ -108,8 +127,10 @@ mod tests {
 
     #[test]
     fn should_be_created_with_a_single_segment_given_valid_parameters() {
-        let id = 1;
-        let topic_path = "/topics/1";
+        let stream_id = 1;
+        let topic_id = 2;
+        let id = 3;
+        let topic_path = "/topics/2";
         let with_segment = true;
         let config = Arc::new(PartitionConfig::default());
         let path = Partition::get_path(id, topic_path);
@@ -117,8 +138,11 @@ mod tests {
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let messages_buffer_capacity = config.messages_buffer as usize;
 
-        let partition = Partition::create(id, topic_path, with_segment, config);
+        let partition =
+            Partition::create(stream_id, topic_id, id, topic_path, with_segment, config);
 
+        assert_eq!(partition.stream_id, stream_id);
+        assert_eq!(partition.topic_id, topic_id);
         assert_eq!(partition.id, id);
         assert_eq!(partition.path, path);
         assert_eq!(partition.offsets_path, offsets_path);
@@ -141,6 +165,8 @@ mod tests {
     fn should_not_initialize_messages_buffer_given_zero_capacity() {
         let partition = Partition::create(
             1,
+            1,
+            1,
             "/topics/1",
             true,
             Arc::new(PartitionConfig {
@@ -153,8 +179,14 @@ mod tests {
 
     #[test]
     fn should_not_initialize_segments_given_false_with_segment_parameter() {
-        let partition =
-            Partition::create(1, "/topics/1", false, Arc::new(PartitionConfig::default()));
+        let partition = Partition::create(
+            1,
+            1,
+            1,
+            "/topics/1",
+            false,
+            Arc::new(PartitionConfig::default()),
+        );
         assert!(partition.segments.is_empty());
     }
 }

@@ -361,6 +361,8 @@ impl Partition {
             self.id
         );
         let new_segment = Segment::create(
+            self.stream_id,
+            self.topic_id,
             self.id,
             start_offset,
             &self.path,

@@ -1,5 +1,6 @@
 use crate::message::Message;
 use shared::error::Error;
+use std::io::SeekFrom;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
@@ -63,7 +64,7 @@ pub async fn load_last(file: &mut File) -> Result<Option<TimeIndex>, Error> {
 
     let indexes_count = file_size / 8;
     let last_index_position = file_size - 8;
-    file.seek(std::io::SeekFrom::Start(last_index_position as u64))
+    file.seek(SeekFrom::Start(last_index_position as u64))
         .await?;
     let timestamp = file.read_u64_le().await?;
     let index = TimeIndex {

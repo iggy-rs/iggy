@@ -4,46 +4,68 @@ use crate::segments::segment::{Segment, LOG_EXTENSION};
 use crate::utils::file;
 use shared::error::Error;
 use tokio::fs;
+use tokio::fs::create_dir;
 use tracing::{error, info};
 
 impl Partition {
     pub async fn persist(&self) -> Result<(), Error> {
-        info!("Saving partition with start ID: {}", self.id);
-        if std::fs::create_dir(&self.path).is_err() {
-            return Err(Error::CannotCreatePartitionDirectory(self.id));
+        info!(
+            "Saving partition with start ID: {} for stream with ID: {} and topic with ID: {}...",
+            self.id, self.stream_id, self.topic_id
+        );
+        if create_dir(&self.path).await.is_err() {
+            return Err(Error::CannotCreatePartitionDirectory(
+                self.id,
+                self.stream_id,
+                self.topic_id,
+            ));
         }
 
-        if std::fs::create_dir(&self.offsets_path).is_err() {
+        if create_dir(&self.offsets_path).await.is_err() {
             error!(
-                "Failed to create offsets directory for partition with ID: {}",
-                self.id
+                "Failed to create offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                self.id, self.stream_id, self.topic_id
             );
-            return Err(Error::CannotCreatePartition);
+            return Err(Error::CannotCreatePartition(
+                self.id,
+                self.stream_id,
+                self.topic_id,
+            ));
         }
 
-        if std::fs::create_dir(&self.consumer_offsets_path).is_err() {
+        if create_dir(&self.consumer_offsets_path).await.is_err() {
             error!(
-                "Failed to create consumer offsets directory for partition with ID: {}",
-                self.id
+                "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                self.id, self.stream_id, self.topic_id
             );
-            return Err(Error::CannotCreatePartition);
+            return Err(Error::CannotCreatePartition(
+                self.id,
+                self.stream_id,
+                self.topic_id,
+            ));
         }
 
         for segment in self.get_segments() {
             segment.persist().await?;
         }
 
+        info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", self.id, self.stream_id, self.topic_id, self.path);
+
         Ok(())
     }
 
     pub async fn load(&mut self) -> Result<(), Error> {
         info!(
-            "Loading partition with ID: {} from disk, for path: {}",
-            self.id, self.path
+            "Loading partition with ID: {} for stream with ID: {} and topic with ID: {}, for path: {} from disk...",
+            self.id, self.stream_id, self.topic_id, self.path
         );
-        let dir_files = fs::read_dir(&self.path).await;
-        let mut dir_files = dir_files.unwrap();
-        while let Some(dir_entry) = dir_files.next_entry().await.unwrap_or(None) {
+        let dir_entries = fs::read_dir(&self.path).await;
+        if dir_entries.is_err() {
+            return Err(Error::CannotReadPartitions(self.id, self.stream_id));
+        }
+
+        let mut dir_entries = dir_entries.unwrap();
+        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
             let metadata = dir_entry.metadata().await.unwrap();
             if metadata.is_dir() {
                 continue;
@@ -63,6 +85,8 @@ impl Partition {
 
             let start_offset = log_file_name.parse::<u64>().unwrap();
             let mut segment = Segment::create(
+                self.stream_id,
+                self.topic_id,
                 self.id,
                 start_offset,
                 &self.path,
@@ -120,19 +144,29 @@ impl Partition {
         self.current_offset = last_segment.current_offset;
         self.load_offsets().await?;
         info!(
-            "Loaded partition with ID: {}, current offset: {}",
-            self.id, self.current_offset
+            "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
+            self.id, self.stream_id, self.topic_id, self.current_offset
         );
 
         Ok(())
     }
 
     pub async fn delete(&self) -> Result<(), Error> {
-        info!("Deleting partition with ID: {}...", &self.id);
+        info!(
+            "Deleting partition with ID: {} for stream with ID: {} and topic with ID: {}...",
+            self.id, self.stream_id, self.topic_id,
+        );
         if fs::remove_dir_all(&self.path).await.is_err() {
-            return Err(Error::CannotDeletePartitionDirectory(self.id));
+            return Err(Error::CannotDeletePartitionDirectory(
+                self.id,
+                self.stream_id,
+                self.topic_id,
+            ));
         }
-        info!("Deleted partition with ID: {}.", &self.id);
+        info!(
+            "Deleted partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+            self.id, self.stream_id, self.topic_id,
+        );
         Ok(())
     }
 }

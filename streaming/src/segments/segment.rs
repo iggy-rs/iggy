@@ -11,6 +11,8 @@ pub const MAX_SIZE_BYTES: u32 = 1024 * 1024 * 1024;
 
 #[derive(Debug)]
 pub struct Segment {
+    pub stream_id: u32,
+    pub topic_id: u32,
     pub partition_id: u32,
     pub start_offset: u64,
     pub end_offset: u64,
@@ -28,6 +30,8 @@ pub struct Segment {
 
 impl Segment {
     pub fn create(
+        stream_id: u32,
+        topic_id: u32,
         partition_id: u32,
         start_offset: u64,
         partition_path: &str,
@@ -36,6 +40,8 @@ impl Segment {
         let path = Self::get_path(partition_path, start_offset);
 
         Segment {
+            stream_id,
+            topic_id,
             partition_id,
             start_offset,
             end_offset: 0,
@@ -85,8 +91,10 @@ mod tests {
 
     #[test]
     fn should_be_created_given_valid_parameters() {
-        let partition_id = 1;
-        let partition_path = "/topics/1/1";
+        let stream_id = 1;
+        let topic_id = 2;
+        let partition_id = 3;
+        let partition_path = "/topics/2/3";
         let start_offset = 0;
         let config = Arc::new(SegmentConfig::default());
         let path = Segment::get_path(partition_path, start_offset);
@@ -94,8 +102,17 @@ mod tests {
         let index_path = Segment::get_index_path(&path);
         let time_index_path = Segment::get_time_index_path(&path);
 
-        let segment = Segment::create(partition_id, start_offset, partition_path, config);
+        let segment = Segment::create(
+            stream_id,
+            topic_id,
+            partition_id,
+            start_offset,
+            partition_path,
+            config,
+        );
 
+        assert_eq!(segment.stream_id, stream_id);
+        assert_eq!(segment.topic_id, topic_id);
         assert_eq!(segment.partition_id, partition_id);
         assert_eq!(segment.start_offset, start_offset);
         assert_eq!(segment.current_offset, 0);
@@ -113,7 +130,9 @@ mod tests {
 
     #[test]
     fn should_not_initialize_indexes_cache_when_disabled() {
-        let partition_id = 1;
+        let stream_id = 1;
+        let topic_id = 2;
+        let partition_id = 3;
         let partition_path = "/topics/1/1";
         let start_offset = 0;
         let config = Arc::new(SegmentConfig {
@@ -121,22 +140,38 @@ mod tests {
             ..SegmentConfig::default()
         });
 
-        let segment = Segment::create(partition_id, start_offset, partition_path, config);
+        let segment = Segment::create(
+            stream_id,
+            topic_id,
+            partition_id,
+            start_offset,
+            partition_path,
+            config,
+        );
 
         assert!(segment.indexes.is_none());
     }
 
     #[test]
     fn should_not_initialize_time_indexes_cache_when_disabled() {
-        let partition_id = 1;
-        let partition_path = "/topics/1/1";
+        let stream_id = 1;
+        let topic_id = 2;
+        let partition_id = 3;
+        let partition_path = "/topics/2/3";
         let start_offset = 0;
         let config = Arc::new(SegmentConfig {
             cache_time_indexes: false,
             ..SegmentConfig::default()
         });
 
-        let segment = Segment::create(partition_id, start_offset, partition_path, config);
+        let segment = Segment::create(
+            stream_id,
+            topic_id,
+            partition_id,
+            start_offset,
+            partition_path,
+            config,
+        );
 
         assert!(segment.time_indexes.is_none());
     }

@@ -8,16 +8,16 @@ use tracing::info;
 impl Segment {
     pub async fn load(&mut self) -> Result<(), Error> {
         info!(
-            "Loading segment from disk for start offset: {} and partition with ID: {}...",
-            self.start_offset, self.partition_id
+            "Loading segment from disk for start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {} ...",
+            self.start_offset, self.partition_id, self.topic_id, self.stream_id
         );
         let log_file = file::open_file(&self.log_path, false).await?;
         let file_size = log_file.metadata().await.unwrap().len() as u32;
         self.current_size_bytes = file_size;
 
         info!(
-            "Segment log file for start offset {}, current offset: {}, and partition ID: {} has {} bytes of size.",
-            self.start_offset, self.current_offset, self.partition_id, self.current_size_bytes
+            "Segment log file for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {} has {} bytes of size.",
+            self.start_offset, self.current_offset, self.partition_id, self.topic_id, self.stream_id, self.current_size_bytes
         );
 
         let mut index_file = file::open_file(&self.index_path, false).await?;
@@ -26,10 +26,12 @@ impl Segment {
         if self.config.cache_indexes {
             self.indexes = Some(index::load_all(&mut index_file).await?);
             info!(
-                "Loaded {} indexes for segment with start offset: {} and partition ID: {}.",
+                "Loaded {} indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
                 self.indexes.as_ref().unwrap().len(),
                 self.start_offset,
-                self.partition_id
+                self.partition_id,
+                self.topic_id,
+                self.stream_id
             );
         }
 
@@ -42,19 +44,23 @@ impl Segment {
             }
 
             info!(
-                "Loaded {} time indexes for segment with start offset: {} and partition ID: {}.",
+                "Loaded {} time indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
                 self.time_indexes.as_ref().unwrap().len(),
                 self.start_offset,
-                self.partition_id
+                self.partition_id,
+                self.topic_id,
+                self.stream_id
             );
         } else {
             let last_index = time_index::load_last(&mut time_index_file).await?;
             if let Some(last_index) = last_index {
                 self.current_offset = self.start_offset + last_index.relative_offset as u64;
                 info!(
-                "Loaded last time index for segment with start offset: {} and partition ID: {}.",
+                "Loaded last time index for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
                 self.start_offset,
-                self.partition_id
+                self.partition_id,
+                self.topic_id,
+                self.stream_id
             );
             }
         }
@@ -67,7 +73,8 @@ impl Segment {
     }
 
     pub async fn persist(&self) -> Result<(), Error> {
-        info!("Saving segment with start offset: {}", self.start_offset);
+        info!("Saving segment with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
+            self.start_offset, self.partition_id, self.topic_id, self.stream_id);
         if File::create(&self.log_path).await.is_err() {
             return Err(Error::CannotCreatePartitionSegmentLogFile(
                 self.log_path.clone(),
@@ -87,10 +94,8 @@ impl Segment {
             ));
         }
 
-        info!(
-            "Created partition segment log file for start offset: {} and partition with ID: {} and path: {}.",
-            self.start_offset, self.partition_id, self.log_path
-        );
+        info!("Created segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
+            self.start_offset, self.partition_id, self.topic_id, self.stream_id);
 
         Ok(())
     }

@@ -17,7 +17,7 @@ pub async fn run(
 ) -> Result<BenchmarkResult, Error> {
     let topic_id: u32 = 1;
     let partition_id: u32 = 1;
-    let total_messages = args.messages_per_batch * args.message_batches;
+    let total_messages = (args.messages_per_batch * args.message_batches) as u64;
     let client = client_factory.create_client(args.clone()).await;
     info!("Consumer #{} → preparing the test messages...", consumer_id);
     info!(
@@ -68,7 +68,7 @@ pub async fn run(
         }
 
         latencies.push(latency_end);
-        received_messages += messages.len() as u32;
+        received_messages += messages.len() as u64;
         for message in messages {
             total_size_bytes += message.get_size_bytes() as u64;
         }

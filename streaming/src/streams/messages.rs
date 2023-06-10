@@ -17,7 +17,7 @@ impl Stream {
     ) -> Result<Vec<Arc<Message>>, Error> {
         let topic = self.topics.get(&topic_id);
         if topic.is_none() {
-            return Err(Error::TopicNotFound(topic_id));
+            return Err(Error::TopicNotFound(topic_id, self.id));
         }
 
         topic
@@ -40,7 +40,7 @@ impl Stream {
 
         let topic = self.topics.get(&topic_id);
         if topic.is_none() {
-            return Err(Error::TopicNotFound(topic_id));
+            return Err(Error::TopicNotFound(topic_id, self.id));
         }
 
         let topic = topic.unwrap();

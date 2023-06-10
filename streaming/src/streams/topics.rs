@@ -11,10 +11,11 @@ impl Stream {
         partitions_count: u32,
     ) -> Result<(), Error> {
         if self.topics.contains_key(&id) {
-            return Err(Error::TopicAlreadyExists(id));
+            return Err(Error::TopicAlreadyExists(id, self.id));
         }
 
         let topic = Topic::create(
+            self.id,
             id,
             name,
             partitions_count,
@@ -41,12 +42,12 @@ impl Stream {
     pub async fn delete_topic(&mut self, id: u32) -> Result<(), Error> {
         let topic = self.topics.remove(&id);
         if topic.is_none() {
-            return Err(Error::TopicNotFound(id));
+            return Err(Error::TopicNotFound(id, self.id));
         }
 
         let topic = topic.unwrap();
         if topic.delete().await.is_err() {
-            return Err(Error::CannotDeleteTopic(id));
+            return Err(Error::CannotDeleteTopic(id, self.id));
         }
 
         Ok(())

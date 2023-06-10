@@ -37,6 +37,8 @@ pub enum Error {
     CannotOpenStreamInfo(u32),
     #[error("Failed to read stream info file for stream with ID {0}")]
     CannotReadStreamInfo(u32),
+    #[error("Cannot read streams")]
+    CannotReadStreams,
     #[error("Failed to create stream with ID: {0}")]
     CannotCreateStream(u32),
     #[error("Failed to delete stream with ID: {0}")]
@@ -51,30 +53,32 @@ pub enum Error {
     InvalidStreamId,
     #[error("Invalid stream name")]
     InvalidStreamName,
-    #[error("Cannot create topics directory")]
-    CannotCreateTopicsDirectory,
-    #[error("Failed to create directory for topic with ID: {0}")]
-    CannotCreateTopicDirectory(u32),
-    #[error("Failed to create topic info file for topic with ID: {0}")]
-    CannotCreateTopicInfo(u32),
-    #[error("Failed to update topic info for topic with ID: {0}")]
-    CannotUpdateTopicInfo(u32),
-    #[error("Failed to open topic info file for topic with ID: {0}")]
-    CannotOpenTopicInfo(u32),
-    #[error("Failed to read topic info file for topic with ID {0}")]
-    CannotReadTopicInfo(u32),
-    #[error("Failed to create topic with ID: {0}")]
-    CannotCreateTopic(u32),
-    #[error("Failed to delete topic with ID: {0}")]
-    CannotDeleteTopic(u32),
-    #[error("Failed to delete topic directory with ID: {0}")]
-    CannotDeleteTopicDirectory(u32),
+    #[error("Cannot read topics for stream with ID {0}")]
+    CannotReadTopics(u32),
+    #[error("Cannot create topics directory for stream with ID {0}")]
+    CannotCreateTopicsDirectory(u32),
+    #[error("Failed to create directory for topic with ID: {0} for stream with ID: {1}.")]
+    CannotCreateTopicDirectory(u32, u32),
+    #[error("Failed to create topic info file for topic with ID: {0} for stream with ID: {1}.")]
+    CannotCreateTopicInfo(u32, u32),
+    #[error("Failed to update topic info for topic with ID: {0} for stream with ID: {1}.")]
+    CannotUpdateTopicInfo(u32, u32),
+    #[error("Failed to open topic info file for topic with ID: {0} for stream with ID: {1}.")]
+    CannotOpenTopicInfo(u32, u32),
+    #[error("Failed to read topic info file for topic with ID {0} for stream with ID: {1}.")]
+    CannotReadTopicInfo(u32, u32),
+    #[error("Failed to create topic with ID: {0} for stream with ID: {1}.")]
+    CannotCreateTopic(u32, u32),
+    #[error("Failed to delete topic with ID: {0} for stream with ID: {1}.")]
+    CannotDeleteTopic(u32, u32),
+    #[error("Failed to delete topic directory with ID: {0} for stream with ID: {1}.")]
+    CannotDeleteTopicDirectory(u32, u32),
     #[error("Cannot poll topic")]
     CannotPollTopic,
-    #[error("Topic with ID: {0} was not found.")]
-    TopicNotFound(u32),
-    #[error("Topic with ID: {0} already exists.")]
-    TopicAlreadyExists(u32),
+    #[error("Topic with ID: {0} for stream with ID: {1} was not found.")]
+    TopicNotFound(u32, u32),
+    #[error("Topic with ID: {0} for stream with ID: {1} already exists.")]
+    TopicAlreadyExists(u32, u32),
     #[error("Invalid topic ID")]
     InvalidTopicId,
     #[error("Invalid topic name")]
@@ -85,14 +89,16 @@ pub enum Error {
     LogFileNotFound,
     #[error("Cannot append message")]
     CannotAppendMessage,
-    #[error("Cannot create partition")]
-    CannotCreatePartition,
-    #[error("Failed to create directory for partition with ID: {0}")]
-    CannotCreatePartitionDirectory(u32),
-    #[error("Failed to delete partition with ID: {0}")]
-    CannotDeletePartition(u32),
-    #[error("Failed to delete partition directory with ID: {0}")]
-    CannotDeletePartitionDirectory(u32),
+    #[error("Cannot create partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
+    CannotCreatePartition(u32, u32, u32),
+    #[error("Failed to create directory for partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
+    CannotCreatePartitionDirectory(u32, u32, u32),
+    #[error(
+        "Failed to delete partition with ID: {0} for stream with ID: {1} and topic with ID: {2}"
+    )]
+    CannotDeletePartition(u32, u32, u32),
+    #[error("Failed to delete partition directory with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
+    CannotDeletePartitionDirectory(u32, u32, u32),
     #[error("Failed to create partition segment log file for path: {0}.")]
     CannotCreatePartitionSegmentLogFile(String),
     #[error("Failed to create partition segment index file for path: {0}.")]
@@ -101,8 +107,8 @@ pub enum Error {
     CannotCreatePartitionSegmentTimeIndexFile(String),
     #[error("Cannot open partition log file")]
     CannotOpenPartitionLogFile,
-    #[error("Failed to partitions directories for topic with ID: {0}")]
-    CannotReadPartitions(u32),
+    #[error("Failed to partitions directories for topic with ID: {0} and stream with ID: {1}")]
+    CannotReadPartitions(u32, u32),
     #[error("Partition with ID: {0} was not found.")]
     PartitionNotFound(u32),
     #[error("Invalid messages count")]
@@ -111,7 +117,7 @@ pub enum Error {
     InvalidMessagePayloadLength,
     #[error("Segment not found")]
     SegmentNotFound,
-    #[error("Segment with start offset: {0} and partition ID: {1} is closed")]
+    #[error("Segment with start offset: {0} and partition with ID: {1} is closed")]
     SegmentClosed(u64, u32),
     #[error("Segment size is invalid")]
     InvalidSegmentSize(u64),
@@ -163,29 +169,29 @@ impl Error {
             Error::StreamNotFound(_) => 14,
             Error::StreamAlreadyExists(_) => 15,
             Error::InvalidStreamName => 16,
-            Error::CannotCreateTopicsDirectory => 17,
-            Error::CannotCreateTopicDirectory(_) => 18,
-            Error::CannotCreateTopicInfo(_) => 19,
-            Error::CannotUpdateTopicInfo(_) => 20,
-            Error::CannotOpenTopicInfo(_) => 21,
-            Error::CannotReadTopicInfo(_) => 22,
-            Error::CannotCreateTopic(_) => 23,
-            Error::CannotDeleteTopic(_) => 24,
-            Error::CannotDeleteTopicDirectory(_) => 25,
+            Error::CannotCreateTopicsDirectory(_) => 17,
+            Error::CannotCreateTopicDirectory(_, _) => 18,
+            Error::CannotCreateTopicInfo(_, _) => 19,
+            Error::CannotUpdateTopicInfo(_, _) => 20,
+            Error::CannotOpenTopicInfo(_, _) => 21,
+            Error::CannotReadTopicInfo(_, _) => 22,
+            Error::CannotCreateTopic(_, _) => 23,
+            Error::CannotDeleteTopic(_, _) => 24,
+            Error::CannotDeleteTopicDirectory(_, _) => 25,
             Error::CannotPollTopic => 26,
-            Error::TopicNotFound(_) => 27,
-            Error::TopicAlreadyExists(_) => 28,
+            Error::TopicNotFound(_, _) => 27,
+            Error::TopicAlreadyExists(_, _) => 28,
             Error::InvalidTopicName => 29,
             Error::InvalidTopicPartitions => 30,
             Error::LogFileNotFound => 31,
             Error::CannotAppendMessage => 32,
-            Error::CannotCreatePartition => 33,
-            Error::CannotCreatePartitionDirectory(_) => 34,
+            Error::CannotCreatePartition(_, _, _) => 33,
+            Error::CannotCreatePartitionDirectory(_, _, _) => 34,
             Error::CannotCreatePartitionSegmentLogFile(_) => 35,
             Error::CannotCreatePartitionSegmentIndexFile(_) => 36,
             Error::CannotCreatePartitionSegmentTimeIndexFile(_) => 37,
             Error::CannotOpenPartitionLogFile => 38,
-            Error::CannotReadPartitions(_) => 39,
+            Error::CannotReadPartitions(_, _) => 39,
             Error::PartitionNotFound(_) => 40,
             Error::InvalidMessagesCount => 41,
             Error::InvalidStreamId => 42,
@@ -209,10 +215,12 @@ impl Error {
             Error::WriteError(_) => 60,
             Error::InvalidOffset(_) => 61,
             Error::CannotReadConsumerOffsets(_) => 62,
-            Error::CannotDeletePartition(_) => 63,
-            Error::CannotDeletePartitionDirectory(_) => 64,
+            Error::CannotDeletePartition(_, _, _) => 63,
+            Error::CannotDeletePartitionDirectory(_, _, _) => 64,
             Error::InvalidMessagePayloadLength => 65,
             Error::EmptyMessagePayload => 67,
+            Error::CannotReadStreams => 68,
+            Error::CannotReadTopics(_) => 69,
         }
     }
 
@@ -235,24 +243,24 @@ impl Error {
             Error::StreamNotFound(_) => "stream_not_found",
             Error::StreamAlreadyExists(_) => "stream_already_exists",
             Error::InvalidStreamName => "invalid_stream_name",
-            Error::CannotCreateTopicsDirectory => "cannot_create_topics_directory",
-            Error::CannotCreateTopicDirectory(_) => "cannot_create_topic_directory",
-            Error::CannotCreateTopicInfo(_) => "cannot_create_topic_info",
-            Error::CannotUpdateTopicInfo(_) => "cannot_update_topic_info",
-            Error::CannotOpenTopicInfo(_) => "cannot_open_topic_info",
-            Error::CannotReadTopicInfo(_) => "cannot_read_topic_info",
-            Error::CannotCreateTopic(_) => "cannot_create_topic",
-            Error::CannotDeleteTopic(_) => "cannot_delete_topic",
-            Error::CannotDeleteTopicDirectory(_) => "cannot_delete_topic_directory",
+            Error::CannotCreateTopicsDirectory(_) => "cannot_create_topics_directory",
+            Error::CannotCreateTopicDirectory(_, _) => "cannot_create_topic_directory",
+            Error::CannotCreateTopicInfo(_, _) => "cannot_create_topic_info",
+            Error::CannotUpdateTopicInfo(_, _) => "cannot_update_topic_info",
+            Error::CannotOpenTopicInfo(_, _) => "cannot_open_topic_info",
+            Error::CannotReadTopicInfo(_, _) => "cannot_read_topic_info",
+            Error::CannotCreateTopic(_, _) => "cannot_create_topic",
+            Error::CannotDeleteTopic(_, _) => "cannot_delete_topic",
+            Error::CannotDeleteTopicDirectory(_, _) => "cannot_delete_topic_directory",
             Error::CannotPollTopic => "cannot_poll_topic",
-            Error::TopicNotFound(_) => "topic_not_found",
-            Error::TopicAlreadyExists(_) => "topic_already_exists",
+            Error::TopicNotFound(_, _) => "topic_not_found",
+            Error::TopicAlreadyExists(_, _) => "topic_already_exists",
             Error::InvalidTopicName => "invalid_topic_name",
             Error::InvalidTopicPartitions => "invalid_topic_partitions",
             Error::LogFileNotFound => "log_file_not_found",
             Error::CannotAppendMessage => "cannot_append_message",
-            Error::CannotCreatePartition => "cannot_create_partition",
-            Error::CannotCreatePartitionDirectory(_) => "cannot_create_partition_directory",
+            Error::CannotCreatePartition(_, _, _) => "cannot_create_partition",
+            Error::CannotCreatePartitionDirectory(_, _, _) => "cannot_create_partition_directory",
             Error::CannotCreatePartitionSegmentLogFile(_) => {
                 "cannot_create_partition_segment_log_file"
             }
@@ -263,7 +271,7 @@ impl Error {
                 "cannot_create_partition_segment_time_index_file"
             }
             Error::CannotOpenPartitionLogFile => "cannot_open_partition_log_file",
-            Error::CannotReadPartitions(_) => "cannot_read_partitions",
+            Error::CannotReadPartitions(_, _) => "cannot_read_partitions",
             Error::PartitionNotFound(_) => "partition_not_found",
             Error::InvalidMessagesCount => "invalid_messages_count",
             Error::InvalidStreamId => "invalid_stream_id",
@@ -287,10 +295,12 @@ impl Error {
             Error::WriteError(_) => "write_error",
             Error::InvalidOffset(_) => "invalid_offset",
             Error::CannotReadConsumerOffsets(_) => "cannot_read_consumer_offsets",
-            Error::CannotDeletePartition(_) => "cannot_delete_partition",
-            Error::CannotDeletePartitionDirectory(_) => "cannot_delete_partition_directory",
+            Error::CannotDeletePartition(_, _, _) => "cannot_delete_partition",
+            Error::CannotDeletePartitionDirectory(_, _, _) => "cannot_delete_partition_directory",
             Error::InvalidMessagePayloadLength => "invalid_message_payload_length",
             Error::EmptyMessagePayload => "empty_message_payload",
+            Error::CannotReadStreams => "cannot_read_streams",
+            Error::CannotReadTopics(_) => "cannot_read_topics",
         }
     }
 }

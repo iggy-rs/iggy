@@ -1,6 +1,7 @@
 use crate::message::Message;
 use crate::segments::index::IndexRange;
 use shared::error::Error;
+use std::io::SeekFrom;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
@@ -23,7 +24,7 @@ pub async fn load(file: &mut File, index_range: &IndexRange) -> Result<Vec<Arc<M
     );
     let mut reader = BufReader::new(file);
     reader
-        .seek(std::io::SeekFrom::Start(index_range.start.position as u64))
+        .seek(SeekFrom::Start(index_range.start.position as u64))
         .await?;
 
     let mut read_messages = 0;

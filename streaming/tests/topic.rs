@@ -7,11 +7,13 @@ use tokio::fs;
 #[tokio::test]
 async fn should_persist_topics_with_partitions_directories_and_info_file() {
     let setup = TestSetup::init().await;
+    let stream_id = 1;
     let partitions_count = 3;
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
         let name = format!("test-{}", topic_id);
         let topic = Topic::create(
+            stream_id,
             topic_id,
             &name,
             partitions_count,
@@ -28,11 +30,13 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
 #[tokio::test]
 async fn should_load_existing_topic_from_disk() {
     let setup = TestSetup::init().await;
+    let stream_id = 1;
     let partitions_count = 3;
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
         let name = format!("test-{}", topic_id);
         let topic = Topic::create(
+            stream_id,
             topic_id,
             &name,
             partitions_count,
@@ -42,10 +46,15 @@ async fn should_load_existing_topic_from_disk() {
         topic.persist().await.unwrap();
         assert_persisted_topic(&topic.path, partitions_count).await;
 
-        let mut loaded_topic =
-            Topic::empty(topic_id, &setup.path, setup.config.stream.topic.clone());
+        let mut loaded_topic = Topic::empty(
+            stream_id,
+            topic_id,
+            &setup.path,
+            setup.config.stream.topic.clone(),
+        );
         loaded_topic.load().await.unwrap();
 
+        assert_eq!(loaded_topic.stream_id, topic.stream_id);
         assert_eq!(loaded_topic.id, topic.id);
         assert_eq!(loaded_topic.name, topic.name);
         assert_eq!(loaded_topic.path, topic.path);
@@ -56,11 +65,13 @@ async fn should_load_existing_topic_from_disk() {
 #[tokio::test]
 async fn should_delete_existing_topic_from_disk() {
     let setup = TestSetup::init().await;
+    let stream_id = 1;
     let partitions_count = 3;
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
         let name = format!("test-{}", topic_id);
         let topic = Topic::create(
+            stream_id,
             topic_id,
             &name,
             partitions_count,

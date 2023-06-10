@@ -10,13 +10,22 @@ use streaming::utils::timestamp;
 #[tokio::test]
 async fn should_persist_messages_and_then_load_them_from_disk() {
     let setup = TestSetup::init().await;
+    let stream_id = 1;
+    let topic_id = 1;
     let partition_id = 1;
     let messages_count = 1000;
     let config = Arc::new(PartitionConfig {
         messages_required_to_save: messages_count,
         ..Default::default()
     });
-    let mut partition = Partition::create(partition_id, &setup.path, true, config.clone());
+    let mut partition = Partition::create(
+        stream_id,
+        topic_id,
+        partition_id,
+        &setup.path,
+        true,
+        config.clone(),
+    );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
     let mut appended_messages = Vec::with_capacity(messages_count as usize);
@@ -34,7 +43,13 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     partition.append_messages(messages, false).await.unwrap();
     assert_eq!(partition.unsaved_messages_count, 0);
 
-    let mut loaded_partition = Partition::empty(partition.id, &setup.path, config.clone());
+    let mut loaded_partition = Partition::empty(
+        stream_id,
+        topic_id,
+        partition.id,
+        &setup.path,
+        config.clone(),
+    );
     loaded_partition.load().await.unwrap();
     let loaded_messages = loaded_partition
         .get_messages_by_offset(0, messages_count)

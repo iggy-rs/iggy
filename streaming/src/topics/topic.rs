@@ -8,6 +8,7 @@ pub const TOPIC_INFO: &str = "topic.info";
 
 #[derive(Debug)]
 pub struct Topic {
+    pub stream_id: u32,
     pub id: u32,
     pub name: String,
     pub path: String,
@@ -17,11 +18,12 @@ pub struct Topic {
 }
 
 impl Topic {
-    pub fn empty(id: u32, topics_path: &str, config: Arc<TopicConfig>) -> Topic {
-        Topic::create(id, "", 0, topics_path, config)
+    pub fn empty(stream_id: u32, id: u32, topics_path: &str, config: Arc<TopicConfig>) -> Topic {
+        Topic::create(stream_id, id, "", 0, topics_path, config)
     }
 
     pub fn create(
+        stream_id: u32,
         id: u32,
         name: &str,
         partitions_count: u32,
@@ -32,6 +34,7 @@ impl Topic {
         let info_path = Self::get_info_path(&path);
 
         let mut topic = Topic {
+            stream_id,
             id,
             name: name.to_string(),
             partitions: HashMap::new(),
@@ -41,9 +44,16 @@ impl Topic {
         };
 
         topic.partitions = (1..partitions_count + 1)
-            .map(|id| {
-                let partition = Partition::create(id, &topic.path, true, config.partition.clone());
-                (id, RwLock::new(partition))
+            .map(|partition_id| {
+                let partition = Partition::create(
+                    stream_id,
+                    topic.id,
+                    partition_id,
+                    &topic.path,
+                    true,
+                    config.partition.clone(),
+                );
+                (partition_id, RwLock::new(partition))
             })
             .collect();
 
@@ -69,7 +79,8 @@ mod tests {
 
     #[test]
     fn should_be_created_given_valid_parameters() {
-        let id = 1;
+        let stream_id = 1;
+        let id = 2;
         let topics_path = "/topics";
         let name = "test";
         let partitions_count = 3;
@@ -77,8 +88,9 @@ mod tests {
         let path = Topic::get_path(id, topics_path);
         let info_path = Topic::get_info_path(&path);
 
-        let topic = Topic::create(1, name, partitions_count, topics_path, config);
+        let topic = Topic::create(stream_id, id, name, partitions_count, topics_path, config);
 
+        assert_eq!(topic.stream_id, stream_id);
         assert_eq!(topic.id, id);
         assert_eq!(topic.path, path);
         assert_eq!(topic.info_path, info_path);
@@ -87,6 +99,8 @@ mod tests {
 
         for (id, partition) in topic.partitions {
             let partition = partition.blocking_read();
+            assert_eq!(partition.stream_id, stream_id);
+            assert_eq!(partition.topic_id, topic.id);
             assert_eq!(partition.id, id);
             assert_eq!(partition.segments.len(), 1);
         }

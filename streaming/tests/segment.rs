@@ -8,11 +8,15 @@ use tokio::fs;
 #[tokio::test]
 async fn should_persist_segment() {
     let setup = TestSetup::init().await;
-    let partition_id = 1;
+    let stream_id = 1;
+    let topic_id = 2;
+    let partition_id = 3;
     let start_offsets = get_start_offsets();
     for start_offset in start_offsets {
         let partition_path = &setup.path;
         let segment = segment::Segment::create(
+            stream_id,
+            topic_id,
             partition_id,
             start_offset,
             partition_path,
@@ -27,11 +31,15 @@ async fn should_persist_segment() {
 #[tokio::test]
 async fn should_load_existing_segment_from_disk() {
     let setup = TestSetup::init().await;
-    let partition_id = 1;
+    let stream_id = 1;
+    let topic_id = 2;
+    let partition_id = 3;
     let start_offsets = get_start_offsets();
     for start_offset in start_offsets {
         let partition_path = &setup.path;
         let segment = segment::Segment::create(
+            stream_id,
+            topic_id,
             partition_id,
             start_offset,
             partition_path,
@@ -41,6 +49,8 @@ async fn should_load_existing_segment_from_disk() {
         assert_persisted_segment(partition_path, start_offset).await;
 
         let mut loaded_segment = segment::Segment::create(
+            stream_id,
+            topic_id,
             partition_id,
             start_offset,
             partition_path,

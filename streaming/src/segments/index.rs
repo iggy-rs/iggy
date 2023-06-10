@@ -1,5 +1,6 @@
 use crate::message::Message;
 use shared::error::Error;
+use std::io::SeekFrom;
 use std::sync::Arc;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt, BufReader};
@@ -118,11 +119,10 @@ pub async fn load_range(
         start_seek_position,
         end_seek_position
     );
-    file.seek(std::io::SeekFrom::Start(start_seek_position as u64))
+    file.seek(SeekFrom::Start(start_seek_position as u64))
         .await?;
     let start_position = file.read_u32_le().await?;
-    file.seek(std::io::SeekFrom::Start(end_seek_position as u64))
-        .await?;
+    file.seek(SeekFrom::Start(end_seek_position as u64)).await?;
     let mut end_position = file.read_u32_le().await?;
     if end_position == 0 {
         end_position = file_length;

@@ -10,7 +10,7 @@ use shared::validatable::Validatable;
 use std::sync::Arc;
 use streaming::message::Message;
 use streaming::system::System;
-use streaming::utils::timestamp;
+use streaming::utils::{checksum, timestamp};
 use tokio::sync::RwLock;
 use tracing::trace;
 
@@ -25,7 +25,7 @@ async fn poll_messages(
     State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(u32, u32)>,
     mut query: Query<PollMessages>,
-) -> Result<Json<Vec<sdk::message::Message>>, CustomError> {
+) -> Result<Json<Vec<Arc<Message>>>, CustomError> {
     query.stream_id = stream_id;
     query.topic_id = topic_id;
     query.validate()?;
@@ -41,16 +41,7 @@ async fn poll_messages(
             query.value,
             query.count,
         )
-        .await?
-        .iter()
-        .map(|message| sdk::message::Message {
-            offset: message.offset,
-            timestamp: message.timestamp,
-            id: message.id,
-            length: message.length,
-            payload: message.payload.clone(),
-        })
-        .collect::<Vec<sdk::message::Message>>();
+        .await?;
 
     if messages.is_empty() {
         return Ok(Json(messages));
@@ -85,7 +76,13 @@ async fn send_messages(
     let mut messages = Vec::with_capacity(command.messages_count as usize);
     for message in command.messages {
         let timestamp = timestamp::get();
-        messages.push(Message::empty(timestamp, message.id, message.payload));
+        let checksum = checksum::get(&message.payload);
+        messages.push(Message::empty(
+            timestamp,
+            message.id,
+            message.payload,
+            checksum,
+        ));
     }
 
     let system = system.read().await;

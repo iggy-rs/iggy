@@ -102,6 +102,13 @@ impl Partition {
                 self.should_increment_offset = segment.current_size_bytes > 0;
             }
 
+            if self.config.validate_checksum {
+                info!("Validating messages checksum for partition with ID: {} and segment with start offset: {}...", self.id, segment.start_offset);
+                let mut log_file = file::open_file(&segment.log_path, false).await?;
+                log::validate_checksum(&mut log_file).await?;
+                info!("Validated messages checksum for partition with ID: {} and segment with start offset: {}.", self.id, segment.start_offset);
+            }
+
             // Load the unique message IDs for the partition if the deduplication feature is enabled.
             if self.message_ids.is_some() {
                 info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", self.id, segment.start_offset);

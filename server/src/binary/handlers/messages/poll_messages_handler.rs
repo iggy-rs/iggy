@@ -88,14 +88,14 @@ pub async fn handle(
     let messages_count = messages.len() as u32;
     let messages_size = messages
         .iter()
-        .map(|message| message.get_size_bytes())
+        .map(|message| message.get_size_bytes(false))
         .sum::<u32>();
 
     let offset = messages.last().unwrap().offset;
     let mut bytes = Vec::with_capacity(4 + messages_size as usize);
     bytes.extend(messages_count.to_le_bytes());
     for message in messages {
-        message.extend(&mut bytes);
+        message.extend(&mut bytes, false);
     }
 
     if command.auto_commit {

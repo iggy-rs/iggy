@@ -5,7 +5,7 @@ use std::sync::Arc;
 use streaming::config::PartitionConfig;
 use streaming::message::Message;
 use streaming::partitions::partition::Partition;
-use streaming::utils::timestamp;
+use streaming::utils::{checksum, timestamp};
 
 #[tokio::test]
 async fn should_persist_messages_and_then_load_them_from_disk() {
@@ -34,7 +34,8 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         let timestamp = timestamp::get();
         let id = i as u128;
         let payload = format!("message {}", i).as_bytes().to_vec();
-        let message = Message::create(offset, timestamp, id, payload);
+        let checksum = checksum::get(&payload);
+        let message = Message::create(offset, timestamp, id, payload, checksum);
         appended_messages.push(message.clone());
         messages.push(message);
     }
@@ -63,6 +64,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         assert_eq!(loaded_message.offset, appended_message.offset);
         assert_eq!(loaded_message.timestamp, appended_message.timestamp);
         assert_eq!(loaded_message.id, appended_message.id);
+        assert_eq!(loaded_message.checksum, appended_message.checksum);
         assert_eq!(loaded_message.length, appended_message.length);
         assert_eq!(loaded_message.payload, appended_message.payload);
     }

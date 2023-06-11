@@ -168,7 +168,7 @@ impl Segment {
             });
         }
 
-        self.current_size_bytes += message.get_size_bytes();
+        self.current_size_bytes += message.get_size_bytes(true);
         self.current_offset = message.offset;
         self.unsaved_messages.as_mut().unwrap().push(message);
 

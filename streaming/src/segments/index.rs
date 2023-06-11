@@ -159,7 +159,7 @@ pub async fn persist(
     for message in messages {
         trace!("Persisting index for position: {}", current_position);
         bytes.extend(current_position.to_le_bytes());
-        current_position += message.get_size_bytes();
+        current_position += message.get_size_bytes(true);
     }
 
     if file.write_all(&bytes).await.is_err() {

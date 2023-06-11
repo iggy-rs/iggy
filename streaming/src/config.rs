@@ -26,6 +26,7 @@ pub struct PartitionConfig {
     pub messages_buffer: u32,
     pub deduplicate_messages: bool,
     pub enforce_sync: bool,
+    pub validate_checksum: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -70,6 +71,7 @@ impl Default for PartitionConfig {
             messages_buffer: 1024,
             deduplicate_messages: false,
             enforce_sync: false,
+            validate_checksum: false,
         }
     }
 }

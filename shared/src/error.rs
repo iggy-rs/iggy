@@ -127,6 +127,10 @@ pub enum Error {
     CannotReadMessageTimestamp,
     #[error("Cannot read message ID")]
     CannotReadMessageId,
+    #[error("Cannot read message checksum")]
+    CannotReadMessageChecksum,
+    #[error("Invalid message checksum: {0}, expected: {1}, for offset: {2}")]
+    InvalidMessageChecksum(u32, u32, u64),
     #[error("Cannot read message length")]
     CannotReadMessageLength,
     #[error("Cannot read message payload")]
@@ -221,6 +225,8 @@ impl Error {
             Error::EmptyMessagePayload => 67,
             Error::CannotReadStreams => 68,
             Error::CannotReadTopics(_) => 69,
+            Error::CannotReadMessageChecksum => 70,
+            Error::InvalidMessageChecksum(_, _, _) => 71,
         }
     }
 
@@ -301,6 +307,8 @@ impl Error {
             Error::EmptyMessagePayload => "empty_message_payload",
             Error::CannotReadStreams => "cannot_read_streams",
             Error::CannotReadTopics(_) => "cannot_read_topics",
+            Error::CannotReadMessageChecksum => "cannot_read_message_checksum",
+            Error::InvalidMessageChecksum(_, _, _) => "invalid_message_checksum",
         }
     }
 }

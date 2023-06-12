@@ -27,16 +27,15 @@ pub async fn handle(
         ));
     }
 
+    let system = system.read().await;
     system
-        .read()
-        .await
         .get_stream(command.stream_id)?
         .append_messages(
             command.topic_id,
             command.key_kind,
             command.key_value,
             messages,
-            false,
+            system.storage.segment.clone(),
         )
         .await?;
 

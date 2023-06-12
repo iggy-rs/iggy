@@ -2,13 +2,16 @@ mod common;
 
 use crate::common::TestSetup;
 use ringbuffer::RingBuffer;
+use std::sync::Arc;
 use streaming::partitions::partition::Partition;
 use streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use streaming::storage::SystemStorage;
 use tokio::fs;
 
 #[tokio::test]
 async fn should_persist_partition_with_segment() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let with_segment = true;
     let stream_id = 1;
     let topic_id = 2;
@@ -21,6 +24,7 @@ async fn should_persist_partition_with_segment() {
             &setup.path,
             with_segment,
             setup.config.stream.topic.partition.clone(),
+            storage.clone(),
         );
 
         partition.persist().await.unwrap();
@@ -32,6 +36,7 @@ async fn should_persist_partition_with_segment() {
 #[tokio::test]
 async fn should_load_existing_partition_from_disk() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let with_segment = true;
     let stream_id = 1;
     let topic_id = 2;
@@ -44,6 +49,7 @@ async fn should_load_existing_partition_from_disk() {
             &setup.path,
             with_segment,
             setup.config.stream.topic.partition.clone(),
+            storage.clone(),
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.path, with_segment).await;
@@ -54,6 +60,7 @@ async fn should_load_existing_partition_from_disk() {
             partition.id,
             &setup.path,
             setup.config.stream.topic.partition.clone(),
+            storage.clone(),
         );
         loaded_partition.load().await.unwrap();
 
@@ -88,6 +95,7 @@ async fn should_load_existing_partition_from_disk() {
 #[tokio::test]
 async fn should_delete_existing_partition_from_disk() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let with_segment = true;
     let stream_id = 1;
     let topic_id = 2;
@@ -100,6 +108,7 @@ async fn should_delete_existing_partition_from_disk() {
             &setup.path,
             with_segment,
             setup.config.stream.topic.partition.clone(),
+            storage.clone(),
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.path, with_segment).await;

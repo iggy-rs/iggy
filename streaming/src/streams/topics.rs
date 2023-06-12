@@ -21,6 +21,7 @@ impl Stream {
             partitions_count,
             &self.topics_path,
             self.config.topic.clone(),
+            self.storage.clone(),
         );
         topic.persist().await?;
         self.topics.insert(id, topic);

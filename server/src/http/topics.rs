@@ -43,9 +43,8 @@ async fn create_topic(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = stream_id;
     command.validate()?;
+    let mut system = system.write().await;
     system
-        .write()
-        .await
         .get_stream_mut(stream_id)?
         .create_topic(command.topic_id, &command.name, command.partitions_count)
         .await?;

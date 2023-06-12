@@ -5,11 +5,13 @@ use std::sync::Arc;
 use streaming::config::PartitionConfig;
 use streaming::message::Message;
 use streaming::partitions::partition::Partition;
+use streaming::storage::SystemStorage;
 use streaming::utils::{checksum, timestamp};
 
 #[tokio::test]
 async fn should_persist_messages_and_then_load_them_from_disk() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 1;
     let partition_id = 1;
@@ -25,6 +27,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         &setup.path,
         true,
         config.clone(),
+        storage.clone(),
     );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
@@ -41,7 +44,10 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     }
 
     partition.persist().await.unwrap();
-    partition.append_messages(messages, false).await.unwrap();
+    partition
+        .append_messages(messages, storage.segment.clone())
+        .await
+        .unwrap();
     assert_eq!(partition.unsaved_messages_count, 0);
 
     let mut loaded_partition = Partition::empty(
@@ -50,6 +56,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         partition.id,
         &setup.path,
         config.clone(),
+        storage.clone(),
     );
     loaded_partition.load().await.unwrap();
     let loaded_messages = loaded_partition

@@ -1,4 +1,5 @@
 use crate::message::Message;
+use crate::storage::SegmentStorage;
 use crate::streams::stream::Stream;
 use shared::error::Error;
 use shared::messages::poll_messages::Kind;
@@ -32,7 +33,7 @@ impl Stream {
         key_kind: KeyKind,
         key_value: u32,
         messages: Vec<Message>,
-        enforce_sync: bool,
+        storage: Arc<dyn SegmentStorage>,
     ) -> Result<(), Error> {
         if messages.is_empty() {
             return Ok(());
@@ -45,7 +46,7 @@ impl Stream {
 
         let topic = topic.unwrap();
         topic
-            .append_messages(key_kind, key_value, messages, enforce_sync)
+            .append_messages(key_kind, key_value, messages, storage)
             .await
     }
 }

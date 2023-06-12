@@ -1,12 +1,15 @@
 mod common;
 
 use crate::common::TestSetup;
+use std::sync::Arc;
+use streaming::storage::SystemStorage;
 use streaming::topics::topic::{Topic, TOPIC_INFO};
 use tokio::fs;
 
 #[tokio::test]
 async fn should_persist_topics_with_partitions_directories_and_info_file() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let partitions_count = 3;
     let topic_ids = get_topic_ids();
@@ -19,6 +22,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             partitions_count,
             &setup.path,
             setup.config.stream.topic.clone(),
+            storage.clone(),
         );
 
         topic.persist().await.unwrap();
@@ -30,6 +34,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
 #[tokio::test]
 async fn should_load_existing_topic_from_disk() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let partitions_count = 3;
     let topic_ids = get_topic_ids();
@@ -42,6 +47,7 @@ async fn should_load_existing_topic_from_disk() {
             partitions_count,
             &setup.path,
             setup.config.stream.topic.clone(),
+            storage.clone(),
         );
         topic.persist().await.unwrap();
         assert_persisted_topic(&topic.path, partitions_count).await;
@@ -51,6 +57,7 @@ async fn should_load_existing_topic_from_disk() {
             topic_id,
             &setup.path,
             setup.config.stream.topic.clone(),
+            storage.clone(),
         );
         loaded_topic.load().await.unwrap();
 
@@ -65,6 +72,7 @@ async fn should_load_existing_topic_from_disk() {
 #[tokio::test]
 async fn should_delete_existing_topic_from_disk() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let partitions_count = 3;
     let topic_ids = get_topic_ids();
@@ -77,6 +85,7 @@ async fn should_delete_existing_topic_from_disk() {
             partitions_count,
             &setup.path,
             setup.config.stream.topic.clone(),
+            storage.clone(),
         );
         topic.persist().await.unwrap();
         assert_persisted_topic(&topic.path, partitions_count).await;

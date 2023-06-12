@@ -140,7 +140,7 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [x] Implement unit tests
 - [x] Implement integration tests
 - [x] Implement end-to-end tests
-- [ ] Make use of `async trait` once available in stable Rust
+- [ ] Make use of `async trait` (instead of the crate) once available in stable Rust
 
 #### Server
 

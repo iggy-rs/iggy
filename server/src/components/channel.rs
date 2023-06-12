@@ -1,6 +1,8 @@
 use crate::server_command::ServerCommand;
 use flume::Receiver;
 use std::sync::Arc;
+use streaming::persister::Persister;
+use streaming::segments::storage::FileSegmentStorage;
 use streaming::system::System;
 use tokio::sync::RwLock;
 use tracing::{error, info};
@@ -16,9 +18,14 @@ pub fn start(system: Arc<RwLock<System>>, receiver: Receiver<ServerCommand>) {
 
             let server_command = server_command.unwrap();
             match server_command {
-                ServerCommand::SaveMessages(sync) => {
+                ServerCommand::SaveMessages(enforce_sync) => {
                     let system = system.read().await;
-                    if system.persist_messages(sync).await.is_err() {
+                    let persister: Arc<dyn Persister> = match enforce_sync {
+                        true => Arc::new(streaming::persister::FileWithSyncPersister),
+                        false => Arc::new(streaming::persister::FilePersister),
+                    };
+                    let storage = Arc::new(FileSegmentStorage::new(persister));
+                    if system.persist_messages(storage).await.is_err() {
                         error!("Couldn't save buffered messages on disk.");
                         return;
                     }

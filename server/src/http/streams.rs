@@ -39,9 +39,8 @@ async fn create_stream(
     Json(command): Json<CreateStream>,
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
+    let mut system = system.write().await;
     system
-        .write()
-        .await
         .create_stream(command.stream_id, &command.name)
         .await?;
     Ok(StatusCode::CREATED)

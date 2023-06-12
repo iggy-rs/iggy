@@ -1,5 +1,6 @@
 use crate::config::TopicConfig;
 use crate::partitions::partition::Partition;
+use crate::storage::SystemStorage;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -15,11 +16,18 @@ pub struct Topic {
     pub(crate) info_path: String,
     pub(crate) config: Arc<TopicConfig>,
     pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
+    pub(crate) storage: Arc<SystemStorage>,
 }
 
 impl Topic {
-    pub fn empty(stream_id: u32, id: u32, topics_path: &str, config: Arc<TopicConfig>) -> Topic {
-        Topic::create(stream_id, id, "", 0, topics_path, config)
+    pub fn empty(
+        stream_id: u32,
+        id: u32,
+        topics_path: &str,
+        config: Arc<TopicConfig>,
+        storage: Arc<SystemStorage>,
+    ) -> Topic {
+        Topic::create(stream_id, id, "", 0, topics_path, config, storage)
     }
 
     pub fn create(
@@ -29,6 +37,7 @@ impl Topic {
         partitions_count: u32,
         topics_path: &str,
         config: Arc<TopicConfig>,
+        storage: Arc<SystemStorage>,
     ) -> Topic {
         let path = Self::get_path(id, topics_path);
         let info_path = Self::get_info_path(&path);
@@ -41,6 +50,7 @@ impl Topic {
             path,
             info_path,
             config: config.clone(),
+            storage: storage.clone(),
         };
 
         topic.partitions = (1..partitions_count + 1)
@@ -52,6 +62,7 @@ impl Topic {
                     &topic.path,
                     true,
                     config.partition.clone(),
+                    storage.clone(),
                 );
                 (partition_id, RwLock::new(partition))
             })
@@ -76,9 +87,11 @@ impl Topic {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::tests::get_test_system_storage;
 
     #[test]
     fn should_be_created_given_valid_parameters() {
+        let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let id = 2;
         let topics_path = "/topics";
@@ -88,7 +101,15 @@ mod tests {
         let path = Topic::get_path(id, topics_path);
         let info_path = Topic::get_info_path(&path);
 
-        let topic = Topic::create(stream_id, id, name, partitions_count, topics_path, config);
+        let topic = Topic::create(
+            stream_id,
+            id,
+            name,
+            partitions_count,
+            topics_path,
+            config,
+            storage,
+        );
 
         assert_eq!(topic.stream_id, stream_id);
         assert_eq!(topic.id, id);

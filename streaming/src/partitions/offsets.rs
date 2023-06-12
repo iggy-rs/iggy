@@ -2,7 +2,7 @@ use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::utils::file;
 use shared::error::Error;
 use tokio::fs;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncReadExt;
 use tokio::sync::RwLock;
 use tracing::{error, trace};
 
@@ -26,39 +26,22 @@ impl Partition {
             if let Some(consumer_offset) = consumer_offset {
                 let mut consumer_offset = consumer_offset.write().await;
                 consumer_offset.offset = offset;
-                self.store_offset_in_file(&consumer_offset.path, consumer_id, offset)
-                    .await?;
+                self.storage.partition.save_offset(&consumer_offset).await?;
                 return Ok(());
             }
         }
 
         let mut consumer_offsets = self.consumer_offsets.write().await;
         let path = format!("{}/{}", self.consumer_offsets_path, consumer_id);
-        self.store_offset_in_file(&path, consumer_id, offset)
-            .await?;
+        let consumer_offset = ConsumerOffset {
+            consumer_id,
+            offset,
+            path,
+        };
+        self.storage.partition.save_offset(&consumer_offset).await?;
         consumer_offsets
             .offsets
-            .insert(consumer_id, RwLock::new(ConsumerOffset { offset, path }));
-
-        Ok(())
-    }
-
-    async fn store_offset_in_file(
-        &self,
-        path: &str,
-        consumer_id: u32,
-        offset: u64,
-    ) -> Result<(), Error> {
-        let mut file = file::create_file(path).await?;
-        file.write_u64(offset).await?;
-
-        trace!(
-            "Stored offset: {} for consumer: {}, partition: {}.",
-            offset,
-            consumer_id,
-            self.id
-        );
-
+            .insert(consumer_id, RwLock::new(consumer_offset));
         Ok(())
     }
 
@@ -98,13 +81,18 @@ impl Partition {
 
             let path = path.unwrap().to_string();
             let consumer_id = consumer_id.unwrap();
-            let mut file = file::open_file(&path, false).await?;
+            let mut file = file::open(&path).await?;
             let offset = file.read_u64_le().await?;
 
             let mut consumer_offsets = self.consumer_offsets.write().await;
-            consumer_offsets
-                .offsets
-                .insert(consumer_id, RwLock::new(ConsumerOffset { offset, path }));
+            consumer_offsets.offsets.insert(
+                consumer_id,
+                RwLock::new(ConsumerOffset {
+                    consumer_id,
+                    offset,
+                    path,
+                }),
+            );
 
             trace!(
                 "Loaded consumer offset: {} for consumer ID: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",

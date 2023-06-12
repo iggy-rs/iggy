@@ -1,13 +1,16 @@
 mod common;
 
 use crate::common::TestSetup;
+use std::sync::Arc;
 use streaming::segments::segment;
 use streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use streaming::storage::SystemStorage;
 use tokio::fs;
 
 #[tokio::test]
 async fn should_persist_segment() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
@@ -21,6 +24,7 @@ async fn should_persist_segment() {
             start_offset,
             partition_path,
             setup.config.stream.topic.partition.segment.clone(),
+            storage.clone(),
         );
 
         segment.persist().await.unwrap();
@@ -31,6 +35,7 @@ async fn should_persist_segment() {
 #[tokio::test]
 async fn should_load_existing_segment_from_disk() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
@@ -44,6 +49,7 @@ async fn should_load_existing_segment_from_disk() {
             start_offset,
             partition_path,
             setup.config.stream.topic.partition.segment.clone(),
+            storage.clone(),
         );
         segment.persist().await.unwrap();
         assert_persisted_segment(partition_path, start_offset).await;
@@ -55,6 +61,7 @@ async fn should_load_existing_segment_from_disk() {
             start_offset,
             partition_path,
             setup.config.stream.topic.partition.segment.clone(),
+            storage.clone(),
         );
         loaded_segment.load().await.unwrap();
 

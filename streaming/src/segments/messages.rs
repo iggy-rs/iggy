@@ -2,8 +2,7 @@ use crate::message::Message;
 use crate::segments::index::{Index, IndexRange};
 use crate::segments::segment::Segment;
 use crate::segments::time_index::TimeIndex;
-use crate::segments::*;
-use crate::utils::file;
+use crate::storage::SegmentStorage;
 use shared::error::Error;
 use std::sync::Arc;
 use tracing::trace;
@@ -110,10 +109,11 @@ impl Segment {
             }
         }
 
-        let mut index_file = file::open_file(&self.index_path, false).await?;
-        let index_range =
-            index::load_range(&mut index_file, self.start_offset, start_offset, end_offset).await?;
-
+        let index_range = self
+            .storage
+            .segment
+            .load_index_range(self, self.start_offset, start_offset, end_offset)
+            .await?;
         if index_range.is_none() {
             trace!(
                 "Cannot load messages from disk, index range not found: {} - {}.",
@@ -132,8 +132,11 @@ impl Segment {
         &self,
         index_range: &IndexRange,
     ) -> Result<Vec<Arc<Message>>, Error> {
-        let mut log_file = file::open_file(&self.log_path, false).await?;
-        let messages = log::load(&mut log_file, index_range).await?;
+        let messages = self
+            .storage
+            .segment
+            .load_messages(self, index_range)
+            .await?;
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
             messages.len(),
@@ -175,7 +178,10 @@ impl Segment {
         Ok(())
     }
 
-    pub async fn persist_messages(&mut self, enforce_sync: bool) -> Result<(), Error> {
+    pub async fn persist_messages(
+        &mut self,
+        storage: Arc<dyn SegmentStorage>,
+    ) -> Result<(), Error> {
         if self.unsaved_messages.is_none() {
             return Ok(());
         }
@@ -192,20 +198,12 @@ impl Segment {
             self.partition_id
         );
 
-        let mut log_file = file::open_file(&self.log_path, true).await?;
-        let mut index_file = file::open_file(&self.index_path, true).await?;
-        let mut time_index_file = file::open_file(&self.time_index_path, true).await?;
-
-        let saved_bytes = log::persist(&mut log_file, unsaved_messages, enforce_sync).await?;
+        let saved_bytes = storage.save_messages(&self, unsaved_messages).await?;
         let current_position = self.current_size_bytes - saved_bytes;
-        index::persist(
-            &mut index_file,
-            current_position,
-            unsaved_messages,
-            enforce_sync,
-        )
-        .await?;
-        time_index::persist(&mut time_index_file, unsaved_messages, enforce_sync).await?;
+        storage
+            .save_index(self, current_position, unsaved_messages)
+            .await?;
+        storage.save_time_index(self, unsaved_messages).await?;
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

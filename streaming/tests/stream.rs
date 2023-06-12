@@ -1,16 +1,25 @@
 mod common;
 
 use crate::common::TestSetup;
+use std::sync::Arc;
+use streaming::storage::SystemStorage;
 use streaming::streams::stream::{Stream, STREAM_INFO};
 use tokio::fs;
 
 #[tokio::test]
 async fn should_persist_stream_with_topics_directory_and_info_file() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_ids = get_stream_ids();
     for stream_id in stream_ids {
         let name = format!("test-{}", stream_id);
-        let stream = Stream::create(stream_id, &name, &setup.path, setup.config.stream.clone());
+        let stream = Stream::create(
+            stream_id,
+            &name,
+            &setup.path,
+            setup.config.stream.clone(),
+            storage.clone(),
+        );
 
         stream.persist().await.unwrap();
 
@@ -21,14 +30,26 @@ async fn should_persist_stream_with_topics_directory_and_info_file() {
 #[tokio::test]
 async fn should_load_existing_stream_from_disk() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_ids = get_stream_ids();
     for stream_id in stream_ids {
         let name = format!("test-{}", stream_id);
-        let stream = Stream::create(stream_id, &name, &setup.path, setup.config.stream.clone());
+        let stream = Stream::create(
+            stream_id,
+            &name,
+            &setup.path,
+            setup.config.stream.clone(),
+            storage.clone(),
+        );
         stream.persist().await.unwrap();
         assert_persisted_stream(&stream.path, &setup.config.stream.topic.path).await;
 
-        let mut loaded_stream = Stream::empty(stream_id, &setup.path, setup.config.stream.clone());
+        let mut loaded_stream = Stream::empty(
+            stream_id,
+            &setup.path,
+            setup.config.stream.clone(),
+            storage.clone(),
+        );
         loaded_stream.load().await.unwrap();
 
         assert_eq!(loaded_stream.id, stream.id);
@@ -42,10 +63,17 @@ async fn should_load_existing_stream_from_disk() {
 #[tokio::test]
 async fn should_delete_existing_stream_from_disk() {
     let setup = TestSetup::init().await;
+    let storage = Arc::new(SystemStorage::default());
     let stream_ids = get_stream_ids();
     for stream_id in stream_ids {
         let name = format!("test-{}", stream_id);
-        let stream = Stream::create(stream_id, &name, &setup.path, setup.config.stream.clone());
+        let stream = Stream::create(
+            stream_id,
+            &name,
+            &setup.path,
+            setup.config.stream.clone(),
+            storage.clone(),
+        );
         stream.persist().await.unwrap();
         assert_persisted_stream(&stream.path, &setup.config.stream.topic.path).await;
 

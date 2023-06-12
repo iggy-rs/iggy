@@ -2,6 +2,7 @@ use crate::config::SegmentConfig;
 use crate::message::Message;
 use crate::segments::index::Index;
 use crate::segments::time_index::TimeIndex;
+use crate::storage::SystemStorage;
 use std::sync::Arc;
 
 pub const LOG_EXTENSION: &str = "log";
@@ -26,6 +27,7 @@ pub struct Segment {
     pub(crate) config: Arc<SegmentConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,
+    pub(crate) storage: Arc<SystemStorage>,
 }
 
 impl Segment {
@@ -36,6 +38,7 @@ impl Segment {
         start_offset: u64,
         partition_path: &str,
         config: Arc<SegmentConfig>,
+        storage: Arc<SystemStorage>,
     ) -> Segment {
         let path = Self::get_path(partition_path, start_offset);
 
@@ -61,6 +64,7 @@ impl Segment {
             unsaved_messages: None,
             is_closed: false,
             config,
+            storage,
         }
     }
 
@@ -88,9 +92,11 @@ impl Segment {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::storage::tests::get_test_system_storage;
 
     #[test]
     fn should_be_created_given_valid_parameters() {
+        let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -109,6 +115,7 @@ mod tests {
             start_offset,
             partition_path,
             config,
+            storage,
         );
 
         assert_eq!(segment.stream_id, stream_id);
@@ -130,6 +137,7 @@ mod tests {
 
     #[test]
     fn should_not_initialize_indexes_cache_when_disabled() {
+        let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -147,6 +155,7 @@ mod tests {
             start_offset,
             partition_path,
             config,
+            storage,
         );
 
         assert!(segment.indexes.is_none());
@@ -154,6 +163,7 @@ mod tests {
 
     #[test]
     fn should_not_initialize_time_indexes_cache_when_disabled() {
+        let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -171,6 +181,7 @@ mod tests {
             start_offset,
             partition_path,
             config,
+            storage,
         );
 
         assert!(segment.time_indexes.is_none());

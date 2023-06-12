@@ -19,6 +19,8 @@ use crate::tcp::tcp_server;
 use anyhow::Result;
 use clap::Parser;
 use std::sync::Arc;
+use streaming::persister::FileWithSyncPersister;
+use streaming::segments::storage::FileSegmentStorage;
 use streaming::system::System;
 use tokio::signal;
 use tokio::sync::RwLock;
@@ -56,7 +58,9 @@ async fn main() -> Result<(), ServerError> {
         Ok(()) => {
             info!("Shutting down Iggy server...");
             let mut system = system.write().await;
-            system.shutdown().await?;
+            let persister = Arc::new(FileWithSyncPersister);
+            let storage = Arc::new(FileSegmentStorage::new(persister));
+            system.shutdown(storage).await?;
             info!("Iggy server has shutdown successfully.");
         }
         Err(err) => {

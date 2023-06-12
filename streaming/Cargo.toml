@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 shared = { path = "../shared" }
+async-trait = "0.1.68"
 bytes = "1.4.0"
 crc32fast = "1.3.2"
 futures = "0.3.28"

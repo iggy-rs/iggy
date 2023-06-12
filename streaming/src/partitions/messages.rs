@@ -1,6 +1,7 @@
 use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::segments::segment::Segment;
+use crate::storage::SegmentStorage;
 use crate::utils::random_id;
 use ringbuffer::{RingBuffer, RingBufferWrite};
 use shared::error::Error;
@@ -261,7 +262,7 @@ impl Partition {
     pub async fn append_messages(
         &mut self,
         messages: Vec<Message>,
-        enforce_sync: bool,
+        storage: Arc<dyn SegmentStorage>,
     ) -> Result<(), Error> {
         let segment = self.segments.last_mut();
         if segment.is_none() {
@@ -347,8 +348,7 @@ impl Partition {
             segment.start_offset,
             self.id
         );
-            let enforce_sync = enforce_sync || self.config.enforce_sync;
-            segment.persist_messages(enforce_sync).await?;
+            segment.persist_messages(storage).await?;
             self.unsaved_messages_count = 0;
         }
 
@@ -367,6 +367,7 @@ impl Partition {
             start_offset,
             &self.path,
             self.config.segment.clone(),
+            self.storage.clone(),
         );
         new_segment.persist().await?;
         self.segments.push(new_segment);

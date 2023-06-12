@@ -87,13 +87,14 @@ async fn send_messages(
 
     let system = system.read().await;
     let stream = system.get_stream(stream_id)?;
+    let storage = system.storage.segment.clone();
     stream
         .append_messages(
             command.topic_id,
             command.key_kind,
             command.key_value,
             messages,
-            false,
+            storage,
         )
         .await?;
     Ok(StatusCode::CREATED)

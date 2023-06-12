@@ -1,4 +1,6 @@
 use crate::config::SystemConfig;
+use crate::persister::*;
+use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
 use futures::future::join_all;
 use shared::error::Error;
@@ -15,18 +17,24 @@ pub struct System {
     pub streams_path: String,
     streams: HashMap<u32, Stream>,
     config: Arc<SystemConfig>,
+    pub storage: Arc<SystemStorage>,
 }
 
 impl System {
     pub fn create(config: Arc<SystemConfig>) -> System {
         let base_path = config.path.to_string();
         let streams_path = format!("{}/{}", base_path, &config.stream.path);
+        let persister: Arc<dyn Persister> = match config.stream.topic.partition.enforce_sync {
+            true => Arc::new(FileWithSyncPersister {}),
+            false => Arc::new(FilePersister {}),
+        };
 
         System {
             config,
             base_path,
             streams_path,
             streams: HashMap::new(),
+            storage: Arc::new(SystemStorage::new(persister)),
         }
     }
 
@@ -64,7 +72,12 @@ impl System {
             }
 
             let stream_id = stream_id.unwrap();
-            let stream = Stream::empty(stream_id, &self.streams_path, self.config.stream.clone());
+            let stream = Stream::empty(
+                stream_id,
+                &self.streams_path,
+                self.config.stream.clone(),
+                self.storage.clone(),
+            );
             unloaded_streams.push(stream);
         }
 
@@ -119,7 +132,13 @@ impl System {
             return Err(Error::StreamAlreadyExists(id));
         }
 
-        let stream = Stream::create(id, name, &self.streams_path, self.config.stream.clone());
+        let stream = Stream::create(
+            id,
+            name,
+            &self.streams_path,
+            self.config.stream.clone(),
+            self.storage.clone(),
+        );
         stream.persist().await?;
         self.streams.insert(stream.id, stream);
         info!("Created stream with ID: {}, name: '{}'.", id, name);
@@ -133,15 +152,15 @@ impl System {
         Ok(())
     }
 
-    pub async fn shutdown(&mut self) -> Result<(), Error> {
-        self.persist_messages(true).await?;
+    pub async fn shutdown(&mut self, storage: Arc<dyn SegmentStorage>) -> Result<(), Error> {
+        self.persist_messages(storage.clone()).await?;
         Ok(())
     }
 
-    pub async fn persist_messages(&self, enforce_sync: bool) -> Result<(), Error> {
+    pub async fn persist_messages(&self, storage: Arc<dyn SegmentStorage>) -> Result<(), Error> {
         trace!("Saving buffered messages on disk...");
         for stream in self.streams.values() {
-            stream.persist_messages(enforce_sync).await?;
+            stream.persist_messages(storage.clone()).await?;
         }
 
         Ok(())

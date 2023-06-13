@@ -65,6 +65,7 @@ async fn try_handle(
         Command::PollMessages(command) => {
             poll_messages_handler::handle(command, sender, system).await
         }
+        Command::GetOffset(command) => get_offset_handler::handle(command, sender, system).await,
         Command::StoreOffset(command) => {
             store_offset_handler::handle(command, sender, system).await
         }

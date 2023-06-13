@@ -7,6 +7,24 @@ use tokio::sync::RwLock;
 use tracing::{error, trace};
 
 impl Partition {
+    pub async fn get_offset(&self, consumer_id: u32) -> Result<u64, Error> {
+        trace!(
+            "Getting offset for consumer: {}, partition: {}, current: {}...",
+            consumer_id,
+            self.id,
+            self.current_offset
+        );
+
+        let consumer_offsets = self.consumer_offsets.read().await;
+        let consumer_offset = consumer_offsets.offsets.get(&consumer_id);
+        if let Some(consumer_offset) = consumer_offset {
+            let consumer_offset = consumer_offset.read().await;
+            return Ok(consumer_offset.offset);
+        }
+
+        Ok(0)
+    }
+
     pub async fn store_offset(&self, consumer_id: u32, offset: u64) -> Result<(), Error> {
         trace!(
             "Storing offset: {} for consumer: {}, partition: {}, current: {}...",

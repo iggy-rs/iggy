@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
+use crate::offsets::get_offset::GetOffset;
 use crate::offsets::store_offset::StoreOffset;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
@@ -19,6 +20,7 @@ pub const PING: &str = "ping";
 pub const SEND_MESSAGES: &str = "message.send";
 pub const POLL_MESSAGES: &str = "message.poll";
 pub const STORE_OFFSET: &str = "offset.store";
+pub const GET_OFFSET: &str = "offset.get";
 pub const GET_STREAMS: &str = "stream.list";
 pub const CREATE_STREAM: &str = "stream.create";
 pub const DELETE_STREAM: &str = "stream.delete";
@@ -32,6 +34,7 @@ pub enum Command {
     Ping(Ping),
     SendMessages(SendMessages),
     PollMessages(PollMessages),
+    GetOffset(GetOffset),
     StoreOffset(StoreOffset),
     GetStreams(GetStreams),
     CreateStream(CreateStream),
@@ -51,6 +54,7 @@ impl BytesSerializable for Command {
             Command::SendMessages(payload) => as_bytes(2, &payload.as_bytes()),
             Command::PollMessages(payload) => as_bytes(3, &payload.as_bytes()),
             Command::StoreOffset(payload) => as_bytes(4, &payload.as_bytes()),
+            Command::GetOffset(payload) => as_bytes(5, &payload.as_bytes()),
             Command::GetStreams(payload) => as_bytes(10, &payload.as_bytes()),
             Command::CreateStream(payload) => as_bytes(11, &payload.as_bytes()),
             Command::DeleteStream(payload) => as_bytes(12, &payload.as_bytes()),
@@ -69,6 +73,7 @@ impl BytesSerializable for Command {
             2 => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
             3 => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
             4 => Ok(Command::StoreOffset(StoreOffset::from_bytes(payload)?)),
+            5 => Ok(Command::GetOffset(GetOffset::from_bytes(payload)?)),
             10 => Ok(Command::GetStreams(GetStreams::from_bytes(payload)?)),
             11 => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
             12 => Ok(Command::DeleteStream(DeleteStream::from_bytes(payload)?)),
@@ -97,6 +102,7 @@ impl FromStr for Command {
             SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
             POLL_MESSAGES => Ok(Command::PollMessages(PollMessages::from_str(payload)?)),
             STORE_OFFSET => Ok(Command::StoreOffset(StoreOffset::from_str(payload)?)),
+            GET_OFFSET => Ok(Command::GetOffset(GetOffset::from_str(payload)?)),
             GET_STREAMS => Ok(Command::GetStreams(GetStreams::from_str(payload)?)),
             CREATE_STREAM => Ok(Command::CreateStream(CreateStream::from_str(payload)?)),
             DELETE_STREAM => Ok(Command::DeleteStream(DeleteStream::from_str(payload)?)),
@@ -122,6 +128,7 @@ impl Display for Command {
             Command::PollMessages(payload) => write!(formatter, "{}|{}", POLL_MESSAGES, payload),
             Command::SendMessages(payload) => write!(formatter, "{}|{}", SEND_MESSAGES, payload),
             Command::StoreOffset(payload) => write!(formatter, "{}|{}", STORE_OFFSET, payload),
+            Command::GetOffset(payload) => write!(formatter, "{}|{}", GET_OFFSET, payload),
         }
     }
 }
@@ -156,6 +163,11 @@ mod tests {
             &Command::StoreOffset(StoreOffset::default()),
             4,
             &StoreOffset::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetOffset(GetOffset::default()),
+            5,
+            &GetOffset::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetStreams(GetStreams::default()),
@@ -207,6 +219,11 @@ mod tests {
             &Command::StoreOffset(StoreOffset::default()),
             STORE_OFFSET,
             &StoreOffset::default(),
+        );
+        assert_read_from_string(
+            &Command::GetOffset(GetOffset::default()),
+            GET_OFFSET,
+            &GetOffset::default(),
         );
         assert_read_from_string(
             &Command::GetStreams(GetStreams::default()),

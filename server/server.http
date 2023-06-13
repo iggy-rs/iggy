@@ -74,3 +74,6 @@ Content-Type: application/json
   "partition_id": {{partition_id}},
   "offset": 1
 }
+
+###
+GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages/offsets?consumer_id={{consumer_id}}&partition_id={{partition_id}}

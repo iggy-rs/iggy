@@ -1,9 +1,11 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::error::Error;
 use crate::message::Message;
+use crate::offset::Offset;
 use shared::command::Command;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
+use shared::offsets::get_offset::GetOffset;
 use shared::offsets::store_offset::StoreOffset;
 
 pub async fn poll_messages(
@@ -28,6 +30,22 @@ pub async fn store_offset(client: &dyn BinaryClient, command: StoreOffset) -> Re
         .send_with_response(Command::StoreOffset(command))
         .await?;
     Ok(())
+}
+
+pub async fn get_offset(client: &dyn BinaryClient, command: GetOffset) -> Result<Offset, Error> {
+    let response = client
+        .send_with_response(Command::GetOffset(command))
+        .await?;
+    handle_get_offset_response(&response)
+}
+
+fn handle_get_offset_response(response: &[u8]) -> Result<Offset, Error> {
+    let consumer_id = u32::from_le_bytes(response[..4].try_into()?);
+    let offset = u64::from_le_bytes(response[4..12].try_into()?);
+    Ok(Offset {
+        consumer_id,
+        offset,
+    })
 }
 
 fn handle_poll_messages_response(response: &[u8]) -> Result<Vec<Message>, Error> {

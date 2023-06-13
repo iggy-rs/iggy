@@ -11,7 +11,8 @@ use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info, trace};
 
-const INITIAL_BYTES_LENGTH: usize = 4;
+const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
+const RESPONSE_INITIAL_BYTES_LENGTH: usize = 5;
 const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
@@ -66,7 +67,7 @@ impl BinaryClient for QuicClient {
         if let Some(connection) = &self.connection {
             let bytes = command.as_bytes();
             let payload_length = bytes.len();
-            let mut buffer = Vec::with_capacity(INITIAL_BYTES_LENGTH + payload_length);
+            let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
             buffer.extend((payload_length as u32).to_le_bytes());
             buffer.extend(bytes);
 
@@ -130,14 +131,17 @@ impl QuicClient {
             return Err(Error::InvalidResponse(status));
         }
 
-        let length = buffer.len();
+        let length =
+            u32::from_le_bytes(buffer[1..RESPONSE_INITIAL_BYTES_LENGTH].try_into().unwrap());
         trace!("Status: OK. Response length: {}", length);
-
         if length <= 1 {
             return Ok(EMPTY_RESPONSE);
         }
 
-        Ok(buffer[1..length].to_vec())
+        Ok(
+            buffer[RESPONSE_INITIAL_BYTES_LENGTH..RESPONSE_INITIAL_BYTES_LENGTH + length as usize]
+                .to_vec(),
+        )
     }
 }
 

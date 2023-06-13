@@ -28,8 +28,6 @@ pub async fn handle(
         })
         .collect::<Vec<u8>>();
 
-    sender
-        .send_ok_response([streams.as_slice()].concat().as_slice())
-        .await?;
+    sender.send_ok_response(streams.as_slice()).await?;
     Ok(())
 }

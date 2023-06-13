@@ -2,6 +2,8 @@ use crate::common::{ClientFactory, TestServer};
 use shared::messages::poll_messages::Kind::Offset;
 use shared::messages::poll_messages::{Format, PollMessages};
 use shared::messages::send_messages::{KeyKind, Message, SendMessages};
+use shared::offsets::get_offset::GetOffset;
+use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::streams::get_streams::GetStreams;
@@ -23,6 +25,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let stream_name = "test-stream";
     let topic_name = "test-topic";
     let partitions_count = 2;
+    let consumer_id = 1;
 
     // 1. Ping server
     let ping = Ping {};
@@ -89,7 +92,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 8. Poll messages from the specific partition in topic
     let poll_messages = PollMessages {
-        consumer_id: 0,
+        consumer_id,
         stream_id,
         topic_id,
         partition_id,
@@ -115,7 +118,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     for i in 0..batches_count {
         let start_offset = (i * batch_size) as u64;
         let poll_messages = PollMessages {
-            consumer_id: 0,
+            consumer_id,
             stream_id,
             topic_id,
             partition_id,
@@ -137,7 +140,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 10. Ensure that messages do not exist in the second partition in the same topic
     let poll_messages = PollMessages {
-        consumer_id: 0,
+        consumer_id,
         stream_id,
         topic_id,
         partition_id: partition_id + 1,
@@ -150,7 +153,46 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let messages = client.poll_messages(poll_messages).await.unwrap();
     assert!(messages.is_empty());
 
-    // 11. Delete the existing topic and ensure it doesn't exist anymore
+    // 11. Get the existing customer offset and ensure it's 0
+    let offset = client
+        .get_offset(GetOffset {
+            stream_id,
+            topic_id,
+            partition_id,
+            consumer_id,
+        })
+        .await
+        .unwrap();
+    assert_eq!(offset.consumer_id, consumer_id);
+    assert_eq!(offset.offset, 0);
+
+    // 12. Store the consumer offset
+    let stored_offset = 10;
+    client
+        .store_offset(StoreOffset {
+            stream_id,
+            topic_id,
+            partition_id,
+            consumer_id,
+            offset: stored_offset,
+        })
+        .await
+        .unwrap();
+
+    // 13. Get the existing customer offset and ensure it's the previously stored value
+    let offset = client
+        .get_offset(GetOffset {
+            stream_id,
+            topic_id,
+            partition_id,
+            consumer_id,
+        })
+        .await
+        .unwrap();
+    assert_eq!(offset.consumer_id, consumer_id);
+    assert_eq!(offset.offset, stored_offset);
+
+    // 14. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(DeleteTopic {
             stream_id,
@@ -161,7 +203,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topics = client.get_topics(GetTopics { stream_id }).await.unwrap();
     assert!(topics.is_empty());
 
-    // 12. Delete the existing stream and ensure it doesn't exist anymore
+    // 15. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(DeleteStream { stream_id })
         .await

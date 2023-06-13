@@ -17,6 +17,8 @@ pub enum Error {
     NotConnected,
     #[error("Request error")]
     RequestError(#[from] reqwest::Error),
+    #[error("HTTP response error, status: {0}, body: {1}")]
+    HttpResponseError(u16, String),
     #[error("Request middleware error")]
     RequestMiddlewareError(#[from] reqwest_middleware::Error),
     #[error("Cannot create endpoint")]

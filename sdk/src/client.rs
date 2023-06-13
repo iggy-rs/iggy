@@ -1,10 +1,12 @@
 use crate::error::Error;
 use crate::message::Message;
+use crate::offset::Offset;
 use crate::stream::Stream;
 use crate::topic::Topic;
 use async_trait::async_trait;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
+use shared::offsets::get_offset::GetOffset;
 use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
@@ -46,4 +48,5 @@ pub trait MessageClient {
     async fn poll_messages(&self, command: PollMessages) -> Result<Vec<Message>, Error>;
     async fn send_messages(&self, command: SendMessages) -> Result<(), Error>;
     async fn store_offset(&self, command: StoreOffset) -> Result<(), Error>;
+    async fn get_offset(&self, command: GetOffset) -> Result<Offset, Error>;
 }

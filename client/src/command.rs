@@ -1,6 +1,6 @@
 use crate::client_error::ClientError;
 use crate::handlers::messages::*;
-use crate::handlers::offsets::store_offset_handler;
+use crate::handlers::offsets::{get_offset_handler, store_offset_handler};
 use crate::handlers::streams::*;
 use crate::handlers::system::*;
 use crate::handlers::topics::*;
@@ -18,6 +18,7 @@ pub async fn handle(input: &str, client: &dyn Client) -> Result<(), ClientError>
         Command::SendMessages(payload) => send_messages_handler::handle(payload, client).await,
         Command::PollMessages(payload) => poll_messages_handler::handle(payload, client).await,
         Command::StoreOffset(payload) => store_offset_handler::handle(payload, client).await,
+        Command::GetOffset(payload) => get_offset_handler::handle(payload, client).await,
         Command::GetStreams(payload) => get_streams_handler::handle(payload, client).await,
         Command::CreateStream(payload) => create_stream_handler::handle(payload, client).await,
         Command::DeleteStream(payload) => delete_stream_handler::handle(payload, client).await,

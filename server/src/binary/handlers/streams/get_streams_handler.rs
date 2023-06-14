@@ -1,4 +1,5 @@
 use crate::binary::sender::Sender;
+use crate::utils::binary_mapper;
 use anyhow::Result;
 use shared::error::Error;
 use shared::streams::get_streams::GetStreams;
@@ -14,20 +15,8 @@ pub async fn handle(
 ) -> Result<(), Error> {
     trace!("{}", command);
     let system = system.read().await;
-    let streams = system
-        .get_streams()
-        .iter()
-        .flat_map(|stream| {
-            [
-                &stream.id.to_le_bytes(),
-                &(stream.get_topics().len() as u32).to_le_bytes(),
-                &(stream.name.len() as u32).to_le_bytes(),
-                stream.name.as_bytes(),
-            ]
-            .concat()
-        })
-        .collect::<Vec<u8>>();
-
+    let streams = system.get_streams();
+    let streams = binary_mapper::map_streams(&streams);
     sender.send_ok_response(streams.as_slice()).await?;
     Ok(())
 }

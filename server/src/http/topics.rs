@@ -1,9 +1,10 @@
 use crate::http::error::CustomError;
+use crate::utils::mapper;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::{delete, get};
+use axum::routing::get;
 use axum::{Json, Router};
-use sdk::topic::Topic;
+use sdk::topic::{Topic, TopicDetails};
 use shared::topics::create_topic::CreateTopic;
 use shared::validatable::Validatable;
 use std::sync::Arc;
@@ -13,26 +14,27 @@ use tokio::sync::RwLock;
 pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", get(get_topics).post(create_topic))
-        .route("/:topic_id", delete(delete_topic))
+        .route("/:topic_id", get(get_topic).delete(delete_topic))
         .with_state(system)
+}
+
+async fn get_topic(
+    State(system): State<Arc<RwLock<System>>>,
+    Path((stream_id, topic_id)): Path<(u32, u32)>,
+) -> Result<Json<TopicDetails>, CustomError> {
+    let system = system.read().await;
+    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    let topic_details = mapper::map_topic(topic).await;
+    Ok(Json(topic_details))
 }
 
 async fn get_topics(
     State(system): State<Arc<RwLock<System>>>,
     Path(stream_id): Path<u32>,
 ) -> Result<Json<Vec<Topic>>, CustomError> {
-    let topics = system
-        .write()
-        .await
-        .get_stream(stream_id)?
-        .get_topics()
-        .iter()
-        .map(|topic| Topic {
-            id: topic.id,
-            name: topic.name.clone(),
-            partitions: topic.get_partitions().len() as u32,
-        })
-        .collect();
+    let system = system.read().await;
+    let topics = system.get_stream(stream_id)?.get_topics();
+    let topics = mapper::map_topics(&topics);
     Ok(Json(topics))
 }
 

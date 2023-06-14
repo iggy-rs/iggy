@@ -69,6 +69,7 @@ async fn try_handle(
         Command::StoreOffset(command) => {
             store_offset_handler::handle(command, sender, system).await
         }
+        Command::GetStream(command) => get_stream_handler::handle(command, sender, system).await,
         Command::GetStreams(command) => get_streams_handler::handle(command, sender, system).await,
         Command::CreateStream(command) => {
             create_stream_handler::handle(command, sender, system).await
@@ -76,6 +77,7 @@ async fn try_handle(
         Command::DeleteStream(command) => {
             delete_stream_handler::handle(command, sender, system).await
         }
+        Command::GetTopic(command) => get_topic_handler::handle(command, sender, system).await,
         Command::GetTopics(command) => get_topics_handler::handle(command, sender, system).await,
         Command::CreateTopic(command) => {
             create_topic_handler::handle(command, sender, system).await

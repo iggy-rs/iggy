@@ -1,4 +1,5 @@
 use crate::binary::sender::Sender;
+use crate::utils::binary_mapper;
 use anyhow::Result;
 use shared::error::Error;
 use shared::messages::poll_messages::PollMessages;
@@ -85,19 +86,8 @@ pub async fn handle(
         return Ok(());
     }
 
-    let messages_count = messages.len() as u32;
-    let messages_size = messages
-        .iter()
-        .map(|message| message.get_size_bytes(false))
-        .sum::<u32>();
-
     let offset = messages.last().unwrap().offset;
-    let mut bytes = Vec::with_capacity(4 + messages_size as usize);
-    bytes.extend(messages_count.to_le_bytes());
-    for message in messages {
-        message.extend(&mut bytes, false);
-    }
-
+    let messages = binary_mapper::map_messages(messages);
     if command.auto_commit {
         trace!("Last offset: {} will be automatically stored for consumer: {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
         stream
@@ -110,7 +100,6 @@ pub async fn handle(
             .await?;
     }
 
-    sender.send_ok_response(&bytes).await?;
-
+    sender.send_ok_response(&messages).await?;
     Ok(())
 }

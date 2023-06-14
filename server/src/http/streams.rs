@@ -1,9 +1,10 @@
 use crate::http::error::CustomError;
+use crate::utils::mapper;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::{delete, get};
+use axum::routing::get;
 use axum::{Json, Router};
-use sdk::stream::Stream;
+use sdk::stream::{Stream, StreamDetails};
 use shared::streams::create_stream::CreateStream;
 use shared::validatable::Validatable;
 use std::sync::Arc;
@@ -13,24 +14,25 @@ use tokio::sync::RwLock;
 pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", get(get_streams).post(create_stream))
-        .route("/:stream_id", delete(delete_stream))
+        .route("/:stream_id", get(get_stream).delete(delete_stream))
         .with_state(system)
+}
+
+async fn get_stream(
+    State(system): State<Arc<RwLock<System>>>,
+    Path(stream_id): Path<u32>,
+) -> Result<Json<StreamDetails>, CustomError> {
+    let system = system.read().await;
+    let stream = system.get_stream(stream_id)?;
+    let stream_details = mapper::map_stream(stream);
+    Ok(Json(stream_details))
 }
 
 async fn get_streams(
     State(system): State<Arc<RwLock<System>>>,
 ) -> Result<Json<Vec<Stream>>, CustomError> {
-    let streams = system
-        .write()
-        .await
-        .get_streams()
-        .iter()
-        .map(|stream| Stream {
-            id: stream.id,
-            name: stream.name.clone(),
-            topics: stream.get_topics().len() as u32,
-        })
-        .collect();
+    let system = system.read().await;
+    let streams = mapper::map_streams(&system.get_streams());
     Ok(Json(streams))
 }
 

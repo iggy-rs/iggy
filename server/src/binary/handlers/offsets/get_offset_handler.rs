@@ -1,4 +1,5 @@
 use crate::binary::sender::Sender;
+use crate::utils::binary_mapper;
 use anyhow::Result;
 use shared::error::Error;
 use shared::offsets::get_offset::GetOffset;
@@ -18,10 +19,7 @@ pub async fn handle(
         .get_stream(command.stream_id)?
         .get_offset(command.consumer_id, command.topic_id, command.partition_id)
         .await?;
-
-    let mut bytes = Vec::with_capacity(12);
-    bytes.extend(command.consumer_id.to_le_bytes());
-    bytes.extend(offset.to_le_bytes());
-    sender.send_ok_response(&bytes).await?;
+    let offset = binary_mapper::map_offset(command.consumer_id, offset);
+    sender.send_ok_response(&offset).await?;
     Ok(())
 }

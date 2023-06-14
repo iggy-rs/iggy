@@ -7,6 +7,7 @@ mod server_command;
 mod server_config;
 mod server_error;
 mod tcp;
+mod utils;
 
 use crate::args::Args;
 use crate::components::{channel, message_saver};

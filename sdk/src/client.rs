@@ -1,8 +1,8 @@
 use crate::error::Error;
 use crate::message::Message;
 use crate::offset::Offset;
-use crate::stream::Stream;
-use crate::topic::Topic;
+use crate::stream::{Stream, StreamDetails};
+use crate::topic::{Topic, TopicDetails};
 use async_trait::async_trait;
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
@@ -10,11 +10,13 @@ use shared::offsets::get_offset::GetOffset;
 use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
+use shared::streams::get_stream::GetStream;
 use shared::streams::get_streams::GetStreams;
 use shared::system::kill::Kill;
 use shared::system::ping::Ping;
 use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
+use shared::topics::get_topic::GetTopic;
 use shared::topics::get_topics::GetTopics;
 
 #[async_trait]
@@ -31,6 +33,7 @@ pub trait SystemClient {
 
 #[async_trait]
 pub trait StreamClient {
+    async fn get_stream(&self, command: GetStream) -> Result<StreamDetails, Error>;
     async fn get_streams(&self, command: GetStreams) -> Result<Vec<Stream>, Error>;
     async fn create_stream(&self, command: CreateStream) -> Result<(), Error>;
     async fn delete_stream(&self, command: DeleteStream) -> Result<(), Error>;
@@ -38,6 +41,7 @@ pub trait StreamClient {
 
 #[async_trait]
 pub trait TopicClient {
+    async fn get_topic(&self, command: GetTopic) -> Result<TopicDetails, Error>;
     async fn get_topics(&self, command: GetTopics) -> Result<Vec<Topic>, Error>;
     async fn create_topic(&self, command: CreateTopic) -> Result<(), Error>;
     async fn delete_topic(&self, command: DeleteTopic) -> Result<(), Error>;

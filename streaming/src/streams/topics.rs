@@ -32,6 +32,15 @@ impl Stream {
         Ok(())
     }
 
+    pub fn get_topic(&self, id: u32) -> Result<&Topic, Error> {
+        let topic = self.topics.get(&id);
+        if topic.is_none() {
+            return Err(Error::TopicNotFound(id, self.id));
+        }
+
+        Ok(topic.unwrap())
+    }
+
     pub fn get_topics(&self) -> Vec<&Topic> {
         self.topics.values().collect()
     }

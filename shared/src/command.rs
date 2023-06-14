@@ -6,11 +6,13 @@ use crate::offsets::get_offset::GetOffset;
 use crate::offsets::store_offset::StoreOffset;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
+use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
+use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -22,9 +24,11 @@ pub const POLL_MESSAGES: &str = "message.poll";
 pub const STORE_OFFSET: &str = "offset.store";
 pub const GET_OFFSET: &str = "offset.get";
 pub const GET_STREAMS: &str = "stream.list";
+pub const GET_STREAM: &str = "stream.get";
 pub const CREATE_STREAM: &str = "stream.create";
 pub const DELETE_STREAM: &str = "stream.delete";
 pub const GET_TOPICS: &str = "topic.list";
+pub const GET_TOPIC: &str = "topic.get";
 pub const CREATE_TOPIC: &str = "topic.create";
 pub const DELETE_TOPIC: &str = "topic.delete";
 
@@ -36,9 +40,11 @@ pub enum Command {
     PollMessages(PollMessages),
     GetOffset(GetOffset),
     StoreOffset(StoreOffset),
+    GetStream(GetStream),
     GetStreams(GetStreams),
     CreateStream(CreateStream),
     DeleteStream(DeleteStream),
+    GetTopic(GetTopic),
     GetTopics(GetTopics),
     CreateTopic(CreateTopic),
     DeleteTopic(DeleteTopic),
@@ -55,12 +61,14 @@ impl BytesSerializable for Command {
             Command::PollMessages(payload) => as_bytes(3, &payload.as_bytes()),
             Command::StoreOffset(payload) => as_bytes(4, &payload.as_bytes()),
             Command::GetOffset(payload) => as_bytes(5, &payload.as_bytes()),
-            Command::GetStreams(payload) => as_bytes(10, &payload.as_bytes()),
-            Command::CreateStream(payload) => as_bytes(11, &payload.as_bytes()),
-            Command::DeleteStream(payload) => as_bytes(12, &payload.as_bytes()),
-            Command::GetTopics(payload) => as_bytes(20, &payload.as_bytes()),
-            Command::CreateTopic(payload) => as_bytes(21, &payload.as_bytes()),
-            Command::DeleteTopic(payload) => as_bytes(22, &payload.as_bytes()),
+            Command::GetStream(payload) => as_bytes(10, &payload.as_bytes()),
+            Command::GetStreams(payload) => as_bytes(11, &payload.as_bytes()),
+            Command::CreateStream(payload) => as_bytes(12, &payload.as_bytes()),
+            Command::DeleteStream(payload) => as_bytes(13, &payload.as_bytes()),
+            Command::GetTopic(payload) => as_bytes(20, &payload.as_bytes()),
+            Command::GetTopics(payload) => as_bytes(21, &payload.as_bytes()),
+            Command::CreateTopic(payload) => as_bytes(22, &payload.as_bytes()),
+            Command::DeleteTopic(payload) => as_bytes(23, &payload.as_bytes()),
         }
     }
 
@@ -74,12 +82,14 @@ impl BytesSerializable for Command {
             3 => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
             4 => Ok(Command::StoreOffset(StoreOffset::from_bytes(payload)?)),
             5 => Ok(Command::GetOffset(GetOffset::from_bytes(payload)?)),
-            10 => Ok(Command::GetStreams(GetStreams::from_bytes(payload)?)),
-            11 => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
-            12 => Ok(Command::DeleteStream(DeleteStream::from_bytes(payload)?)),
-            20 => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
-            21 => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
-            22 => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
+            10 => Ok(Command::GetStream(GetStream::from_bytes(payload)?)),
+            11 => Ok(Command::GetStreams(GetStreams::from_bytes(payload)?)),
+            12 => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
+            13 => Ok(Command::DeleteStream(DeleteStream::from_bytes(payload)?)),
+            20 => Ok(Command::GetTopic(GetTopic::from_bytes(payload)?)),
+            21 => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
+            22 => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
+            23 => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -103,9 +113,11 @@ impl FromStr for Command {
             POLL_MESSAGES => Ok(Command::PollMessages(PollMessages::from_str(payload)?)),
             STORE_OFFSET => Ok(Command::StoreOffset(StoreOffset::from_str(payload)?)),
             GET_OFFSET => Ok(Command::GetOffset(GetOffset::from_str(payload)?)),
+            GET_STREAM => Ok(Command::GetStream(GetStream::from_str(payload)?)),
             GET_STREAMS => Ok(Command::GetStreams(GetStreams::from_str(payload)?)),
             CREATE_STREAM => Ok(Command::CreateStream(CreateStream::from_str(payload)?)),
             DELETE_STREAM => Ok(Command::DeleteStream(DeleteStream::from_str(payload)?)),
+            GET_TOPIC => Ok(Command::GetTopic(GetTopic::from_str(payload)?)),
             GET_TOPICS => Ok(Command::GetTopics(GetTopics::from_str(payload)?)),
             CREATE_TOPIC => Ok(Command::CreateTopic(CreateTopic::from_str(payload)?)),
             DELETE_TOPIC => Ok(Command::DeleteTopic(DeleteTopic::from_str(payload)?)),
@@ -119,9 +131,11 @@ impl Display for Command {
         match self {
             Command::Kill(payload) => write!(formatter, "{}|{}", KILL, payload),
             Command::Ping(payload) => write!(formatter, "{}|{}", PING, payload),
+            Command::GetStream(payload) => write!(formatter, "{}|{}", GET_STREAM, payload),
             Command::GetStreams(payload) => write!(formatter, "{}|{}", GET_STREAMS, payload),
             Command::CreateStream(payload) => write!(formatter, "{}|{}", CREATE_STREAM, payload),
             Command::DeleteStream(payload) => write!(formatter, "{}|{}", DELETE_STREAM, payload),
+            Command::GetTopic(payload) => write!(formatter, "{}|{}", GET_TOPIC, payload),
             Command::GetTopics(payload) => write!(formatter, "{}|{}", GET_TOPICS, payload),
             Command::CreateTopic(payload) => write!(formatter, "{}|{}", CREATE_TOPIC, payload),
             Command::DeleteTopic(payload) => write!(formatter, "{}|{}", DELETE_TOPIC, payload),
@@ -170,33 +184,43 @@ mod tests {
             &GetOffset::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::GetStreams(GetStreams::default()),
+            &Command::GetStream(GetStream::default()),
             10,
+            &GetStream::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetStreams(GetStreams::default()),
+            11,
             &GetStreams::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::CreateStream(CreateStream::default()),
-            11,
+            12,
             &CreateStream::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::DeleteStream(DeleteStream::default()),
-            12,
+            13,
             &DeleteStream::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::GetTopics(GetTopics::default()),
+            &Command::GetTopic(GetTopic::default()),
             20,
+            &GetTopic::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetTopics(GetTopics::default()),
+            21,
             &GetTopics::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::CreateTopic(CreateTopic::default()),
-            21,
+            22,
             &CreateTopic::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::DeleteTopic(DeleteTopic::default()),
-            22,
+            23,
             &DeleteTopic::default(),
         );
     }
@@ -226,6 +250,11 @@ mod tests {
             &GetOffset::default(),
         );
         assert_read_from_string(
+            &Command::GetStream(GetStream::default()),
+            GET_STREAM,
+            &GetStream::default(),
+        );
+        assert_read_from_string(
             &Command::GetStreams(GetStreams::default()),
             GET_STREAMS,
             &GetStreams::default(),
@@ -239,6 +268,11 @@ mod tests {
             &Command::DeleteStream(DeleteStream::default()),
             DELETE_STREAM,
             &DeleteStream::default(),
+        );
+        assert_read_from_string(
+            &Command::GetTopic(GetTopic::default()),
+            GET_TOPIC,
+            &GetTopic::default(),
         );
         assert_read_from_string(
             &Command::GetTopics(GetTopics::default()),

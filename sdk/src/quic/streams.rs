@@ -2,14 +2,19 @@ use crate::binary;
 use crate::client::StreamClient;
 use crate::error::Error;
 use crate::quic::client::QuicClient;
-use crate::stream::Stream;
+use crate::stream::{Stream, StreamDetails};
 use async_trait::async_trait;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
+use shared::streams::get_stream::GetStream;
 use shared::streams::get_streams::GetStreams;
 
 #[async_trait]
 impl StreamClient for QuicClient {
+    async fn get_stream(&self, command: GetStream) -> Result<StreamDetails, Error> {
+        binary::streams::get_stream(self, command).await
+    }
+
     async fn get_streams(&self, command: GetStreams) -> Result<Vec<Stream>, Error> {
         binary::streams::get_streams(self, command).await
     }

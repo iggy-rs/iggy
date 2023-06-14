@@ -6,10 +6,12 @@ use shared::offsets::get_offset::GetOffset;
 use shared::offsets::store_offset::StoreOffset;
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
+use shared::streams::get_stream::GetStream;
 use shared::streams::get_streams::GetStreams;
 use shared::system::ping::Ping;
 use shared::topics::create_topic::CreateTopic;
 use shared::topics::delete_topic::DeleteTopic;
+use shared::topics::get_topic::GetTopic;
 use shared::topics::get_topics::GetTopics;
 use tokio::time::sleep;
 
@@ -48,8 +50,16 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let stream = streams.get(0).unwrap();
     assert_eq!(stream.id, stream_id);
     assert_eq!(stream.name, stream_name);
+    assert_eq!(stream.topics_count, 0);
 
-    // 5. Create the topic
+    // 5. Get stream details
+    let stream = client.get_stream(GetStream { stream_id }).await.unwrap();
+    assert_eq!(stream.id, stream_id);
+    assert_eq!(stream.name, stream_name);
+    assert_eq!(stream.topics_count, 0);
+    assert!(stream.topics.is_empty());
+
+    // 6. Create the topic
     let create_topic = CreateTopic {
         stream_id,
         topic_id,
@@ -58,16 +68,47 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     };
     client.create_topic(create_topic).await.unwrap();
 
-    // 6. Get topics and validate that created topic exists
-    let get_topics = GetTopics { stream_id };
-    let topics = client.get_topics(get_topics).await.unwrap();
+    // 7. Get topics and validate that created topic exists
+    let topics = client.get_topics(GetTopics { stream_id }).await.unwrap();
     assert_eq!(topics.len(), 1);
     let topic = topics.get(0).unwrap();
     assert_eq!(topic.id, topic_id);
     assert_eq!(topic.name, topic_name);
-    assert_eq!(topic.partitions, partitions_count);
+    assert_eq!(topic.partitions_count, partitions_count);
 
-    // 7. Send messages to the specific topic and partition
+    // 8. Get topic details
+    let topic = client
+        .get_topic(GetTopic {
+            stream_id,
+            topic_id,
+        })
+        .await
+        .unwrap();
+    assert_eq!(topic.id, topic_id);
+    assert_eq!(topic.name, topic_name);
+    assert_eq!(topic.partitions_count, partitions_count);
+    assert_eq!(topic.partitions.len(), partitions_count as usize);
+    let mut id = 1;
+    for topic_partition in topic.partitions {
+        assert_eq!(topic_partition.id, id);
+        assert_eq!(topic_partition.segments_count, 1);
+        assert_eq!(topic_partition.size_bytes, 0);
+        assert_eq!(topic_partition.current_offset, 0);
+        id += 1;
+    }
+
+    // 9. Get stream details and validate that created topic exists
+    let stream = client.get_stream(GetStream { stream_id }).await.unwrap();
+    assert_eq!(stream.id, stream_id);
+    assert_eq!(stream.name, stream_name);
+    assert_eq!(stream.topics_count, 1);
+    assert_eq!(stream.topics.len(), 1);
+    let stream_topic = stream.topics.get(0).unwrap();
+    assert_eq!(stream_topic.id, topic.id);
+    assert_eq!(stream_topic.name, topic.name);
+    assert_eq!(stream_topic.partitions_count, topic.partitions_count);
+
+    // 10. Send messages to the specific topic and partition
     let messages_count = 1000u32;
     let mut messages = Vec::new();
     for offset in 0..messages_count {
@@ -90,7 +131,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     };
     client.send_messages(send_messages).await.unwrap();
 
-    // 8. Poll messages from the specific partition in topic
+    // 11. Poll messages from the specific partition in topic
     let poll_messages = PollMessages {
         consumer_id,
         stream_id,
@@ -111,10 +152,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         assert_message(message, offset);
     }
 
-    // 9. Messages should be also polled in the smaller batches
+    // 12. Messages should be also polled in the smaller batches
     let batches_count = 10;
     let batch_size = messages_count / batches_count;
-
     for i in 0..batches_count {
         let start_offset = (i * batch_size) as u64;
         let poll_messages = PollMessages {
@@ -138,7 +178,25 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         }
     }
 
-    // 10. Ensure that messages do not exist in the second partition in the same topic
+    // 13. Get topic details and validate the partition details
+    let topic = client
+        .get_topic(GetTopic {
+            stream_id,
+            topic_id,
+        })
+        .await
+        .unwrap();
+    assert_eq!(topic.id, topic_id);
+    assert_eq!(topic.name, topic_name);
+    assert_eq!(topic.partitions_count, partitions_count);
+    assert_eq!(topic.partitions.len(), partitions_count as usize);
+    let topic_partition = topic.partitions.get((partition_id - 1) as usize).unwrap();
+    assert_eq!(topic_partition.id, partition_id);
+    assert_eq!(topic_partition.segments_count, 1);
+    assert!(topic_partition.size_bytes > 0);
+    assert_eq!(topic_partition.current_offset, (messages_count - 1) as u64);
+
+    // 14. Ensure that messages do not exist in the second partition in the same topic
     let poll_messages = PollMessages {
         consumer_id,
         stream_id,
@@ -153,7 +211,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let messages = client.poll_messages(poll_messages).await.unwrap();
     assert!(messages.is_empty());
 
-    // 11. Get the existing customer offset and ensure it's 0
+    // 15. Get the existing customer offset and ensure it's 0
     let offset = client
         .get_offset(GetOffset {
             stream_id,
@@ -166,7 +224,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(offset.consumer_id, consumer_id);
     assert_eq!(offset.offset, 0);
 
-    // 12. Store the consumer offset
+    // 16. Store the consumer offset
     let stored_offset = 10;
     client
         .store_offset(StoreOffset {
@@ -179,7 +237,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 13. Get the existing customer offset and ensure it's the previously stored value
+    // 17. Get the existing customer offset and ensure it's the previously stored value
     let offset = client
         .get_offset(GetOffset {
             stream_id,
@@ -192,7 +250,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(offset.consumer_id, consumer_id);
     assert_eq!(offset.offset, stored_offset);
 
-    // 14. Delete the existing topic and ensure it doesn't exist anymore
+    // 18. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(DeleteTopic {
             stream_id,
@@ -203,7 +261,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topics = client.get_topics(GetTopics { stream_id }).await.unwrap();
     assert!(topics.is_empty());
 
-    // 15. Delete the existing stream and ensure it doesn't exist anymore
+    // 19. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(DeleteStream { stream_id })
         .await

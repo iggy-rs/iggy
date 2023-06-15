@@ -1,5 +1,5 @@
 use crate::common::{ClientFactory, TestServer};
-use shared::messages::poll_messages::Kind::Offset;
+use shared::messages::poll_messages::Kind::{Next, Offset};
 use shared::messages::poll_messages::{Format, PollMessages};
 use shared::messages::send_messages::{KeyKind, Message, SendMessages};
 use shared::offsets::get_offset::GetOffset;
@@ -250,7 +250,42 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(offset.consumer_id, consumer_id);
     assert_eq!(offset.offset, stored_offset);
 
-    // 18. Delete the existing topic and ensure it doesn't exist anymore
+    // 18. Poll messages from the specific partition in topic using next with auto commit
+    let messages_count = 10;
+    let poll_messages = PollMessages {
+        consumer_id,
+        stream_id,
+        topic_id,
+        partition_id,
+        kind: Next,
+        value: 0,
+        count: messages_count,
+        auto_commit: true,
+        format: Format::None,
+    };
+
+    let messages = client.poll_messages(poll_messages).await.unwrap();
+    assert_eq!(messages.len() as u32, messages_count);
+    let first_offset = messages.first().unwrap().offset;
+    let last_offset = messages.last().unwrap().offset;
+    let expected_last_offset = stored_offset + messages_count as u64;
+    assert_eq!(first_offset, stored_offset + 1);
+    assert_eq!(last_offset, expected_last_offset);
+
+    // 19. Get the existing customer offset and ensure that auto commit during poll has worked
+    let offset = client
+        .get_offset(GetOffset {
+            stream_id,
+            topic_id,
+            partition_id,
+            consumer_id,
+        })
+        .await
+        .unwrap();
+    assert_eq!(offset.consumer_id, consumer_id);
+    assert_eq!(offset.offset, expected_last_offset);
+
+    // 20. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(DeleteTopic {
             stream_id,
@@ -261,7 +296,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topics = client.get_topics(GetTopics { stream_id }).await.unwrap();
     assert!(topics.is_empty());
 
-    // 19. Delete the existing stream and ensure it doesn't exist anymore
+    // 21. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(DeleteStream { stream_id })
         .await

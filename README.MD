@@ -62,6 +62,10 @@ List available streams:
 
 `stream.list`
 
+Get stream details (ID 1):
+
+`stream.get|1`
+
 Create a topic named `dummy` with ID 1 and 2 partitions (IDs 1 and 2) for stream `dev` (ID 1):
 
 `topic.create|1|1|2|dummy`
@@ -69,6 +73,10 @@ Create a topic named `dummy` with ID 1 and 2 partitions (IDs 1 and 2) for stream
 List available topics for stream `dev` (ID 1):
 
 `topic.list|1`
+
+Get topic details (ID 1) for stream `dev` (ID 1):
+
+`topic.get|1|1`
 
 Send a message 'hello world' (ID 1) to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 1:
 

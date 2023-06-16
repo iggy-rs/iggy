@@ -22,6 +22,20 @@ pub async fn run(
     let client = client_factory.create_client(args.clone()).await;
     info!("Producer #{} → preparing the test messages...", producer_id);
     let payload = create_payload(args.message_size);
+    let mut messages = Vec::with_capacity(args.messages_per_batch as usize);
+    for _ in 0..args.messages_per_batch {
+        let message = Message::from_str(&payload).unwrap();
+        messages.push(message);
+    }
+
+    let command = SendMessages {
+        stream_id,
+        topic_id,
+        key_kind: KeyKind::PartitionId,
+        key_value: partition_id,
+        messages_count: args.messages_per_batch,
+        messages,
+    };
 
     info!(
         "Producer #{} → sending {} test messages in {} batches of {} messages...",
@@ -29,25 +43,9 @@ pub async fn run(
     );
 
     let mut latencies: Vec<Duration> = Vec::with_capacity(args.message_batches as usize);
-
     for _ in 0..args.message_batches {
-        let mut messages = Vec::with_capacity(args.messages_per_batch as usize);
-        for _ in 0..args.messages_per_batch {
-            let message = Message::from_str(&payload).unwrap();
-            messages.push(message);
-        }
-
-        let command = SendMessages {
-            stream_id,
-            topic_id,
-            key_kind: KeyKind::PartitionId,
-            key_value: partition_id,
-            messages_count: args.messages_per_batch,
-            messages,
-        };
-
         let latency_start = Instant::now();
-        client.send_messages(command).await?;
+        client.send_messages(&command).await?;
         let latency_end = latency_start.elapsed();
         latencies.push(latency_end);
     }

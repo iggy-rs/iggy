@@ -2,7 +2,8 @@ use crate::binary::binary_client::BinaryClient;
 use crate::binary::mapper;
 use crate::error::Error;
 use crate::stream::{Stream, StreamDetails};
-use shared::command::Command;
+use shared::bytes_serializable::BytesSerializable;
+use shared::command::{CREATE_STREAM_CODE, DELETE_STREAM_CODE, GET_STREAMS_CODE, GET_STREAM_CODE};
 use shared::streams::create_stream::CreateStream;
 use shared::streams::delete_stream::DeleteStream;
 use shared::streams::get_stream::GetStream;
@@ -10,43 +11,34 @@ use shared::streams::get_streams::GetStreams;
 
 pub async fn get_stream(
     client: &dyn BinaryClient,
-    command: GetStream,
+    command: &GetStream,
 ) -> Result<StreamDetails, Error> {
     let response = client
-        .send_with_response(Command::GetStream(command))
+        .send_with_response(GET_STREAM_CODE, &command.as_bytes())
         .await?;
-
-    let stream = mapper::map_stream(&response)?;
-    Ok(stream)
+    mapper::map_stream(&response)
 }
 
 pub async fn get_streams(
     client: &dyn BinaryClient,
-    command: GetStreams,
+    command: &GetStreams,
 ) -> Result<Vec<Stream>, Error> {
     let response = client
-        .send_with_response(Command::GetStreams(command))
+        .send_with_response(GET_STREAMS_CODE, &command.as_bytes())
         .await?;
-
-    if response.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let mut streams = mapper::map_streams(&response)?;
-    streams.sort_by(|x, y| x.id.cmp(&y.id));
-    Ok(streams)
+    mapper::map_streams(&response)
 }
 
-pub async fn create_stream(client: &dyn BinaryClient, command: CreateStream) -> Result<(), Error> {
+pub async fn create_stream(client: &dyn BinaryClient, command: &CreateStream) -> Result<(), Error> {
     client
-        .send_with_response(Command::CreateStream(command))
+        .send_with_response(CREATE_STREAM_CODE, &command.as_bytes())
         .await?;
     Ok(())
 }
 
-pub async fn delete_stream(client: &dyn BinaryClient, command: DeleteStream) -> Result<(), Error> {
+pub async fn delete_stream(client: &dyn BinaryClient, command: &DeleteStream) -> Result<(), Error> {
     client
-        .send_with_response(Command::DeleteStream(command))
+        .send_with_response(DELETE_STREAM_CODE, &command.as_bytes())
         .await?;
     Ok(())
 }

@@ -25,26 +25,28 @@ pub async fn run(
         consumer_id, total_messages, args.message_batches, args.messages_per_batch
     );
 
+    let mut command = PollMessages {
+        consumer_id,
+        stream_id,
+        topic_id,
+        partition_id,
+        kind: Kind::Offset,
+        value: 0,
+        count: args.messages_per_batch,
+        auto_commit: false,
+        format: Format::Binary,
+    };
+
     let mut latencies: Vec<Duration> = Vec::with_capacity(args.message_batches as usize);
     let mut total_size_bytes = 0;
     let mut current_iteration = 0;
     let mut received_messages = 0;
     while received_messages < total_messages {
         let offset = (current_iteration * args.messages_per_batch) as u64;
-        let command = PollMessages {
-            consumer_id,
-            stream_id,
-            topic_id,
-            partition_id,
-            kind: Kind::Offset,
-            value: offset,
-            count: args.messages_per_batch,
-            auto_commit: false,
-            format: Format::Binary,
-        };
+        command.value = offset;
 
         let latency_start = Instant::now();
-        let messages = client.poll_messages(command).await;
+        let messages = client.poll_messages(&command).await;
         let latency_end = latency_start.elapsed();
         if messages.is_err() {
             trace!("Offset: {} is not available yet, retrying...", offset);

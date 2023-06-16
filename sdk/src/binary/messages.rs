@@ -1,8 +1,10 @@
 use crate::binary::binary_client::BinaryClient;
+use crate::binary::mapper;
 use crate::error::Error;
 use crate::message::Message;
 use crate::offset::Offset;
-use shared::command::Command;
+use shared::bytes_serializable::BytesSerializable;
+use shared::command::{GET_OFFSET_CODE, POLL_MESSAGES_CODE, SEND_MESSAGES_CODE, STORE_OFFSET_CODE};
 use shared::messages::poll_messages::PollMessages;
 use shared::messages::send_messages::SendMessages;
 use shared::offsets::get_offset::GetOffset;
@@ -10,82 +12,31 @@ use shared::offsets::store_offset::StoreOffset;
 
 pub async fn poll_messages(
     client: &dyn BinaryClient,
-    command: PollMessages,
+    command: &PollMessages,
 ) -> Result<Vec<Message>, Error> {
     let response = client
-        .send_with_response(Command::PollMessages(command))
+        .send_with_response(POLL_MESSAGES_CODE, &command.as_bytes())
         .await?;
-    handle_poll_messages_response(&response)
+    mapper::map_messages(&response)
 }
 
-pub async fn send_messages(client: &dyn BinaryClient, command: SendMessages) -> Result<(), Error> {
+pub async fn send_messages(client: &dyn BinaryClient, command: &SendMessages) -> Result<(), Error> {
     client
-        .send_with_response(Command::SendMessages(command))
+        .send_with_response(SEND_MESSAGES_CODE, &command.as_bytes())
         .await?;
     Ok(())
 }
 
-pub async fn store_offset(client: &dyn BinaryClient, command: StoreOffset) -> Result<(), Error> {
+pub async fn store_offset(client: &dyn BinaryClient, command: &StoreOffset) -> Result<(), Error> {
     client
-        .send_with_response(Command::StoreOffset(command))
+        .send_with_response(STORE_OFFSET_CODE, &command.as_bytes())
         .await?;
     Ok(())
 }
 
-pub async fn get_offset(client: &dyn BinaryClient, command: GetOffset) -> Result<Offset, Error> {
+pub async fn get_offset(client: &dyn BinaryClient, command: &GetOffset) -> Result<Offset, Error> {
     let response = client
-        .send_with_response(Command::GetOffset(command))
+        .send_with_response(GET_OFFSET_CODE, &command.as_bytes())
         .await?;
-    handle_get_offset_response(&response)
-}
-
-fn handle_get_offset_response(response: &[u8]) -> Result<Offset, Error> {
-    let consumer_id = u32::from_le_bytes(response[..4].try_into()?);
-    let offset = u64::from_le_bytes(response[4..12].try_into()?);
-    Ok(Offset {
-        consumer_id,
-        offset,
-    })
-}
-
-fn handle_poll_messages_response(response: &[u8]) -> Result<Vec<Message>, Error> {
-    if response.is_empty() {
-        return Ok(Vec::new());
-    }
-
-    const PROPERTIES_SIZE: usize = 36;
-    let length = response.len();
-    let mut position = 4;
-    let mut messages = Vec::new();
-    while position < length {
-        let offset = u64::from_le_bytes(response[position..position + 8].try_into()?);
-        let timestamp = u64::from_le_bytes(response[position + 8..position + 16].try_into()?);
-        let id = u128::from_le_bytes(response[position + 16..position + 32].try_into()?);
-        let message_length =
-            u32::from_le_bytes(response[position + 32..position + PROPERTIES_SIZE].try_into()?);
-
-        let payload_range =
-            position + PROPERTIES_SIZE..position + PROPERTIES_SIZE + message_length as usize;
-        if payload_range.start > length || payload_range.end > length {
-            break;
-        }
-
-        let payload = response[payload_range].to_vec();
-        let total_size = PROPERTIES_SIZE + message_length as usize;
-        position += total_size;
-        messages.push(Message {
-            offset,
-            timestamp,
-            id,
-            length: message_length,
-            payload,
-        });
-
-        if position + PROPERTIES_SIZE >= length {
-            break;
-        }
-    }
-
-    messages.sort_by(|x, y| x.offset.cmp(&y.offset));
-    Ok(messages)
+    mapper::map_offset(&response)
 }

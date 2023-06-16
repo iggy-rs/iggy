@@ -1,10 +1,67 @@
 use crate::error::Error;
+use crate::message::Message;
+use crate::offset::Offset;
 use crate::partition::Partition;
 use crate::stream::{Stream, StreamDetails};
 use crate::topic::{Topic, TopicDetails};
 use std::str::from_utf8;
 
+pub fn map_offset(payload: &[u8]) -> Result<Offset, Error> {
+    let consumer_id = u32::from_le_bytes(payload[..4].try_into()?);
+    let offset = u64::from_le_bytes(payload[4..12].try_into()?);
+    Ok(Offset {
+        consumer_id,
+        offset,
+    })
+}
+
+pub fn map_messages(payload: &[u8]) -> Result<Vec<Message>, Error> {
+    if payload.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    const PROPERTIES_SIZE: usize = 36;
+    let length = payload.len();
+    let mut position = 4;
+    let mut messages = Vec::new();
+    while position < length {
+        let offset = u64::from_le_bytes(payload[position..position + 8].try_into()?);
+        let timestamp = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
+        let id = u128::from_le_bytes(payload[position + 16..position + 32].try_into()?);
+        let message_length =
+            u32::from_le_bytes(payload[position + 32..position + PROPERTIES_SIZE].try_into()?);
+
+        let payload_range =
+            position + PROPERTIES_SIZE..position + PROPERTIES_SIZE + message_length as usize;
+        if payload_range.start > length || payload_range.end > length {
+            break;
+        }
+
+        let payload = payload[payload_range].to_vec();
+        let total_size = PROPERTIES_SIZE + message_length as usize;
+        position += total_size;
+        messages.push(Message {
+            offset,
+            timestamp,
+            id,
+            length: message_length,
+            payload,
+        });
+
+        if position + PROPERTIES_SIZE >= length {
+            break;
+        }
+    }
+
+    messages.sort_by(|x, y| x.offset.cmp(&y.offset));
+    Ok(messages)
+}
+
 pub fn map_streams(payload: &[u8]) -> Result<Vec<Stream>, Error> {
+    if payload.is_empty() {
+        return Ok(Vec::new());
+    }
+
     let mut streams = Vec::new();
     let length = payload.len();
     let mut position = 0;
@@ -16,6 +73,7 @@ pub fn map_streams(payload: &[u8]) -> Result<Vec<Stream>, Error> {
             break;
         }
     }
+    streams.sort_by(|x, y| x.id.cmp(&y.id));
     Ok(streams)
 }
 
@@ -59,6 +117,10 @@ fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), Err
 }
 
 pub fn map_topics(payload: &[u8]) -> Result<Vec<Topic>, Error> {
+    if payload.is_empty() {
+        return Ok(Vec::new());
+    }
+
     let mut topics = Vec::new();
     let length = payload.len();
     let mut position = 0;
@@ -70,6 +132,7 @@ pub fn map_topics(payload: &[u8]) -> Result<Vec<Topic>, Error> {
             break;
         }
     }
+    topics.sort_by(|x, y| x.id.cmp(&y.id));
     Ok(topics)
 }
 

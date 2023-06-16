@@ -3,8 +3,6 @@ use crate::client::Client;
 use crate::error::Error;
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
-use shared::bytes_serializable::BytesSerializable;
-use shared::command::Command;
 use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -56,13 +54,13 @@ impl Client for TcpClient {
 
 #[async_trait]
 impl BinaryClient for TcpClient {
-    async fn send_with_response(&self, command: Command) -> Result<Vec<u8>, Error> {
+    async fn send_with_response(&self, command: u8, payload: &[u8]) -> Result<Vec<u8>, Error> {
         if let Some(stream) = &self.stream {
-            let bytes = command.as_bytes();
-            let payload_length = bytes.len();
+            let payload_length = payload.len() + 1;
             let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
             buffer.extend((payload_length as u32).to_le_bytes());
-            buffer.extend(bytes);
+            buffer.extend(command.to_le_bytes());
+            buffer.extend(payload);
 
             let mut stream = stream.lock().await;
             trace!("Sending a TCP request...");

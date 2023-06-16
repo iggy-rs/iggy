@@ -18,19 +18,33 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 pub const KILL: &str = "kill";
+pub const KILL_CODE: u8 = 0;
 pub const PING: &str = "ping";
+pub const PING_CODE: u8 = 1;
 pub const SEND_MESSAGES: &str = "message.send";
+pub const SEND_MESSAGES_CODE: u8 = 2;
 pub const POLL_MESSAGES: &str = "message.poll";
+pub const POLL_MESSAGES_CODE: u8 = 3;
 pub const STORE_OFFSET: &str = "offset.store";
+pub const STORE_OFFSET_CODE: u8 = 4;
 pub const GET_OFFSET: &str = "offset.get";
-pub const GET_STREAMS: &str = "stream.list";
+pub const GET_OFFSET_CODE: u8 = 5;
 pub const GET_STREAM: &str = "stream.get";
+pub const GET_STREAM_CODE: u8 = 10;
+pub const GET_STREAMS: &str = "stream.list";
+pub const GET_STREAMS_CODE: u8 = 11;
 pub const CREATE_STREAM: &str = "stream.create";
+pub const CREATE_STREAM_CODE: u8 = 12;
 pub const DELETE_STREAM: &str = "stream.delete";
-pub const GET_TOPICS: &str = "topic.list";
+pub const DELETE_STREAM_CODE: u8 = 13;
 pub const GET_TOPIC: &str = "topic.get";
+pub const GET_TOPIC_CODE: u8 = 20;
+pub const GET_TOPICS: &str = "topic.list";
+pub const GET_TOPICS_CODE: u8 = 21;
 pub const CREATE_TOPIC: &str = "topic.create";
+pub const CREATE_TOPIC_CODE: u8 = 22;
 pub const DELETE_TOPIC: &str = "topic.delete";
+pub const DELETE_TOPIC_CODE: u8 = 23;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
@@ -55,20 +69,20 @@ pub trait CommandPayload: BytesSerializable + Display {}
 impl BytesSerializable for Command {
     fn as_bytes(&self) -> Vec<u8> {
         match self {
-            Command::Kill(payload) => as_bytes(0, &payload.as_bytes()),
-            Command::Ping(payload) => as_bytes(1, &payload.as_bytes()),
-            Command::SendMessages(payload) => as_bytes(2, &payload.as_bytes()),
-            Command::PollMessages(payload) => as_bytes(3, &payload.as_bytes()),
-            Command::StoreOffset(payload) => as_bytes(4, &payload.as_bytes()),
-            Command::GetOffset(payload) => as_bytes(5, &payload.as_bytes()),
-            Command::GetStream(payload) => as_bytes(10, &payload.as_bytes()),
-            Command::GetStreams(payload) => as_bytes(11, &payload.as_bytes()),
-            Command::CreateStream(payload) => as_bytes(12, &payload.as_bytes()),
-            Command::DeleteStream(payload) => as_bytes(13, &payload.as_bytes()),
-            Command::GetTopic(payload) => as_bytes(20, &payload.as_bytes()),
-            Command::GetTopics(payload) => as_bytes(21, &payload.as_bytes()),
-            Command::CreateTopic(payload) => as_bytes(22, &payload.as_bytes()),
-            Command::DeleteTopic(payload) => as_bytes(23, &payload.as_bytes()),
+            Command::Kill(payload) => as_bytes(KILL_CODE, &payload.as_bytes()),
+            Command::Ping(payload) => as_bytes(PING_CODE, &payload.as_bytes()),
+            Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, &payload.as_bytes()),
+            Command::PollMessages(payload) => as_bytes(POLL_MESSAGES_CODE, &payload.as_bytes()),
+            Command::StoreOffset(payload) => as_bytes(STORE_OFFSET_CODE, &payload.as_bytes()),
+            Command::GetOffset(payload) => as_bytes(GET_OFFSET_CODE, &payload.as_bytes()),
+            Command::GetStream(payload) => as_bytes(GET_STREAM_CODE, &payload.as_bytes()),
+            Command::GetStreams(payload) => as_bytes(GET_STREAMS_CODE, &payload.as_bytes()),
+            Command::CreateStream(payload) => as_bytes(CREATE_STREAM_CODE, &payload.as_bytes()),
+            Command::DeleteStream(payload) => as_bytes(DELETE_STREAM_CODE, &payload.as_bytes()),
+            Command::GetTopic(payload) => as_bytes(GET_TOPIC_CODE, &payload.as_bytes()),
+            Command::GetTopics(payload) => as_bytes(GET_TOPICS_CODE, &payload.as_bytes()),
+            Command::CreateTopic(payload) => as_bytes(CREATE_TOPIC_CODE, &payload.as_bytes()),
+            Command::DeleteTopic(payload) => as_bytes(DELETE_TOPIC_CODE, &payload.as_bytes()),
         }
     }
 
@@ -76,20 +90,20 @@ impl BytesSerializable for Command {
         let command = bytes[0];
         let payload = &bytes[1..];
         match command {
-            0 => Ok(Command::Kill(Kill::from_bytes(payload)?)),
-            1 => Ok(Command::Ping(Ping::from_bytes(payload)?)),
-            2 => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
-            3 => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
-            4 => Ok(Command::StoreOffset(StoreOffset::from_bytes(payload)?)),
-            5 => Ok(Command::GetOffset(GetOffset::from_bytes(payload)?)),
-            10 => Ok(Command::GetStream(GetStream::from_bytes(payload)?)),
-            11 => Ok(Command::GetStreams(GetStreams::from_bytes(payload)?)),
-            12 => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
-            13 => Ok(Command::DeleteStream(DeleteStream::from_bytes(payload)?)),
-            20 => Ok(Command::GetTopic(GetTopic::from_bytes(payload)?)),
-            21 => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
-            22 => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
-            23 => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
+            KILL_CODE => Ok(Command::Kill(Kill::from_bytes(payload)?)),
+            PING_CODE => Ok(Command::Ping(Ping::from_bytes(payload)?)),
+            SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
+            POLL_MESSAGES_CODE => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
+            STORE_OFFSET_CODE => Ok(Command::StoreOffset(StoreOffset::from_bytes(payload)?)),
+            GET_OFFSET_CODE => Ok(Command::GetOffset(GetOffset::from_bytes(payload)?)),
+            GET_STREAM_CODE => Ok(Command::GetStream(GetStream::from_bytes(payload)?)),
+            GET_STREAMS_CODE => Ok(Command::GetStreams(GetStreams::from_bytes(payload)?)),
+            CREATE_STREAM_CODE => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
+            DELETE_STREAM_CODE => Ok(Command::DeleteStream(DeleteStream::from_bytes(payload)?)),
+            GET_TOPIC_CODE => Ok(Command::GetTopic(GetTopic::from_bytes(payload)?)),
+            GET_TOPICS_CODE => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
+            CREATE_TOPIC_CODE => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
+            DELETE_TOPIC_CODE => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -155,72 +169,72 @@ mod tests {
     fn should_be_serialized_as_bytes_and_deserialized_from_bytes() {
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::Kill(Kill::default()),
-            0,
+            KILL_CODE,
             &Kill::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::Ping(Ping::default()),
-            1,
+            PING_CODE,
             &Ping::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::SendMessages(SendMessages::default()),
-            2,
+            SEND_MESSAGES_CODE,
             &SendMessages::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::PollMessages(PollMessages::default()),
-            3,
+            POLL_MESSAGES_CODE,
             &PollMessages::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::StoreOffset(StoreOffset::default()),
-            4,
+            STORE_OFFSET_CODE,
             &StoreOffset::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetOffset(GetOffset::default()),
-            5,
+            GET_OFFSET_CODE,
             &GetOffset::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetStream(GetStream::default()),
-            10,
+            GET_STREAM_CODE,
             &GetStream::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetStreams(GetStreams::default()),
-            11,
+            GET_STREAMS_CODE,
             &GetStreams::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::CreateStream(CreateStream::default()),
-            12,
+            CREATE_STREAM_CODE,
             &CreateStream::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::DeleteStream(DeleteStream::default()),
-            13,
+            DELETE_STREAM_CODE,
             &DeleteStream::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetTopic(GetTopic::default()),
-            20,
+            GET_TOPIC_CODE,
             &GetTopic::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetTopics(GetTopics::default()),
-            21,
+            GET_TOPICS_CODE,
             &GetTopics::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::CreateTopic(CreateTopic::default()),
-            22,
+            CREATE_TOPIC_CODE,
             &CreateTopic::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::DeleteTopic(DeleteTopic::default()),
-            23,
+            DELETE_TOPIC_CODE,
             &DeleteTopic::default(),
         );
     }

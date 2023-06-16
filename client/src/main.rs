@@ -2,7 +2,11 @@ mod args;
 mod client_error;
 mod client_provider;
 mod command;
-mod handlers;
+mod messages;
+mod offsets;
+mod streams;
+mod system;
+mod topics;
 
 use crate::args::Args;
 use crate::client_error::ClientError;

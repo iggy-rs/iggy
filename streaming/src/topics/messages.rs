@@ -2,9 +2,9 @@ use crate::message::Message;
 use crate::storage::SegmentStorage;
 use crate::topics::topic::Topic;
 use ringbuffer::RingBufferWrite;
-use shared::error::Error;
-use shared::messages::poll_messages::Kind;
-use shared::messages::send_messages::KeyKind;
+use sdk::error::Error;
+use sdk::messages::poll_messages::Kind;
+use sdk::messages::send_messages::KeyKind;
 use std::sync::Arc;
 use tracing::trace;
 

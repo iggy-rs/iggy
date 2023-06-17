@@ -1,9 +1,9 @@
 use crate::client::SystemClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
+use crate::system::kill::Kill;
+use crate::system::ping::Ping;
 use async_trait::async_trait;
-use shared::system::kill::Kill;
-use shared::system::ping::Ping;
 
 const PING: &str = "/ping";
 const KILL: &str = "/kill";

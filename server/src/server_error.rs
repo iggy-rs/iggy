@@ -13,8 +13,8 @@ pub enum ServerError {
     CannotLoadConfiguration,
     #[error("Invalid configuration")]
     InvalidConfiguration,
-    #[error("System error")]
-    SystemError(#[from] shared::error::Error),
+    #[error("SDK error")]
+    SdkError(#[from] sdk::error::Error),
     #[error("Write error")]
     WriteError(#[from] WriteError),
     #[error("Read to end error")]

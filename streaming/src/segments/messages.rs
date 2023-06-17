@@ -3,7 +3,7 @@ use crate::segments::index::{Index, IndexRange};
 use crate::segments::segment::Segment;
 use crate::segments::time_index::TimeIndex;
 use crate::storage::SegmentStorage;
-use shared::error::Error;
+use sdk::error::Error;
 use std::sync::Arc;
 use tracing::trace;
 

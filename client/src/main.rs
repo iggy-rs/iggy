@@ -1,6 +1,3 @@
-mod args;
-mod client_error;
-mod client_provider;
 mod command;
 mod messages;
 mod offsets;
@@ -8,10 +5,11 @@ mod streams;
 mod system;
 mod topics;
 
-use crate::args::Args;
-use crate::client_error::ClientError;
 use anyhow::Result;
 use clap::Parser;
+use sdk::args::Args;
+use sdk::client_error::ClientError;
+use sdk::client_provider;
 use sdk::error::Error;
 use std::io;
 use tracing::{error, info};

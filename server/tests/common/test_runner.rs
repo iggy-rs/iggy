@@ -1,18 +1,18 @@
 use crate::common::{ClientFactory, TestServer};
-use shared::messages::poll_messages::Kind::{Next, Offset};
-use shared::messages::poll_messages::{Format, PollMessages};
-use shared::messages::send_messages::{KeyKind, Message, SendMessages};
-use shared::offsets::get_offset::GetOffset;
-use shared::offsets::store_offset::StoreOffset;
-use shared::streams::create_stream::CreateStream;
-use shared::streams::delete_stream::DeleteStream;
-use shared::streams::get_stream::GetStream;
-use shared::streams::get_streams::GetStreams;
-use shared::system::ping::Ping;
-use shared::topics::create_topic::CreateTopic;
-use shared::topics::delete_topic::DeleteTopic;
-use shared::topics::get_topic::GetTopic;
-use shared::topics::get_topics::GetTopics;
+use sdk::messages::poll_messages::Kind::{Next, Offset};
+use sdk::messages::poll_messages::{Format, PollMessages};
+use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
+use sdk::offsets::get_offset::GetOffset;
+use sdk::offsets::store_offset::StoreOffset;
+use sdk::streams::create_stream::CreateStream;
+use sdk::streams::delete_stream::DeleteStream;
+use sdk::streams::get_stream::GetStream;
+use sdk::streams::get_streams::GetStreams;
+use sdk::system::ping::Ping;
+use sdk::topics::create_topic::CreateTopic;
+use sdk::topics::delete_topic::DeleteTopic;
+use sdk::topics::get_topic::GetTopic;
+use sdk::topics::get_topics::GetTopics;
 use tokio::time::sleep;
 
 pub async fn run(client_factory: &dyn ClientFactory) {

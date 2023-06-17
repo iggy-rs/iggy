@@ -2,9 +2,9 @@ use crate::binary;
 use crate::client::SystemClient;
 use crate::error::Error;
 use crate::quic::client::QuicClient;
+use crate::system::kill::Kill;
+use crate::system::ping::Ping;
 use async_trait::async_trait;
-use shared::system::kill::Kill;
-use shared::system::ping::Ping;
 
 #[async_trait]
 impl SystemClient for QuicClient {

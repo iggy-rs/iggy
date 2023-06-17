@@ -1,6 +1,6 @@
 use crate::binary::sender::Sender;
 use async_trait::async_trait;
-use shared::error::Error;
+use sdk::error::Error;
 use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tracing::trace;

@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use shared::error::Error;
-use shared::system::ping::Ping;
+use sdk::error::Error;
+use sdk::system::ping::Ping;
 use tracing::trace;
 
 pub async fn handle(command: Ping, sender: &mut dyn Sender) -> Result<(), Error> {

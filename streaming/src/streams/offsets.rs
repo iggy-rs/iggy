@@ -1,5 +1,5 @@
 use crate::streams::stream::Stream;
-use shared::error::Error;
+use sdk::error::Error;
 
 impl Stream {
     pub async fn store_offset(

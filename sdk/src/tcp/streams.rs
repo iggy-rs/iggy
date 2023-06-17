@@ -2,12 +2,12 @@ use crate::binary;
 use crate::client::StreamClient;
 use crate::error::Error;
 use crate::stream::{Stream, StreamDetails};
+use crate::streams::create_stream::CreateStream;
+use crate::streams::delete_stream::DeleteStream;
+use crate::streams::get_stream::GetStream;
+use crate::streams::get_streams::GetStreams;
 use crate::tcp::client::TcpClient;
 use async_trait::async_trait;
-use shared::streams::create_stream::CreateStream;
-use shared::streams::delete_stream::DeleteStream;
-use shared::streams::get_stream::GetStream;
-use shared::streams::get_streams::GetStreams;
 
 #[async_trait]
 impl StreamClient for TcpClient {

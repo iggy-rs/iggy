@@ -1,5 +1,5 @@
 use crate::segments::segment::Segment;
-use shared::error::Error;
+use sdk::error::Error;
 
 impl Segment {
     pub async fn load(&mut self) -> Result<(), Error> {

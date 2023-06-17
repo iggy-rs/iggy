@@ -6,8 +6,8 @@ lto = true
 members = [
     "bench",
     "client",
+    "samples",
     "sdk",
     "server",
-    "shared",
     "streaming"
 ]

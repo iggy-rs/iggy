@@ -1,5 +1,5 @@
 use crate::topics::topic::Topic;
-use shared::error::Error;
+use sdk::error::Error;
 
 impl Topic {
     pub async fn store_offset(

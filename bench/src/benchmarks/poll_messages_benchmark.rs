@@ -3,7 +3,7 @@ use crate::benchmark::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
 use sdk::error::Error;
-use shared::messages::poll_messages::{Format, Kind, PollMessages};
+use sdk::messages::poll_messages::{Format, Kind, PollMessages};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;

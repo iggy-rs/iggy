@@ -1,7 +1,15 @@
 [package]
-name = "client"
+name = "samples"
 version = "0.1.0"
 edition = "2021"
+
+[[bin]]
+name = "sample-consumer"
+path = "src/consumer/main.rs"
+
+[[bin]]
+name = "sample-producer"
+path = "src/producer/main.rs"
 
 [dependencies]
 sdk = { path = "../sdk" }
@@ -13,5 +21,3 @@ tracing-subscriber = {version = "0.3.16"}
 anyhow = "1.0.70"
 bytes = "1.4.0"
 rcgen = "0.10.0"
-quinn = "0.10.0"
-rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }

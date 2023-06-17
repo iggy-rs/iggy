@@ -1,9 +1,9 @@
-use crate::client_error::ClientError;
 use sdk::client::Client;
-use shared::streams::create_stream::CreateStream;
-use shared::streams::delete_stream::DeleteStream;
-use shared::streams::get_stream::GetStream;
-use shared::streams::get_streams::GetStreams;
+use sdk::client_error::ClientError;
+use sdk::streams::create_stream::CreateStream;
+use sdk::streams::delete_stream::DeleteStream;
+use sdk::streams::get_stream::GetStream;
+use sdk::streams::get_streams::GetStreams;
 use tracing::info;
 
 pub async fn get_stream(command: &GetStream, client: &dyn Client) -> Result<(), ClientError> {

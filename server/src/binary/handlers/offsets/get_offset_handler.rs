@@ -1,8 +1,8 @@
 use crate::binary::sender::Sender;
 use crate::utils::binary_mapper;
 use anyhow::Result;
-use shared::error::Error;
-use shared::offsets::get_offset::GetOffset;
+use sdk::error::Error;
+use sdk::offsets::get_offset::GetOffset;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

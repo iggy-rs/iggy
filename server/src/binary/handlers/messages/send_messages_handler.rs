@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use shared::error::Error;
-use shared::messages::send_messages::SendMessages;
+use sdk::error::Error;
+use sdk::messages::send_messages::SendMessages;
 use std::sync::Arc;
 use streaming::message::Message;
 use streaming::system::System;

@@ -2,13 +2,13 @@ use crate::binary;
 use crate::client::MessageClient;
 use crate::error::Error;
 use crate::message::Message;
+use crate::messages::poll_messages::PollMessages;
+use crate::messages::send_messages::SendMessages;
 use crate::offset::Offset;
+use crate::offsets::get_offset::GetOffset;
+use crate::offsets::store_offset::StoreOffset;
 use crate::tcp::client::TcpClient;
 use async_trait::async_trait;
-use shared::messages::poll_messages::PollMessages;
-use shared::messages::send_messages::SendMessages;
-use shared::offsets::get_offset::GetOffset;
-use shared::offsets::store_offset::StoreOffset;
 
 #[async_trait]
 impl MessageClient for TcpClient {

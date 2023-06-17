@@ -1,6 +1,6 @@
 use crate::storage::SegmentStorage;
 use crate::streams::stream::Stream;
-use shared::error::Error;
+use sdk::error::Error;
 use std::sync::Arc;
 
 impl Stream {

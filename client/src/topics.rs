@@ -1,9 +1,9 @@
-use crate::client_error::ClientError;
 use sdk::client::Client;
-use shared::topics::create_topic::CreateTopic;
-use shared::topics::delete_topic::DeleteTopic;
-use shared::topics::get_topic::GetTopic;
-use shared::topics::get_topics::GetTopics;
+use sdk::client_error::ClientError;
+use sdk::topics::create_topic::CreateTopic;
+use sdk::topics::delete_topic::DeleteTopic;
+use sdk::topics::get_topic::GetTopic;
+use sdk::topics::get_topics::GetTopics;
 use tracing::info;
 
 pub async fn get_topic(command: &GetTopic, client: &dyn Client) -> Result<(), ClientError> {

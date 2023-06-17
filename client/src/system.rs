@@ -1,7 +1,7 @@
-use crate::client_error::ClientError;
 use sdk::client::Client;
-use shared::system::kill::Kill;
-use shared::system::ping::Ping;
+use sdk::client_error::ClientError;
+use sdk::system::kill::Kill;
+use sdk::system::ping::Ping;
 
 pub async fn kill(command: &Kill, client: &dyn Client) -> Result<(), ClientError> {
     client.kill(command).await?;

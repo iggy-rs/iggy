@@ -5,7 +5,6 @@ edition = "2021"
 
 [dependencies]
 sdk = { path = "../sdk" }
-shared = { path = "../shared" }
 streaming = { path = "../streaming" }
 async-trait = "0.1.68"
 axum = "0.6.18"

@@ -1,8 +1,8 @@
 use crate::binary::sender::Sender;
 use crate::utils::binary_mapper;
 use anyhow::Result;
-use shared::error::Error;
-use shared::messages::poll_messages::PollMessages;
+use sdk::error::Error;
+use sdk::messages::poll_messages::PollMessages;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

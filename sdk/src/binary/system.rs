@@ -1,9 +1,9 @@
 use crate::binary::binary_client::BinaryClient;
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{KILL_CODE, PING_CODE};
 use crate::error::Error;
-use shared::bytes_serializable::BytesSerializable;
-use shared::command::{KILL_CODE, PING_CODE};
-use shared::system::kill::Kill;
-use shared::system::ping::Ping;
+use crate::system::kill::Kill;
+use crate::system::ping::Ping;
 
 pub async fn ping(client: &dyn BinaryClient, command: &Ping) -> Result<(), Error> {
     client

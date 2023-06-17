@@ -1,7 +1,7 @@
 use crate::message::Message;
 use crate::persister::Persister;
 use async_trait::async_trait;
-use shared::error::Error;
+use sdk::error::Error;
 use std::io::SeekFrom;
 use std::sync::Arc;
 use tokio::fs;

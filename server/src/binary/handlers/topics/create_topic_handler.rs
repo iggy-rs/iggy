@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use shared::error::Error;
-use shared::topics::create_topic::CreateTopic;
+use sdk::error::Error;
+use sdk::topics::create_topic::CreateTopic;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

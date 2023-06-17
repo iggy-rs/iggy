@@ -1,3 +1,4 @@
+use crate::error::Error;
 use thiserror::Error;
 use tokio::io;
 
@@ -10,7 +11,5 @@ pub enum ClientError {
     #[error("IO error")]
     IoError(#[from] io::Error),
     #[error("SDK error")]
-    SdkError(#[from] sdk::error::Error),
-    #[error("Shared error")]
-    SharedError(#[from] shared::error::Error),
+    SdkError(#[from] Error),
 }

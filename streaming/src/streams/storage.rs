@@ -4,7 +4,7 @@ use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
 use async_trait::async_trait;
 use futures::future::join_all;
-use shared::error::Error;
+use sdk::error::Error;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;

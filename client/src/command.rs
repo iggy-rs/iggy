@@ -1,7 +1,7 @@
-use crate::client_error::ClientError;
 use crate::{messages, offsets, streams, system, topics};
 use sdk::client::Client;
-use shared::command::Command;
+use sdk::client_error::ClientError;
+use sdk::command::Command;
 use std::str::FromStr;
 use tracing::info;
 

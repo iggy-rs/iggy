@@ -1,7 +1,7 @@
-use crate::client_error::ClientError;
 use sdk::client::Client;
-use shared::offsets::get_offset::GetOffset;
-use shared::offsets::store_offset::StoreOffset;
+use sdk::client_error::ClientError;
+use sdk::offsets::get_offset::GetOffset;
+use sdk::offsets::store_offset::StoreOffset;
 use tracing::info;
 
 pub async fn get_offset(command: &GetOffset, client: &dyn Client) -> Result<(), ClientError> {

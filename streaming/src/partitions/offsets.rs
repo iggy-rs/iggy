@@ -1,6 +1,6 @@
 use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::utils::file;
-use shared::error::Error;
+use sdk::error::Error;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tokio::sync::RwLock;

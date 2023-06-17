@@ -11,7 +11,7 @@ use crate::streams::stream::Stream;
 use crate::topics::storage::FileTopicStorage;
 use crate::topics::topic::Topic;
 use async_trait::async_trait;
-use shared::error::Error;
+use sdk::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -130,7 +130,6 @@ pub(crate) mod tests {
     use crate::streams::stream::Stream;
     use crate::topics::topic::Topic;
     use async_trait::async_trait;
-    use shared::error::Error;
     use std::sync::Arc;
 
     struct TestStreamStorage {}

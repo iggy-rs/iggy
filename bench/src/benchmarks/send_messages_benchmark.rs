@@ -3,7 +3,7 @@ use crate::benchmark::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
 use sdk::error::Error;
-use shared::messages::send_messages::{KeyKind, Message, SendMessages};
+use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;

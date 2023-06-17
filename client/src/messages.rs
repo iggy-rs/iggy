@@ -1,7 +1,7 @@
-use crate::client_error::ClientError;
 use sdk::client::Client;
-use shared::messages::poll_messages::{Format, PollMessages};
-use shared::messages::send_messages::SendMessages;
+use sdk::client_error::ClientError;
+use sdk::messages::poll_messages::{Format, PollMessages};
+use sdk::messages::send_messages::SendMessages;
 use std::str::from_utf8;
 use tracing::info;
 

@@ -1,14 +1,14 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::mapper;
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{GET_OFFSET_CODE, POLL_MESSAGES_CODE, SEND_MESSAGES_CODE, STORE_OFFSET_CODE};
 use crate::error::Error;
 use crate::message::Message;
+use crate::messages::poll_messages::PollMessages;
+use crate::messages::send_messages::SendMessages;
 use crate::offset::Offset;
-use shared::bytes_serializable::BytesSerializable;
-use shared::command::{GET_OFFSET_CODE, POLL_MESSAGES_CODE, SEND_MESSAGES_CODE, STORE_OFFSET_CODE};
-use shared::messages::poll_messages::PollMessages;
-use shared::messages::send_messages::SendMessages;
-use shared::offsets::get_offset::GetOffset;
-use shared::offsets::store_offset::StoreOffset;
+use crate::offsets::get_offset::GetOffset;
+use crate::offsets::store_offset::StoreOffset;
 
 pub async fn poll_messages(
     client: &dyn BinaryClient,

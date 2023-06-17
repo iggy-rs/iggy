@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use shared::error::Error;
-use shared::offsets::store_offset::StoreOffset;
+use sdk::error::Error;
+use sdk::offsets::store_offset::StoreOffset;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

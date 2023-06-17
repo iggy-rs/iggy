@@ -1,6 +1,6 @@
 use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
-use shared::error::Error;
+use sdk::error::Error;
 use tracing::info;
 
 impl Stream {

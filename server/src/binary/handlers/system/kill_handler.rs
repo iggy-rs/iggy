@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use shared::error::Error;
-use shared::system::kill::Kill;
+use sdk::error::Error;
+use sdk::system::kill::Kill;
 use tracing::trace;
 
 pub async fn handle(command: Kill, sender: &mut dyn Sender) -> Result<(), Error> {

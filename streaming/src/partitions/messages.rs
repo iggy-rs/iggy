@@ -4,7 +4,7 @@ use crate::segments::segment::Segment;
 use crate::storage::SegmentStorage;
 use crate::utils::random_id;
 use ringbuffer::{RingBuffer, RingBufferWrite};
-use shared::error::Error;
+use sdk::error::Error;
 use std::sync::Arc;
 use tracing::{error, trace, warn};
 

@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-shared = { path = "../shared" }
 sdk = { path = "../sdk" }
 async-trait = "0.1.68"
 futures = "0.3.28"

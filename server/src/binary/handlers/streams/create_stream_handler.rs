@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use shared::error::Error;
-use shared::streams::create_stream::CreateStream;
+use sdk::error::Error;
+use sdk::streams::create_stream::CreateStream;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

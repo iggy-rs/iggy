@@ -1,9 +1,9 @@
 use crate::message::Message;
 use crate::storage::SegmentStorage;
 use crate::streams::stream::Stream;
-use shared::error::Error;
-use shared::messages::poll_messages::Kind;
-use shared::messages::send_messages::KeyKind;
+use sdk::error::Error;
+use sdk::messages::poll_messages::Kind;
+use sdk::messages::send_messages::KeyKind;
 use std::sync::Arc;
 
 impl Stream {

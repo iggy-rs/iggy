@@ -1,7 +1,7 @@
 use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::persister::Persister;
 use async_trait::async_trait;
-use shared::error::Error;
+use sdk::error::Error;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;

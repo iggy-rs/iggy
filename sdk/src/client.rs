@@ -1,23 +1,23 @@
 use crate::error::Error;
 use crate::message::Message;
+use crate::messages::poll_messages::PollMessages;
+use crate::messages::send_messages::SendMessages;
 use crate::offset::Offset;
+use crate::offsets::get_offset::GetOffset;
+use crate::offsets::store_offset::StoreOffset;
 use crate::stream::{Stream, StreamDetails};
+use crate::streams::create_stream::CreateStream;
+use crate::streams::delete_stream::DeleteStream;
+use crate::streams::get_stream::GetStream;
+use crate::streams::get_streams::GetStreams;
+use crate::system::kill::Kill;
+use crate::system::ping::Ping;
 use crate::topic::{Topic, TopicDetails};
+use crate::topics::create_topic::CreateTopic;
+use crate::topics::delete_topic::DeleteTopic;
+use crate::topics::get_topic::GetTopic;
+use crate::topics::get_topics::GetTopics;
 use async_trait::async_trait;
-use shared::messages::poll_messages::PollMessages;
-use shared::messages::send_messages::SendMessages;
-use shared::offsets::get_offset::GetOffset;
-use shared::offsets::store_offset::StoreOffset;
-use shared::streams::create_stream::CreateStream;
-use shared::streams::delete_stream::DeleteStream;
-use shared::streams::get_stream::GetStream;
-use shared::streams::get_streams::GetStreams;
-use shared::system::kill::Kill;
-use shared::system::ping::Ping;
-use shared::topics::create_topic::CreateTopic;
-use shared::topics::delete_topic::DeleteTopic;
-use shared::topics::get_topic::GetTopic;
-use shared::topics::get_topics::GetTopics;
 
 #[async_trait]
 pub trait Client: SystemClient + StreamClient + TopicClient + MessageClient + Sync + Send {

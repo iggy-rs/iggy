@@ -1,12 +1,12 @@
 use crate::args::Args;
+use crate::client::Client;
 use crate::client_error::ClientError;
-use sdk::client::Client;
-use sdk::http::client::HttpClient;
-use sdk::http::config::HttpClientConfig;
-use sdk::quic::client::QuicClient;
-use sdk::quic::config::QuicClientConfig;
-use sdk::tcp::client::TcpClient;
-use sdk::tcp::config::TcpClientConfig;
+use crate::http::client::HttpClient;
+use crate::http::config::HttpClientConfig;
+use crate::quic::client::QuicClient;
+use crate::quic::config::QuicClientConfig;
+use crate::tcp::client::TcpClient;
+use crate::tcp::config::TcpClientConfig;
 
 const QUIC_TRANSPORT: &str = "quic";
 const HTTP_TRANSPORT: &str = "http";

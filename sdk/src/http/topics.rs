@@ -2,11 +2,11 @@ use crate::client::TopicClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
 use crate::topic::{Topic, TopicDetails};
+use crate::topics::create_topic::CreateTopic;
+use crate::topics::delete_topic::DeleteTopic;
+use crate::topics::get_topic::GetTopic;
+use crate::topics::get_topics::GetTopics;
 use async_trait::async_trait;
-use shared::topics::create_topic::CreateTopic;
-use shared::topics::delete_topic::DeleteTopic;
-use shared::topics::get_topic::GetTopic;
-use shared::topics::get_topics::GetTopics;
 
 #[async_trait]
 impl TopicClient for HttpClient {

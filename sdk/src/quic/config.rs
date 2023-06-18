@@ -5,7 +5,7 @@ pub struct QuicClientConfig {
     pub server_name: String,
     pub response_buffer_size: u64,
     pub max_concurrent_bidi_streams: u64,
-    pub datagram_send_buffer_size: usize,
+    pub datagram_send_buffer_size: u64,
     pub initial_mtu: u16,
     pub send_window: u64,
     pub receive_window: u64,

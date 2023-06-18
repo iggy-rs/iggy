@@ -168,7 +168,7 @@ fn configure(config: &QuicClientConfig) -> Result<ClientConfig, Error> {
     transport.initial_mtu(config.initial_mtu);
     transport.send_window(config.send_window);
     transport.receive_window(receive_window.unwrap());
-    transport.datagram_send_buffer_size(config.datagram_send_buffer_size);
+    transport.datagram_send_buffer_size(config.datagram_send_buffer_size as usize);
     transport.max_concurrent_bidi_streams(max_concurrent_bidi_streams.unwrap());
     if config.keep_alive_interval > 0 {
         transport.keep_alive_interval(Some(Duration::from_millis(config.keep_alive_interval)));

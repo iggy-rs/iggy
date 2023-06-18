@@ -13,9 +13,12 @@ path = "src/producer/main.rs"
 
 [dependencies]
 sdk = { path = "../sdk" }
+clap = { version = "4.1.11", features = ["derive"] }
+rand = "0.8.5"
+serde = { version = "1.0.159", features = ["derive", "rc"] }
+serde_json = "1.0.95"
 thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"] }
-clap = { version = "4.1.11", features = ["derive"] }
 tracing = { version = "0.1.37"}
 tracing-subscriber = {version = "0.3.16"}
 anyhow = "1.0.70"

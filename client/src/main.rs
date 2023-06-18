@@ -10,6 +10,7 @@ use clap::Parser;
 use sdk::args::Args;
 use sdk::client_error::ClientError;
 use sdk::client_provider;
+use sdk::client_provider::ClientProviderConfig;
 use sdk::error::Error;
 use std::io;
 use tracing::{error, info};
@@ -19,7 +20,8 @@ async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     info!("Selected transport: {}", args.transport);
-    let mut client = client_provider::get_client(args).await?;
+    let client_provider_config = ClientProviderConfig::from_args(args)?;
+    let mut client = client_provider::get_client(client_provider_config).await?;
     let client = client.as_mut();
     let stdin = io::stdin();
     let mut user_input = String::new();

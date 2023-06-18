@@ -6,6 +6,12 @@ pub struct Args {
     #[arg(long, default_value = "tcp")]
     pub transport: String,
 
+    #[arg(long, default_value = "0")]
+    pub consumer_id: u32,
+
+    #[arg(long, default_value = "1000")]
+    pub interval: u64,
+
     #[arg(long, default_value = "http://localhost:3000")]
     pub http_api_url: String,
 
@@ -47,4 +53,26 @@ pub struct Args {
 
     #[arg(long, default_value = "10000")]
     pub quic_max_idle_timeout: u64,
+}
+
+impl Args {
+    pub fn to_sdk_args(&self) -> sdk::args::Args {
+        sdk::args::Args {
+            transport: self.transport.clone(),
+            http_api_url: self.http_api_url.clone(),
+            http_retries: self.http_retries,
+            tcp_server_address: self.tcp_server_address.clone(),
+            quic_client_address: self.quic_client_address.clone(),
+            quic_server_address: self.quic_server_address.clone(),
+            quic_server_name: self.quic_server_name.clone(),
+            quic_max_concurrent_bidi_streams: self.quic_max_concurrent_bidi_streams,
+            quic_datagram_send_buffer_size: self.quic_datagram_send_buffer_size,
+            quic_initial_mtu: self.quic_initial_mtu,
+            quic_send_window: self.quic_send_window,
+            quic_receive_window: self.quic_receive_window,
+            quic_response_buffer_size: self.quic_response_buffer_size,
+            quic_keep_alive_interval: self.quic_keep_alive_interval,
+            quic_max_idle_timeout: self.quic_max_idle_timeout,
+        }
+    }
 }

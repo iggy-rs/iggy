@@ -3,14 +3,26 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    #[arg(long, default_value = "tcp")]
-    pub transport: String,
+    #[arg(long, default_value = "1000")]
+    pub interval: u64,
+
+    #[arg(long, default_value = "9999")]
+    pub stream_id: u32,
+
+    #[arg(long, default_value = "1")]
+    pub topic_id: u32,
+
+    #[arg(long, default_value = "1")]
+    pub partition_id: u32,
 
     #[arg(long, default_value = "0")]
     pub consumer_id: u32,
 
-    #[arg(long, default_value = "1000")]
-    pub interval: u64,
+    #[arg(long, default_value = "1")]
+    pub messages_per_batch: u32,
+
+    #[arg(long, default_value = "tcp")]
+    pub transport: String,
 
     #[arg(long, default_value = "http://localhost:3000")]
     pub http_api_url: String,

@@ -1,8 +1,15 @@
 use serde::{Deserialize, Serialize};
+use std::fmt::Debug;
 
 pub const ORDER_CREATED_TYPE: &str = "order_created";
+pub const ORDER_CONFIRMED_TYPE: &str = "order_confirmed";
+pub const ORDER_REJECTED_TYPE: &str = "order_rejected";
 
-// The message envelope can be used to send the different types of messages to the same topic
+pub trait SerializableMessage: Debug {
+    fn to_json_envelope(&self) -> String;
+}
+
+// The message envelope can be used to send the different types of messages to the same topic.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Envelope {
     pub message_type: String,
@@ -35,8 +42,34 @@ pub struct OrderCreated {
     pub timestamp: u64,
 }
 
-impl OrderCreated {
-    pub fn to_json_envelope(&self) -> String {
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OrderConfirmed {
+    pub id: u64,
+    pub price: f64,
+    pub timestamp: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct OrderRejected {
+    pub id: u64,
+    pub timestamp: u64,
+    pub reason: String,
+}
+
+impl SerializableMessage for OrderCreated {
+    fn to_json_envelope(&self) -> String {
         Envelope::new(ORDER_CREATED_TYPE, self).to_json()
+    }
+}
+
+impl SerializableMessage for OrderConfirmed {
+    fn to_json_envelope(&self) -> String {
+        Envelope::new(ORDER_CONFIRMED_TYPE, self).to_json()
+    }
+}
+
+impl SerializableMessage for OrderRejected {
+    fn to_json_envelope(&self) -> String {
+        Envelope::new(ORDER_REJECTED_TYPE, self).to_json()
     }
 }

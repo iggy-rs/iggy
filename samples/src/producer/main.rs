@@ -13,6 +13,7 @@ use sdk::streams::get_stream::GetStream;
 use sdk::topics::create_topic::CreateTopic;
 use std::error::Error;
 use std::str::FromStr;
+use std::sync::Arc;
 use tracing::info;
 
 #[tokio::main]
@@ -23,7 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "Producer has started, selected transport: {}",
         args.transport
     );
-    let client_provider_config = ClientProviderConfig::from_args(args.to_sdk_args())?;
+    let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_client(client_provider_config).await?;
     let client = client.as_ref();
     let stream = client

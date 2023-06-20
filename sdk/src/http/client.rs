@@ -6,6 +6,7 @@ use reqwest::{Response, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::Serialize;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct HttpClient {
@@ -28,13 +29,13 @@ unsafe impl Sync for HttpClient {}
 
 impl HttpClient {
     pub fn new(api_url: &str) -> Result<Self, Error> {
-        Self::create(HttpClientConfig {
+        Self::create(Arc::new(HttpClientConfig {
             api_url: api_url.to_string(),
             ..Default::default()
-        })
+        }))
     }
 
-    pub fn create(config: HttpClientConfig) -> Result<Self, Error> {
+    pub fn create(config: Arc<HttpClientConfig>) -> Result<Self, Error> {
         let api_url = Url::parse(&config.api_url);
         if api_url.is_err() {
             return Err(Error::CannotParseUrl);

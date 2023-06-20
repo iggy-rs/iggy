@@ -13,6 +13,7 @@ use sdk::client_provider;
 use sdk::client_provider::ClientProviderConfig;
 use sdk::error::Error;
 use std::io;
+use std::sync::Arc;
 use tracing::{error, info};
 
 #[tokio::main]
@@ -20,7 +21,7 @@ async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     info!("Selected transport: {}", args.transport);
-    let client_provider_config = ClientProviderConfig::from_args(args)?;
+    let client_provider_config = Arc::new(ClientProviderConfig::from_args(args)?);
     let mut client = client_provider::get_client(client_provider_config).await?;
     let client = client.as_mut();
     let stdin = io::stdin();

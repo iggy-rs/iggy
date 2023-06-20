@@ -6,6 +6,7 @@ use crate::quic::client::QuicClient;
 use crate::quic::config::QuicClientConfig;
 use crate::tcp::client::TcpClient;
 use crate::tcp::config::TcpClientConfig;
+use std::sync::Arc;
 
 const QUIC_TRANSPORT: &str = "quic";
 const HTTP_TRANSPORT: &str = "http";
@@ -13,9 +14,9 @@ const TCP_TRANSPORT: &str = "tcp";
 
 pub struct ClientProviderConfig {
     pub transport: String,
-    pub http: Option<HttpClientConfig>,
-    pub quic: Option<QuicClientConfig>,
-    pub tcp: Option<TcpClientConfig>,
+    pub http: Option<Arc<HttpClientConfig>>,
+    pub quic: Option<Arc<QuicClientConfig>>,
+    pub tcp: Option<Arc<TcpClientConfig>>,
 }
 
 impl ClientProviderConfig {
@@ -29,7 +30,7 @@ impl ClientProviderConfig {
         };
         match config.transport.as_str() {
             QUIC_TRANSPORT => {
-                config.quic = Some(QuicClientConfig {
+                config.quic = Some(Arc::new(QuicClientConfig {
                     client_address: args.quic_client_address,
                     server_address: args.quic_server_address,
                     server_name: args.quic_server_name,
@@ -41,18 +42,18 @@ impl ClientProviderConfig {
                     receive_window: args.quic_receive_window,
                     keep_alive_interval: args.quic_keep_alive_interval,
                     max_idle_timeout: args.quic_max_idle_timeout,
-                });
+                }));
             }
             HTTP_TRANSPORT => {
-                config.http = Some(HttpClientConfig {
+                config.http = Some(Arc::new(HttpClientConfig {
                     api_url: args.http_api_url,
                     retries: args.http_retries,
-                });
+                }));
             }
             TCP_TRANSPORT => {
-                config.tcp = Some(TcpClientConfig {
+                config.tcp = Some(Arc::new(TcpClientConfig {
                     server_address: args.tcp_server_address,
-                });
+                }));
             }
             _ => return Err(ClientError::InvalidTransport(config.transport.clone())),
         }
@@ -61,25 +62,26 @@ impl ClientProviderConfig {
     }
 }
 
-pub async fn get_client(config: ClientProviderConfig) -> Result<Box<dyn Client>, ClientError> {
-    match config.transport.as_str() {
+pub async fn get_client(config: Arc<ClientProviderConfig>) -> Result<Box<dyn Client>, ClientError> {
+    let transport = config.transport.clone();
+    match transport.as_str() {
         QUIC_TRANSPORT => {
-            let quic_config = config.quic.unwrap();
-            let mut client = QuicClient::create(quic_config)?;
+            let quic_config = config.quic.as_ref().unwrap();
+            let mut client = QuicClient::create(quic_config.clone())?;
             client.connect().await?;
             Ok(Box::new(client))
         }
         HTTP_TRANSPORT => {
-            let http_config = config.http.unwrap();
-            let client = HttpClient::create(http_config)?;
+            let http_config = config.http.as_ref().unwrap();
+            let client = HttpClient::create(http_config.clone())?;
             Ok(Box::new(client))
         }
         TCP_TRANSPORT => {
-            let tcp_config = config.tcp.unwrap();
-            let mut client = TcpClient::create(tcp_config)?;
+            let tcp_config = config.tcp.as_ref().unwrap();
+            let mut client = TcpClient::create(tcp_config.clone())?;
             client.connect().await?;
             Ok(Box::new(client))
         }
-        _ => Err(ClientError::InvalidTransport(config.transport)),
+        _ => Err(ClientError::InvalidTransport(transport)),
     }
 }

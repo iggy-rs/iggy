@@ -7,7 +7,7 @@ pub struct HttpClientConfig {
 impl Default for HttpClientConfig {
     fn default() -> HttpClientConfig {
         HttpClientConfig {
-            api_url: "127.0.0.1:3000".to_string(),
+            api_url: "http://127.0.0.1:3000".to_string(),
             retries: 3,
         }
     }

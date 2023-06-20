@@ -18,7 +18,7 @@ const NAME: &str = "Iggy";
 pub struct QuicClient {
     pub(crate) endpoint: Endpoint,
     pub(crate) connection: Option<Connection>,
-    pub(crate) config: QuicClientConfig,
+    pub(crate) config: Arc<QuicClientConfig>,
     pub(crate) server_address: SocketAddr,
 }
 
@@ -86,15 +86,15 @@ impl QuicClient {
         server_address: &str,
         server_name: &str,
     ) -> Result<Self, Error> {
-        Self::create(QuicClientConfig {
+        Self::create(Arc::new(QuicClientConfig {
             client_address: client_address.to_string(),
             server_address: server_address.to_string(),
             server_name: server_name.to_string(),
             ..Default::default()
-        })
+        }))
     }
 
-    pub fn create(config: QuicClientConfig) -> Result<Self, Error> {
+    pub fn create(config: Arc<QuicClientConfig>) -> Result<Self, Error> {
         let client_address = config.client_address.parse::<SocketAddr>()?;
         let server_address = config.server_address.parse::<SocketAddr>()?;
         let quic_config = configure(&config)?;

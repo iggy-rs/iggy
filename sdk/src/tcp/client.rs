@@ -4,6 +4,7 @@ use crate::error::Error;
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
@@ -19,7 +20,7 @@ const NAME: &str = "Iggy";
 pub struct TcpClient {
     pub(crate) server_address: SocketAddr,
     pub(crate) stream: Option<Mutex<TcpStream>>,
-    pub(crate) config: TcpClientConfig,
+    pub(crate) config: Arc<TcpClientConfig>,
 }
 
 unsafe impl Send for TcpClient {}
@@ -86,12 +87,12 @@ impl BinaryClient for TcpClient {
 
 impl TcpClient {
     pub fn new(server_address: &str) -> Result<Self, Error> {
-        Self::create(TcpClientConfig {
+        Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
-        })
+        }))
     }
 
-    pub fn create(config: TcpClientConfig) -> Result<Self, Error> {
+    pub fn create(config: Arc<TcpClientConfig>) -> Result<Self, Error> {
         let server_address = config.server_address.parse::<SocketAddr>()?;
 
         Ok(Self {

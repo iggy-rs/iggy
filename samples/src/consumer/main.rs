@@ -10,6 +10,7 @@ use sdk::messages::poll_messages::{Format, Kind, PollMessages};
 use sdk::streams::get_stream::GetStream;
 use sdk::topics::get_topic::GetTopic;
 use std::error::Error;
+use std::sync::Arc;
 use tracing::{info, warn};
 
 #[tokio::main]
@@ -20,7 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         "Consumer has started, selected transport: {}",
         args.transport
     );
-    let client_provider_config = ClientProviderConfig::from_args(args.to_sdk_args())?;
+    let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_client(client_provider_config).await?;
     let client = client.as_ref();
     consume_messages(&args, client).await

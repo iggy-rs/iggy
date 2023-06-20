@@ -15,7 +15,6 @@ use crate::segments::time_index::TimeIndex;
 use crate::storage::{SegmentStorage, Storage};
 use crate::utils::{checksum, file};
 
-const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
 const INDEX_SIZE: u32 = 4;
@@ -165,71 +164,15 @@ impl SegmentStorage for FileSegmentStorage {
         segment: &Segment,
         index_range: &IndexRange,
     ) -> Result<Vec<Arc<Message>>, Error> {
-        let file = file::open(&segment.log_path).await?;
-        let file_size = file.metadata().await?.len();
-        if file_size == 0 {
-            return Ok(EMPTY_MESSAGES);
-        }
-
-        if index_range.end.position == 0 {
-            return Ok(EMPTY_MESSAGES);
-        }
-
         let mut messages = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
-        let mut reader = BufReader::new(file);
-        reader
-            .seek(SeekFrom::Start(index_range.start.position as u64))
-            .await?;
-
-        let mut read_messages = 0;
-        let messages_count =
-            (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
-
-        while read_messages < messages_count {
-            let offset = reader.read_u64_le().await;
-            if offset.is_err() {
-                break;
-            }
-
-            let timestamp = reader.read_u64_le().await;
-            if timestamp.is_err() {
-                return Err(Error::CannotReadMessageTimestamp);
-            }
-
-            let id = reader.read_u128_le().await;
-            if id.is_err() {
-                return Err(Error::CannotReadMessageId);
-            }
-
-            let checksum = reader.read_u32_le().await;
-            if checksum.is_err() {
-                return Err(Error::CannotReadMessageChecksum);
-            }
-
-            let length = reader.read_u32_le().await;
-            if length.is_err() {
-                return Err(Error::CannotReadMessageLength);
-            }
-
-            let mut payload = vec![0; length.unwrap() as usize];
-            if reader.read_exact(&mut payload).await.is_err() {
-                return Err(Error::CannotReadMessagePayload);
-            }
-
-            let offset = offset.unwrap();
-            let timestamp = timestamp.unwrap();
-            let id = id.unwrap();
-            let checksum = checksum.unwrap();
-            messages.push(Arc::new(Message::create(
-                offset, timestamp, id, payload, checksum,
-            )));
-            read_messages += 1;
-        }
-
+        load_messages_by_range(segment, index_range, |message: Message| {
+            messages.push(Arc::new(message));
+            Ok(())
+        })
+        .await?;
         trace!("Loaded {} messages from disk.", messages.len());
-
         Ok(messages)
     }
 
@@ -261,93 +204,35 @@ impl SegmentStorage for FileSegmentStorage {
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, Error> {
-        let file = file::open(&segment.log_path).await?;
-        let file_size = file.metadata().await?.len();
-        if file_size == 0 {
-            return Ok(Vec::new());
-        }
-
         let mut message_ids = Vec::new();
-        let mut reader = BufReader::new(file);
-        loop {
-            let offset = reader.read_u64_le().await;
-            if offset.is_err() {
-                break;
-            }
-
-            // Skip timestamp
-            _ = reader.read_u64_le().await?;
-
-            let id = reader.read_u128_le().await;
-            if id.is_err() {
-                return Err(Error::CannotReadMessageId);
-            }
-
-            // Skip checksum
-            _ = reader.read_u32_le().await?;
-
-            let id = id.unwrap();
-            message_ids.push(id);
-            let length = reader.read_u32_le().await;
-            // File seek() is way too slow, just read the message payload and ignore it for now.
-            let mut payload = vec![0; length.unwrap() as usize];
-            if reader.read_exact(&mut payload).await.is_err() {
-                return Err(Error::CannotReadMessagePayload);
-            }
-        }
-
+        load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
+            message_ids.push(message.id);
+            Ok(())
+        })
+        .await?;
         trace!("Loaded {} message IDs from disk.", message_ids.len());
-
         Ok(message_ids)
     }
 
     async fn load_checksums(&self, segment: &Segment) -> Result<(), Error> {
-        let file = file::open(&segment.log_path).await?;
-        let file_size = file.metadata().await?.len();
-        if file_size == 0 {
-            return Ok(());
-        }
-
-        let mut reader = BufReader::new(file);
-        loop {
-            let offset = reader.read_u64_le().await;
-            if offset.is_err() {
-                break;
-            }
-
-            // Skip timestamp
-            _ = reader.read_u64_le().await?;
-            // Skip ID
-            _ = reader.read_u128_le().await?;
-            let checksum = reader.read_u32_le().await;
-            if checksum.is_err() {
-                return Err(Error::CannotReadMessageChecksum);
-            }
-
-            let length = reader.read_u32_le().await;
-            let mut payload = vec![0; length.unwrap() as usize];
-            if reader.read_exact(&mut payload).await.is_err() {
-                return Err(Error::CannotReadMessagePayload);
-            }
-
-            let offset = offset.unwrap();
-            let message_checksum = checksum::get(&payload);
-            let checksum = checksum.unwrap();
+        load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
+            let calculated_checksum = checksum::get(&message.payload);
             trace!(
                 "Loaded message for offset: {}, checksum: {}, expected: {}",
-                offset,
-                message_checksum,
-                checksum
+                message.offset,
+                calculated_checksum,
+                message.checksum
             );
-            if message_checksum != checksum {
+            if calculated_checksum != message.checksum {
                 return Err(Error::InvalidMessageChecksum(
-                    message_checksum,
-                    checksum,
-                    offset,
+                    calculated_checksum,
+                    message.checksum,
+                    message.offset,
                 ));
             }
-        }
-
+            Ok(())
+        })
+        .await?;
         Ok(())
     }
 
@@ -589,4 +474,70 @@ impl SegmentStorage for FileSegmentStorage {
 
         Ok(())
     }
+}
+
+async fn load_messages_by_range(
+    segment: &Segment,
+    index_range: &IndexRange,
+    mut on_message: impl FnMut(Message) -> Result<(), Error>,
+) -> Result<(), Error> {
+    let file = file::open(&segment.log_path).await?;
+    let file_size = file.metadata().await?.len();
+    if file_size == 0 {
+        return Ok(());
+    }
+
+    if index_range.end.position == 0 {
+        return Ok(());
+    }
+
+    let mut reader = BufReader::new(file);
+    reader
+        .seek(SeekFrom::Start(index_range.start.position as u64))
+        .await?;
+
+    let mut read_messages = 0;
+    let messages_count =
+        (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
+
+    while read_messages < messages_count {
+        let offset = reader.read_u64_le().await;
+        if offset.is_err() {
+            break;
+        }
+
+        let timestamp = reader.read_u64_le().await;
+        if timestamp.is_err() {
+            return Err(Error::CannotReadMessageTimestamp);
+        }
+
+        let id = reader.read_u128_le().await;
+        if id.is_err() {
+            return Err(Error::CannotReadMessageId);
+        }
+
+        let checksum = reader.read_u32_le().await;
+        if checksum.is_err() {
+            return Err(Error::CannotReadMessageChecksum);
+        }
+
+        let length = reader.read_u32_le().await;
+        if length.is_err() {
+            return Err(Error::CannotReadMessageLength);
+        }
+
+        let mut payload = vec![0; length.unwrap() as usize];
+        if reader.read_exact(&mut payload).await.is_err() {
+            return Err(Error::CannotReadMessagePayload);
+        }
+
+        let offset = offset.unwrap();
+        let timestamp = timestamp.unwrap();
+        let id = id.unwrap();
+        let checksum = checksum.unwrap();
+        let message = Message::create(offset, timestamp, id, payload, checksum);
+        read_messages += 1;
+        on_message(message)?;
+    }
+    Ok(())
 }

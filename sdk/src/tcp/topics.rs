@@ -1,8 +1,8 @@
 use crate::binary;
 use crate::client::TopicClient;
 use crate::error::Error;
+use crate::models::topic::{Topic, TopicDetails};
 use crate::tcp::client::TcpClient;
-use crate::topic::{Topic, TopicDetails};
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;

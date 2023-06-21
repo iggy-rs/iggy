@@ -4,7 +4,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
-use sdk::topic::{Topic, TopicDetails};
+use sdk::models::topic::{Topic, TopicDetails};
 use sdk::topics::create_topic::CreateTopic;
 use sdk::validatable::Validatable;
 use std::sync::Arc;

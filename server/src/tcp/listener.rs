@@ -5,6 +5,7 @@ use sdk::bytes_serializable::BytesSerializable;
 use sdk::command::Command;
 use std::io::ErrorKind;
 use std::sync::Arc;
+use streaming::clients::client_manager::Transport;
 use streaming::system::System;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
@@ -27,9 +28,23 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
                 Ok((stream, addr)) => {
                     info!("Accepted new TCP connection: {}", addr);
                     let system = system.clone();
+                    system
+                        .write()
+                        .await
+                        .client_manager
+                        .lock()
+                        .await
+                        .add_client(addr.to_string().as_str(), Transport::Tcp);
                     tokio::spawn(async move {
-                        if let Err(error) = handle_connection(stream, system).await {
+                        if let Err(error) = handle_connection(stream, system.clone()).await {
                             handle_error(error);
+                            system
+                                .write()
+                                .await
+                                .client_manager
+                                .lock()
+                                .await
+                                .remove_client(addr.to_string().as_str());
                         }
                     });
                 }
@@ -45,7 +60,6 @@ async fn handle_connection(
 ) -> Result<(), ServerError> {
     let mut sender = TcpSender { stream };
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
-
     loop {
         let read_length = sender.stream.read_exact(&mut initial_buffer).await?;
         if read_length != INITIAL_BYTES_LENGTH {

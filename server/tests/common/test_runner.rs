@@ -307,7 +307,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     test_server.stop();
 }
 
-fn assert_message(message: &sdk::message::Message, offset: u64) {
+fn assert_message(message: &sdk::models::message::Message, offset: u64) {
     let expected_payload = get_message_payload(offset);
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);

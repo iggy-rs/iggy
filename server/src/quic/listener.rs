@@ -5,6 +5,7 @@ use quinn::Endpoint;
 use sdk::bytes_serializable::BytesSerializable;
 use sdk::command::Command;
 use std::sync::Arc;
+use streaming::clients::client_manager::Transport;
 use streaming::system::System;
 use tokio::sync::RwLock;
 use tracing::log::trace;
@@ -39,16 +40,38 @@ async fn handle_connection(
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
     let connection = incoming_connection.await?;
+    let address = connection.remote_address().to_string();
     async {
-        info!("Client has connected: {}", connection.remote_address());
+        info!("Client has connected: {}", address);
+        system
+            .write()
+            .await
+            .client_manager
+            .lock()
+            .await
+            .add_client(&address, Transport::Quic);
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {
                 Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
                     info!("Connection closed");
+                    system
+                        .write()
+                        .await
+                        .client_manager
+                        .lock()
+                        .await
+                        .remove_client(&address);
                     return Ok(());
                 }
                 Err(error) => {
+                    system
+                        .write()
+                        .await
+                        .client_manager
+                        .lock()
+                        .await
+                        .remove_client(&address);
                     return Err(error);
                 }
                 Ok(stream) => stream,

@@ -1,3 +1,4 @@
+use crate::clients::client_manager::ClientManager;
 use crate::config::SystemConfig;
 use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
@@ -18,6 +19,7 @@ pub struct System {
     streams: HashMap<u32, Stream>,
     config: Arc<SystemConfig>,
     pub storage: Arc<SystemStorage>,
+    pub client_manager: Arc<Mutex<ClientManager>>,
 }
 
 impl System {
@@ -35,6 +37,7 @@ impl System {
             streams_path,
             streams: HashMap::new(),
             storage: Arc::new(SystemStorage::new(persister)),
+            client_manager: Arc::new(Mutex::new(ClientManager::new())),
         }
     }
 

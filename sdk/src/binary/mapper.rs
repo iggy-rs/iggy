@@ -1,9 +1,9 @@
 use crate::error::Error;
-use crate::message::Message;
-use crate::offset::Offset;
-use crate::partition::Partition;
-use crate::stream::{Stream, StreamDetails};
-use crate::topic::{Topic, TopicDetails};
+use crate::models::message::Message;
+use crate::models::offset::Offset;
+use crate::models::partition::Partition;
+use crate::models::stream::{Stream, StreamDetails};
+use crate::models::topic::{Topic, TopicDetails};
 use std::str::from_utf8;
 
 pub fn map_offset(payload: &[u8]) -> Result<Offset, Error> {

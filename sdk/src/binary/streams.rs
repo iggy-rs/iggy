@@ -3,7 +3,7 @@ use crate::binary::mapper;
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::{CREATE_STREAM_CODE, DELETE_STREAM_CODE, GET_STREAMS_CODE, GET_STREAM_CODE};
 use crate::error::Error;
-use crate::stream::{Stream, StreamDetails};
+use crate::models::stream::{Stream, StreamDetails};
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;

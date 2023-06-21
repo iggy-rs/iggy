@@ -3,10 +3,10 @@ use crate::binary::mapper;
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::{GET_OFFSET_CODE, POLL_MESSAGES_CODE, SEND_MESSAGES_CODE, STORE_OFFSET_CODE};
 use crate::error::Error;
-use crate::message::Message;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
-use crate::offset::Offset;
+use crate::models::message::Message;
+use crate::models::offset::Offset;
 use crate::offsets::get_offset::GetOffset;
 use crate::offsets::store_offset::StoreOffset;
 

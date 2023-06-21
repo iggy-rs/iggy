@@ -1,8 +1,8 @@
 use crate::binary;
 use crate::client::StreamClient;
 use crate::error::Error;
+use crate::models::stream::{Stream, StreamDetails};
 use crate::quic::client::QuicClient;
-use crate::stream::{Stream, StreamDetails};
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;

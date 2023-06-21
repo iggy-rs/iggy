@@ -5,7 +5,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use sdk::messages::poll_messages::PollMessages;
 use sdk::messages::send_messages::SendMessages;
-use sdk::offset::Offset;
+use sdk::models::offset::Offset;
 use sdk::offsets::get_offset::GetOffset;
 use sdk::offsets::store_offset::StoreOffset;
 use sdk::validatable::Validatable;

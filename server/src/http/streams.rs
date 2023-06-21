@@ -4,7 +4,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
-use sdk::stream::{Stream, StreamDetails};
+use sdk::models::stream::{Stream, StreamDetails};
 use sdk::streams::create_stream::CreateStream;
 use sdk::validatable::Validatable;
 use std::sync::Arc;

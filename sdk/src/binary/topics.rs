@@ -3,7 +3,7 @@ use crate::binary::mapper;
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::{CREATE_TOPIC_CODE, DELETE_TOPIC_CODE, GET_TOPICS_CODE, GET_TOPIC_CODE};
 use crate::error::Error;
-use crate::topic::{Topic, TopicDetails};
+use crate::models::topic::{Topic, TopicDetails};
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;

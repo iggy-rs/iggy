@@ -1,17 +1,17 @@
-use crate::partition::Partition;
+use crate::models::topic::Topic;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Topic {
+pub struct Stream {
     pub id: u32,
     pub name: String,
-    pub partitions_count: u32,
+    pub topics_count: u32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct TopicDetails {
+pub struct StreamDetails {
     pub id: u32,
     pub name: String,
-    pub partitions_count: u32,
-    pub partitions: Vec<Partition>,
+    pub topics_count: u32,
+    pub topics: Vec<Topic>,
 }

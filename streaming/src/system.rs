@@ -16,9 +16,9 @@ use tracing::{error, info, trace};
 pub struct System {
     pub base_path: String,
     pub streams_path: String,
+    pub storage: Arc<SystemStorage>,
     streams: HashMap<u32, Stream>,
     config: Arc<SystemConfig>,
-    pub storage: Arc<SystemStorage>,
     pub client_manager: Arc<Mutex<ClientManager>>,
 }
 

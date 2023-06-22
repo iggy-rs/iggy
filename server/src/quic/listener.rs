@@ -40,7 +40,7 @@ async fn handle_connection(
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
     let connection = incoming_connection.await?;
-    let address = connection.remote_address().to_string();
+    let address = connection.remote_address();
     async {
         info!("Client has connected: {}", address);
         system

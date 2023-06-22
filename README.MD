@@ -19,6 +19,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 - **Low latency and predictable resource usage** thanks to the Rust compiled language (no GC)
 - Support for multiple streams, topics and partitions
 - Support for **multiple transport protocols** (QUIC, TCP, HTTP)
+- Fully operational RESTful API which can be optionally enabled
 - Available client SDK in Rust (more languages to come)
 - **Works directly with the binary data** (lack of enforced schema and serialization/deserialization)
 - Configurable server features (e.g. caching, segment size, data flush interval, transport protocols etc.)

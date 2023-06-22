@@ -9,12 +9,15 @@ use tracing::info;
 
 pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
     info!("Starting HTTP API on: {:?}", config.address);
-    let app = Router::new().nest("/", system::router()).nest(
-        "/streams",
-        streams::router(system.clone()).nest(
-            "/:stream_id/topics",
-            topics::router(system.clone())
-                .nest("/:topic_id/messages", messages::router(system.clone())),
+    let app = Router::new().nest(
+        "/",
+        system::router(system.clone()).nest(
+            "/streams",
+            streams::router(system.clone()).nest(
+                "/:stream_id/topics",
+                topics::router(system.clone())
+                    .nest("/:topic_id/messages", messages::router(system.clone())),
+            ),
         ),
     );
 

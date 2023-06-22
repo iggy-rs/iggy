@@ -1,5 +1,6 @@
 use sdk::models::stream::StreamDetails;
 use sdk::models::topic::TopicDetails;
+use streaming::clients::client_manager::Client;
 use streaming::streams::stream::Stream;
 use streaming::topics::topic::Topic;
 
@@ -72,4 +73,17 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
     }
     topic_details.partitions.sort_by(|a, b| a.id.cmp(&b.id));
     topic_details
+}
+
+pub fn map_clients(clients: &[&Client]) -> Vec<sdk::models::client_info::ClientInfo> {
+    let mut clients = clients
+        .iter()
+        .map(|client| sdk::models::client_info::ClientInfo {
+            id: client.id,
+            transport: client.transport.to_string(),
+            address: client.address.to_string(),
+        })
+        .collect::<Vec<sdk::models::client_info::ClientInfo>>();
+    clients.sort_by(|a, b| a.id.cmp(&b.id));
+    clients
 }

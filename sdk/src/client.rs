@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
+use crate::models::client_info::ClientInfo;
 use crate::models::message::Message;
 use crate::models::offset::Offset;
 use crate::models::stream::{Stream, StreamDetails};
@@ -11,6 +12,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::system::get_clients::GetClients;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use crate::topics::create_topic::CreateTopic;
@@ -27,6 +29,7 @@ pub trait Client: SystemClient + StreamClient + TopicClient + MessageClient + Sy
 
 #[async_trait]
 pub trait SystemClient {
+    async fn get_clients(&self, command: &GetClients) -> Result<Vec<ClientInfo>, Error>;
     async fn ping(&self, command: &Ping) -> Result<(), Error>;
     async fn kill(&self, command: &Kill) -> Result<(), Error>;
 }

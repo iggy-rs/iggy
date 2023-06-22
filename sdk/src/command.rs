@@ -8,6 +8,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::system::get_clients::GetClients;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use crate::topics::create_topic::CreateTopic;
@@ -21,35 +22,38 @@ pub const KILL: &str = "kill";
 pub const KILL_CODE: u8 = 0;
 pub const PING: &str = "ping";
 pub const PING_CODE: u8 = 1;
+pub const GET_CLIENTS: &str = "client.list";
+pub const GET_CLIENTS_CODE: u8 = 2;
 pub const SEND_MESSAGES: &str = "message.send";
-pub const SEND_MESSAGES_CODE: u8 = 2;
+pub const SEND_MESSAGES_CODE: u8 = 10;
 pub const POLL_MESSAGES: &str = "message.poll";
-pub const POLL_MESSAGES_CODE: u8 = 3;
+pub const POLL_MESSAGES_CODE: u8 = 11;
 pub const STORE_OFFSET: &str = "offset.store";
-pub const STORE_OFFSET_CODE: u8 = 4;
+pub const STORE_OFFSET_CODE: u8 = 12;
 pub const GET_OFFSET: &str = "offset.get";
-pub const GET_OFFSET_CODE: u8 = 5;
+pub const GET_OFFSET_CODE: u8 = 13;
 pub const GET_STREAM: &str = "stream.get";
-pub const GET_STREAM_CODE: u8 = 10;
+pub const GET_STREAM_CODE: u8 = 20;
 pub const GET_STREAMS: &str = "stream.list";
-pub const GET_STREAMS_CODE: u8 = 11;
+pub const GET_STREAMS_CODE: u8 = 21;
 pub const CREATE_STREAM: &str = "stream.create";
-pub const CREATE_STREAM_CODE: u8 = 12;
+pub const CREATE_STREAM_CODE: u8 = 22;
 pub const DELETE_STREAM: &str = "stream.delete";
-pub const DELETE_STREAM_CODE: u8 = 13;
+pub const DELETE_STREAM_CODE: u8 = 23;
 pub const GET_TOPIC: &str = "topic.get";
-pub const GET_TOPIC_CODE: u8 = 20;
+pub const GET_TOPIC_CODE: u8 = 30;
 pub const GET_TOPICS: &str = "topic.list";
-pub const GET_TOPICS_CODE: u8 = 21;
+pub const GET_TOPICS_CODE: u8 = 31;
 pub const CREATE_TOPIC: &str = "topic.create";
-pub const CREATE_TOPIC_CODE: u8 = 22;
+pub const CREATE_TOPIC_CODE: u8 = 32;
 pub const DELETE_TOPIC: &str = "topic.delete";
-pub const DELETE_TOPIC_CODE: u8 = 23;
+pub const DELETE_TOPIC_CODE: u8 = 33;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
     Kill(Kill),
     Ping(Ping),
+    GetClients(GetClients),
     SendMessages(SendMessages),
     PollMessages(PollMessages),
     GetOffset(GetOffset),
@@ -71,6 +75,7 @@ impl BytesSerializable for Command {
         match self {
             Command::Kill(payload) => as_bytes(KILL_CODE, &payload.as_bytes()),
             Command::Ping(payload) => as_bytes(PING_CODE, &payload.as_bytes()),
+            Command::GetClients(payload) => as_bytes(GET_CLIENTS_CODE, &payload.as_bytes()),
             Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, &payload.as_bytes()),
             Command::PollMessages(payload) => as_bytes(POLL_MESSAGES_CODE, &payload.as_bytes()),
             Command::StoreOffset(payload) => as_bytes(STORE_OFFSET_CODE, &payload.as_bytes()),
@@ -92,6 +97,7 @@ impl BytesSerializable for Command {
         match command {
             KILL_CODE => Ok(Command::Kill(Kill::from_bytes(payload)?)),
             PING_CODE => Ok(Command::Ping(Ping::from_bytes(payload)?)),
+            GET_CLIENTS_CODE => Ok(Command::GetClients(GetClients::from_bytes(payload)?)),
             SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
             POLL_MESSAGES_CODE => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
             STORE_OFFSET_CODE => Ok(Command::StoreOffset(StoreOffset::from_bytes(payload)?)),
@@ -123,6 +129,7 @@ impl FromStr for Command {
         match command {
             KILL => Ok(Command::Kill(Kill::from_str(payload)?)),
             PING => Ok(Command::Ping(Ping::from_str(payload)?)),
+            GET_CLIENTS => Ok(Command::GetClients(GetClients::from_str(payload)?)),
             SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
             POLL_MESSAGES => Ok(Command::PollMessages(PollMessages::from_str(payload)?)),
             STORE_OFFSET => Ok(Command::StoreOffset(StoreOffset::from_str(payload)?)),
@@ -145,6 +152,7 @@ impl Display for Command {
         match self {
             Command::Kill(payload) => write!(formatter, "{}|{}", KILL, payload),
             Command::Ping(payload) => write!(formatter, "{}|{}", PING, payload),
+            Command::GetClients(payload) => write!(formatter, "{}|{}", GET_CLIENTS, payload),
             Command::GetStream(payload) => write!(formatter, "{}|{}", GET_STREAM, payload),
             Command::GetStreams(payload) => write!(formatter, "{}|{}", GET_STREAMS, payload),
             Command::CreateStream(payload) => write!(formatter, "{}|{}", CREATE_STREAM, payload),
@@ -176,6 +184,11 @@ mod tests {
             &Command::Ping(Ping::default()),
             PING_CODE,
             &Ping::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetClients(GetClients::default()),
+            GET_CLIENTS_CODE,
+            &GetClients::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::SendMessages(SendMessages::default()),
@@ -243,6 +256,11 @@ mod tests {
     fn should_be_read_from_string() {
         assert_read_from_string(&Command::Kill(Kill::default()), KILL, &Kill::default());
         assert_read_from_string(&Command::Ping(Ping::default()), PING, &Ping::default());
+        assert_read_from_string(
+            &Command::GetClients(GetClients::default()),
+            GET_CLIENTS,
+            &GetClients::default(),
+        );
         assert_read_from_string(
             &Command::SendMessages(SendMessages::default()),
             SEND_MESSAGES,

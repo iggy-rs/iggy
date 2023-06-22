@@ -25,8 +25,8 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
         let listener = listener.unwrap();
         loop {
             match listener.accept().await {
-                Ok((stream, addr)) => {
-                    info!("Accepted new TCP connection: {}", addr);
+                Ok((stream, address)) => {
+                    info!("Accepted new TCP connection: {}", address);
                     let system = system.clone();
                     system
                         .write()
@@ -34,7 +34,7 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
                         .client_manager
                         .lock()
                         .await
-                        .add_client(addr.to_string().as_str(), Transport::Tcp);
+                        .add_client(&address, Transport::Tcp);
                     tokio::spawn(async move {
                         if let Err(error) = handle_connection(stream, system.clone()).await {
                             handle_error(error);
@@ -44,7 +44,7 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
                                 .client_manager
                                 .lock()
                                 .await
-                                .remove_client(addr.to_string().as_str());
+                                .remove_client(&address);
                         }
                     });
                 }

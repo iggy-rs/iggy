@@ -8,6 +8,7 @@ use sdk::streams::create_stream::CreateStream;
 use sdk::streams::delete_stream::DeleteStream;
 use sdk::streams::get_stream::GetStream;
 use sdk::streams::get_streams::GetStreams;
+use sdk::system::get_clients::GetClients;
 use sdk::system::ping::Ping;
 use sdk::topics::create_topic::CreateTopic;
 use sdk::topics::delete_topic::DeleteTopic;
@@ -303,6 +304,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
+
+    // 22. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    let clients = client.get_clients(&GetClients {}).await.unwrap();
+
+    assert!(clients.len() <= 1);
 
     test_server.stop();
 }

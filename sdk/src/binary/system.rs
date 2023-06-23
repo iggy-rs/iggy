@@ -1,6 +1,7 @@
 use crate::binary::binary_client::BinaryClient;
+use crate::binary::mapper;
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{KILL_CODE, PING_CODE};
+use crate::command::{GET_CLIENTS_CODE, KILL_CODE, PING_CODE};
 use crate::error::Error;
 use crate::models::client_info::ClientInfo;
 use crate::system::get_clients::GetClients;
@@ -8,11 +9,13 @@ use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 
 pub async fn get_clients(
-    _client: &dyn BinaryClient,
-    _command: &GetClients,
+    client: &dyn BinaryClient,
+    command: &GetClients,
 ) -> Result<Vec<ClientInfo>, Error> {
-    // TODO: implement get clients client handler
-    Ok(vec![])
+    let response = client
+        .send_with_response(GET_CLIENTS_CODE, &command.as_bytes())
+        .await?;
+    mapper::map_clients(&response)
 }
 
 pub async fn ping(client: &dyn BinaryClient, command: &Ping) -> Result<(), Error> {

@@ -1,10 +1,16 @@
 use crate::error::Error;
+use crate::models::client_info::ClientInfo;
 use crate::models::message::Message;
 use crate::models::offset::Offset;
 use crate::models::partition::Partition;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use std::str::from_utf8;
+
+const EMPTY_MESSAGES: Vec<Message> = vec![];
+const EMPTY_TOPICS: Vec<Topic> = vec![];
+const EMPTY_STREAMS: Vec<Stream> = vec![];
+const EMPTY_CLIENTS: Vec<ClientInfo> = vec![];
 
 pub fn map_offset(payload: &[u8]) -> Result<Offset, Error> {
     let consumer_id = u32::from_le_bytes(payload[..4].try_into()?);
@@ -15,9 +21,44 @@ pub fn map_offset(payload: &[u8]) -> Result<Offset, Error> {
     })
 }
 
+pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, Error> {
+    if payload.is_empty() {
+        return Ok(EMPTY_CLIENTS);
+    }
+
+    let mut clients = Vec::new();
+    let length = payload.len();
+    let mut position = 0;
+    while position < length {
+        let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+        let transport = payload[position + 4];
+        let transport = match transport {
+            1 => "TCP",
+            2 => "QUIC",
+            _ => "Unknown",
+        }
+        .to_string();
+        let address_length =
+            u32::from_le_bytes(payload[position + 5..position + 9].try_into()?) as usize;
+        let address = from_utf8(&payload[position + 9..position + 9 + address_length])?.to_string();
+        position += 4 + 1 + 4 + address_length;
+        let client = ClientInfo {
+            id,
+            transport,
+            address,
+        };
+        clients.push(client);
+        if position >= length {
+            break;
+        }
+    }
+    clients.sort_by(|x, y| x.id.cmp(&y.id));
+    Ok(clients)
+}
+
 pub fn map_messages(payload: &[u8]) -> Result<Vec<Message>, Error> {
     if payload.is_empty() {
-        return Ok(Vec::new());
+        return Ok(EMPTY_MESSAGES);
     }
 
     const PROPERTIES_SIZE: usize = 36;
@@ -59,7 +100,7 @@ pub fn map_messages(payload: &[u8]) -> Result<Vec<Message>, Error> {
 
 pub fn map_streams(payload: &[u8]) -> Result<Vec<Stream>, Error> {
     if payload.is_empty() {
-        return Ok(Vec::new());
+        return Ok(EMPTY_STREAMS);
     }
 
     let mut streams = Vec::new();
@@ -118,7 +159,7 @@ fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), Err
 
 pub fn map_topics(payload: &[u8]) -> Result<Vec<Topic>, Error> {
     if payload.is_empty() {
-        return Ok(Vec::new());
+        return Ok(EMPTY_TOPICS);
     }
 
     let mut topics = Vec::new();

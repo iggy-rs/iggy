@@ -1,5 +1,5 @@
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
-use crate::utils::binary_mapper;
 use anyhow::Result;
 use sdk::error::Error;
 use sdk::messages::poll_messages::PollMessages;
@@ -87,7 +87,7 @@ pub async fn handle(
     }
 
     let offset = messages.last().unwrap().offset;
-    let messages = binary_mapper::map_messages(messages);
+    let messages = mapper::map_messages(&messages);
     if command.auto_commit {
         trace!("Last offset: {} will be automatically stored for consumer: {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
         stream

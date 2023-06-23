@@ -1,5 +1,5 @@
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
-use crate::utils::binary_mapper;
 use anyhow::Result;
 use sdk::error::Error;
 use sdk::offsets::get_offset::GetOffset;
@@ -19,7 +19,7 @@ pub async fn handle(
         .get_stream(command.stream_id)?
         .get_offset(command.consumer_id, command.topic_id, command.partition_id)
         .await?;
-    let offset = binary_mapper::map_offset(command.consumer_id, offset);
+    let offset = mapper::map_offset(command.consumer_id, offset);
     sender.send_ok_response(&offset).await?;
     Ok(())
 }

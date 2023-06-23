@@ -1,5 +1,5 @@
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
-use crate::utils::binary_mapper;
 use anyhow::Result;
 use sdk::error::Error;
 use sdk::streams::get_streams::GetStreams;
@@ -16,7 +16,7 @@ pub async fn handle(
     trace!("{}", command);
     let system = system.read().await;
     let streams = system.get_streams();
-    let streams = binary_mapper::map_streams(&streams);
+    let streams = mapper::map_streams(&streams);
     sender.send_ok_response(streams.as_slice()).await?;
     Ok(())
 }

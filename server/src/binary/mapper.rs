@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use streaming::clients::client_manager::{Client, Transport};
 use streaming::message::Message;
 use streaming::partitions::partition::Partition;
 use streaming::streams::stream::Stream;
@@ -11,7 +12,23 @@ pub fn map_offset(consumer_id: u32, offset: u64) -> Vec<u8> {
     bytes
 }
 
-pub fn map_messages(messages: Vec<Arc<Message>>) -> Vec<u8> {
+pub fn map_clients(clients: &[&Client]) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for client in clients {
+        bytes.extend(client.id.to_le_bytes());
+        let transport: u8 = match client.transport {
+            Transport::Tcp => 1,
+            Transport::Quic => 2,
+        };
+        bytes.extend(transport.to_le_bytes());
+        let address = client.address.to_string();
+        bytes.extend((address.len() as u32).to_le_bytes());
+        bytes.extend(address.as_bytes());
+    }
+    bytes
+}
+
+pub fn map_messages(messages: &[Arc<Message>]) -> Vec<u8> {
     let messages_count = messages.len() as u32;
     let messages_size = messages
         .iter()

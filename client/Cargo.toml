@@ -5,13 +5,14 @@ edition = "2021"
 
 [dependencies]
 sdk = { path = "../sdk" }
-thiserror = "1.0.40"
-tokio = { version = "1.28.2", features = ["full"] }
-clap = { version = "4.1.11", features = ["derive"] }
-tracing = { version = "0.1.37"}
-tracing-subscriber = {version = "0.3.16"}
 anyhow = "1.0.70"
 bytes = "1.4.0"
-rcgen = "0.10.0"
+clap = { version = "4.1.11", features = ["derive"] }
 quinn = "0.10.0"
+rcgen = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
+tracing = { version = "0.1.37"}
+tracing-subscriber = {version = "0.3.16"}
+thiserror = "1.0.40"
+tokio = { version = "1.28.2", features = ["full"] }
+tokio-rustls = "0.24.0"

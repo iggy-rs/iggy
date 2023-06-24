@@ -1,6 +1,7 @@
 use crate::config::TopicConfig;
 use crate::partitions::partition::Partition;
 use crate::storage::SystemStorage;
+use crate::topics::consumer_group::ConsumerGroup;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -17,6 +18,7 @@ pub struct Topic {
     pub(crate) config: Arc<TopicConfig>,
     pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) _consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
 }
 
 impl Topic {
@@ -51,6 +53,7 @@ impl Topic {
             info_path,
             config: config.clone(),
             storage: storage.clone(),
+            _consumer_groups: HashMap::new(),
         };
 
         topic.partitions = (1..partitions_count + 1)

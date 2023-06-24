@@ -178,6 +178,8 @@ pub enum Error {
     InvalidOffset(u64),
     #[error("Failed to read consumers offsets  for partition with ID: {0}")]
     CannotReadConsumerOffsets(u32),
+    #[error("Consumer group member with ID: {0} for topic with ID: {1} was not found.")]
+    ConsumerGroupMemberNotFound(u32, u32),
 }
 
 impl Error {
@@ -254,6 +256,7 @@ impl Error {
             Error::CannotReadTopics(_) => 69,
             Error::CannotReadMessageChecksum => 70,
             Error::InvalidMessageChecksum(_, _, _) => 71,
+            Error::ConsumerGroupMemberNotFound(_, _) => 72,
             _ => 255,
         }
     }
@@ -337,6 +340,7 @@ impl Error {
             Error::CannotReadTopics(_) => "cannot_read_topics",
             Error::CannotReadMessageChecksum => "cannot_read_message_checksum",
             Error::InvalidMessageChecksum(_, _, _) => "invalid_message_checksum",
+            Error::ConsumerGroupMemberNotFound(_, _) => "consumer_group_member_not_found",
             _ => "error",
         }
     }

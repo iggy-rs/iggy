@@ -55,7 +55,7 @@ impl ClientManager {
         self.clients.insert(client.id, client);
     }
 
-    pub fn remove_client(&mut self, address: &SocketAddr) {
+    pub fn delete_client(&mut self, address: &SocketAddr) {
         let id = checksum::get(address.to_string().as_bytes());
         let client = self.clients.remove(&id);
         if client.is_none() {
@@ -64,7 +64,7 @@ impl ClientManager {
 
         let client = client.unwrap();
         info!(
-            "Removed {} client with ID: {} for address: {}",
+            "Deleted {} client with ID: {} for address: {}",
             client.transport, id, client.address
         );
     }

@@ -61,7 +61,7 @@ async fn handle_connection(
                         .client_manager
                         .lock()
                         .await
-                        .remove_client(&address);
+                        .delete_client(&address);
                     return Ok(());
                 }
                 Err(error) => {
@@ -71,7 +71,7 @@ async fn handle_connection(
                         .client_manager
                         .lock()
                         .await
-                        .remove_client(&address);
+                        .delete_client(&address);
                     return Err(error);
                 }
                 Ok(stream) => stream,

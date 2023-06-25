@@ -44,7 +44,7 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
                                 .client_manager
                                 .lock()
                                 .await
-                                .remove_client(&address);
+                                .delete_client(&address);
                         }
                     });
                 }

@@ -2,6 +2,7 @@ use crate::config::TopicConfig;
 use crate::partitions::partition::Partition;
 use crate::storage::SystemStorage;
 use crate::topics::consumer_group::ConsumerGroup;
+use sdk::error::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -18,7 +19,7 @@ pub struct Topic {
     pub(crate) config: Arc<TopicConfig>,
     pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
-    pub(crate) _consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
+    pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
 }
 
 impl Topic {
@@ -53,7 +54,7 @@ impl Topic {
             info_path,
             config: config.clone(),
             storage: storage.clone(),
-            _consumer_groups: HashMap::new(),
+            consumer_groups: HashMap::new(),
         };
 
         topic.partitions = (1..partitions_count + 1)
@@ -76,6 +77,15 @@ impl Topic {
 
     pub fn get_partitions(&self) -> Vec<&RwLock<Partition>> {
         self.partitions.values().collect()
+    }
+
+    pub fn get_consumer_group(&self, id: u32) -> Result<&RwLock<ConsumerGroup>, Error> {
+        let consumer_group = self.consumer_groups.get(&id);
+        if consumer_group.is_none() {
+            return Err(Error::ConsumerGroupNotFound(id, self.id));
+        }
+
+        Ok(consumer_group.unwrap())
     }
 
     fn get_path(id: u32, topics_path: &str) -> String {

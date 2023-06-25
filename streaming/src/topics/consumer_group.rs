@@ -1,13 +1,14 @@
 use sdk::error::Error;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
+use tracing::trace;
 
 #[derive(Debug)]
 pub struct ConsumerGroup {
     pub topic_id: u32,
     pub id: u32,
     pub partitions_count: u32,
-    pub members: HashMap<u32, RwLock<ConsumerGroupMember>>,
+    members: HashMap<u32, RwLock<ConsumerGroupMember>>,
 }
 
 #[derive(Debug)]
@@ -18,15 +19,28 @@ pub struct ConsumerGroupMember {
 }
 
 impl ConsumerGroup {
-    pub async fn calculate_partition_id(&mut self, member_id: u32) -> Result<u32, Error> {
-        let member = self.members.get_mut(&member_id);
+    pub fn new(topic_id: u32, id: u32, partitions_count: u32) -> ConsumerGroup {
+        ConsumerGroup {
+            topic_id,
+            id,
+            partitions_count,
+            members: HashMap::new(),
+        }
+    }
+
+    pub async fn calculate_partition_id(&self, member_id: u32) -> Result<u32, Error> {
+        let member = self.members.get(&member_id);
         if let Some(member) = member {
             return Ok(member.write().await.calculate_partition_id());
         }
-        Err(Error::ConsumerGroupMemberNotFound(self.topic_id, member_id))
+        Err(Error::ConsumerGroupMemberNotFound(
+            member_id,
+            self.id,
+            self.topic_id,
+        ))
     }
 
-    pub fn add_member(&mut self, member_id: u32) {
+    pub async fn add_member(&mut self, member_id: u32) {
         self.members.insert(
             member_id,
             RwLock::new(ConsumerGroupMember {
@@ -35,17 +49,44 @@ impl ConsumerGroup {
                 current_partition_index: 0,
             }),
         );
-        self.assign_partitions();
+        trace!(
+            "Added member with ID: {} to consumer group: {} for topic with ID: {}",
+            member_id,
+            self.id,
+            self.topic_id
+        );
+        self.assign_partitions().await;
     }
 
-    pub fn delete_member(&mut self, member_id: u32) {
+    pub async fn delete_member(&mut self, member_id: u32) {
         if self.members.remove(&member_id).is_some() {
-            self.assign_partitions();
+            trace!(
+                "Deleted member with ID: {} in consumer group: {} for topic with ID: {}",
+                member_id,
+                self.id,
+                self.topic_id
+            );
+            self.assign_partitions().await;
         }
     }
 
-    fn assign_partitions(&mut self) {
-        // TODO: Implement assigning partitions to members
+    async fn assign_partitions(&mut self) {
+        let mut members = self.members.values_mut().collect::<Vec<_>>();
+        let members_count = members.len() as u32;
+        for member in members.iter_mut() {
+            let mut member = member.write().await;
+            member.partitions.clear();
+        }
+
+        for partition_index in 0..self.partitions_count {
+            let partition_id = partition_index + 1;
+            let member_index = partition_index % members_count;
+            let member = members.get(member_index as usize).unwrap();
+            let mut member = member.write().await;
+            member.partitions.insert(partition_index, partition_id);
+            trace!("Assigned partition ID: {} to member with ID: {} for topic with ID: {} in consumer group: {}",
+                partition_id, member.id, self.topic_id, self.id)
+        }
     }
 }
 
@@ -58,6 +99,120 @@ impl ConsumerGroupMember {
         } else {
             self.current_partition_index += 1;
         }
+        trace!(
+            "Calculated partition ID: {} for member with ID: {}",
+            partition_id,
+            self.id
+        );
         partition_id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn should_calculate_partition_id_using_round_robin() {
+        let member_id = 123;
+        let mut consumer_group = ConsumerGroup {
+            topic_id: 1,
+            id: 1,
+            partitions_count: 3,
+            members: HashMap::new(),
+        };
+
+        consumer_group.add_member(member_id).await;
+        for i in 0..1000 {
+            let partition_id = consumer_group
+                .calculate_partition_id(member_id)
+                .await
+                .unwrap();
+            assert_eq!(partition_id, (i % consumer_group.partitions_count) + 1);
+        }
+    }
+
+    #[tokio::test]
+    async fn should_assign_all_partitions_to_the_only_single_member() {
+        let member_id = 123;
+        let mut consumer_group = ConsumerGroup {
+            topic_id: 1,
+            id: 1,
+            partitions_count: 3,
+            members: HashMap::new(),
+        };
+
+        consumer_group.add_member(member_id).await;
+        let member = consumer_group.members.get(&member_id).unwrap();
+        let member = member.read().await;
+        assert_eq!(
+            member.partitions.len() as u32,
+            consumer_group.partitions_count
+        );
+        let member_partitions = member.partitions.values().collect::<Vec<_>>();
+        for partition_id in 1..=consumer_group.partitions_count {
+            assert!(member_partitions.contains(&&partition_id));
+        }
+    }
+
+    #[tokio::test]
+    async fn should_assign_partitions_to_the_multiple_members() {
+        let member1_id = 123;
+        let member2_id = 456;
+        let mut consumer_group = ConsumerGroup {
+            topic_id: 1,
+            id: 1,
+            partitions_count: 3,
+            members: HashMap::new(),
+        };
+
+        consumer_group.add_member(member1_id).await;
+        consumer_group.add_member(member2_id).await;
+        let member1 = consumer_group.members.get(&member1_id).unwrap();
+        let member2 = consumer_group.members.get(&member2_id).unwrap();
+        let member1 = member1.read().await;
+        let member2 = member2.read().await;
+        assert_eq!(
+            member1.partitions.len() + member2.partitions.len(),
+            consumer_group.partitions_count as usize
+        );
+        let member1_partitions = member1.partitions.values().collect::<Vec<_>>();
+        let member2_partitions = member2.partitions.values().collect::<Vec<_>>();
+        let members_partitions = member1_partitions
+            .into_iter()
+            .chain(member2_partitions.into_iter())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            members_partitions.len(),
+            consumer_group.partitions_count as usize
+        );
+        for partition_id in 1..=consumer_group.partitions_count {
+            assert!(members_partitions.contains(&&partition_id));
+        }
+    }
+
+    #[tokio::test]
+    async fn should_assign_only_single_partition_to_the_only_single_member() {
+        let member1_id = 123;
+        let member2_id = 456;
+        let mut consumer_group = ConsumerGroup {
+            topic_id: 1,
+            id: 1,
+            partitions_count: 1,
+            members: HashMap::new(),
+        };
+
+        consumer_group.add_member(member1_id).await;
+        consumer_group.add_member(member2_id).await;
+        let member1 = consumer_group.members.get(&member1_id).unwrap();
+        let member2 = consumer_group.members.get(&member2_id).unwrap();
+        let member1 = member1.read().await;
+        let member2 = member2.read().await;
+        if member1.partitions.len() == 1 {
+            assert_eq!(member2.partitions.len(), 0);
+        } else {
+            assert_eq!(member1.partitions.len(), 0);
+            assert_eq!(member2.partitions.len(), 1);
+        }
     }
 }

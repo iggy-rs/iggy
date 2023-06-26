@@ -122,7 +122,6 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes() {
-        let is_empty = false;
         let command = CreateTopic {
             stream_id: 1,
             topic_id: 2,
@@ -136,7 +135,7 @@ mod tests {
         let partitions_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
         let name = from_utf8(&bytes[12..]).unwrap();
 
-        assert_eq!(bytes.is_empty(), is_empty);
+        assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
         assert_eq!(partitions_count, command.partitions_count);

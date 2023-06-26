@@ -323,7 +323,6 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes() {
-        let is_empty = false;
         let message_1 = Message::from_str("hello 1").unwrap();
         let message_2 = Message::from_str("2|hello 2").unwrap();
         let message_3 = Message::from_str("3|hello 3").unwrap();
@@ -351,7 +350,7 @@ mod tests {
             .collect::<Vec<Vec<u8>>>()
             .concat();
 
-        assert_eq!(bytes.is_empty(), is_empty);
+        assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
         assert_eq!(key_kind, command.key_kind);

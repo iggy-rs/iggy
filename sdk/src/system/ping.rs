@@ -58,10 +58,9 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_empty_bytes() {
-        let is_empty = true;
         let command = Ping {};
         let bytes = command.as_bytes();
-        assert_eq!(bytes.is_empty(), is_empty);
+        assert!(bytes.is_empty());
     }
 
     #[test]

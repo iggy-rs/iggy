@@ -75,13 +75,12 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes() {
-        let is_empty = false;
         let command = GetTopics { stream_id: 1 };
 
         let bytes = command.as_bytes();
         let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
 
-        assert_eq!(bytes.is_empty(), is_empty);
+        assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
     }
 

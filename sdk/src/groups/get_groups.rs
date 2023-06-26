@@ -7,23 +7,23 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct GetTopic {
+pub struct GetGroups {
     pub stream_id: u32,
     pub topic_id: u32,
 }
 
-impl CommandPayload for GetTopic {}
+impl CommandPayload for GetGroups {}
 
-impl Default for GetTopic {
+impl Default for GetGroups {
     fn default() -> Self {
-        GetTopic {
+        GetGroups {
             stream_id: 1,
             topic_id: 1,
         }
     }
 }
 
-impl Validatable for GetTopic {
+impl Validatable for GetGroups {
     fn validate(&self) -> Result<(), Error> {
         if self.stream_id == 0 {
             return Err(Error::InvalidStreamId);
@@ -37,7 +37,7 @@ impl Validatable for GetTopic {
     }
 }
 
-impl FromStr for GetTopic {
+impl FromStr for GetGroups {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
@@ -47,7 +47,7 @@ impl FromStr for GetTopic {
 
         let stream_id = parts[0].parse::<u32>()?;
         let topic_id = parts[1].parse::<u32>()?;
-        let command = GetTopic {
+        let command = GetGroups {
             stream_id,
             topic_id,
         };
@@ -56,7 +56,7 @@ impl FromStr for GetTopic {
     }
 }
 
-impl BytesSerializable for GetTopic {
+impl BytesSerializable for GetGroups {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(8);
         bytes.extend(self.stream_id.to_le_bytes());
@@ -64,14 +64,14 @@ impl BytesSerializable for GetTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<GetGroups, Error> {
         if bytes.len() != 8 {
             return Err(Error::InvalidCommand);
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
         let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        let command = GetTopic {
+        let command = GetGroups {
             stream_id,
             topic_id,
         };
@@ -80,7 +80,7 @@ impl BytesSerializable for GetTopic {
     }
 }
 
-impl Display for GetTopic {
+impl Display for GetGroups {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}|{}", self.stream_id, self.topic_id)
     }
@@ -92,7 +92,7 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes() {
-        let command = GetTopic {
+        let command = GetGroups {
             stream_id: 1,
             topic_id: 2,
         };
@@ -111,7 +111,7 @@ mod tests {
         let stream_id = 1u32;
         let topic_id = 2u32;
         let bytes = [stream_id.to_le_bytes(), topic_id.to_le_bytes()].concat();
-        let command = GetTopic::from_bytes(&bytes);
+        let command = GetGroups::from_bytes(&bytes);
         assert!(command.is_ok());
 
         let command = command.unwrap();
@@ -124,7 +124,7 @@ mod tests {
         let stream_id = 1u32;
         let topic_id = 2u32;
         let input = format!("{}|{}", stream_id, topic_id);
-        let command = GetTopic::from_str(&input);
+        let command = GetGroups::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

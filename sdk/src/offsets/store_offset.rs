@@ -124,7 +124,6 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes() {
-        let is_empty = false;
         let command = StoreOffset {
             consumer_id: 1,
             stream_id: 2,
@@ -140,7 +139,7 @@ mod tests {
         let partition_id = u32::from_le_bytes(bytes[12..16].try_into().unwrap());
         let offset = u64::from_le_bytes(bytes[16..24].try_into().unwrap());
 
-        assert_eq!(bytes.is_empty(), is_empty);
+        assert!(!bytes.is_empty());
         assert_eq!(consumer_id, command.consumer_id);
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);

@@ -6,6 +6,7 @@ pub mod client_error;
 pub mod client_provider;
 pub mod command;
 pub mod error;
+pub mod groups;
 pub mod http;
 pub mod messages;
 pub mod models;

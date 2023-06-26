@@ -1,3 +1,4 @@
+pub mod groups;
 pub mod messages;
 pub mod offsets;
 pub mod streams;

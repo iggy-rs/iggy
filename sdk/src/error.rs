@@ -182,6 +182,8 @@ pub enum Error {
     ConsumerGroupNotFound(u32, u32),
     #[error("Consumer group member with ID: {0} for group with ID: {1} for topic with ID: {2} was not found.")]
     ConsumerGroupMemberNotFound(u32, u32, u32),
+    #[error("Invalid consumer group ID")]
+    InvalidConsumerGroupId,
 }
 
 impl Error {

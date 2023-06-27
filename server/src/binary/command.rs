@@ -1,3 +1,4 @@
+use crate::binary::handlers::groups::{create_group_handler, delete_group_handler};
 use crate::binary::handlers::messages::*;
 use crate::binary::handlers::offsets::*;
 use crate::binary::handlers::streams::*;
@@ -85,6 +86,12 @@ async fn try_handle(
         }
         Command::DeleteTopic(command) => {
             delete_topic_handler::handle(command, sender, system).await
+        }
+        Command::CreateGroup(command) => {
+            create_group_handler::handle(command, sender, system).await
+        }
+        Command::DeleteGroup(command) => {
+            delete_group_handler::handle(command, sender, system).await
         }
     }
 }

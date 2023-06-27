@@ -180,6 +180,8 @@ pub enum Error {
     CannotReadConsumerOffsets(u32),
     #[error("Consumer group with ID: {0} for topic with ID: {1} was not found.")]
     ConsumerGroupNotFound(u32, u32),
+    #[error("Consumer group with ID: {0} for topic with ID: {1} already exists.")]
+    ConsumerGroupAlreadyExists(u32, u32),
     #[error("Consumer group member with ID: {0} for group with ID: {1} for topic with ID: {2} was not found.")]
     ConsumerGroupMemberNotFound(u32, u32, u32),
     #[error("Invalid consumer group ID")]
@@ -261,7 +263,8 @@ impl Error {
             Error::CannotReadMessageChecksum => 70,
             Error::InvalidMessageChecksum(_, _, _) => 71,
             Error::ConsumerGroupNotFound(_, _) => 72,
-            Error::ConsumerGroupMemberNotFound(_, _, _) => 73,
+            Error::ConsumerGroupAlreadyExists(_, _) => 73,
+            Error::ConsumerGroupMemberNotFound(_, _, _) => 74,
             _ => 255,
         }
     }
@@ -346,6 +349,7 @@ impl Error {
             Error::CannotReadMessageChecksum => "cannot_read_message_checksum",
             Error::InvalidMessageChecksum(_, _, _) => "invalid_message_checksum",
             Error::ConsumerGroupNotFound(_, _) => "consumer_group_not_found",
+            Error::ConsumerGroupAlreadyExists(_, _) => "consumer_group_already_exists",
             Error::ConsumerGroupMemberNotFound(_, _, _) => "consumer_group_member_not_found",
             _ => "error",
         }

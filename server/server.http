@@ -2,6 +2,7 @@
 @stream_id = 1
 @topic_id = 1
 @partition_id = 1
+@group_id = 1
 @consumer_id = 1
 @message_1_payload_base64 = aGVsbG8=
 @message_2_payload_base64 = d29ybGQ=
@@ -85,4 +86,15 @@ Content-Type: application/json
 }
 
 ###
-GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages/offsets?consumer_id={{consumer_id}}&partition_id={{partition_id}}-
+GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages/offsets?consumer_id={{consumer_id}}&partition_id={{partition_id}}
+
+###
+POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/groups
+Content-Type: application/json
+
+{
+  "group_id": {{group_id}}
+}
+
+###
+DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/groups/{{group_id}}

@@ -6,6 +6,7 @@ use sdk::error::Error;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::info;
 
 pub const TOPIC_INFO: &str = "topic.info";
 
@@ -77,6 +78,41 @@ impl Topic {
 
     pub fn get_partitions(&self) -> Vec<&RwLock<Partition>> {
         self.partitions.values().collect()
+    }
+
+    pub fn create_consumer_group(&mut self, id: u32) -> Result<(), Error> {
+        if self
+            .consumer_groups
+            .insert(
+                id,
+                RwLock::new(ConsumerGroup::new(
+                    self.id,
+                    id,
+                    self.partitions.len() as u32,
+                )),
+            )
+            .is_none()
+        {
+            info!(
+                "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
+                id, self.id, self.stream_id
+            );
+            return Ok(());
+        }
+
+        Err(Error::ConsumerGroupAlreadyExists(id, self.id))
+    }
+
+    pub fn delete_consumer_group(&mut self, id: u32) -> Result<(), Error> {
+        if self.consumer_groups.remove(&id).is_some() {
+            info!(
+                "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
+                id, self.id, self.stream_id
+            );
+            return Ok(());
+        }
+
+        Err(Error::ConsumerGroupNotFound(id, self.id))
     }
 
     pub fn get_consumer_group(&self, id: u32) -> Result<&RwLock<ConsumerGroup>, Error> {

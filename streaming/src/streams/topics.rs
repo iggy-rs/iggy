@@ -41,6 +41,15 @@ impl Stream {
         Ok(topic.unwrap())
     }
 
+    pub fn get_topic_mut(&mut self, id: u32) -> Result<&mut Topic, Error> {
+        let topic = self.topics.get_mut(&id);
+        if topic.is_none() {
+            return Err(Error::TopicNotFound(id, self.id));
+        }
+
+        Ok(topic.unwrap())
+    }
+
     pub fn get_topics(&self) -> Vec<&Topic> {
         self.topics.values().collect()
     }

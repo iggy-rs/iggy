@@ -1,4 +1,6 @@
 use crate::common::{ClientFactory, TestServer};
+use sdk::groups::create_group::CreateGroup;
+use sdk::groups::delete_group::DeleteGroup;
 use sdk::messages::poll_messages::Kind::{Next, Offset};
 use sdk::messages::poll_messages::{Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
@@ -286,7 +288,28 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(offset.consumer_id, consumer_id);
     assert_eq!(offset.offset, expected_last_offset);
 
-    // 20. Delete the existing topic and ensure it doesn't exist anymore
+    // 20. Create the consumer group
+    let group_id = 1;
+    client
+        .create_group(&CreateGroup {
+            stream_id,
+            topic_id,
+            group_id,
+        })
+        .await
+        .unwrap();
+
+    // 21. Delete the consumer group
+    client
+        .delete_group(&DeleteGroup {
+            stream_id,
+            topic_id,
+            group_id,
+        })
+        .await
+        .unwrap();
+
+    // 22. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(&DeleteTopic {
             stream_id,

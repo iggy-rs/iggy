@@ -1,4 +1,6 @@
 use crate::error::Error;
+use crate::groups::create_group::CreateGroup;
+use crate::groups::delete_group::DeleteGroup;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::models::client_info::ClientInfo;
@@ -48,6 +50,8 @@ pub trait TopicClient {
     async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error>;
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error>;
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error>;
+    async fn create_group(&self, command: &CreateGroup) -> Result<(), Error>;
+    async fn delete_group(&self, command: &DeleteGroup) -> Result<(), Error>;
 }
 
 #[async_trait]

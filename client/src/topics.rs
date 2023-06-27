@@ -1,5 +1,7 @@
 use sdk::client::Client;
 use sdk::client_error::ClientError;
+use sdk::groups::create_group::CreateGroup;
+use sdk::groups::delete_group::DeleteGroup;
 use sdk::topics::create_topic::CreateTopic;
 use sdk::topics::delete_topic::DeleteTopic;
 use sdk::topics::get_topic::GetTopic;
@@ -30,5 +32,15 @@ pub async fn create_topic(command: &CreateTopic, client: &dyn Client) -> Result<
 
 pub async fn delete_topic(command: &DeleteTopic, client: &dyn Client) -> Result<(), ClientError> {
     client.delete_topic(command).await?;
+    Ok(())
+}
+
+pub async fn create_group(command: &CreateGroup, client: &dyn Client) -> Result<(), ClientError> {
+    client.create_group(command).await?;
+    Ok(())
+}
+
+pub async fn delete_group(command: &DeleteGroup, client: &dyn Client) -> Result<(), ClientError> {
+    client.delete_group(command).await?;
     Ok(())
 }

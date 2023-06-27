@@ -1,6 +1,8 @@
 use crate::binary;
 use crate::client::TopicClient;
 use crate::error::Error;
+use crate::groups::create_group::CreateGroup;
+use crate::groups::delete_group::DeleteGroup;
 use crate::models::topic::{Topic, TopicDetails};
 use crate::quic::client::QuicClient;
 use crate::topics::create_topic::CreateTopic;
@@ -25,5 +27,13 @@ impl TopicClient for QuicClient {
 
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
         binary::topics::delete_topic(self, command).await
+    }
+
+    async fn create_group(&self, command: &CreateGroup) -> Result<(), Error> {
+        binary::topics::create_group(self, command).await
+    }
+
+    async fn delete_group(&self, command: &DeleteGroup) -> Result<(), Error> {
+        binary::topics::delete_group(self, command).await
     }
 }

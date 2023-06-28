@@ -1,6 +1,8 @@
 use crate::common::{ClientFactory, TestServer};
 use sdk::groups::create_group::CreateGroup;
 use sdk::groups::delete_group::DeleteGroup;
+use sdk::groups::get_group::GetGroup;
+use sdk::groups::get_groups::GetGroups;
 use sdk::messages::poll_messages::Kind::{Next, Offset};
 use sdk::messages::poll_messages::{Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
@@ -288,7 +290,18 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(offset.consumer_id, consumer_id);
     assert_eq!(offset.offset, expected_last_offset);
 
-    // 20. Create the consumer group
+    // 20. Get the consumer groups and validate that there are no groups
+    let groups = client
+        .get_groups(&GetGroups {
+            stream_id,
+            topic_id,
+        })
+        .await
+        .unwrap();
+
+    assert!(groups.is_empty());
+
+    // 21. Create the consumer group
     let group_id = 1;
     client
         .create_group(&CreateGroup {
@@ -299,7 +312,35 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 21. Delete the consumer group
+    // 22. Get the consumer groups and validate that there is one group
+    let groups = client
+        .get_groups(&GetGroups {
+            stream_id,
+            topic_id,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(groups.len(), 1);
+    let group = groups.get(0).unwrap();
+    assert_eq!(group.id, group_id);
+    assert_eq!(group.members_count, 0);
+
+    // 23. Get the consumer group details
+    let group = client
+        .get_group(&GetGroup {
+            stream_id,
+            topic_id,
+            group_id,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(group.id, group_id);
+    assert_eq!(group.members_count, 0);
+    assert!(group.members.is_empty());
+
+    // 24. Delete the consumer group
     client
         .delete_group(&DeleteGroup {
             stream_id,
@@ -309,7 +350,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 22. Delete the existing topic and ensure it doesn't exist anymore
+    // 25. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(&DeleteTopic {
             stream_id,
@@ -320,7 +361,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topics = client.get_topics(&GetTopics { stream_id }).await.unwrap();
     assert!(topics.is_empty());
 
-    // 21. Delete the existing stream and ensure it doesn't exist anymore
+    // 26. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(&DeleteStream { stream_id })
         .await
@@ -328,7 +369,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
-    // 22. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 27. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients(&GetClients {}).await.unwrap();
 
     assert!(clients.len() <= 1);

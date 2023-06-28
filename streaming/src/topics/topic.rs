@@ -80,6 +80,10 @@ impl Topic {
         self.partitions.values().collect()
     }
 
+    pub fn get_consumer_groups(&self) -> Vec<&RwLock<ConsumerGroup>> {
+        self.consumer_groups.values().collect()
+    }
+
     pub fn create_consumer_group(&mut self, id: u32) -> Result<(), Error> {
         if self
             .consumer_groups

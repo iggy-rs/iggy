@@ -2,9 +2,10 @@ use crate::http::error::CustomError;
 use crate::http::mapper;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::{delete, get, post};
+use axum::routing::get;
 use axum::{Json, Router};
 use sdk::groups::create_group::CreateGroup;
+use sdk::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use sdk::models::topic::{Topic, TopicDetails};
 use sdk::topics::create_topic::CreateTopic;
 use sdk::validatable::Validatable;
@@ -16,8 +17,11 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", get(get_topics).post(create_topic))
         .route("/:topic_id", get(get_topic).delete(delete_topic))
-        .route("/:topic_id/groups", post(create_group))
-        .route("/:topic_id/groups/:group_id", delete(delete_group))
+        .route("/:topic_id/groups", get(get_groups).post(create_group))
+        .route(
+            "/:topic_id/groups/:group_id",
+            get(get_group).delete(delete_group),
+        )
         .with_state(system)
 }
 
@@ -27,8 +31,8 @@ async fn get_topic(
 ) -> Result<Json<TopicDetails>, CustomError> {
     let system = system.read().await;
     let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
-    let topic_details = mapper::map_topic(topic).await;
-    Ok(Json(topic_details))
+    let topic = mapper::map_topic(topic).await;
+    Ok(Json(topic))
 }
 
 async fn get_topics(
@@ -67,6 +71,30 @@ async fn delete_topic(
         .delete_topic(topic_id)
         .await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+async fn get_group(
+    State(system): State<Arc<RwLock<System>>>,
+    Path((stream_id, topic_id, group_id)): Path<(u32, u32, u32)>,
+) -> Result<Json<ConsumerGroupDetails>, CustomError> {
+    let system = system.read().await;
+    let consumer_group = system
+        .get_stream(stream_id)?
+        .get_topic(topic_id)?
+        .get_consumer_group(group_id)?;
+    let consumer_group = consumer_group.read().await;
+    let consumer_group = mapper::map_consumer_group(&consumer_group).await;
+    Ok(Json(consumer_group))
+}
+
+async fn get_groups(
+    State(system): State<Arc<RwLock<System>>>,
+    Path((stream_id, topic_id)): Path<(u32, u32)>,
+) -> Result<Json<Vec<ConsumerGroup>>, CustomError> {
+    let system = system.read().await;
+    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    let consumer_groups = mapper::map_consumer_groups(&topic.get_consumer_groups()).await;
+    Ok(Json(consumer_groups))
 }
 
 async fn create_group(

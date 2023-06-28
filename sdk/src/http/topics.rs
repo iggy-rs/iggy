@@ -2,7 +2,10 @@ use crate::client::TopicClient;
 use crate::error::Error;
 use crate::groups::create_group::CreateGroup;
 use crate::groups::delete_group::DeleteGroup;
+use crate::groups::get_group::GetGroup;
+use crate::groups::get_groups::GetGroups;
 use crate::http::client::HttpClient;
+use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
@@ -44,6 +47,26 @@ impl TopicClient for HttpClient {
         );
         self.delete(&path).await?;
         Ok(())
+    }
+
+    async fn get_group(&self, command: &GetGroup) -> Result<ConsumerGroupDetails, Error> {
+        let response = self
+            .get(&format!(
+                "{}/{}",
+                get_groups_path(command.stream_id, command.topic_id),
+                command.stream_id
+            ))
+            .await?;
+        let consumer_group = response.json().await?;
+        Ok(consumer_group)
+    }
+
+    async fn get_groups(&self, command: &GetGroups) -> Result<Vec<ConsumerGroup>, Error> {
+        let response = self
+            .get(&get_groups_path(command.stream_id, command.topic_id))
+            .await?;
+        let consumer_groups = response.json().await?;
+        Ok(consumer_groups)
     }
 
     async fn create_group(&self, command: &CreateGroup) -> Result<(), Error> {

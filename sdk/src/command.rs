@@ -2,6 +2,8 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
 use crate::groups::create_group::CreateGroup;
 use crate::groups::delete_group::DeleteGroup;
+use crate::groups::get_group::GetGroup;
+use crate::groups::get_groups::GetGroups;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::offsets::get_offset::GetOffset;
@@ -50,6 +52,10 @@ pub const CREATE_TOPIC: &str = "topic.create";
 pub const CREATE_TOPIC_CODE: u8 = 32;
 pub const DELETE_TOPIC: &str = "topic.delete";
 pub const DELETE_TOPIC_CODE: u8 = 33;
+pub const GET_GROUP: &str = "group.get";
+pub const GET_GROUP_CODE: u8 = 40;
+pub const GET_GROUPS: &str = "group.list";
+pub const GET_GROUPS_CODE: u8 = 41;
 pub const CREATE_GROUP: &str = "group.create";
 pub const CREATE_GROUP_CODE: u8 = 42;
 pub const DELETE_GROUP: &str = "group.delete";
@@ -72,6 +78,8 @@ pub enum Command {
     GetTopics(GetTopics),
     CreateTopic(CreateTopic),
     DeleteTopic(DeleteTopic),
+    GetGroup(GetGroup),
+    GetGroups(GetGroups),
     CreateGroup(CreateGroup),
     DeleteGroup(DeleteGroup),
 }
@@ -96,6 +104,8 @@ impl BytesSerializable for Command {
             Command::GetTopics(payload) => as_bytes(GET_TOPICS_CODE, &payload.as_bytes()),
             Command::CreateTopic(payload) => as_bytes(CREATE_TOPIC_CODE, &payload.as_bytes()),
             Command::DeleteTopic(payload) => as_bytes(DELETE_TOPIC_CODE, &payload.as_bytes()),
+            Command::GetGroup(payload) => as_bytes(GET_GROUP_CODE, &payload.as_bytes()),
+            Command::GetGroups(payload) => as_bytes(GET_GROUPS_CODE, &payload.as_bytes()),
             Command::CreateGroup(payload) => as_bytes(CREATE_GROUP_CODE, &payload.as_bytes()),
             Command::DeleteGroup(payload) => as_bytes(DELETE_GROUP_CODE, &payload.as_bytes()),
         }
@@ -120,6 +130,8 @@ impl BytesSerializable for Command {
             GET_TOPICS_CODE => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
             CREATE_TOPIC_CODE => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
             DELETE_TOPIC_CODE => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
+            GET_GROUP_CODE => Ok(Command::GetGroup(GetGroup::from_bytes(payload)?)),
+            GET_GROUPS_CODE => Ok(Command::GetGroups(GetGroups::from_bytes(payload)?)),
             CREATE_GROUP_CODE => Ok(Command::CreateGroup(CreateGroup::from_bytes(payload)?)),
             DELETE_GROUP_CODE => Ok(Command::DeleteGroup(DeleteGroup::from_bytes(payload)?)),
             _ => Err(Error::InvalidCommand),
@@ -154,6 +166,8 @@ impl FromStr for Command {
             GET_TOPICS => Ok(Command::GetTopics(GetTopics::from_str(payload)?)),
             CREATE_TOPIC => Ok(Command::CreateTopic(CreateTopic::from_str(payload)?)),
             DELETE_TOPIC => Ok(Command::DeleteTopic(DeleteTopic::from_str(payload)?)),
+            GET_GROUP => Ok(Command::GetGroup(GetGroup::from_str(payload)?)),
+            GET_GROUPS => Ok(Command::GetGroups(GetGroups::from_str(payload)?)),
             CREATE_GROUP => Ok(Command::CreateGroup(CreateGroup::from_str(payload)?)),
             DELETE_GROUP => Ok(Command::DeleteGroup(DeleteGroup::from_str(payload)?)),
             _ => Err(Error::InvalidCommand),
@@ -179,6 +193,8 @@ impl Display for Command {
             Command::SendMessages(payload) => write!(formatter, "{}|{}", SEND_MESSAGES, payload),
             Command::StoreOffset(payload) => write!(formatter, "{}|{}", STORE_OFFSET, payload),
             Command::GetOffset(payload) => write!(formatter, "{}|{}", GET_OFFSET, payload),
+            Command::GetGroup(payload) => write!(formatter, "{}|{}", GET_GROUP, payload),
+            Command::GetGroups(payload) => write!(formatter, "{}|{}", GET_GROUPS, payload),
             Command::CreateGroup(payload) => write!(formatter, "{}|{}", CREATE_GROUP, payload),
             Command::DeleteGroup(payload) => write!(formatter, "{}|{}", DELETE_GROUP, payload),
         }
@@ -267,6 +283,16 @@ mod tests {
             &DeleteTopic::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetGroup(GetGroup::default()),
+            GET_GROUP_CODE,
+            &GetGroup::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetGroups(GetGroups::default()),
+            GET_GROUPS_CODE,
+            &GetGroups::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::CreateGroup(CreateGroup::default()),
             CREATE_GROUP_CODE,
             &CreateGroup::default(),
@@ -346,6 +372,16 @@ mod tests {
             &Command::DeleteTopic(DeleteTopic::default()),
             DELETE_TOPIC,
             &DeleteTopic::default(),
+        );
+        assert_read_from_string(
+            &Command::GetGroup(GetGroup::default()),
+            GET_GROUP,
+            &GetGroup::default(),
+        );
+        assert_read_from_string(
+            &Command::GetGroups(GetGroups::default()),
+            GET_GROUPS,
+            &GetGroups::default(),
         );
         assert_read_from_string(
             &Command::CreateGroup(CreateGroup::default()),

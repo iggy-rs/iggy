@@ -24,8 +24,8 @@ async fn get_stream(
 ) -> Result<Json<StreamDetails>, CustomError> {
     let system = system.read().await;
     let stream = system.get_stream(stream_id)?;
-    let stream_details = mapper::map_stream(stream);
-    Ok(Json(stream_details))
+    let stream = mapper::map_stream(stream);
+    Ok(Json(stream))
 }
 
 async fn get_streams(

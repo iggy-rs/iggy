@@ -1,9 +1,12 @@
 use crate::error::Error;
 use crate::groups::create_group::CreateGroup;
 use crate::groups::delete_group::DeleteGroup;
+use crate::groups::get_group::GetGroup;
+use crate::groups::get_groups::GetGroups;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::models::client_info::ClientInfo;
+use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::message::Message;
 use crate::models::offset::Offset;
 use crate::models::stream::{Stream, StreamDetails};
@@ -50,6 +53,8 @@ pub trait TopicClient {
     async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error>;
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error>;
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error>;
+    async fn get_group(&self, command: &GetGroup) -> Result<ConsumerGroupDetails, Error>;
+    async fn get_groups(&self, command: &GetGroups) -> Result<Vec<ConsumerGroup>, Error>;
     async fn create_group(&self, command: &CreateGroup) -> Result<(), Error>;
     async fn delete_group(&self, command: &DeleteGroup) -> Result<(), Error>;
 }

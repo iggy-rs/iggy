@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::models::client_info::ClientInfo;
+use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
 use crate::models::message::Message;
 use crate::models::offset::Offset;
 use crate::models::partition::Partition;
@@ -11,6 +12,7 @@ const EMPTY_MESSAGES: Vec<Message> = vec![];
 const EMPTY_TOPICS: Vec<Topic> = vec![];
 const EMPTY_STREAMS: Vec<Stream> = vec![];
 const EMPTY_CLIENTS: Vec<ClientInfo> = vec![];
+const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
 
 pub fn map_offset(payload: &[u8]) -> Result<Offset, Error> {
     let consumer_id = u32::from_le_bytes(payload[..4].try_into()?);
@@ -48,9 +50,6 @@ pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, Error> {
             address,
         };
         clients.push(client);
-        if position >= length {
-            break;
-        }
     }
     clients.sort_by(|x, y| x.id.cmp(&y.id));
     Ok(clients)
@@ -110,9 +109,6 @@ pub fn map_streams(payload: &[u8]) -> Result<Vec<Stream>, Error> {
         let (stream, read_bytes) = map_to_stream(payload, position)?;
         streams.push(stream);
         position += read_bytes;
-        if position >= length {
-            break;
-        }
     }
     streams.sort_by(|x, y| x.id.cmp(&y.id));
     Ok(streams)
@@ -126,9 +122,6 @@ pub fn map_stream(payload: &[u8]) -> Result<StreamDetails, Error> {
         let (topic, read_bytes) = map_to_topic(payload, position)?;
         topics.push(topic);
         position += read_bytes;
-        if position >= length {
-            break;
-        }
     }
 
     topics.sort_by(|x, y| x.id.cmp(&y.id));
@@ -169,25 +162,19 @@ pub fn map_topics(payload: &[u8]) -> Result<Vec<Topic>, Error> {
         let (topic, read_bytes) = map_to_topic(payload, position)?;
         topics.push(topic);
         position += read_bytes;
-        if position >= length {
-            break;
-        }
     }
     topics.sort_by(|x, y| x.id.cmp(&y.id));
     Ok(topics)
 }
 
 pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
-    let (topic, mut position) = map_to_stream(payload, 0)?;
+    let (topic, mut position) = map_to_topic(payload, 0)?;
     let mut partitions = Vec::new();
     let length = payload.len();
     while position < length {
         let (partition, read_bytes) = map_to_partition(payload, position)?;
         partitions.push(partition);
         position += read_bytes;
-        if position >= length {
-            break;
-        }
     }
 
     partitions.sort_by(|x, y| x.id.cmp(&y.id));
@@ -228,6 +215,73 @@ fn map_to_partition(payload: &[u8], position: usize) -> Result<(Partition, usize
             segments_count,
             current_offset,
             size_bytes,
+        },
+        read_bytes,
+    ))
+}
+
+pub fn map_consumer_groups(payload: &[u8]) -> Result<Vec<ConsumerGroup>, Error> {
+    if payload.is_empty() {
+        return Ok(EMPTY_CONSUMER_GROUPS);
+    }
+
+    let mut consumer_groups = Vec::new();
+    let length = payload.len();
+    let mut position = 0;
+    while position < length {
+        let (consumer_group, read_bytes) = map_to_consumer_group(payload, position)?;
+        consumer_groups.push(consumer_group);
+        position += read_bytes;
+    }
+    consumer_groups.sort_by(|x, y| x.id.cmp(&y.id));
+    Ok(consumer_groups)
+}
+
+pub fn map_consumer_group(payload: &[u8]) -> Result<ConsumerGroupDetails, Error> {
+    let (consumer_group, mut position) = map_to_consumer_group(payload, 0)?;
+    let mut members = Vec::new();
+    let length = payload.len();
+    while position < length {
+        let (member, read_bytes) = map_to_consumer_group_member(payload, position)?;
+        members.push(member);
+        position += read_bytes;
+    }
+    members.sort_by(|x, y| x.id.cmp(&y.id));
+    let consumer_group_details = ConsumerGroupDetails {
+        id: consumer_group.id,
+        members_count: consumer_group.members_count,
+        members,
+    };
+    Ok(consumer_group_details)
+}
+
+fn map_to_consumer_group(payload: &[u8], position: usize) -> Result<(ConsumerGroup, usize), Error> {
+    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+    let members_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
+    Ok((ConsumerGroup { id, members_count }, 8))
+}
+
+fn map_to_consumer_group_member(
+    payload: &[u8],
+    position: usize,
+) -> Result<(ConsumerGroupMember, usize), Error> {
+    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+    let partitions_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
+    let mut partitions = Vec::new();
+    for i in 0..partitions_count {
+        let partition_id = u32::from_le_bytes(
+            payload[position + 8 + (i * 4) as usize..position + 8 + ((i + 1) * 4) as usize]
+                .try_into()?,
+        );
+        partitions.push(partition_id);
+    }
+
+    let read_bytes = (4 + 4 + partitions_count * 4) as usize;
+    Ok((
+        ConsumerGroupMember {
+            id,
+            partitions_count,
+            partitions,
         },
         read_bytes,
     ))

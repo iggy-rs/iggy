@@ -28,6 +28,10 @@ impl ConsumerGroup {
         }
     }
 
+    pub fn get_members(&self) -> Vec<&RwLock<ConsumerGroupMember>> {
+        self.members.values().collect()
+    }
+
     pub async fn calculate_partition_id(&self, member_id: u32) -> Result<u32, Error> {
         let member = self.members.get(&member_id);
         if let Some(member) = member {
@@ -91,6 +95,10 @@ impl ConsumerGroup {
 }
 
 impl ConsumerGroupMember {
+    pub fn get_partitions(&self) -> Vec<u32> {
+        self.partitions.values().copied().collect()
+    }
+
     pub fn calculate_partition_id(&mut self) -> u32 {
         let partition_index = self.current_partition_index;
         let partition_id = *self.partitions.get(&partition_index).unwrap();

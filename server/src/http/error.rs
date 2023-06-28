@@ -28,6 +28,8 @@ impl IntoResponse for CustomError {
                     Error::PartitionNotFound(_) => StatusCode::NOT_FOUND,
                     Error::SegmentNotFound => StatusCode::NOT_FOUND,
                     Error::LogFileNotFound => StatusCode::NOT_FOUND,
+                    Error::ConsumerGroupNotFound(_, _) => StatusCode::NOT_FOUND,
+                    Error::ConsumerGroupMemberNotFound(_, _, _) => StatusCode::NOT_FOUND,
                     Error::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     Error::WriteError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     Error::CannotParseInt(_) => StatusCode::INTERNAL_SERVER_ERROR,

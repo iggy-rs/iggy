@@ -3,7 +3,9 @@ use streaming::clients::client_manager::{Client, Transport};
 use streaming::message::Message;
 use streaming::partitions::partition::Partition;
 use streaming::streams::stream::Stream;
+use streaming::topics::consumer_group::ConsumerGroup;
 use streaming::topics::topic::Topic;
+use tokio::sync::RwLock;
 
 pub fn map_offset(consumer_id: u32, offset: u64) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(12);
@@ -79,6 +81,31 @@ pub async fn map_topic(topic: &Topic) -> Vec<u8> {
     bytes
 }
 
+pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    extend_consumer_group(consumer_group, &mut bytes);
+    let members = consumer_group.get_members();
+    for member in members {
+        let member = member.read().await;
+        bytes.extend(member.id.to_le_bytes());
+        let partitions = member.get_partitions();
+        bytes.extend((partitions.len() as u32).to_le_bytes());
+        for partition in partitions {
+            bytes.extend(partition.to_le_bytes());
+        }
+    }
+    bytes
+}
+
+pub async fn map_consumer_groups(consumer_groups: &[&RwLock<ConsumerGroup>]) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for consumer_group in consumer_groups {
+        let consumer_group = consumer_group.read().await;
+        extend_consumer_group(&consumer_group, &mut bytes);
+    }
+    bytes
+}
+
 fn extend_stream(stream: &Stream, bytes: &mut Vec<u8>) {
     bytes.extend(stream.id.to_le_bytes());
     bytes.extend((stream.get_topics().len() as u32).to_le_bytes());
@@ -105,4 +132,9 @@ fn extend_partition(partition: &Partition, bytes: &mut Vec<u8>) {
             .sum::<u64>()
             .to_le_bytes(),
     );
+}
+
+fn extend_consumer_group(consumer_group: &ConsumerGroup, bytes: &mut Vec<u8>) {
+    bytes.extend(consumer_group.id.to_le_bytes());
+    bytes.extend((consumer_group.get_members().len() as u32).to_le_bytes());
 }

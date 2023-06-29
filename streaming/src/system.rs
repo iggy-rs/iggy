@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{create_dir, read_dir};
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 use tokio::time::Instant;
 use tracing::{error, info, trace};
 
@@ -19,7 +19,7 @@ pub struct System {
     pub storage: Arc<SystemStorage>,
     streams: HashMap<u32, Stream>,
     config: Arc<SystemConfig>,
-    pub client_manager: Arc<Mutex<ClientManager>>,
+    pub client_manager: Arc<RwLock<ClientManager>>,
 }
 
 impl System {
@@ -37,7 +37,7 @@ impl System {
             streams_path,
             streams: HashMap::new(),
             storage: Arc::new(SystemStorage::new(persister)),
-            client_manager: Arc::new(Mutex::new(ClientManager::new())),
+            client_manager: Arc::new(RwLock::new(ClientManager::new())),
         }
     }
 

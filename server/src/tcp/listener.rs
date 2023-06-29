@@ -1,3 +1,4 @@
+use crate::binary::client_context::ClientContext;
 use crate::binary::command;
 use crate::server_error::ServerError;
 use crate::tcp::tcp_sender::TcpSender;
@@ -28,13 +29,6 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
                 Ok((stream, address)) => {
                     info!("Accepted new TCP connection: {}", address);
                     let system = system.clone();
-                    system
-                        .write()
-                        .await
-                        .client_manager
-                        .lock()
-                        .await
-                        .add_client(&address, Transport::Tcp);
                     tokio::spawn(async move {
                         if let Err(error) = handle_connection(stream, system.clone()).await {
                             handle_error(error);
@@ -42,7 +36,7 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
                                 .write()
                                 .await
                                 .client_manager
-                                .lock()
+                                .write()
                                 .await
                                 .delete_client(&address);
                         }
@@ -58,8 +52,18 @@ async fn handle_connection(
     stream: TcpStream,
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
+    let address = stream.peer_addr()?;
+    let client_id = system
+        .write()
+        .await
+        .client_manager
+        .write()
+        .await
+        .add_client(&address, Transport::Tcp);
+    let client_context = ClientContext { client_id };
     let mut sender = TcpSender { stream };
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
+
     loop {
         let read_length = sender.stream.read_exact(&mut initial_buffer).await?;
         if read_length != INITIAL_BYTES_LENGTH {
@@ -80,7 +84,7 @@ async fn handle_connection(
             command,
             length
         );
-        let result = command::handle(command, &mut sender, system.clone()).await;
+        let result = command::handle(command, &mut sender, &client_context, system.clone()).await;
         if result.is_err() {
             error!("Error when handling the TCP request: {:?}", result.err());
             continue;

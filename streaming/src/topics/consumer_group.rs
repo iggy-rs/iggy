@@ -76,6 +76,10 @@ impl ConsumerGroup {
 
     async fn assign_partitions(&mut self) {
         let mut members = self.members.values_mut().collect::<Vec<_>>();
+        if members.is_empty() {
+            return;
+        }
+
         let members_count = members.len() as u32;
         for member in members.iter_mut() {
             let mut member = member.write().await;

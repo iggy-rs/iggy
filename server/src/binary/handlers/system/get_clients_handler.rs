@@ -14,7 +14,7 @@ pub async fn handle(
 ) -> Result<(), Error> {
     trace!("{}", command);
     let system = system.read().await;
-    let client_manager = system.client_manager.lock().await;
+    let client_manager = system.client_manager.read().await;
     let clients = mapper::map_clients(&client_manager.get_clients());
     sender.send_ok_response(clients.as_slice()).await?;
     Ok(())

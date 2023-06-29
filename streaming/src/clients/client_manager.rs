@@ -44,7 +44,7 @@ impl ClientManager {
         }
     }
 
-    pub fn add_client(&mut self, address: &SocketAddr, transport: Transport) {
+    pub fn add_client(&mut self, address: &SocketAddr, transport: Transport) -> u32 {
         let id = checksum::get(address.to_string().as_bytes());
         info!("Added {transport} client with ID: {id} for address: {address}");
         let client = Client {
@@ -53,6 +53,7 @@ impl ClientManager {
             transport,
         };
         self.clients.insert(client.id, client);
+        id
     }
 
     pub fn delete_client(&mut self, address: &SocketAddr) {

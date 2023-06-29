@@ -1,3 +1,4 @@
+use crate::binary::client_context::ClientContext;
 use crate::binary::command;
 use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ServerError;
@@ -43,13 +44,14 @@ async fn handle_connection(
     let address = connection.remote_address();
     async {
         info!("Client has connected: {}", address);
-        system
+        let client_id = system
             .write()
             .await
             .client_manager
-            .lock()
+            .write()
             .await
             .add_client(&address, Transport::Quic);
+        let client_context = ClientContext { client_id };
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {
@@ -59,7 +61,7 @@ async fn handle_connection(
                         .write()
                         .await
                         .client_manager
-                        .lock()
+                        .write()
                         .await
                         .delete_client(&address);
                     return Ok(());
@@ -69,7 +71,7 @@ async fn handle_connection(
                         .write()
                         .await
                         .client_manager
-                        .lock()
+                        .write()
                         .await
                         .delete_client(&address);
                     return Err(error);
@@ -111,8 +113,13 @@ async fn handle_connection(
                 length
             );
 
-            let result =
-                command::handle(command, &mut QuicSender { send: stream.0 }, system.clone()).await;
+            let result = command::handle(
+                command,
+                &mut QuicSender { send: stream.0 },
+                &client_context,
+                system.clone(),
+            )
+            .await;
             if result.is_err() {
                 error!("Error when handling the QUIC request: {:?}", result.err());
                 continue;

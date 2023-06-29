@@ -1,3 +1,4 @@
+use crate::binary::client_context::ClientContext;
 use crate::binary::handlers::groups::{
     create_group_handler, delete_group_handler, get_group_handler, get_groups_handler,
 };
@@ -36,17 +37,22 @@ use tracing::trace;
 pub async fn handle(
     command: Command,
     sender: &mut dyn Sender,
+    client_context: &ClientContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    let result = try_handle(command, sender, system).await;
+    let result = try_handle(command, sender, client_context, system).await;
     if result.is_ok() {
-        trace!("Command was handled successfully.");
+        trace!(
+            "Command was handled successfully, client: '{}'.",
+            client_context
+        );
         return Ok(());
     }
 
     let error = result.err().unwrap();
     trace!(
-        "Command was not handled successfully, error: '{:?}'.",
+        "Command was not handled successfully, client: {}, error: '{:?}'.",
+        client_context,
         error
     );
     sender.send_error_response(error).await?;
@@ -56,9 +62,14 @@ pub async fn handle(
 async fn try_handle(
     command: Command,
     sender: &mut dyn Sender,
+    client_context: &ClientContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("Handling command '{}'...", command);
+    trace!(
+        "Handling command '{}', client: {}...",
+        command,
+        client_context
+    );
     match command {
         Command::Kill(command) => kill_handler::handle(command, sender).await,
         Command::Ping(command) => ping_handler::handle(command, sender).await,

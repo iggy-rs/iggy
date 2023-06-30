@@ -1,4 +1,5 @@
 mod command;
+mod groups;
 mod messages;
 mod offsets;
 mod streams;

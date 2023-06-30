@@ -5,6 +5,8 @@ use crate::groups::create_group::CreateGroup;
 use crate::groups::delete_group::DeleteGroup;
 use crate::groups::get_group::GetGroup;
 use crate::groups::get_groups::GetGroups;
+use crate::groups::join_group::JoinGroup;
+use crate::groups::leave_group::LeaveGroup;
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::tcp::client::TcpClient;
@@ -33,18 +35,26 @@ impl TopicClient for TcpClient {
     }
 
     async fn get_group(&self, command: &GetGroup) -> Result<ConsumerGroupDetails, Error> {
-        binary::topics::get_group(self, command).await
+        binary::groups::get_group(self, command).await
     }
 
     async fn get_groups(&self, command: &GetGroups) -> Result<Vec<ConsumerGroup>, Error> {
-        binary::topics::get_groups(self, command).await
+        binary::groups::get_groups(self, command).await
     }
 
     async fn create_group(&self, command: &CreateGroup) -> Result<(), Error> {
-        binary::topics::create_group(self, command).await
+        binary::groups::create_group(self, command).await
     }
 
     async fn delete_group(&self, command: &DeleteGroup) -> Result<(), Error> {
-        binary::topics::delete_group(self, command).await
+        binary::groups::delete_group(self, command).await
+    }
+
+    async fn join_group(&self, command: &JoinGroup) -> Result<(), Error> {
+        binary::groups::join_group(self, command).await
+    }
+
+    async fn leave_group(&self, command: &LeaveGroup) -> Result<(), Error> {
+        binary::groups::leave_group(self, command).await
     }
 }

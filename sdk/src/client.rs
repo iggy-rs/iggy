@@ -3,6 +3,8 @@ use crate::groups::create_group::CreateGroup;
 use crate::groups::delete_group::DeleteGroup;
 use crate::groups::get_group::GetGroup;
 use crate::groups::get_groups::GetGroups;
+use crate::groups::join_group::JoinGroup;
+use crate::groups::leave_group::LeaveGroup;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::models::client_info::ClientInfo;
@@ -57,6 +59,8 @@ pub trait TopicClient {
     async fn get_groups(&self, command: &GetGroups) -> Result<Vec<ConsumerGroup>, Error>;
     async fn create_group(&self, command: &CreateGroup) -> Result<(), Error>;
     async fn delete_group(&self, command: &DeleteGroup) -> Result<(), Error>;
+    async fn join_group(&self, command: &JoinGroup) -> Result<(), Error>;
+    async fn leave_group(&self, command: &LeaveGroup) -> Result<(), Error>;
 }
 
 #[async_trait]

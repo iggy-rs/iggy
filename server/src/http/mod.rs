@@ -1,4 +1,5 @@
 pub mod error;
+pub mod groups;
 pub mod http_server;
 mod mapper;
 pub mod messages;

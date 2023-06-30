@@ -57,6 +57,10 @@ impl Topic {
         let consumer_group = self.get_consumer_group(group_id)?;
         let mut consumer_group = consumer_group.write().await;
         consumer_group.add_member(member_id).await;
+        info!(
+            "Member with ID: {} has joined consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
+            member_id, group_id, self.id, self.stream_id
+        );
         Ok(())
     }
 
@@ -64,6 +68,10 @@ impl Topic {
         let consumer_group = self.get_consumer_group(group_id)?;
         let mut consumer_group = consumer_group.write().await;
         consumer_group.delete_member(member_id).await;
+        info!(
+            "Member with ID: {} has left consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
+            member_id, group_id, self.id, self.stream_id
+        );
         Ok(())
     }
 }

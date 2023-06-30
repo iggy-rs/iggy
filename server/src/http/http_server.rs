@@ -1,4 +1,4 @@
-use crate::http::{messages, streams, system, topics};
+use crate::http::{groups, messages, streams, system, topics};
 use axum::Router;
 use std::sync::Arc;
 use streaming::system::System;
@@ -16,6 +16,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
             streams::router(system.clone()).nest(
                 "/:stream_id/topics",
                 topics::router(system.clone())
+                    .nest("/:topic_id/groups", groups::router(system.clone()))
                     .nest("/:topic_id/messages", messages::router(system.clone())),
             ),
         ),

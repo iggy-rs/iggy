@@ -186,6 +186,8 @@ pub enum Error {
     ConsumerGroupMemberNotFound(u32, u32, u32),
     #[error("Invalid consumer group ID")]
     InvalidConsumerGroupId,
+    #[error("Feature is unavailable")]
+    FeatureUnavailable,
 }
 
 impl Error {
@@ -265,6 +267,8 @@ impl Error {
             Error::ConsumerGroupNotFound(_, _) => 72,
             Error::ConsumerGroupAlreadyExists(_, _) => 73,
             Error::ConsumerGroupMemberNotFound(_, _, _) => 74,
+            Error::InvalidConsumerGroupId => 75,
+            Error::FeatureUnavailable => 76,
             _ => 255,
         }
     }
@@ -351,6 +355,7 @@ impl Error {
             Error::ConsumerGroupNotFound(_, _) => "consumer_group_not_found",
             Error::ConsumerGroupAlreadyExists(_, _) => "consumer_group_already_exists",
             Error::ConsumerGroupMemberNotFound(_, _, _) => "consumer_group_member_not_found",
+            Error::FeatureUnavailable => "feature_unavailable",
             _ => "error",
         }
     }

@@ -1,6 +1,7 @@
 use crate::binary::client_context::ClientContext;
 use crate::binary::handlers::groups::{
     create_group_handler, delete_group_handler, get_group_handler, get_groups_handler,
+    join_group_handler, leave_group_handler,
 };
 use crate::binary::handlers::messages::*;
 use crate::binary::handlers::offsets::*;
@@ -107,6 +108,12 @@ async fn try_handle(
         }
         Command::DeleteGroup(command) => {
             delete_group_handler::handle(command, sender, system).await
+        }
+        Command::JoinGroup(command) => {
+            join_group_handler::handle(command, sender, client_context, system).await
+        }
+        Command::LeaveGroup(command) => {
+            leave_group_handler::handle(command, sender, client_context, system).await
         }
     }
 }

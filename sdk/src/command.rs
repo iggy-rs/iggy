@@ -4,6 +4,8 @@ use crate::groups::create_group::CreateGroup;
 use crate::groups::delete_group::DeleteGroup;
 use crate::groups::get_group::GetGroup;
 use crate::groups::get_groups::GetGroups;
+use crate::groups::join_group::JoinGroup;
+use crate::groups::leave_group::LeaveGroup;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::offsets::get_offset::GetOffset;
@@ -60,6 +62,10 @@ pub const CREATE_GROUP: &str = "group.create";
 pub const CREATE_GROUP_CODE: u8 = 42;
 pub const DELETE_GROUP: &str = "group.delete";
 pub const DELETE_GROUP_CODE: u8 = 43;
+pub const JOIN_GROUP: &str = "group.join";
+pub const JOIN_GROUP_CODE: u8 = 44;
+pub const LEAVE_GROUP: &str = "group.leave";
+pub const LEAVE_GROUP_CODE: u8 = 45;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
@@ -82,6 +88,8 @@ pub enum Command {
     GetGroups(GetGroups),
     CreateGroup(CreateGroup),
     DeleteGroup(DeleteGroup),
+    JoinGroup(JoinGroup),
+    LeaveGroup(LeaveGroup),
 }
 
 pub trait CommandPayload: BytesSerializable + Display {}
@@ -108,6 +116,8 @@ impl BytesSerializable for Command {
             Command::GetGroups(payload) => as_bytes(GET_GROUPS_CODE, &payload.as_bytes()),
             Command::CreateGroup(payload) => as_bytes(CREATE_GROUP_CODE, &payload.as_bytes()),
             Command::DeleteGroup(payload) => as_bytes(DELETE_GROUP_CODE, &payload.as_bytes()),
+            Command::JoinGroup(payload) => as_bytes(JOIN_GROUP_CODE, &payload.as_bytes()),
+            Command::LeaveGroup(payload) => as_bytes(LEAVE_GROUP_CODE, &payload.as_bytes()),
         }
     }
 
@@ -134,6 +144,8 @@ impl BytesSerializable for Command {
             GET_GROUPS_CODE => Ok(Command::GetGroups(GetGroups::from_bytes(payload)?)),
             CREATE_GROUP_CODE => Ok(Command::CreateGroup(CreateGroup::from_bytes(payload)?)),
             DELETE_GROUP_CODE => Ok(Command::DeleteGroup(DeleteGroup::from_bytes(payload)?)),
+            JOIN_GROUP_CODE => Ok(Command::JoinGroup(JoinGroup::from_bytes(payload)?)),
+            LEAVE_GROUP_CODE => Ok(Command::LeaveGroup(LeaveGroup::from_bytes(payload)?)),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -170,6 +182,8 @@ impl FromStr for Command {
             GET_GROUPS => Ok(Command::GetGroups(GetGroups::from_str(payload)?)),
             CREATE_GROUP => Ok(Command::CreateGroup(CreateGroup::from_str(payload)?)),
             DELETE_GROUP => Ok(Command::DeleteGroup(DeleteGroup::from_str(payload)?)),
+            JOIN_GROUP => Ok(Command::JoinGroup(JoinGroup::from_str(payload)?)),
+            LEAVE_GROUP => Ok(Command::LeaveGroup(LeaveGroup::from_str(payload)?)),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -197,6 +211,8 @@ impl Display for Command {
             Command::GetGroups(payload) => write!(formatter, "{}|{}", GET_GROUPS, payload),
             Command::CreateGroup(payload) => write!(formatter, "{}|{}", CREATE_GROUP, payload),
             Command::DeleteGroup(payload) => write!(formatter, "{}|{}", DELETE_GROUP, payload),
+            Command::JoinGroup(payload) => write!(formatter, "{}|{}", JOIN_GROUP, payload),
+            Command::LeaveGroup(payload) => write!(formatter, "{}|{}", LEAVE_GROUP, payload),
         }
     }
 }
@@ -302,6 +318,16 @@ mod tests {
             DELETE_GROUP_CODE,
             &DeleteGroup::default(),
         );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::JoinGroup(JoinGroup::default()),
+            JOIN_GROUP_CODE,
+            &JoinGroup::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::LeaveGroup(LeaveGroup::default()),
+            LEAVE_GROUP_CODE,
+            &LeaveGroup::default(),
+        );
     }
 
     #[test]
@@ -392,6 +418,16 @@ mod tests {
             &Command::DeleteGroup(DeleteGroup::default()),
             DELETE_GROUP,
             &DeleteGroup::default(),
+        );
+        assert_read_from_string(
+            &Command::JoinGroup(JoinGroup::default()),
+            JOIN_GROUP,
+            &JoinGroup::default(),
+        );
+        assert_read_from_string(
+            &Command::LeaveGroup(LeaveGroup::default()),
+            LEAVE_GROUP,
+            &LeaveGroup::default(),
         );
     }
 

@@ -4,6 +4,8 @@ use crate::groups::create_group::CreateGroup;
 use crate::groups::delete_group::DeleteGroup;
 use crate::groups::get_group::GetGroup;
 use crate::groups::get_groups::GetGroups;
+use crate::groups::join_group::JoinGroup;
+use crate::groups::leave_group::LeaveGroup;
 use crate::http::client::HttpClient;
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -86,6 +88,14 @@ impl TopicClient for HttpClient {
         );
         self.delete(&path).await?;
         Ok(())
+    }
+
+    async fn join_group(&self, _command: &JoinGroup) -> Result<(), Error> {
+        Err(Error::FeatureUnavailable)
+    }
+
+    async fn leave_group(&self, _command: &LeaveGroup) -> Result<(), Error> {
+        Err(Error::FeatureUnavailable)
     }
 }
 

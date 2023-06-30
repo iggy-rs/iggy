@@ -1,8 +1,11 @@
 use crate::common::{ClientFactory, TestServer};
+use sdk::error::Error;
 use sdk::groups::create_group::CreateGroup;
 use sdk::groups::delete_group::DeleteGroup;
 use sdk::groups::get_group::GetGroup;
 use sdk::groups::get_groups::GetGroups;
+use sdk::groups::join_group::JoinGroup;
+use sdk::groups::leave_group::LeaveGroup;
 use sdk::messages::poll_messages::Kind::{Next, Offset};
 use sdk::messages::poll_messages::{Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
@@ -340,7 +343,54 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(group.members_count, 0);
     assert!(group.members.is_empty());
 
-    // 24. Delete the consumer group
+    // 24. Join the consumer group and then leave it if the feature is available
+    let result = client
+        .join_group(&JoinGroup {
+            stream_id,
+            topic_id,
+            group_id,
+        })
+        .await;
+
+    match result {
+        Ok(_) => {
+            let group = client
+                .get_group(&GetGroup {
+                    stream_id,
+                    topic_id,
+                    group_id,
+                })
+                .await
+                .unwrap();
+            assert_eq!(group.members_count, 1);
+            assert_eq!(group.members.len(), 1);
+            let member = &group.members[0];
+            assert_eq!(member.partitions_count, partitions_count);
+
+            client
+                .leave_group(&LeaveGroup {
+                    stream_id,
+                    topic_id,
+                    group_id,
+                })
+                .await
+                .unwrap();
+
+            let group = client
+                .get_group(&GetGroup {
+                    stream_id,
+                    topic_id,
+                    group_id,
+                })
+                .await
+                .unwrap();
+            assert_eq!(group.members_count, 0);
+            assert!(group.members.is_empty())
+        }
+        Err(e) => assert_eq!(e.as_code(), Error::FeatureUnavailable.as_code()),
+    }
+
+    // 25. Delete the consumer group
     client
         .delete_group(&DeleteGroup {
             stream_id,
@@ -350,7 +400,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 25. Delete the existing topic and ensure it doesn't exist anymore
+    // 26. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(&DeleteTopic {
             stream_id,
@@ -361,7 +411,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topics = client.get_topics(&GetTopics { stream_id }).await.unwrap();
     assert!(topics.is_empty());
 
-    // 26. Delete the existing stream and ensure it doesn't exist anymore
+    // 27. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(&DeleteStream { stream_id })
         .await
@@ -369,7 +419,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
-    // 27. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 28. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients(&GetClients {}).await.unwrap();
 
     assert!(clients.len() <= 1);

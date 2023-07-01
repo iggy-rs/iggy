@@ -1,6 +1,7 @@
 use crate::topics::topic::Topic;
 use sdk::error::Error;
 
+// TODO: Implement the consumer group offset storage
 impl Topic {
     pub async fn store_offset(
         &self,

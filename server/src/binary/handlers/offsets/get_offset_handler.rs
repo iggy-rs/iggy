@@ -17,7 +17,8 @@ pub async fn handle(
     let system = system.read().await;
     let offset = system
         .get_stream(command.stream_id)?
-        .get_offset(command.consumer_id, command.topic_id, command.partition_id)
+        .get_topic(command.topic_id)?
+        .get_offset(command.consumer_id, command.partition_id)
         .await?;
     let offset = mapper::map_offset(command.consumer_id, offset);
     sender.send_ok_response(&offset).await?;

@@ -115,6 +115,7 @@ impl Partition {
             .await
     }
 
+    // TODO: Implement polling and resolving the offset for the regular consumer and consumer group.
     pub async fn get_next_messages(
         &self,
         consumer_id: u32,

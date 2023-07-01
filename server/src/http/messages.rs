@@ -12,6 +12,7 @@ use sdk::validatable::Validatable;
 use std::sync::Arc;
 use streaming::message::Message;
 use streaming::system::System;
+use streaming::topics::polling_consumer::PollingConsumer;
 use streaming::utils::{checksum, timestamp};
 use tokio::sync::RwLock;
 use tracing::trace;
@@ -33,11 +34,10 @@ async fn poll_messages(
     query.validate()?;
 
     let system = system.read().await;
-    let stream = system.get_stream(stream_id)?;
-    let messages = stream
+    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    let messages = topic
         .get_messages(
-            query.consumer_id,
-            topic_id,
+            PollingConsumer::Consumer(query.consumer_id),
             query.partition_id,
             query.kind,
             query.value,
@@ -52,13 +52,8 @@ async fn poll_messages(
     if query.auto_commit {
         let offset = messages.last().unwrap().offset;
         trace!("Last offset: {} will be automatically stored for consumer: {}, stream: {}, topic: {}, partition: {}", offset, query.consumer_id, query.stream_id, query.topic_id, query.partition_id);
-        stream
-            .store_offset(
-                query.consumer_id,
-                query.topic_id,
-                query.partition_id,
-                offset,
-            )
+        topic
+            .store_offset(query.consumer_id, query.partition_id, offset)
             .await?;
     }
 
@@ -88,16 +83,10 @@ async fn send_messages(
     }
 
     let system = system.read().await;
-    let stream = system.get_stream(stream_id)?;
+    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
     let storage = system.storage.segment.clone();
-    stream
-        .append_messages(
-            command.topic_id,
-            command.key_kind,
-            command.key_value,
-            messages,
-            storage,
-        )
+    topic
+        .append_messages(command.key_kind, command.key_value, messages, storage)
         .await?;
     Ok(StatusCode::CREATED)
 }
@@ -112,14 +101,9 @@ async fn store_offset(
     command.validate()?;
 
     let system = system.read().await;
-    let stream = system.get_stream(stream_id)?;
-    stream
-        .store_offset(
-            command.consumer_id,
-            command.topic_id,
-            command.partition_id,
-            command.offset,
-        )
+    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    topic
+        .store_offset(command.consumer_id, command.partition_id, command.offset)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -134,9 +118,10 @@ async fn get_offset(
     query.validate()?;
 
     let system = system.read().await;
-    let stream = system.get_stream(stream_id)?;
-    let offset = stream
-        .get_offset(query.consumer_id, query.topic_id, query.partition_id)
+    let offset = system
+        .get_stream(stream_id)?
+        .get_topic(topic_id)?
+        .get_offset(query.consumer_id, query.partition_id)
         .await?;
 
     Ok(Json(Offset {

@@ -5,7 +5,7 @@ use samples::shared::messages::*;
 use sdk::client::Client;
 use sdk::client_provider;
 use sdk::client_provider::ClientProviderConfig;
-use sdk::messages::poll_messages::{Format, Kind, PollMessages};
+use sdk::messages::poll_messages::{ConsumerType, Format, Kind, PollMessages};
 use sdk::models::message::Message;
 use sdk::streams::get_stream::GetStream;
 use sdk::topics::get_topic::GetTopic;
@@ -35,6 +35,7 @@ pub async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Bo
     loop {
         let messages = client
             .poll_messages(&PollMessages {
+                consumer_type: ConsumerType::from_code(args.consumer_type)?,
                 consumer_id: args.consumer_id,
                 stream_id: args.stream_id,
                 topic_id: args.topic_id,

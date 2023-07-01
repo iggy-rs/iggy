@@ -28,10 +28,11 @@ pub async fn handle(
     }
 
     let system = system.read().await;
-    system
+    let topic = system
         .get_stream(command.stream_id)?
+        .get_topic(command.topic_id)?;
+    topic
         .append_messages(
-            command.topic_id,
             command.key_kind,
             command.key_value,
             messages,

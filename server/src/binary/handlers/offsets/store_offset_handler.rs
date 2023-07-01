@@ -16,12 +16,8 @@ pub async fn handle(
     let system = system.read().await;
     system
         .get_stream(command.stream_id)?
-        .store_offset(
-            command.consumer_id,
-            command.topic_id,
-            command.partition_id,
-            command.offset,
-        )
+        .get_topic(command.topic_id)?
+        .store_offset(command.consumer_id, command.partition_id, command.offset)
         .await?;
 
     sender.send_empty_ok_response().await?;

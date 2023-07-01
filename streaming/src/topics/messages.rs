@@ -1,5 +1,6 @@
 use crate::message::Message;
 use crate::storage::SegmentStorage;
+use crate::topics::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
 use ringbuffer::RingBufferWrite;
 use sdk::error::Error;
@@ -8,16 +9,23 @@ use sdk::messages::send_messages::KeyKind;
 use std::sync::Arc;
 use tracing::trace;
 
-// TODO: Resolve partition ID by consumer group if provided.
 impl Topic {
     pub async fn get_messages(
         &self,
-        consumer_id: u32,
+        consumer: PollingConsumer,
         partition_id: u32,
         kind: Kind,
         value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
+        let (partition_id, consumer_id) = match consumer {
+            PollingConsumer::Consumer(consumer_id) => (partition_id, consumer_id),
+            PollingConsumer::Group(group_id, member_id) => {
+                let group = self.get_consumer_group(group_id)?.read().await;
+                (group.calculate_partition_id(member_id).await?, group_id)
+            }
+        };
+
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
             return Err(Error::PartitionNotFound(partition_id));
@@ -41,6 +49,10 @@ impl Topic {
         messages: Vec<Message>,
         storage: Arc<dyn SegmentStorage>,
     ) -> Result<(), Error> {
+        if messages.is_empty() {
+            return Ok(());
+        }
+
         let partition_id = match key_kind {
             KeyKind::PartitionId => key_value,
             KeyKind::EntityId => self.calculate_partition_id(key_value),

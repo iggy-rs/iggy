@@ -7,7 +7,7 @@ use sdk::groups::get_groups::GetGroups;
 use sdk::groups::join_group::JoinGroup;
 use sdk::groups::leave_group::LeaveGroup;
 use sdk::messages::poll_messages::Kind::{Next, Offset};
-use sdk::messages::poll_messages::{Format, PollMessages};
+use sdk::messages::poll_messages::{ConsumerType, Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
 use sdk::offsets::get_offset::GetOffset;
 use sdk::offsets::store_offset::StoreOffset;
@@ -36,6 +36,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topic_name = "test-topic";
     let partitions_count = 2;
     let consumer_id = 1;
+    let consumer_type = ConsumerType::Consumer;
 
     // 1. Ping server
     let ping = Ping {};
@@ -141,6 +142,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 11. Poll messages from the specific partition in topic
     let poll_messages = PollMessages {
+        consumer_type,
         consumer_id,
         stream_id,
         topic_id,
@@ -166,6 +168,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     for i in 0..batches_count {
         let start_offset = (i * batch_size) as u64;
         let poll_messages = PollMessages {
+            consumer_type,
             consumer_id,
             stream_id,
             topic_id,
@@ -206,6 +209,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 14. Ensure that messages do not exist in the second partition in the same topic
     let poll_messages = PollMessages {
+        consumer_type,
         consumer_id,
         stream_id,
         topic_id,
@@ -261,6 +265,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 18. Poll messages from the specific partition in topic using next with auto commit
     let messages_count = 10;
     let poll_messages = PollMessages {
+        consumer_type,
         consumer_id,
         stream_id,
         topic_id,

@@ -3,7 +3,7 @@ use crate::benchmark::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
 use sdk::error::Error;
-use sdk::messages::poll_messages::{Format, Kind, PollMessages};
+use sdk::messages::poll_messages::{ConsumerType, Format, Kind, PollMessages};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
@@ -26,6 +26,7 @@ pub async fn run(
     );
 
     let mut command = PollMessages {
+        consumer_type: ConsumerType::Consumer,
         consumer_id,
         stream_id,
         topic_id,

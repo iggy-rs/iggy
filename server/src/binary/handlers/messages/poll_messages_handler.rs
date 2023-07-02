@@ -2,11 +2,12 @@ use crate::binary::client_context::ClientContext;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use anyhow::Result;
+use sdk::consumer_type::ConsumerType;
 use sdk::error::Error;
-use sdk::messages::poll_messages::{ConsumerType, PollMessages};
+use sdk::messages::poll_messages::PollMessages;
 use std::sync::Arc;
+use streaming::polling_consumer::PollingConsumer;
 use streaming::system::System;
-use streaming::topics::polling_consumer::PollingConsumer;
 use tokio::sync::RwLock;
 use tracing::trace;
 
@@ -100,9 +101,9 @@ pub async fn handle(
     let offset = messages.last().unwrap().offset;
     let messages = mapper::map_messages(&messages);
     if command.auto_commit {
-        trace!("Last offset: {} will be automatically stored for consumer: {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
+        trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
         topic
-            .store_offset(command.consumer_id, command.partition_id, offset)
+            .store_offset(consumer, command.partition_id, offset)
             .await?;
     }
 

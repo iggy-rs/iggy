@@ -5,6 +5,7 @@ pub mod client;
 pub mod client_error;
 pub mod client_provider;
 pub mod command;
+pub mod consumer_type;
 pub mod error;
 pub mod groups;
 pub mod http;

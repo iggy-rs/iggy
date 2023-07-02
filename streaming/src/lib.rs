@@ -3,6 +3,7 @@ pub mod config;
 pub mod message;
 pub mod partitions;
 pub mod persister;
+pub mod polling_consumer;
 pub mod segments;
 pub mod storage;
 pub mod streams;

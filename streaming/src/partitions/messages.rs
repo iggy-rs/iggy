@@ -1,5 +1,6 @@
 use crate::message::Message;
 use crate::partitions::partition::Partition;
+use crate::polling_consumer::PollingConsumer;
 use crate::segments::segment::Segment;
 use crate::storage::SegmentStorage;
 use crate::utils::random_id;
@@ -115,13 +116,20 @@ impl Partition {
             .await
     }
 
-    // TODO: Implement polling and resolving the offset for the regular consumer and consumer group.
     pub async fn get_next_messages(
         &self,
-        consumer_id: u32,
+        consumer: PollingConsumer,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
-        let consumer_offsets = self.consumer_offsets.read().await;
+        let (consumer_offsets, consumer_id) = match consumer {
+            PollingConsumer::Consumer(consumer_id) => {
+                (self.consumer_offsets.read().await, consumer_id)
+            }
+            PollingConsumer::Group(group_id, _) => {
+                (self.consumer_group_offsets.read().await, group_id)
+            }
+        };
+
         let consumer_offset = consumer_offsets.offsets.get(&consumer_id);
         if consumer_offset.is_none() {
             trace!(
@@ -145,7 +153,7 @@ impl Partition {
 
         let offset = consumer_offset.offset + 1;
         trace!(
-            "Getting next messages for consumer: {} for partition: {} from offset: {}...",
+            "Getting next messages for {} for partition: {} from offset: {}...",
             consumer_id,
             self.id,
             offset

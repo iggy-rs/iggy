@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use tokio::sync::RwLock;
 use tracing::trace;
 
+// TODO: Implement storage
 #[derive(Debug)]
 pub struct ConsumerGroup {
     pub topic_id: u32,

@@ -1,6 +1,6 @@
 use crate::message::Message;
+use crate::polling_consumer::PollingConsumer;
 use crate::storage::SegmentStorage;
-use crate::topics::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
 use ringbuffer::RingBufferWrite;
 use sdk::error::Error;
@@ -18,11 +18,11 @@ impl Topic {
         value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
-        let (partition_id, consumer_id) = match consumer {
-            PollingConsumer::Consumer(consumer_id) => (partition_id, consumer_id),
+        let partition_id = match consumer {
+            PollingConsumer::Consumer(_) => partition_id,
             PollingConsumer::Group(group_id, member_id) => {
                 let group = self.get_consumer_group(group_id)?.read().await;
-                (group.calculate_partition_id(member_id).await?, group_id)
+                group.calculate_partition_id(member_id).await?
             }
         };
 
@@ -38,7 +38,7 @@ impl Topic {
             Kind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
             Kind::First => partition.get_first_messages(count).await,
             Kind::Last => partition.get_last_messages(count).await,
-            Kind::Next => partition.get_next_messages(consumer_id, count).await,
+            Kind::Next => partition.get_next_messages(consumer, count).await,
         }
     }
 
@@ -80,7 +80,7 @@ impl Topic {
     }
 
     fn calculate_partition_id(&self, entity_id: u32) -> u32 {
-        let partition_id = entity_id % self.partitions.len() as u32;
+        let partition_id = (entity_id % self.partitions.len() as u32) + 1;
         trace!(
             "Calculated partition ID: {} for key: {}",
             partition_id,

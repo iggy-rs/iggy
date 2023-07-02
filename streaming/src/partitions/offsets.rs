@@ -1,5 +1,7 @@
 use crate::partitions::partition::{ConsumerOffset, Partition};
+use crate::polling_consumer::PollingConsumer;
 use crate::utils::file;
+use sdk::consumer_type::ConsumerType;
 use sdk::error::Error;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
@@ -7,15 +9,23 @@ use tokio::sync::RwLock;
 use tracing::{error, trace};
 
 impl Partition {
-    pub async fn get_offset(&self, consumer_id: u32) -> Result<u64, Error> {
+    pub async fn get_offset(&self, consumer: PollingConsumer) -> Result<u64, Error> {
         trace!(
-            "Getting offset for consumer: {}, partition: {}, current: {}...",
-            consumer_id,
+            "Getting offset for {}, partition: {}, current: {}...",
+            consumer,
             self.id,
             self.current_offset
         );
 
-        let consumer_offsets = self.consumer_offsets.read().await;
+        let (consumer_offsets, consumer_id) = match consumer {
+            PollingConsumer::Consumer(consumer_id) => {
+                (self.consumer_offsets.read().await, consumer_id)
+            }
+            PollingConsumer::Group(group_id, _) => {
+                (self.consumer_group_offsets.read().await, group_id)
+            }
+        };
+
         let consumer_offset = consumer_offsets.offsets.get(&consumer_id);
         if let Some(consumer_offset) = consumer_offset {
             let consumer_offset = consumer_offset.read().await;
@@ -25,11 +35,11 @@ impl Partition {
         Ok(0)
     }
 
-    pub async fn store_offset(&self, consumer_id: u32, offset: u64) -> Result<(), Error> {
+    pub async fn store_offset(&self, consumer: PollingConsumer, offset: u64) -> Result<(), Error> {
         trace!(
-            "Storing offset: {} for consumer: {}, partition: {}, current: {}...",
+            "Storing offset: {} for {}, partition: {}, current: {}...",
             offset,
-            consumer_id,
+            consumer,
             self.id,
             self.current_offset
         );
@@ -39,7 +49,14 @@ impl Partition {
 
         // This scope is required to avoid the potential deadlock by acquiring read lock and then write lock.
         {
-            let consumer_offsets = self.consumer_offsets.read().await;
+            let (consumer_offsets, consumer_id) = match consumer {
+                PollingConsumer::Consumer(consumer_id) => {
+                    (self.consumer_offsets.read().await, consumer_id)
+                }
+                PollingConsumer::Group(group_id, _) => {
+                    (self.consumer_group_offsets.read().await, group_id)
+                }
+            };
             let consumer_offset = consumer_offsets.offsets.get(&consumer_id);
             if let Some(consumer_offset) = consumer_offset {
                 let mut consumer_offset = consumer_offset.write().await;
@@ -49,8 +66,20 @@ impl Partition {
             }
         }
 
-        let mut consumer_offsets = self.consumer_offsets.write().await;
-        let path = format!("{}/{}", self.consumer_offsets_path, consumer_id);
+        let (mut consumer_offsets, consumer_id, path) = match consumer {
+            PollingConsumer::Consumer(consumer_id) => (
+                self.consumer_offsets.write().await,
+                consumer_id,
+                &self.consumer_offsets_path,
+            ),
+            PollingConsumer::Group(group_id, _) => (
+                self.consumer_group_offsets.write().await,
+                group_id,
+                &self.consumer_group_offsets_path,
+            ),
+        };
+
+        let path = format!("{}/{}", path, consumer_id);
         let consumer_offset = ConsumerOffset {
             consumer_id,
             offset,
@@ -63,7 +92,7 @@ impl Partition {
         Ok(())
     }
 
-    pub async fn load_offsets(&mut self) -> Result<(), Error> {
+    pub async fn load_offsets(&mut self, consumer_type: ConsumerType) -> Result<(), Error> {
         trace!(
                 "Loading consumer offsets for partition with ID: {} for topic with ID: {} and stream with ID: {}...",
                 self.id,
@@ -71,7 +100,18 @@ impl Partition {
                 self.stream_id
             );
 
-        let dir_entries = fs::read_dir(&self.consumer_offsets_path).await;
+        let (path, mut offsets) = match consumer_type {
+            ConsumerType::Consumer => (
+                &self.consumer_offsets_path,
+                self.consumer_offsets.write().await,
+            ),
+            ConsumerType::Group => (
+                &self.consumer_group_offsets_path,
+                self.consumer_group_offsets.write().await,
+            ),
+        };
+
+        let dir_entries = fs::read_dir(&path).await;
         if dir_entries.is_err() {
             return Err(Error::CannotReadConsumerOffsets(self.id));
         }
@@ -101,9 +141,7 @@ impl Partition {
             let consumer_id = consumer_id.unwrap();
             let mut file = file::open(&path).await?;
             let offset = file.read_u64_le().await?;
-
-            let mut consumer_offsets = self.consumer_offsets.write().await;
-            consumer_offsets.offsets.insert(
+            offsets.offsets.insert(
                 consumer_id,
                 RwLock::new(ConsumerOffset {
                     consumer_id,
@@ -113,8 +151,9 @@ impl Partition {
             );
 
             trace!(
-                "Loaded consumer offset: {} for consumer ID: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
+                "Loaded consumer offset: {} for {} ID: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
                 offset,
+                consumer_type,
                 consumer_id,
                 self.id,
                 self.topic_id,

@@ -15,12 +15,14 @@ pub struct Partition {
     pub path: String,
     pub offsets_path: String,
     pub consumer_offsets_path: String,
+    pub consumer_group_offsets_path: String,
     pub current_offset: u64,
     pub messages: Option<AllocRingBuffer<Arc<Message>>>,
     pub message_ids: Option<HashMap<u128, bool>>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
     pub(crate) consumer_offsets: RwLock<ConsumerOffsets>,
+    pub(crate) consumer_group_offsets: RwLock<ConsumerOffsets>,
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<PartitionConfig>,
     pub(crate) storage: Arc<SystemStorage>,
@@ -62,6 +64,7 @@ impl Partition {
         let path = Self::get_path(id, topic_path);
         let offsets_path = Self::get_offsets_path(&path);
         let consumer_offsets_path = Self::get_consumer_offsets_path(&offsets_path);
+        let consumer_group_offsets_path = Self::get_consumer_group_offsets_path(&offsets_path);
         let mut partition = Partition {
             stream_id,
             topic_id,
@@ -69,6 +72,7 @@ impl Partition {
             path,
             offsets_path,
             consumer_offsets_path,
+            consumer_group_offsets_path,
             messages: match config.messages_buffer {
                 0 => None,
                 _ => Some(AllocRingBuffer::with_capacity(
@@ -84,6 +88,9 @@ impl Partition {
             unsaved_messages_count: 0,
             should_increment_offset: false,
             consumer_offsets: RwLock::new(ConsumerOffsets {
+                offsets: HashMap::new(),
+            }),
+            consumer_group_offsets: RwLock::new(ConsumerOffsets {
                 offsets: HashMap::new(),
             }),
             config,
@@ -125,6 +132,10 @@ impl Partition {
     fn get_consumer_offsets_path(offsets_path: &str) -> String {
         format!("{}/consumers", offsets_path)
     }
+
+    fn get_consumer_group_offsets_path(offsets_path: &str) -> String {
+        format!("{}/groups", offsets_path)
+    }
 }
 
 #[cfg(test)]
@@ -147,6 +158,7 @@ mod tests {
         let path = Partition::get_path(id, topic_path);
         let offsets_path = Partition::get_offsets_path(&path);
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
+        let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
         let messages_buffer_capacity = config.messages_buffer as usize;
 
         let partition = Partition::create(
@@ -165,6 +177,10 @@ mod tests {
         assert_eq!(partition.path, path);
         assert_eq!(partition.offsets_path, offsets_path);
         assert_eq!(partition.consumer_offsets_path, consumer_offsets_path);
+        assert_eq!(
+            partition.consumer_group_offsets_path,
+            consumer_group_offsets_path
+        );
         assert_eq!(partition.current_offset, 0);
         assert_eq!(partition.unsaved_messages_count, 0);
         assert_eq!(partition.segments.len(), 1);

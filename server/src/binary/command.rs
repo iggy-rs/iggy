@@ -81,9 +81,11 @@ async fn try_handle(
         Command::PollMessages(command) => {
             poll_messages_handler::handle(command, sender, client_context, system).await
         }
-        Command::GetOffset(command) => get_offset_handler::handle(command, sender, system).await,
+        Command::GetOffset(command) => {
+            get_offset_handler::handle(command, sender, client_context, system).await
+        }
         Command::StoreOffset(command) => {
-            store_offset_handler::handle(command, sender, system).await
+            store_offset_handler::handle(command, sender, client_context, system).await
         }
         Command::GetStream(command) => get_stream_handler::handle(command, sender, system).await,
         Command::GetStreams(command) => get_streams_handler::handle(command, sender, system).await,

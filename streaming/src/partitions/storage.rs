@@ -1,6 +1,7 @@
 use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::persister::Persister;
 use async_trait::async_trait;
+use sdk::consumer_type::ConsumerType;
 use sdk::error::Error;
 use std::sync::Arc;
 use tokio::fs;
@@ -31,7 +32,7 @@ impl PartitionStorage for FilePartitionStorage {
             .overwrite(&offset.path, &offset.offset.to_le_bytes())
             .await?;
         trace!(
-            "Stored offset: {} for consumer: {}",
+            "Stored offset: {} for {}",
             offset.offset,
             offset.consumer_id,
         );
@@ -139,7 +140,8 @@ impl Storage<Partition> for FilePartitionStorage {
         }
 
         partition.current_offset = last_segment.current_offset;
-        partition.load_offsets().await?;
+        partition.load_offsets(ConsumerType::Consumer).await?;
+        partition.load_offsets(ConsumerType::Group).await?;
         info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
             partition.id, partition.stream_id, partition.topic_id, partition.current_offset
@@ -176,6 +178,21 @@ impl Storage<Partition> for FilePartitionStorage {
         if create_dir(&partition.consumer_offsets_path).await.is_err() {
             error!(
                 "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                partition.id, partition.stream_id, partition.topic_id
+            );
+            return Err(Error::CannotCreatePartition(
+                partition.id,
+                partition.stream_id,
+                partition.topic_id,
+            ));
+        }
+
+        if create_dir(&partition.consumer_group_offsets_path)
+            .await
+            .is_err()
+        {
+            error!(
+                "Failed to create consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
                 partition.id, partition.stream_id, partition.topic_id
             );
             return Err(Error::CannotCreatePartition(

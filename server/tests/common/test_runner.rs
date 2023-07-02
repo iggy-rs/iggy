@@ -1,4 +1,5 @@
 use crate::common::{ClientFactory, TestServer};
+use sdk::consumer_type::ConsumerType;
 use sdk::error::Error;
 use sdk::groups::create_group::CreateGroup;
 use sdk::groups::delete_group::DeleteGroup;
@@ -7,7 +8,7 @@ use sdk::groups::get_groups::GetGroups;
 use sdk::groups::join_group::JoinGroup;
 use sdk::groups::leave_group::LeaveGroup;
 use sdk::messages::poll_messages::Kind::{Next, Offset};
-use sdk::messages::poll_messages::{ConsumerType, Format, PollMessages};
+use sdk::messages::poll_messages::{Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
 use sdk::offsets::get_offset::GetOffset;
 use sdk::offsets::store_offset::StoreOffset;
@@ -226,6 +227,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 15. Get the existing customer offset and ensure it's 0
     let offset = client
         .get_offset(&GetOffset {
+            consumer_type,
             stream_id,
             topic_id,
             partition_id,
@@ -240,6 +242,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let stored_offset = 10;
     client
         .store_offset(&StoreOffset {
+            consumer_type,
             stream_id,
             topic_id,
             partition_id,
@@ -252,6 +255,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 17. Get the existing customer offset and ensure it's the previously stored value
     let offset = client
         .get_offset(&GetOffset {
+            consumer_type,
             stream_id,
             topic_id,
             partition_id,
@@ -288,6 +292,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 19. Get the existing customer offset and ensure that auto commit during poll has worked
     let offset = client
         .get_offset(&GetOffset {
+            consumer_type,
             stream_id,
             topic_id,
             partition_id,

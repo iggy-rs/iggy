@@ -11,8 +11,8 @@ use sdk::offsets::store_offset::StoreOffset;
 use sdk::validatable::Validatable;
 use std::sync::Arc;
 use streaming::message::Message;
+use streaming::polling_consumer::PollingConsumer;
 use streaming::system::System;
-use streaming::topics::polling_consumer::PollingConsumer;
 use streaming::utils::{checksum, timestamp};
 use tokio::sync::RwLock;
 use tracing::trace;
@@ -33,11 +33,12 @@ async fn poll_messages(
     query.topic_id = topic_id;
     query.validate()?;
 
+    let consumer = PollingConsumer::Consumer(query.consumer_id);
     let system = system.read().await;
     let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
     let messages = topic
         .get_messages(
-            PollingConsumer::Consumer(query.consumer_id),
+            consumer,
             query.partition_id,
             query.kind,
             query.value,
@@ -51,9 +52,9 @@ async fn poll_messages(
 
     if query.auto_commit {
         let offset = messages.last().unwrap().offset;
-        trace!("Last offset: {} will be automatically stored for consumer: {}, stream: {}, topic: {}, partition: {}", offset, query.consumer_id, query.stream_id, query.topic_id, query.partition_id);
+        trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, query.stream_id, query.topic_id, query.partition_id);
         topic
-            .store_offset(query.consumer_id, query.partition_id, offset)
+            .store_offset(consumer, query.partition_id, offset)
             .await?;
     }
 
@@ -100,10 +101,11 @@ async fn store_offset(
     command.topic_id = topic_id;
     command.validate()?;
 
+    let consumer = PollingConsumer::Consumer(command.consumer_id);
     let system = system.read().await;
     let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
     topic
-        .store_offset(command.consumer_id, command.partition_id, command.offset)
+        .store_offset(consumer, command.partition_id, command.offset)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -117,11 +119,12 @@ async fn get_offset(
     query.topic_id = topic_id;
     query.validate()?;
 
+    let consumer = PollingConsumer::Consumer(query.consumer_id);
     let system = system.read().await;
     let offset = system
         .get_stream(stream_id)?
         .get_topic(topic_id)?
-        .get_offset(query.consumer_id, query.partition_id)
+        .get_offset(consumer, query.partition_id)
         .await?;
 
     Ok(Json(Offset {

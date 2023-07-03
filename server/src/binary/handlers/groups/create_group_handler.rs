@@ -14,10 +14,7 @@ pub async fn handle(
 ) -> Result<(), Error> {
     trace!("{}", command);
     let mut system = system.write().await;
-    system
-        .get_stream_mut(command.stream_id)?
-        .get_topic_mut(command.topic_id)?
-        .create_consumer_group(command.group_id)?;
+    system.create_consumer_group(command.stream_id, command.topic_id, command.group_id)?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

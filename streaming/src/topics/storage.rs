@@ -56,7 +56,7 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         topic.name = topic_info;
-        let dir_entries = fs::read_dir(&topic.path).await;
+        let dir_entries = fs::read_dir(&topic.get_partitions_path()).await;
         if dir_entries.is_err() {
             return Err(Error::CannotReadPartitions(topic.id, topic.stream_id));
         }
@@ -81,7 +81,7 @@ impl Storage<Topic> for FileTopicStorage {
                 topic.stream_id,
                 topic.id,
                 partition_id,
-                &topic.path,
+                &topic.get_partitions_path(),
                 false,
                 topic.config.partition.clone(),
                 topic.storage.clone(),
@@ -130,6 +130,13 @@ impl Storage<Topic> for FileTopicStorage {
 
         if create_dir(&topic.path).await.is_err() {
             return Err(Error::CannotCreateTopicDirectory(topic.id, topic.stream_id));
+        }
+
+        if create_dir(&topic.get_partitions_path()).await.is_err() {
+            return Err(Error::CannotCreatePartitionsDirectory(
+                topic.stream_id,
+                topic.id,
+            ));
         }
 
         info!("Topic with ID {} was saved, path: {}", topic.id, topic.path);

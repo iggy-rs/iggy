@@ -103,7 +103,7 @@ async fn assert_persisted_topic(topic_path: &str, partitions_count: u32) {
     let topic_info_metadata = fs::metadata(&topic_info_path).await.unwrap();
     assert!(topic_info_metadata.is_file());
     for partition_id in 1..=partitions_count {
-        let partition_path = format!("{}/{}", topic_path, partition_id);
+        let partition_path = format!("{}/partitions/{}", topic_path, partition_id);
         let partition_metadata = fs::metadata(&partition_path).await.unwrap();
         assert!(partition_metadata.is_dir());
     }

@@ -1,4 +1,4 @@
-use crate::clients::client_manager::ClientManager;
+use crate::clients::client_manager::{Client, ClientManager, Transport};
 use crate::config::SystemConfig;
 use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
@@ -6,6 +6,7 @@ use crate::streams::stream::Stream;
 use futures::future::join_all;
 use sdk::error::Error;
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{create_dir, read_dir};
@@ -19,7 +20,7 @@ pub struct System {
     pub storage: Arc<SystemStorage>,
     streams: HashMap<u32, Stream>,
     config: Arc<SystemConfig>,
-    pub client_manager: Arc<RwLock<ClientManager>>,
+    client_manager: Arc<RwLock<ClientManager>>,
 }
 
 impl System {
@@ -167,5 +168,120 @@ impl System {
         }
 
         Ok(())
+    }
+
+    pub fn create_consumer_group(
+        &mut self,
+        stream_id: u32,
+        topic_id: u32,
+        group_id: u32,
+    ) -> Result<(), Error> {
+        self.get_stream_mut(stream_id)?
+            .get_topic_mut(topic_id)?
+            .create_consumer_group(group_id)?;
+        Ok(())
+    }
+
+    pub async fn delete_consumer_group(
+        &mut self,
+        stream_id: u32,
+        topic_id: u32,
+        group_id: u32,
+    ) -> Result<(), Error> {
+        let consumer_group = self
+            .get_stream_mut(stream_id)?
+            .get_topic_mut(topic_id)?
+            .delete_consumer_group(group_id)?;
+
+        let client_manager = self.client_manager.read().await;
+        let consumer_group = consumer_group.read().await;
+        for member in consumer_group.get_members() {
+            let member = member.read().await;
+            client_manager
+                .leave_consumer_group(member.id, stream_id, topic_id, group_id)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    pub async fn join_consumer_group(
+        &self,
+        client_id: u32,
+        stream_id: u32,
+        topic_id: u32,
+        group_id: u32,
+    ) -> Result<(), Error> {
+        self.get_stream(stream_id)?
+            .get_topic(topic_id)?
+            .join_consumer_group(group_id, client_id)
+            .await?;
+        let client_manager = self.client_manager.read().await;
+        client_manager
+            .join_consumer_group(client_id, stream_id, topic_id, group_id)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn leave_consumer_group(
+        &self,
+        client_id: u32,
+        stream_id: u32,
+        topic_id: u32,
+        group_id: u32,
+    ) -> Result<(), Error> {
+        self.get_stream(stream_id)?
+            .get_topic(topic_id)?
+            .leave_consumer_group(group_id, client_id)
+            .await?;
+        let client_manager = self.client_manager.read().await;
+        client_manager
+            .leave_consumer_group(client_id, stream_id, topic_id, group_id)
+            .await?;
+        Ok(())
+    }
+
+    pub async fn add_client(&self, address: &SocketAddr, transport: Transport) -> u32 {
+        let mut client_manager = self.client_manager.write().await;
+        let client_id = client_manager.add_client(address, transport);
+        info!("Added {transport} client with ID: {client_id} for address: {address}");
+        client_id
+    }
+
+    pub async fn delete_client(&self, address: &SocketAddr) {
+        let mut client_manager = self.client_manager.write().await;
+        let client = client_manager.delete_client(address);
+        if client.is_none() {
+            return;
+        }
+
+        let client = client.unwrap();
+        let client = client.read().await;
+        info!(
+            "Deleted {} client with ID: {} for address: {}",
+            client.transport, client.id, client.address
+        );
+
+        for consumer_group in client.consumer_groups.iter() {
+            if let Err(error) = self
+                .leave_consumer_group(
+                    client.id,
+                    consumer_group.stream_id,
+                    consumer_group.topic_id,
+                    consumer_group.group_id,
+                )
+                .await
+            {
+                error!(
+                    "Failed to leave consumer group with ID: {} by client with ID: {}. Error: {}",
+                    consumer_group.group_id, client.id, error
+                );
+            }
+        }
+    }
+
+    pub async fn get_clients(&self) -> Vec<Arc<RwLock<Client>>> {
+        let client_manager = self.client_manager.read().await;
+        client_manager.get_clients()
     }
 }

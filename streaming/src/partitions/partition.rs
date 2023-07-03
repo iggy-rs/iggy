@@ -45,23 +45,31 @@ impl Partition {
         stream_id: u32,
         topic_id: u32,
         id: u32,
-        topic_path: &str,
+        partition_path: &str,
         config: Arc<PartitionConfig>,
         storage: Arc<SystemStorage>,
     ) -> Partition {
-        Partition::create(stream_id, topic_id, id, topic_path, false, config, storage)
+        Partition::create(
+            stream_id,
+            topic_id,
+            id,
+            partition_path,
+            false,
+            config,
+            storage,
+        )
     }
 
     pub fn create(
         stream_id: u32,
         topic_id: u32,
         id: u32,
-        topic_path: &str,
+        partition_path: &str,
         with_segment: bool,
         config: Arc<PartitionConfig>,
         storage: Arc<SystemStorage>,
     ) -> Partition {
-        let path = Self::get_path(id, topic_path);
+        let path = Self::get_path(id, partition_path);
         let offsets_path = Self::get_offsets_path(&path);
         let consumer_offsets_path = Self::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Self::get_consumer_group_offsets_path(&offsets_path);
@@ -152,10 +160,10 @@ mod tests {
         let stream_id = 1;
         let topic_id = 2;
         let id = 3;
-        let topic_path = "/topics/2";
+        let partition_path = &format!("/topics/{topic_id}/partitions");
         let with_segment = true;
         let config = Arc::new(PartitionConfig::default());
-        let path = Partition::get_path(id, topic_path);
+        let path = Partition::get_path(id, &partition_path);
         let offsets_path = Partition::get_offsets_path(&path);
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
@@ -165,7 +173,7 @@ mod tests {
             stream_id,
             topic_id,
             id,
-            topic_path,
+            partition_path,
             with_segment,
             config,
             storage,
@@ -198,11 +206,13 @@ mod tests {
     #[test]
     fn should_not_initialize_messages_buffer_given_zero_capacity() {
         let storage = Arc::new(get_test_system_storage());
+        let topic_id = 1;
+        let partition_path = &format!("/topics/{topic_id}/partitions");
         let partition = Partition::create(
             1,
             1,
             1,
-            "/topics/1",
+            partition_path,
             true,
             Arc::new(PartitionConfig {
                 messages_buffer: 0,
@@ -216,11 +226,13 @@ mod tests {
     #[test]
     fn should_not_initialize_segments_given_false_with_segment_parameter() {
         let storage = Arc::new(get_test_system_storage());
+        let topic_id = 1;
+        let partition_path = &format!("/topics/{topic_id}/partitions");
         let partition = Partition::create(
             1,
+            topic_id,
             1,
-            1,
-            "/topics/1",
+            partition_path,
             false,
             Arc::new(PartitionConfig::default()),
             storage,

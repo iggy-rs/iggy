@@ -30,8 +30,8 @@ async fn get_clients(
     State(system): State<Arc<RwLock<System>>>,
 ) -> Result<Json<Vec<ClientInfo>>, CustomError> {
     let system = system.read().await;
-    let client_manager = system.client_manager.read().await;
-    let clients = mapper::map_clients(&client_manager.get_clients());
+    let clients = system.get_clients().await;
+    let clients = mapper::map_clients(&clients).await;
     Ok(Json(clients))
 }
 

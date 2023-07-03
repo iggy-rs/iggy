@@ -45,35 +45,21 @@ async fn handle_connection(
     async {
         info!("Client has connected: {}", address);
         let client_id = system
-            .write()
+            .read()
             .await
-            .client_manager
-            .write()
-            .await
-            .add_client(&address, Transport::Quic);
+            .add_client(&address, Transport::Quic)
+            .await;
         let client_context = ClientContext { client_id };
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {
                 Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
                     info!("Connection closed");
-                    system
-                        .write()
-                        .await
-                        .client_manager
-                        .write()
-                        .await
-                        .delete_client(&address);
+                    system.read().await.delete_client(&address).await;
                     return Ok(());
                 }
                 Err(error) => {
-                    system
-                        .write()
-                        .await
-                        .client_manager
-                        .write()
-                        .await
-                        .delete_client(&address);
+                    system.read().await.delete_client(&address).await;
                     return Err(error);
                 }
                 Ok(stream) => stream,

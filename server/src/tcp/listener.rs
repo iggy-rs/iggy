@@ -32,13 +32,7 @@ pub fn start(address: &str, system: Arc<RwLock<System>>) {
                     tokio::spawn(async move {
                         if let Err(error) = handle_connection(stream, system.clone()).await {
                             handle_error(error);
-                            system
-                                .write()
-                                .await
-                                .client_manager
-                                .write()
-                                .await
-                                .delete_client(&address);
+                            system.read().await.delete_client(&address).await;
                         }
                     });
                 }
@@ -54,12 +48,10 @@ async fn handle_connection(
 ) -> Result<(), ServerError> {
     let address = stream.peer_addr()?;
     let client_id = system
-        .write()
+        .read()
         .await
-        .client_manager
-        .write()
-        .await
-        .add_client(&address, Transport::Tcp);
+        .add_client(&address, Transport::Tcp)
+        .await;
     let client_context = ClientContext { client_id };
     let mut sender = TcpSender { stream };
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];

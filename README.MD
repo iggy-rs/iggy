@@ -87,9 +87,9 @@ Send another message 'lorem ipsum' (ID 2) to the same stream, topic and partitio
 
 `message.send|1|1|p|1|2|lorem ipsum`
 
-Poll messages by a regular consumer type 0 (1 for consumer group) with ID 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition with ID 1, starting with offset (`o`) 0, messages count 2, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload:
+Poll messages by a regular consumer `c` (`g` for consumer group) with ID 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition with ID 1, starting with offset (`o`) 0, messages count 2, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload:
 
-`message.poll|0|0|1|1|1|o|0|2|n|s`
+`message.poll|c|0|1|1|1|o|0|2|n|s`
 
 Finally, restart the server to see it is able to load the persisted data.
 

@@ -62,7 +62,7 @@ impl Topic {
                     stream_id,
                     topic.id,
                     partition_id,
-                    &topic.path,
+                    &topic.get_partitions_path(),
                     true,
                     config.partition.clone(),
                     storage.clone(),
@@ -76,6 +76,10 @@ impl Topic {
 
     pub fn get_partitions(&self) -> Vec<&RwLock<Partition>> {
         self.partitions.values().collect()
+    }
+
+    pub fn get_partitions_path(&self) -> String {
+        format!("{}/partitions", self.path)
     }
 
     fn get_path(id: u32, topics_path: &str) -> String {

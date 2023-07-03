@@ -121,6 +121,10 @@ pub enum Error {
     #[error("Failed to create directory for partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
     CannotCreatePartitionDirectory(u32, u32, u32),
     #[error(
+        "Failed to create directory for partitions for stream with ID: {0} and topic with ID: {1}"
+    )]
+    CannotCreatePartitionsDirectory(u32, u32),
+    #[error(
         "Failed to delete partition with ID: {0} for stream with ID: {1} and topic with ID: {2}"
     )]
     CannotDeletePartition(u32, u32, u32),
@@ -188,6 +192,8 @@ pub enum Error {
     InvalidConsumerGroupId,
     #[error("Feature is unavailable")]
     FeatureUnavailable,
+    #[error("Client with ID: {0} was not found.")]
+    ClientNotFound(u32),
 }
 
 impl Error {
@@ -269,6 +275,8 @@ impl Error {
             Error::ConsumerGroupMemberNotFound(_, _, _) => 74,
             Error::InvalidConsumerGroupId => 75,
             Error::FeatureUnavailable => 76,
+            Error::CannotCreatePartitionsDirectory(_, _) => 77,
+            Error::ClientNotFound(_) => 78,
             _ => 255,
         }
     }
@@ -356,6 +364,8 @@ impl Error {
             Error::ConsumerGroupAlreadyExists(_, _) => "consumer_group_already_exists",
             Error::ConsumerGroupMemberNotFound(_, _, _) => "consumer_group_member_not_found",
             Error::FeatureUnavailable => "feature_unavailable",
+            Error::CannotCreatePartitionsDirectory(_, _) => "cannot_create_partitions_directory",
+            Error::ClientNotFound(_) => "client_not_found",
             _ => "error",
         }
     }

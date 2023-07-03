@@ -14,9 +14,10 @@ pub fn map_offset(consumer_id: u32, offset: u64) -> Vec<u8> {
     bytes
 }
 
-pub fn map_clients(clients: &[&Client]) -> Vec<u8> {
+pub async fn map_clients(clients: &[Arc<RwLock<Client>>]) -> Vec<u8> {
     let mut bytes = Vec::new();
     for client in clients {
+        let client = client.read().await;
         bytes.extend(client.id.to_le_bytes());
         let transport: u8 = match client.transport {
             Transport::Tcp => 1,

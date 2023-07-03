@@ -17,9 +17,12 @@ pub async fn handle(
     trace!("{}", command);
     let system = system.read().await;
     system
-        .get_stream(command.stream_id)?
-        .get_topic(command.topic_id)?
-        .join_consumer_group(command.group_id, client_context.client_id)
+        .join_consumer_group(
+            client_context.client_id,
+            command.stream_id,
+            command.topic_id,
+            command.group_id,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

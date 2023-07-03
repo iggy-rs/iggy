@@ -41,13 +41,14 @@ impl Topic {
         Err(Error::ConsumerGroupAlreadyExists(id, self.id))
     }
 
-    pub fn delete_consumer_group(&mut self, id: u32) -> Result<(), Error> {
-        if self.consumer_groups.remove(&id).is_some() {
+    pub fn delete_consumer_group(&mut self, id: u32) -> Result<RwLock<ConsumerGroup>, Error> {
+        let consumer_group = self.consumer_groups.remove(&id);
+        if let Some(consumer_group) = consumer_group {
             info!(
                 "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
                 id, self.id, self.stream_id
             );
-            return Ok(());
+            return Ok(consumer_group);
         }
 
         Err(Error::ConsumerGroupNotFound(id, self.id))

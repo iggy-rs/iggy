@@ -51,10 +51,7 @@ async fn create_group(
     command.topic_id = topic_id;
     command.validate()?;
     let mut system = system.write().await;
-    system
-        .get_stream_mut(stream_id)?
-        .get_topic_mut(command.topic_id)?
-        .create_consumer_group(command.group_id)?;
+    system.create_consumer_group(stream_id, topic_id, command.group_id)?;
     Ok(StatusCode::CREATED)
 }
 
@@ -62,11 +59,9 @@ async fn delete_group(
     State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id, group_id)): Path<(u32, u32, u32)>,
 ) -> Result<StatusCode, CustomError> {
+    let mut system = system.write().await;
     system
-        .write()
-        .await
-        .get_stream_mut(stream_id)?
-        .get_topic_mut(topic_id)?
-        .delete_consumer_group(group_id)?;
+        .delete_consumer_group(stream_id, topic_id, group_id)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }

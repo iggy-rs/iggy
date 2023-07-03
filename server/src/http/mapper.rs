@@ -1,6 +1,7 @@
 use sdk::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
 use sdk::models::stream::StreamDetails;
 use sdk::models::topic::TopicDetails;
+use std::sync::Arc;
 use streaming::clients::client_manager::Client;
 use streaming::streams::stream::Stream;
 use streaming::topics::consumer_group::ConsumerGroup;
@@ -78,17 +79,22 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
     topic_details
 }
 
-pub fn map_clients(clients: &[&Client]) -> Vec<sdk::models::client_info::ClientInfo> {
-    let mut clients = clients
-        .iter()
-        .map(|client| sdk::models::client_info::ClientInfo {
+pub async fn map_clients(
+    clients: &[Arc<RwLock<Client>>],
+) -> Vec<sdk::models::client_info::ClientInfo> {
+    let mut clients_data = Vec::new();
+    for client in clients {
+        let client = client.read().await;
+        let client = sdk::models::client_info::ClientInfo {
             id: client.id,
             transport: client.transport.to_string(),
             address: client.address.to_string(),
-        })
-        .collect::<Vec<sdk::models::client_info::ClientInfo>>();
-    clients.sort_by(|a, b| a.id.cmp(&b.id));
-    clients
+        };
+        clients_data.push(client);
+    }
+
+    clients_data.sort_by(|a, b| a.id.cmp(&b.id));
+    clients_data
 }
 
 pub async fn map_consumer_groups(

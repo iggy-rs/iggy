@@ -62,7 +62,7 @@ pub enum Error {
     CannotUpdateStreamInfo(u32),
     #[error("Failed to open stream info file for stream with ID: {0}")]
     CannotOpenStreamInfo(u32),
-    #[error("Failed to read stream info file for stream with ID {0}")]
+    #[error("Failed to read stream info file for stream with ID: {0}")]
     CannotReadStreamInfo(u32),
     #[error("Cannot read streams")]
     CannotReadStreams,
@@ -80,9 +80,9 @@ pub enum Error {
     InvalidStreamId,
     #[error("Invalid stream name")]
     InvalidStreamName,
-    #[error("Cannot read topics for stream with ID {0}")]
+    #[error("Cannot read topics for stream with ID: {0}")]
     CannotReadTopics(u32),
-    #[error("Cannot create topics directory for stream with ID {0}")]
+    #[error("Cannot create topics directory for stream with ID: {0}")]
     CannotCreateTopicsDirectory(u32),
     #[error("Failed to create directory for topic with ID: {0} for stream with ID: {1}.")]
     CannotCreateTopicDirectory(u32, u32),
@@ -92,7 +92,7 @@ pub enum Error {
     CannotUpdateTopicInfo(u32, u32),
     #[error("Failed to open topic info file for topic with ID: {0} for stream with ID: {1}.")]
     CannotOpenTopicInfo(u32, u32),
-    #[error("Failed to read topic info file for topic with ID {0} for stream with ID: {1}.")]
+    #[error("Failed to read topic info file for topic with ID: {0} for stream with ID: {1}.")]
     CannotReadTopicInfo(u32, u32),
     #[error("Failed to create topic with ID: {0} for stream with ID: {1}.")]
     CannotCreateTopic(u32, u32),
@@ -125,6 +125,10 @@ pub enum Error {
     )]
     CannotCreatePartitionsDirectory(u32, u32),
     #[error(
+    "Failed to create directory for consumer groups for stream with ID: {0} and topic with ID: {1}"
+    )]
+    CannotCreateConsumerGroupsDirectory(u32, u32),
+    #[error(
         "Failed to delete partition with ID: {0} for stream with ID: {1} and topic with ID: {2}"
     )]
     CannotDeletePartition(u32, u32, u32),
@@ -138,7 +142,9 @@ pub enum Error {
     CannotCreatePartitionSegmentTimeIndexFile(String),
     #[error("Cannot open partition log file")]
     CannotOpenPartitionLogFile,
-    #[error("Failed to partitions directories for topic with ID: {0} and stream with ID: {1}")]
+    #[error(
+        "Failed to read partitions directories for topic with ID: {0} and stream with ID: {1}"
+    )]
     CannotReadPartitions(u32, u32),
     #[error("Partition with ID: {0} was not found.")]
     PartitionNotFound(u32),
@@ -182,6 +188,12 @@ pub enum Error {
     InvalidOffset(u64),
     #[error("Failed to read consumers offsets  for partition with ID: {0}")]
     CannotReadConsumerOffsets(u32),
+    #[error("Failed to read consumer groups for topic with ID: {0} and stream with ID: {1}")]
+    CannotReadConsumerGroups(u32, u32),
+    #[error("Failed to create consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.")]
+    CannotCreateConsumerGroupInfo(u32, u32, u32),
+    #[error("Failed to delete consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.")]
+    CannotDeleteConsumerGroupInfo(u32, u32, u32),
     #[error("Consumer group with ID: {0} for topic with ID: {1} was not found.")]
     ConsumerGroupNotFound(u32, u32),
     #[error("Consumer group with ID: {0} for topic with ID: {1} already exists.")]
@@ -276,7 +288,11 @@ impl Error {
             Error::InvalidConsumerGroupId => 75,
             Error::FeatureUnavailable => 76,
             Error::CannotCreatePartitionsDirectory(_, _) => 77,
-            Error::ClientNotFound(_) => 78,
+            Error::CannotCreateConsumerGroupsDirectory(_, _) => 78,
+            Error::CannotReadConsumerGroups(_, _) => 79,
+            Error::CannotCreateConsumerGroupInfo(_, _, _) => 80,
+            Error::CannotDeleteConsumerGroupInfo(_, _, _) => 81,
+            Error::ClientNotFound(_) => 82,
             _ => 255,
         }
     }
@@ -365,6 +381,12 @@ impl Error {
             Error::ConsumerGroupMemberNotFound(_, _, _) => "consumer_group_member_not_found",
             Error::FeatureUnavailable => "feature_unavailable",
             Error::CannotCreatePartitionsDirectory(_, _) => "cannot_create_partitions_directory",
+            Error::CannotCreateConsumerGroupsDirectory(_, _) => {
+                "cannot_create_consumer_groups_directory"
+            }
+            Error::CannotReadConsumerGroups(_, _) => "cannot_read_consumer_groups",
+            Error::CannotCreateConsumerGroupInfo(_, _, _) => "cannot_create_consumer_group_info",
+            Error::CannotDeleteConsumerGroupInfo(_, _, _) => "cannot_delete_consumer_group_info",
             Error::ClientNotFound(_) => "client_not_found",
             _ => "error",
         }

@@ -51,7 +51,9 @@ async fn create_group(
     command.topic_id = topic_id;
     command.validate()?;
     let mut system = system.write().await;
-    system.create_consumer_group(stream_id, topic_id, command.group_id)?;
+    system
+        .create_consumer_group(stream_id, topic_id, command.group_id)
+        .await?;
     Ok(StatusCode::CREATED)
 }
 

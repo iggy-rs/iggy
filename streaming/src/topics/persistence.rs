@@ -6,7 +6,8 @@ use std::sync::Arc;
 impl Topic {
     pub async fn load(&mut self) -> Result<(), Error> {
         let storage = self.storage.clone();
-        storage.topic.load(self).await
+        storage.topic.load(self).await?;
+        storage.topic.load_consumer_groups(self).await
     }
 
     pub async fn persist(&self) -> Result<(), Error> {

@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use sdk::error::Error;
 use std::io::SeekFrom;
 use std::sync::Arc;
-use tokio::fs;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::log::{trace, warn};
 use tracing::{error, info};
@@ -146,9 +145,9 @@ impl Storage<Segment> for FileSegmentStorage {
             "Deleting segment with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
             segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
         );
-        fs::remove_file(&segment.log_path).await?;
-        fs::remove_file(&segment.index_path).await?;
-        fs::remove_file(&segment.time_index_path).await?;
+        self.persister.delete(&segment.log_path).await?;
+        self.persister.delete(&segment.index_path).await?;
+        self.persister.delete(&segment.time_index_path).await?;
         info!(
             "Deleted segment with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
             segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,

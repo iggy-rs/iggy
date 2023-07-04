@@ -8,6 +8,7 @@ use crate::segments::storage::FileSegmentStorage;
 use crate::segments::time_index::TimeIndex;
 use crate::streams::storage::FileStreamStorage;
 use crate::streams::stream::Stream;
+use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::storage::FileTopicStorage;
 use crate::topics::topic::Topic;
 use async_trait::async_trait;
@@ -26,7 +27,19 @@ pub trait Storage<T>: Sync + Send {
 pub trait StreamStorage: Storage<Stream> {}
 
 #[async_trait]
-pub trait TopicStorage: Storage<Topic> {}
+pub trait TopicStorage: Storage<Topic> {
+    async fn save_consumer_group(
+        &self,
+        topic: &Topic,
+        consumer_group: &ConsumerGroup,
+    ) -> Result<(), Error>;
+    async fn load_consumer_groups(&self, topic: &mut Topic) -> Result<(), Error>;
+    async fn delete_consumer_group(
+        &self,
+        topic: &Topic,
+        consumer_group: &ConsumerGroup,
+    ) -> Result<(), Error>;
+}
 
 #[async_trait]
 pub trait PartitionStorage: Storage<Partition> {
@@ -169,7 +182,28 @@ pub(crate) mod tests {
         }
     }
 
-    impl TopicStorage for TestTopicStorage {}
+    #[async_trait]
+    impl TopicStorage for TestTopicStorage {
+        async fn save_consumer_group(
+            &self,
+            _topic: &Topic,
+            _consumer_group: &ConsumerGroup,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn load_consumer_groups(&self, _topic: &mut Topic) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn delete_consumer_group(
+            &self,
+            _topic: &Topic,
+            _consumer_group: &ConsumerGroup,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+    }
 
     #[async_trait]
     impl Storage<Partition> for TestPartitionStorage {

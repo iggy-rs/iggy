@@ -82,6 +82,14 @@ impl Topic {
         format!("{}/partitions", self.path)
     }
 
+    pub fn get_consumer_group_path(&self, id: u32) -> String {
+        format!("{}/{}", self.get_consumer_groups_path(), id)
+    }
+
+    pub fn get_consumer_groups_path(&self) -> String {
+        format!("{}/groups", self.path)
+    }
+
     fn get_path(id: u32, topics_path: &str) -> String {
         format!("{}/{}", topics_path, id)
     }

@@ -1,6 +1,7 @@
 use crate::partitions::partition::Partition;
 use crate::persister::Persister;
 use crate::storage::{Storage, TopicStorage};
+use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::topic::Topic;
 use async_trait::async_trait;
 use futures::future::join_all;
@@ -27,7 +28,102 @@ impl FileTopicStorage {
 unsafe impl Send for FileTopicStorage {}
 unsafe impl Sync for FileTopicStorage {}
 
-impl TopicStorage for FileTopicStorage {}
+#[async_trait]
+impl TopicStorage for FileTopicStorage {
+    async fn save_consumer_group(
+        &self,
+        topic: &Topic,
+        consumer_group: &ConsumerGroup,
+    ) -> Result<(), Error> {
+        if self
+            .persister
+            .overwrite(
+                &topic.get_consumer_group_path(consumer_group.id),
+                &consumer_group.id.to_le_bytes(),
+            )
+            .await
+            .is_err()
+        {
+            return Err(Error::CannotCreateConsumerGroupInfo(
+                consumer_group.id,
+                topic.id,
+                topic.stream_id,
+            ));
+        }
+
+        info!(
+            "Consumer group with ID: {} for topic with ID: {} and stream with ID: {} was saved.",
+            consumer_group.id, topic.id, topic.stream_id
+        );
+
+        Ok(())
+    }
+
+    async fn load_consumer_groups(&self, topic: &mut Topic) -> Result<(), Error> {
+        info!(
+            "Loading consumer groups for topic with ID: {} for stream with ID: {} from disk...",
+            topic.id, topic.stream_id
+        );
+
+        let dir_entries = fs::read_dir(&topic.get_consumer_groups_path()).await;
+        if dir_entries.is_err() {
+            return Err(Error::CannotReadConsumerGroups(topic.id, topic.stream_id));
+        }
+
+        let mut dir_entries = dir_entries.unwrap();
+        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
+            let metadata = dir_entry.metadata().await;
+            if metadata.is_err() || metadata.unwrap().is_dir() {
+                continue;
+            }
+
+            let name = dir_entry.file_name().into_string().unwrap();
+            let consumer_group_id = name.parse::<u32>();
+            if consumer_group_id.is_err() {
+                error!("Invalid consumer group ID file with name: '{}'.", name);
+                continue;
+            }
+
+            let consumer_group_id = consumer_group_id.unwrap();
+            topic.consumer_groups.insert(
+                consumer_group_id,
+                RwLock::new(ConsumerGroup::new(
+                    topic.id,
+                    consumer_group_id,
+                    topic.partitions.len() as u32,
+                )),
+            );
+        }
+
+        Ok(())
+    }
+
+    async fn delete_consumer_group(
+        &self,
+        topic: &Topic,
+        consumer_group: &ConsumerGroup,
+    ) -> Result<(), Error> {
+        if self
+            .persister
+            .delete(&topic.get_consumer_group_path(consumer_group.id))
+            .await
+            .is_err()
+        {
+            return Err(Error::CannotDeleteConsumerGroupInfo(
+                consumer_group.id,
+                topic.id,
+                topic.stream_id,
+            ));
+        }
+
+        info!(
+            "Consumer group with ID: {} for topic with ID: {} and stream with ID: {} was deleted.",
+            consumer_group.id, topic.id, topic.stream_id
+        );
+
+        Ok(())
+    }
+}
 
 #[async_trait]
 impl Storage<Topic> for FileTopicStorage {
@@ -113,6 +209,7 @@ impl Storage<Topic> for FileTopicStorage {
                 .insert(partition.id, RwLock::new(partition));
         }
 
+        self.load_consumer_groups(topic).await?;
         topic.load_messages_to_cache().await?;
 
         info!(
@@ -139,7 +236,12 @@ impl Storage<Topic> for FileTopicStorage {
             ));
         }
 
-        info!("Topic with ID {} was saved, path: {}", topic.id, topic.path);
+        if create_dir(&topic.get_consumer_groups_path()).await.is_err() {
+            return Err(Error::CannotCreateConsumerGroupsDirectory(
+                topic.stream_id,
+                topic.id,
+            ));
+        }
 
         if self
             .persister
@@ -149,6 +251,11 @@ impl Storage<Topic> for FileTopicStorage {
         {
             return Err(Error::CannotCreateTopicInfo(topic.id, topic.stream_id));
         }
+
+        info!(
+            "Topic with ID: {} was saved, path: {}",
+            topic.id, topic.path
+        );
 
         info!(
             "Creating {} partition(s) for topic with ID: {} and stream with ID: {}...",

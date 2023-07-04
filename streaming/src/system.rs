@@ -170,7 +170,7 @@ impl System {
         Ok(())
     }
 
-    pub fn create_consumer_group(
+    pub async fn create_consumer_group(
         &mut self,
         stream_id: u32,
         topic_id: u32,
@@ -178,7 +178,8 @@ impl System {
     ) -> Result<(), Error> {
         self.get_stream_mut(stream_id)?
             .get_topic_mut(topic_id)?
-            .create_consumer_group(group_id)?;
+            .create_consumer_group(group_id)
+            .await?;
         Ok(())
     }
 
@@ -191,7 +192,8 @@ impl System {
         let consumer_group = self
             .get_stream_mut(stream_id)?
             .get_topic_mut(topic_id)?
-            .delete_consumer_group(group_id)?;
+            .delete_consumer_group(group_id)
+            .await?;
 
         let client_manager = self.client_manager.read().await;
         let consumer_group = consumer_group.read().await;

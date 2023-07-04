@@ -18,19 +18,19 @@ impl Topic {
         Ok(consumer_group.unwrap())
     }
 
-    pub fn create_consumer_group(&mut self, id: u32) -> Result<(), Error> {
+    pub async fn create_consumer_group(&mut self, id: u32) -> Result<(), Error> {
+        let consumer_group = ConsumerGroup::new(self.id, id, self.partitions.len() as u32);
         if self
             .consumer_groups
-            .insert(
-                id,
-                RwLock::new(ConsumerGroup::new(
-                    self.id,
-                    id,
-                    self.partitions.len() as u32,
-                )),
-            )
+            .insert(id, RwLock::new(consumer_group))
             .is_none()
         {
+            let consumer_group = self.get_consumer_group(id)?;
+            let consumer_group = consumer_group.read().await;
+            self.storage
+                .topic
+                .save_consumer_group(self, &consumer_group)
+                .await?;
             info!(
                 "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
                 id, self.id, self.stream_id
@@ -41,13 +41,20 @@ impl Topic {
         Err(Error::ConsumerGroupAlreadyExists(id, self.id))
     }
 
-    pub fn delete_consumer_group(&mut self, id: u32) -> Result<RwLock<ConsumerGroup>, Error> {
+    pub async fn delete_consumer_group(&mut self, id: u32) -> Result<RwLock<ConsumerGroup>, Error> {
         let consumer_group = self.consumer_groups.remove(&id);
         if let Some(consumer_group) = consumer_group {
-            info!(
-                "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
-                id, self.id, self.stream_id
-            );
+            {
+                let consumer_group = consumer_group.read().await;
+                self.storage
+                    .topic
+                    .delete_consumer_group(self, &consumer_group)
+                    .await?;
+                info!(
+                    "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
+                    id, self.id, self.stream_id
+                );
+            }
             return Ok(consumer_group);
         }
 
@@ -84,48 +91,48 @@ mod tests {
     use crate::storage::tests::get_test_system_storage;
     use std::sync::Arc;
 
-    #[test]
-    fn should_be_created_given_valid_parameters() {
+    #[tokio::test]
+    async fn should_be_created_given_valid_parameters() {
         let group_id = 1;
         let mut topic = get_topic();
-        let result = topic.create_consumer_group(group_id);
+        let result = topic.create_consumer_group(group_id).await;
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn should_not_be_created_given_already_existing_group_with_same_id() {
+    #[tokio::test]
+    async fn should_not_be_created_given_already_existing_group_with_same_id() {
         let group_id = 1;
         let mut topic = get_topic();
-        let result = topic.create_consumer_group(group_id);
+        let result = topic.create_consumer_group(group_id).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
-        let result = topic.create_consumer_group(group_id);
+        let result = topic.create_consumer_group(group_id).await;
         assert!(result.is_err());
         assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
         assert!(matches!(err, Error::ConsumerGroupAlreadyExists(_, _)));
     }
 
-    #[test]
-    fn should_be_deleted_given_already_existing_group_with_same_id() {
+    #[tokio::test]
+    async fn should_be_deleted_given_already_existing_group_with_same_id() {
         let group_id = 1;
         let mut topic = get_topic();
-        let result = topic.create_consumer_group(group_id);
+        let result = topic.create_consumer_group(group_id).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
-        let result = topic.delete_consumer_group(group_id);
+        let result = topic.delete_consumer_group(group_id).await;
         assert!(result.is_ok());
         assert!(topic.consumer_groups.is_empty());
     }
 
-    #[test]
-    fn should_not_be_deleted_given_non_existing_group_with_same_id() {
+    #[tokio::test]
+    async fn should_not_be_deleted_given_non_existing_group_with_same_id() {
         let group_id = 1;
         let mut topic = get_topic();
-        let result = topic.create_consumer_group(group_id);
+        let result = topic.create_consumer_group(group_id).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
-        let result = topic.delete_consumer_group(group_id + 1);
+        let result = topic.delete_consumer_group(group_id + 1).await;
         assert!(result.is_err());
         assert_eq!(topic.consumer_groups.len(), 1);
     }
@@ -135,7 +142,7 @@ mod tests {
         let group_id = 1;
         let member_id = 1;
         let mut topic = get_topic();
-        topic.create_consumer_group(group_id).unwrap();
+        topic.create_consumer_group(group_id).await.unwrap();
         let result = topic.join_consumer_group(group_id, member_id).await;
         assert!(result.is_ok());
         let group = topic.get_consumer_group(group_id).unwrap().read().await;
@@ -148,7 +155,7 @@ mod tests {
         let group_id = 1;
         let member_id = 1;
         let mut topic = get_topic();
-        topic.create_consumer_group(group_id).unwrap();
+        topic.create_consumer_group(group_id).await.unwrap();
         topic
             .join_consumer_group(group_id, member_id)
             .await

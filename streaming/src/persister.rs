@@ -2,12 +2,14 @@ use crate::utils::file;
 use async_trait::async_trait;
 use sdk::error::Error;
 use std::fmt::Debug;
+use tokio::fs;
 use tokio::io::AsyncWriteExt;
 
 #[async_trait]
 pub trait Persister: Sync + Send {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), Error>;
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), Error>;
+    async fn delete(&self, path: &str) -> Result<(), Error>;
 }
 
 impl Debug for dyn Persister {
@@ -43,6 +45,11 @@ impl Persister for FilePersister {
         file.write_all(bytes).await?;
         Ok(())
     }
+
+    async fn delete(&self, path: &str) -> Result<(), Error> {
+        fs::remove_file(path).await?;
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -58,6 +65,11 @@ impl Persister for FileWithSyncPersister {
         let mut file = file::write(path).await?;
         file.write_all(bytes).await?;
         file.sync_all().await?;
+        Ok(())
+    }
+
+    async fn delete(&self, path: &str) -> Result<(), Error> {
+        fs::remove_file(path).await?;
         Ok(())
     }
 }

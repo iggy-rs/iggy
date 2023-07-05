@@ -59,6 +59,7 @@ async fn handle_connection(
                     return Ok(());
                 }
                 Err(error) => {
+                    error!("Error when handling QUIC stream: {:?}", error);
                     system.read().await.delete_client(&address).await;
                     return Err(error);
                 }

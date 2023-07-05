@@ -251,34 +251,53 @@ impl System {
     }
 
     pub async fn delete_client(&self, address: &SocketAddr) {
-        let mut client_manager = self.client_manager.write().await;
-        let client = client_manager.delete_client(address);
-        if client.is_none() {
-            return;
+        let consumer_groups: Vec<(u32, u32, u32)>;
+        let client_id;
+
+        {
+            let client_manager = self.client_manager.read().await;
+            let client = client_manager.get_client(address);
+            if client.is_none() {
+                return;
+            }
+
+            let client = client.unwrap();
+            let client = client.read().await;
+            client_id = client.id;
+
+            consumer_groups = client
+                .consumer_groups
+                .iter()
+                .map(|c| (c.stream_id, c.topic_id, c.group_id))
+                .collect();
         }
 
-        let client = client.unwrap();
-        let client = client.read().await;
-        info!(
-            "Deleted {} client with ID: {} for address: {}",
-            client.transport, client.id, client.address
-        );
-
-        for consumer_group in client.consumer_groups.iter() {
+        for (stream_id, topic_id, group_id) in consumer_groups.iter() {
             if let Err(error) = self
-                .leave_consumer_group(
-                    client.id,
-                    consumer_group.stream_id,
-                    consumer_group.topic_id,
-                    consumer_group.group_id,
-                )
+                .leave_consumer_group(client_id, *stream_id, *topic_id, *group_id)
                 .await
             {
                 error!(
                     "Failed to leave consumer group with ID: {} by client with ID: {}. Error: {}",
-                    consumer_group.group_id, client.id, error
+                    group_id, client_id, error
                 );
             }
+        }
+
+        {
+            let mut client_manager = self.client_manager.write().await;
+            let client = client_manager.delete_client(address);
+            if client.is_none() {
+                return;
+            }
+
+            let client = client.unwrap();
+            let client = client.read().await;
+
+            info!(
+                "Deleted {} client with ID: {} for address: {}",
+                client.transport, client.id, client.address
+            );
         }
     }
 

@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::models::client_info::ClientInfo;
+use crate::models::client_info::{ClientInfo, ConsumerGroupInfo};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
 use crate::models::message::Message;
 use crate::models::offset::Offset;
@@ -44,10 +44,27 @@ pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, Error> {
             u32::from_le_bytes(payload[position + 5..position + 9].try_into()?) as usize;
         let address = from_utf8(&payload[position + 9..position + 9 + address_length])?.to_string();
         position += 4 + 1 + 4 + address_length;
+        let consumer_groups_count = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+        position += 4;
+        let mut consumer_groups = Vec::with_capacity(12 * consumer_groups_count as usize);
+        for _ in 0..consumer_groups_count {
+            let stream_id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+            let topic_id = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
+            let group_id = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
+            let consumer_group = ConsumerGroupInfo {
+                stream_id,
+                topic_id,
+                group_id,
+            };
+            consumer_groups.push(consumer_group);
+            position += 12;
+        }
+
         let client = ClientInfo {
             id,
             transport,
             address,
+            consumer_groups,
         };
         clients.push(client);
     }

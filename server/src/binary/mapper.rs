@@ -27,6 +27,12 @@ pub async fn map_clients(clients: &[Arc<RwLock<Client>>]) -> Vec<u8> {
         let address = client.address.to_string();
         bytes.extend((address.len() as u32).to_le_bytes());
         bytes.extend(address.as_bytes());
+        bytes.extend((client.consumer_groups.len() as u32).to_le_bytes());
+        for consumer_group in &client.consumer_groups {
+            bytes.extend(consumer_group.group_id.to_le_bytes());
+            bytes.extend(consumer_group.topic_id.to_le_bytes());
+            bytes.extend(consumer_group.stream_id.to_le_bytes());
+        }
     }
     bytes
 }

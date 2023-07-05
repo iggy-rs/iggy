@@ -67,13 +67,18 @@ impl ClientManager {
         id
     }
 
-    pub fn delete_client(&mut self, address: &SocketAddr) -> Option<Arc<RwLock<Client>>> {
+    pub fn get_client(&self, address: &SocketAddr) -> Option<&Arc<RwLock<Client>>> {
         let id = checksum::get(address.to_string().as_bytes());
-        self.clients.remove(&id)
+        self.clients.get(&id)
     }
 
     pub fn get_clients(&self) -> Vec<Arc<RwLock<Client>>> {
         self.clients.values().cloned().collect()
+    }
+
+    pub fn delete_client(&mut self, address: &SocketAddr) -> Option<Arc<RwLock<Client>>> {
+        let id = checksum::get(address.to_string().as_bytes());
+        self.clients.remove(&id)
     }
 
     pub async fn join_consumer_group(
@@ -87,7 +92,16 @@ impl ClientManager {
         if client.is_none() {
             return Err(Error::ClientNotFound(client_id));
         }
+
         let mut client = client.unwrap().write().await;
+        if client.consumer_groups.iter().any(|consumer_group| {
+            consumer_group.group_id == group_id
+                && consumer_group.topic_id == topic_id
+                && consumer_group.stream_id == stream_id
+        }) {
+            return Ok(());
+        }
+
         client.consumer_groups.push(ConsumerGroup {
             stream_id,
             topic_id,

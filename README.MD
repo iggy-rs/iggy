@@ -30,6 +30,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
   - First/Last N messages
   - Next N messages for the specific consumer
 - Possibility of **auto committing the offset** (e.g. to achieve *at-most-once* delivery)
+- **Consumer groups** allowing message ordering and horizontal scaling across the consumers
 - Additional features such as **server side message deduplication**
 - Built-in benchmarking app to test the performance
 - **Single binary deployment** (no external dependencies)
@@ -232,7 +233,7 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer
 - [x] Implement message deduplication
-- [ ] Implement consumer groups for horizontal scaling
+- [x] Implement consumer groups for message ordering & horizontal scaling
 - [ ] Delete old messages bases on retention policy
 
 #### Distribution

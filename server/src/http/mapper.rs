@@ -1,3 +1,4 @@
+use sdk::models::client_info::ConsumerGroupInfo;
 use sdk::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
 use sdk::models::stream::StreamDetails;
 use sdk::models::topic::TopicDetails;
@@ -89,6 +90,15 @@ pub async fn map_clients(
             id: client.id,
             transport: client.transport.to_string(),
             address: client.address.to_string(),
+            consumer_groups: client
+                .consumer_groups
+                .iter()
+                .map(|consumer_group| ConsumerGroupInfo {
+                    stream_id: consumer_group.stream_id,
+                    topic_id: consumer_group.topic_id,
+                    group_id: consumer_group.group_id,
+                })
+                .collect(),
         };
         clients_data.push(client);
     }

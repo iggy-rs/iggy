@@ -7,7 +7,7 @@ use crate::groups::join_group::JoinGroup;
 use crate::groups::leave_group::LeaveGroup;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
-use crate::models::client_info::ClientInfo;
+use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::message::Message;
 use crate::models::offset::Offset;
@@ -19,6 +19,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
@@ -36,6 +37,7 @@ pub trait Client: SystemClient + StreamClient + TopicClient + MessageClient + Sy
 
 #[async_trait]
 pub trait SystemClient {
+    async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, Error>;
     async fn get_clients(&self, command: &GetClients) -> Result<Vec<ClientInfo>, Error>;
     async fn ping(&self, command: &Ping) -> Result<(), Error>;
     async fn kill(&self, command: &Kill) -> Result<(), Error>;

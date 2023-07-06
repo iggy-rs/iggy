@@ -4,6 +4,7 @@
 @partition_id = 1
 @group_id = 1
 @consumer_id = 1
+@client_id = 1
 @message_1_payload_base64 = aGVsbG8=
 @message_2_payload_base64 = d29ybGQ=
 
@@ -12,6 +13,9 @@ GET {{url}}
 
 ###
 GET {{url}}/clients
+
+###
+GET {{url}}/clients/{{client_id}}
 
 ###
 GET {{url}}/ping

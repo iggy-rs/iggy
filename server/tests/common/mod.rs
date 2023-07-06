@@ -1,7 +1,7 @@
 pub mod http;
 pub mod quic;
+pub mod scenarios;
 pub mod tcp;
-pub mod test_runner;
 
 use async_trait::async_trait;
 use sdk::client::Client;

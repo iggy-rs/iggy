@@ -1,5 +1,5 @@
 use crate::error::Error;
-use crate::models::client_info::{ClientInfo, ConsumerGroupInfo};
+use crate::models::client_info::{ClientInfo, ClientInfoDetails, ConsumerGroupInfo};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
 use crate::models::message::Message;
 use crate::models::offset::Offset;
@@ -23,31 +23,12 @@ pub fn map_offset(payload: &[u8]) -> Result<Offset, Error> {
     })
 }
 
-pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, Error> {
-    if payload.is_empty() {
-        return Ok(EMPTY_CLIENTS);
-    }
-
-    let mut clients = Vec::new();
+pub fn map_client(payload: &[u8]) -> Result<ClientInfoDetails, Error> {
+    let (client, mut position) = map_to_client_info(payload, 0)?;
+    let mut consumer_groups = Vec::new();
     let length = payload.len();
-    let mut position = 0;
     while position < length {
-        let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-        let transport = payload[position + 4];
-        let transport = match transport {
-            1 => "TCP",
-            2 => "QUIC",
-            _ => "Unknown",
-        }
-        .to_string();
-        let address_length =
-            u32::from_le_bytes(payload[position + 5..position + 9].try_into()?) as usize;
-        let address = from_utf8(&payload[position + 9..position + 9 + address_length])?.to_string();
-        position += 4 + 1 + 4 + address_length;
-        let consumer_groups_count = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-        position += 4;
-        let mut consumer_groups = Vec::with_capacity(12 * consumer_groups_count as usize);
-        for _ in 0..consumer_groups_count {
+        for _ in 0..client.consumer_groups_count {
             let stream_id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
             let topic_id = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
             let group_id = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
@@ -59,14 +40,31 @@ pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, Error> {
             consumer_groups.push(consumer_group);
             position += 12;
         }
+    }
 
-        let client = ClientInfo {
-            id,
-            transport,
-            address,
-            consumer_groups,
-        };
+    consumer_groups.sort_by(|x, y| x.group_id.cmp(&y.group_id));
+    let client = ClientInfoDetails {
+        id: client.id,
+        address: client.address,
+        transport: client.transport,
+        consumer_groups_count: client.consumer_groups_count,
+        consumer_groups,
+    };
+    Ok(client)
+}
+
+pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, Error> {
+    if payload.is_empty() {
+        return Ok(EMPTY_CLIENTS);
+    }
+
+    let mut clients = Vec::new();
+    let length = payload.len();
+    let mut position = 0;
+    while position < length {
+        let (client, read_bytes) = map_to_client_info(payload, position)?;
         clients.push(client);
+        position += read_bytes;
     }
     clients.sort_by(|x, y| x.id.cmp(&y.id));
     Ok(clients)
@@ -299,6 +297,34 @@ fn map_to_consumer_group_member(
             id,
             partitions_count,
             partitions,
+        },
+        read_bytes,
+    ))
+}
+
+fn map_to_client_info(payload: &[u8], mut position: usize) -> Result<(ClientInfo, usize), Error> {
+    let mut read_bytes;
+    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+    let transport = payload[position + 4];
+    let transport = match transport {
+        1 => "TCP",
+        2 => "QUIC",
+        _ => "Unknown",
+    }
+    .to_string();
+    let address_length =
+        u32::from_le_bytes(payload[position + 5..position + 9].try_into()?) as usize;
+    let address = from_utf8(&payload[position + 9..position + 9 + address_length])?.to_string();
+    read_bytes = 4 + 1 + 4 + address_length;
+    position += read_bytes;
+    let consumer_groups_count = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+    read_bytes += 4;
+    Ok((
+        ClientInfo {
+            id,
+            transport,
+            address,
+            consumer_groups_count,
         },
         read_bytes,
     ))

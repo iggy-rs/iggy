@@ -67,9 +67,13 @@ impl ClientManager {
         id
     }
 
-    pub fn get_client(&self, address: &SocketAddr) -> Option<&Arc<RwLock<Client>>> {
+    pub fn get_client_by_address(&self, address: &SocketAddr) -> Option<&Arc<RwLock<Client>>> {
         let id = checksum::get(address.to_string().as_bytes());
-        self.clients.get(&id)
+        self.get_client_by_id(id)
+    }
+
+    pub fn get_client_by_id(&self, client_id: u32) -> Option<&Arc<RwLock<Client>>> {
+        self.clients.get(&client_id)
     }
 
     pub fn get_clients(&self) -> Vec<Arc<RwLock<Client>>> {

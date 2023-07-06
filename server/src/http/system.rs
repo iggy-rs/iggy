@@ -1,9 +1,9 @@
 use crate::http::error::CustomError;
 use crate::http::mapper;
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Json, Router};
-use sdk::models::client_info::ClientInfo;
+use sdk::models::client_info::{ClientInfo, ClientInfoDetails};
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;
@@ -16,6 +16,7 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
         .route("/", get(|| async { NAME }))
         .route("/ping", get(|| async { PONG }))
         .route("/clients", get(get_clients))
+        .route("/clients/:client_id", get(get_client))
         .with_state(system);
     #[cfg(feature = "allow_kill_command")]
     {
@@ -24,6 +25,17 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
 
     #[cfg(not(feature = "allow_kill_command"))]
     router
+}
+
+async fn get_client(
+    State(system): State<Arc<RwLock<System>>>,
+    Path(client_id): Path<u32>,
+) -> Result<Json<ClientInfoDetails>, CustomError> {
+    let system = system.read().await;
+    let client = system.get_client(client_id).await?;
+    let client = client.read().await;
+    let client = mapper::map_client(&client).await;
+    Ok(Json(client))
 }
 
 async fn get_clients(

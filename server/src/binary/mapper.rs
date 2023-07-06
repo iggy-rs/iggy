@@ -14,25 +14,22 @@ pub fn map_offset(consumer_id: u32, offset: u64) -> Vec<u8> {
     bytes
 }
 
+pub async fn map_client(client: &Client) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    extend_client(client, &mut bytes);
+    for consumer_group in &client.consumer_groups {
+        bytes.extend(consumer_group.group_id.to_le_bytes());
+        bytes.extend(consumer_group.topic_id.to_le_bytes());
+        bytes.extend(consumer_group.stream_id.to_le_bytes());
+    }
+    bytes
+}
+
 pub async fn map_clients(clients: &[Arc<RwLock<Client>>]) -> Vec<u8> {
     let mut bytes = Vec::new();
     for client in clients {
         let client = client.read().await;
-        bytes.extend(client.id.to_le_bytes());
-        let transport: u8 = match client.transport {
-            Transport::Tcp => 1,
-            Transport::Quic => 2,
-        };
-        bytes.extend(transport.to_le_bytes());
-        let address = client.address.to_string();
-        bytes.extend((address.len() as u32).to_le_bytes());
-        bytes.extend(address.as_bytes());
-        bytes.extend((client.consumer_groups.len() as u32).to_le_bytes());
-        for consumer_group in &client.consumer_groups {
-            bytes.extend(consumer_group.group_id.to_le_bytes());
-            bytes.extend(consumer_group.topic_id.to_le_bytes());
-            bytes.extend(consumer_group.stream_id.to_le_bytes());
-        }
+        extend_client(&client, &mut bytes);
     }
     bytes
 }
@@ -144,4 +141,17 @@ fn extend_partition(partition: &Partition, bytes: &mut Vec<u8>) {
 fn extend_consumer_group(consumer_group: &ConsumerGroup, bytes: &mut Vec<u8>) {
     bytes.extend(consumer_group.id.to_le_bytes());
     bytes.extend((consumer_group.get_members().len() as u32).to_le_bytes());
+}
+
+fn extend_client(client: &Client, bytes: &mut Vec<u8>) {
+    bytes.extend(client.id.to_le_bytes());
+    let transport: u8 = match client.transport {
+        Transport::Tcp => 1,
+        Transport::Quic => 2,
+    };
+    bytes.extend(transport.to_le_bytes());
+    let address = client.address.to_string();
+    bytes.extend((address.len() as u32).to_le_bytes());
+    bytes.extend(address.as_bytes());
+    bytes.extend((client.consumer_groups.len() as u32).to_le_bytes());
 }

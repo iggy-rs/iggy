@@ -1,9 +1,9 @@
 mod common;
 use crate::common::http::HttpClientFactory;
-use crate::common::test_runner;
+use crate::common::scenarios::system_scenario;
 
 #[tokio::test]
-async fn stream_should_be_created_and_messages_should_be_appended_to_the_partition() {
+async fn system_scenario_should_be_valid() {
     let client_factory = HttpClientFactory {};
-    test_runner::run(&client_factory).await;
+    system_scenario::run(&client_factory).await;
 }

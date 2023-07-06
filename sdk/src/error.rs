@@ -206,6 +206,8 @@ pub enum Error {
     FeatureUnavailable,
     #[error("Client with ID: {0} was not found.")]
     ClientNotFound(u32),
+    #[error("Invalid client ID")]
+    InvalidClientId,
 }
 
 impl Error {
@@ -293,6 +295,7 @@ impl Error {
             Error::CannotCreateConsumerGroupInfo(_, _, _) => 80,
             Error::CannotDeleteConsumerGroupInfo(_, _, _) => 81,
             Error::ClientNotFound(_) => 82,
+            Error::InvalidClientId => 83,
             _ => 255,
         }
     }
@@ -388,6 +391,7 @@ impl Error {
             Error::CannotCreateConsumerGroupInfo(_, _, _) => "cannot_create_consumer_group_info",
             Error::CannotDeleteConsumerGroupInfo(_, _, _) => "cannot_delete_consumer_group_info",
             Error::ClientNotFound(_) => "client_not_found",
+            Error::InvalidClientId => "invalid_client_id",
             _ => "error",
         }
     }

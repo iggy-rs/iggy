@@ -1,7 +1,8 @@
 use crate::client::SystemClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
-use crate::models::client_info::ClientInfo;
+use crate::models::client_info::{ClientInfo, ClientInfoDetails};
+use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
@@ -13,6 +14,13 @@ const CLIENTS: &str = "/clients";
 
 #[async_trait]
 impl SystemClient for HttpClient {
+    async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, Error> {
+        let path = format!("{}/{}", CLIENTS, command.client_id);
+        let response = self.get(&path).await?;
+        let client = response.json().await?;
+        Ok(client)
+    }
+
     async fn get_clients(&self, _command: &GetClients) -> Result<Vec<ClientInfo>, Error> {
         let response = self.get(CLIENTS).await?;
         let clients = response.json().await?;

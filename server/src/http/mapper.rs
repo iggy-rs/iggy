@@ -80,31 +80,42 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
     topic_details
 }
 
+pub async fn map_client(client: &Client) -> sdk::models::client_info::ClientInfoDetails {
+    let client = sdk::models::client_info::ClientInfoDetails {
+        id: client.id,
+        transport: client.transport.to_string(),
+        address: client.address.to_string(),
+        consumer_groups_count: client.consumer_groups.len() as u32,
+        consumer_groups: client
+            .consumer_groups
+            .iter()
+            .map(|consumer_group| ConsumerGroupInfo {
+                stream_id: consumer_group.stream_id,
+                topic_id: consumer_group.topic_id,
+                group_id: consumer_group.group_id,
+            })
+            .collect(),
+    };
+    client
+}
+
 pub async fn map_clients(
     clients: &[Arc<RwLock<Client>>],
 ) -> Vec<sdk::models::client_info::ClientInfo> {
-    let mut clients_data = Vec::new();
+    let mut all_clients = Vec::new();
     for client in clients {
         let client = client.read().await;
         let client = sdk::models::client_info::ClientInfo {
             id: client.id,
             transport: client.transport.to_string(),
             address: client.address.to_string(),
-            consumer_groups: client
-                .consumer_groups
-                .iter()
-                .map(|consumer_group| ConsumerGroupInfo {
-                    stream_id: consumer_group.stream_id,
-                    topic_id: consumer_group.topic_id,
-                    group_id: consumer_group.group_id,
-                })
-                .collect(),
+            consumer_groups_count: client.consumer_groups.len() as u32,
         };
-        clients_data.push(client);
+        all_clients.push(client);
     }
 
-    clients_data.sort_by(|a, b| a.id.cmp(&b.id));
-    clients_data
+    all_clients.sort_by(|a, b| a.id.cmp(&b.id));
+    all_clients
 }
 
 pub async fn map_consumer_groups(

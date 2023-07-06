@@ -256,7 +256,7 @@ impl System {
 
         {
             let client_manager = self.client_manager.read().await;
-            let client = client_manager.get_client(address);
+            let client = client_manager.get_client_by_address(address);
             if client.is_none() {
                 return;
             }
@@ -299,6 +299,16 @@ impl System {
                 client.transport, client.id, client.address
             );
         }
+    }
+
+    pub async fn get_client(&self, client_id: u32) -> Result<Arc<RwLock<Client>>, Error> {
+        let client_manager = self.client_manager.read().await;
+        let client = client_manager.get_client_by_id(client_id);
+        if client.is_none() {
+            return Err(Error::ClientNotFound(client_id));
+        }
+
+        Ok(client.unwrap().clone())
     }
 
     pub async fn get_clients(&self) -> Vec<Arc<RwLock<Client>>> {

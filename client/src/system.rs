@@ -1,5 +1,6 @@
 use sdk::client::Client;
 use sdk::client_error::ClientError;
+use sdk::system::get_client::GetClient;
 use sdk::system::get_clients::GetClients;
 use sdk::system::kill::Kill;
 use sdk::system::ping::Ping;
@@ -12,6 +13,12 @@ pub async fn kill(command: &Kill, client: &dyn Client) -> Result<(), ClientError
 
 pub async fn ping(command: &Ping, client: &dyn Client) -> Result<(), ClientError> {
     client.ping(command).await?;
+    Ok(())
+}
+
+pub async fn get_client(command: &GetClient, client: &dyn Client) -> Result<(), ClientError> {
+    let client = client.get_client(command).await?;
+    info!("Client: {:#?}", client);
     Ok(())
 }
 

@@ -4,6 +4,7 @@ use crate::http::client::HttpClient;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
+use crate::system::get_me::GetMe;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use async_trait::async_trait;
@@ -14,6 +15,10 @@ const CLIENTS: &str = "/clients";
 
 #[async_trait]
 impl SystemClient for HttpClient {
+    async fn get_me(&self, _command: &GetMe) -> Result<ClientInfoDetails, Error> {
+        Err(Error::FeatureUnavailable)
+    }
+
     async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, Error> {
         let path = format!("{}/{}", CLIENTS, command.client_id);
         let response = self.get(&path).await?;

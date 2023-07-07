@@ -17,6 +17,7 @@ use sdk::streams::delete_stream::DeleteStream;
 use sdk::streams::get_stream::GetStream;
 use sdk::streams::get_streams::GetStreams;
 use sdk::system::get_clients::GetClients;
+use sdk::system::get_me::GetMe;
 use sdk::system::ping::Ping;
 use sdk::topics::create_topic::CreateTopic;
 use sdk::topics::delete_topic::DeleteTopic;
@@ -372,10 +373,20 @@ pub async fn run(client_factory: &dyn ClientFactory) {
                 })
                 .await
                 .unwrap();
+            assert_eq!(group.id, group_id);
             assert_eq!(group.members_count, 1);
             assert_eq!(group.members.len(), 1);
             let member = &group.members[0];
             assert_eq!(member.partitions_count, partitions_count);
+
+            let me = client.get_me(&GetMe {}).await.unwrap();
+            assert!(me.id > 0);
+            assert_eq!(me.consumer_groups_count, 1);
+            assert_eq!(me.consumer_groups.len(), 1);
+            let consumer_group = &me.consumer_groups[0];
+            assert_eq!(consumer_group.group_id, group_id);
+            assert_eq!(consumer_group.topic_id, topic_id);
+            assert_eq!(consumer_group.group_id, stream_id);
 
             client
                 .leave_group(&LeaveGroup {
@@ -395,7 +406,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
                 .await
                 .unwrap();
             assert_eq!(group.members_count, 0);
-            assert!(group.members.is_empty())
+            assert!(group.members.is_empty());
+
+            let me = client.get_me(&GetMe {}).await.unwrap();
+            assert_eq!(me.consumer_groups_count, 0);
+            assert!(me.consumer_groups.is_empty());
         }
         Err(e) => assert_eq!(e.as_code(), Error::FeatureUnavailable.as_code()),
     }

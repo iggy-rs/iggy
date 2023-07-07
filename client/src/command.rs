@@ -11,6 +11,7 @@ pub async fn handle(input: &str, client: &dyn Client) -> Result<(), ClientError>
     match command {
         Command::Kill(payload) => system::kill(&payload, client).await,
         Command::Ping(payload) => system::ping(&payload, client).await,
+        Command::GetMe(payload) => system::get_me(&payload, client).await,
         Command::GetClient(payload) => system::get_client(&payload, client).await,
         Command::GetClients(payload) => system::get_clients(&payload, client).await,
         Command::SendMessages(payload) => messages::send_messages(&payload, client).await,

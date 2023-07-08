@@ -140,6 +140,7 @@ fn extend_partition(partition: &Partition, bytes: &mut Vec<u8>) {
 
 fn extend_consumer_group(consumer_group: &ConsumerGroup, bytes: &mut Vec<u8>) {
     bytes.extend(consumer_group.id.to_le_bytes());
+    bytes.extend(consumer_group.partitions_count.to_le_bytes());
     bytes.extend((consumer_group.get_members().len() as u32).to_le_bytes());
 }
 

@@ -338,6 +338,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(groups.len(), 1);
     let group = groups.get(0).unwrap();
     assert_eq!(group.id, group_id);
+    assert_eq!(group.partitions_count, partitions_count);
     assert_eq!(group.members_count, 0);
 
     // 23. Get the consumer group details
@@ -351,6 +352,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
 
     assert_eq!(group.id, group_id);
+    assert_eq!(group.partitions_count, partitions_count);
     assert_eq!(group.members_count, 0);
     assert!(group.members.is_empty());
 
@@ -374,6 +376,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
                 .await
                 .unwrap();
             assert_eq!(group.id, group_id);
+            assert_eq!(group.partitions_count, partitions_count);
             assert_eq!(group.members_count, 1);
             assert_eq!(group.members.len(), 1);
             let member = &group.members[0];

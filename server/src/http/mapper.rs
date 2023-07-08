@@ -126,6 +126,7 @@ pub async fn map_consumer_groups(
         let consumer_group = consumer_group.read().await;
         let consumer_group = sdk::models::consumer_group::ConsumerGroup {
             id: consumer_group.id,
+            partitions_count: consumer_group.partitions_count,
             members_count: consumer_group.get_members().len() as u32,
         };
         groups.push(consumer_group);
@@ -137,6 +138,7 @@ pub async fn map_consumer_groups(
 pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> ConsumerGroupDetails {
     let mut consumer_group_details = ConsumerGroupDetails {
         id: consumer_group.id,
+        partitions_count: consumer_group.partitions_count,
         members_count: consumer_group.get_members().len() as u32,
         members: Vec::new(),
     };

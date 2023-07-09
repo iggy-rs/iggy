@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 use tracing::log::trace;
 
 pub async fn handle(
-    command: GetClient,
+    command: &GetClient,
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {

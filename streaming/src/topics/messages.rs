@@ -18,14 +18,6 @@ impl Topic {
         value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
-        let partition_id = match consumer {
-            PollingConsumer::Consumer(_) => partition_id,
-            PollingConsumer::Group(group_id, member_id) => {
-                let group = self.get_consumer_group(group_id)?.read().await;
-                group.calculate_partition_id(member_id).await?
-            }
-        };
-
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
             return Err(Error::PartitionNotFound(partition_id));
@@ -33,6 +25,7 @@ impl Topic {
 
         let partition = partition.unwrap();
         let partition = partition.read().await;
+
         match kind {
             Kind::Offset => partition.get_messages_by_offset(value, count).await,
             Kind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
@@ -80,7 +73,11 @@ impl Topic {
     }
 
     fn calculate_partition_id(&self, entity_id: u32) -> u32 {
-        let partition_id = (entity_id % self.partitions.len() as u32) + 1;
+        let partitions_count = self.partitions.len() as u32;
+        let mut partition_id = entity_id % partitions_count;
+        if partition_id == 0 {
+            partition_id = partitions_count;
+        }
         trace!(
             "Calculated partition ID: {} for key: {}",
             partition_id,

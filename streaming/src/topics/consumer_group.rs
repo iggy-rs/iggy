@@ -16,6 +16,7 @@ pub struct ConsumerGroupMember {
     pub id: u32,
     partitions: HashMap<u32, u32>,
     current_partition_index: u32,
+    current_partition_id: u32,
 }
 
 impl ConsumerGroup {
@@ -44,6 +45,18 @@ impl ConsumerGroup {
         ))
     }
 
+    pub async fn get_current_partition_id(&self, member_id: u32) -> Result<u32, Error> {
+        let member = self.members.get(&member_id);
+        if let Some(member) = member {
+            return Ok(member.read().await.current_partition_id);
+        }
+        Err(Error::ConsumerGroupMemberNotFound(
+            member_id,
+            self.id,
+            self.topic_id,
+        ))
+    }
+
     pub async fn add_member(&mut self, member_id: u32) {
         self.members.insert(
             member_id,
@@ -51,6 +64,7 @@ impl ConsumerGroup {
                 id: member_id,
                 partitions: HashMap::new(),
                 current_partition_index: 0,
+                current_partition_id: 0,
             }),
         );
         trace!(
@@ -83,6 +97,8 @@ impl ConsumerGroup {
         let members_count = members.len() as u32;
         for member in members.iter_mut() {
             let mut member = member.write().await;
+            member.current_partition_index = 0;
+            member.current_partition_id = 0;
             member.partitions.clear();
         }
 
@@ -91,7 +107,10 @@ impl ConsumerGroup {
             let member_index = partition_index % members_count;
             let member = members.get(member_index as usize).unwrap();
             let mut member = member.write().await;
-            member.partitions.insert(partition_index, partition_id);
+            let member_partition_index = member.partitions.len() as u32;
+            member
+                .partitions
+                .insert(member_partition_index, partition_id);
             trace!("Assigned partition ID: {} to member with ID: {} for topic with ID: {} in consumer group: {}",
                 partition_id, member.id, self.topic_id, self.id)
         }
@@ -106,6 +125,7 @@ impl ConsumerGroupMember {
     pub fn calculate_partition_id(&mut self) -> u32 {
         let partition_index = self.current_partition_index;
         let partition_id = *self.partitions.get(&partition_index).unwrap();
+        self.current_partition_id = partition_id;
         if self.partitions.len() == (partition_index + 1) as usize {
             self.current_partition_index = 0;
         } else {

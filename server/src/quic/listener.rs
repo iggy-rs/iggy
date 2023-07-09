@@ -101,7 +101,7 @@ async fn handle_connection(
             );
 
             let result = command::handle(
-                command,
+                &command,
                 &mut QuicSender { send: stream.0 },
                 &client_context,
                 system.clone(),

@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
-    command: DeleteStream,
+    command: &DeleteStream,
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {

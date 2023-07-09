@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
-    command: GetTopics,
+    command: &GetTopics,
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {

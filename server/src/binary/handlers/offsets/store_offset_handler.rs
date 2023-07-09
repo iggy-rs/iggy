@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
-    command: StoreOffset,
+    command: &StoreOffset,
     sender: &mut dyn Sender,
     client_context: &ClientContext,
     system: Arc<RwLock<System>>,
@@ -25,10 +25,20 @@ pub async fn handle(
     };
 
     let system = system.read().await;
-    system
+    let topic = system
         .get_stream(command.stream_id)?
-        .get_topic(command.topic_id)?
-        .store_offset(consumer, command.partition_id, command.offset)
+        .get_topic(command.topic_id)?;
+
+    let partition_id = match consumer {
+        PollingConsumer::Consumer(_) => command.partition_id,
+        PollingConsumer::Group(group_id, member_id) => {
+            let group = topic.get_consumer_group(group_id)?.read().await;
+            group.get_current_partition_id(member_id).await?
+        }
+    };
+
+    topic
+        .store_offset(consumer, partition_id, command.offset)
         .await?;
 
     sender.send_empty_ok_response().await?;

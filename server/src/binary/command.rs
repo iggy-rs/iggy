@@ -36,7 +36,7 @@ use tracing::trace;
 */
 
 pub async fn handle(
-    command: Command,
+    command: &Command,
     sender: &mut dyn Sender,
     client_context: &ClientContext,
     system: Arc<RwLock<System>>,
@@ -61,7 +61,7 @@ pub async fn handle(
 }
 
 async fn try_handle(
-    command: Command,
+    command: &Command,
     sender: &mut dyn Sender,
     client_context: &ClientContext,
     system: Arc<RwLock<System>>,

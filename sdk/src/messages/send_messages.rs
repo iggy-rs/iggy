@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -31,7 +32,7 @@ pub struct Message {
     #[serde(skip)]
     pub length: u32,
     #[serde_as(as = "Base64")]
-    pub payload: Vec<u8>,
+    pub payload: Bytes,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
@@ -128,7 +129,7 @@ impl Message {
 
 impl Default for Message {
     fn default() -> Self {
-        let payload = "hello world".as_bytes().to_vec();
+        let payload = Bytes::from("hello world");
         Message {
             id: 0,
             length: payload.len() as u32,
@@ -163,7 +164,7 @@ impl BytesSerializable for Message {
             return Err(Error::EmptyMessagePayload);
         }
 
-        let payload = bytes[20..20 + length as usize].to_vec();
+        let payload = Bytes::from(bytes[20..20 + length as usize].to_vec());
         if payload.len() != length as usize {
             return Err(Error::InvalidMessagePayloadLength);
         }
@@ -181,8 +182,11 @@ impl FromStr for Message {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
         let (id, payload) = match parts.len() {
-            1 => (0, parts[0].as_bytes().to_vec()),
-            2 => (parts[0].parse::<u128>()?, parts[1].as_bytes().to_vec()),
+            1 => (0, Bytes::from(parts[0].as_bytes().to_vec())),
+            2 => (
+                parts[0].parse::<u128>()?,
+                Bytes::from(parts[1].as_bytes().to_vec()),
+            ),
             _ => return Err(Error::InvalidCommand),
         };
         let length = payload.len() as u32;
@@ -212,7 +216,7 @@ impl FromStr for SendMessages {
         let key_kind = KeyKind::from_str(key_kind)?;
         let key_value = parts[3].parse::<u32>()?;
         let message_id = parts[4].parse::<u128>()?;
-        let payload = parts[5].as_bytes().to_vec();
+        let payload = Bytes::from(parts[5].as_bytes().to_vec());
 
         // For now, we only support a single payload.
         let messages_count = 1;

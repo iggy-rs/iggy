@@ -76,7 +76,7 @@ async fn handle_connection(
             command,
             length
         );
-        let result = command::handle(command, &mut sender, &client_context, system.clone()).await;
+        let result = command::handle(&command, &mut sender, &client_context, system.clone()).await;
         if result.is_err() {
             error!("Error when handling the TCP request: {:?}", result.err());
             continue;

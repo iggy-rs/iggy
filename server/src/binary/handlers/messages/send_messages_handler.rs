@@ -10,19 +10,19 @@ use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
-    command: SendMessages,
+    command: &SendMessages,
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
     let mut messages = Vec::with_capacity(command.messages_count as usize);
-    for message in command.messages {
+    for message in &command.messages {
         let timestamp = timestamp::get();
         let checksum = checksum::get(&message.payload);
         messages.push(Message::empty(
             timestamp,
             message.id,
-            message.payload,
+            message.payload.clone(),
             checksum,
         ));
     }

@@ -4,7 +4,7 @@ use sdk::error::Error;
 use sdk::system::kill::Kill;
 use tracing::trace;
 
-pub async fn handle(command: Kill, sender: &mut dyn Sender) -> Result<(), Error> {
+pub async fn handle(command: &Kill, sender: &mut dyn Sender) -> Result<(), Error> {
     trace!("{}", command);
     #[cfg(feature = "allow_kill_command")]
     {

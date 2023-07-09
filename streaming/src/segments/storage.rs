@@ -1,6 +1,7 @@
 use crate::message::Message;
 use crate::persister::Persister;
 use async_trait::async_trait;
+use bytes::Bytes;
 use sdk::error::Error;
 use std::io::SeekFrom;
 use std::sync::Arc;
@@ -534,7 +535,7 @@ async fn load_messages_by_range(
         let timestamp = timestamp.unwrap();
         let id = id.unwrap();
         let checksum = checksum.unwrap();
-        let message = Message::create(offset, timestamp, id, payload, checksum);
+        let message = Message::create(offset, timestamp, id, Bytes::from(payload), checksum);
         read_messages += 1;
         on_message(message)?;
     }

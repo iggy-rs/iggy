@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
-    command: GetOffset,
+    command: &GetOffset,
     sender: &mut dyn Sender,
     client_context: &ClientContext,
     system: Arc<RwLock<System>>,

@@ -1,6 +1,7 @@
 mod common;
 
 use crate::common::TestSetup;
+use bytes::Bytes;
 use std::sync::Arc;
 use streaming::config::PartitionConfig;
 use streaming::message::Message;
@@ -36,7 +37,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         let offset = (i - 1) as u64;
         let timestamp = timestamp::get();
         let id = i as u128;
-        let payload = format!("message {}", i).as_bytes().to_vec();
+        let payload = Bytes::from(format!("message {}", i));
         let checksum = checksum::get(&payload);
         let message = Message::create(offset, timestamp, id, payload, checksum);
         appended_messages.push(message.clone());

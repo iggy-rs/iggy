@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -13,15 +14,15 @@ pub struct Message {
     #[serde(skip)]
     pub length: u32,
     #[serde_as(as = "Base64")]
-    pub payload: Vec<u8>,
+    pub payload: Bytes,
 }
 
 impl Message {
-    pub fn empty(timestamp: u64, id: u128, payload: Vec<u8>, checksum: u32) -> Self {
+    pub fn empty(timestamp: u64, id: u128, payload: Bytes, checksum: u32) -> Self {
         Message::create(0, timestamp, id, payload, checksum)
     }
 
-    pub fn create(offset: u64, timestamp: u64, id: u128, payload: Vec<u8>, checksum: u32) -> Self {
+    pub fn create(offset: u64, timestamp: u64, id: u128, payload: Bytes, checksum: u32) -> Self {
         Message {
             offset,
             timestamp,

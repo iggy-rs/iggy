@@ -62,7 +62,7 @@ use tracing::trace;
 */
 
 pub async fn handle(
-    command: PollMessages,
+    command: &PollMessages,
     sender: &mut dyn Sender,
     client_context: &ClientContext,
     system: Arc<RwLock<System>>,
@@ -83,10 +83,18 @@ pub async fn handle(
         }
     };
 
+    let partition_id = match consumer {
+        PollingConsumer::Consumer(_) => command.partition_id,
+        PollingConsumer::Group(group_id, member_id) => {
+            let group = topic.get_consumer_group(group_id)?.read().await;
+            group.calculate_partition_id(member_id).await?
+        }
+    };
+
     let messages = topic
         .get_messages(
             consumer,
-            command.partition_id,
+            partition_id,
             command.kind,
             command.value,
             command.count,
@@ -102,9 +110,7 @@ pub async fn handle(
     let messages = mapper::map_messages(&messages);
     if command.auto_commit {
         trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
-        topic
-            .store_offset(consumer, command.partition_id, offset)
-            .await?;
+        topic.store_offset(consumer, partition_id, offset).await?;
     }
 
     sender.send_ok_response(&messages).await?;

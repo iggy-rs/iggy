@@ -99,6 +99,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(member1.partitions_count, 1);
     assert_eq!(member2.partitions_count, 1);
     assert_eq!(member3.partitions_count, 1);
+    assert_ne!(member1.partitions[0], member2.partitions[0]);
+    assert_ne!(member1.partitions[0], member3.partitions[0]);
+    assert_ne!(member2.partitions[0], member3.partitions[0]);
 
     test_server.stop();
 }

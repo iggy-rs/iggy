@@ -1,5 +1,4 @@
 use crate::common::{ClientFactory, TestServer};
-use sdk::client::Client;
 use sdk::consumer_type::ConsumerType;
 use sdk::groups::create_group::CreateGroup;
 use sdk::groups::get_group::GetGroup;
@@ -7,7 +6,6 @@ use sdk::groups::join_group::JoinGroup;
 use sdk::messages::poll_messages::Kind::Next;
 use sdk::messages::poll_messages::{Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
-use sdk::models::consumer_group::ConsumerGroupDetails;
 use sdk::streams::create_stream::CreateStream;
 use sdk::system::get_me::GetMe;
 use sdk::topics::create_topic::CreateTopic;
@@ -27,21 +25,14 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let test_server = TestServer::default();
     test_server.start();
     sleep(std::time::Duration::from_secs(1)).await;
-    let system_client = client_factory.create_client().await;
-    let client1 = client_factory.create_client().await;
-    let client2 = client_factory.create_client().await;
-    let client3 = client_factory.create_client().await;
-    let system_client = system_client.as_ref();
-    let client1 = client1.as_ref();
-    let client2 = client2.as_ref();
-    let client3 = client3.as_ref();
+    let client = client_factory.create_client().await;
 
     // 1. Create the stream
     let create_stream = CreateStream {
         stream_id: STREAM_ID,
         name: STREAM_NAME.to_string(),
     };
-    system_client.create_stream(&create_stream).await.unwrap();
+    client.create_stream(&create_stream).await.unwrap();
 
     // 2. Create the topic
     let create_topic = CreateTopic {
@@ -50,7 +41,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
     };
-    system_client.create_topic(&create_topic).await.unwrap();
+    client.create_topic(&create_topic).await.unwrap();
 
     // 3. Create the consumer group
     let create_group = CreateGroup {
@@ -58,7 +49,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         topic_id: TOPIC_ID,
         group_id: GROUP_ID,
     };
-    system_client.create_group(&create_group).await.unwrap();
+    client.create_group(&create_group).await.unwrap();
 
     let join_group = JoinGroup {
         stream_id: STREAM_ID,
@@ -66,12 +57,29 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         group_id: GROUP_ID,
     };
 
-    // 4. Join the consumer group by each client
-    client1.join_group(&join_group).await.unwrap();
-    client2.join_group(&join_group).await.unwrap();
-    client3.join_group(&join_group).await.unwrap();
+    // 4. Join the consumer group by client
+    client.join_group(&join_group).await.unwrap();
 
-    // 5. Send messages to the calculated partition ID on the server side by using entity ID as a key
+    // 5. Validate that group contains the single client with all partitions assigned
+    let group_info = client
+        .get_group(&GetGroup {
+            stream_id: STREAM_ID,
+            topic_id: TOPIC_ID,
+            group_id: GROUP_ID,
+        })
+        .await
+        .unwrap();
+
+    let client_info = client.get_me(&GetMe {}).await.unwrap();
+
+    assert_eq!(group_info.members_count, 1);
+    assert_eq!(group_info.members.len(), 1);
+    let member = &group_info.members[0];
+    assert_eq!(member.id, client_info.id);
+    assert_eq!(member.partitions.len() as u32, PARTITIONS_COUNT);
+    assert_eq!(member.partitions_count, PARTITIONS_COUNT);
+
+    // 6. Send messages to the calculated partition ID on the server side by using entity ID as a key
     for entity_id in 1..=MESSAGES_COUNT_PER_PARTITION * PARTITIONS_COUNT {
         let mut partition_id = entity_id % PARTITIONS_COUNT;
         if partition_id == 0 {
@@ -88,44 +96,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             messages_count: 1,
             messages,
         };
-        system_client.send_messages(&send_messages).await.unwrap();
+        client.send_messages(&send_messages).await.unwrap();
     }
 
-    // 6. Get the consumer group details
-    let group_info = system_client
-        .get_group(&GetGroup {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
-            group_id: GROUP_ID,
-        })
-        .await
-        .unwrap();
-
-    for member in &group_info.members {
-        assert_eq!(member.partitions.len(), 1);
-    }
-
-    // 7. Poll the messages for each client per assigned partition in the consumer group
-    validate_message_polling(client1, &group_info).await;
-    validate_message_polling(client2, &group_info).await;
-    validate_message_polling(client3, &group_info).await;
-
-    test_server.stop();
-}
-
-async fn validate_message_polling(client: &dyn Client, group: &ConsumerGroupDetails) {
-    let client_info = client.get_me(&GetMe {}).await.unwrap();
-    let group_member = group
-        .members
-        .iter()
-        .find(|m| m.id == client_info.id)
-        .unwrap();
-    let partition_id = group_member.partitions[0];
-    let mut start_entity_id = partition_id % PARTITIONS_COUNT;
-    if start_entity_id == 0 {
-        start_entity_id = PARTITIONS_COUNT;
-    }
-
+    // 7. Poll the messages for the single client which has assigned all partitions in the consumer group
     let poll_messages = PollMessages {
         consumer_type: ConsumerType::Group,
         consumer_id: GROUP_ID,
@@ -139,19 +113,30 @@ async fn validate_message_polling(client: &dyn Client, group: &ConsumerGroupDeta
         format: Format::None,
     };
 
-    for i in 1..=MESSAGES_COUNT_PER_PARTITION {
+    let mut partition_id = 1;
+    let mut offset = 0;
+    let mut entity_id = 1;
+    for _ in 1..=PARTITIONS_COUNT * MESSAGES_COUNT_PER_PARTITION {
         let messages = client.poll_messages(&poll_messages).await.unwrap();
         assert_eq!(messages.len(), 1);
         let message = &messages[0];
-        let offset = (i - 1) as u64;
         assert_eq!(message.offset, offset);
-        let entity_id = start_entity_id + ((i - 1) * PARTITIONS_COUNT);
         let payload = from_utf8(&message.payload).unwrap();
         assert_eq!(payload, &get_message_payload(partition_id, entity_id));
+        partition_id += 1;
+        entity_id += 1;
+        if partition_id > PARTITIONS_COUNT {
+            partition_id = 1;
+            offset += 1;
+        }
     }
 
-    let messages = client.poll_messages(&poll_messages).await.unwrap();
-    assert!(messages.is_empty())
+    for _ in 1..=PARTITIONS_COUNT {
+        let messages = client.poll_messages(&poll_messages).await.unwrap();
+        assert!(messages.is_empty());
+    }
+
+    test_server.stop();
 }
 
 fn get_message_payload(partition_id: u32, entity_id: u32) -> String {

@@ -21,6 +21,7 @@ pub struct TopicConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PartitionConfig {
+    pub path: String,
     pub segment: Arc<SegmentConfig>,
     pub messages_required_to_save: u32,
     pub messages_buffer: u32,
@@ -66,6 +67,7 @@ impl Default for TopicConfig {
 impl Default for PartitionConfig {
     fn default() -> PartitionConfig {
         PartitionConfig {
+            path: "partitions".to_string(),
             segment: Arc::new(SegmentConfig::default()),
             messages_required_to_save: 1000,
             messages_buffer: 1024,

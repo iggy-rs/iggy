@@ -27,7 +27,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
 
         topic.persist().await.unwrap();
 
-        assert_persisted_topic(&topic.path, 3).await;
+        assert_persisted_topic(&topic.path, &topic.get_partitions_path(), 3).await;
     }
 }
 
@@ -50,7 +50,7 @@ async fn should_load_existing_topic_from_disk() {
             storage.clone(),
         );
         topic.persist().await.unwrap();
-        assert_persisted_topic(&topic.path, partitions_count).await;
+        assert_persisted_topic(&topic.path, &topic.get_partitions_path(), partitions_count).await;
 
         let mut loaded_topic = Topic::empty(
             stream_id,
@@ -88,7 +88,7 @@ async fn should_delete_existing_topic_from_disk() {
             storage.clone(),
         );
         topic.persist().await.unwrap();
-        assert_persisted_topic(&topic.path, partitions_count).await;
+        assert_persisted_topic(&topic.path, &topic.get_partitions_path(), partitions_count).await;
 
         topic.delete().await.unwrap();
 
@@ -96,14 +96,14 @@ async fn should_delete_existing_topic_from_disk() {
     }
 }
 
-async fn assert_persisted_topic(topic_path: &str, partitions_count: u32) {
+async fn assert_persisted_topic(topic_path: &str, partitions_path: &str, partitions_count: u32) {
     let topic_metadata = fs::metadata(topic_path).await.unwrap();
     assert!(topic_metadata.is_dir());
     let topic_info_path = format!("{}/{}", topic_path, TOPIC_INFO);
     let topic_info_metadata = fs::metadata(&topic_info_path).await.unwrap();
     assert!(topic_info_metadata.is_file());
     for partition_id in 1..=partitions_count {
-        let partition_path = format!("{}/partitions/{}", topic_path, partition_id);
+        let partition_path = format!("{}/{}", partitions_path, partition_id);
         let partition_metadata = fs::metadata(&partition_path).await.unwrap();
         assert!(partition_metadata.is_dir());
     }

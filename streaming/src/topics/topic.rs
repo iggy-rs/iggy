@@ -79,7 +79,7 @@ impl Topic {
     }
 
     pub fn get_partitions_path(&self) -> String {
-        format!("{}/partitions", self.path)
+        format!("{}/{}", self.path, self.config.partition.path)
     }
 
     pub fn get_consumer_group_path(&self, id: u32) -> String {

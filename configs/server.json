@@ -30,6 +30,7 @@
       "topic": {
         "path": "topics",
         "partition": {
+          "path": "partitions",
           "deduplicate_messages": false,
           "enforce_sync": false,
           "validate_checksum": false,

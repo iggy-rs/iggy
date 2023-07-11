@@ -1,10 +1,10 @@
+use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
+use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
+use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
+use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
+use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::error::Error;
-use crate::groups::create_group::CreateGroup;
-use crate::groups::delete_group::DeleteGroup;
-use crate::groups::get_group::GetGroup;
-use crate::groups::get_groups::GetGroups;
-use crate::groups::join_group::JoinGroup;
-use crate::groups::leave_group::LeaveGroup;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
@@ -59,12 +59,18 @@ pub trait TopicClient {
     async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error>;
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error>;
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error>;
-    async fn get_group(&self, command: &GetGroup) -> Result<ConsumerGroupDetails, Error>;
-    async fn get_groups(&self, command: &GetGroups) -> Result<Vec<ConsumerGroup>, Error>;
-    async fn create_group(&self, command: &CreateGroup) -> Result<(), Error>;
-    async fn delete_group(&self, command: &DeleteGroup) -> Result<(), Error>;
-    async fn join_group(&self, command: &JoinGroup) -> Result<(), Error>;
-    async fn leave_group(&self, command: &LeaveGroup) -> Result<(), Error>;
+    async fn get_consumer_group(
+        &self,
+        command: &GetConsumerGroup,
+    ) -> Result<ConsumerGroupDetails, Error>;
+    async fn get_consumer_groups(
+        &self,
+        command: &GetConsumerGroups,
+    ) -> Result<Vec<ConsumerGroup>, Error>;
+    async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), Error>;
+    async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), Error>;
+    async fn join_consumer_group(&self, command: &JoinConsumerGroup) -> Result<(), Error>;
+    async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), Error>;
 }
 
 #[async_trait]

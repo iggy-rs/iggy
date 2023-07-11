@@ -1,5 +1,5 @@
 mod command;
-mod groups;
+mod consumer_groups;
 mod messages;
 mod offsets;
 mod streams;

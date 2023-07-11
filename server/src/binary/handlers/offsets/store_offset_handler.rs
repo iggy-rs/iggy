@@ -19,8 +19,8 @@ pub async fn handle(
     trace!("{}", command);
     let consumer = match command.consumer_type {
         ConsumerType::Consumer => PollingConsumer::Consumer(command.consumer_id),
-        ConsumerType::Group => {
-            PollingConsumer::Group(command.consumer_id, client_context.client_id)
+        ConsumerType::ConsumerGroup => {
+            PollingConsumer::ConsumerGroup(command.consumer_id, client_context.client_id)
         }
     };
 
@@ -31,9 +31,9 @@ pub async fn handle(
 
     let partition_id = match consumer {
         PollingConsumer::Consumer(_) => command.partition_id,
-        PollingConsumer::Group(group_id, member_id) => {
-            let group = topic.get_consumer_group(group_id)?.read().await;
-            group.get_current_partition_id(member_id).await?
+        PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
+            let consumer_group = topic.get_consumer_group(consumer_group_id)?.read().await;
+            consumer_group.get_current_partition_id(member_id).await?
         }
     };
 

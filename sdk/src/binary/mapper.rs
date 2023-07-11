@@ -31,18 +31,19 @@ pub fn map_client(payload: &[u8]) -> Result<ClientInfoDetails, Error> {
         for _ in 0..client.consumer_groups_count {
             let stream_id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
             let topic_id = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-            let group_id = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
+            let consumer_group_id =
+                u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
             let consumer_group = ConsumerGroupInfo {
                 stream_id,
                 topic_id,
-                group_id,
+                consumer_group_id,
             };
             consumer_groups.push(consumer_group);
             position += 12;
         }
     }
 
-    consumer_groups.sort_by(|x, y| x.group_id.cmp(&y.group_id));
+    consumer_groups.sort_by(|x, y| x.consumer_group_id.cmp(&y.consumer_group_id));
     let client = ClientInfoDetails {
         id: client.id,
         address: client.address,

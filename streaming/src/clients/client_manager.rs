@@ -23,7 +23,7 @@ pub struct Client {
 pub struct ConsumerGroup {
     pub stream_id: u32,
     pub topic_id: u32,
-    pub group_id: u32,
+    pub consumer_group_id: u32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -98,7 +98,7 @@ impl ClientManager {
         client_id: u32,
         stream_id: u32,
         topic_id: u32,
-        group_id: u32,
+        consumer_group_id: u32,
     ) -> Result<(), Error> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
@@ -107,7 +107,7 @@ impl ClientManager {
 
         let mut client = client.unwrap().write().await;
         if client.consumer_groups.iter().any(|consumer_group| {
-            consumer_group.group_id == group_id
+            consumer_group.consumer_group_id == consumer_group_id
                 && consumer_group.topic_id == topic_id
                 && consumer_group.stream_id == stream_id
         }) {
@@ -117,7 +117,7 @@ impl ClientManager {
         client.consumer_groups.push(ConsumerGroup {
             stream_id,
             topic_id,
-            group_id,
+            consumer_group_id,
         });
         Ok(())
     }
@@ -127,7 +127,7 @@ impl ClientManager {
         client_id: u32,
         stream_id: u32,
         topic_id: u32,
-        group_id: u32,
+        consumer_group_id: u32,
     ) -> Result<(), Error> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
@@ -137,7 +137,7 @@ impl ClientManager {
         for (index, consumer_group) in client.consumer_groups.iter().enumerate() {
             if consumer_group.stream_id == stream_id
                 && consumer_group.topic_id == topic_id
-                && consumer_group.group_id == group_id
+                && consumer_group.consumer_group_id == consumer_group_id
             {
                 client.consumer_groups.remove(index);
                 return Ok(());

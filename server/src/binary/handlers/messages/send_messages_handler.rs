@@ -32,12 +32,7 @@ pub async fn handle(
         .get_stream(command.stream_id)?
         .get_topic(command.topic_id)?;
     topic
-        .append_messages(
-            command.key_kind,
-            command.key_value,
-            messages,
-            system.storage.segment.clone(),
-        )
+        .append_messages(command.key_kind, command.key_value, messages)
         .await?;
 
     sender.send_empty_ok_response().await?;

@@ -92,7 +92,7 @@ pub async fn map_client(client: &Client) -> sdk::models::client_info::ClientInfo
             .map(|consumer_group| ConsumerGroupInfo {
                 stream_id: consumer_group.stream_id,
                 topic_id: consumer_group.topic_id,
-                group_id: consumer_group.group_id,
+                consumer_group_id: consumer_group.consumer_group_id,
             })
             .collect(),
     };

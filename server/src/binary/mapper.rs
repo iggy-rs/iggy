@@ -18,7 +18,7 @@ pub async fn map_client(client: &Client) -> Vec<u8> {
     let mut bytes = Vec::new();
     extend_client(client, &mut bytes);
     for consumer_group in &client.consumer_groups {
-        bytes.extend(consumer_group.group_id.to_le_bytes());
+        bytes.extend(consumer_group.consumer_group_id.to_le_bytes());
         bytes.extend(consumer_group.topic_id.to_le_bytes());
         bytes.extend(consumer_group.stream_id.to_le_bytes());
     }

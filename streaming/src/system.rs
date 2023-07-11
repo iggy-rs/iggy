@@ -174,11 +174,11 @@ impl System {
         &mut self,
         stream_id: u32,
         topic_id: u32,
-        group_id: u32,
+        consumer_group_id: u32,
     ) -> Result<(), Error> {
         self.get_stream_mut(stream_id)?
             .get_topic_mut(topic_id)?
-            .create_consumer_group(group_id)
+            .create_consumer_group(consumer_group_id)
             .await?;
         Ok(())
     }
@@ -187,12 +187,12 @@ impl System {
         &mut self,
         stream_id: u32,
         topic_id: u32,
-        group_id: u32,
+        consumer_group_id: u32,
     ) -> Result<(), Error> {
         let consumer_group = self
             .get_stream_mut(stream_id)?
             .get_topic_mut(topic_id)?
-            .delete_consumer_group(group_id)
+            .delete_consumer_group(consumer_group_id)
             .await?;
 
         let client_manager = self.client_manager.read().await;
@@ -200,7 +200,7 @@ impl System {
         for member in consumer_group.get_members() {
             let member = member.read().await;
             client_manager
-                .leave_consumer_group(member.id, stream_id, topic_id, group_id)
+                .leave_consumer_group(member.id, stream_id, topic_id, consumer_group_id)
                 .await?;
         }
 
@@ -212,15 +212,15 @@ impl System {
         client_id: u32,
         stream_id: u32,
         topic_id: u32,
-        group_id: u32,
+        consumer_group_id: u32,
     ) -> Result<(), Error> {
         self.get_stream(stream_id)?
             .get_topic(topic_id)?
-            .join_consumer_group(group_id, client_id)
+            .join_consumer_group(consumer_group_id, client_id)
             .await?;
         let client_manager = self.client_manager.read().await;
         client_manager
-            .join_consumer_group(client_id, stream_id, topic_id, group_id)
+            .join_consumer_group(client_id, stream_id, topic_id, consumer_group_id)
             .await?;
         Ok(())
     }
@@ -230,15 +230,15 @@ impl System {
         client_id: u32,
         stream_id: u32,
         topic_id: u32,
-        group_id: u32,
+        consumer_group_id: u32,
     ) -> Result<(), Error> {
         self.get_stream(stream_id)?
             .get_topic(topic_id)?
-            .leave_consumer_group(group_id, client_id)
+            .leave_consumer_group(consumer_group_id, client_id)
             .await?;
         let client_manager = self.client_manager.read().await;
         client_manager
-            .leave_consumer_group(client_id, stream_id, topic_id, group_id)
+            .leave_consumer_group(client_id, stream_id, topic_id, consumer_group_id)
             .await?;
         Ok(())
     }
@@ -268,18 +268,18 @@ impl System {
             consumer_groups = client
                 .consumer_groups
                 .iter()
-                .map(|c| (c.stream_id, c.topic_id, c.group_id))
+                .map(|c| (c.stream_id, c.topic_id, c.consumer_group_id))
                 .collect();
         }
 
-        for (stream_id, topic_id, group_id) in consumer_groups.iter() {
+        for (stream_id, topic_id, consumer_group_id) in consumer_groups.iter() {
             if let Err(error) = self
-                .leave_consumer_group(client_id, *stream_id, *topic_id, *group_id)
+                .leave_consumer_group(client_id, *stream_id, *topic_id, *consumer_group_id)
                 .await
             {
                 error!(
                     "Failed to leave consumer group with ID: {} by client with ID: {}. Error: {}",
-                    group_id, client_id, error
+                    consumer_group_id, client_id, error
                 );
             }
         }

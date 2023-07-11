@@ -1,11 +1,11 @@
 use crate::client::TopicClient;
+use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
+use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
+use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
+use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
+use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::error::Error;
-use crate::groups::create_group::CreateGroup;
-use crate::groups::delete_group::DeleteGroup;
-use crate::groups::get_group::GetGroup;
-use crate::groups::get_groups::GetGroups;
-use crate::groups::join_group::JoinGroup;
-use crate::groups::leave_group::LeaveGroup;
 use crate::http::client::HttpClient;
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -51,7 +51,10 @@ impl TopicClient for HttpClient {
         Ok(())
     }
 
-    async fn get_group(&self, command: &GetGroup) -> Result<ConsumerGroupDetails, Error> {
+    async fn get_consumer_group(
+        &self,
+        command: &GetConsumerGroup,
+    ) -> Result<ConsumerGroupDetails, Error> {
         let response = self
             .get(&format!(
                 "{}/{}",
@@ -63,7 +66,10 @@ impl TopicClient for HttpClient {
         Ok(consumer_group)
     }
 
-    async fn get_groups(&self, command: &GetGroups) -> Result<Vec<ConsumerGroup>, Error> {
+    async fn get_consumer_groups(
+        &self,
+        command: &GetConsumerGroups,
+    ) -> Result<Vec<ConsumerGroup>, Error> {
         let response = self
             .get(&get_groups_path(command.stream_id, command.topic_id))
             .await?;
@@ -71,7 +77,7 @@ impl TopicClient for HttpClient {
         Ok(consumer_groups)
     }
 
-    async fn create_group(&self, command: &CreateGroup) -> Result<(), Error> {
+    async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), Error> {
         self.post(
             &get_groups_path(command.stream_id, command.topic_id),
             &command,
@@ -80,21 +86,21 @@ impl TopicClient for HttpClient {
         Ok(())
     }
 
-    async fn delete_group(&self, command: &DeleteGroup) -> Result<(), Error> {
+    async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), Error> {
         let path = format!(
             "{}/{}",
             get_groups_path(command.stream_id, command.topic_id),
-            command.group_id
+            command.consumer_group_id
         );
         self.delete(&path).await?;
         Ok(())
     }
 
-    async fn join_group(&self, _command: &JoinGroup) -> Result<(), Error> {
+    async fn join_consumer_group(&self, _command: &JoinConsumerGroup) -> Result<(), Error> {
         Err(Error::FeatureUnavailable)
     }
 
-    async fn leave_group(&self, _command: &LeaveGroup) -> Result<(), Error> {
+    async fn leave_consumer_group(&self, _command: &LeaveConsumerGroup) -> Result<(), Error> {
         Err(Error::FeatureUnavailable)
     }
 }
@@ -104,5 +110,5 @@ fn get_topics_path(stream_id: u32) -> String {
 }
 
 fn get_groups_path(stream_id: u32, topic_id: u32) -> String {
-    format!("streams/{}/topics/{}/groups", stream_id, topic_id)
+    format!("streams/{}/topics/{}/consumer_groups", stream_id, topic_id)
 }

@@ -21,5 +21,5 @@ pub struct ClientInfoDetails {
 pub struct ConsumerGroupInfo {
     pub stream_id: u32,
     pub topic_id: u32,
-    pub group_id: u32,
+    pub consumer_group_id: u32,
 }

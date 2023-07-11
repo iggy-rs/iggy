@@ -1,4 +1,4 @@
-use crate::{groups, messages, offsets, streams, system, topics};
+use crate::{consumer_groups, messages, offsets, streams, system, topics};
 use sdk::client::Client;
 use sdk::client_error::ClientError;
 use sdk::command::Command;
@@ -26,11 +26,17 @@ pub async fn handle(input: &str, client: &dyn Client) -> Result<(), ClientError>
         Command::GetTopics(payload) => topics::get_topics(&payload, client).await,
         Command::CreateTopic(payload) => topics::create_topic(&payload, client).await,
         Command::DeleteTopic(payload) => topics::delete_topic(&payload, client).await,
-        Command::GetGroup(payload) => groups::get_group(&payload, client).await,
-        Command::GetGroups(payload) => groups::get_groups(&payload, client).await,
-        Command::CreateGroup(payload) => groups::create_group(&payload, client).await,
-        Command::DeleteGroup(payload) => groups::delete_group(&payload, client).await,
-        Command::JoinGroup(payload) => groups::join_group(&payload, client).await,
-        Command::LeaveGroup(payload) => groups::leave_group(&payload, client).await,
+        Command::GetGroup(payload) => consumer_groups::get_consumer_group(&payload, client).await,
+        Command::GetGroups(payload) => consumer_groups::get_consumer_groups(&payload, client).await,
+        Command::CreateGroup(payload) => {
+            consumer_groups::create_consumer_group(&payload, client).await
+        }
+        Command::DeleteGroup(payload) => {
+            consumer_groups::delete_consumer_group(&payload, client).await
+        }
+        Command::JoinGroup(payload) => consumer_groups::join_consumer_group(&payload, client).await,
+        Command::LeaveGroup(payload) => {
+            consumer_groups::leave_consumer_group(&payload, client).await
+        }
     }
 }

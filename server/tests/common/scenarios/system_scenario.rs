@@ -1,13 +1,13 @@
 use crate::common::{ClientFactory, TestServer};
 use bytes::Bytes;
+use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use sdk::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
+use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
+use sdk::consumer_groups::get_consumer_groups::GetConsumerGroups;
+use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
+use sdk::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use sdk::consumer_type::ConsumerType;
 use sdk::error::Error;
-use sdk::groups::create_group::CreateGroup;
-use sdk::groups::delete_group::DeleteGroup;
-use sdk::groups::get_group::GetGroup;
-use sdk::groups::get_groups::GetGroups;
-use sdk::groups::join_group::JoinGroup;
-use sdk::groups::leave_group::LeaveGroup;
 use sdk::messages::poll_messages::Kind::{Next, Offset};
 use sdk::messages::poll_messages::{Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
@@ -34,7 +34,7 @@ const CONSUMER_ID: u32 = 1;
 const CONSUMER_TYPE: ConsumerType = ConsumerType::Consumer;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
-const GROUP_ID: u32 = 1;
+const CONSUMER_GROUP_ID: u32 = 1;
 
 #[allow(dead_code)]
 pub async fn run(client_factory: &dyn ClientFactory) {
@@ -323,80 +323,80 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(offset.offset, expected_last_offset);
 
     // 20. Get the consumer groups and validate that there are no groups
-    let groups = client
-        .get_groups(&GetGroups {
+    let consumer_groups = client
+        .get_consumer_groups(&GetConsumerGroups {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
         })
         .await
         .unwrap();
 
-    assert!(groups.is_empty());
+    assert!(consumer_groups.is_empty());
 
     // 21. Create the consumer group
     client
-        .create_group(&CreateGroup {
+        .create_consumer_group(&CreateConsumerGroup {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
-            group_id: GROUP_ID,
+            consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
         .unwrap();
 
     // 22. Get the consumer groups and validate that there is one group
-    let groups = client
-        .get_groups(&GetGroups {
+    let consumer_groups = client
+        .get_consumer_groups(&GetConsumerGroups {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
         })
         .await
         .unwrap();
 
-    assert_eq!(groups.len(), 1);
-    let group = groups.get(0).unwrap();
-    assert_eq!(group.id, GROUP_ID);
-    assert_eq!(group.partitions_count, PARTITIONS_COUNT);
-    assert_eq!(group.members_count, 0);
+    assert_eq!(consumer_groups.len(), 1);
+    let consumer_group = consumer_groups.get(0).unwrap();
+    assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
+    assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
+    assert_eq!(consumer_group.members_count, 0);
 
     // 23. Get the consumer group details
-    let group = client
-        .get_group(&GetGroup {
+    let consumer_group = client
+        .get_consumer_group(&GetConsumerGroup {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
-            group_id: GROUP_ID,
+            consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
         .unwrap();
 
-    assert_eq!(group.id, GROUP_ID);
-    assert_eq!(group.partitions_count, PARTITIONS_COUNT);
-    assert_eq!(group.members_count, 0);
-    assert!(group.members.is_empty());
+    assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
+    assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
+    assert_eq!(consumer_group.members_count, 0);
+    assert!(consumer_group.members.is_empty());
 
     // 24. Join the consumer group and then leave it if the feature is available
     let result = client
-        .join_group(&JoinGroup {
+        .join_consumer_group(&JoinConsumerGroup {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
-            group_id: GROUP_ID,
+            consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await;
 
     match result {
         Ok(_) => {
-            let group = client
-                .get_group(&GetGroup {
+            let consumer_group = client
+                .get_consumer_group(&GetConsumerGroup {
                     stream_id: STREAM_ID,
                     topic_id: TOPIC_ID,
-                    group_id: GROUP_ID,
+                    consumer_group_id: CONSUMER_GROUP_ID,
                 })
                 .await
                 .unwrap();
-            assert_eq!(group.id, GROUP_ID);
-            assert_eq!(group.partitions_count, PARTITIONS_COUNT);
-            assert_eq!(group.members_count, 1);
-            assert_eq!(group.members.len(), 1);
-            let member = &group.members[0];
+            assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
+            assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
+            assert_eq!(consumer_group.members_count, 1);
+            assert_eq!(consumer_group.members.len(), 1);
+            let member = &consumer_group.members[0];
             assert_eq!(member.partitions_count, PARTITIONS_COUNT);
 
             let me = client.get_me(&GetMe {}).await.unwrap();
@@ -404,29 +404,29 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             assert_eq!(me.consumer_groups_count, 1);
             assert_eq!(me.consumer_groups.len(), 1);
             let consumer_group = &me.consumer_groups[0];
-            assert_eq!(consumer_group.group_id, GROUP_ID);
+            assert_eq!(consumer_group.consumer_group_id, CONSUMER_GROUP_ID);
             assert_eq!(consumer_group.topic_id, TOPIC_ID);
-            assert_eq!(consumer_group.group_id, STREAM_ID);
+            assert_eq!(consumer_group.consumer_group_id, STREAM_ID);
 
             client
-                .leave_group(&LeaveGroup {
+                .leave_consumer_group(&LeaveConsumerGroup {
                     stream_id: STREAM_ID,
                     topic_id: TOPIC_ID,
-                    group_id: GROUP_ID,
+                    consumer_group_id: CONSUMER_GROUP_ID,
                 })
                 .await
                 .unwrap();
 
-            let group = client
-                .get_group(&GetGroup {
+            let consumer_group = client
+                .get_consumer_group(&GetConsumerGroup {
                     stream_id: STREAM_ID,
                     topic_id: TOPIC_ID,
-                    group_id: GROUP_ID,
+                    consumer_group_id: CONSUMER_GROUP_ID,
                 })
                 .await
                 .unwrap();
-            assert_eq!(group.members_count, 0);
-            assert!(group.members.is_empty());
+            assert_eq!(consumer_group.members_count, 0);
+            assert!(consumer_group.members.is_empty());
 
             let me = client.get_me(&GetMe {}).await.unwrap();
             assert_eq!(me.consumer_groups_count, 0);
@@ -437,10 +437,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 25. Delete the consumer group
     client
-        .delete_group(&DeleteGroup {
+        .delete_consumer_group(&DeleteConsumerGroup {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
-            group_id: GROUP_ID,
+            consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
         .unwrap();

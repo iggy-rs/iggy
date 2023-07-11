@@ -1,5 +1,5 @@
+pub mod consumer_groups;
 pub mod error;
-pub mod groups;
 pub mod http_server;
 mod mapper;
 pub mod messages;

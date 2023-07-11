@@ -1,8 +1,8 @@
 use crate::common::{ClientFactory, TestServer};
+use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
+use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use sdk::consumer_type::ConsumerType;
-use sdk::groups::create_group::CreateGroup;
-use sdk::groups::get_group::GetGroup;
-use sdk::groups::join_group::JoinGroup;
 use sdk::messages::poll_messages::Kind::Next;
 use sdk::messages::poll_messages::{Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
@@ -17,7 +17,7 @@ const TOPIC_ID: u32 = 1;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const PARTITIONS_COUNT: u32 = 3;
-const GROUP_ID: u32 = 1;
+const CONSUMER_GROUP_ID: u32 = 1;
 const MESSAGES_COUNT_PER_PARTITION: u32 = 10;
 
 #[allow(dead_code)]
@@ -44,37 +44,37 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     client.create_topic(&create_topic).await.unwrap();
 
     // 3. Create the consumer group
-    let create_group = CreateGroup {
+    let create_group = CreateConsumerGroup {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
-        group_id: GROUP_ID,
+        consumer_group_id: CONSUMER_GROUP_ID,
     };
-    client.create_group(&create_group).await.unwrap();
+    client.create_consumer_group(&create_group).await.unwrap();
 
-    let join_group = JoinGroup {
+    let join_group = JoinConsumerGroup {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
-        group_id: GROUP_ID,
+        consumer_group_id: CONSUMER_GROUP_ID,
     };
 
     // 4. Join the consumer group by client
-    client.join_group(&join_group).await.unwrap();
+    client.join_consumer_group(&join_group).await.unwrap();
 
     // 5. Validate that group contains the single client with all partitions assigned
-    let group_info = client
-        .get_group(&GetGroup {
+    let consumer_group_info = client
+        .get_consumer_group(&GetConsumerGroup {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
-            group_id: GROUP_ID,
+            consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
         .unwrap();
 
     let client_info = client.get_me(&GetMe {}).await.unwrap();
 
-    assert_eq!(group_info.members_count, 1);
-    assert_eq!(group_info.members.len(), 1);
-    let member = &group_info.members[0];
+    assert_eq!(consumer_group_info.members_count, 1);
+    assert_eq!(consumer_group_info.members.len(), 1);
+    let member = &consumer_group_info.members[0];
     assert_eq!(member.id, client_info.id);
     assert_eq!(member.partitions.len() as u32, PARTITIONS_COUNT);
     assert_eq!(member.partitions_count, PARTITIONS_COUNT);
@@ -101,8 +101,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 7. Poll the messages for the single client which has assigned all partitions in the consumer group
     let poll_messages = PollMessages {
-        consumer_type: ConsumerType::Group,
-        consumer_id: GROUP_ID,
+        consumer_type: ConsumerType::ConsumerGroup,
+        consumer_id: CONSUMER_GROUP_ID,
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
         partition_id: 0,

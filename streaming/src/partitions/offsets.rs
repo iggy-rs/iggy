@@ -21,8 +21,8 @@ impl Partition {
             PollingConsumer::Consumer(consumer_id) => {
                 (self.consumer_offsets.read().await, consumer_id)
             }
-            PollingConsumer::Group(group_id, _) => {
-                (self.consumer_group_offsets.read().await, group_id)
+            PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
+                (self.consumer_group_offsets.read().await, consumer_group_id)
             }
         };
 
@@ -53,8 +53,8 @@ impl Partition {
                 PollingConsumer::Consumer(consumer_id) => {
                     (self.consumer_offsets.read().await, consumer_id)
                 }
-                PollingConsumer::Group(group_id, _) => {
-                    (self.consumer_group_offsets.read().await, group_id)
+                PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
+                    (self.consumer_group_offsets.read().await, consumer_group_id)
                 }
             };
             let consumer_offset = consumer_offsets.offsets.get(&consumer_id);
@@ -72,9 +72,9 @@ impl Partition {
                 consumer_id,
                 &self.consumer_offsets_path,
             ),
-            PollingConsumer::Group(group_id, _) => (
+            PollingConsumer::ConsumerGroup(consumer_group_id, _) => (
                 self.consumer_group_offsets.write().await,
-                group_id,
+                consumer_group_id,
                 &self.consumer_group_offsets_path,
             ),
         };
@@ -105,7 +105,7 @@ impl Partition {
                 &self.consumer_offsets_path,
                 self.consumer_offsets.write().await,
             ),
-            ConsumerType::Group => (
+            ConsumerType::ConsumerGroup => (
                 &self.consumer_group_offsets_path,
                 self.consumer_group_offsets.write().await,
             ),

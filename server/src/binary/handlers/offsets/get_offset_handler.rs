@@ -20,8 +20,8 @@ pub async fn handle(
     trace!("{}", command);
     let consumer = match command.consumer_type {
         ConsumerType::Consumer => PollingConsumer::Consumer(command.consumer_id),
-        ConsumerType::Group => {
-            PollingConsumer::Group(command.consumer_id, client_context.client_id)
+        ConsumerType::ConsumerGroup => {
+            PollingConsumer::ConsumerGroup(command.consumer_id, client_context.client_id)
         }
     };
 

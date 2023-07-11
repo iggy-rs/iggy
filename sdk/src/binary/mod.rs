@@ -1,5 +1,5 @@
 pub mod binary_client;
-pub mod groups;
+pub mod consumer_groups;
 mod mapper;
 pub mod messages;
 pub mod streams;

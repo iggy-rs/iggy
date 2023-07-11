@@ -1,8 +1,8 @@
 use crate::common::{ClientFactory, TestServer};
 use sdk::client::Client;
-use sdk::groups::create_group::CreateGroup;
-use sdk::groups::get_group::GetGroup;
-use sdk::groups::join_group::JoinGroup;
+use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
+use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use sdk::models::client_info::ClientInfoDetails;
 use sdk::models::consumer_group::ConsumerGroupDetails;
 use sdk::streams::create_stream::CreateStream;
@@ -15,7 +15,7 @@ const TOPIC_ID: u32 = 1;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const PARTITIONS_COUNT: u32 = 3;
-const GROUP_ID: u32 = 1;
+const CONSUMER_GROUP_ID: u32 = 1;
 
 #[allow(dead_code)]
 pub async fn run(client_factory: &dyn ClientFactory) {
@@ -48,12 +48,15 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     system_client.create_topic(&create_topic).await.unwrap();
 
     // 3. Create the consumer group
-    let create_group = CreateGroup {
+    let create_group = CreateConsumerGroup {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
-        group_id: GROUP_ID,
+        consumer_group_id: CONSUMER_GROUP_ID,
     };
-    system_client.create_group(&create_group).await.unwrap();
+    system_client
+        .create_consumer_group(&create_group)
+        .await
+        .unwrap();
 
     // 4. Join the consumer group by client 1
     join_consumer_group(client1).await;
@@ -62,8 +65,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client1_info = get_me_and_validate_consumer_groups(client1).await;
 
     // 6. Validate that the consumer group has 1 member and this member has all partitions assigned
-    let group = get_consumer_group_and_validate_members(system_client, 1).await;
-    let member = &group.members[0];
+    let consumer_group = get_consumer_group_and_validate_members(system_client, 1).await;
+    let member = &consumer_group.members[0];
     assert_eq!(member.id, client1_info.id);
     assert_eq!(member.partitions_count, PARTITIONS_COUNT);
     assert_eq!(member.partitions.len() as u32, PARTITIONS_COUNT);
@@ -75,9 +78,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     get_me_and_validate_consumer_groups(client2).await;
 
     // 9. Validate that the consumer group has 2 members and partitions are distributed between them
-    let group = get_consumer_group_and_validate_members(system_client, 2).await;
-    let member1 = &group.members[0];
-    let member2 = &group.members[1];
+    let consumer_group = get_consumer_group_and_validate_members(system_client, 2).await;
+    let member1 = &consumer_group.members[0];
+    let member2 = &consumer_group.members[1];
     assert!(member1.partitions_count >= 1 && member1.partitions_count < PARTITIONS_COUNT);
     assert!(member2.partitions_count >= 1 && member2.partitions_count < PARTITIONS_COUNT);
     assert_eq!(
@@ -92,10 +95,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     get_me_and_validate_consumer_groups(client3).await;
 
     // 12. Validate that the consumer group has 3 members and partitions are equally distributed between them
-    let group = get_consumer_group_and_validate_members(system_client, 3).await;
-    let member1 = &group.members[0];
-    let member2 = &group.members[1];
-    let member3 = &group.members[2];
+    let consumer_group = get_consumer_group_and_validate_members(system_client, 3).await;
+    let member1 = &consumer_group.members[0];
+    let member2 = &consumer_group.members[1];
+    let member3 = &consumer_group.members[2];
     assert_eq!(member1.partitions_count, 1);
     assert_eq!(member2.partitions_count, 1);
     assert_eq!(member3.partitions_count, 1);
@@ -107,12 +110,12 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 }
 
 async fn join_consumer_group(client: &dyn Client) {
-    let join_group = JoinGroup {
+    let join_group = JoinConsumerGroup {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
-        group_id: GROUP_ID,
+        consumer_group_id: CONSUMER_GROUP_ID,
     };
-    client.join_group(&join_group).await.unwrap();
+    client.join_consumer_group(&join_group).await.unwrap();
 }
 
 async fn get_me_and_validate_consumer_groups(client: &dyn Client) -> ClientInfoDetails {
@@ -126,7 +129,7 @@ async fn get_me_and_validate_consumer_groups(client: &dyn Client) -> ClientInfoD
     let consumer_group = &client_info.consumer_groups[0];
     assert_eq!(consumer_group.stream_id, STREAM_ID);
     assert_eq!(consumer_group.topic_id, TOPIC_ID);
-    assert_eq!(consumer_group.group_id, GROUP_ID);
+    assert_eq!(consumer_group.consumer_group_id, CONSUMER_GROUP_ID);
 
     client_info
 }
@@ -135,17 +138,17 @@ async fn get_consumer_group_and_validate_members(
     client: &dyn Client,
     members_count: u32,
 ) -> ConsumerGroupDetails {
-    let get_group = GetGroup {
+    let get_group = GetConsumerGroup {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
-        group_id: GROUP_ID,
+        consumer_group_id: CONSUMER_GROUP_ID,
     };
-    let group = client.get_group(&get_group).await.unwrap();
+    let consumer_group = client.get_consumer_group(&get_group).await.unwrap();
 
-    assert_eq!(group.id, GROUP_ID);
-    assert_eq!(group.partitions_count, PARTITIONS_COUNT);
-    assert_eq!(group.members_count, members_count);
-    assert_eq!(group.members.len() as u32, members_count);
+    assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
+    assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
+    assert_eq!(consumer_group.members_count, members_count);
+    assert_eq!(consumer_group.members.len() as u32, members_count);
 
-    group
+    consumer_group
 }

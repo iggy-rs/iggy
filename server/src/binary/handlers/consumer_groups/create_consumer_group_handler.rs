@@ -1,21 +1,25 @@
 use crate::binary::sender::Sender;
 use anyhow::Result;
+use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use sdk::error::Error;
-use sdk::groups::delete_group::DeleteGroup;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
-    command: &DeleteGroup,
+    command: &CreateConsumerGroup,
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
     let mut system = system.write().await;
     system
-        .delete_consumer_group(command.stream_id, command.topic_id, command.group_id)
+        .create_consumer_group(
+            command.stream_id,
+            command.topic_id,
+            command.consumer_group_id,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

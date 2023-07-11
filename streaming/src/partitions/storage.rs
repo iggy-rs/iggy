@@ -141,7 +141,7 @@ impl Storage<Partition> for FilePartitionStorage {
 
         partition.current_offset = last_segment.current_offset;
         partition.load_offsets(ConsumerType::Consumer).await?;
-        partition.load_offsets(ConsumerType::Group).await?;
+        partition.load_offsets(ConsumerType::ConsumerGroup).await?;
         info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
             partition.id, partition.stream_id, partition.topic_id, partition.current_offset

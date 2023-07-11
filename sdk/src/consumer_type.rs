@@ -8,21 +8,21 @@ use std::str::FromStr;
 pub enum ConsumerType {
     #[default]
     Consumer,
-    Group,
+    ConsumerGroup,
 }
 
 impl ConsumerType {
     pub fn as_code(&self) -> u8 {
         match self {
             ConsumerType::Consumer => 0,
-            ConsumerType::Group => 1,
+            ConsumerType::ConsumerGroup => 1,
         }
     }
 
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
             0 => Ok(ConsumerType::Consumer),
-            1 => Ok(ConsumerType::Group),
+            1 => Ok(ConsumerType::ConsumerGroup),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -33,7 +33,7 @@ impl FromStr for ConsumerType {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
             "c" | "consumer" => Ok(ConsumerType::Consumer),
-            "g" | "group" => Ok(ConsumerType::Group),
+            "g" | "consumer_group" => Ok(ConsumerType::ConsumerGroup),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -43,7 +43,7 @@ impl Display for ConsumerType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ConsumerType::Consumer => write!(f, "consumer"),
-            ConsumerType::Group => write!(f, "group"),
+            ConsumerType::ConsumerGroup => write!(f, "consumer_group"),
         }
     }
 }

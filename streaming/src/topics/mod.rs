@@ -1,5 +1,5 @@
 pub mod consumer_group;
-pub mod groups;
+pub mod consumer_groups;
 pub mod messages;
 pub mod offsets;
 pub mod persistence;

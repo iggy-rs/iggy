@@ -85,9 +85,8 @@ async fn send_messages(
 
     let system = system.read().await;
     let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
-    let storage = system.storage.segment.clone();
     topic
-        .append_messages(command.key_kind, command.key_value, messages, storage)
+        .append_messages(command.key_kind, command.key_value, messages)
         .await?;
     Ok(StatusCode::CREATED)
 }

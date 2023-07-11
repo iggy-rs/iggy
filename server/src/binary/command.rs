@@ -1,7 +1,7 @@
 use crate::binary::client_context::ClientContext;
-use crate::binary::handlers::groups::{
-    create_group_handler, delete_group_handler, get_group_handler, get_groups_handler,
-    join_group_handler, leave_group_handler,
+use crate::binary::handlers::consumer_groups::{
+    create_consumer_group_handler, delete_consumer_group_handler, get_consumer_group_handler,
+    get_consumer_groups_handler, join_consumer_group_handler, leave_consumer_group_handler,
 };
 use crate::binary::handlers::messages::*;
 use crate::binary::handlers::offsets::*;
@@ -107,19 +107,23 @@ async fn try_handle(
         Command::DeleteTopic(command) => {
             delete_topic_handler::handle(command, sender, system).await
         }
-        Command::GetGroup(command) => get_group_handler::handle(command, sender, system).await,
-        Command::GetGroups(command) => get_groups_handler::handle(command, sender, system).await,
+        Command::GetGroup(command) => {
+            get_consumer_group_handler::handle(command, sender, system).await
+        }
+        Command::GetGroups(command) => {
+            get_consumer_groups_handler::handle(command, sender, system).await
+        }
         Command::CreateGroup(command) => {
-            create_group_handler::handle(command, sender, system).await
+            create_consumer_group_handler::handle(command, sender, system).await
         }
         Command::DeleteGroup(command) => {
-            delete_group_handler::handle(command, sender, system).await
+            delete_consumer_group_handler::handle(command, sender, system).await
         }
         Command::JoinGroup(command) => {
-            join_group_handler::handle(command, sender, client_context, system).await
+            join_consumer_group_handler::handle(command, sender, client_context, system).await
         }
         Command::LeaveGroup(command) => {
-            leave_group_handler::handle(command, sender, client_context, system).await
+            leave_consumer_group_handler::handle(command, sender, client_context, system).await
         }
     }
 }

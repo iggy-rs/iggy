@@ -2,7 +2,6 @@ use crate::message::Message;
 use crate::partitions::partition::Partition;
 use crate::polling_consumer::PollingConsumer;
 use crate::segments::segment::Segment;
-use crate::storage::SegmentStorage;
 use crate::utils::random_id;
 use ringbuffer::{RingBuffer, RingBufferWrite};
 use sdk::error::Error;
@@ -125,8 +124,8 @@ impl Partition {
             PollingConsumer::Consumer(consumer_id) => {
                 (self.consumer_offsets.read().await, consumer_id)
             }
-            PollingConsumer::Group(group_id, _) => {
-                (self.consumer_group_offsets.read().await, group_id)
+            PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
+                (self.consumer_group_offsets.read().await, consumer_group_id)
             }
         };
 
@@ -268,11 +267,7 @@ impl Partition {
         messages
     }
 
-    pub async fn append_messages(
-        &mut self,
-        messages: Vec<Message>,
-        storage: Arc<dyn SegmentStorage>,
-    ) -> Result<(), Error> {
+    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {
         let segment = self.segments.last_mut();
         if segment.is_none() {
             return Err(Error::SegmentNotFound);
@@ -357,7 +352,9 @@ impl Partition {
             segment.start_offset,
             self.id
         );
-            segment.persist_messages(storage).await?;
+            segment
+                .persist_messages(self.storage.segment.clone())
+                .await?;
             self.unsaved_messages_count = 0;
         }
 

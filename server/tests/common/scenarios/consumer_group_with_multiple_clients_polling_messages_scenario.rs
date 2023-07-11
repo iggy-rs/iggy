@@ -1,9 +1,9 @@
 use crate::common::{ClientFactory, TestServer};
 use sdk::client::Client;
+use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
+use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use sdk::consumer_type::ConsumerType;
-use sdk::groups::create_group::CreateGroup;
-use sdk::groups::get_group::GetGroup;
-use sdk::groups::join_group::JoinGroup;
 use sdk::messages::poll_messages::Kind::Next;
 use sdk::messages::poll_messages::{Format, PollMessages};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
@@ -19,7 +19,7 @@ const TOPIC_ID: u32 = 1;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const PARTITIONS_COUNT: u32 = 3;
-const GROUP_ID: u32 = 1;
+const CONSUMER_GROUP_ID: u32 = 1;
 const MESSAGES_COUNT_PER_PARTITION: u32 = 10;
 
 #[allow(dead_code)]
@@ -53,23 +53,26 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     system_client.create_topic(&create_topic).await.unwrap();
 
     // 3. Create the consumer group
-    let create_group = CreateGroup {
+    let create_group = CreateConsumerGroup {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
-        group_id: GROUP_ID,
+        consumer_group_id: CONSUMER_GROUP_ID,
     };
-    system_client.create_group(&create_group).await.unwrap();
+    system_client
+        .create_consumer_group(&create_group)
+        .await
+        .unwrap();
 
-    let join_group = JoinGroup {
+    let join_group = JoinConsumerGroup {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
-        group_id: GROUP_ID,
+        consumer_group_id: CONSUMER_GROUP_ID,
     };
 
     // 4. Join the consumer group by each client
-    client1.join_group(&join_group).await.unwrap();
-    client2.join_group(&join_group).await.unwrap();
-    client3.join_group(&join_group).await.unwrap();
+    client1.join_consumer_group(&join_group).await.unwrap();
+    client2.join_consumer_group(&join_group).await.unwrap();
+    client3.join_consumer_group(&join_group).await.unwrap();
 
     // 5. Send messages to the calculated partition ID on the server side by using entity ID as a key
     for entity_id in 1..=MESSAGES_COUNT_PER_PARTITION * PARTITIONS_COUNT {
@@ -92,43 +95,43 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     }
 
     // 6. Get the consumer group details
-    let group_info = system_client
-        .get_group(&GetGroup {
+    let consumer_group_info = system_client
+        .get_consumer_group(&GetConsumerGroup {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
-            group_id: GROUP_ID,
+            consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
         .unwrap();
 
-    for member in &group_info.members {
+    for member in &consumer_group_info.members {
         assert_eq!(member.partitions.len(), 1);
     }
 
     // 7. Poll the messages for each client per assigned partition in the consumer group
-    validate_message_polling(client1, &group_info).await;
-    validate_message_polling(client2, &group_info).await;
-    validate_message_polling(client3, &group_info).await;
+    validate_message_polling(client1, &consumer_group_info).await;
+    validate_message_polling(client2, &consumer_group_info).await;
+    validate_message_polling(client3, &consumer_group_info).await;
 
     test_server.stop();
 }
 
-async fn validate_message_polling(client: &dyn Client, group: &ConsumerGroupDetails) {
+async fn validate_message_polling(client: &dyn Client, consumer_group: &ConsumerGroupDetails) {
     let client_info = client.get_me(&GetMe {}).await.unwrap();
-    let group_member = group
+    let consumer_group_member = consumer_group
         .members
         .iter()
         .find(|m| m.id == client_info.id)
         .unwrap();
-    let partition_id = group_member.partitions[0];
+    let partition_id = consumer_group_member.partitions[0];
     let mut start_entity_id = partition_id % PARTITIONS_COUNT;
     if start_entity_id == 0 {
         start_entity_id = PARTITIONS_COUNT;
     }
 
     let poll_messages = PollMessages {
-        consumer_type: ConsumerType::Group,
-        consumer_id: GROUP_ID,
+        consumer_type: ConsumerType::ConsumerGroup,
+        consumer_id: CONSUMER_GROUP_ID,
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
         partition_id: 0,

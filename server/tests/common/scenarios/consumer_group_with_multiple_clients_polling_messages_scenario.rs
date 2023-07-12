@@ -1,5 +1,6 @@
 use crate::common::{ClientFactory, TestServer};
-use sdk::client::Client;
+use sdk::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
+use sdk::clients::client::{IggyClient, IggyClientConfig};
 use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
 use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
@@ -27,14 +28,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let test_server = TestServer::default();
     test_server.start();
     sleep(std::time::Duration::from_secs(1)).await;
-    let system_client = client_factory.create_client().await;
-    let client1 = client_factory.create_client().await;
-    let client2 = client_factory.create_client().await;
-    let client3 = client_factory.create_client().await;
-    let system_client = system_client.as_ref();
-    let client1 = client1.as_ref();
-    let client2 = client2.as_ref();
-    let client3 = client3.as_ref();
+    let system_client = create_client(client_factory).await;
+    let client1 = create_client(client_factory).await;
+    let client2 = create_client(client_factory).await;
+    let client3 = create_client(client_factory).await;
 
     // 1. Create the stream
     let create_stream = CreateStream {
@@ -109,14 +106,14 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     }
 
     // 7. Poll the messages for each client per assigned partition in the consumer group
-    validate_message_polling(client1, &consumer_group_info).await;
-    validate_message_polling(client2, &consumer_group_info).await;
-    validate_message_polling(client3, &consumer_group_info).await;
+    validate_message_polling(&client1, &consumer_group_info).await;
+    validate_message_polling(&client2, &consumer_group_info).await;
+    validate_message_polling(&client3, &consumer_group_info).await;
 
     test_server.stop();
 }
 
-async fn validate_message_polling(client: &dyn Client, consumer_group: &ConsumerGroupDetails) {
+async fn validate_message_polling(client: &IggyClient, consumer_group: &ConsumerGroupDetails) {
     let client_info = client.get_me(&GetMe {}).await.unwrap();
     let consumer_group_member = consumer_group
         .members
@@ -159,4 +156,9 @@ async fn validate_message_polling(client: &dyn Client, consumer_group: &Consumer
 
 fn get_message_payload(partition_id: u32, entity_id: u32) -> String {
     format!("message-{}-{}", partition_id, entity_id)
+}
+
+async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
+    let client = client_factory.create_client().await;
+    IggyClient::new(client, IggyClientConfig::default())
 }

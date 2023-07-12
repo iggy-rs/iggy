@@ -1,4 +1,6 @@
 use crate::common::{ClientFactory, TestServer};
+use sdk::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
+use sdk::clients::client::{IggyClient, IggyClientConfig};
 use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
 use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
@@ -26,6 +28,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     test_server.start();
     sleep(std::time::Duration::from_secs(1)).await;
     let client = client_factory.create_client().await;
+    let client = IggyClient::new(client, IggyClientConfig::default());
 
     // 1. Create the stream
     let create_stream = CreateStream {

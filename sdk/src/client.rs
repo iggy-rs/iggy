@@ -29,9 +29,19 @@ use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use async_trait::async_trait;
+use std::fmt::Debug;
 
 #[async_trait]
-pub trait Client: SystemClient + StreamClient + TopicClient + MessageClient + Sync + Send {
+pub trait Client:
+    SystemClient
+    + StreamClient
+    + TopicClient
+    + MessageClient
+    + ConsumerGroupClient
+    + Sync
+    + Send
+    + Debug
+{
     async fn connect(&mut self) -> Result<(), Error>;
     async fn disconnect(&mut self) -> Result<(), Error>;
 }
@@ -59,6 +69,18 @@ pub trait TopicClient {
     async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error>;
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error>;
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error>;
+}
+
+#[async_trait]
+pub trait MessageClient {
+    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error>;
+    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error>;
+    async fn store_offset(&self, command: &StoreOffset) -> Result<(), Error>;
+    async fn get_offset(&self, command: &GetOffset) -> Result<Offset, Error>;
+}
+
+#[async_trait]
+pub trait ConsumerGroupClient {
     async fn get_consumer_group(
         &self,
         command: &GetConsumerGroup,
@@ -71,12 +93,4 @@ pub trait TopicClient {
     async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), Error>;
     async fn join_consumer_group(&self, command: &JoinConsumerGroup) -> Result<(), Error>;
     async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), Error>;
-}
-
-#[async_trait]
-pub trait MessageClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error>;
-    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error>;
-    async fn store_offset(&self, command: &StoreOffset) -> Result<(), Error>;
-    async fn get_offset(&self, command: &GetOffset) -> Result<Offset, Error>;
 }

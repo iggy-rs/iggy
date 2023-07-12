@@ -4,6 +4,7 @@ pub mod bytes_serializable;
 pub mod client;
 pub mod client_error;
 pub mod client_provider;
+pub mod clients;
 pub mod command;
 pub mod consumer_groups;
 pub mod consumer_type;

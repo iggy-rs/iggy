@@ -1,5 +1,6 @@
 use crate::common::{ClientFactory, TestServer};
-use sdk::client::Client;
+use sdk::client::{ConsumerGroupClient, StreamClient, SystemClient, TopicClient};
+use sdk::clients::client::{IggyClient, IggyClientConfig};
 use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
 use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
@@ -22,14 +23,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let test_server = TestServer::default();
     test_server.start();
     sleep(std::time::Duration::from_secs(1)).await;
-    let system_client = client_factory.create_client().await;
-    let client1 = client_factory.create_client().await;
-    let client2 = client_factory.create_client().await;
-    let client3 = client_factory.create_client().await;
-    let system_client = system_client.as_ref();
-    let client1 = client1.as_ref();
-    let client2 = client2.as_ref();
-    let client3 = client3.as_ref();
+    let system_client = create_client(client_factory).await;
+    let client1 = create_client(client_factory).await;
+    let client2 = create_client(client_factory).await;
+    let client3 = create_client(client_factory).await;
 
     // 1. Create the stream
     let create_stream = CreateStream {
@@ -59,26 +56,26 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
 
     // 4. Join the consumer group by client 1
-    join_consumer_group(client1).await;
+    join_consumer_group(&client1).await;
 
     // 5. Get client1 info and validate that it contains the single consumer group
-    let client1_info = get_me_and_validate_consumer_groups(client1).await;
+    let client1_info = get_me_and_validate_consumer_groups(&client1).await;
 
     // 6. Validate that the consumer group has 1 member and this member has all partitions assigned
-    let consumer_group = get_consumer_group_and_validate_members(system_client, 1).await;
+    let consumer_group = get_consumer_group_and_validate_members(&system_client, 1).await;
     let member = &consumer_group.members[0];
     assert_eq!(member.id, client1_info.id);
     assert_eq!(member.partitions_count, PARTITIONS_COUNT);
     assert_eq!(member.partitions.len() as u32, PARTITIONS_COUNT);
 
     // 7. Join the consumer group by client 2
-    join_consumer_group(client2).await;
+    join_consumer_group(&client2).await;
 
     // 8. Validate that client 2 contains the single consumer group
-    get_me_and_validate_consumer_groups(client2).await;
+    get_me_and_validate_consumer_groups(&client2).await;
 
     // 9. Validate that the consumer group has 2 members and partitions are distributed between them
-    let consumer_group = get_consumer_group_and_validate_members(system_client, 2).await;
+    let consumer_group = get_consumer_group_and_validate_members(&system_client, 2).await;
     let member1 = &consumer_group.members[0];
     let member2 = &consumer_group.members[1];
     assert!(member1.partitions_count >= 1 && member1.partitions_count < PARTITIONS_COUNT);
@@ -89,13 +86,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     );
 
     // 10. Join the consumer group by client 3
-    join_consumer_group(client3).await;
+    join_consumer_group(&client3).await;
 
     // 11. Validate that client 3 contains the single consumer group
-    get_me_and_validate_consumer_groups(client3).await;
+    get_me_and_validate_consumer_groups(&client3).await;
 
     // 12. Validate that the consumer group has 3 members and partitions are equally distributed between them
-    let consumer_group = get_consumer_group_and_validate_members(system_client, 3).await;
+    let consumer_group = get_consumer_group_and_validate_members(&system_client, 3).await;
     let member1 = &consumer_group.members[0];
     let member2 = &consumer_group.members[1];
     let member3 = &consumer_group.members[2];
@@ -109,7 +106,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     test_server.stop();
 }
 
-async fn join_consumer_group(client: &dyn Client) {
+async fn join_consumer_group(client: &IggyClient) {
     let join_group = JoinConsumerGroup {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
@@ -118,7 +115,7 @@ async fn join_consumer_group(client: &dyn Client) {
     client.join_consumer_group(&join_group).await.unwrap();
 }
 
-async fn get_me_and_validate_consumer_groups(client: &dyn Client) -> ClientInfoDetails {
+async fn get_me_and_validate_consumer_groups(client: &IggyClient) -> ClientInfoDetails {
     let get_me = GetMe {};
     let client_info = client.get_me(&get_me).await.unwrap();
 
@@ -135,7 +132,7 @@ async fn get_me_and_validate_consumer_groups(client: &dyn Client) -> ClientInfoD
 }
 
 async fn get_consumer_group_and_validate_members(
-    client: &dyn Client,
+    client: &IggyClient,
     members_count: u32,
 ) -> ConsumerGroupDetails {
     let get_group = GetConsumerGroup {
@@ -151,4 +148,9 @@ async fn get_consumer_group_and_validate_members(
     assert_eq!(consumer_group.members.len() as u32, members_count);
 
     consumer_group
+}
+
+async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
+    let client = client_factory.create_client().await;
+    IggyClient::new(client, IggyClientConfig::default())
 }

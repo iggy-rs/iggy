@@ -8,7 +8,7 @@ use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::error::Error;
-use crate::messages::poll_messages::PollMessages;
+use crate::messages::poll_messages::{Kind, PollMessages};
 use crate::messages::send_messages::{KeyKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
@@ -48,27 +48,51 @@ pub struct IggyClient {
 
 #[derive(Debug)]
 struct SendMessagesBatch {
-    pub send_messages: VecDeque<SendMessages>,
+    pub commands: VecDeque<SendMessages>,
 }
 
 #[derive(Debug, Default)]
 pub struct IggyClientConfig {
-    pub send_messages_batch: SendMessagesBatchConfig,
+    pub send_messages: SendMessagesConfig,
+    pub poll_messages: PollMessagesConfig,
 }
 
 #[derive(Debug)]
-pub struct SendMessagesBatchConfig {
+pub struct SendMessagesConfig {
     pub enabled: bool,
     pub interval: u64,
     pub max_messages: u32,
 }
 
-impl Default for SendMessagesBatchConfig {
+#[derive(Debug, Copy, Clone)]
+pub struct PollMessagesConfig {
+    pub interval: u64,
+    pub store_offset_kind: StoreOffsetKind,
+}
+
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum StoreOffsetKind {
+    Never,
+    WhenMessagesAreReceived,
+    WhenMessagesAreProcessed,
+    AfterProcessingEachMessage,
+}
+
+impl Default for SendMessagesConfig {
     fn default() -> Self {
-        SendMessagesBatchConfig {
+        SendMessagesConfig {
             enabled: false,
             interval: 100,
             max_messages: 1000,
+        }
+    }
+}
+
+impl Default for PollMessagesConfig {
+    fn default() -> Self {
+        PollMessagesConfig {
+            interval: 100,
+            store_offset_kind: StoreOffsetKind::WhenMessagesAreProcessed,
         }
     }
 }
@@ -77,12 +101,12 @@ impl IggyClient {
     pub fn new(client: Box<dyn Client>, config: IggyClientConfig) -> Self {
         let client = Arc::new(RwLock::new(client));
         let send_messages_batch = Arc::new(Mutex::new(SendMessagesBatch {
-            send_messages: VecDeque::new(),
+            commands: VecDeque::new(),
         }));
-        if config.send_messages_batch.enabled && config.send_messages_batch.interval > 0 {
+        if config.send_messages.enabled && config.send_messages.interval > 0 {
             Self::send_messages_in_background(
-                config.send_messages_batch.interval,
-                config.send_messages_batch.max_messages,
+                config.send_messages.interval,
+                config.send_messages.max_messages,
                 client.clone(),
                 send_messages_batch.clone(),
             );
@@ -92,6 +116,93 @@ impl IggyClient {
             client,
             config,
             send_messages_batch,
+        }
+    }
+
+    pub async fn start_polling_messages<F>(
+        &self,
+        mut poll_messages: PollMessages,
+        on_message: F,
+        config_override: Option<PollMessagesConfig>,
+    ) -> Result<(), Error>
+    where
+        F: Fn(Message) + Send + Sync + 'static,
+    {
+        let client = self.client.clone();
+        let config = config_override.unwrap_or(self.config.poll_messages);
+        let interval = Duration::from_millis(config.interval);
+        let mut store_offset_after_processing_each_message = false;
+        let mut store_offset_when_messages_are_processed = false;
+        match config.store_offset_kind {
+            StoreOffsetKind::Never => {
+                poll_messages.auto_commit = false;
+            }
+            StoreOffsetKind::WhenMessagesAreReceived => {
+                poll_messages.auto_commit = true;
+            }
+            StoreOffsetKind::WhenMessagesAreProcessed => {
+                poll_messages.auto_commit = false;
+                store_offset_when_messages_are_processed = true;
+            }
+            StoreOffsetKind::AfterProcessingEachMessage => {
+                poll_messages.auto_commit = false;
+                store_offset_after_processing_each_message = true;
+            }
+        }
+
+        let result = tokio::spawn(async move {
+            loop {
+                sleep(interval).await;
+                let client = client.read().await;
+                let messages = client.poll_messages(&poll_messages).await;
+                if let Err(error) = messages {
+                    error!("There was an error while polling messages: {:?}", error);
+                    continue;
+                }
+
+                let messages = messages.unwrap();
+                if messages.is_empty() {
+                    continue;
+                }
+
+                let mut current_offset = 0;
+                for message in messages {
+                    current_offset = message.offset;
+                    on_message(message);
+                    if store_offset_after_processing_each_message {
+                        Self::store_offset(client.as_ref(), &poll_messages, current_offset).await;
+                    }
+                }
+
+                if store_offset_when_messages_are_processed {
+                    Self::store_offset(client.as_ref(), &poll_messages, current_offset).await;
+                }
+
+                if poll_messages.kind == Kind::Offset {
+                    poll_messages.value = current_offset + 1;
+                }
+            }
+        })
+        .await;
+        if let Err(error) = result {
+            error!("There was an error while polling messages: {:?}", error);
+        }
+        Ok(())
+    }
+
+    async fn store_offset(client: &dyn Client, poll_messages: &PollMessages, offset: u64) {
+        let result = client
+            .store_offset(&StoreOffset {
+                consumer_type: poll_messages.consumer_type,
+                consumer_id: poll_messages.consumer_id,
+                stream_id: poll_messages.stream_id,
+                topic_id: poll_messages.topic_id,
+                partition_id: poll_messages.partition_id,
+                offset,
+            })
+            .await;
+        if let Err(error) = result {
+            error!("There was an error while storing offset: {:?}", error);
         }
     }
 
@@ -107,7 +218,7 @@ impl IggyClient {
             loop {
                 sleep(interval).await;
                 let mut send_messages_batch = send_messages_batch.lock().await;
-                if send_messages_batch.send_messages.is_empty() {
+                if send_messages_batch.commands.is_empty() {
                     continue;
                 }
 
@@ -118,7 +229,7 @@ impl IggyClient {
                 let mut key_value = 0;
                 let mut batch_messages = true;
 
-                for send_messages in send_messages_batch.send_messages.iter() {
+                for send_messages in send_messages_batch.commands.iter() {
                     if !initialized {
                         stream_id = send_messages.stream_id;
                         topic_id = send_messages.topic_id;
@@ -139,18 +250,18 @@ impl IggyClient {
                 }
 
                 if !batch_messages {
-                    for send_messages in send_messages_batch.send_messages.iter() {
+                    for send_messages in send_messages_batch.commands.iter() {
                         if let Err(error) = client.read().await.send_messages(send_messages).await {
                             error!("There was an error when sending the messages: {:?}", error);
                         }
                     }
-                    send_messages_batch.send_messages.clear();
+                    send_messages_batch.commands.clear();
                     continue;
                 }
 
                 let mut batches = VecDeque::new();
                 let mut messages = Vec::new();
-                while let Some(send_messages) = send_messages_batch.send_messages.pop_front() {
+                while let Some(send_messages) = send_messages_batch.commands.pop_front() {
                     messages.extend(send_messages.messages);
                     if messages.len() >= max_messages {
                         batches.push_back(messages);
@@ -176,7 +287,7 @@ impl IggyClient {
                     }
                 }
 
-                send_messages_batch.send_messages.clear();
+                send_messages_batch.commands.clear();
             }
         });
     }
@@ -261,8 +372,7 @@ impl MessageClient for IggyClient {
     }
 
     async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
-        if !self.config.send_messages_batch.enabled || self.config.send_messages_batch.interval == 0
-        {
+        if !self.config.send_messages.enabled || self.config.send_messages.interval == 0 {
             self.client.read().await.send_messages(command).await?;
             return Ok(());
         }
@@ -284,7 +394,7 @@ impl MessageClient for IggyClient {
                 })
                 .collect(),
         };
-        batch.send_messages.push_back(send_messages);
+        batch.commands.push_back(send_messages);
         Ok(())
     }
 

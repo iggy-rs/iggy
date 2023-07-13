@@ -4,9 +4,10 @@ use crate::messages_generator::MessagesGenerator;
 use anyhow::Result;
 use clap::Parser;
 use samples::shared::args::Args;
-use sdk::client::Client;
+use sdk::client::{MessageClient, StreamClient, TopicClient};
 use sdk::client_provider;
 use sdk::client_provider::ClientProviderConfig;
+use sdk::clients::client::{IggyClient, IggyClientConfig};
 use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
 use sdk::streams::create_stream::CreateStream;
 use sdk::streams::get_stream::GetStream;
@@ -26,7 +27,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_client(client_provider_config).await?;
-    let client = client.as_ref();
+    let client = IggyClient::new(client, IggyClientConfig::default());
     let stream = client
         .get_stream(&GetStream {
             stream_id: args.stream_id,
@@ -50,10 +51,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .await?;
     }
 
-    produce_messages(&args, client).await
+    produce_messages(&args, &client).await
 }
 
-pub async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {
+async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
     info!(
         "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.stream_id, args.topic_id, args.partition_id, args.interval

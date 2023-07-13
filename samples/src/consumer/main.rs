@@ -5,6 +5,7 @@ use samples::shared::messages::*;
 use sdk::client::Client;
 use sdk::client_provider;
 use sdk::client_provider::ClientProviderConfig;
+use sdk::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
 use sdk::consumer_type::ConsumerType;
 use sdk::messages::poll_messages::{Format, Kind, PollMessages};
 use sdk::models::message::Message;
@@ -24,11 +25,52 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_client(client_provider_config).await?;
-    let client = client.as_ref();
-    consume_messages(&args, client).await
+    let client = IggyClient::new(
+        client,
+        IggyClientConfig {
+            poll_messages: PollMessagesConfig {
+                interval: args.interval,
+                store_offset_kind: StoreOffsetKind::WhenMessagesAreReceived,
+            },
+            ..Default::default()
+        },
+    );
+    consume_messages(&args, &client).await
 }
 
-pub async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {
+async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
+    validate_system(args.stream_id, args.topic_id, args.partition_id, client).await;
+    info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
+        args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
+    client
+        .start_polling_messages(
+            PollMessages {
+                consumer_type: ConsumerType::from_code(args.consumer_type)?,
+                consumer_id: args.consumer_id,
+                stream_id: args.stream_id,
+                topic_id: args.topic_id,
+                partition_id: args.partition_id,
+                kind: Kind::Next,
+                value: 0,
+                count: args.messages_per_batch,
+                auto_commit: true,
+                format: Format::None,
+            },
+            |message| {
+                let result = handle_message(&message);
+                if let Err(e) = result {
+                    warn!("Error handling message: {}", e);
+                }
+            },
+            None,
+        )
+        .await?;
+    Ok(())
+}
+
+// The method below uses poll_messages() directly with a custom loop.
+#[allow(dead_code)]
+async fn consume_messages_in_loop(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {
     validate_system(args.stream_id, args.topic_id, args.partition_id, client).await;
     info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);

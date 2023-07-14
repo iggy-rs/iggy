@@ -1,31 +1,31 @@
 use crate::common::{ClientFactory, TestServer};
 use bytes::Bytes;
-use sdk::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
-use sdk::clients::client::{IggyClient, IggyClientConfig};
-use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use sdk::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
-use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
-use sdk::consumer_groups::get_consumer_groups::GetConsumerGroups;
-use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
-use sdk::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
-use sdk::consumer_type::ConsumerType;
-use sdk::error::Error;
-use sdk::messages::poll_messages::Kind::{Next, Offset};
-use sdk::messages::poll_messages::{Format, PollMessages};
-use sdk::messages::send_messages::{KeyKind, Message, SendMessages};
-use sdk::offsets::get_offset::GetOffset;
-use sdk::offsets::store_offset::StoreOffset;
-use sdk::streams::create_stream::CreateStream;
-use sdk::streams::delete_stream::DeleteStream;
-use sdk::streams::get_stream::GetStream;
-use sdk::streams::get_streams::GetStreams;
-use sdk::system::get_clients::GetClients;
-use sdk::system::get_me::GetMe;
-use sdk::system::ping::Ping;
-use sdk::topics::create_topic::CreateTopic;
-use sdk::topics::delete_topic::DeleteTopic;
-use sdk::topics::get_topic::GetTopic;
-use sdk::topics::get_topics::GetTopics;
+use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
+use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
+use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
+use iggy::consumer_groups::get_consumer_groups::GetConsumerGroups;
+use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
+use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
+use iggy::consumer_type::ConsumerType;
+use iggy::error::Error;
+use iggy::messages::poll_messages::Kind::{Next, Offset};
+use iggy::messages::poll_messages::{Format, PollMessages};
+use iggy::messages::send_messages::{KeyKind, Message, SendMessages};
+use iggy::offsets::get_offset::GetOffset;
+use iggy::offsets::store_offset::StoreOffset;
+use iggy::streams::create_stream::CreateStream;
+use iggy::streams::delete_stream::DeleteStream;
+use iggy::streams::get_stream::GetStream;
+use iggy::streams::get_streams::GetStreams;
+use iggy::system::get_clients::GetClients;
+use iggy::system::get_me::GetMe;
+use iggy::system::ping::Ping;
+use iggy::topics::create_topic::CreateTopic;
+use iggy::topics::delete_topic::DeleteTopic;
+use iggy::topics::get_topic::GetTopic;
+use iggy::topics::get_topics::GetTopics;
 use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;
@@ -482,7 +482,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     test_server.stop();
 }
 
-fn assert_message(message: &sdk::models::message::Message, offset: u64) {
+fn assert_message(message: &iggy::models::message::Message, offset: u64) {
     let expected_payload = get_message_payload(offset);
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);

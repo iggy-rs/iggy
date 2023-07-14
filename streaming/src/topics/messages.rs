@@ -1,10 +1,10 @@
 use crate::message::Message;
 use crate::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
+use iggy::error::Error;
+use iggy::messages::poll_messages::Kind;
+use iggy::messages::send_messages::KeyKind;
 use ringbuffer::RingBufferWrite;
-use sdk::error::Error;
-use sdk::messages::poll_messages::Kind;
-use sdk::messages::send_messages::KeyKind;
 use std::sync::Arc;
 use tracing::trace;
 

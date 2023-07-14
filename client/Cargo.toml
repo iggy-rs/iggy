@@ -1,10 +1,10 @@
 [package]
 name = "client"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-sdk = { path = "../sdk" }
+iggy = { path = "../iggy" }
 anyhow = "1.0.70"
 bytes = "1.4.0"
 clap = { version = "4.1.11", features = ["derive"] }

@@ -1,9 +1,9 @@
 use crate::args::Args;
 use crate::client_factory::ClientFactory;
-use sdk::error::Error;
-use sdk::streams::create_stream::CreateStream;
-use sdk::streams::get_streams::GetStreams;
-use sdk::topics::create_topic::CreateTopic;
+use iggy::error::Error;
+use iggy::streams::create_stream::CreateStream;
+use iggy::streams::get_streams::GetStreams;
+use iggy::topics::create_topic::CreateTopic;
 use std::sync::Arc;
 use tracing::info;
 

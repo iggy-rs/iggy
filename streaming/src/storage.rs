@@ -12,7 +12,7 @@ use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::storage::FileTopicStorage;
 use crate::topics::topic::Topic;
 use async_trait::async_trait;
-use sdk::error::Error;
+use iggy::error::Error;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 

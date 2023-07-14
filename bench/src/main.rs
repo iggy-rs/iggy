@@ -12,7 +12,7 @@ mod tcp;
 use crate::args::Args;
 use anyhow::Result;
 use clap::Parser;
-use sdk::error::Error;
+use iggy::error::Error;
 use tracing::info;
 
 #[tokio::main]

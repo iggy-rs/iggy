@@ -1,9 +1,9 @@
-use sdk::client::Client;
-use sdk::client_error::ClientError;
-use sdk::streams::create_stream::CreateStream;
-use sdk::streams::delete_stream::DeleteStream;
-use sdk::streams::get_stream::GetStream;
-use sdk::streams::get_streams::GetStreams;
+use iggy::client::Client;
+use iggy::client_error::ClientError;
+use iggy::streams::create_stream::CreateStream;
+use iggy::streams::delete_stream::DeleteStream;
+use iggy::streams::get_stream::GetStream;
+use iggy::streams::get_streams::GetStreams;
 use tracing::info;
 
 pub async fn get_stream(command: &GetStream, client: &dyn Client) -> Result<(), ClientError> {

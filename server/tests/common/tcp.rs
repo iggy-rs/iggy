@@ -1,8 +1,8 @@
 use crate::common::ClientFactory;
 use async_trait::async_trait;
-use sdk::client::Client;
-use sdk::tcp::client::TcpClient;
-use sdk::tcp::config::TcpClientConfig;
+use iggy::client::Client;
+use iggy::tcp::client::TcpClient;
+use iggy::tcp::config::TcpClientConfig;
 use std::sync::Arc;
 
 #[derive(Debug, Copy, Clone)]

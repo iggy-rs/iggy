@@ -3,7 +3,7 @@ use crate::http::mapper;
 use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Json, Router};
-use sdk::models::client_info::{ClientInfo, ClientInfoDetails};
+use iggy::models::client_info::{ClientInfo, ClientInfoDetails};
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

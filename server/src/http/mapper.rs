@@ -1,7 +1,7 @@
-use sdk::models::client_info::ConsumerGroupInfo;
-use sdk::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
-use sdk::models::stream::StreamDetails;
-use sdk::models::topic::TopicDetails;
+use iggy::models::client_info::ConsumerGroupInfo;
+use iggy::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
+use iggy::models::stream::StreamDetails;
+use iggy::models::topic::TopicDetails;
 use std::sync::Arc;
 use streaming::clients::client_manager::Client;
 use streaming::streams::stream::Stream;
@@ -17,7 +17,7 @@ pub fn map_stream(stream: &Stream) -> StreamDetails {
         topics: stream
             .get_topics()
             .iter()
-            .map(|topic| sdk::models::topic::Topic {
+            .map(|topic| iggy::models::topic::Topic {
                 id: topic.id,
                 name: topic.name.clone(),
                 partitions_count: topic.get_partitions().len() as u32,
@@ -28,28 +28,28 @@ pub fn map_stream(stream: &Stream) -> StreamDetails {
     stream_details
 }
 
-pub fn map_streams(streams: &[&Stream]) -> Vec<sdk::models::stream::Stream> {
+pub fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Stream> {
     let mut streams = streams
         .iter()
-        .map(|stream| sdk::models::stream::Stream {
+        .map(|stream| iggy::models::stream::Stream {
             id: stream.id,
             name: stream.name.clone(),
             topics_count: stream.get_topics().len() as u32,
         })
-        .collect::<Vec<sdk::models::stream::Stream>>();
+        .collect::<Vec<iggy::models::stream::Stream>>();
     streams.sort_by(|a, b| a.id.cmp(&b.id));
     streams
 }
 
-pub fn map_topics(topics: &[&Topic]) -> Vec<sdk::models::topic::Topic> {
+pub fn map_topics(topics: &[&Topic]) -> Vec<iggy::models::topic::Topic> {
     let mut topics = topics
         .iter()
-        .map(|topic| sdk::models::topic::Topic {
+        .map(|topic| iggy::models::topic::Topic {
             id: topic.id,
             name: topic.name.clone(),
             partitions_count: topic.get_partitions().len() as u32,
         })
-        .collect::<Vec<sdk::models::topic::Topic>>();
+        .collect::<Vec<iggy::models::topic::Topic>>();
     topics.sort_by(|a, b| a.id.cmp(&b.id));
     topics
 }
@@ -65,7 +65,7 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
         let partition = partition.read().await;
         topic_details
             .partitions
-            .push(sdk::models::partition::Partition {
+            .push(iggy::models::partition::Partition {
                 id: partition.id,
                 segments_count: partition.get_segments().len() as u32,
                 current_offset: partition.current_offset,
@@ -80,8 +80,8 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
     topic_details
 }
 
-pub async fn map_client(client: &Client) -> sdk::models::client_info::ClientInfoDetails {
-    let client = sdk::models::client_info::ClientInfoDetails {
+pub async fn map_client(client: &Client) -> iggy::models::client_info::ClientInfoDetails {
+    let client = iggy::models::client_info::ClientInfoDetails {
         id: client.id,
         transport: client.transport.to_string(),
         address: client.address.to_string(),
@@ -101,11 +101,11 @@ pub async fn map_client(client: &Client) -> sdk::models::client_info::ClientInfo
 
 pub async fn map_clients(
     clients: &[Arc<RwLock<Client>>],
-) -> Vec<sdk::models::client_info::ClientInfo> {
+) -> Vec<iggy::models::client_info::ClientInfo> {
     let mut all_clients = Vec::new();
     for client in clients {
         let client = client.read().await;
-        let client = sdk::models::client_info::ClientInfo {
+        let client = iggy::models::client_info::ClientInfo {
             id: client.id,
             transport: client.transport.to_string(),
             address: client.address.to_string(),
@@ -120,11 +120,11 @@ pub async fn map_clients(
 
 pub async fn map_consumer_groups(
     consumer_groups: &[&RwLock<ConsumerGroup>],
-) -> Vec<sdk::models::consumer_group::ConsumerGroup> {
+) -> Vec<iggy::models::consumer_group::ConsumerGroup> {
     let mut groups = Vec::new();
     for consumer_group in consumer_groups {
         let consumer_group = consumer_group.read().await;
-        let consumer_group = sdk::models::consumer_group::ConsumerGroup {
+        let consumer_group = iggy::models::consumer_group::ConsumerGroup {
             id: consumer_group.id,
             partitions_count: consumer_group.partitions_count,
             members_count: consumer_group.get_members().len() as u32,

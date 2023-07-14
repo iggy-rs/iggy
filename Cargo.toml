@@ -7,7 +7,7 @@ members = [
     "bench",
     "client",
     "samples",
-    "sdk",
+    "iggy",
     "server",
     "streaming"
 ]

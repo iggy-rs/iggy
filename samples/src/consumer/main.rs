@@ -1,16 +1,16 @@
 use anyhow::Result;
 use clap::Parser;
+use iggy::client::{Client, MessageClient};
+use iggy::client_provider;
+use iggy::client_provider::ClientProviderConfig;
+use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
+use iggy::consumer_type::ConsumerType;
+use iggy::messages::poll_messages::{Format, Kind, PollMessages};
+use iggy::models::message::Message;
+use iggy::streams::get_stream::GetStream;
+use iggy::topics::get_topic::GetTopic;
 use samples::shared::args::Args;
 use samples::shared::messages::*;
-use sdk::client::Client;
-use sdk::client_provider;
-use sdk::client_provider::ClientProviderConfig;
-use sdk::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
-use sdk::consumer_type::ConsumerType;
-use sdk::messages::poll_messages::{Format, Kind, PollMessages};
-use sdk::models::message::Message;
-use sdk::streams::get_stream::GetStream;
-use sdk::topics::get_topic::GetTopic;
 use std::error::Error;
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -70,7 +70,7 @@ async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
 
 // The method below uses poll_messages() directly with a custom loop.
 #[allow(dead_code)]
-async fn consume_messages_in_loop(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {
+async fn consume_messages_in_loop(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
     validate_system(args.stream_id, args.topic_id, args.partition_id, client).await;
     info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);

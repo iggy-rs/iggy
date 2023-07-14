@@ -1,8 +1,8 @@
 use crate::common::ClientFactory;
 use async_trait::async_trait;
-use sdk::client::Client;
-use sdk::http::client::HttpClient;
-use sdk::http::config::HttpClientConfig;
+use iggy::client::Client;
+use iggy::http::client::HttpClient;
+use iggy::http::config::HttpClientConfig;
 use std::sync::Arc;
 
 #[derive(Debug, Copy, Clone)]

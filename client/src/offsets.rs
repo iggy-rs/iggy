@@ -1,7 +1,7 @@
-use sdk::client::Client;
-use sdk::client_error::ClientError;
-use sdk::offsets::get_offset::GetOffset;
-use sdk::offsets::store_offset::StoreOffset;
+use iggy::client::Client;
+use iggy::client_error::ClientError;
+use iggy::offsets::get_offset::GetOffset;
+use iggy::offsets::store_offset::StoreOffset;
 use tracing::info;
 
 pub async fn get_offset(command: &GetOffset, client: &dyn Client) -> Result<(), ClientError> {

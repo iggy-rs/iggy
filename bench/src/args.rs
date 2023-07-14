@@ -1,5 +1,5 @@
 use clap::Parser;
-use sdk::error::Error;
+use iggy::error::Error;
 use tracing::error;
 
 #[derive(Parser, Debug)]

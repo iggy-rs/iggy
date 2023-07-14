@@ -1,5 +1,9 @@
 # Iggy
 
+[Website](https://iggy.rs) | [Documentation](https://docs.iggy.rs) | [Crates](https://crates.io/crates/iggy)
+
+---
+
 ![iggy](assets/iggy.png)
 
 ---
@@ -256,4 +260,4 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 
 #### UI
 
-- [ ] Build a simple UI for the server using chosen framework
+- [ ] Build a simple UI for the server using chosen framework**

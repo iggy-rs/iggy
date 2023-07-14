@@ -8,7 +8,7 @@ use crate::quic::QuicClientFactory;
 use crate::tcp::TcpClientFactory;
 use crate::{benchmark, initializer};
 use futures::future::join_all;
-use sdk::error::Error;
+use iggy::error::Error;
 use std::sync::Arc;
 use tracing::info;
 

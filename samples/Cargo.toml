@@ -1,6 +1,6 @@
 [package]
 name = "samples"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [[bin]]
@@ -12,7 +12,7 @@ name = "sample-producer"
 path = "src/producer/main.rs"
 
 [dependencies]
-sdk = { path = "../sdk" }
+iggy = { path = "../iggy" }
 clap = { version = "4.1.11", features = ["derive"] }
 rand = "0.8.5"
 serde = { version = "1.0.159", features = ["derive", "rc"] }

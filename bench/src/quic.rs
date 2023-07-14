@@ -1,8 +1,8 @@
 use crate::args::Args;
 use crate::client_factory::ClientFactory;
 use async_trait::async_trait;
-use sdk::client::Client;
-use sdk::quic::client::QuicClient;
+use iggy::client::Client;
+use iggy::quic::client::QuicClient;
 use std::sync::Arc;
 
 #[derive(Debug, Copy, Clone)]

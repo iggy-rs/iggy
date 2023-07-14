@@ -3,7 +3,7 @@ use crate::benchmark::{display_results, BenchmarkKind};
 use crate::benchmarks::{poll_messages_benchmark, send_messages_benchmark};
 use crate::client_factory::ClientFactory;
 use futures::future::join_all;
-use sdk::error::Error;
+use iggy::error::Error;
 use std::sync::Arc;
 use tracing::info;
 

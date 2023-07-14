@@ -1,7 +1,7 @@
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
-use sdk::error::Error;
-use sdk::system::get_client::GetClient;
+use iggy::error::Error;
+use iggy::system::get_client::GetClient;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

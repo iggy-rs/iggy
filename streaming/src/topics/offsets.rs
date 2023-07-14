@@ -1,6 +1,6 @@
 use crate::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
-use sdk::error::Error;
+use iggy::error::Error;
 
 impl Topic {
     pub async fn store_offset(

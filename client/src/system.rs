@@ -1,10 +1,10 @@
-use sdk::client::Client;
-use sdk::client_error::ClientError;
-use sdk::system::get_client::GetClient;
-use sdk::system::get_clients::GetClients;
-use sdk::system::get_me::GetMe;
-use sdk::system::kill::Kill;
-use sdk::system::ping::Ping;
+use iggy::client::Client;
+use iggy::client_error::ClientError;
+use iggy::system::get_client::GetClient;
+use iggy::system::get_clients::GetClients;
+use iggy::system::get_me::GetMe;
+use iggy::system::kill::Kill;
+use iggy::system::ping::Ping;
 use tracing::info;
 
 pub async fn kill(command: &Kill, client: &dyn Client) -> Result<(), ClientError> {

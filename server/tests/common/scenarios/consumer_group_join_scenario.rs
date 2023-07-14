@@ -1,14 +1,14 @@
 use crate::common::{ClientFactory, TestServer};
-use sdk::client::{ConsumerGroupClient, StreamClient, SystemClient, TopicClient};
-use sdk::clients::client::{IggyClient, IggyClientConfig};
-use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
-use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
-use sdk::models::client_info::ClientInfoDetails;
-use sdk::models::consumer_group::ConsumerGroupDetails;
-use sdk::streams::create_stream::CreateStream;
-use sdk::system::get_me::GetMe;
-use sdk::topics::create_topic::CreateTopic;
+use iggy::client::{ConsumerGroupClient, StreamClient, SystemClient, TopicClient};
+use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
+use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
+use iggy::models::client_info::ClientInfoDetails;
+use iggy::models::consumer_group::ConsumerGroupDetails;
+use iggy::streams::create_stream::CreateStream;
+use iggy::system::get_me::GetMe;
+use iggy::topics::create_topic::CreateTopic;
 use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;

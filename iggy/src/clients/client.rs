@@ -36,6 +36,7 @@ use std::collections::VecDeque;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
+use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::error;
 
@@ -119,12 +120,12 @@ impl IggyClient {
         }
     }
 
-    pub async fn start_polling_messages<F>(
+    pub fn start_polling_messages<F>(
         &self,
         mut poll_messages: PollMessages,
         on_message: F,
         config_override: Option<PollMessagesConfig>,
-    ) -> Result<(), Error>
+    ) -> JoinHandle<()>
     where
         F: Fn(Message) + Send + Sync + 'static,
     {
@@ -150,7 +151,7 @@ impl IggyClient {
             }
         }
 
-        let result = tokio::spawn(async move {
+        tokio::spawn(async move {
             loop {
                 sleep(interval).await;
                 let client = client.read().await;
@@ -183,11 +184,6 @@ impl IggyClient {
                 }
             }
         })
-        .await;
-        if let Err(error) = result {
-            error!("There was an error while polling messages: {:?}", error);
-        }
-        Ok(())
     }
 
     async fn store_offset(client: &dyn Client, poll_messages: &PollMessages, offset: u64) {

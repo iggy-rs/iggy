@@ -1,9 +1,9 @@
-use sdk::client::Client;
-use sdk::client_error::ClientError;
-use sdk::topics::create_topic::CreateTopic;
-use sdk::topics::delete_topic::DeleteTopic;
-use sdk::topics::get_topic::GetTopic;
-use sdk::topics::get_topics::GetTopics;
+use iggy::client::Client;
+use iggy::client_error::ClientError;
+use iggy::topics::create_topic::CreateTopic;
+use iggy::topics::delete_topic::DeleteTopic;
+use iggy::topics::get_topic::GetTopic;
+use iggy::topics::get_topics::GetTopics;
 use tracing::info;
 
 pub async fn get_topic(command: &GetTopic, client: &dyn Client) -> Result<(), ClientError> {

@@ -71,8 +71,8 @@ pub struct Args {
 }
 
 impl Args {
-    pub fn to_sdk_args(&self) -> sdk::args::Args {
-        sdk::args::Args {
+    pub fn to_sdk_args(&self) -> iggy::args::Args {
+        iggy::args::Args {
             transport: self.transport.clone(),
             http_api_url: self.http_api_url.clone(),
             http_retries: self.http_retries,

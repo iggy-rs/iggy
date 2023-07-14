@@ -1,7 +1,14 @@
 [package]
-name = "sdk"
-version = "0.1.0"
+name = "iggy"
+version = "0.0.1"
+description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
+license = "MIT"
+keywords = ["iggy", "messaging", "streaming"]
+categories = ["messaging", "streaming"]
+homepage = "https://iggy.rs"
+documentation = "https://docs.iggy.rs"
+repository = "http://github.com/spetz/iggy"
 
 [dependencies]
 async-trait = "0.1.68"

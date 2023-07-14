@@ -4,7 +4,7 @@ use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
 use futures::future::join_all;
-use sdk::error::Error;
+use iggy::error::Error;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::Path;

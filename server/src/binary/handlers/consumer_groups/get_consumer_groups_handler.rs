@@ -1,8 +1,8 @@
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use sdk::consumer_groups::get_consumer_groups::GetConsumerGroups;
-use sdk::error::Error;
+use iggy::consumer_groups::get_consumer_groups::GetConsumerGroups;
+use iggy::error::Error;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

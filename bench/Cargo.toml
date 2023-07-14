@@ -1,10 +1,10 @@
 [package]
 name = "bench"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-sdk = { path = "../sdk" }
+iggy = { path = "../iggy" }
 async-trait = "0.1.68"
 futures = "0.3.28"
 thiserror = "1.0.40"

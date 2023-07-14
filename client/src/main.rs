@@ -8,11 +8,11 @@ mod topics;
 
 use anyhow::Result;
 use clap::Parser;
-use sdk::args::Args;
-use sdk::client_error::ClientError;
-use sdk::client_provider;
-use sdk::client_provider::ClientProviderConfig;
-use sdk::error::Error;
+use iggy::args::Args;
+use iggy::client_error::ClientError;
+use iggy::client_provider;
+use iggy::client_provider::ClientProviderConfig;
+use iggy::error::Error;
 use std::io;
 use std::sync::Arc;
 use tracing::{error, info};

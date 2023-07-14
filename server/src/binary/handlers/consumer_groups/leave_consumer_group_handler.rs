@@ -1,8 +1,8 @@
 use crate::binary::client_context::ClientContext;
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use sdk::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
-use sdk::error::Error;
+use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
+use iggy::error::Error;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

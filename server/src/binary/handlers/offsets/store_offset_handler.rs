@@ -1,9 +1,9 @@
 use crate::binary::client_context::ClientContext;
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use sdk::consumer_type::ConsumerType;
-use sdk::error::Error;
-use sdk::offsets::store_offset::StoreOffset;
+use iggy::consumer_type::ConsumerType;
+use iggy::error::Error;
+use iggy::offsets::store_offset::StoreOffset;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
 use streaming::system::System;

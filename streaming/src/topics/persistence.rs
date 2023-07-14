@@ -1,6 +1,6 @@
 use crate::storage::SegmentStorage;
 use crate::topics::topic::Topic;
-use sdk::error::Error;
+use iggy::error::Error;
 use std::sync::Arc;
 
 impl Topic {

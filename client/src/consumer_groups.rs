@@ -1,11 +1,11 @@
-use sdk::client::Client;
-use sdk::client_error::ClientError;
-use sdk::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use sdk::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
-use sdk::consumer_groups::get_consumer_group::GetConsumerGroup;
-use sdk::consumer_groups::get_consumer_groups::GetConsumerGroups;
-use sdk::consumer_groups::join_consumer_group::JoinConsumerGroup;
-use sdk::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
+use iggy::client::Client;
+use iggy::client_error::ClientError;
+use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
+use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
+use iggy::consumer_groups::get_consumer_groups::GetConsumerGroups;
+use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
+use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use tracing::info;
 
 pub async fn get_consumer_group(

@@ -1,7 +1,7 @@
-use sdk::client::Client;
-use sdk::client_error::ClientError;
-use sdk::messages::poll_messages::{Format, PollMessages};
-use sdk::messages::send_messages::SendMessages;
+use iggy::client::Client;
+use iggy::client_error::ClientError;
+use iggy::messages::poll_messages::{Format, PollMessages};
+use iggy::messages::send_messages::SendMessages;
 use std::str::from_utf8;
 use tracing::info;
 

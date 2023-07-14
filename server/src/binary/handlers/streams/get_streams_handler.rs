@@ -1,8 +1,8 @@
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use sdk::error::Error;
-use sdk::streams::get_streams::GetStreams;
+use iggy::error::Error;
+use iggy::streams::get_streams::GetStreams;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;

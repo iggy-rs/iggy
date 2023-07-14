@@ -1,7 +1,7 @@
 use crate::{consumer_groups, messages, offsets, streams, system, topics};
-use sdk::client::Client;
-use sdk::client_error::ClientError;
-use sdk::command::Command;
+use iggy::client::Client;
+use iggy::client_error::ClientError;
+use iggy::command::Command;
 use std::str::FromStr;
 use tracing::info;
 

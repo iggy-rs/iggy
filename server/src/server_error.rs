@@ -14,7 +14,7 @@ pub enum ServerError {
     #[error("Invalid configuration")]
     InvalidConfiguration,
     #[error("SDK error")]
-    SdkError(#[from] sdk::error::Error),
+    SdkError(#[from] iggy::error::Error),
     #[error("Write error")]
     WriteError(#[from] WriteError),
     #[error("Read to end error")]

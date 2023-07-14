@@ -4,7 +4,7 @@ pub mod scenarios;
 pub mod tcp;
 
 use async_trait::async_trait;
-use sdk::client::Client;
+use iggy::client::Client;
 use std::fs;
 use tokio::process::Command;
 use tokio::runtime::Runtime;

@@ -1,5 +1,5 @@
 use crate::partitions::partition::Partition;
-use sdk::error::Error;
+use iggy::error::Error;
 
 impl Partition {
     pub async fn load(&mut self) -> Result<(), Error> {

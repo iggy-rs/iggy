@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use sdk::error::Error;
+use iggy::error::Error;
 
 #[async_trait]
 pub trait Sender: Sync + Send {

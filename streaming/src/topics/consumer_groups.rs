@@ -1,6 +1,6 @@
 use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::topic::Topic;
-use sdk::error::Error;
+use iggy::error::Error;
 use tokio::sync::RwLock;
 use tracing::info;
 

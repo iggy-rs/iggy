@@ -1,8 +1,8 @@
 use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::polling_consumer::PollingConsumer;
 use crate::utils::file;
-use sdk::consumer_type::ConsumerType;
-use sdk::error::Error;
+use iggy::consumer_type::ConsumerType;
+use iggy::error::Error;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
 use tokio::sync::RwLock;

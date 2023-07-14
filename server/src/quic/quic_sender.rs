@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use async_trait::async_trait;
+use iggy::error::Error;
 use quinn::SendStream;
-use sdk::error::Error;
 use tracing::trace;
 
 const STATUS_OK: &[u8] = &[0];

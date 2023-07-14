@@ -5,7 +5,7 @@ use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::topic::Topic;
 use async_trait::async_trait;
 use futures::future::join_all;
-use sdk::error::Error;
+use iggy::error::Error;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;

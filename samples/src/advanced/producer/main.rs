@@ -3,15 +3,13 @@ mod messages_generator;
 use crate::messages_generator::MessagesGenerator;
 use anyhow::Result;
 use clap::Parser;
-use iggy::client::{MessageClient, StreamClient, TopicClient};
+use iggy::client::MessageClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::messages::send_messages::{KeyKind, Message, SendMessages};
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::get_stream::GetStream;
-use iggy::topics::create_topic::CreateTopic;
 use samples::shared::args::Args;
+use samples::shared::system;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -22,35 +20,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     info!(
-        "Producer has started, selected transport: {}",
+        "Advanced producer has started, selected transport: {}",
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_client(client_provider_config).await?;
     let client = IggyClient::new(client, IggyClientConfig::default());
-    let stream = client
-        .get_stream(&GetStream {
-            stream_id: args.stream_id,
-        })
-        .await;
-    if stream.is_err() {
-        info!("Stream does not exist, creating...");
-        client
-            .create_stream(&CreateStream {
-                stream_id: args.stream_id,
-                name: "sample".to_string(),
-            })
-            .await?;
-        client
-            .create_topic(&CreateTopic {
-                stream_id: args.stream_id,
-                topic_id: args.topic_id,
-                partitions_count: args.partition_id,
-                name: "orders".to_string(),
-            })
-            .await?;
-    }
-
+    system::init_by_producer(&args, &client).await?;
     produce_messages(&args, &client).await
 }
 

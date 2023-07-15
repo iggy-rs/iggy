@@ -4,12 +4,20 @@ version = "0.0.1"
 edition = "2021"
 
 [[bin]]
-name = "sample-consumer"
-path = "src/consumer/main.rs"
+name = "basic-consumer-sample"
+path = "src/basic/consumer/main.rs"
 
 [[bin]]
-name = "sample-producer"
-path = "src/producer/main.rs"
+name = "basic-producer-sample"
+path = "src/basic/producer/main.rs"
+
+[[bin]]
+name = "advanced-consumer-sample"
+path = "src/advanced/consumer/main.rs"
+
+[[bin]]
+name = "advanced-producer-sample"
+path = "src/advanced/producer/main.rs"
 
 [dependencies]
 iggy = { path = "../iggy" }

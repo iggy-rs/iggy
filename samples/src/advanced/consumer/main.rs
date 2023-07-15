@@ -1,16 +1,14 @@
 use anyhow::Result;
 use clap::Parser;
-use iggy::client::{Client, MessageClient};
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
 use iggy::consumer_type::ConsumerType;
 use iggy::messages::poll_messages::{Format, Kind, PollMessages};
 use iggy::models::message::Message;
-use iggy::streams::get_stream::GetStream;
-use iggy::topics::get_topic::GetTopic;
 use samples::shared::args::Args;
 use samples::shared::messages::*;
+use samples::shared::system;
 use std::error::Error;
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -20,7 +18,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     info!(
-        "Consumer has started, selected transport: {}",
+        "Advanced consumer has started, selected transport: {}",
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
@@ -35,11 +33,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ..Default::default()
         },
     );
+    system::init_by_consumer(&args, &client).await;
     consume_messages(&args, &client).await
 }
 
 async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
-    validate_system(args.stream_id, args.topic_id, args.partition_id, client).await;
     info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
     client
@@ -66,40 +64,6 @@ async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
         )
         .await?;
     Ok(())
-}
-
-// The method below uses poll_messages() directly with a custom loop.
-#[allow(dead_code)]
-async fn consume_messages_in_loop(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
-    validate_system(args.stream_id, args.topic_id, args.partition_id, client).await;
-    info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
-        args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
-    let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
-    loop {
-        let messages = client
-            .poll_messages(&PollMessages {
-                consumer_type: ConsumerType::from_code(args.consumer_type)?,
-                consumer_id: args.consumer_id,
-                stream_id: args.stream_id,
-                topic_id: args.topic_id,
-                partition_id: args.partition_id,
-                kind: Kind::Next,
-                value: 0,
-                count: args.messages_per_batch,
-                auto_commit: true,
-                format: Format::None,
-            })
-            .await?;
-        if messages.is_empty() {
-            info!("No messages found.");
-            interval.tick().await;
-            continue;
-        }
-        for message in messages {
-            handle_message(&message)?;
-        }
-        interval.tick().await;
-    }
 }
 
 fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
@@ -129,41 +93,4 @@ fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
         }
     }
     Ok(())
-}
-
-async fn validate_system(stream_id: u32, topic_id: u32, partition_id: u32, client: &dyn Client) {
-    let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
-    loop {
-        info!("Validating if stream: {} exists..", stream_id);
-        let stream = client.get_stream(&GetStream { stream_id }).await;
-        if stream.is_ok() {
-            info!("Stream: {} was found.", stream_id);
-            break;
-        }
-        interval.tick().await;
-    }
-    loop {
-        info!("Validating if topic: {} exists..", topic_id);
-        let topic = client
-            .get_topic(&GetTopic {
-                stream_id,
-                topic_id,
-            })
-            .await;
-        if topic.is_err() {
-            interval.tick().await;
-            continue;
-        }
-
-        info!("Topic: {} was found.", topic_id);
-        let topic = topic.unwrap();
-        if topic.partitions_count >= partition_id {
-            break;
-        }
-
-        panic!(
-            "Topic: {} has only {} partition(s), but partition: {} was requested.",
-            topic_id, topic.partitions_count, partition_id
-        );
-    }
 }

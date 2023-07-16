@@ -17,7 +17,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
                 "/:stream_id/topics",
                 topics::router(system.clone())
                     .nest(
-                        "/:topic_id/consumer_groups",
+                        "/:topic_id/consumer-groups",
                         consumer_groups::router(system.clone()),
                     )
                     .nest("/:topic_id/messages", messages::router(system.clone())),

@@ -4,6 +4,14 @@ version = "0.0.1"
 edition = "2021"
 
 [[bin]]
+name = "getting-started-consumer-sample"
+path = "src/getting-started/consumer/main.rs"
+
+[[bin]]
+name = "getting-started-producer-sample"
+path = "src/getting-started/producer/main.rs"
+
+[[bin]]
 name = "basic-consumer-sample"
 path = "src/basic/consumer/main.rs"
 

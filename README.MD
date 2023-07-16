@@ -1,6 +1,6 @@
 # Iggy
 
-[Website](https://iggy.rs) | [Documentation](https://docs.iggy.rs) | [Crates](https://crates.io/crates/iggy)
+[Website](https://iggy.rs) | [Getting started](https://docs.iggy.rs/introduction/getting-started/) | [Documentation](https://docs.iggy.rs) | [Crates](https://crates.io/crates/iggy)
 
 ---
 
@@ -39,6 +39,13 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 - Built-in benchmarking app to test the performance
 - **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)
+
+---
+
+### Supported languages SDK
+
+- [Rust](https://crates.io/crates/iggy)
+- [C#](https://github.com/numinnex/Iggy_SDK)
 
 ---
 
@@ -124,7 +131,7 @@ To see the detailed logs from the client/server, run it with `RUST_LOG=trace` en
 
 ### Samples
 
-You can find the sample consumer & producer applications under `samples` directory. The purpose of these apps is to showcase the usage of the client SDK.
+You can find the sample consumer & producer applications under `samples` directory. The purpose of these apps is to showcase the usage of the client SDK. To find out more about building the applications, please refer to the [getting started](https://docs.iggy.rs/introduction/getting-started) guide.
 
 To run the sample, first start the server with `cargo r --bin server` and then run the producer and consumer apps with `cargo r --bin advanced-producer-sample` and `cargo r --bin advanced-consumer-sample` respectively.
 

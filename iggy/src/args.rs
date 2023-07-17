@@ -15,6 +15,12 @@ pub struct Args {
     #[arg(long, default_value = "127.0.0.1:8090")]
     pub tcp_server_address: String,
 
+    #[arg(long, default_value = "3")]
+    pub tcp_reconnection_retries: u32,
+
+    #[arg(long, default_value = "1000")]
+    pub tcp_reconnection_interval: u64,
+
     #[arg(long, default_value = "127.0.0.1:0")]
     pub quic_client_address: String,
 
@@ -23,6 +29,12 @@ pub struct Args {
 
     #[arg(long, default_value = "localhost")]
     pub quic_server_name: String,
+
+    #[arg(long, default_value = "3")]
+    pub quic_reconnection_retries: u32,
+
+    #[arg(long, default_value = "1000")]
+    pub quic_reconnection_interval: u64,
 
     #[arg(long, default_value = "10000")]
     pub quic_max_concurrent_bidi_streams: u64,

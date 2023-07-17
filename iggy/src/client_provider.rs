@@ -34,6 +34,8 @@ impl ClientProviderConfig {
                     client_address: args.quic_client_address,
                     server_address: args.quic_server_address,
                     server_name: args.quic_server_name,
+                    reconnection_retries: args.quic_reconnection_retries,
+                    reconnection_interval: args.quic_reconnection_interval,
                     response_buffer_size: args.quic_response_buffer_size,
                     max_concurrent_bidi_streams: args.quic_max_concurrent_bidi_streams,
                     datagram_send_buffer_size: args.quic_datagram_send_buffer_size,
@@ -53,6 +55,8 @@ impl ClientProviderConfig {
             TCP_TRANSPORT => {
                 config.tcp = Some(Arc::new(TcpClientConfig {
                     server_address: args.tcp_server_address,
+                    reconnection_retries: args.tcp_reconnection_retries,
+                    reconnection_interval: args.tcp_reconnection_interval,
                 }));
             }
             _ => return Err(ClientError::InvalidTransport(config.transport.clone())),

@@ -228,13 +228,13 @@ impl FromStr for Command {
 impl Display for Command {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Command::Kill(payload) => write!(formatter, "{}|{}", KILL, payload),
-            Command::Ping(payload) => write!(formatter, "{}|{}", PING, payload),
-            Command::GetMe(payload) => write!(formatter, "{}|{}", GET_ME, payload),
+            Command::Kill(_) => write!(formatter, "{}", KILL),
+            Command::Ping(_) => write!(formatter, "{}", PING),
+            Command::GetMe(_) => write!(formatter, "{}", GET_ME),
             Command::GetClient(payload) => write!(formatter, "{}|{}", GET_CLIENT, payload),
-            Command::GetClients(payload) => write!(formatter, "{}|{}", GET_CLIENTS, payload),
+            Command::GetClients(_) => write!(formatter, "{}", GET_CLIENTS),
             Command::GetStream(payload) => write!(formatter, "{}|{}", GET_STREAM, payload),
-            Command::GetStreams(payload) => write!(formatter, "{}|{}", GET_STREAMS, payload),
+            Command::GetStreams(_) => write!(formatter, "{}", GET_STREAMS),
             Command::CreateStream(payload) => write!(formatter, "{}|{}", CREATE_STREAM, payload),
             Command::DeleteStream(payload) => write!(formatter, "{}|{}", DELETE_STREAM, payload),
             Command::GetTopic(payload) => write!(formatter, "{}|{}", GET_TOPIC, payload),

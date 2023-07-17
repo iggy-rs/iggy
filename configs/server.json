@@ -1,4 +1,12 @@
 {
+  "http": {
+    "enabled": true,
+    "address": "127.0.0.1:3000"
+  },
+  "tcp": {
+    "enabled": true,
+    "address": "127.0.0.1:8090"
+  },
   "quic": {
     "enabled": true,
     "address": "127.0.0.1:8080",
@@ -10,18 +18,10 @@
     "keep_alive_interval": 5000,
     "max_idle_timeout": 10000
   },
-  "tcp": {
-    "enabled": true,
-    "address": "127.0.0.1:8090"
-  },
-  "http": {
-    "enabled": true,
-    "address": "127.0.0.1:3000"
-  },
   "message_saver": {
     "enabled": true,
     "enforce_sync": true,
-    "interval": 1000
+    "interval": 30
   },
   "system": {
     "path": "local_data",

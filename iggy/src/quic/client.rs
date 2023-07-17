@@ -7,6 +7,7 @@ use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt}
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::time::sleep;
 use tracing::{error, info, trace};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
@@ -28,22 +29,43 @@ unsafe impl Sync for QuicClient {}
 #[async_trait]
 impl Client for QuicClient {
     async fn connect(&mut self) -> Result<(), Error> {
-        info!(
-            "{} client is connecting to server: {}",
-            NAME, self.config.server_name
-        );
-        let connection = self
-            .endpoint
-            .connect(self.server_address, &self.config.server_name)
-            .unwrap()
-            .await
-            .unwrap();
+        let mut retry_count = 0;
+        let connection;
+        loop {
+            info!(
+                "{} client is connecting to server: {}...",
+                NAME, self.config.server_address
+            );
+            let connection_result = self
+                .endpoint
+                .connect(self.server_address, &self.config.server_name)
+                .unwrap()
+                .await;
 
-        info!(
-            "{} client has connected to server: {}",
-            NAME,
-            connection.remote_address()
-        );
+            if connection_result.is_err() {
+                error!(
+                    "Failed to connect to server: {}",
+                    self.config.server_address
+                );
+                if retry_count < self.config.reconnection_retries {
+                    retry_count += 1;
+                    info!(
+                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
+                        retry_count,
+                        self.config.reconnection_retries,
+                        self.config.server_address,
+                        self.config.reconnection_interval
+                    );
+                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
+                    continue;
+                }
+
+                return Err(Error::NotConnected);
+            }
+
+            connection = connection_result.unwrap();
+            break;
+        }
 
         self.connection = Some(connection);
 

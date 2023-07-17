@@ -33,6 +33,12 @@ pub struct Args {
     #[arg(long, default_value = "3")]
     pub http_retries: u32,
 
+    #[arg(long, default_value = "3")]
+    pub tcp_reconnection_retries: u32,
+
+    #[arg(long, default_value = "1000")]
+    pub tcp_reconnection_interval: u64,
+
     #[arg(long, default_value = "127.0.0.1:8090")]
     pub tcp_server_address: String,
 
@@ -44,6 +50,12 @@ pub struct Args {
 
     #[arg(long, default_value = "localhost")]
     pub quic_server_name: String,
+
+    #[arg(long, default_value = "3")]
+    pub quic_reconnection_retries: u32,
+
+    #[arg(long, default_value = "1000")]
+    pub quic_reconnection_interval: u64,
 
     #[arg(long, default_value = "10000")]
     pub quic_max_concurrent_bidi_streams: u64,
@@ -77,9 +89,13 @@ impl Args {
             http_api_url: self.http_api_url.clone(),
             http_retries: self.http_retries,
             tcp_server_address: self.tcp_server_address.clone(),
+            tcp_reconnection_retries: self.tcp_reconnection_retries,
+            tcp_reconnection_interval: self.tcp_reconnection_interval,
             quic_client_address: self.quic_client_address.clone(),
             quic_server_address: self.quic_server_address.clone(),
             quic_server_name: self.quic_server_name.clone(),
+            quic_reconnection_retries: self.quic_reconnection_retries,
+            quic_reconnection_interval: self.quic_reconnection_interval,
             quic_max_concurrent_bidi_streams: self.quic_max_concurrent_bidi_streams,
             quic_datagram_send_buffer_size: self.quic_datagram_send_buffer_size,
             quic_initial_mtu: self.quic_initial_mtu,

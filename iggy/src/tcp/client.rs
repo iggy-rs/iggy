@@ -5,9 +5,11 @@ use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
+use tokio::time::sleep;
 use tracing::log::trace;
 use tracing::{error, info};
 
@@ -29,11 +31,39 @@ unsafe impl Sync for TcpClient {}
 #[async_trait]
 impl Client for TcpClient {
     async fn connect(&mut self) -> Result<(), Error> {
-        info!(
-            "{} client is connecting to server: {}",
-            NAME, self.config.server_address
-        );
-        let stream = TcpStream::connect(self.server_address).await?;
+        let mut retry_count = 0;
+        let stream;
+        loop {
+            info!(
+                "{} client is connecting to server: {}...",
+                NAME, self.config.server_address
+            );
+            let connection = TcpStream::connect(self.server_address).await;
+            if connection.is_err() {
+                error!(
+                    "Failed to connect to server: {}",
+                    self.config.server_address
+                );
+                if retry_count < self.config.reconnection_retries {
+                    retry_count += 1;
+                    info!(
+                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
+                        retry_count,
+                        self.config.reconnection_retries,
+                        self.config.server_address,
+                        self.config.reconnection_interval
+                    );
+                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
+                    continue;
+                }
+
+                return Err(Error::NotConnected);
+            }
+
+            stream = connection.unwrap();
+            break;
+        }
+
         let remote_address = stream.peer_addr()?;
         self.stream = Some(Mutex::new(stream));
 
@@ -89,6 +119,7 @@ impl TcpClient {
     pub fn new(server_address: &str) -> Result<Self, Error> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
+            ..Default::default()
         }))
     }
 

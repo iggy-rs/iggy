@@ -2,9 +2,11 @@ use crate::client::SystemClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
+use crate::models::stats::Stats;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
+use crate::system::get_stats::GetStats;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use async_trait::async_trait;
@@ -12,9 +14,16 @@ use async_trait::async_trait;
 const PING: &str = "/ping";
 const KILL: &str = "/kill";
 const CLIENTS: &str = "/clients";
+const STATS: &str = "/stats";
 
 #[async_trait]
 impl SystemClient for HttpClient {
+    async fn get_stats(&self, _command: &GetStats) -> Result<Stats, Error> {
+        let response = self.get(STATS).await?;
+        let stats = response.json().await?;
+        Ok(stats)
+    }
+
     async fn get_me(&self, _command: &GetMe) -> Result<ClientInfoDetails, Error> {
         Err(Error::FeatureUnavailable)
     }

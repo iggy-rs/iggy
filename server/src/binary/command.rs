@@ -74,6 +74,7 @@ async fn try_handle(
     match command {
         Command::Kill(command) => kill_handler::handle(command, sender).await,
         Command::Ping(command) => ping_handler::handle(command, sender).await,
+        Command::GetStats(command) => get_stats_handler::handle(command, sender, system).await,
         Command::GetMe(command) => {
             get_me_handler::handle(command, sender, client_context, system).await
         }

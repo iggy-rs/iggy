@@ -14,6 +14,7 @@ use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::message::Message;
 use crate::models::offset::Offset;
+use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::offsets::get_offset::GetOffset;
@@ -25,6 +26,7 @@ use crate::streams::get_streams::GetStreams;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
+use crate::system::get_stats::GetStats;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use crate::topics::create_topic::CreateTopic;
@@ -302,6 +304,10 @@ impl Client for IggyClient {
 
 #[async_trait]
 impl SystemClient for IggyClient {
+    async fn get_stats(&self, command: &GetStats) -> Result<Stats, Error> {
+        self.client.read().await.get_stats(command).await
+    }
+
     async fn get_me(&self, command: &GetMe) -> Result<ClientInfoDetails, Error> {
         self.client.read().await.get_me(command).await
     }

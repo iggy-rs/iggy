@@ -5,6 +5,7 @@ use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
 use futures::future::join_all;
 use iggy::error::Error;
+use iggy::models::stats::Stats;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::Path;
@@ -309,5 +310,37 @@ impl System {
     pub async fn get_clients(&self) -> Vec<Arc<RwLock<Client>>> {
         let client_manager = self.client_manager.read().await;
         client_manager.get_clients()
+    }
+
+    pub async fn get_stats(&self) -> Stats {
+        Stats {
+            streams_count: self.streams.len() as u32,
+            topics_count: self
+                .streams
+                .values()
+                .map(|s| s.topics.len() as u32)
+                .sum::<u32>(),
+            partitions_count: self
+                .streams
+                .values()
+                .map(|s| {
+                    s.topics
+                        .values()
+                        .map(|t| t.partitions.len() as u32)
+                        .sum::<u32>()
+                })
+                .sum::<u32>(),
+            clients_count: self.client_manager.read().await.get_clients().len() as u32,
+            consumer_groups_count: self
+                .streams
+                .values()
+                .map(|s| {
+                    s.topics
+                        .values()
+                        .map(|t| t.consumer_groups.len() as u32)
+                        .sum::<u32>()
+                })
+                .sum::<u32>(),
+        }
     }
 }

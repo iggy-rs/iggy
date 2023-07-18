@@ -4,6 +4,7 @@ use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, Consume
 use crate::models::message::Message;
 use crate::models::offset::Offset;
 use crate::models::partition::Partition;
+use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use std::str::from_utf8;
@@ -13,6 +14,21 @@ const EMPTY_TOPICS: Vec<Topic> = vec![];
 const EMPTY_STREAMS: Vec<Stream> = vec![];
 const EMPTY_CLIENTS: Vec<ClientInfo> = vec![];
 const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
+
+pub fn map_stats(payload: &[u8]) -> Result<Stats, Error> {
+    let streams_count = u32::from_le_bytes(payload[..4].try_into()?);
+    let topics_count = u32::from_le_bytes(payload[4..8].try_into()?);
+    let partitions_count = u32::from_le_bytes(payload[8..12].try_into()?);
+    let clients_count = u32::from_le_bytes(payload[12..16].try_into()?);
+    let consumer_groups_count = u32::from_le_bytes(payload[16..20].try_into()?);
+    Ok(Stats {
+        streams_count,
+        topics_count,
+        partitions_count,
+        clients_count,
+        consumer_groups_count,
+    })
+}
 
 pub fn map_offset(payload: &[u8]) -> Result<Offset, Error> {
     let consumer_id = u32::from_le_bytes(payload[..4].try_into()?);

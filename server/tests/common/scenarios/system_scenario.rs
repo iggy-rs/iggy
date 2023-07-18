@@ -21,6 +21,7 @@ use iggy::streams::get_stream::GetStream;
 use iggy::streams::get_streams::GetStreams;
 use iggy::system::get_clients::GetClients;
 use iggy::system::get_me::GetMe;
+use iggy::system::get_stats::GetStats;
 use iggy::system::ping::Ping;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
@@ -438,7 +439,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         Err(e) => assert_eq!(e.as_code(), Error::FeatureUnavailable.as_code()),
     }
 
-    // 25. Delete the consumer group
+    // 25. Get the stats and validate that there is one stream
+    let stats = client.get_stats(&GetStats {}).await.unwrap();
+    assert_eq!(stats.streams_count, 1);
+    assert_eq!(stats.topics_count, 1);
+    assert_eq!(stats.partitions_count, PARTITIONS_COUNT);
+
+    // 26. Delete the consumer group
     client
         .delete_consumer_group(&DeleteConsumerGroup {
             stream_id: STREAM_ID,
@@ -448,7 +455,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 26. Delete the existing topic and ensure it doesn't exist anymore
+    // 27. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(&DeleteTopic {
             stream_id: STREAM_ID,
@@ -464,7 +471,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert!(topics.is_empty());
 
-    // 27. Delete the existing stream and ensure it doesn't exist anymore
+    // 28. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(&DeleteStream {
             stream_id: STREAM_ID,
@@ -474,7 +481,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
-    // 28. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 29. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients(&GetClients {}).await.unwrap();
 
     assert!(clients.len() <= 1);

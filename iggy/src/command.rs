@@ -17,6 +17,7 @@ use crate::streams::get_streams::GetStreams;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
+use crate::system::get_stats::GetStats;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use crate::topics::create_topic::CreateTopic;
@@ -30,12 +31,14 @@ pub const KILL: &str = "kill";
 pub const KILL_CODE: u8 = 0;
 pub const PING: &str = "ping";
 pub const PING_CODE: u8 = 1;
-pub const GET_ME: &str = "me.get";
-pub const GET_ME_CODE: u8 = 2;
+pub const GET_STATS: &str = "stats";
+pub const GET_STATS_CODE: u8 = 2;
+pub const GET_ME: &str = "me";
+pub const GET_ME_CODE: u8 = 3;
 pub const GET_CLIENT: &str = "client.get";
-pub const GET_CLIENT_CODE: u8 = 3;
+pub const GET_CLIENT_CODE: u8 = 4;
 pub const GET_CLIENTS: &str = "client.list";
-pub const GET_CLIENTS_CODE: u8 = 4;
+pub const GET_CLIENTS_CODE: u8 = 5;
 pub const SEND_MESSAGES: &str = "message.send";
 pub const SEND_MESSAGES_CODE: u8 = 10;
 pub const POLL_MESSAGES: &str = "message.poll";
@@ -77,6 +80,7 @@ pub const LEAVE_CONSUMER_GROUP_CODE: u8 = 45;
 pub enum Command {
     Kill(Kill),
     Ping(Ping),
+    GetStats(GetStats),
     GetMe(GetMe),
     GetClient(GetClient),
     GetClients(GetClients),
@@ -107,6 +111,7 @@ impl BytesSerializable for Command {
         match self {
             Command::Kill(payload) => as_bytes(KILL_CODE, &payload.as_bytes()),
             Command::Ping(payload) => as_bytes(PING_CODE, &payload.as_bytes()),
+            Command::GetStats(payload) => as_bytes(GET_STATS_CODE, &payload.as_bytes()),
             Command::GetMe(payload) => as_bytes(GET_ME_CODE, &payload.as_bytes()),
             Command::GetClient(payload) => as_bytes(GET_CLIENT_CODE, &payload.as_bytes()),
             Command::GetClients(payload) => as_bytes(GET_CLIENTS_CODE, &payload.as_bytes()),
@@ -143,6 +148,7 @@ impl BytesSerializable for Command {
         match command {
             KILL_CODE => Ok(Command::Kill(Kill::from_bytes(payload)?)),
             PING_CODE => Ok(Command::Ping(Ping::from_bytes(payload)?)),
+            GET_STATS_CODE => Ok(Command::GetStats(GetStats::from_bytes(payload)?)),
             GET_ME_CODE => Ok(Command::GetMe(GetMe::from_bytes(payload)?)),
             GET_CLIENT_CODE => Ok(Command::GetClient(GetClient::from_bytes(payload)?)),
             GET_CLIENTS_CODE => Ok(Command::GetClients(GetClients::from_bytes(payload)?)),
@@ -195,6 +201,7 @@ impl FromStr for Command {
         match command {
             KILL => Ok(Command::Kill(Kill::from_str(payload)?)),
             PING => Ok(Command::Ping(Ping::from_str(payload)?)),
+            GET_STATS => Ok(Command::GetStats(GetStats::from_str(payload)?)),
             GET_ME => Ok(Command::GetMe(GetMe::from_str(payload)?)),
             GET_CLIENT => Ok(Command::GetClient(GetClient::from_str(payload)?)),
             GET_CLIENTS => Ok(Command::GetClients(GetClients::from_str(payload)?)),
@@ -230,6 +237,7 @@ impl Display for Command {
         match self {
             Command::Kill(_) => write!(formatter, "{}", KILL),
             Command::Ping(_) => write!(formatter, "{}", PING),
+            Command::GetStats(_) => write!(formatter, "{}", GET_STATS),
             Command::GetMe(_) => write!(formatter, "{}", GET_ME),
             Command::GetClient(payload) => write!(formatter, "{}|{}", GET_CLIENT, payload),
             Command::GetClients(_) => write!(formatter, "{}", GET_CLIENTS),
@@ -276,6 +284,11 @@ mod tests {
             &Command::Ping(Ping::default()),
             PING_CODE,
             &Ping::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetStats(GetStats::default()),
+            GET_STATS_CODE,
+            &GetStats::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetMe(GetMe::default()),
@@ -388,6 +401,11 @@ mod tests {
     fn should_be_read_from_string() {
         assert_read_from_string(&Command::Kill(Kill::default()), KILL, &Kill::default());
         assert_read_from_string(&Command::Ping(Ping::default()), PING, &Ping::default());
+        assert_read_from_string(
+            &Command::GetStats(GetStats::default()),
+            GET_STATS,
+            &GetStats::default(),
+        );
         assert_read_from_string(&Command::GetMe(GetMe::default()), GET_ME, &GetMe::default());
         assert_read_from_string(
             &Command::GetClient(GetClient::default()),

@@ -1,14 +1,25 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::mapper;
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{GET_CLIENTS_CODE, GET_CLIENT_CODE, GET_ME_CODE, KILL_CODE, PING_CODE};
+use crate::command::{
+    GET_CLIENTS_CODE, GET_CLIENT_CODE, GET_ME_CODE, GET_STATS_CODE, KILL_CODE, PING_CODE,
+};
 use crate::error::Error;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
+use crate::models::stats::Stats;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
+use crate::system::get_stats::GetStats;
 use crate::system::kill::Kill;
 use crate::system::ping::Ping;
+
+pub async fn get_stats(client: &dyn BinaryClient, command: &GetStats) -> Result<Stats, Error> {
+    let response = client
+        .send_with_response(GET_STATS_CODE, &command.as_bytes())
+        .await?;
+    mapper::map_stats(&response)
+}
 
 pub async fn get_me(
     client: &dyn BinaryClient,

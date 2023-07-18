@@ -21,6 +21,9 @@ GET {{url}}/clients/{{client_id}}
 GET {{url}}/ping
 
 ###
+GET {{url}}/stats
+
+###
 POST {{url}}/kill
 
 ###
@@ -93,13 +96,13 @@ Content-Type: application/json
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages/offsets?consumer_id={{consumer_id}}&partition_id={{partition_id}}
 
 ###
-GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer_groups
+GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups
 
 ###
-GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer_groups/{{consumer_group_id}}
+GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups/{{consumer_group_id}}
 
 ###
-POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer_groups
+POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups
 Content-Type: application/json
 
 {
@@ -107,4 +110,4 @@ Content-Type: application/json
 }
 
 ###
-DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer_groups/{{consumer_group_id}}
+DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups/{{consumer_group_id}}

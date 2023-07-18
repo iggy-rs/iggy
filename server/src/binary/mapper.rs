@@ -1,3 +1,4 @@
+use iggy::models::stats::Stats;
 use std::sync::Arc;
 use streaming::clients::client_manager::{Client, Transport};
 use streaming::message::Message;
@@ -6,6 +7,16 @@ use streaming::streams::stream::Stream;
 use streaming::topics::consumer_group::ConsumerGroup;
 use streaming::topics::topic::Topic;
 use tokio::sync::RwLock;
+
+pub fn map_stats(stats: &Stats) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(20);
+    bytes.extend(stats.streams_count.to_le_bytes());
+    bytes.extend(stats.topics_count.to_le_bytes());
+    bytes.extend(stats.partitions_count.to_le_bytes());
+    bytes.extend(stats.clients_count.to_le_bytes());
+    bytes.extend(stats.consumer_groups_count.to_le_bytes());
+    bytes
+}
 
 pub fn map_offset(consumer_id: u32, offset: u64) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(12);

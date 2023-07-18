@@ -4,6 +4,7 @@ use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Json, Router};
 use iggy::models::client_info::{ClientInfo, ClientInfoDetails};
+use iggy::models::stats::Stats;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;
@@ -15,6 +16,7 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
     let router = Router::new()
         .route("/", get(|| async { NAME }))
         .route("/ping", get(|| async { PONG }))
+        .route("/stats", get(get_stats))
         .route("/clients", get(get_clients))
         .route("/clients/:client_id", get(get_client))
         .with_state(system);
@@ -25,6 +27,12 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
 
     #[cfg(not(feature = "allow_kill_command"))]
     router
+}
+
+async fn get_stats(State(system): State<Arc<RwLock<System>>>) -> Result<Json<Stats>, CustomError> {
+    let system = system.read().await;
+    let stats = system.get_stats().await;
+    Ok(Json(stats))
 }
 
 async fn get_client(

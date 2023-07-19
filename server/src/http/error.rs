@@ -13,7 +13,7 @@ pub enum CustomError {
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
-    pub id: u8,
+    pub id: u32,
     pub code: String,
     pub reason: String,
 }

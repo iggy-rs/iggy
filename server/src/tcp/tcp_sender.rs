@@ -5,7 +5,7 @@ use tokio::io::AsyncWriteExt;
 use tokio::net::TcpStream;
 use tracing::trace;
 
-const STATUS_OK: &[u8] = &[0];
+const STATUS_OK: &[u8] = &[0; 4];
 
 #[derive(Debug)]
 pub struct TcpSender {

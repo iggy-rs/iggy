@@ -11,7 +11,7 @@ use tokio::time::sleep;
 use tracing::{error, info, trace};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
-const RESPONSE_INITIAL_BYTES_LENGTH: usize = 5;
+const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
 const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
@@ -83,9 +83,9 @@ impl Client for QuicClient {
 
 #[async_trait]
 impl BinaryClient for QuicClient {
-    async fn send_with_response(&self, command: u8, payload: &[u8]) -> Result<Vec<u8>, Error> {
+    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, Error> {
         if let Some(connection) = &self.connection {
-            let payload_length = payload.len() + 1;
+            let payload_length = payload.len() + 4;
             let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
             buffer.extend((payload_length as u32).to_le_bytes());
             buffer.extend(command.to_le_bytes());
@@ -145,14 +145,14 @@ impl QuicClient {
             return Err(Error::EmptyResponse);
         }
 
-        let status = buffer[0];
+        let status = u32::from_le_bytes(buffer[..4].try_into().unwrap());
         if status != 0 {
             error!("Received an invalid response with status: {:?}.", status);
             return Err(Error::InvalidResponse(status));
         }
 
         let length =
-            u32::from_le_bytes(buffer[1..RESPONSE_INITIAL_BYTES_LENGTH].try_into().unwrap());
+            u32::from_le_bytes(buffer[4..RESPONSE_INITIAL_BYTES_LENGTH].try_into().unwrap());
         trace!("Status: OK. Response length: {}", length);
         if length <= 1 {
             return Ok(EMPTY_RESPONSE);

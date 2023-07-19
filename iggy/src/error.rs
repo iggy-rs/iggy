@@ -25,7 +25,7 @@ pub enum Error {
     #[error("Cannot parse URL")]
     CannotParseUrl,
     #[error("Invalid response: {0}")]
-    InvalidResponse(u8),
+    InvalidResponse(u32),
     #[error("Cannot parse address")]
     CannotParseAddress(#[from] AddrParseError),
     #[error("Read error")]
@@ -211,7 +211,7 @@ pub enum Error {
 }
 
 impl Error {
-    pub fn as_code(&self) -> u8 {
+    pub fn as_code(&self) -> u32 {
         match self {
             Error::Error => 0,
             Error::IoError(_) => 1,

@@ -14,7 +14,7 @@ use tracing::log::trace;
 use tracing::{error, info};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
-const RESPONSE_INITIAL_BYTES_LENGTH: usize = 5;
+const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
 const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
@@ -85,9 +85,9 @@ impl Client for TcpClient {
 
 #[async_trait]
 impl BinaryClient for TcpClient {
-    async fn send_with_response(&self, command: u8, payload: &[u8]) -> Result<Vec<u8>, Error> {
+    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, Error> {
         if let Some(stream) = &self.stream {
-            let payload_length = payload.len() + 1;
+            let payload_length = payload.len() + 4;
             let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
             buffer.extend((payload_length as u32).to_le_bytes());
             buffer.extend(command.to_le_bytes());
@@ -105,8 +105,8 @@ impl BinaryClient for TcpClient {
                 return Err(Error::EmptyResponse);
             }
 
-            let status = response_buffer[0];
-            let length = u32::from_le_bytes(response_buffer[1..].try_into().unwrap());
+            let status = u32::from_le_bytes(response_buffer[..4].try_into().unwrap());
+            let length = u32::from_le_bytes(response_buffer[4..].try_into().unwrap());
             return self.handle_response(status, length, &mut stream).await;
         }
 
@@ -135,7 +135,7 @@ impl TcpClient {
 
     async fn handle_response(
         &self,
-        status: u8,
+        status: u32,
         length: u32,
         stream: &mut TcpStream,
     ) -> Result<Vec<u8>, Error> {

@@ -28,53 +28,53 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
 pub const KILL: &str = "kill";
-pub const KILL_CODE: u8 = 0;
+pub const KILL_CODE: u32 = 0;
 pub const PING: &str = "ping";
-pub const PING_CODE: u8 = 1;
+pub const PING_CODE: u32 = 1;
 pub const GET_STATS: &str = "stats";
-pub const GET_STATS_CODE: u8 = 2;
+pub const GET_STATS_CODE: u32 = 2;
 pub const GET_ME: &str = "me";
-pub const GET_ME_CODE: u8 = 3;
+pub const GET_ME_CODE: u32 = 3;
 pub const GET_CLIENT: &str = "client.get";
-pub const GET_CLIENT_CODE: u8 = 4;
+pub const GET_CLIENT_CODE: u32 = 4;
 pub const GET_CLIENTS: &str = "client.list";
-pub const GET_CLIENTS_CODE: u8 = 5;
+pub const GET_CLIENTS_CODE: u32 = 5;
 pub const SEND_MESSAGES: &str = "message.send";
-pub const SEND_MESSAGES_CODE: u8 = 10;
+pub const SEND_MESSAGES_CODE: u32 = 10;
 pub const POLL_MESSAGES: &str = "message.poll";
-pub const POLL_MESSAGES_CODE: u8 = 11;
+pub const POLL_MESSAGES_CODE: u32 = 11;
 pub const STORE_OFFSET: &str = "offset.store";
-pub const STORE_OFFSET_CODE: u8 = 12;
+pub const STORE_OFFSET_CODE: u32 = 12;
 pub const GET_OFFSET: &str = "offset.get";
-pub const GET_OFFSET_CODE: u8 = 13;
+pub const GET_OFFSET_CODE: u32 = 13;
 pub const GET_STREAM: &str = "stream.get";
-pub const GET_STREAM_CODE: u8 = 20;
+pub const GET_STREAM_CODE: u32 = 20;
 pub const GET_STREAMS: &str = "stream.list";
-pub const GET_STREAMS_CODE: u8 = 21;
+pub const GET_STREAMS_CODE: u32 = 21;
 pub const CREATE_STREAM: &str = "stream.create";
-pub const CREATE_STREAM_CODE: u8 = 22;
+pub const CREATE_STREAM_CODE: u32 = 22;
 pub const DELETE_STREAM: &str = "stream.delete";
-pub const DELETE_STREAM_CODE: u8 = 23;
+pub const DELETE_STREAM_CODE: u32 = 23;
 pub const GET_TOPIC: &str = "topic.get";
-pub const GET_TOPIC_CODE: u8 = 30;
+pub const GET_TOPIC_CODE: u32 = 30;
 pub const GET_TOPICS: &str = "topic.list";
-pub const GET_TOPICS_CODE: u8 = 31;
+pub const GET_TOPICS_CODE: u32 = 31;
 pub const CREATE_TOPIC: &str = "topic.create";
-pub const CREATE_TOPIC_CODE: u8 = 32;
+pub const CREATE_TOPIC_CODE: u32 = 32;
 pub const DELETE_TOPIC: &str = "topic.delete";
-pub const DELETE_TOPIC_CODE: u8 = 33;
+pub const DELETE_TOPIC_CODE: u32 = 33;
 pub const GET_CONSUMER_GROUP: &str = "consumer_group.get";
-pub const GET_CONSUMER_GROUP_CODE: u8 = 40;
+pub const GET_CONSUMER_GROUP_CODE: u32 = 40;
 pub const GET_CONSUMER_GROUPS: &str = "consumer_group.list";
-pub const GET_CONSUMER_GROUPS_CODE: u8 = 41;
+pub const GET_CONSUMER_GROUPS_CODE: u32 = 41;
 pub const CREATE_CONSUMER_GROUP: &str = "consumer_group.create";
-pub const CREATE_CONSUMER_GROUP_CODE: u8 = 42;
+pub const CREATE_CONSUMER_GROUP_CODE: u32 = 42;
 pub const DELETE_CONSUMER_GROUP: &str = "consumer_group.delete";
-pub const DELETE_CONSUMER_GROUP_CODE: u8 = 43;
+pub const DELETE_CONSUMER_GROUP_CODE: u32 = 43;
 pub const JOIN_CONSUMER_GROUP: &str = "consumer_group.join";
-pub const JOIN_CONSUMER_GROUP_CODE: u8 = 44;
+pub const JOIN_CONSUMER_GROUP_CODE: u32 = 44;
 pub const LEAVE_CONSUMER_GROUP: &str = "consumer_group.leave";
-pub const LEAVE_CONSUMER_GROUP_CODE: u8 = 45;
+pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 45;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
@@ -143,8 +143,8 @@ impl BytesSerializable for Command {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        let command = bytes[0];
-        let payload = &bytes[1..];
+        let command = u32::from_le_bytes(bytes[..4].try_into()?);
+        let payload = &bytes[4..];
         match command {
             KILL_CODE => Ok(Command::Kill(Kill::from_bytes(payload)?)),
             PING_CODE => Ok(Command::Ping(Ping::from_bytes(payload)?)),
@@ -187,9 +187,9 @@ impl BytesSerializable for Command {
     }
 }
 
-fn as_bytes(command: u8, payload: &[u8]) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(1 + payload.len());
-    bytes.extend([command]);
+fn as_bytes(command: u32, payload: &[u8]) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(4 + payload.len());
+    bytes.extend(command.to_le_bytes());
     bytes.extend(payload);
     bytes
 }
@@ -511,29 +511,33 @@ mod tests {
 
     fn assert_serialized_as_bytes_and_deserialized_from_bytes(
         command: &Command,
-        command_id: u8,
+        command_id: u32,
         payload: &dyn CommandPayload,
     ) {
         assert_serialized_as_bytes(command, command_id, payload);
         assert_deserialized_from_bytes(command, command_id, payload);
     }
 
-    fn assert_serialized_as_bytes(command: &Command, command_id: u8, payload: &dyn CommandPayload) {
+    fn assert_serialized_as_bytes(
+        command: &Command,
+        command_id: u32,
+        payload: &dyn CommandPayload,
+    ) {
         let payload = payload.as_bytes();
-        let mut bytes = Vec::with_capacity(1 + payload.len());
-        bytes.extend([command_id]);
+        let mut bytes = Vec::with_capacity(4 + payload.len());
+        bytes.extend(command_id.to_le_bytes());
         bytes.extend(payload);
         assert_eq!(command.as_bytes(), bytes);
     }
 
     fn assert_deserialized_from_bytes(
         command: &Command,
-        command_id: u8,
+        command_id: u32,
         payload: &dyn CommandPayload,
     ) {
         let payload = payload.as_bytes();
-        let mut bytes = Vec::with_capacity(1 + payload.len());
-        bytes.extend([command_id]);
+        let mut bytes = Vec::with_capacity(4 + payload.len());
+        bytes.extend(command_id.to_le_bytes());
         bytes.extend(payload);
         assert_eq!(&Command::from_bytes(&bytes).unwrap(), command);
     }

@@ -9,10 +9,22 @@ use streaming::topics::topic::Topic;
 use tokio::sync::RwLock;
 
 pub fn map_stats(stats: &Stats) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(20);
+    let mut bytes = Vec::with_capacity(104);
+    bytes.extend(stats.process_id.to_le_bytes());
+    bytes.extend(stats.cpu_usage.to_le_bytes());
+    bytes.extend(stats.memory_usage.to_le_bytes());
+    bytes.extend(stats.total_memory.to_le_bytes());
+    bytes.extend(stats.available_memory.to_le_bytes());
+    bytes.extend(stats.run_time.to_le_bytes());
+    bytes.extend(stats.start_time.to_le_bytes());
+    bytes.extend(stats.read_bytes.to_le_bytes());
+    bytes.extend(stats.written_bytes.to_le_bytes());
+    bytes.extend(stats.messages_size_bytes.to_le_bytes());
     bytes.extend(stats.streams_count.to_le_bytes());
     bytes.extend(stats.topics_count.to_le_bytes());
     bytes.extend(stats.partitions_count.to_le_bytes());
+    bytes.extend(stats.segments_count.to_le_bytes());
+    bytes.extend(stats.messages_count.to_le_bytes());
     bytes.extend(stats.clients_count.to_le_bytes());
     bytes.extend(stats.consumer_groups_count.to_le_bytes());
     bytes

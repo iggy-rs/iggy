@@ -10,10 +10,13 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::Arc;
+use sysinfo::{PidExt, ProcessExt, SystemExt};
 use tokio::fs::{create_dir, read_dir};
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::Instant;
 use tracing::{error, info, trace};
+
+const PROCESS_NAME: &str = "server";
 
 pub struct System {
     pub base_path: String,
@@ -313,7 +316,14 @@ impl System {
     }
 
     pub async fn get_stats(&self) -> Stats {
-        Stats {
+        let mut stats = Stats {
+            process_id: 0,
+            cpu_usage: 0.0,
+            memory_usage: 0,
+            total_memory: 0,
+            available_memory: 0,
+            run_time: 0,
+            start_time: 0,
             streams_count: self.streams.len() as u32,
             topics_count: self
                 .streams
@@ -330,6 +340,8 @@ impl System {
                         .sum::<u32>()
                 })
                 .sum::<u32>(),
+            segments_count: 0,
+            messages_count: 0,
             clients_count: self.client_manager.read().await.get_clients().len() as u32,
             consumer_groups_count: self
                 .streams
@@ -341,6 +353,52 @@ impl System {
                         .sum::<u32>()
                 })
                 .sum::<u32>(),
+            read_bytes: 0,
+            written_bytes: 0,
+            messages_size_bytes: 0,
+        };
+
+        let mut sys = sysinfo::System::new_all();
+        sys.refresh_system();
+        sys.refresh_processes();
+        for (pid, process) in sys.processes() {
+            if process.name() != PROCESS_NAME {
+                continue;
+            }
+
+            stats.process_id = pid.as_u32();
+            stats.cpu_usage = process.cpu_usage();
+            stats.memory_usage = process.memory();
+            stats.total_memory = sys.total_memory();
+            stats.available_memory = sys.available_memory();
+            stats.run_time = process.run_time();
+            stats.start_time = process.start_time();
+            let disk_usage = process.disk_usage();
+            stats.read_bytes = disk_usage.total_read_bytes;
+            stats.written_bytes = disk_usage.total_written_bytes;
+            break;
         }
+
+        for stream in self.streams.values() {
+            for topic in stream.topics.values() {
+                for partition in topic.partitions.values() {
+                    let partition = partition.read().await;
+                    stats.segments_count += partition.segments.len() as u32;
+                    for segment in &partition.segments {
+                        stats.messages_size_bytes += segment.current_size_bytes as u64;
+                    }
+
+                    let last_segment = partition.segments.last();
+                    if last_segment.is_some() {
+                        let last_segment = last_segment.unwrap();
+                        if last_segment.current_size_bytes > 0 {
+                            stats.messages_count += last_segment.current_offset + 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        stats
     }
 }

@@ -16,15 +16,40 @@ const EMPTY_CLIENTS: Vec<ClientInfo> = vec![];
 const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
 
 pub fn map_stats(payload: &[u8]) -> Result<Stats, Error> {
-    let streams_count = u32::from_le_bytes(payload[..4].try_into()?);
-    let topics_count = u32::from_le_bytes(payload[4..8].try_into()?);
-    let partitions_count = u32::from_le_bytes(payload[8..12].try_into()?);
-    let clients_count = u32::from_le_bytes(payload[12..16].try_into()?);
-    let consumer_groups_count = u32::from_le_bytes(payload[16..20].try_into()?);
+    let process_id = u32::from_le_bytes(payload[..4].try_into()?);
+    let cpu_usage = f32::from_le_bytes(payload[4..8].try_into()?);
+    let memory_usage = u64::from_le_bytes(payload[8..16].try_into()?);
+    let total_memory = u64::from_le_bytes(payload[16..24].try_into()?);
+    let available_memory = u64::from_le_bytes(payload[24..32].try_into()?);
+    let run_time = u64::from_le_bytes(payload[32..40].try_into()?);
+    let start_time = u64::from_le_bytes(payload[40..48].try_into()?);
+    let read_bytes = u64::from_le_bytes(payload[48..56].try_into()?);
+    let written_bytes = u64::from_le_bytes(payload[56..64].try_into()?);
+    let total_size_bytes = u64::from_le_bytes(payload[64..72].try_into()?);
+    let streams_count = u32::from_le_bytes(payload[72..76].try_into()?);
+    let topics_count = u32::from_le_bytes(payload[76..80].try_into()?);
+    let partitions_count = u32::from_le_bytes(payload[80..84].try_into()?);
+    let segments_count = u32::from_le_bytes(payload[84..88].try_into()?);
+    let messages_count = u64::from_le_bytes(payload[88..96].try_into()?);
+    let clients_count = u32::from_le_bytes(payload[96..100].try_into()?);
+    let consumer_groups_count = u32::from_le_bytes(payload[100..104].try_into()?);
+
     Ok(Stats {
+        process_id,
+        cpu_usage,
+        memory_usage,
+        total_memory,
+        available_memory,
+        run_time,
+        start_time,
+        read_bytes,
+        written_bytes,
+        messages_size_bytes: total_size_bytes,
         streams_count,
         topics_count,
         partitions_count,
+        segments_count,
+        messages_count,
         clients_count,
         consumer_groups_count,
     })

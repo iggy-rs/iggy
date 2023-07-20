@@ -38,6 +38,7 @@ const CONSUMER_TYPE: ConsumerType = ConsumerType::Consumer;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const CONSUMER_GROUP_ID: u32 = 1;
+const MESSAGES_COUNT: u32 = 1000;
 
 #[allow(dead_code)]
 pub async fn run(client_factory: &dyn ClientFactory) {
@@ -142,9 +143,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream_topic.partitions_count, topic.partitions_count);
 
     // 10. Send messages to the specific topic and partition
-    let messages_count = 1000u32;
     let mut messages = Vec::new();
-    for offset in 0..messages_count {
+    for offset in 0..MESSAGES_COUNT {
         let id = (offset + 1) as u128;
         let payload = get_message_payload(offset as u64);
         messages.push(Message {
@@ -159,7 +159,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         topic_id: TOPIC_ID,
         key_kind: KeyKind::PartitionId,
         key_value: PARTITION_ID,
-        messages_count,
+        messages_count: MESSAGES_COUNT,
         messages,
     };
     client.send_messages(&send_messages).await.unwrap();
@@ -173,14 +173,14 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         partition_id: PARTITION_ID,
         kind: Offset,
         value: 0,
-        count: messages_count,
+        count: MESSAGES_COUNT,
         auto_commit: false,
         format: Format::None,
     };
 
     let messages = client.poll_messages(&poll_messages).await.unwrap();
-    assert_eq!(messages.len() as u32, messages_count);
-    for i in 0..messages_count {
+    assert_eq!(messages.len() as u32, MESSAGES_COUNT);
+    for i in 0..MESSAGES_COUNT {
         let offset = i as u64;
         let message = messages.get(i as usize).unwrap();
         assert_message(message, offset);
@@ -188,7 +188,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 12. Messages should be also polled in the smaller batches
     let batches_count = 10;
-    let batch_size = messages_count / batches_count;
+    let batch_size = MESSAGES_COUNT / batches_count;
     for i in 0..batches_count {
         let start_offset = (i * batch_size) as u64;
         let poll_messages = PollMessages {
@@ -229,7 +229,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic_partition.id, PARTITION_ID);
     assert_eq!(topic_partition.segments_count, 1);
     assert!(topic_partition.size_bytes > 0);
-    assert_eq!(topic_partition.current_offset, (messages_count - 1) as u64);
+    assert_eq!(topic_partition.current_offset, (MESSAGES_COUNT - 1) as u64);
 
     // 14. Ensure that messages do not exist in the second partition in the same topic
     let poll_messages = PollMessages {
@@ -240,7 +240,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         partition_id: PARTITION_ID + 1,
         kind: Offset,
         value: 0,
-        count: messages_count,
+        count: MESSAGES_COUNT,
         auto_commit: false,
         format: Format::None,
     };
@@ -441,9 +441,17 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 25. Get the stats and validate that there is one stream
     let stats = client.get_stats(&GetStats {}).await.unwrap();
+    assert!(stats.process_id > 0);
+    assert!(stats.memory_usage > 0);
+    assert!(stats.total_memory > 0);
+    assert!(stats.available_memory > 0);
+    assert!(stats.run_time > 0);
+    assert!(stats.start_time > 0);
     assert_eq!(stats.streams_count, 1);
     assert_eq!(stats.topics_count, 1);
     assert_eq!(stats.partitions_count, PARTITIONS_COUNT);
+    assert_eq!(stats.segments_count, PARTITIONS_COUNT);
+    assert_eq!(stats.messages_count, MESSAGES_COUNT as u64);
 
     // 26. Delete the consumer group
     client

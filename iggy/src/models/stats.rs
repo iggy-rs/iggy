@@ -19,4 +19,8 @@ pub struct Stats {
     pub messages_count: u64,
     pub clients_count: u32,
     pub consumer_groups_count: u32,
+    pub hostname: String,
+    pub os_name: String,
+    pub os_version: String,
+    pub kernel_version: String,
 }

@@ -45,7 +45,21 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 ### Supported languages SDK
 
 - [Rust](https://crates.io/crates/iggy)
-- [C#](https://github.com/numinnex/Iggy_SDK)
+- [C#](https://github.com/iggy-rs/iggy-dotnet-client)
+
+---
+
+### Web UI
+
+There's an ongoing effort to build the administrative web UI for the server, which will allow to manage the streams, topics, partitions, messages and so on. Check the [Web UI repository](https://github.com/iggy-rs/iggy-web-ui)
+
+---
+
+### Docker
+
+You can find the `Dockerfile` and `docker-compose` in the root of the repository. To build and start the server, run: `docker compose up`.
+
+Additionally, you can run the `client` which is available in the running container, by executing: `docker exec -it iggy-server /client`.
 
 ---
 

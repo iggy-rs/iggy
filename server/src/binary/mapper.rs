@@ -27,6 +27,14 @@ pub fn map_stats(stats: &Stats) -> Vec<u8> {
     bytes.extend(stats.messages_count.to_le_bytes());
     bytes.extend(stats.clients_count.to_le_bytes());
     bytes.extend(stats.consumer_groups_count.to_le_bytes());
+    bytes.extend((stats.hostname.len() as u32).to_le_bytes());
+    bytes.extend(stats.hostname.as_bytes());
+    bytes.extend((stats.os_name.len() as u32).to_le_bytes());
+    bytes.extend(stats.os_name.as_bytes());
+    bytes.extend((stats.os_version.len() as u32).to_le_bytes());
+    bytes.extend(stats.os_version.as_bytes());
+    bytes.extend((stats.kernel_version.len() as u32).to_le_bytes());
+    bytes.extend(stats.kernel_version.as_bytes());
     bytes
 }
 

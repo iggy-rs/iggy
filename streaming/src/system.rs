@@ -316,6 +316,10 @@ impl System {
     }
 
     pub async fn get_stats(&self) -> Stats {
+        let mut sys = sysinfo::System::new_all();
+        sys.refresh_system();
+        sys.refresh_processes();
+
         let mut stats = Stats {
             process_id: 0,
             cpu_usage: 0.0,
@@ -356,11 +360,16 @@ impl System {
             read_bytes: 0,
             written_bytes: 0,
             messages_size_bytes: 0,
+            hostname: sys.host_name().unwrap_or("unknown_hostname".to_string()),
+            os_name: sys.name().unwrap_or("unknown_os_name".to_string()),
+            os_version: sys
+                .long_os_version()
+                .unwrap_or("unknown_os_version".to_string()),
+            kernel_version: sys
+                .kernel_version()
+                .unwrap_or("unknown_kernel_version".to_string()),
         };
 
-        let mut sys = sysinfo::System::new_all();
-        sys.refresh_system();
-        sys.refresh_processes();
         for (pid, process) in sys.processes() {
             if process.name() != PROCESS_NAME {
                 continue;

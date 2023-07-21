@@ -442,6 +442,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 25. Get the stats and validate that there is one stream
     let stats = client.get_stats(&GetStats {}).await.unwrap();
     assert!(stats.process_id > 0);
+    assert!(!stats.hostname.is_empty());
+    assert!(!stats.os_name.is_empty());
+    assert!(!stats.os_version.is_empty());
+    assert!(!stats.kernel_version.is_empty());
     assert!(stats.memory_usage > 0);
     assert!(stats.total_memory > 0);
     assert!(stats.available_memory > 0);

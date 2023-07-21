@@ -33,6 +33,29 @@ pub fn map_stats(payload: &[u8]) -> Result<Stats, Error> {
     let messages_count = u64::from_le_bytes(payload[88..96].try_into()?);
     let clients_count = u32::from_le_bytes(payload[96..100].try_into()?);
     let consumer_groups_count = u32::from_le_bytes(payload[100..104].try_into()?);
+    let mut current_position = 104;
+    let hostname_length =
+        u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
+    let hostname =
+        from_utf8(&payload[current_position + 4..current_position + 4 + hostname_length])?
+            .to_string();
+    current_position += 4 + hostname_length;
+    let os_name_length =
+        u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
+    let os_name = from_utf8(&payload[current_position + 4..current_position + 4 + os_name_length])?
+        .to_string();
+    current_position += 4 + os_name_length;
+    let os_version_length =
+        u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
+    let os_version =
+        from_utf8(&payload[current_position + 4..current_position + 4 + os_version_length])?
+            .to_string();
+    current_position += 4 + os_version_length;
+    let kernel_version_length =
+        u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
+    let kernel_version =
+        from_utf8(&payload[current_position + 4..current_position + 4 + kernel_version_length])?
+            .to_string();
 
     Ok(Stats {
         process_id,
@@ -52,6 +75,10 @@ pub fn map_stats(payload: &[u8]) -> Result<Stats, Error> {
         messages_count,
         clients_count,
         consumer_groups_count,
+        hostname,
+        os_name,
+        os_version,
+        kernel_version,
     })
 }
 

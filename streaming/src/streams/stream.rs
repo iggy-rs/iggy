@@ -51,6 +51,22 @@ impl Stream {
         }
     }
 
+    pub async fn get_messages_count(&self) -> u64 {
+        let mut messages_count = 0;
+        for topic in self.topics.values() {
+            messages_count += topic.get_messages_count().await;
+        }
+        messages_count
+    }
+
+    pub async fn get_size_bytes(&self) -> u64 {
+        let mut size_bytes = 0;
+        for topic in self.topics.values() {
+            size_bytes += topic.get_size_bytes().await;
+        }
+        size_bytes
+    }
+
     fn get_path(id: u32, streams_path: &str) -> String {
         format!("{}/{}", streams_path, id)
     }

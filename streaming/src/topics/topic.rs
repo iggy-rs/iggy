@@ -74,6 +74,24 @@ impl Topic {
         topic
     }
 
+    pub async fn get_messages_count(&self) -> u64 {
+        let mut messages_count = 0;
+        for partition in self.get_partitions() {
+            let partition = partition.read().await;
+            messages_count += partition.get_messages_count();
+        }
+        messages_count
+    }
+
+    pub async fn get_size_bytes(&self) -> u64 {
+        let mut size_bytes = 0;
+        for partition in self.get_partitions() {
+            let partition = partition.read().await;
+            size_bytes += partition.get_size_bytes();
+        }
+        size_bytes
+    }
+
     pub fn get_partitions(&self) -> Vec<&RwLock<Partition>> {
         self.partitions.values().collect()
     }

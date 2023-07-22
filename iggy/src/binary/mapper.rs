@@ -212,6 +212,8 @@ pub fn map_stream(payload: &[u8]) -> Result<StreamDetails, Error> {
     let stream = StreamDetails {
         id: stream.id,
         topics_count: stream.topics_count,
+        size_bytes: stream.size_bytes,
+        messages_count: stream.messages_count,
         name: stream.name,
         topics,
     };
@@ -221,12 +223,17 @@ pub fn map_stream(payload: &[u8]) -> Result<StreamDetails, Error> {
 fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), Error> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let topics_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-    let name_length = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?) as usize;
-    let name = from_utf8(&payload[position + 12..position + 12 + name_length])?.to_string();
-    let read_bytes = 4 + 4 + 4 + name_length;
+    let size_bytes = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
+    let messages_count = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
+    let name_length =
+        u32::from_le_bytes(payload[position + 24..position + 28].try_into()?) as usize;
+    let name = from_utf8(&payload[position + 28..position + 28 + name_length])?.to_string();
+    let read_bytes = 4 + 4 + 8 + 8 + 4 + name_length;
     Ok((
         Stream {
             id,
+            size_bytes,
+            messages_count,
             topics_count,
             name,
         },
@@ -265,6 +272,8 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
     let topic = TopicDetails {
         id: topic.id,
         name: topic.name,
+        size_bytes: topic.size_bytes,
+        messages_count: topic.messages_count,
         partitions_count: partitions.len() as u32,
         partitions,
     };
@@ -274,13 +283,18 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
 fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), Error> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let partitions_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-    let name_length = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?) as usize;
-    let name = from_utf8(&payload[position + 12..position + 12 + name_length])?.to_string();
-    let read_bytes = 4 + 4 + 4 + name_length;
+    let size_bytes = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
+    let messages_count = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
+    let name_length =
+        u32::from_le_bytes(payload[position + 24..position + 28].try_into()?) as usize;
+    let name = from_utf8(&payload[position + 28..position + 28 + name_length])?.to_string();
+    let read_bytes = 4 + 4 + 8 + 8 + 4 + name_length;
     Ok((
         Topic {
             id,
             partitions_count,
+            size_bytes,
+            messages_count,
             name,
         },
         read_bytes,
@@ -292,13 +306,15 @@ fn map_to_partition(payload: &[u8], position: usize) -> Result<(Partition, usize
     let segments_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
     let current_offset = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
     let size_bytes = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
-    let read_bytes = 4 + 4 + 8 + 8;
+    let messages_count = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?);
+    let read_bytes = 4 + 4 + 8 + 8 + 8;
     Ok((
         Partition {
             id,
             segments_count,
             current_offset,
             size_bytes,
+            messages_count,
         },
         read_bytes,
     ))

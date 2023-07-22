@@ -121,6 +121,23 @@ impl Partition {
         partition
     }
 
+    pub fn get_size_bytes(&self) -> u64 {
+        self.segments
+            .iter()
+            .map(|segment| segment.current_size_bytes as u64)
+            .sum()
+    }
+
+    pub fn get_messages_count(&self) -> u64 {
+        let last_segment = self.segments.last();
+        if let Some(last_segment) = last_segment {
+            if last_segment.current_size_bytes > 0 {
+                return last_segment.current_offset + 1;
+            }
+        }
+        0
+    }
+
     pub fn get_segments(&self) -> &Vec<Segment> {
         &self.segments
     }

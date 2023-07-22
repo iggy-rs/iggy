@@ -392,17 +392,10 @@ impl System {
             for topic in stream.topics.values() {
                 for partition in topic.partitions.values() {
                     let partition = partition.read().await;
+                    stats.messages_count += partition.get_messages_count();
                     stats.segments_count += partition.segments.len() as u32;
                     for segment in &partition.segments {
                         stats.messages_size_bytes += segment.current_size_bytes as u64;
-                    }
-
-                    let last_segment = partition.segments.last();
-                    if last_segment.is_some() {
-                        let last_segment = last_segment.unwrap();
-                        if last_segment.current_size_bytes > 0 {
-                            stats.messages_count += last_segment.current_offset + 1;
-                        }
                     }
                 }
             }

@@ -70,6 +70,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.id, STREAM_ID);
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
+    assert_eq!(stream.size_bytes, 0);
+    assert_eq!(stream.messages_count, 0);
 
     // 5. Get stream details
     let stream = client
@@ -82,6 +84,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
     assert!(stream.topics.is_empty());
+    assert_eq!(stream.size_bytes, 0);
+    assert_eq!(stream.messages_count, 0);
 
     // 6. Create the topic
     let create_topic = CreateTopic {
@@ -104,6 +108,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
+    assert_eq!(topic.size_bytes, 0);
+    assert_eq!(topic.messages_count, 0);
 
     // 8. Get topic details
     let topic = client
@@ -117,12 +123,15 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
     assert_eq!(topic.partitions.len(), PARTITIONS_COUNT as usize);
+    assert_eq!(topic.size_bytes, 0);
+    assert_eq!(topic.messages_count, 0);
     let mut id = 1;
     for topic_partition in topic.partitions {
         assert_eq!(topic_partition.id, id);
         assert_eq!(topic_partition.segments_count, 1);
         assert_eq!(topic_partition.size_bytes, 0);
         assert_eq!(topic_partition.current_offset, 0);
+        assert_eq!(topic_partition.messages_count, 0);
         id += 1;
     }
 
@@ -137,10 +146,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 1);
     assert_eq!(stream.topics.len(), 1);
+    assert_eq!(stream.messages_count, 0);
     let stream_topic = stream.topics.get(0).unwrap();
     assert_eq!(stream_topic.id, topic.id);
     assert_eq!(stream_topic.name, topic.name);
     assert_eq!(stream_topic.partitions_count, topic.partitions_count);
+    assert_eq!(stream_topic.size_bytes, 0);
+    assert_eq!(stream_topic.messages_count, 0);
 
     // 10. Send messages to the specific topic and partition
     let mut messages = Vec::new();
@@ -225,11 +237,14 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
     assert_eq!(topic.partitions.len(), PARTITIONS_COUNT as usize);
+    assert!(topic.size_bytes > 0);
+    assert_eq!(topic.messages_count, MESSAGES_COUNT as u64);
     let topic_partition = topic.partitions.get((PARTITION_ID - 1) as usize).unwrap();
     assert_eq!(topic_partition.id, PARTITION_ID);
     assert_eq!(topic_partition.segments_count, 1);
     assert!(topic_partition.size_bytes > 0);
     assert_eq!(topic_partition.current_offset, (MESSAGES_COUNT - 1) as u64);
+    assert_eq!(topic_partition.messages_count, MESSAGES_COUNT as u64);
 
     // 14. Ensure that messages do not exist in the second partition in the same topic
     let poll_messages = PollMessages {

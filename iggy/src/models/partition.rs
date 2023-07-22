@@ -6,4 +6,5 @@ pub struct Partition {
     pub segments_count: u32,
     pub current_offset: u64,
     pub size_bytes: u64,
+    pub messages_count: u64,
 }

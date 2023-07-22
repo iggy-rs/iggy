@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 pub struct Stream {
     pub id: u32,
     pub name: String,
+    pub size_bytes: u64,
+    pub messages_count: u64,
     pub topics_count: u32,
 }
 
@@ -12,6 +14,8 @@ pub struct Stream {
 pub struct StreamDetails {
     pub id: u32,
     pub name: String,
+    pub size_bytes: u64,
+    pub messages_count: u64,
     pub topics_count: u32,
     pub topics: Vec<Topic>,
 }

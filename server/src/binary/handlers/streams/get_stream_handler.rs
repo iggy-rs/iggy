@@ -16,7 +16,7 @@ pub async fn handle(
     trace!("{}", command);
     let system = system.read().await;
     let stream = system.get_stream(command.stream_id)?;
-    let stream = mapper::map_stream(stream);
+    let stream = mapper::map_stream(stream).await;
     sender.send_ok_response(&stream).await?;
     Ok(())
 }

@@ -9,55 +9,59 @@ use streaming::topics::consumer_group::ConsumerGroup;
 use streaming::topics::topic::Topic;
 use tokio::sync::RwLock;
 
-pub fn map_stream(stream: &Stream) -> StreamDetails {
+pub async fn map_stream(stream: &Stream) -> StreamDetails {
+    let topics = map_topics(&stream.get_topics()).await;
     let mut stream_details = StreamDetails {
         id: stream.id,
         name: stream.name.clone(),
-        topics_count: stream.get_topics().len() as u32,
-        topics: stream
-            .get_topics()
-            .iter()
-            .map(|topic| iggy::models::topic::Topic {
-                id: topic.id,
-                name: topic.name.clone(),
-                partitions_count: topic.get_partitions().len() as u32,
-            })
-            .collect(),
+        topics_count: topics.len() as u32,
+        size_bytes: stream.get_size_bytes().await,
+        messages_count: stream.get_messages_count().await,
+        topics,
     };
     stream_details.topics.sort_by(|a, b| a.id.cmp(&b.id));
     stream_details
 }
 
-pub fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Stream> {
-    let mut streams = streams
-        .iter()
-        .map(|stream| iggy::models::stream::Stream {
+pub async fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Stream> {
+    let mut streams_data = Vec::with_capacity(streams.len());
+    for stream in streams {
+        let stream = iggy::models::stream::Stream {
             id: stream.id,
             name: stream.name.clone(),
+            size_bytes: stream.get_size_bytes().await,
             topics_count: stream.get_topics().len() as u32,
-        })
-        .collect::<Vec<iggy::models::stream::Stream>>();
-    streams.sort_by(|a, b| a.id.cmp(&b.id));
-    streams
+            messages_count: stream.get_messages_count().await,
+        };
+        streams_data.push(stream);
+    }
+
+    streams_data.sort_by(|a, b| a.id.cmp(&b.id));
+    streams_data
 }
 
-pub fn map_topics(topics: &[&Topic]) -> Vec<iggy::models::topic::Topic> {
-    let mut topics = topics
-        .iter()
-        .map(|topic| iggy::models::topic::Topic {
+pub async fn map_topics(topics: &[&Topic]) -> Vec<iggy::models::topic::Topic> {
+    let mut topics_data = Vec::with_capacity(topics.len());
+    for topic in topics {
+        let topic = iggy::models::topic::Topic {
             id: topic.id,
             name: topic.name.clone(),
+            size_bytes: topic.get_size_bytes().await,
             partitions_count: topic.get_partitions().len() as u32,
-        })
-        .collect::<Vec<iggy::models::topic::Topic>>();
-    topics.sort_by(|a, b| a.id.cmp(&b.id));
-    topics
+            messages_count: topic.get_messages_count().await,
+        };
+        topics_data.push(topic);
+    }
+    topics_data.sort_by(|a, b| a.id.cmp(&b.id));
+    topics_data
 }
 
 pub async fn map_topic(topic: &Topic) -> TopicDetails {
     let mut topic_details = TopicDetails {
         id: topic.id,
         name: topic.name.clone(),
+        size_bytes: topic.get_size_bytes().await,
+        messages_count: topic.get_messages_count().await,
         partitions_count: topic.get_partitions().len() as u32,
         partitions: Vec::new(),
     };
@@ -69,11 +73,8 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
                 id: partition.id,
                 segments_count: partition.get_segments().len() as u32,
                 current_offset: partition.current_offset,
-                size_bytes: partition
-                    .get_segments()
-                    .iter()
-                    .map(|segment| segment.current_size_bytes as u64)
-                    .sum(),
+                size_bytes: partition.get_size_bytes(),
+                messages_count: partition.get_messages_count(),
             });
     }
     topic_details.partitions.sort_by(|a, b| a.id.cmp(&b.id));

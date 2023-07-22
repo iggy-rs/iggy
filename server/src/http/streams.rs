@@ -24,7 +24,7 @@ async fn get_stream(
 ) -> Result<Json<StreamDetails>, CustomError> {
     let system = system.read().await;
     let stream = system.get_stream(stream_id)?;
-    let stream = mapper::map_stream(stream);
+    let stream = mapper::map_stream(stream).await;
     Ok(Json(stream))
 }
 
@@ -32,7 +32,7 @@ async fn get_streams(
     State(system): State<Arc<RwLock<System>>>,
 ) -> Result<Json<Vec<Stream>>, CustomError> {
     let system = system.read().await;
-    let streams = mapper::map_streams(&system.get_streams());
+    let streams = mapper::map_streams(&system.get_streams()).await;
     Ok(Json(streams))
 }
 

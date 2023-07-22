@@ -34,7 +34,7 @@ async fn get_topics(
 ) -> Result<Json<Vec<Topic>>, CustomError> {
     let system = system.read().await;
     let topics = system.get_stream(stream_id)?.get_topics();
-    let topics = mapper::map_topics(&topics);
+    let topics = mapper::map_topics(&topics).await;
     Ok(Json(topics))
 }
 

@@ -140,7 +140,11 @@ impl TcpClient {
         stream: &mut TcpStream,
     ) -> Result<Vec<u8>, Error> {
         if status != 0 {
-            error!("Received an invalid response with status: {:?}.", status);
+            error!(
+                "Received an invalid response with status: {} ({}).",
+                status,
+                Error::from_code_as_string(status)
+            );
             return Err(Error::InvalidResponse(status));
         }
 

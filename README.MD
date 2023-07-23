@@ -201,6 +201,8 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [x] Make use of HTTP protocol
 - [x] Create a basic TCP server
 - [x] Make use of TCP protocol
+- [ ] Add support for TLS
+- [ ] Implement user authentication & roles management
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
 - [x] Allow multiple clients to connect to the server
@@ -217,6 +219,7 @@ Depending on the hardware, settings in `server.json`, transport protocol (`quic`
 - [x] Make use of HTTP protocol
 - [x] Create a basic TCP client
 - [x] Make use of TCP protocol
+- [ ] Add support for TLS
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
 - [x] Communicate with the server using established binary protocol

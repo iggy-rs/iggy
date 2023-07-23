@@ -108,9 +108,7 @@ impl Storage<Segment> for FileSegmentStorage {
             .await
             .is_err()
         {
-            return Err(Error::CannotCreatePartitionSegmentLogFile(
-                segment.log_path.clone(),
-            ));
+            return Err(Error::CannotCreateSegmentLogFile(segment.log_path.clone()));
         }
 
         if self
@@ -119,7 +117,7 @@ impl Storage<Segment> for FileSegmentStorage {
             .await
             .is_err()
         {
-            return Err(Error::CannotCreatePartitionSegmentTimeIndexFile(
+            return Err(Error::CannotCreateSegmentTimeIndexFile(
                 segment.log_path.clone(),
             ));
         }
@@ -130,7 +128,7 @@ impl Storage<Segment> for FileSegmentStorage {
             .await
             .is_err()
         {
-            return Err(Error::CannotCreatePartitionSegmentIndexFile(
+            return Err(Error::CannotCreateSegmentIndexFile(
                 segment.log_path.clone(),
             ));
         }
@@ -191,12 +189,8 @@ impl SegmentStorage for FileSegmentStorage {
             message.extend(&mut bytes, true);
         }
 
-        if self
-            .persister
-            .append(&segment.log_path, &bytes)
-            .await
-            .is_err()
-        {
+        if let Err(error) = self.persister.append(&segment.log_path, &bytes).await {
+            error!("Cannot save messages to segment: {}", error);
             return Err(Error::CannotSaveMessagesToSegment);
         }
 

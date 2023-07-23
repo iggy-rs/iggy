@@ -147,7 +147,11 @@ impl QuicClient {
 
         let status = u32::from_le_bytes(buffer[..4].try_into().unwrap());
         if status != 0 {
-            error!("Received an invalid response with status: {:?}.", status);
+            error!(
+                "Received an invalid response with status: {} ({}).",
+                status,
+                Error::from_code_as_string(status)
+            );
             return Err(Error::InvalidResponse(status));
         }
 

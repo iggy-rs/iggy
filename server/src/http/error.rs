@@ -27,7 +27,7 @@ impl IntoResponse for CustomError {
                     Error::TopicNotFound(_, _) => StatusCode::NOT_FOUND,
                     Error::PartitionNotFound(_) => StatusCode::NOT_FOUND,
                     Error::SegmentNotFound => StatusCode::NOT_FOUND,
-                    Error::LogFileNotFound => StatusCode::NOT_FOUND,
+                    Error::ClientNotFound(_) => StatusCode::NOT_FOUND,
                     Error::ConsumerGroupNotFound(_, _) => StatusCode::NOT_FOUND,
                     Error::ConsumerGroupMemberNotFound(_, _, _) => StatusCode::NOT_FOUND,
                     Error::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -48,7 +48,7 @@ impl ErrorResponse {
     pub fn from_error(error: Error) -> Self {
         ErrorResponse {
             id: error.as_code(),
-            code: error.as_text_code().to_string(),
+            code: error.as_string().to_string(),
             reason: error.to_string(),
         }
     }

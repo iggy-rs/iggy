@@ -3,13 +3,14 @@ use crate::persister::Persister;
 use crate::storage::{Storage, TopicStorage};
 use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::topic::Topic;
+use crate::utils::file;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
-use tokio::fs::{create_dir, OpenOptions};
+use tokio::fs::create_dir;
 use tokio::io::AsyncReadExt;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{error, info};
@@ -136,7 +137,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::TopicNotFound(topic.id, topic.stream_id));
         }
 
-        let topic_info_file = OpenOptions::new().read(true).open(&topic.info_path).await;
+        let topic_info_file = file::open(&topic.info_path).await;
         if topic_info_file.is_err() {
             return Err(Error::CannotOpenTopicInfo(topic.id, topic.stream_id));
         }

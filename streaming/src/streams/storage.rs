@@ -2,13 +2,14 @@ use crate::persister::Persister;
 use crate::storage::{Storage, StreamStorage};
 use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
+use crate::utils::file;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
-use tokio::fs::{create_dir, OpenOptions};
+use tokio::fs::create_dir;
 use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 use tracing::{error, info};
@@ -37,7 +38,7 @@ impl Storage<Stream> for FileStreamStorage {
             return Err(Error::StreamNotFound(stream.id));
         }
 
-        let stream_info_file = OpenOptions::new().read(true).open(&stream.info_path).await;
+        let stream_info_file = file::open(&stream.info_path).await;
         if stream_info_file.is_err() {
             return Err(Error::CannotOpenStreamInfo(stream.id));
         }

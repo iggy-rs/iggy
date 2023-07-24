@@ -34,7 +34,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
   - First/Last N messages
   - Next N messages for the specific consumer
 - Possibility of **auto committing the offset** (e.g. to achieve *at-most-once* delivery)
-- **Consumer groups** allowing message ordering and horizontal scaling across the consumers
+- **Consumer groups** providing the message ordering and horizontal scaling across the connected clients
 - Additional features such as **server side message deduplication**
 - Built-in benchmarking app to test the performance
 - **Single binary deployment** (no external dependencies)
@@ -60,6 +60,16 @@ There's an ongoing effort to build the administrative web UI for the server, whi
 You can find the `Dockerfile` and `docker-compose` in the root of the repository. To build and start the server, run: `docker compose up`.
 
 Additionally, you can run the `client` which is available in the running container, by executing: `docker exec -it iggy-server /client`.
+
+---
+
+### Configuration
+
+The default configuration can be found in `server.toml` (the default one) or `server.json` file in `configs` directory.
+
+The configuration file is loaded from the current working directory, but you can specify the path to the configuration file by setting `IGGY_CONFIG_PATH` environment variable, for example `export IGGY_CONFIG_PATH=configs/server.json` (or other command depending on OS).
+
+For the detailed documentation of the configuration file, please refer to the [configuration](https://docs.iggy.rs/introduction/configuration) section.
 
 ---
 
@@ -165,7 +175,7 @@ To benchmark the project, first start the server and then run the benchmarking a
 
 `cargo r --bin bench -r -- --tcp --test-poll-messages --streams 10 --consumers 10 --parallel-consumer-streams --messages-per-batch 1000 --message-batches 1000`
 
-Depending on the hardware, settings in `server.json`, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. The current results have been achieved on Apple M1 Max with 64 GB RAM.
+Depending on the hardware, settings in `configs/server.toml` (the default configuration) or `server.json` file, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. The current results have been achieved on Apple M1 Max with 64 GB RAM.
 
 *Write benchmark*
 

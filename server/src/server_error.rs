@@ -9,6 +9,8 @@ pub enum ServerError {
     IoError(#[from] io::Error),
     #[error("Connection error")]
     ConnectionError(#[from] ConnectionError),
+    #[error("Invalid configuration provider: {0}")]
+    InvalidConfigurationProvider(String),
     #[error("Cannot load configuration")]
     CannotLoadConfiguration,
     #[error("Invalid configuration")]

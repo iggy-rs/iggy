@@ -9,7 +9,7 @@ mod server_error;
 mod tcp;
 
 use crate::args::Args;
-use crate::components::{channel, message_saver};
+use crate::components::{channel, config_provider, message_saver};
 use crate::http::http_server;
 use crate::quic::quic_server;
 use crate::server_command::ServerCommand;
@@ -30,8 +30,8 @@ use tracing::info;
 async fn main() -> Result<(), ServerError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
-
-    let config = ServerConfig::load(&args.config)?;
+    let config_provider = config_provider::resolve(&args.config_provider)?;
+    let config = ServerConfig::load(config_provider.as_ref()).await?;
     let mut system = System::create(config.system.clone());
     system.init().await?;
     let system = Arc::new(RwLock::new(system));

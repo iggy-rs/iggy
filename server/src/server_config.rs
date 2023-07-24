@@ -1,13 +1,10 @@
+use crate::components::config_provider::ConfigProvider;
 use crate::server_error::ServerError;
-use figment::{
-    providers::{Env, Format, Json},
-    Error, Figment,
-};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use streaming::config::SystemConfig;
 use streaming::segments::segment;
-use tracing::{error, info};
+use tracing::error;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerConfig {
@@ -107,21 +104,9 @@ impl Default for MessageSaverConfig {
 }
 
 impl ServerConfig {
-    pub fn load(path: &str) -> Result<ServerConfig, ServerError> {
-        let config: Result<ServerConfig, Error> = Figment::new()
-            .merge(Env::prefixed("IGGY_"))
-            .join(Json::file(path))
-            .extract();
-
-        if config.is_err() {
-            return Err(ServerError::CannotLoadConfiguration);
-        }
-
-        let config = config.unwrap();
+    pub async fn load(config_provider: &dyn ConfigProvider) -> Result<ServerConfig, ServerError> {
+        let config = config_provider.load_config().await?;
         Self::validate_config(&config)?;
-        let config_json = serde_json::to_string_pretty(&config).unwrap();
-        info!("Config loaded from path: '{}'\n{}", path, config_json);
-
         Ok(config)
     }
 

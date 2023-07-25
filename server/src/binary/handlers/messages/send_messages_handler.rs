@@ -18,7 +18,7 @@ pub async fn handle(
     let mut messages = Vec::with_capacity(command.messages_count as usize);
     for message in &command.messages {
         let timestamp = timestamp::get();
-        let checksum = checksum::get(&message.payload);
+        let checksum = checksum::calculate(&message.payload);
         messages.push(Message::empty(
             timestamp,
             message.id,
@@ -31,9 +31,7 @@ pub async fn handle(
     let topic = system
         .get_stream(command.stream_id)?
         .get_topic(command.topic_id)?;
-    topic
-        .append_messages(command.key_kind, command.key_value, messages)
-        .await?;
+    topic.append_messages(&command.key, messages).await?;
 
     sender.send_empty_ok_response().await?;
     Ok(())

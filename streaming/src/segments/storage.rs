@@ -210,7 +210,7 @@ impl SegmentStorage for FileSegmentStorage {
 
     async fn load_checksums(&self, segment: &Segment) -> Result<(), Error> {
         load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
-            let calculated_checksum = checksum::get(&message.payload);
+            let calculated_checksum = checksum::calculate(&message.payload);
             trace!(
                 "Loaded message for offset: {}, checksum: {}, expected: {}",
                 message.offset,

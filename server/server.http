@@ -5,6 +5,7 @@
 @consumer_group_id = 1
 @consumer_id = 1
 @client_id = 1
+@partition_id_payload_base64 = AQAAAA==
 @message_1_payload_base64 = aGVsbG8=
 @message_2_payload_base64 = d29ybGQ=
 
@@ -68,8 +69,10 @@ POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages
 Content-Type: application/json
 
 {
-  "key_kind": "partition_id",
-  "key_value": 1,
+  "key": {
+    "kind": "partition_id",
+    "value": "{{partition_id_payload_base64}}"
+  },
   "messages": [{
     "id": 0,
     "payload": "{{message_1_payload_base64}}"

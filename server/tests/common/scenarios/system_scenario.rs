@@ -12,7 +12,7 @@ use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
 use iggy::messages::poll_messages::Kind::{Next, Offset};
 use iggy::messages::poll_messages::{Format, PollMessages};
-use iggy::messages::send_messages::{KeyKind, Message, SendMessages};
+use iggy::messages::send_messages::{Key, Message, SendMessages};
 use iggy::offsets::get_offset::GetOffset;
 use iggy::offsets::store_offset::StoreOffset;
 use iggy::streams::create_stream::CreateStream;
@@ -169,8 +169,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let send_messages = SendMessages {
         stream_id: STREAM_ID,
         topic_id: TOPIC_ID,
-        key_kind: KeyKind::PartitionId,
-        key_value: PARTITION_ID,
+        key: Key::partition_id(PARTITION_ID),
         messages_count: MESSAGES_COUNT,
         messages,
     };

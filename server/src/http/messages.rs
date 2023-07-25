@@ -68,13 +68,14 @@ async fn send_messages(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = stream_id;
     command.topic_id = topic_id;
+    command.key.length = command.key.value.len() as u8;
     command.messages_count = command.messages.len() as u32;
     command.validate()?;
 
     let mut messages = Vec::with_capacity(command.messages_count as usize);
     for message in command.messages {
         let timestamp = timestamp::get();
-        let checksum = checksum::get(&message.payload);
+        let checksum = checksum::calculate(&message.payload);
         messages.push(Message::empty(
             timestamp,
             message.id,
@@ -85,9 +86,7 @@ async fn send_messages(
 
     let system = system.read().await;
     let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
-    topic
-        .append_messages(command.key_kind, command.key_value, messages)
-        .await?;
+    topic.append_messages(&command.key, messages).await?;
     Ok(StatusCode::CREATED)
 }
 

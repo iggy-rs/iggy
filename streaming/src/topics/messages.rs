@@ -1,9 +1,10 @@
 use crate::message::Message;
 use crate::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
+use crate::utils::hash;
 use iggy::error::Error;
 use iggy::messages::poll_messages::Kind;
-use iggy::messages::send_messages::KeyKind;
+use iggy::messages::send_messages::{Key, KeyKind};
 use ringbuffer::RingBufferWrite;
 use std::sync::Arc;
 use tracing::trace;
@@ -34,19 +35,16 @@ impl Topic {
         }
     }
 
-    pub async fn append_messages(
-        &self,
-        key_kind: KeyKind,
-        key_value: u32,
-        messages: Vec<Message>,
-    ) -> Result<(), Error> {
+    pub async fn append_messages(&self, key: &Key, messages: Vec<Message>) -> Result<(), Error> {
         if messages.is_empty() {
             return Ok(());
         }
 
-        let partition_id = match key_kind {
-            KeyKind::PartitionId => key_value,
-            KeyKind::EntityId => self.calculate_partition_id(key_value),
+        let partition_id = match key.kind {
+            KeyKind::PartitionId => {
+                u32::from_le_bytes(key.value[..key.length as usize].try_into()?)
+            }
+            KeyKind::EntityId => self.calculate_partition_id(&key.value),
         };
 
         self.append_messages_to_partition(partition_id, messages)
@@ -69,14 +67,16 @@ impl Topic {
         Ok(())
     }
 
-    fn calculate_partition_id(&self, entity_id: u32) -> u32 {
-        let partitions_count = self.partitions.len() as u32;
-        let mut partition_id = entity_id % partitions_count;
+    fn calculate_partition_id(&self, entity_id: &[u8]) -> u32 {
+        let entity_id_hash = hash::calculate(entity_id);
+        let partitions_count = self.partitions.len() as u128;
+        let mut partition_id = (entity_id_hash % partitions_count) as u32;
         if partition_id == 0 {
-            partition_id = partitions_count;
+            partition_id = partitions_count as u32;
         }
+
         trace!(
-            "Calculated partition ID: {} for key: {}",
+            "Calculated partition ID: {} for entity ID: {:?}",
             partition_id,
             entity_id
         );
@@ -151,6 +151,7 @@ mod tests {
     #[tokio::test]
     async fn given_partition_id_key_messages_should_be_appended_only_to_the_chosen_partition() {
         let partition_id = 1;
+        let key = Key::partition_id(partition_id);
         let partitions_count = 3;
         let messages_count = 1000;
         let topic = init_topic(partitions_count);
@@ -158,10 +159,7 @@ mod tests {
         for entity_id in 1..=messages_count {
             let payload = Bytes::from("test");
             let messages = vec![Message::empty(1, entity_id as u128, payload, 1)];
-            topic
-                .append_messages(KeyKind::PartitionId, partition_id, messages)
-                .await
-                .unwrap();
+            topic.append_messages(&key, messages).await.unwrap();
         }
 
         let partitions = topic.get_partitions();
@@ -178,38 +176,42 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn given_entity_id_key_messages_should_be_appended_to_the_next_partitions() {
+    async fn given_entity_id_key_messages_should_be_appended_to_the_calculated_partitions() {
         let partitions_count = 3;
-        let messages_per_partition_count = 1000;
+        let messages_count = 1000;
         let topic = init_topic(partitions_count);
 
-        for entity_id in 1..=partitions_count * messages_per_partition_count {
+        for entity_id in 1..=messages_count {
+            let key = Key::entity_id_u32(entity_id);
             let payload = Bytes::from("test");
             let messages = vec![Message::empty(1, entity_id as u128, payload, 1)];
-            topic
-                .append_messages(KeyKind::EntityId, entity_id, messages)
-                .await
-                .unwrap();
+            topic.append_messages(&key, messages).await.unwrap();
         }
 
+        let mut read_messages_count = 0;
         let partitions = topic.get_partitions();
         assert_eq!(partitions.len(), partitions_count as usize);
         for partition in partitions {
             let partition = partition.read().await;
             let messages = partition.messages.as_ref().unwrap().to_vec();
-            assert_eq!(messages.len() as u32, messages_per_partition_count);
+            read_messages_count += messages.len();
+            assert!(messages.len() < messages_count as usize);
         }
+
+        assert_eq!(read_messages_count, messages_count as usize);
     }
 
     #[test]
     fn given_multiple_partitions_calculate_partition_id_should_return_next_partition_id() {
         let partitions_count = 3;
-        let messages_per_partition_count = 1000;
+        let messages_count = 1000;
         let topic = init_topic(partitions_count);
 
-        for entity_id in 1..=partitions_count * messages_per_partition_count {
-            let partition_id = topic.calculate_partition_id(entity_id);
-            let mut expected_partition_id = entity_id % partitions_count;
+        for entity_id in 1..=messages_count {
+            let key = Key::entity_id_u32(entity_id);
+            let partition_id = topic.calculate_partition_id(&key.value);
+            let entity_id_hash = hash::calculate(&key.value);
+            let mut expected_partition_id = (entity_id_hash % partitions_count as u128) as u32;
             if expected_partition_id == 0 {
                 expected_partition_id = partitions_count;
             }

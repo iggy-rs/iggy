@@ -1,5 +1,5 @@
 use crate::common::{ClientFactory, TestServer};
-use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
+use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
@@ -7,12 +7,10 @@ use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::consumer_type::ConsumerType;
 use iggy::messages::poll_messages::Kind::Next;
 use iggy::messages::poll_messages::{Format, PollMessages};
-use iggy::messages::send_messages::{KeyKind, Message, SendMessages};
-use iggy::models::consumer_group::ConsumerGroupDetails;
+use iggy::messages::send_messages::{Key, Message, SendMessages};
 use iggy::streams::create_stream::CreateStream;
-use iggy::system::get_me::GetMe;
 use iggy::topics::create_topic::CreateTopic;
-use std::str::{from_utf8, FromStr};
+use std::str::FromStr;
 use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;
@@ -21,7 +19,7 @@ const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const PARTITIONS_COUNT: u32 = 3;
 const CONSUMER_GROUP_ID: u32 = 1;
-const MESSAGES_COUNT_PER_PARTITION: u32 = 10;
+const MESSAGES_COUNT: u32 = 1000;
 
 #[allow(dead_code)]
 pub async fn run(client_factory: &dyn ClientFactory) {
@@ -72,19 +70,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     client3.join_consumer_group(&join_group).await.unwrap();
 
     // 5. Send messages to the calculated partition ID on the server side by using entity ID as a key
-    for entity_id in 1..=MESSAGES_COUNT_PER_PARTITION * PARTITIONS_COUNT {
-        let mut partition_id = entity_id % PARTITIONS_COUNT;
-        if partition_id == 0 {
-            partition_id = PARTITIONS_COUNT;
-        }
-
-        let message = Message::from_str(&get_message_payload(partition_id, entity_id)).unwrap();
+    for entity_id in 1..=MESSAGES_COUNT {
+        let message = Message::from_str(&get_message_payload(entity_id)).unwrap();
         let messages = vec![message];
         let send_messages = SendMessages {
             stream_id: STREAM_ID,
             topic_id: TOPIC_ID,
-            key_kind: KeyKind::EntityId,
-            key_value: entity_id,
+            key: Key::entity_id_u32(entity_id),
             messages_count: 1,
             messages,
         };
@@ -106,26 +98,17 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     }
 
     // 7. Poll the messages for each client per assigned partition in the consumer group
-    validate_message_polling(&client1, &consumer_group_info).await;
-    validate_message_polling(&client2, &consumer_group_info).await;
-    validate_message_polling(&client3, &consumer_group_info).await;
+    let mut total_read_messages_count = 0;
+    total_read_messages_count += poll_messages(&client1).await;
+    total_read_messages_count += poll_messages(&client2).await;
+    total_read_messages_count += poll_messages(&client3).await;
+
+    assert_eq!(total_read_messages_count, MESSAGES_COUNT);
 
     test_server.stop();
 }
 
-async fn validate_message_polling(client: &IggyClient, consumer_group: &ConsumerGroupDetails) {
-    let client_info = client.get_me(&GetMe {}).await.unwrap();
-    let consumer_group_member = consumer_group
-        .members
-        .iter()
-        .find(|m| m.id == client_info.id)
-        .unwrap();
-    let partition_id = consumer_group_member.partitions[0];
-    let mut start_entity_id = partition_id % PARTITIONS_COUNT;
-    if start_entity_id == 0 {
-        start_entity_id = PARTITIONS_COUNT;
-    }
-
+async fn poll_messages(client: &IggyClient) -> u32 {
     let poll_messages = PollMessages {
         consumer_type: ConsumerType::ConsumerGroup,
         consumer_id: CONSUMER_GROUP_ID,
@@ -139,23 +122,17 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
         format: Format::None,
     };
 
-    for i in 1..=MESSAGES_COUNT_PER_PARTITION {
+    let mut total_read_messages_count = 0;
+    for _ in 1..=PARTITIONS_COUNT * MESSAGES_COUNT {
         let messages = client.poll_messages(&poll_messages).await.unwrap();
-        assert_eq!(messages.len(), 1);
-        let message = &messages[0];
-        let offset = (i - 1) as u64;
-        assert_eq!(message.offset, offset);
-        let entity_id = start_entity_id + ((i - 1) * PARTITIONS_COUNT);
-        let payload = from_utf8(&message.payload).unwrap();
-        assert_eq!(payload, &get_message_payload(partition_id, entity_id));
+        total_read_messages_count += messages.len() as u32;
     }
 
-    let messages = client.poll_messages(&poll_messages).await.unwrap();
-    assert!(messages.is_empty())
+    total_read_messages_count
 }
 
-fn get_message_payload(partition_id: u32, entity_id: u32) -> String {
-    format!("message-{}-{}", partition_id, entity_id)
+fn get_message_payload(entity_id: u32) -> String {
+    format!("message-{}", entity_id)
 }
 
 async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {

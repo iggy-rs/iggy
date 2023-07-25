@@ -9,7 +9,7 @@ use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::error::Error;
 use crate::messages::poll_messages::{Kind, PollMessages};
-use crate::messages::send_messages::{KeyKind, SendMessages};
+use crate::messages::send_messages::{Key, KeyKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::message::Message;
@@ -223,24 +223,27 @@ impl IggyClient {
                 let mut initialized = false;
                 let mut stream_id = 0;
                 let mut topic_id = 0;
-                let mut key_kind = KeyKind::PartitionId;
-                let mut key_value = 0;
+                let mut key = Key::partition_id(0);
                 let mut batch_messages = true;
 
                 for send_messages in send_messages_batch.commands.iter() {
                     if !initialized {
+                        if send_messages.key.kind != KeyKind::PartitionId {
+                            batch_messages = false;
+                            break;
+                        }
+
                         stream_id = send_messages.stream_id;
                         topic_id = send_messages.topic_id;
-                        key_kind = send_messages.key_kind;
-                        key_value = send_messages.key_value;
+                        key.value = send_messages.key.value.clone();
                         initialized = true;
                     }
 
                     // Batching the messages is only possible for the same stream, topic and partition.
                     if send_messages.stream_id != stream_id
                         || send_messages.topic_id != topic_id
-                        || send_messages.key_kind != key_kind
-                        || send_messages.key_value != key_value
+                        || send_messages.key.kind != KeyKind::PartitionId
+                        || send_messages.key.value != key.value
                     {
                         batch_messages = false;
                         break;
@@ -272,8 +275,11 @@ impl IggyClient {
                         stream_id,
                         topic_id,
                         messages_count: messages.len() as u32,
-                        key_value,
-                        key_kind,
+                        key: Key {
+                            kind: KeyKind::PartitionId,
+                            length: 4,
+                            value: key.value.clone(),
+                        },
                         messages,
                     };
 
@@ -384,8 +390,11 @@ impl MessageClient for IggyClient {
             stream_id: command.stream_id,
             topic_id: command.topic_id,
             messages_count: command.messages_count,
-            key_value: command.key_value,
-            key_kind: command.key_kind,
+            key: Key {
+                kind: command.key.kind,
+                length: command.key.length,
+                value: command.key.value.clone(),
+            },
             messages: command
                 .messages
                 .iter()

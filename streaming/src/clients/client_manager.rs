@@ -55,7 +55,7 @@ impl ClientManager {
     }
 
     pub fn add_client(&mut self, address: &SocketAddr, transport: Transport) -> u32 {
-        let id = checksum::get(address.to_string().as_bytes());
+        let id = checksum::calculate(address.to_string().as_bytes());
         let client = Client {
             id,
             address: *address,
@@ -71,7 +71,7 @@ impl ClientManager {
         &self,
         address: &SocketAddr,
     ) -> Result<Arc<RwLock<Client>>, Error> {
-        let id = checksum::get(address.to_string().as_bytes());
+        let id = checksum::calculate(address.to_string().as_bytes());
         self.get_client_by_id(id)
     }
 
@@ -89,7 +89,7 @@ impl ClientManager {
     }
 
     pub fn delete_client(&mut self, address: &SocketAddr) -> Option<Arc<RwLock<Client>>> {
-        let id = checksum::get(address.to_string().as_bytes());
+        let id = checksum::calculate(address.to_string().as_bytes());
         self.clients.remove(&id)
     }
 

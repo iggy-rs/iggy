@@ -1,5 +1,5 @@
 use iggy::client::Client;
-use iggy::messages::send_messages::{KeyKind, Message, SendMessages};
+use iggy::messages::send_messages::{Key, Message, SendMessages};
 use iggy::streams::create_stream::CreateStream;
 use iggy::tcp::client::TcpClient;
 use iggy::topics::create_topic::CreateTopic;
@@ -72,8 +72,7 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
             .send_messages(&SendMessages {
                 stream_id: STREAM_ID,
                 topic_id: TOPIC_ID,
-                key_kind: KeyKind::PartitionId,
-                key_value: PARTITION_ID,
+                key: Key::partition_id(PARTITION_ID),
                 messages_count: messages.len() as u32,
                 messages,
             })

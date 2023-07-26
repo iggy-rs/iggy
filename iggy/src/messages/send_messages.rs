@@ -11,6 +11,8 @@ use std::str::FromStr;
 
 const MAX_PAYLOAD_SIZE: u32 = 10 * 1024 * 1024;
 
+const EMPTY_KEY_VALUE: Vec<u8> = vec![];
+
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SendMessages {
     #[serde(skip)]
@@ -50,6 +52,7 @@ pub struct Message {
 #[serde(rename_all = "snake_case")]
 pub enum KeyKind {
     #[default]
+    None,
     PartitionId,
     EntityId,
 }
@@ -72,15 +75,19 @@ impl Default for SendMessages {
 
 impl Default for Key {
     fn default() -> Self {
-        Key {
-            kind: KeyKind::default(),
-            length: 4,
-            value: 1u32.to_le_bytes().to_vec(),
-        }
+        Key::none()
     }
 }
 
 impl Key {
+    pub fn none() -> Self {
+        Key {
+            kind: KeyKind::None,
+            length: 0,
+            value: EMPTY_KEY_VALUE,
+        }
+    }
+
     pub fn partition_id(partition_id: u32) -> Self {
         Key {
             kind: KeyKind::PartitionId,
@@ -165,15 +172,17 @@ impl Validatable for SendMessages {
 impl KeyKind {
     pub fn as_code(&self) -> u8 {
         match self {
-            KeyKind::PartitionId => 0,
-            KeyKind::EntityId => 1,
+            KeyKind::None => 0,
+            KeyKind::PartitionId => 1,
+            KeyKind::EntityId => 2,
         }
     }
 
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
-            0 => Ok(KeyKind::PartitionId),
-            1 => Ok(KeyKind::EntityId),
+            0 => Ok(KeyKind::None),
+            1 => Ok(KeyKind::PartitionId),
+            2 => Ok(KeyKind::EntityId),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -183,6 +192,7 @@ impl FromStr for KeyKind {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
+            "n" | "none" => Ok(KeyKind::None),
             "p" | "partition_id" => Ok(KeyKind::PartitionId),
             "c" | "entity_id" => Ok(KeyKind::EntityId),
             _ => Err(Error::InvalidCommand),
@@ -317,6 +327,7 @@ impl FromStr for SendMessages {
         let key_kind = parts[2];
         let key_kind = KeyKind::from_str(key_kind)?;
         let (key_value, key_length) = match key_kind {
+            KeyKind::None => (EMPTY_KEY_VALUE, 0),
             KeyKind::PartitionId => (parts[3].parse::<u32>()?.to_le_bytes().to_vec(), 4),
             KeyKind::EntityId => {
                 let key_value = parts[3].as_bytes().to_vec();
@@ -432,6 +443,7 @@ impl Display for SendMessages {
 impl Display for Key {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.kind {
+            KeyKind::None => write!(f, "{}|0", self.kind),
             KeyKind::PartitionId => write!(
                 f,
                 "{}|{}",
@@ -448,6 +460,7 @@ impl Display for Key {
 impl Display for KeyKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            KeyKind::None => write!(f, "none"),
             KeyKind::PartitionId => write!(f, "partition_id"),
             KeyKind::EntityId => write!(f, "entity_id"),
         }

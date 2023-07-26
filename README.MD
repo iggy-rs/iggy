@@ -46,6 +46,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 
 - [Rust](https://crates.io/crates/iggy)
 - [C#](https://github.com/iggy-rs/iggy-dotnet-client)
+- [Go](https://github.com/eldpcn/iggy-go)
 
 ---
 

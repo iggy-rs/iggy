@@ -3,6 +3,7 @@ use crate::partitions::partition::Partition;
 use crate::storage::SystemStorage;
 use crate::topics::consumer_group::ConsumerGroup;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -19,6 +20,7 @@ pub struct Topic {
     pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
+    pub(crate) current_partition_id: AtomicU32,
 }
 
 impl Topic {
@@ -54,6 +56,7 @@ impl Topic {
             config: config.clone(),
             storage: storage.clone(),
             consumer_groups: HashMap::new(),
+            current_partition_id: AtomicU32::new(1),
         };
 
         topic.partitions = (1..partitions_count + 1)

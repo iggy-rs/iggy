@@ -6,6 +6,7 @@ use iggy::error::Error;
 use iggy::messages::poll_messages::Kind;
 use iggy::messages::send_messages::{Key, KeyKind};
 use ringbuffer::RingBufferWrite;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -41,10 +42,11 @@ impl Topic {
         }
 
         let partition_id = match key.kind {
+            KeyKind::None => self.calculate_next_partition_id(),
             KeyKind::PartitionId => {
                 u32::from_le_bytes(key.value[..key.length as usize].try_into()?)
             }
-            KeyKind::EntityId => self.calculate_partition_id(&key.value),
+            KeyKind::EntityId => self.calculate_partition_id_by_entity_id_hash(&key.value),
         };
 
         self.append_messages_to_partition(partition_id, messages)
@@ -67,18 +69,29 @@ impl Topic {
         Ok(())
     }
 
-    fn calculate_partition_id(&self, entity_id: &[u8]) -> u32 {
+    fn calculate_next_partition_id(&self) -> u32 {
+        let mut partition_id = self.current_partition_id.fetch_add(1, Ordering::SeqCst);
+        let partitions_count = self.partitions.len() as u32;
+        if partition_id > partitions_count {
+            partition_id = partitions_count;
+            self.current_partition_id.swap(1, Ordering::SeqCst);
+        }
+        trace!("Next partition ID: {}", partition_id);
+        partition_id
+    }
+
+    fn calculate_partition_id_by_entity_id_hash(&self, entity_id: &[u8]) -> u32 {
         let entity_id_hash = hash::calculate(entity_id);
         let partitions_count = self.partitions.len() as u128;
         let mut partition_id = (entity_id_hash % partitions_count) as u32;
         if partition_id == 0 {
             partition_id = partitions_count as u32;
         }
-
         trace!(
-            "Calculated partition ID: {} for entity ID: {:?}",
+            "Calculated partition ID: {} for entity ID: {:?}, hash: {}",
             partition_id,
-            entity_id
+            entity_id,
+            entity_id_hash
         );
         partition_id
     }
@@ -209,7 +222,7 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let key = Key::entity_id_u32(entity_id);
-            let partition_id = topic.calculate_partition_id(&key.value);
+            let partition_id = topic.calculate_partition_id_by_entity_id_hash(&key.value);
             let entity_id_hash = hash::calculate(&key.value);
             let mut expected_partition_id = (entity_id_hash % partitions_count as u128) as u32;
             if expected_partition_id == 0 {

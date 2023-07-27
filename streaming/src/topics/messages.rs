@@ -42,7 +42,7 @@ impl Topic {
         }
 
         let partition_id = match key.kind {
-            KeyKind::None => self.calculate_next_partition_id(),
+            KeyKind::None => self.get_next_partition_id(),
             KeyKind::PartitionId => {
                 u32::from_le_bytes(key.value[..key.length as usize].try_into()?)
             }
@@ -69,12 +69,13 @@ impl Topic {
         Ok(())
     }
 
-    fn calculate_next_partition_id(&self) -> u32 {
+    fn get_next_partition_id(&self) -> u32 {
         let mut partition_id = self.current_partition_id.fetch_add(1, Ordering::SeqCst);
         let partitions_count = self.partitions.len() as u32;
         if partition_id > partitions_count {
-            partition_id = partitions_count;
-            self.current_partition_id.swap(1, Ordering::SeqCst);
+            partition_id = 1;
+            self.current_partition_id
+                .swap(partition_id + 1, Ordering::SeqCst);
         }
         trace!("Next partition ID: {}", partition_id);
         partition_id
@@ -215,7 +216,26 @@ mod tests {
     }
 
     #[test]
-    fn given_multiple_partitions_calculate_partition_id_should_return_next_partition_id() {
+    fn given_multiple_partitions_calculate_next_partition_id_should_return_next_partition_id_using_round_robin(
+    ) {
+        let partitions_count = 3;
+        let messages_count = 1000;
+        let topic = init_topic(partitions_count);
+
+        let mut expected_partition_id = 0;
+        for _ in 1..=messages_count {
+            let partition_id = topic.get_next_partition_id();
+            expected_partition_id += 1;
+            if expected_partition_id > partitions_count {
+                expected_partition_id = 1;
+            }
+
+            assert_eq!(partition_id, expected_partition_id);
+        }
+    }
+
+    #[test]
+    fn given_multiple_partitions_calculate_partition_id_by_hash_should_return_next_partition_id() {
         let partitions_count = 3;
         let messages_count = 1000;
         let topic = init_topic(partitions_count);

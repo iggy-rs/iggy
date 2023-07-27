@@ -146,6 +146,8 @@ pub enum Error {
     CannotReadPartitions(u32, u32),
     #[error("Partition with ID: {0} was not found.")]
     PartitionNotFound(u32),
+    #[error("Invalid key value length")]
+    InvalidKeyValueLength,
     #[error("Invalid messages count")]
     InvalidMessagesCount,
     #[error("Invalid message payload length")]
@@ -296,6 +298,7 @@ impl Error {
             Error::InvalidMessagePayloadLength => 4019,
             Error::CannotReadMessageChecksum => 4020,
             Error::InvalidMessageChecksum(_, _, _) => 4021,
+            Error::InvalidKeyValueLength => 4022,
             Error::InvalidOffset(_) => 4100,
             Error::CannotReadConsumerOffsets(_) => 4101,
             Error::ConsumerGroupNotFound(_, _) => 5000,
@@ -396,6 +399,7 @@ impl Error {
             4019 => "invalid_message_payload_length",
             4020 => "cannot_read_message_checksum",
             4021 => "invalid_message_checksum",
+            4022 => "invalid_key_value_length",
             4100 => "invalid_offset",
             4101 => "cannot_read_consumer_offsets",
             5000 => "consumer_group_not_found",
@@ -482,6 +486,7 @@ impl Error {
             Error::CannotReadTopics(_) => "cannot_read_topics",
             Error::CannotReadMessageChecksum => "cannot_read_message_checksum",
             Error::InvalidMessageChecksum(_, _, _) => "invalid_message_checksum",
+            Error::InvalidKeyValueLength => "invalid_key_value_length",
             Error::ConsumerGroupNotFound(_, _) => "consumer_group_not_found",
             Error::ConsumerGroupAlreadyExists(_, _) => "consumer_group_already_exists",
             Error::ConsumerGroupMemberNotFound(_, _, _) => "consumer_group_member_not_found",

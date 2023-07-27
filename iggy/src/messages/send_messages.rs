@@ -96,20 +96,21 @@ impl Key {
         }
     }
 
-    pub fn entity_id_str(entity_id: &str) -> Self {
-        Key {
-            kind: KeyKind::EntityId,
-            length: entity_id.len() as u8,
-            value: entity_id.as_bytes().to_vec(),
-        }
+    pub fn entity_id_str(entity_id: &str) -> Result<Self, Error> {
+        Self::entity_id_bytes(entity_id.as_bytes())
     }
 
-    pub fn entity_id_bytes(entity_id: &[u8]) -> Self {
-        Key {
-            kind: KeyKind::EntityId,
-            length: entity_id.len() as u8,
-            value: entity_id.to_vec(),
+    pub fn entity_id_bytes(entity_id: &[u8]) -> Result<Self, Error> {
+        let length = entity_id.len();
+        if length == 0 || length > 255 {
+            return Err(Error::InvalidCommand);
         }
+
+        Ok(Key {
+            kind: KeyKind::EntityId,
+            length: length as u8,
+            value: entity_id.to_vec(),
+        })
     }
 
     pub fn entity_id_u32(entity_id: u32) -> Self {
@@ -151,6 +152,11 @@ impl Validatable for SendMessages {
 
         if self.messages_count == 0 {
             return Err(Error::InvalidMessagesCount);
+        }
+
+        let key_value_length = self.key.value.len();
+        if key_value_length > 255 || (self.key.kind != KeyKind::None && key_value_length == 0) {
+            return Err(Error::InvalidKeyValueLength);
         }
 
         let mut payload_size = 0;

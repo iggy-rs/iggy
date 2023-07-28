@@ -1,15 +1,22 @@
 use crate::http::{consumer_groups, messages, streams, system, topics};
+use axum::http::Method;
 use axum::Router;
 use std::sync::Arc;
 use streaming::system::System;
 use tokio::sync::RwLock;
+use tower::ServiceBuilder;
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::server_config::HttpConfig;
 use tracing::info;
 
 pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
     info!("Starting HTTP API on: {:?}", config.address);
-    let app = Router::new().nest(
+    let cors = CorsLayer::new()
+        .allow_methods([Method::GET, Method::POST])
+        .allow_origin(Any);
+
+    let app = Router::new().layer(ServiceBuilder::new().layer(cors)).nest(
         "/",
         system::router(system.clone()).nest(
             "/streams",

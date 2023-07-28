@@ -1,4 +1,6 @@
+use crate::utils::{checksum, timestamp};
 use bytes::Bytes;
+use iggy::messages::send_messages;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -18,6 +20,12 @@ pub struct Message {
 }
 
 impl Message {
+    pub fn from_message(message: &send_messages::Message) -> Self {
+        let timestamp = timestamp::get();
+        let checksum = checksum::calculate(&message.payload);
+        Self::empty(timestamp, message.id, message.payload.clone(), checksum)
+    }
+
     pub fn empty(timestamp: u64, id: u128, payload: Bytes, checksum: u32) -> Self {
         Message::create(0, timestamp, id, payload, checksum)
     }

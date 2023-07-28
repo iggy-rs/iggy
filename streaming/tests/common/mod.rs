@@ -20,9 +20,7 @@ impl TestSetup {
             ..Default::default()
         });
         let test_setup = TestSetup { path, config };
-
         fs::create_dir(&test_setup.path).await.unwrap();
-
         test_setup
     }
 }

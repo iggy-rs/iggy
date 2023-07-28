@@ -25,8 +25,6 @@ pub struct SendMessages {
     pub messages: Vec<Message>,
 }
 
-// TODO: Add KeyKind::None for the messages without key - the partition ID should be calculated using the round-robin algorithm.
-
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Key {
@@ -595,5 +593,48 @@ mod tests {
         assert_eq!(message.id, message_id);
         assert_eq!(message.length, payload.len() as u32);
         assert_eq!(message.payload, payload.as_bytes());
+    }
+
+    #[test]
+    fn key_of_type_none_should_have_empty_value() {
+        let key = Key::none();
+        assert_eq!(key.kind, KeyKind::None);
+        assert_eq!(key.length, 0);
+        assert_eq!(key.value, EMPTY_KEY_VALUE);
+        assert_eq!(KeyKind::from_code(0).unwrap(), KeyKind::None);
+    }
+
+    #[test]
+    fn key_of_type_partition_should_have_value_of_const_length_4() {
+        let partition_id = 1234u32;
+        let key = Key::partition_id(partition_id);
+        assert_eq!(key.kind, KeyKind::PartitionId);
+        assert_eq!(key.length, 4);
+        assert_eq!(key.value, partition_id.to_le_bytes());
+        assert_eq!(KeyKind::from_code(1).unwrap(), KeyKind::PartitionId);
+    }
+
+    #[test]
+    fn key_of_type_entity_id_should_have_value_of_dynamic_length() {
+        let entity_id = "hello world";
+        let key = Key::entity_id_str(entity_id).unwrap();
+        assert_eq!(key.kind, KeyKind::EntityId);
+        assert_eq!(key.length, entity_id.len() as u8);
+        assert_eq!(key.value, entity_id.as_bytes());
+        assert_eq!(KeyKind::from_code(2).unwrap(), KeyKind::EntityId);
+    }
+
+    #[test]
+    fn key_of_type_entity_id_that_has_length_0_should_fail() {
+        let entity_id = "";
+        let key = Key::entity_id_str(entity_id);
+        assert!(key.is_err());
+    }
+
+    #[test]
+    fn key_of_type_entity_id_that_has_length_greater_than_255_should_fail() {
+        let entity_id = "a".repeat(256);
+        let key = Key::entity_id_str(&entity_id);
+        assert!(key.is_err());
     }
 }

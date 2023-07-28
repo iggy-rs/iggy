@@ -13,7 +13,6 @@ use std::sync::Arc;
 use streaming::message::Message;
 use streaming::polling_consumer::PollingConsumer;
 use streaming::system::System;
-use streaming::utils::{checksum, timestamp};
 use tokio::sync::RwLock;
 use tracing::trace;
 
@@ -73,15 +72,8 @@ async fn send_messages(
     command.validate()?;
 
     let mut messages = Vec::with_capacity(command.messages_count as usize);
-    for message in command.messages {
-        let timestamp = timestamp::get();
-        let checksum = checksum::calculate(&message.payload);
-        messages.push(Message::empty(
-            timestamp,
-            message.id,
-            message.payload,
-            checksum,
-        ));
+    for message in &command.messages {
+        messages.push(Message::from_message(message));
     }
 
     let system = system.read().await;

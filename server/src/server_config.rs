@@ -44,9 +44,10 @@ pub struct HttpConfig {
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct CorsConfig {
     pub enabled: bool,
+    pub allowed_methods: Vec<String>,
     pub allowed_origins: Vec<String>,
     pub allowed_headers: Vec<String>,
-    pub allowed_methods: Vec<String>,
+    pub exposed_headers: Vec<String>,
     pub allow_credentials: bool,
     pub allow_private_network: bool,
 }

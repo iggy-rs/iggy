@@ -55,6 +55,12 @@ fn configure_cors(config: CorsConfig) -> CorsLayer {
         .map(|s| s.parse().unwrap())
         .collect::<Vec<_>>();
 
+    let exposed_headers = config
+        .exposed_headers
+        .iter()
+        .map(|s| s.parse().unwrap())
+        .collect::<Vec<_>>();
+
     let allowed_methods = config
         .allowed_methods
         .iter()
@@ -76,6 +82,7 @@ fn configure_cors(config: CorsConfig) -> CorsLayer {
         .allow_methods(allowed_methods)
         .allow_origin(allowed_origins)
         .allow_headers(allowed_headers)
+        .expose_headers(exposed_headers)
         .allow_credentials(config.allow_credentials)
         .allow_private_network(config.allow_private_network)
 }

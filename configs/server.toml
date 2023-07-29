@@ -2,6 +2,14 @@
 enabled = true
 address = "0.0.0.0:3000"
 
+[http.cors]
+enabled = true
+allowed_origins = [ "*" ]
+allowed_methods = [ "GET", "POST", "PUT", "DELETE" ]
+allowed_headers = [ ]
+allow_credentials = false
+allow_private_network = false
+
 [tcp]
 enabled = true
 address = "0.0.0.0:8090"

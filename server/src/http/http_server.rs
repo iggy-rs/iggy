@@ -12,7 +12,7 @@ use tracing::info;
 pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
     info!("Starting HTTP API on: {:?}", config.address);
     let address = config.address.clone();
-    let app = create_app(config).nest(
+    let mut app = Router::new().nest(
         "/",
         system::router(system.clone()).nest(
             "/streams",
@@ -28,18 +28,14 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         ),
     );
 
+    if config.cors.enabled {
+        app = app.layer(configure_cors(config.cors));
+    }
+
     axum::Server::bind(&address.parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();
-}
-
-fn create_app(config: HttpConfig) -> Router {
-    let mut app = Router::new();
-    if config.cors.enabled {
-        app = app.layer(configure_cors(config.cors));
-    }
-    app
 }
 
 fn configure_cors(config: CorsConfig) -> CorsLayer {

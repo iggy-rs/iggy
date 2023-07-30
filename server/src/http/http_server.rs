@@ -1,4 +1,4 @@
-use crate::http::{consumer_groups, messages, streams, system, topics};
+use crate::http::{consumer_groups, messages, partitions, streams, system, topics};
 use axum::http::Method;
 use axum::Router;
 use std::sync::Arc;
@@ -11,7 +11,6 @@ use tracing::info;
 
 pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
     info!("Starting HTTP API on: {:?}", config.address);
-    let address = config.address.clone();
     let mut app = Router::new().nest(
         "/",
         system::router(system.clone()).nest(
@@ -23,7 +22,8 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
                         "/:topic_id/consumer-groups",
                         consumer_groups::router(system.clone()),
                     )
-                    .nest("/:topic_id/messages", messages::router(system.clone())),
+                    .nest("/:topic_id/messages", messages::router(system.clone()))
+                    .nest("/:topic_id/partitions", partitions::router(system.clone())),
             ),
         ),
     );
@@ -32,7 +32,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         app = app.layer(configure_cors(config.cors));
     }
 
-    axum::Server::bind(&address.parse().unwrap())
+    axum::Server::bind(&config.address.parse().unwrap())
         .serve(app.into_make_service())
         .await
         .unwrap();

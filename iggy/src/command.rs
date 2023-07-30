@@ -10,6 +10,8 @@ use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::offsets::get_offset::GetOffset;
 use crate::offsets::store_offset::StoreOffset;
+use crate::partitions::create_partitions::CreatePartitions;
+use crate::partitions::delete_partitions::DeletePartitions;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -32,49 +34,53 @@ pub const KILL_CODE: u32 = 0;
 pub const PING: &str = "ping";
 pub const PING_CODE: u32 = 1;
 pub const GET_STATS: &str = "stats";
-pub const GET_STATS_CODE: u32 = 2;
+pub const GET_STATS_CODE: u32 = 10;
 pub const GET_ME: &str = "me";
-pub const GET_ME_CODE: u32 = 3;
+pub const GET_ME_CODE: u32 = 20;
 pub const GET_CLIENT: &str = "client.get";
-pub const GET_CLIENT_CODE: u32 = 4;
+pub const GET_CLIENT_CODE: u32 = 21;
 pub const GET_CLIENTS: &str = "client.list";
-pub const GET_CLIENTS_CODE: u32 = 5;
+pub const GET_CLIENTS_CODE: u32 = 22;
 pub const SEND_MESSAGES: &str = "message.send";
-pub const SEND_MESSAGES_CODE: u32 = 10;
+pub const SEND_MESSAGES_CODE: u32 = 100;
 pub const POLL_MESSAGES: &str = "message.poll";
-pub const POLL_MESSAGES_CODE: u32 = 11;
+pub const POLL_MESSAGES_CODE: u32 = 101;
 pub const STORE_OFFSET: &str = "offset.store";
-pub const STORE_OFFSET_CODE: u32 = 12;
+pub const STORE_OFFSET_CODE: u32 = 102;
 pub const GET_OFFSET: &str = "offset.get";
-pub const GET_OFFSET_CODE: u32 = 13;
+pub const GET_OFFSET_CODE: u32 = 103;
 pub const GET_STREAM: &str = "stream.get";
-pub const GET_STREAM_CODE: u32 = 20;
+pub const GET_STREAM_CODE: u32 = 200;
 pub const GET_STREAMS: &str = "stream.list";
-pub const GET_STREAMS_CODE: u32 = 21;
+pub const GET_STREAMS_CODE: u32 = 201;
 pub const CREATE_STREAM: &str = "stream.create";
-pub const CREATE_STREAM_CODE: u32 = 22;
+pub const CREATE_STREAM_CODE: u32 = 202;
 pub const DELETE_STREAM: &str = "stream.delete";
-pub const DELETE_STREAM_CODE: u32 = 23;
+pub const DELETE_STREAM_CODE: u32 = 203;
 pub const GET_TOPIC: &str = "topic.get";
-pub const GET_TOPIC_CODE: u32 = 30;
+pub const GET_TOPIC_CODE: u32 = 300;
 pub const GET_TOPICS: &str = "topic.list";
-pub const GET_TOPICS_CODE: u32 = 31;
+pub const GET_TOPICS_CODE: u32 = 301;
 pub const CREATE_TOPIC: &str = "topic.create";
-pub const CREATE_TOPIC_CODE: u32 = 32;
+pub const CREATE_TOPIC_CODE: u32 = 302;
 pub const DELETE_TOPIC: &str = "topic.delete";
-pub const DELETE_TOPIC_CODE: u32 = 33;
+pub const DELETE_TOPIC_CODE: u32 = 303;
+pub const CREATE_PARTITIONS: &str = "partition.create";
+pub const CREATE_PARTITIONS_CODE: u32 = 402;
+pub const DELETE_PARTITIONS: &str = "partition.delete";
+pub const DELETE_PARTITIONS_CODE: u32 = 403;
 pub const GET_CONSUMER_GROUP: &str = "consumer_group.get";
-pub const GET_CONSUMER_GROUP_CODE: u32 = 40;
+pub const GET_CONSUMER_GROUP_CODE: u32 = 600;
 pub const GET_CONSUMER_GROUPS: &str = "consumer_group.list";
-pub const GET_CONSUMER_GROUPS_CODE: u32 = 41;
+pub const GET_CONSUMER_GROUPS_CODE: u32 = 601;
 pub const CREATE_CONSUMER_GROUP: &str = "consumer_group.create";
-pub const CREATE_CONSUMER_GROUP_CODE: u32 = 42;
+pub const CREATE_CONSUMER_GROUP_CODE: u32 = 602;
 pub const DELETE_CONSUMER_GROUP: &str = "consumer_group.delete";
-pub const DELETE_CONSUMER_GROUP_CODE: u32 = 43;
+pub const DELETE_CONSUMER_GROUP_CODE: u32 = 603;
 pub const JOIN_CONSUMER_GROUP: &str = "consumer_group.join";
-pub const JOIN_CONSUMER_GROUP_CODE: u32 = 44;
+pub const JOIN_CONSUMER_GROUP_CODE: u32 = 604;
 pub const LEAVE_CONSUMER_GROUP: &str = "consumer_group.leave";
-pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 45;
+pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 605;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
@@ -96,6 +102,8 @@ pub enum Command {
     GetTopics(GetTopics),
     CreateTopic(CreateTopic),
     DeleteTopic(DeleteTopic),
+    CreatePartitions(CreatePartitions),
+    DeletePartitions(DeletePartitions),
     GetGroup(GetConsumerGroup),
     GetGroups(GetConsumerGroups),
     CreateGroup(CreateConsumerGroup),
@@ -127,6 +135,12 @@ impl BytesSerializable for Command {
             Command::GetTopics(payload) => as_bytes(GET_TOPICS_CODE, &payload.as_bytes()),
             Command::CreateTopic(payload) => as_bytes(CREATE_TOPIC_CODE, &payload.as_bytes()),
             Command::DeleteTopic(payload) => as_bytes(DELETE_TOPIC_CODE, &payload.as_bytes()),
+            Command::CreatePartitions(payload) => {
+                as_bytes(CREATE_PARTITIONS_CODE, &payload.as_bytes())
+            }
+            Command::DeletePartitions(payload) => {
+                as_bytes(DELETE_PARTITIONS_CODE, &payload.as_bytes())
+            }
             Command::GetGroup(payload) => as_bytes(GET_CONSUMER_GROUP_CODE, &payload.as_bytes()),
             Command::GetGroups(payload) => as_bytes(GET_CONSUMER_GROUPS_CODE, &payload.as_bytes()),
             Command::CreateGroup(payload) => {
@@ -164,6 +178,12 @@ impl BytesSerializable for Command {
             GET_TOPICS_CODE => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
             CREATE_TOPIC_CODE => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
             DELETE_TOPIC_CODE => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
+            CREATE_PARTITIONS_CODE => Ok(Command::CreatePartitions(CreatePartitions::from_bytes(
+                payload,
+            )?)),
+            DELETE_PARTITIONS_CODE => Ok(Command::DeletePartitions(DeletePartitions::from_bytes(
+                payload,
+            )?)),
             GET_CONSUMER_GROUP_CODE => {
                 Ok(Command::GetGroup(GetConsumerGroup::from_bytes(payload)?))
             }
@@ -217,6 +237,12 @@ impl FromStr for Command {
             GET_TOPICS => Ok(Command::GetTopics(GetTopics::from_str(payload)?)),
             CREATE_TOPIC => Ok(Command::CreateTopic(CreateTopic::from_str(payload)?)),
             DELETE_TOPIC => Ok(Command::DeleteTopic(DeleteTopic::from_str(payload)?)),
+            CREATE_PARTITIONS => Ok(Command::CreatePartitions(CreatePartitions::from_str(
+                payload,
+            )?)),
+            DELETE_PARTITIONS => Ok(Command::DeletePartitions(DeletePartitions::from_str(
+                payload,
+            )?)),
             GET_CONSUMER_GROUP => Ok(Command::GetGroup(GetConsumerGroup::from_str(payload)?)),
             GET_CONSUMER_GROUPS => Ok(Command::GetGroups(GetConsumerGroups::from_str(payload)?)),
             CREATE_CONSUMER_GROUP => Ok(Command::CreateGroup(CreateConsumerGroup::from_str(
@@ -249,6 +275,12 @@ impl Display for Command {
             Command::GetTopics(payload) => write!(formatter, "{}|{}", GET_TOPICS, payload),
             Command::CreateTopic(payload) => write!(formatter, "{}|{}", CREATE_TOPIC, payload),
             Command::DeleteTopic(payload) => write!(formatter, "{}|{}", DELETE_TOPIC, payload),
+            Command::CreatePartitions(payload) => {
+                write!(formatter, "{}|{}", CREATE_PARTITIONS, payload)
+            }
+            Command::DeletePartitions(payload) => {
+                write!(formatter, "{}|{}", DELETE_PARTITIONS, payload)
+            }
             Command::PollMessages(payload) => write!(formatter, "{}|{}", POLL_MESSAGES, payload),
             Command::SendMessages(payload) => write!(formatter, "{}|{}", SEND_MESSAGES, payload),
             Command::StoreOffset(payload) => write!(formatter, "{}|{}", STORE_OFFSET, payload),
@@ -366,6 +398,16 @@ mod tests {
             &DeleteTopic::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::CreatePartitions(CreatePartitions::default()),
+            CREATE_PARTITIONS_CODE,
+            &CreatePartitions::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::DeletePartitions(DeletePartitions::default()),
+            DELETE_PARTITIONS_CODE,
+            &DeletePartitions::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetGroup(GetConsumerGroup::default()),
             GET_CONSUMER_GROUP_CODE,
             &GetConsumerGroup::default(),
@@ -476,6 +518,16 @@ mod tests {
             &Command::DeleteTopic(DeleteTopic::default()),
             DELETE_TOPIC,
             &DeleteTopic::default(),
+        );
+        assert_read_from_string(
+            &Command::CreatePartitions(CreatePartitions::default()),
+            CREATE_PARTITIONS,
+            &CreatePartitions::default(),
+        );
+        assert_read_from_string(
+            &Command::DeletePartitions(DeletePartitions::default()),
+            DELETE_PARTITIONS,
+            &DeletePartitions::default(),
         );
         assert_read_from_string(
             &Command::GetGroup(GetConsumerGroup::default()),

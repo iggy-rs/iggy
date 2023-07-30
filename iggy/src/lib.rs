@@ -13,6 +13,7 @@ pub mod http;
 pub mod messages;
 pub mod models;
 pub mod offsets;
+pub mod partitions;
 pub mod quic;
 pub mod streams;
 pub mod system;

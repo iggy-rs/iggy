@@ -2,6 +2,7 @@ mod command;
 mod consumer_groups;
 mod messages;
 mod offsets;
+mod partitions;
 mod streams;
 mod system;
 mod topics;

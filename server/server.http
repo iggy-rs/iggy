@@ -65,6 +65,17 @@ Content-Type: application/json
 DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
 
 ###
+POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/partitions
+Content-Type: application/json
+
+{
+  "partitions_count": 3
+}
+
+###
+DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/partitions?partitions_count=1
+
+###
 POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages
 Content-Type: application/json
 

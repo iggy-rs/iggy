@@ -5,6 +5,7 @@ use crate::binary::handlers::consumer_groups::{
 };
 use crate::binary::handlers::messages::*;
 use crate::binary::handlers::offsets::*;
+use crate::binary::handlers::partitions::{create_partitions_handler, delete_partitions_handler};
 use crate::binary::handlers::streams::*;
 use crate::binary::handlers::system::*;
 use crate::binary::handlers::topics::*;
@@ -107,6 +108,12 @@ async fn try_handle(
         }
         Command::DeleteTopic(command) => {
             delete_topic_handler::handle(command, sender, system).await
+        }
+        Command::CreatePartitions(command) => {
+            create_partitions_handler::handle(command, sender, system).await
+        }
+        Command::DeletePartitions(command) => {
+            delete_partitions_handler::handle(command, sender, system).await
         }
         Command::GetGroup(command) => {
             get_consumer_group_handler::handle(command, sender, system).await

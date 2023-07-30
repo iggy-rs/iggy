@@ -16,6 +16,8 @@ use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::offsets::get_offset::GetOffset;
 use crate::offsets::store_offset::StoreOffset;
+use crate::partitions::create_partitions::CreatePartitions;
+use crate::partitions::delete_partitions::DeletePartitions;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -38,6 +40,7 @@ pub trait Client:
     SystemClient
     + StreamClient
     + TopicClient
+    + PartitionClient
     + MessageClient
     + ConsumerGroupClient
     + Sync
@@ -72,6 +75,12 @@ pub trait TopicClient {
     async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error>;
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error>;
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error>;
+}
+
+#[async_trait]
+pub trait PartitionClient {
+    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), Error>;
+    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), Error>;
 }
 
 #[async_trait]

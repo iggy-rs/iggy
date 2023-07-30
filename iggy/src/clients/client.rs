@@ -1,5 +1,6 @@
 use crate::client::{
-    Client, ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient,
+    Client, ConsumerGroupClient, MessageClient, PartitionClient, StreamClient, SystemClient,
+    TopicClient,
 };
 use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
@@ -19,6 +20,8 @@ use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::offsets::get_offset::GetOffset;
 use crate::offsets::store_offset::StoreOffset;
+use crate::partitions::create_partitions::CreatePartitions;
+use crate::partitions::delete_partitions::DeletePartitions;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -374,6 +377,17 @@ impl TopicClient for IggyClient {
 }
 
 #[async_trait]
+impl PartitionClient for IggyClient {
+    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), Error> {
+        self.client.read().await.create_partitions(command).await
+    }
+
+    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), Error> {
+        self.client.read().await.delete_partitions(command).await
+    }
+}
+
+#[async_trait]
 impl MessageClient for IggyClient {
     async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
         self.client.read().await.poll_messages(command).await
@@ -381,8 +395,7 @@ impl MessageClient for IggyClient {
 
     async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
         if !self.config.send_messages.enabled || self.config.send_messages.interval == 0 {
-            self.client.read().await.send_messages(command).await?;
-            return Ok(());
+            return self.client.read().await.send_messages(command).await;
         }
 
         let mut batch = self.send_messages_batch.lock().await;

@@ -76,6 +76,10 @@ pub async fn handle(
     let topic = system
         .get_stream(command.stream_id)?
         .get_topic(command.topic_id)?;
+    if !topic.has_partitions() {
+        return Err(Error::NoPartitions(topic.id, topic.stream_id));
+    }
+
     let consumer = match command.consumer_type {
         ConsumerType::Consumer => PollingConsumer::Consumer(command.consumer_id),
         ConsumerType::ConsumerGroup => {

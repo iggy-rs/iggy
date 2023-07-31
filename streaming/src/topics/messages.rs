@@ -19,6 +19,10 @@ impl Topic {
         value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
+        if !self.has_partitions() {
+            return Err(Error::NoPartitions(self.id, self.stream_id));
+        }
+
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
             return Err(Error::PartitionNotFound(partition_id));
@@ -37,6 +41,10 @@ impl Topic {
     }
 
     pub async fn append_messages(&self, key: &Key, messages: Vec<Message>) -> Result<(), Error> {
+        if !self.has_partitions() {
+            return Err(Error::NoPartitions(self.id, self.stream_id));
+        }
+
         if messages.is_empty() {
             return Ok(());
         }
@@ -270,5 +278,6 @@ mod tests {
             config,
             storage,
         )
+        .unwrap()
     }
 }

@@ -1,6 +1,8 @@
 use crate::common::{ClientFactory, TestServer};
 use bytes::Bytes;
-use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
+use iggy::client::{
+    ConsumerGroupClient, MessageClient, PartitionClient, StreamClient, SystemClient, TopicClient,
+};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
@@ -15,6 +17,8 @@ use iggy::messages::poll_messages::{Format, PollMessages};
 use iggy::messages::send_messages::{Key, Message, SendMessages};
 use iggy::offsets::get_offset::GetOffset;
 use iggy::offsets::store_offset::StoreOffset;
+use iggy::partitions::create_partitions::CreatePartitions;
+use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::streams::get_stream::GetStream;
@@ -481,7 +485,47 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 27. Delete the existing topic and ensure it doesn't exist anymore
+    // 27. Create new partitions and validate that the number of partitions is increased
+    client
+        .create_partitions(&CreatePartitions {
+            stream_id: STREAM_ID,
+            topic_id: TOPIC_ID,
+            partitions_count: PARTITIONS_COUNT,
+        })
+        .await
+        .unwrap();
+
+    let topic = client
+        .get_topic(&GetTopic {
+            stream_id: STREAM_ID,
+            topic_id: TOPIC_ID,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(topic.partitions_count, 2 * PARTITIONS_COUNT);
+
+    // 28. Delete the partitions and validate that the number of partitions is decreased
+    client
+        .delete_partitions(&DeletePartitions {
+            stream_id: STREAM_ID,
+            topic_id: TOPIC_ID,
+            partitions_count: PARTITIONS_COUNT,
+        })
+        .await
+        .unwrap();
+
+    let topic = client
+        .get_topic(&GetTopic {
+            stream_id: STREAM_ID,
+            topic_id: TOPIC_ID,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
+
+    // 29. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(&DeleteTopic {
             stream_id: STREAM_ID,
@@ -497,7 +541,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert!(topics.is_empty());
 
-    // 28. Delete the existing stream and ensure it doesn't exist anymore
+    // 30. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(&DeleteStream {
             stream_id: STREAM_ID,
@@ -507,7 +551,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
-    // 29. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 31. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients(&GetClients {}).await.unwrap();
 
     assert!(clients.len() <= 1);

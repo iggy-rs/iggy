@@ -17,25 +17,39 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
 }
 
 async fn create_partitions(
-    State(_system): State<Arc<RwLock<System>>>,
+    State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(u32, u32)>,
     Json(mut command): Json<CreatePartitions>,
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = stream_id;
     command.topic_id = topic_id;
     command.validate()?;
-    // TODO: Implement create partitions.
+    let mut system = system.write().await;
+    let topic = system
+        .get_stream_mut(command.stream_id)?
+        .get_topic_mut(command.topic_id)?;
+    topic
+        .add_persisted_partitions(command.partitions_count)
+        .await?;
+    topic.reassign_consumer_groups().await;
     Ok(StatusCode::CREATED)
 }
 
 async fn delete_partitions(
-    State(_system): State<Arc<RwLock<System>>>,
+    State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(u32, u32)>,
     mut query: Query<DeletePartitions>,
 ) -> Result<StatusCode, CustomError> {
     query.stream_id = stream_id;
     query.topic_id = topic_id;
     query.validate()?;
-    // TODO: Implement delete partitions.
+    let mut system = system.write().await;
+    let topic = system
+        .get_stream_mut(query.stream_id)?
+        .get_topic_mut(query.topic_id)?;
+    topic
+        .delete_persisted_partitions(query.partitions_count)
+        .await?;
+    topic.reassign_consumer_groups().await;
     Ok(StatusCode::NO_CONTENT)
 }

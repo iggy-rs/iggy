@@ -3,6 +3,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
+use iggy::error::Error;
 use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
 use iggy::models::offset::Offset;
@@ -35,6 +36,13 @@ async fn poll_messages(
     let consumer = PollingConsumer::Consumer(query.consumer_id);
     let system = system.read().await;
     let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    if !topic.has_partitions() {
+        return Err(CustomError::from(Error::NoPartitions(
+            topic.id,
+            topic.stream_id,
+        )));
+    }
+
     let messages = topic
         .get_messages(
             consumer,

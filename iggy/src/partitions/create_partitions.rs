@@ -40,7 +40,7 @@ impl Validatable for CreatePartitions {
         }
 
         if !(1..=MAX_PARTITIONS_COUNT).contains(&self.partitions_count) {
-            return Err(Error::InvalidTopicPartitions);
+            return Err(Error::TooManyPartitions);
         }
 
         Ok(())

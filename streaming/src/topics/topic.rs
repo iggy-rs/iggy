@@ -2,6 +2,7 @@ use crate::config::TopicConfig;
 use crate::partitions::partition::Partition;
 use crate::storage::SystemStorage;
 use crate::topics::consumer_group::ConsumerGroup;
+use iggy::error::Error;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
@@ -31,7 +32,7 @@ impl Topic {
         config: Arc<TopicConfig>,
         storage: Arc<SystemStorage>,
     ) -> Topic {
-        Topic::create(stream_id, id, "", 0, topics_path, config, storage)
+        Topic::create(stream_id, id, "", 0, topics_path, config, storage).unwrap()
     }
 
     pub fn create(
@@ -42,10 +43,9 @@ impl Topic {
         topics_path: &str,
         config: Arc<TopicConfig>,
         storage: Arc<SystemStorage>,
-    ) -> Topic {
+    ) -> Result<Topic, Error> {
         let path = Self::get_path(id, topics_path);
         let info_path = Self::get_info_path(&path);
-
         let mut topic = Topic {
             stream_id,
             id,
@@ -53,28 +53,13 @@ impl Topic {
             partitions: HashMap::new(),
             path,
             info_path,
-            config: config.clone(),
-            storage: storage.clone(),
+            config,
+            storage,
             consumer_groups: HashMap::new(),
             current_partition_id: AtomicU32::new(1),
         };
-
-        topic.partitions = (1..partitions_count + 1)
-            .map(|partition_id| {
-                let partition = Partition::create(
-                    stream_id,
-                    topic.id,
-                    partition_id,
-                    &topic.get_partitions_path(),
-                    true,
-                    config.partition.clone(),
-                    storage.clone(),
-                );
-                (partition_id, RwLock::new(partition))
-            })
-            .collect();
-
-        topic
+        topic.add_partitions(partitions_count)?;
+        Ok(topic)
     }
 
     pub async fn get_messages_count(&self) -> u64 {
@@ -93,6 +78,10 @@ impl Topic {
             size_bytes += partition.get_size_bytes();
         }
         size_bytes
+    }
+
+    pub fn has_partitions(&self) -> bool {
+        !self.partitions.is_empty()
     }
 
     pub fn get_partitions(&self) -> Vec<&RwLock<Partition>> {
@@ -145,7 +134,8 @@ mod tests {
             topics_path,
             config,
             storage,
-        );
+        )
+        .unwrap();
 
         assert_eq!(topic.stream_id, stream_id);
         assert_eq!(topic.id, id);

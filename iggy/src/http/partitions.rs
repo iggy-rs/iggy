@@ -14,12 +14,8 @@ impl PartitionClient for HttpClient {
     }
 
     async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), Error> {
-        let path = format!(
-            "{}/{}",
-            get_path(command.stream_id, command.stream_id),
-            command.topic_id
-        );
-        self.delete(&path).await?;
+        self.delete_with_query(&get_path(command.stream_id, command.topic_id), &command)
+            .await?;
         Ok(())
     }
 }

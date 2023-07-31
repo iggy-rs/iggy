@@ -45,8 +45,8 @@ impl Validatable for CreateTopic {
             return Err(Error::InvalidTopicName);
         }
 
-        if !(1..=MAX_PARTITIONS_COUNT).contains(&self.partitions_count) {
-            return Err(Error::InvalidTopicPartitions);
+        if !(0..=MAX_PARTITIONS_COUNT).contains(&self.partitions_count) {
+            return Err(Error::TooManyPartitions);
         }
 
         Ok(())

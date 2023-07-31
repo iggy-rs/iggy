@@ -91,6 +91,16 @@ impl HttpClient {
         Self::handle_response(response).await
     }
 
+    pub async fn delete_with_query<T: Serialize + ?Sized>(
+        &self,
+        path: &str,
+        query: &T,
+    ) -> Result<Response, Error> {
+        let url = self.get_url(path)?;
+        let response = self.client.delete(url).query(query).send().await?;
+        Self::handle_response(response).await
+    }
+
     pub fn get_url(&self, path: &str) -> Result<Url, Error> {
         self.api_url.join(path).map_err(|_| Error::CannotParseUrl)
     }

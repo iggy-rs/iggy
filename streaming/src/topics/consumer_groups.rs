@@ -5,6 +5,22 @@ use tokio::sync::RwLock;
 use tracing::info;
 
 impl Topic {
+    pub async fn reassign_consumer_groups(&mut self) {
+        if self.consumer_groups.is_empty() {
+            return;
+        }
+
+        let partitions_count = self.partitions.len() as u32;
+        info!(
+            "Reassigning consumer groups for topic with ID: {} for stream with ID with {}, partitions count: {}",
+            self.id, self.stream_id, partitions_count
+        );
+        for (_, consumer_group) in self.consumer_groups.iter_mut() {
+            let mut consumer_group = consumer_group.write().await;
+            consumer_group.reassign_partitions(partitions_count).await;
+        }
+    }
+
     pub fn get_consumer_groups(&self) -> Vec<&RwLock<ConsumerGroup>> {
         self.consumer_groups.values().collect()
     }
@@ -211,5 +227,6 @@ mod tests {
             config,
             storage,
         )
+        .unwrap()
     }
 }

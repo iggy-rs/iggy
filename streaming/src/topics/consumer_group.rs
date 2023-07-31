@@ -33,6 +33,11 @@ impl ConsumerGroup {
         self.members.values().collect()
     }
 
+    pub async fn reassign_partitions(&mut self, partitions_count: u32) {
+        self.partitions_count = partitions_count;
+        self.assign_partitions().await;
+    }
+
     pub async fn calculate_partition_id(&self, member_id: u32) -> Result<u32, Error> {
         let member = self.members.get(&member_id);
         if let Some(member) = member {

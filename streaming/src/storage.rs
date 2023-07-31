@@ -28,6 +28,12 @@ pub trait StreamStorage: Storage<Stream> {}
 
 #[async_trait]
 pub trait TopicStorage: Storage<Topic> {
+    async fn save_partitions(&self, topic: &Topic, partition_ids: &[u32]) -> Result<(), Error>;
+    async fn delete_partitions(
+        &self,
+        topic: &mut Topic,
+        partition_ids: &[u32],
+    ) -> Result<(), Error>;
     async fn save_consumer_group(
         &self,
         topic: &Topic,
@@ -184,6 +190,22 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl TopicStorage for TestTopicStorage {
+        async fn save_partitions(
+            &self,
+            _topic: &Topic,
+            _partition_ids: &[u32],
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn delete_partitions(
+            &self,
+            _topic: &mut Topic,
+            _partition_ids: &[u32],
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
         async fn save_consumer_group(
             &self,
             _topic: &Topic,

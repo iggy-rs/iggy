@@ -110,8 +110,8 @@ pub enum Error {
     InvalidTopicId,
     #[error("Invalid topic name")]
     InvalidTopicName,
-    #[error("Invalid topic partitions")]
-    InvalidTopicPartitions,
+    #[error("Too many partitions")]
+    TooManyPartitions,
     #[error("Cannot append message")]
     CannotAppendMessage,
     #[error("Cannot create partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
@@ -146,6 +146,8 @@ pub enum Error {
     CannotReadPartitions(u32, u32),
     #[error("Partition with ID: {0} was not found.")]
     PartitionNotFound(u32),
+    #[error("Topic with ID: {0} for stream with ID: {1} has no partitions.")]
+    NoPartitions(u32, u32),
     #[error("Invalid key value length")]
     InvalidKeyValueLength,
     #[error("Invalid messages count")]
@@ -265,7 +267,7 @@ impl Error {
             Error::TopicNotFound(_, _) => 2010,
             Error::TopicAlreadyExists(_, _) => 2011,
             Error::InvalidTopicName => 2012,
-            Error::InvalidTopicPartitions => 2013,
+            Error::TooManyPartitions => 2013,
             Error::InvalidTopicId => 2014,
             Error::CannotReadTopics(_) => 2015,
             Error::CannotCreatePartition(_, _, _) => 3000,
@@ -276,6 +278,7 @@ impl Error {
             Error::CannotDeletePartition(_, _, _) => 3005,
             Error::CannotDeletePartitionDirectory(_, _, _) => 3006,
             Error::PartitionNotFound(_) => 3007,
+            Error::NoPartitions(_, _) => 3008,
             Error::SegmentNotFound => 4000,
             Error::SegmentClosed(_, _) => 4001,
             Error::InvalidSegmentSize(_) => 4002,
@@ -366,7 +369,7 @@ impl Error {
             2010 => "topic_not_found",
             2011 => "topic_already_exists",
             2012 => "invalid_topic_name",
-            2013 => "invalid_topic_partitions",
+            2013 => "too_many_partitions",
             2014 => "invalid_topic_id",
             2015 => "cannot_read_topics",
             3000 => "cannot_create_partition",
@@ -377,6 +380,7 @@ impl Error {
             3005 => "cannot_delete_partition",
             3006 => "cannot_delete_partition_directory",
             3007 => "partition_not_found",
+            3008 => "no_partitions",
             4000 => "segment_not_found",
             4001 => "segment_closed",
             4002 => "invalid_segment_size",
@@ -446,7 +450,7 @@ impl Error {
             Error::TopicNotFound(_, _) => "topic_not_found",
             Error::TopicAlreadyExists(_, _) => "topic_already_exists",
             Error::InvalidTopicName => "invalid_topic_name",
-            Error::InvalidTopicPartitions => "invalid_topic_partitions",
+            Error::TooManyPartitions => "too_many_partitions",
             Error::CannotAppendMessage => "cannot_append_message",
             Error::CannotCreatePartition(_, _, _) => "cannot_create_partition",
             Error::CannotCreatePartitionDirectory(_, _, _) => "cannot_create_partition_directory",
@@ -456,6 +460,7 @@ impl Error {
             Error::CannotOpenPartitionLogFile => "cannot_open_partition_log_file",
             Error::CannotReadPartitions(_, _) => "cannot_read_partitions",
             Error::PartitionNotFound(_) => "partition_not_found",
+            Error::NoPartitions(_, _) => "no_partitions",
             Error::InvalidMessagesCount => "invalid_messages_count",
             Error::InvalidStreamId => "invalid_stream_id",
             Error::InvalidTopicId => "invalid_topic_id",

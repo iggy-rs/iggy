@@ -26,8 +26,8 @@ async fn create_partitions(
     command.validate()?;
     let mut system = system.write().await;
     let topic = system
-        .get_stream_mut(command.stream_id)?
-        .get_topic_mut(command.topic_id)?;
+        .get_stream_by_id_mut(command.stream_id)?
+        .get_topic_by_id_mut(command.topic_id)?;
     topic
         .add_persisted_partitions(command.partitions_count)
         .await?;
@@ -45,8 +45,8 @@ async fn delete_partitions(
     query.validate()?;
     let mut system = system.write().await;
     let topic = system
-        .get_stream_mut(query.stream_id)?
-        .get_topic_mut(query.topic_id)?;
+        .get_stream_by_id_mut(query.stream_id)?
+        .get_topic_by_id_mut(query.topic_id)?;
     topic
         .delete_persisted_partitions(query.partitions_count)
         .await?;

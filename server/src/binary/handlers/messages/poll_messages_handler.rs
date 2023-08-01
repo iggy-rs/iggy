@@ -74,8 +74,8 @@ pub async fn handle(
 
     let system = system.read().await;
     let topic = system
-        .get_stream(command.stream_id)?
-        .get_topic(command.topic_id)?;
+        .get_stream_by_id(command.stream_id)?
+        .get_topic_by_id(command.topic_id)?;
     if !topic.has_partitions() {
         return Err(Error::NoPartitions(topic.id, topic.stream_id));
     }

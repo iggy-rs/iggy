@@ -42,7 +42,7 @@ impl FileConfigProvider {
 impl ConfigProvider for FileConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ServerError> {
         info!("Loading config from path: '{}'...", self.path);
-        let config_builder = Figment::new().merge(Env::prefixed("IGGY_"));
+        let config_builder = Figment::new();
         let extension = self.path.split('.').last().unwrap_or("");
         let config_builder = match extension {
             "json" => config_builder.merge(Json::file(&self.path)),
@@ -53,7 +53,9 @@ impl ConfigProvider for FileConfigProvider {
             }
         };
 
-        let config: Result<ServerConfig, figment::Error> = config_builder.extract();
+        let config: Result<ServerConfig, figment::Error> = config_builder
+            .merge(Env::prefixed("IGGY_").split("_"))
+            .extract();
         if config.is_err() {
             return Err(ServerError::CannotLoadConfiguration);
         }

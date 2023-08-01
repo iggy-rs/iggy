@@ -16,8 +16,8 @@ pub async fn handle(
     trace!("{}", command);
     let system = system.read().await;
     let topic = system
-        .get_stream(command.stream_id)?
-        .get_topic(command.topic_id)?;
+        .get_stream_by_id(command.stream_id)?
+        .get_topic_by_id(command.topic_id)?;
     let topic = mapper::map_topic(topic).await;
     sender.send_ok_response(&topic).await?;
     Ok(())

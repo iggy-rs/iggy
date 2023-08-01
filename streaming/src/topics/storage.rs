@@ -3,7 +3,7 @@ use crate::persister::Persister;
 use crate::storage::{Storage, TopicStorage};
 use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::topic::Topic;
-use crate::utils::file;
+use crate::utils::{file, text};
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
@@ -170,7 +170,7 @@ impl Storage<Topic> for FileTopicStorage {
             topic.id, topic.stream_id
         );
         if !Path::new(&topic.path).exists() {
-            return Err(Error::TopicNotFound(topic.id, topic.stream_id));
+            return Err(Error::TopicIdNotFound(topic.id, topic.stream_id));
         }
 
         let topic_info_file = file::open(&topic.info_path).await;
@@ -188,7 +188,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::CannotReadTopicInfo(topic.id, topic.stream_id));
         }
 
-        topic.name = topic_info;
+        topic.name = text::to_lowercase_non_whitespace(&topic_info);
         let dir_entries = fs::read_dir(&topic.get_partitions_path()).await;
         if dir_entries.is_err() {
             return Err(Error::CannotReadPartitions(topic.id, topic.stream_id));
@@ -259,7 +259,7 @@ impl Storage<Topic> for FileTopicStorage {
 
     async fn save(&self, topic: &Topic) -> Result<(), Error> {
         if Path::new(&topic.path).exists() {
-            return Err(Error::TopicAlreadyExists(topic.id, topic.stream_id));
+            return Err(Error::TopicIdAlreadyExists(topic.id, topic.stream_id));
         }
 
         if create_dir(&topic.path).await.is_err() {

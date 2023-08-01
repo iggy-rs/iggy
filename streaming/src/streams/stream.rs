@@ -14,6 +14,7 @@ pub struct Stream {
     pub topics_path: String,
     pub info_path: String,
     pub(crate) topics: HashMap<u32, Topic>,
+    pub(crate) topics_ids: HashMap<String, u32>,
     pub(crate) config: Arc<StreamConfig>,
     pub(crate) storage: Arc<SystemStorage>,
 }
@@ -47,6 +48,7 @@ impl Stream {
             info_path,
             config,
             topics: HashMap::new(),
+            topics_ids: HashMap::new(),
             storage,
         }
     }

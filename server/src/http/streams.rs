@@ -23,7 +23,7 @@ async fn get_stream(
     Path(stream_id): Path<u32>,
 ) -> Result<Json<StreamDetails>, CustomError> {
     let system = system.read().await;
-    let stream = system.get_stream(stream_id)?;
+    let stream = system.get_stream_by_id(stream_id)?;
     let stream = mapper::map_stream(stream).await;
     Ok(Json(stream))
 }

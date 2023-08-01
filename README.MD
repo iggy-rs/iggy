@@ -72,7 +72,7 @@ The default configuration can be found in `server.toml` (the default one) or `se
 
 The configuration file is loaded from the current working directory, but you can specify the path to the configuration file by setting `IGGY_CONFIG_PATH` environment variable, for example `export IGGY_CONFIG_PATH=configs/server.json` (or other command depending on OS).
 
-For the detailed documentation of the configuration file, please refer to the [configuration](https://docs.iggy.rs/introduction/configuration) section.
+For the detailed documentation of the configuration file, please refer to the [configuration](https://docs.iggy.rs/server/configuration) section.
 
 ---
 
@@ -297,4 +297,4 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 
 #### UI
 
-- [ ] Build a simple UI for the server using chosen framework**
+- [ ] Build a simple UI for the server using chosen framework

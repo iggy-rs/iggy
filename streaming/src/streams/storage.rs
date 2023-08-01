@@ -2,7 +2,7 @@ use crate::persister::Persister;
 use crate::storage::{Storage, StreamStorage};
 use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
-use crate::utils::file;
+use crate::utils::{file, text};
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
@@ -35,7 +35,7 @@ impl Storage<Stream> for FileStreamStorage {
     async fn load(&self, stream: &mut Stream) -> Result<(), Error> {
         info!("Loading stream with ID: {} from disk...", stream.id);
         if !Path::new(&stream.path).exists() {
-            return Err(Error::StreamNotFound(stream.id));
+            return Err(Error::StreamIdNotFound(stream.id));
         }
 
         let stream_info_file = file::open(&stream.info_path).await;
@@ -53,7 +53,7 @@ impl Storage<Stream> for FileStreamStorage {
             return Err(Error::CannotReadStreamInfo(stream.id));
         }
 
-        stream.name = stream_info;
+        stream.name = text::to_lowercase_non_whitespace(&stream_info);
         let mut unloaded_topics = Vec::new();
         let dir_entries = fs::read_dir(&stream.topics_path).await;
         if dir_entries.is_err() {
@@ -100,6 +100,23 @@ impl Storage<Stream> for FileStreamStorage {
 
         join_all(load_topics).await;
         for topic in loaded_topics.lock().await.drain(..) {
+            if stream.topics.contains_key(&topic.id) {
+                error!(
+                    "Topic with ID: '{}' already exists for stream with ID: {}.",
+                    &topic.id, &stream.id
+                );
+                continue;
+            }
+
+            if stream.topics_ids.contains_key(&topic.name) {
+                error!(
+                    "Topic with name: '{}' already exists for stream with ID: {}.",
+                    &topic.name, &stream.id
+                );
+                continue;
+            }
+
+            stream.topics_ids.insert(topic.name.clone(), topic.id);
             stream.topics.insert(topic.id, topic);
         }
 
@@ -113,7 +130,7 @@ impl Storage<Stream> for FileStreamStorage {
 
     async fn save(&self, stream: &Stream) -> Result<(), Error> {
         if Path::new(&stream.path).exists() {
-            return Err(Error::StreamAlreadyExists(stream.id));
+            return Err(Error::StreamIdAlreadyExists(stream.id));
         }
 
         if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {

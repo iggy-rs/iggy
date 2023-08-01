@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
-const MAX_NAME_LENGTH: usize = 1000;
+const MAX_NAME_LENGTH: usize = 255;
 const MAX_PARTITIONS_COUNT: u32 = 100000;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]

@@ -6,6 +6,7 @@ pub mod tcp;
 use async_trait::async_trait;
 use iggy::client::Client;
 use std::fs;
+use streaming::utils::random_id;
 use tokio::process::Command;
 use tokio::runtime::Runtime;
 
@@ -30,10 +31,12 @@ impl TestServer {
 
     pub fn start(&self) {
         self.cleanup();
+        let files_path = self.files_path.clone();
         self.runtime.spawn(async {
             Command::new("cargo")
                 .kill_on_drop(true)
                 .args(&["r", "--bin", "server"])
+                .env("IGGY_SYSTEM_PATH", files_path)
                 .spawn()
                 .expect("Could not start server")
                 .wait()
@@ -56,6 +59,6 @@ impl TestServer {
 
 impl Default for TestServer {
     fn default() -> Self {
-        TestServer::new("local_data".to_string())
+        TestServer::new(format!("local_data_{}", random_id::get()))
     }
 }

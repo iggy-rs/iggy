@@ -27,8 +27,8 @@ async fn get_consumer_group(
 ) -> Result<Json<ConsumerGroupDetails>, CustomError> {
     let system = system.read().await;
     let consumer_group = system
-        .get_stream(stream_id)?
-        .get_topic(topic_id)?
+        .get_stream_by_id(stream_id)?
+        .get_topic_by_id(topic_id)?
         .get_consumer_group(consumer_group_id)?;
     let consumer_group = consumer_group.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;
@@ -40,7 +40,9 @@ async fn get_consumer_groups(
     Path((stream_id, topic_id)): Path<(u32, u32)>,
 ) -> Result<Json<Vec<ConsumerGroup>>, CustomError> {
     let system = system.read().await;
-    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    let topic = system
+        .get_stream_by_id(stream_id)?
+        .get_topic_by_id(topic_id)?;
     let consumer_groups = mapper::map_consumer_groups(&topic.get_consumer_groups()).await;
     Ok(Json(consumer_groups))
 }

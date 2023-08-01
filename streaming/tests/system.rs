@@ -45,7 +45,7 @@ async fn should_delete_persisted_stream() {
     system.init().await.unwrap();
     system.create_stream(stream_id, stream_name).await.unwrap();
     assert_persisted_stream(&system.streams_path, stream_id).await;
-    let stream_path = system.get_stream(stream_id).unwrap().path.clone();
+    let stream_path = system.get_stream_by_id(stream_id).unwrap().path.clone();
 
     system.delete_stream(stream_id).await.unwrap();
 

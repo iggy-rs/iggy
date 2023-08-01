@@ -35,7 +35,9 @@ async fn poll_messages(
 
     let consumer = PollingConsumer::Consumer(query.consumer_id);
     let system = system.read().await;
-    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    let topic = system
+        .get_stream_by_id(stream_id)?
+        .get_topic_by_id(topic_id)?;
     if !topic.has_partitions() {
         return Err(CustomError::from(Error::NoPartitions(
             topic.id,
@@ -85,7 +87,9 @@ async fn send_messages(
     }
 
     let system = system.read().await;
-    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    let topic = system
+        .get_stream_by_id(stream_id)?
+        .get_topic_by_id(topic_id)?;
     topic.append_messages(&command.key, messages).await?;
     Ok(StatusCode::CREATED)
 }
@@ -101,7 +105,9 @@ async fn store_offset(
 
     let consumer = PollingConsumer::Consumer(command.consumer_id);
     let system = system.read().await;
-    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    let topic = system
+        .get_stream_by_id(stream_id)?
+        .get_topic_by_id(topic_id)?;
     topic
         .store_offset(consumer, command.partition_id, command.offset)
         .await?;
@@ -120,8 +126,8 @@ async fn get_offset(
     let consumer = PollingConsumer::Consumer(query.consumer_id);
     let system = system.read().await;
     let offset = system
-        .get_stream(stream_id)?
-        .get_topic(topic_id)?
+        .get_stream_by_id(stream_id)?
+        .get_topic_by_id(topic_id)?
         .get_offset(consumer, query.partition_id)
         .await?;
 

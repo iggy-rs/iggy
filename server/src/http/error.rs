@@ -23,8 +23,8 @@ impl IntoResponse for CustomError {
         match self {
             CustomError::Error(error) => {
                 let status_code = match error {
-                    Error::StreamNotFound(_) => StatusCode::NOT_FOUND,
-                    Error::TopicNotFound(_, _) => StatusCode::NOT_FOUND,
+                    Error::StreamIdNotFound(_) => StatusCode::NOT_FOUND,
+                    Error::TopicIdNotFound(_, _) => StatusCode::NOT_FOUND,
                     Error::PartitionNotFound(_) => StatusCode::NOT_FOUND,
                     Error::SegmentNotFound => StatusCode::NOT_FOUND,
                     Error::ClientNotFound(_) => StatusCode::NOT_FOUND,

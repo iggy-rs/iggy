@@ -3,6 +3,7 @@ use crate::config::SystemConfig;
 use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
+use crate::utils::text;
 use futures::future::join_all;
 use iggy::error::Error;
 use iggy::models::stats::Stats;
@@ -23,6 +24,7 @@ pub struct System {
     pub streams_path: String,
     pub storage: Arc<SystemStorage>,
     streams: HashMap<u32, Stream>,
+    streams_ids: HashMap<String, u32>,
     config: Arc<SystemConfig>,
     client_manager: Arc<RwLock<ClientManager>>,
 }
@@ -41,6 +43,7 @@ impl System {
             base_path,
             streams_path,
             streams: HashMap::new(),
+            streams_ids: HashMap::new(),
             storage: Arc::new(SystemStorage::new(persister)),
             client_manager: Arc::new(RwLock::new(ClientManager::new())),
         }
@@ -55,7 +58,10 @@ impl System {
             return Err(Error::CannotCreateStreamsDirectory);
         }
 
-        info!("Initializing system...");
+        info!(
+            "Initializing system, data will be stored at: {}",
+            self.base_path
+        );
         let now = Instant::now();
         self.load_streams().await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
@@ -106,6 +112,17 @@ impl System {
 
         join_all(load_streams).await;
         for stream in loaded_streams.lock().await.drain(..) {
+            if self.streams.contains_key(&stream.id) {
+                error!("Stream with ID: '{}' already exists.", &stream.id);
+                continue;
+            }
+
+            if self.streams_ids.contains_key(&stream.name) {
+                error!("Stream with name: '{}' already exists.", &stream.name);
+                continue;
+            }
+
+            self.streams_ids.insert(stream.name.clone(), stream.id);
             self.streams.insert(stream.id, stream);
         }
 
@@ -117,46 +134,85 @@ impl System {
         self.streams.values().collect()
     }
 
-    pub fn get_stream(&self, id: u32) -> Result<&Stream, Error> {
+    pub fn get_stream_by_id(&self, id: u32) -> Result<&Stream, Error> {
         let stream = self.streams.get(&id);
         if stream.is_none() {
-            return Err(Error::StreamNotFound(id));
+            return Err(Error::StreamIdNotFound(id));
         }
 
         Ok(stream.unwrap())
     }
 
-    pub fn get_stream_mut(&mut self, id: u32) -> Result<&mut Stream, Error> {
+    pub fn get_stream_by_name(&self, name: &str) -> Result<&Stream, Error> {
+        let stream_id = self.streams_ids.get(name);
+        if stream_id.is_none() {
+            return Err(Error::StreamNameNotFound(name.to_string()));
+        }
+
+        self.get_stream_by_id(*stream_id.unwrap())
+    }
+
+    pub fn get_stream_by_id_mut(&mut self, id: u32) -> Result<&mut Stream, Error> {
         let stream = self.streams.get_mut(&id);
         if stream.is_none() {
-            return Err(Error::StreamNotFound(id));
+            return Err(Error::StreamIdNotFound(id));
         }
 
         Ok(stream.unwrap())
+    }
+
+    pub fn get_stream_by_name_mut(&mut self, name: &str) -> Result<&mut Stream, Error> {
+        let stream_id = self.streams_ids.get_mut(name);
+        if stream_id.is_none() {
+            return Err(Error::StreamNameNotFound(name.to_string()));
+        }
+
+        Ok(self.streams.get_mut(stream_id.unwrap()).unwrap())
     }
 
     pub async fn create_stream(&mut self, id: u32, name: &str) -> Result<(), Error> {
         if self.streams.contains_key(&id) {
-            return Err(Error::StreamAlreadyExists(id));
+            return Err(Error::StreamIdAlreadyExists(id));
+        }
+
+        let name = text::to_lowercase_non_whitespace(name);
+        if self.streams_ids.contains_key(&name) {
+            return Err(Error::StreamNameAlreadyExists(name.to_string()));
         }
 
         let stream = Stream::create(
             id,
-            name,
+            &name,
             &self.streams_path,
             self.config.stream.clone(),
             self.storage.clone(),
         );
         stream.persist().await?;
-        self.streams.insert(stream.id, stream);
         info!("Created stream with ID: {}, name: '{}'.", id, name);
+        self.streams_ids.insert(name, stream.id);
+        self.streams.insert(stream.id, stream);
         Ok(())
     }
 
     pub async fn delete_stream(&mut self, id: u32) -> Result<(), Error> {
-        let stream = self.get_stream_mut(id)?;
+        let stream = self.get_stream_by_id_mut(id)?;
+        let name = stream.name.clone();
         stream.delete().await?;
+        self.streams_ids.remove(&name);
         self.streams.remove(&id);
+        let client_manager = self.client_manager.read().await;
+        client_manager.delete_consumer_groups_for_stream(id).await;
+        Ok(())
+    }
+
+    pub async fn delete_topic(&mut self, stream_id: u32, topic_id: u32) -> Result<(), Error> {
+        self.get_stream_by_id_mut(stream_id)?
+            .delete_topic(topic_id)
+            .await?;
+        let client_manager = self.client_manager.read().await;
+        client_manager
+            .delete_consumer_groups_for_topic(stream_id, topic_id)
+            .await;
         Ok(())
     }
 
@@ -180,8 +236,8 @@ impl System {
         topic_id: u32,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        self.get_stream_mut(stream_id)?
-            .get_topic_mut(topic_id)?
+        self.get_stream_by_id_mut(stream_id)?
+            .get_topic_by_id_mut(topic_id)?
             .create_consumer_group(consumer_group_id)
             .await?;
         Ok(())
@@ -194,8 +250,8 @@ impl System {
         consumer_group_id: u32,
     ) -> Result<(), Error> {
         let consumer_group = self
-            .get_stream_mut(stream_id)?
-            .get_topic_mut(topic_id)?
+            .get_stream_by_id_mut(stream_id)?
+            .get_topic_by_id_mut(topic_id)?
             .delete_consumer_group(consumer_group_id)
             .await?;
 
@@ -218,8 +274,8 @@ impl System {
         topic_id: u32,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        self.get_stream(stream_id)?
-            .get_topic(topic_id)?
+        self.get_stream_by_id(stream_id)?
+            .get_topic_by_id(topic_id)?
             .join_consumer_group(consumer_group_id, client_id)
             .await?;
         let client_manager = self.client_manager.read().await;
@@ -236,8 +292,8 @@ impl System {
         topic_id: u32,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        self.get_stream(stream_id)?
-            .get_topic(topic_id)?
+        self.get_stream_by_id(stream_id)?
+            .get_topic_by_id(topic_id)?
             .leave_consumer_group(consumer_group_id, client_id)
             .await?;
         let client_manager = self.client_manager.read().await;

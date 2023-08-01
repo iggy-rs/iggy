@@ -23,7 +23,9 @@ async fn get_topic(
     Path((stream_id, topic_id)): Path<(u32, u32)>,
 ) -> Result<Json<TopicDetails>, CustomError> {
     let system = system.read().await;
-    let topic = system.get_stream(stream_id)?.get_topic(topic_id)?;
+    let topic = system
+        .get_stream_by_id(stream_id)?
+        .get_topic_by_id(topic_id)?;
     let topic = mapper::map_topic(topic).await;
     Ok(Json(topic))
 }
@@ -33,7 +35,7 @@ async fn get_topics(
     Path(stream_id): Path<u32>,
 ) -> Result<Json<Vec<Topic>>, CustomError> {
     let system = system.read().await;
-    let topics = system.get_stream(stream_id)?.get_topics();
+    let topics = system.get_stream_by_id(stream_id)?.get_topics();
     let topics = mapper::map_topics(&topics).await;
     Ok(Json(topics))
 }
@@ -47,7 +49,7 @@ async fn create_topic(
     command.validate()?;
     let mut system = system.write().await;
     system
-        .get_stream_mut(stream_id)?
+        .get_stream_by_id_mut(stream_id)?
         .create_topic(command.topic_id, &command.name, command.partitions_count)
         .await?;
     Ok(StatusCode::CREATED)
@@ -57,11 +59,7 @@ async fn delete_topic(
     State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(u32, u32)>,
 ) -> Result<StatusCode, CustomError> {
-    system
-        .write()
-        .await
-        .get_stream_mut(stream_id)?
-        .delete_topic(topic_id)
-        .await?;
+    let mut system = system.write().await;
+    system.delete_topic(stream_id, topic_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

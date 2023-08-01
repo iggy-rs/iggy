@@ -15,8 +15,7 @@ pub async fn handle(
     trace!("{}", command);
     let mut system = system.write().await;
     system
-        .get_stream_mut(command.stream_id)?
-        .delete_topic(command.topic_id)
+        .delete_topic(command.stream_id, command.topic_id)
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

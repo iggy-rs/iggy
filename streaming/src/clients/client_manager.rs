@@ -145,4 +145,47 @@ impl ClientManager {
         }
         Ok(())
     }
+
+    pub async fn delete_consumer_groups_for_stream(&self, stream_id: u32) {
+        for client in self.clients.values() {
+            let mut client = client.write().await;
+            let indexes_to_remove = client
+                .consumer_groups
+                .iter()
+                .enumerate()
+                .filter_map(|(index, consumer_group)| {
+                    if consumer_group.stream_id == stream_id {
+                        Some(index)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            for index in indexes_to_remove {
+                client.consumer_groups.remove(index);
+            }
+        }
+    }
+
+    pub async fn delete_consumer_groups_for_topic(&self, stream_id: u32, topic_id: u32) {
+        for client in self.clients.values() {
+            let mut client = client.write().await;
+            let indexes_to_remove = client
+                .consumer_groups
+                .iter()
+                .enumerate()
+                .filter_map(|(index, consumer_group)| {
+                    if consumer_group.stream_id == stream_id && consumer_group.topic_id == topic_id
+                    {
+                        Some(index)
+                    } else {
+                        None
+                    }
+                })
+                .collect::<Vec<_>>();
+            for index in indexes_to_remove {
+                client.consumer_groups.remove(index);
+            }
+        }
+    }
 }

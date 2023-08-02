@@ -5,6 +5,7 @@ use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::consumer_type::ConsumerType;
+use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::Kind::Next;
 use iggy::messages::poll_messages::{Format, PollMessages};
 use iggy::messages::send_messages::{Key, Message, SendMessages};
@@ -122,8 +123,8 @@ async fn execute_using_entity_id_key(
         let message = Message::from_str(&get_message_payload(entity_id)).unwrap();
         let messages = vec![message];
         let send_messages = SendMessages {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             key: Key::entity_id_u32(entity_id),
             messages_count: 1,
             messages,
@@ -144,8 +145,8 @@ async fn poll_messages(client: &IggyClient) -> u32 {
     let poll_messages = PollMessages {
         consumer_type: ConsumerType::ConsumerGroup,
         consumer_id: CONSUMER_GROUP_ID,
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: 0,
         kind: Next,
         value: 0,
@@ -184,8 +185,8 @@ async fn execute_using_none_key(
             Message::from_str(&get_extended_message_payload(partition_id, entity_id)).unwrap();
         let messages = vec![message];
         let send_messages = SendMessages {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             key: Key::none(),
             messages_count: 1,
             messages,
@@ -228,8 +229,8 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
     let poll_messages = PollMessages {
         consumer_type: ConsumerType::ConsumerGroup,
         consumer_id: CONSUMER_GROUP_ID,
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: 0,
         kind: Next,
         value: 0,

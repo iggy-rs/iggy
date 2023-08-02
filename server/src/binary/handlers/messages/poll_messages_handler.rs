@@ -4,6 +4,7 @@ use crate::binary::sender::Sender;
 use anyhow::Result;
 use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
+use iggy::identifier::IdKind;
 use iggy::messages::poll_messages::PollMessages;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
@@ -73,9 +74,15 @@ pub async fn handle(
     }
 
     let system = system.read().await;
-    let topic = system
-        .get_stream_by_id(command.stream_id)?
-        .get_topic_by_id(command.topic_id)?;
+    let stream = match command.stream_id.kind {
+        IdKind::Numeric => system.get_stream_by_id(command.stream_id.as_u32().unwrap())?,
+        IdKind::String => system.get_stream_by_name(&command.stream_id.as_string().unwrap())?,
+    };
+    let topic = match command.topic_id.kind {
+        IdKind::Numeric => stream.get_topic_by_id(command.topic_id.as_u32().unwrap())?,
+        IdKind::String => stream.get_topic_by_name(&command.topic_id.as_string().unwrap())?,
+    };
+
     if !topic.has_partitions() {
         return Err(Error::NoPartitions(topic.id, topic.stream_id));
     }

@@ -4,6 +4,7 @@ use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
 use iggy::consumer_type::ConsumerType;
+use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{Format, Kind, PollMessages};
 use iggy::models::message::Message;
 use samples::shared::args::Args;
@@ -45,8 +46,8 @@ async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
             PollMessages {
                 consumer_type: ConsumerType::from_code(args.consumer_type)?,
                 consumer_id: args.consumer_id,
-                stream_id: args.stream_id,
-                topic_id: args.topic_id,
+                stream_id: Identifier::numeric(args.stream_id).unwrap(),
+                topic_id: Identifier::numeric(args.topic_id).unwrap(),
                 partition_id: args.partition_id,
                 kind: Kind::Next,
                 value: 0,

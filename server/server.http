@@ -39,7 +39,7 @@ Content-Type: application/json
 
 {
   "stream_id": {{stream_id}},
-  "name": "stream 1"
+  "name": "stream1"
 }
 
 ###
@@ -57,7 +57,7 @@ Content-Type: application/json
 
 {
   "topic_id": {{topic_id}},
-  "name": "topic 1",
+  "name": "topic1",
   "partitions_count": 3
 }
 

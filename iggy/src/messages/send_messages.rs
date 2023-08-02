@@ -1,6 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::identifier::{IdKind, Identifier};
 use crate::validatable::Validatable;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -16,9 +17,9 @@ const EMPTY_KEY_VALUE: Vec<u8> = vec![];
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct SendMessages {
     #[serde(skip)]
-    pub stream_id: u32,
+    pub stream_id: Identifier,
     #[serde(skip)]
-    pub topic_id: u32,
+    pub topic_id: Identifier,
     pub key: Key,
     #[serde(skip)]
     pub messages_count: u32,
@@ -62,8 +63,8 @@ fn default_message_id() -> u128 {
 impl Default for SendMessages {
     fn default() -> Self {
         SendMessages {
-            stream_id: 1,
-            topic_id: 1,
+            stream_id: Identifier::default(),
+            topic_id: Identifier::default(),
             key: Key::default(),
             messages_count: 1,
             messages: vec![Message::default()],
@@ -140,14 +141,6 @@ impl CommandPayload for SendMessages {}
 
 impl Validatable for SendMessages {
     fn validate(&self) -> Result<(), Error> {
-        if self.stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
-        if self.topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         if self.messages_count == 0 {
             return Err(Error::InvalidMessagesCount);
         }
@@ -326,8 +319,18 @@ impl FromStr for SendMessages {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = parts[0].parse::<u32>()?;
-        let topic_id = parts[1].parse::<u32>()?;
+        let stream_id = match parts[0].parse::<u32>() {
+            Ok(stream_id) => Identifier::numeric(stream_id),
+            Err(_) => Identifier::string(parts[0]),
+        }
+        .unwrap();
+
+        let topic_id = match parts[1].parse::<u32>() {
+            Ok(topic_id) => Identifier::numeric(topic_id),
+            Err(_) => Identifier::string(parts[1]),
+        }
+        .unwrap();
+
         let key_kind = parts[2];
         let key_kind = KeyKind::from_str(key_kind)?;
         let (key_value, key_length) = match key_kind {
@@ -375,9 +378,16 @@ impl BytesSerializable for SendMessages {
             .sum::<u32>();
 
         let key_bytes = self.key.as_bytes();
-        let mut bytes = Vec::with_capacity(12 + key_bytes.len() + messages_size as usize);
-        bytes.extend(self.stream_id.to_le_bytes());
-        bytes.extend(self.topic_id.to_le_bytes());
+        let stream_id_bytes = self.stream_id.as_bytes();
+        let topic_id_bytes = self.topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(
+            4 + stream_id_bytes.len()
+                + topic_id_bytes.len()
+                + key_bytes.len()
+                + messages_size as usize,
+        );
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes.extend(key_bytes);
         bytes.extend(self.messages_count.to_le_bytes());
         for message in &self.messages {
@@ -394,15 +404,23 @@ impl BytesSerializable for SendMessages {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        let key_kind = KeyKind::from_code(bytes[8])?;
-        let key_length = bytes[9];
-        let key_value = bytes[10..10 + key_length as usize].to_vec();
-        let messages_count = u32::from_le_bytes(
-            bytes[10 + key_length as usize..14 + key_length as usize].try_into()?,
-        );
-        let messages_payloads = &bytes[14 + key_length as usize..];
+        let stream_id_kind = IdKind::from_code(bytes[0])?;
+        let stream_id_length = bytes[1];
+        let stream_id_value = bytes[2..2 + stream_id_length as usize].to_vec();
+        let topic_id_kind = IdKind::from_code(bytes[2 + stream_id_length as usize])?;
+        let topic_id_length = bytes[3 + stream_id_length as usize];
+        let topic_id_value = bytes[4 + stream_id_length as usize
+            ..4 + stream_id_length as usize + topic_id_length as usize]
+            .to_vec();
+        let current_position = 4 + stream_id_length as usize + topic_id_length as usize;
+        let key_kind = KeyKind::from_code(bytes[current_position])?;
+        let key_length = bytes[current_position + 1];
+        let key_value =
+            bytes[current_position + 2..current_position + 2 + key_length as usize].to_vec();
+        let current_position = current_position + 2 + key_length as usize;
+        let messages_count =
+            u32::from_le_bytes(bytes[current_position..current_position + 4].try_into()?);
+        let messages_payloads = &bytes[current_position + 4..];
         let mut position = 0;
         let mut messages = Vec::with_capacity(messages_count as usize);
         while position < messages_payloads.len() {
@@ -412,8 +430,16 @@ impl BytesSerializable for SendMessages {
         }
 
         let command = SendMessages {
-            stream_id,
-            topic_id,
+            stream_id: Identifier {
+                kind: stream_id_kind,
+                length: stream_id_length,
+                value: stream_id_value,
+            },
+            topic_id: Identifier {
+                kind: topic_id_kind,
+                length: topic_id_length,
+                value: topic_id_value,
+            },
             key: Key {
                 kind: key_kind,
                 length: key_length,
@@ -482,25 +508,34 @@ mod tests {
         let message_3 = Message::from_str("3|hello 3").unwrap();
         let messages = vec![message_1, message_2, message_3];
         let command = SendMessages {
-            stream_id: 1,
-            topic_id: 2,
+            stream_id: Identifier::numeric(1).unwrap(),
+            topic_id: Identifier::numeric(2).unwrap(),
             key: Key::partition_id(4),
             messages_count: messages.len() as u32,
             messages,
         };
 
         let bytes = command.as_bytes();
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
-        let key_kind = KeyKind::from_code(bytes[8]).unwrap();
-        let key_length = bytes[9];
-        let key_value = Bytes::from(bytes[10..10 + key_length as usize].to_vec());
+        let stream_id_kind = IdKind::from_code(bytes[0]).unwrap();
+        let stream_id_length = bytes[1];
+        let stream_id_value = bytes[2..2 + stream_id_length as usize].to_vec();
+        let topic_id_kind = IdKind::from_code(bytes[2 + stream_id_length as usize]).unwrap();
+        let topic_id_length = bytes[3 + stream_id_length as usize];
+        let topic_id_value = bytes[4 + stream_id_length as usize
+            ..4 + stream_id_length as usize + topic_id_length as usize]
+            .to_vec();
+        let current_position = 4 + stream_id_length as usize + topic_id_length as usize;
+        let key_kind = KeyKind::from_code(bytes[current_position]).unwrap();
+        let key_length = bytes[current_position + 1];
+        let key_value =
+            bytes[current_position + 2..current_position + 2 + key_length as usize].to_vec();
+        let current_position = current_position + 2 + key_length as usize;
         let messages_count = u32::from_le_bytes(
-            bytes[10 + key_length as usize..14 + key_length as usize]
+            bytes[current_position..current_position + 4]
                 .try_into()
                 .unwrap(),
         );
-        let messages = &bytes[14 + key_length as usize..];
+        let messages = &bytes[current_position + 4..];
         let command_messages = &command
             .messages
             .iter()
@@ -509,8 +544,12 @@ mod tests {
             .concat();
 
         assert!(!bytes.is_empty());
-        assert_eq!(stream_id, command.stream_id);
-        assert_eq!(topic_id, command.topic_id);
+        assert_eq!(stream_id_kind, command.stream_id.kind);
+        assert_eq!(stream_id_length, command.stream_id.length);
+        assert_eq!(stream_id_value, command.stream_id.value);
+        assert_eq!(topic_id_kind, command.topic_id.kind);
+        assert_eq!(topic_id_length, command.topic_id.length);
+        assert_eq!(topic_id_value, command.topic_id.value);
         assert_eq!(key_kind, command.key.kind);
         assert_eq!(key_length, command.key.length);
         assert_eq!(key_value, command.key.value);
@@ -520,8 +559,8 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let stream_id = 1u32;
-        let topic_id = 2u32;
+        let stream_id = Identifier::numeric(1).unwrap();
+        let topic_id = Identifier::numeric(2).unwrap();
         let key = Key::partition_id(4);
         let messages_count = 3u32;
 
@@ -536,7 +575,14 @@ mod tests {
         .concat();
 
         let key_bytes = key.as_bytes();
-        let mut bytes: Vec<u8> = [stream_id.to_le_bytes(), topic_id.to_le_bytes()].concat();
+        let stream_id_bytes = stream_id.as_bytes();
+        let topic_id_bytes = topic_id.as_bytes();
+        let current_position = 4 + stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len();
+        let mut bytes = Vec::with_capacity(
+            4 + stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages.len(),
+        );
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes.extend(key_bytes);
         bytes.extend(messages_count.to_le_bytes());
         bytes.extend(messages);
@@ -544,7 +590,7 @@ mod tests {
         let command = SendMessages::from_bytes(&bytes);
         assert!(command.is_ok());
 
-        let messages_payloads = &bytes[14 + key.length as usize..];
+        let messages_payloads = &bytes[current_position..];
         let mut position = 0;
         let mut messages = Vec::with_capacity(messages_count as usize);
         while position < messages_payloads.len() {
@@ -570,8 +616,8 @@ mod tests {
     // For now, we only support a single payload.
     #[test]
     fn should_be_read_from_string() {
-        let stream_id = 1u32;
-        let topic_id = 2u32;
+        let stream_id = Identifier::numeric(1).unwrap();
+        let topic_id = Identifier::numeric(2).unwrap();
         let key = Key::partition_id(4);
         let messages_count = 1u32;
         let message_id = 1u128;

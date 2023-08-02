@@ -10,6 +10,7 @@ pub mod consumer_groups;
 pub mod consumer_type;
 pub mod error;
 pub mod http;
+pub mod identifier;
 pub mod messages;
 pub mod models;
 pub mod offsets;

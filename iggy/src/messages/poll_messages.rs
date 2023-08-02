@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::consumer_type::ConsumerType;
 use crate::error::Error;
+use crate::identifier::{IdKind, Identifier};
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -14,9 +15,9 @@ pub struct PollMessages {
     #[serde(default = "default_consumer_id")]
     pub consumer_id: u32,
     #[serde(skip)]
-    pub stream_id: u32,
+    pub stream_id: Identifier,
     #[serde(skip)]
-    pub topic_id: u32,
+    pub topic_id: Identifier,
     #[serde(default = "default_partition_id")]
     pub partition_id: u32,
     #[serde(default = "default_kind")]
@@ -36,8 +37,8 @@ impl Default for PollMessages {
         Self {
             consumer_type: default_consumer_type(),
             consumer_id: default_consumer_id(),
-            stream_id: 1,
-            topic_id: 1,
+            stream_id: Identifier::numeric(1).unwrap(),
+            topic_id: Identifier::numeric(1).unwrap(),
             partition_id: default_partition_id(),
             kind: default_kind(),
             value: default_value(),
@@ -95,14 +96,6 @@ fn default_count() -> u32 {
 
 impl Validatable for PollMessages {
     fn validate(&self) -> Result<(), Error> {
-        if self.stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
-        if self.topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         Ok(())
     }
 }
@@ -166,8 +159,19 @@ impl FromStr for PollMessages {
 
         let consumer_type = ConsumerType::from_str(parts[0])?;
         let consumer_id = parts[1].parse::<u32>()?;
-        let stream_id = parts[2].parse::<u32>()?;
-        let topic_id = parts[3].parse::<u32>()?;
+
+        let stream_id = match parts[2].parse::<u32>() {
+            Ok(stream_id) => Identifier::numeric(stream_id),
+            Err(_) => Identifier::string(parts[2]),
+        }
+        .unwrap();
+
+        let topic_id = match parts[3].parse::<u32>() {
+            Ok(topic_id) => Identifier::numeric(topic_id),
+            Err(_) => Identifier::string(parts[3]),
+        }
+        .unwrap();
+
         let partition_id = parts[4].parse::<u32>()?;
         let kind = Kind::from_str(parts[5])?;
         let value = parts[6].parse::<u64>()?;
@@ -208,11 +212,13 @@ impl FromStr for PollMessages {
 
 impl BytesSerializable for PollMessages {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(31);
+        let stream_id_bytes = self.stream_id.as_bytes();
+        let topic_id_bytes = self.topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(23 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.extend(self.consumer_type.as_code().to_le_bytes());
         bytes.extend(self.consumer_id.to_le_bytes());
-        bytes.extend(self.stream_id.to_le_bytes());
-        bytes.extend(self.topic_id.to_le_bytes());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes.extend(self.partition_id.to_le_bytes());
         bytes.extend(self.kind.as_code().to_le_bytes());
         bytes.extend(self.value.to_le_bytes());
@@ -227,31 +233,48 @@ impl BytesSerializable for PollMessages {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() != 31 {
+        if bytes.len() < 29 {
             return Err(Error::InvalidCommand);
         }
 
         let consumer_type = ConsumerType::from_code(bytes[0])?;
         let consumer_id = u32::from_le_bytes(bytes[1..5].try_into()?);
-        let stream_id = u32::from_le_bytes(bytes[5..9].try_into()?);
-        let topic_id = u32::from_le_bytes(bytes[9..13].try_into()?);
-        let partition_id = u32::from_le_bytes(bytes[13..17].try_into()?);
-        let kind = Kind::from_code(bytes[17])?;
-        let value = u64::from_le_bytes(bytes[18..26].try_into()?);
-        let count = u32::from_le_bytes(bytes[26..30].try_into()?);
-        let auto_commit = bytes[30];
+        let stream_id_kind = IdKind::from_code(bytes[5])?;
+        let stream_id_length = bytes[6];
+        let stream_id_value = bytes[7..7 + stream_id_length as usize].to_vec();
+        let topic_id_kind = IdKind::from_code(bytes[7 + stream_id_length as usize])?;
+        let topic_id_length = bytes[8 + stream_id_length as usize];
+        let topic_id_value = bytes[9 + stream_id_length as usize
+            ..9 + stream_id_length as usize + topic_id_length as usize]
+            .to_vec();
+        let current_position = 9 + stream_id_length as usize + topic_id_length as usize;
+        let partition_id =
+            u32::from_le_bytes(bytes[current_position..current_position + 4].try_into()?);
+        let kind = Kind::from_code(bytes[current_position + 4])?;
+        let current_position = current_position + 5;
+        let value = u64::from_le_bytes(bytes[current_position..current_position + 8].try_into()?);
+        let count =
+            u32::from_le_bytes(bytes[current_position + 8..current_position + 12].try_into()?);
+        let auto_commit = bytes[current_position + 12];
         let auto_commit = match auto_commit {
             0 => false,
             1 => true,
             _ => false,
         };
         let format = Format::None;
-
         let command = PollMessages {
             consumer_type,
             consumer_id,
-            stream_id,
-            topic_id,
+            stream_id: Identifier {
+                kind: stream_id_kind,
+                length: stream_id_length,
+                value: stream_id_value,
+            },
+            topic_id: Identifier {
+                kind: topic_id_kind,
+                length: topic_id_length,
+                value: topic_id_value,
+            },
             partition_id,
             kind,
             value,
@@ -299,8 +322,8 @@ mod tests {
         let command = PollMessages {
             consumer_type: ConsumerType::Consumer,
             consumer_id: 1,
-            stream_id: 2,
-            topic_id: 3,
+            stream_id: Identifier::numeric(2).unwrap(),
+            topic_id: Identifier::numeric(3).unwrap(),
             partition_id: 4,
             kind: Kind::Offset,
             value: 2,
@@ -312,13 +335,33 @@ mod tests {
         let bytes = command.as_bytes();
         let consumer_type = ConsumerType::from_code(bytes[0]).unwrap();
         let consumer_id = u32::from_le_bytes(bytes[1..5].try_into().unwrap());
-        let stream_id = u32::from_le_bytes(bytes[5..9].try_into().unwrap());
-        let topic_id = u32::from_le_bytes(bytes[9..13].try_into().unwrap());
-        let partition_id = u32::from_le_bytes(bytes[13..17].try_into().unwrap());
-        let kind = Kind::from_code(bytes[17]).unwrap();
-        let value = u64::from_le_bytes(bytes[18..26].try_into().unwrap());
-        let count = u32::from_le_bytes(bytes[26..30].try_into().unwrap());
-        let auto_commit = bytes[30];
+        let stream_id_kind = IdKind::from_code(bytes[5]).unwrap();
+        let stream_id_length = bytes[6];
+        let stream_id_value = bytes[7..7 + stream_id_length as usize].to_vec();
+        let topic_id_kind = IdKind::from_code(bytes[7 + stream_id_length as usize]).unwrap();
+        let topic_id_length = bytes[8 + stream_id_length as usize];
+        let topic_id_value = bytes[9 + stream_id_length as usize
+            ..9 + stream_id_length as usize + topic_id_length as usize]
+            .to_vec();
+        let current_position = 9 + stream_id_length as usize + topic_id_length as usize;
+        let partition_id = u32::from_le_bytes(
+            bytes[current_position..current_position + 4]
+                .try_into()
+                .unwrap(),
+        );
+        let kind = Kind::from_code(bytes[current_position + 4]).unwrap();
+        let current_position = current_position + 5;
+        let value = u64::from_le_bytes(
+            bytes[current_position..current_position + 8]
+                .try_into()
+                .unwrap(),
+        );
+        let count = u32::from_le_bytes(
+            bytes[current_position + 8..current_position + 12]
+                .try_into()
+                .unwrap(),
+        );
+        let auto_commit = bytes[current_position + 12];
         let auto_commit = match auto_commit {
             0 => false,
             1 => true,
@@ -328,8 +371,12 @@ mod tests {
         assert!(!bytes.is_empty());
         assert_eq!(consumer_type, command.consumer_type);
         assert_eq!(consumer_id, command.consumer_id);
-        assert_eq!(stream_id, command.stream_id);
-        assert_eq!(topic_id, command.topic_id);
+        assert_eq!(stream_id_kind, command.stream_id.kind);
+        assert_eq!(stream_id_length, command.stream_id.length);
+        assert_eq!(stream_id_value, command.stream_id.value);
+        assert_eq!(topic_id_kind, command.topic_id.kind);
+        assert_eq!(topic_id_length, command.topic_id.length);
+        assert_eq!(topic_id_value, command.topic_id.value);
         assert_eq!(partition_id, command.partition_id);
         assert_eq!(kind, command.kind);
         assert_eq!(value, command.value);
@@ -341,18 +388,21 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let consumer_type = ConsumerType::Consumer;
         let consumer_id = 1u32;
-        let stream_id = 2u32;
-        let topic_id = 3u32;
+        let stream_id = Identifier::numeric(2).unwrap();
+        let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
         let kind = Kind::Offset;
         let value = 2u64;
         let count = 3u32;
         let auto_commit = 1u8;
-        let mut bytes = Vec::with_capacity(31);
+
+        let stream_id_bytes = stream_id.as_bytes();
+        let topic_id_bytes = topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(23 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.extend(consumer_type.as_code().to_le_bytes());
         bytes.extend(consumer_id.to_le_bytes());
-        bytes.extend(stream_id.to_le_bytes());
-        bytes.extend(topic_id.to_le_bytes());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes.extend(partition_id.to_le_bytes());
         bytes.extend(kind.as_code().to_le_bytes());
         bytes.extend(value.to_le_bytes());
@@ -384,8 +434,8 @@ mod tests {
     fn should_be_read_from_string() {
         let consumer_type = ConsumerType::Consumer;
         let consumer_id = 1u32;
-        let stream_id = 2u32;
-        let topic_id = 3u32;
+        let stream_id = Identifier::numeric(2).unwrap();
+        let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
         let kind = Kind::Timestamp;
         let value = 2u64;

@@ -4,6 +4,7 @@ use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
 use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
+use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{Format, Kind, PollMessages};
 use std::sync::Arc;
 use std::time::Duration;
@@ -29,8 +30,8 @@ pub async fn run(
     let mut command = PollMessages {
         consumer_type: ConsumerType::Consumer,
         consumer_id,
-        stream_id,
-        topic_id,
+        stream_id: Identifier::numeric(stream_id).unwrap(),
+        topic_id: Identifier::numeric(topic_id).unwrap(),
         partition_id,
         kind: Kind::Offset,
         value: 0,

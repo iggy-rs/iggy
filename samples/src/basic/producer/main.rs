@@ -2,6 +2,7 @@ use clap::Parser;
 use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
+use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Key, Message, SendMessages};
 use samples::shared::args::Args;
 use samples::shared::system;
@@ -44,8 +45,8 @@ async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
         }
         client
             .send_messages(&SendMessages {
-                stream_id: args.stream_id,
-                topic_id: args.topic_id,
+                stream_id: Identifier::numeric(args.stream_id)?,
+                topic_id: Identifier::numeric(args.topic_id)?,
                 key: Key::partition_id(args.partition_id),
                 messages_count: messages.len() as u32,
                 messages,

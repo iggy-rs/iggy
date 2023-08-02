@@ -12,6 +12,7 @@ use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
+use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::Kind::{Next, Offset};
 use iggy::messages::poll_messages::{Format, PollMessages};
 use iggy::messages::send_messages::{Key, Message, SendMessages};
@@ -181,8 +182,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     }
 
     let send_messages = SendMessages {
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         key: Key::partition_id(PARTITION_ID),
         messages_count: MESSAGES_COUNT,
         messages,
@@ -193,8 +194,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let poll_messages = PollMessages {
         consumer_type: CONSUMER_TYPE,
         consumer_id: CONSUMER_ID,
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID,
         kind: Offset,
         value: 0,
@@ -219,8 +220,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         let poll_messages = PollMessages {
             consumer_type: CONSUMER_TYPE,
             consumer_id: CONSUMER_ID,
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
             kind: Offset,
             value: start_offset,
@@ -263,8 +264,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let poll_messages = PollMessages {
         consumer_type: CONSUMER_TYPE,
         consumer_id: CONSUMER_ID,
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID + 1,
         kind: Offset,
         value: 0,
@@ -322,8 +323,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let poll_messages = PollMessages {
         consumer_type: CONSUMER_TYPE,
         consumer_id: CONSUMER_ID,
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID,
         kind: Next,
         value: 0,
@@ -469,16 +470,19 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 27. Get the stats and validate that there is one stream
     let stats = client.get_stats(&GetStats {}).await.unwrap();
-    assert!(stats.process_id > 0);
     assert!(!stats.hostname.is_empty());
     assert!(!stats.os_name.is_empty());
     assert!(!stats.os_version.is_empty());
     assert!(!stats.kernel_version.is_empty());
-    assert!(stats.memory_usage > 0);
-    assert!(stats.total_memory > 0);
-    assert!(stats.available_memory > 0);
-    assert!(stats.run_time > 0);
-    assert!(stats.start_time > 0);
+    #[cfg(not(target_os = "windows"))]
+    {
+        assert!(stats.process_id > 0);
+        assert!(stats.memory_usage > 0);
+        assert!(stats.total_memory > 0);
+        assert!(stats.available_memory > 0);
+        assert!(stats.run_time > 0);
+        assert!(stats.start_time > 0);
+    }
     assert_eq!(stats.streams_count, 1);
     assert_eq!(stats.topics_count, 1);
     assert_eq!(stats.partitions_count, PARTITIONS_COUNT);

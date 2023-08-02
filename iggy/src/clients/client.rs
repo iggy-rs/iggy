@@ -9,6 +9,7 @@ use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::error::Error;
+use crate::identifier::{IdKind, Identifier};
 use crate::messages::poll_messages::{Kind, PollMessages};
 use crate::messages::send_messages::{Key, KeyKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
@@ -192,12 +193,29 @@ impl IggyClient {
     }
 
     async fn store_offset(client: &dyn Client, poll_messages: &PollMessages, offset: u64) {
+        // TODO: Support string stream IDs.
+        let stream_id = match poll_messages.stream_id.kind {
+            IdKind::Numeric => poll_messages.stream_id.as_u32().unwrap(),
+            IdKind::String => {
+                error!("Storing offset for string stream ID is not supported yet.");
+                return;
+            }
+        };
+
+        let topic_id = match poll_messages.topic_id.kind {
+            IdKind::Numeric => poll_messages.topic_id.as_u32().unwrap(),
+            IdKind::String => {
+                error!("Storing offset for string stream ID is not supported yet.");
+                return;
+            }
+        };
+
         let result = client
             .store_offset(&StoreOffset {
                 consumer_type: poll_messages.consumer_type,
                 consumer_id: poll_messages.consumer_id,
-                stream_id: poll_messages.stream_id,
-                topic_id: poll_messages.topic_id,
+                stream_id,
+                topic_id,
                 partition_id: poll_messages.partition_id,
                 offset,
             })
@@ -224,8 +242,8 @@ impl IggyClient {
                 }
 
                 let mut initialized = false;
-                let mut stream_id = 0;
-                let mut topic_id = 0;
+                let mut stream_id = Identifier::numeric(1).unwrap();
+                let mut topic_id = Identifier::numeric(1).unwrap();
                 let mut key = Key::partition_id(0);
                 let mut batch_messages = true;
 
@@ -236,8 +254,8 @@ impl IggyClient {
                             break;
                         }
 
-                        stream_id = send_messages.stream_id;
-                        topic_id = send_messages.topic_id;
+                        stream_id = Identifier::from(&send_messages.stream_id);
+                        topic_id = Identifier::from(&send_messages.topic_id);
                         key.value = send_messages.key.value.clone();
                         initialized = true;
                     }
@@ -275,8 +293,8 @@ impl IggyClient {
 
                 while let Some(messages) = batches.pop_front() {
                     let send_messages = SendMessages {
-                        stream_id,
-                        topic_id,
+                        stream_id: Identifier::from(&stream_id),
+                        topic_id: Identifier::from(&topic_id),
                         messages_count: messages.len() as u32,
                         key: Key {
                             kind: KeyKind::PartitionId,
@@ -400,8 +418,8 @@ impl MessageClient for IggyClient {
 
         let mut batch = self.send_messages_batch.lock().await;
         let send_messages = SendMessages {
-            stream_id: command.stream_id,
-            topic_id: command.topic_id,
+            stream_id: Identifier::from(&command.stream_id),
+            topic_id: Identifier::from(&command.topic_id),
             messages_count: command.messages_count,
             key: Key {
                 kind: command.key.kind,

@@ -4,6 +4,7 @@ use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
 use iggy::error::Error;
+use iggy::identifier::{IdKind, Identifier};
 use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
 use iggy::models::offset::Offset;
@@ -26,18 +27,29 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
 
 async fn poll_messages(
     State(system): State<Arc<RwLock<System>>>,
-    Path((stream_id, topic_id)): Path<(u32, u32)>,
+    Path((stream_id, topic_id)): Path<(String, String)>,
     mut query: Query<PollMessages>,
 ) -> Result<Json<Vec<Arc<Message>>>, CustomError> {
-    query.stream_id = stream_id;
-    query.topic_id = topic_id;
+    query.stream_id = match stream_id.parse::<u32>() {
+        Ok(id) => Identifier::numeric(id).unwrap(),
+        Err(_) => Identifier::string(&stream_id).unwrap(),
+    };
+    query.topic_id = match topic_id.parse::<u32>() {
+        Ok(id) => Identifier::numeric(id).unwrap(),
+        Err(_) => Identifier::string(&topic_id).unwrap(),
+    };
     query.validate()?;
 
     let consumer = PollingConsumer::Consumer(query.consumer_id);
     let system = system.read().await;
-    let topic = system
-        .get_stream_by_id(stream_id)?
-        .get_topic_by_id(topic_id)?;
+    let stream = match query.stream_id.kind {
+        IdKind::Numeric => system.get_stream_by_id(query.stream_id.as_u32().unwrap())?,
+        IdKind::String => system.get_stream_by_name(&query.stream_id.as_string().unwrap())?,
+    };
+    let topic = match query.topic_id.kind {
+        IdKind::Numeric => stream.get_topic_by_id(query.topic_id.as_u32().unwrap())?,
+        IdKind::String => stream.get_topic_by_name(&query.topic_id.as_string().unwrap())?,
+    };
     if !topic.has_partitions() {
         return Err(CustomError::from(Error::NoPartitions(
             topic.id,
@@ -72,11 +84,17 @@ async fn poll_messages(
 
 async fn send_messages(
     State(system): State<Arc<RwLock<System>>>,
-    Path((stream_id, topic_id)): Path<(u32, u32)>,
+    Path((stream_id, topic_id)): Path<(String, String)>,
     Json(mut command): Json<SendMessages>,
 ) -> Result<StatusCode, CustomError> {
-    command.stream_id = stream_id;
-    command.topic_id = topic_id;
+    command.stream_id = match stream_id.parse::<u32>() {
+        Ok(id) => Identifier::numeric(id).unwrap(),
+        Err(_) => Identifier::string(&stream_id).unwrap(),
+    };
+    command.topic_id = match topic_id.parse::<u32>() {
+        Ok(id) => Identifier::numeric(id).unwrap(),
+        Err(_) => Identifier::string(&topic_id).unwrap(),
+    };
     command.key.length = command.key.value.len() as u8;
     command.messages_count = command.messages.len() as u32;
     command.validate()?;
@@ -87,9 +105,14 @@ async fn send_messages(
     }
 
     let system = system.read().await;
-    let topic = system
-        .get_stream_by_id(stream_id)?
-        .get_topic_by_id(topic_id)?;
+    let stream = match command.stream_id.kind {
+        IdKind::Numeric => system.get_stream_by_id(command.stream_id.as_u32().unwrap())?,
+        IdKind::String => system.get_stream_by_name(&command.stream_id.as_string().unwrap())?,
+    };
+    let topic = match command.topic_id.kind {
+        IdKind::Numeric => stream.get_topic_by_id(command.topic_id.as_u32().unwrap())?,
+        IdKind::String => stream.get_topic_by_name(&command.topic_id.as_string().unwrap())?,
+    };
     topic.append_messages(&command.key, messages).await?;
     Ok(StatusCode::CREATED)
 }

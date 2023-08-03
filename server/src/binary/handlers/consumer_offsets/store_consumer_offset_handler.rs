@@ -1,10 +1,9 @@
 use crate::binary::client_context::ClientContext;
-use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use anyhow::Result;
+use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
-use iggy::offsets::get_offset::GetOffset;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
 use streaming::system::System;
@@ -12,7 +11,7 @@ use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
-    command: &GetOffset,
+    command: &StoreConsumerOffset,
     sender: &mut dyn Sender,
     client_context: &ClientContext,
     system: Arc<RwLock<System>>,
@@ -26,12 +25,22 @@ pub async fn handle(
     };
 
     let system = system.read().await;
-    let offset = system
-        .get_stream_by_id(command.stream_id)?
-        .get_topic_by_id(command.topic_id)?
-        .get_offset(consumer, command.partition_id)
+    let topic = system
+        .get_stream(&command.stream_id)?
+        .get_topic(&command.topic_id)?;
+
+    let partition_id = match consumer {
+        PollingConsumer::Consumer(_) => command.partition_id,
+        PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
+            let consumer_group = topic.get_consumer_group(consumer_group_id)?.read().await;
+            consumer_group.get_current_partition_id(member_id).await?
+        }
+    };
+
+    topic
+        .store_consumer_offset(consumer, partition_id, command.offset)
         .await?;
-    let offset = mapper::map_offset(command.consumer_id, offset);
-    sender.send_ok_response(&offset).await?;
+
+    sender.send_empty_ok_response().await?;
     Ok(())
 }

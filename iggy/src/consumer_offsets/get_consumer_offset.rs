@@ -2,38 +2,39 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::consumer_type::ConsumerType;
 use crate::error::Error;
+use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct GetOffset {
+pub struct GetConsumerOffset {
     #[serde(default = "default_consumer_type")]
     pub consumer_type: ConsumerType,
     #[serde(default = "default_consumer_id")]
     pub consumer_id: u32,
     #[serde(skip)]
-    pub stream_id: u32,
+    pub stream_id: Identifier,
     #[serde(skip)]
-    pub topic_id: u32,
+    pub topic_id: Identifier,
     #[serde(default = "default_partition_id")]
     pub partition_id: u32,
 }
 
-impl Default for GetOffset {
+impl Default for GetConsumerOffset {
     fn default() -> Self {
-        GetOffset {
+        GetConsumerOffset {
             consumer_type: default_consumer_type(),
             consumer_id: default_consumer_id(),
-            stream_id: 1,
-            topic_id: 1,
+            stream_id: Identifier::default(),
+            topic_id: Identifier::default(),
             partition_id: default_partition_id(),
         }
     }
 }
 
-impl CommandPayload for GetOffset {}
+impl CommandPayload for GetConsumerOffset {}
 
 fn default_consumer_type() -> ConsumerType {
     ConsumerType::Consumer
@@ -47,21 +48,13 @@ fn default_partition_id() -> u32 {
     1
 }
 
-impl Validatable for GetOffset {
+impl Validatable for GetConsumerOffset {
     fn validate(&self) -> Result<(), Error> {
-        if self.stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
-        if self.topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         Ok(())
     }
 }
 
-impl FromStr for GetOffset {
+impl FromStr for GetConsumerOffset {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
@@ -71,10 +64,10 @@ impl FromStr for GetOffset {
 
         let consumer_type = ConsumerType::from_str(parts[0])?;
         let consumer_id = parts[1].parse::<u32>()?;
-        let stream_id = parts[2].parse::<u32>()?;
-        let topic_id = parts[3].parse::<u32>()?;
+        let stream_id = parts[2].parse::<Identifier>()?;
+        let topic_id = parts[3].parse::<Identifier>()?;
         let partition_id = parts[4].parse::<u32>()?;
-        let command = GetOffset {
+        let command = GetConsumerOffset {
             consumer_type,
             consumer_id,
             stream_id,
@@ -86,28 +79,34 @@ impl FromStr for GetOffset {
     }
 }
 
-impl BytesSerializable for GetOffset {
+impl BytesSerializable for GetConsumerOffset {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(17);
+        let stream_id_bytes = self.stream_id.as_bytes();
+        let topic_id_bytes = self.topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(9 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.extend(self.consumer_type.as_code().to_le_bytes());
         bytes.extend(self.consumer_id.to_le_bytes());
-        bytes.extend(self.stream_id.to_le_bytes());
-        bytes.extend(self.topic_id.to_le_bytes());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes.extend(self.partition_id.to_le_bytes());
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetOffset, Error> {
-        if bytes.len() != 17 {
+    fn from_bytes(bytes: &[u8]) -> Result<GetConsumerOffset, Error> {
+        if bytes.len() < 15 {
             return Err(Error::InvalidCommand);
         }
 
+        let mut position = 0;
         let consumer_type = ConsumerType::from_code(bytes[0])?;
         let consumer_id = u32::from_le_bytes(bytes[1..5].try_into()?);
-        let stream_id = u32::from_le_bytes(bytes[5..9].try_into()?);
-        let topic_id = u32::from_le_bytes(bytes[9..13].try_into()?);
-        let partition_id = u32::from_le_bytes(bytes[13..17].try_into()?);
-        let command = GetOffset {
+        position += 5;
+        let stream_id = Identifier::from_bytes(&bytes[position..])?;
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        position += topic_id.get_size_bytes() as usize;
+        let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let command = GetConsumerOffset {
             consumer_type,
             consumer_id,
             stream_id,
@@ -119,7 +118,7 @@ impl BytesSerializable for GetOffset {
     }
 }
 
-impl Display for GetOffset {
+impl Display for GetConsumerOffset {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -135,20 +134,24 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes() {
-        let command = GetOffset {
+        let command = GetConsumerOffset {
             consumer_type: ConsumerType::Consumer,
             consumer_id: 1,
-            stream_id: 2,
-            topic_id: 3,
+            stream_id: Identifier::numeric(2).unwrap(),
+            topic_id: Identifier::numeric(3).unwrap(),
             partition_id: 4,
         };
 
         let bytes = command.as_bytes();
+        let mut position = 0;
         let consumer_type = ConsumerType::from_code(bytes[0]).unwrap();
         let consumer_id = u32::from_le_bytes(bytes[1..5].try_into().unwrap());
-        let stream_id = u32::from_le_bytes(bytes[5..9].try_into().unwrap());
-        let topic_id = u32::from_le_bytes(bytes[9..13].try_into().unwrap());
-        let partition_id = u32::from_le_bytes(bytes[13..17].try_into().unwrap());
+        position += 5;
+        let stream_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        position += topic_id.get_size_bytes() as usize;
+        let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
 
         assert!(!bytes.is_empty());
         assert_eq!(consumer_type, command.consumer_type);
@@ -162,18 +165,20 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let consumer_type = ConsumerType::Consumer;
         let consumer_id = 1u32;
-        let stream_id = 2u32;
-        let topic_id = 3u32;
+        let stream_id = Identifier::numeric(2).unwrap();
+        let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
 
-        let mut bytes = Vec::with_capacity(17);
+        let stream_id_bytes = stream_id.as_bytes();
+        let topic_id_bytes = topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(9 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.extend(consumer_type.as_code().to_le_bytes());
         bytes.extend(consumer_id.to_le_bytes());
-        bytes.extend(stream_id.to_le_bytes());
-        bytes.extend(topic_id.to_le_bytes());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes.extend(partition_id.to_le_bytes());
 
-        let command = GetOffset::from_bytes(&bytes);
+        let command = GetConsumerOffset::from_bytes(&bytes);
         assert!(command.is_ok());
 
         let command = command.unwrap();
@@ -188,14 +193,14 @@ mod tests {
     fn should_be_read_from_string() {
         let consumer_type = ConsumerType::Consumer;
         let consumer_id = 1u32;
-        let stream_id = 2u32;
-        let topic_id = 3u32;
+        let stream_id = Identifier::numeric(2).unwrap();
+        let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
         let input = format!(
             "{}|{}|{}|{}|{}",
             consumer_type, consumer_id, stream_id, topic_id, partition_id
         );
-        let command = GetOffset::from_str(&input);
+        let command = GetConsumerOffset::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

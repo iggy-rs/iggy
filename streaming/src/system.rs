@@ -6,6 +6,7 @@ use crate::streams::stream::Stream;
 use crate::utils::text;
 use futures::future::join_all;
 use iggy::error::Error;
+use iggy::identifier::{IdKind, Identifier};
 use iggy::models::stats::Stats;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -134,6 +135,20 @@ impl System {
         self.streams.values().collect()
     }
 
+    pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, Error> {
+        match identifier.kind {
+            IdKind::Numeric => self.get_stream_by_id(identifier.get_u32_value().unwrap()),
+            IdKind::String => self.get_stream_by_name(&identifier.get_string_value().unwrap()),
+        }
+    }
+
+    pub fn get_stream_mut(&mut self, identifier: &Identifier) -> Result<&mut Stream, Error> {
+        match identifier.kind {
+            IdKind::Numeric => self.get_stream_by_id_mut(identifier.get_u32_value().unwrap()),
+            IdKind::String => self.get_stream_by_name_mut(&identifier.get_string_value().unwrap()),
+        }
+    }
+
     pub fn get_stream_by_id(&self, id: u32) -> Result<&Stream, Error> {
         let stream = self.streams.get(&id);
         if stream.is_none() {
@@ -194,24 +209,58 @@ impl System {
         Ok(())
     }
 
-    pub async fn delete_stream(&mut self, id: u32) -> Result<(), Error> {
-        let stream = self.get_stream_by_id_mut(id)?;
-        let name = stream.name.clone();
+    pub async fn delete_stream(&mut self, id: &Identifier) -> Result<(), Error> {
+        let stream = match id.kind {
+            IdKind::Numeric => {
+                let stream_id = id.get_u32_value().unwrap();
+                let stream = self.streams.remove(&stream_id);
+                if stream.is_none() {
+                    return Err(Error::StreamIdNotFound(stream_id));
+                }
+
+                let stream = stream.unwrap();
+                self.streams_ids.remove(&stream.name);
+                stream
+            }
+            IdKind::String => {
+                let stream_name = id.get_string_value().unwrap();
+                let stream_id = self.streams_ids.remove(&stream_name);
+                if stream_id.is_none() {
+                    return Err(Error::StreamNameNotFound(stream_name));
+                }
+
+                let stream_id = stream_id.unwrap();
+                let topic = self.streams.remove(&stream_id);
+                topic.unwrap()
+            }
+        };
+
         stream.delete().await?;
-        self.streams_ids.remove(&name);
-        self.streams.remove(&id);
         let client_manager = self.client_manager.read().await;
-        client_manager.delete_consumer_groups_for_stream(id).await;
+        client_manager
+            .delete_consumer_groups_for_stream(stream.id)
+            .await;
         Ok(())
     }
 
-    pub async fn delete_topic(&mut self, stream_id: u32, topic_id: u32) -> Result<(), Error> {
-        self.get_stream_by_id_mut(stream_id)?
+    pub async fn delete_topic(
+        &mut self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+    ) -> Result<(), Error> {
+        let stream_id_value;
+        {
+            let stream = self.get_stream(stream_id)?;
+            stream_id_value = stream.id;
+        }
+
+        let topic = self
+            .get_stream_mut(stream_id)?
             .delete_topic(topic_id)
             .await?;
         let client_manager = self.client_manager.read().await;
         client_manager
-            .delete_consumer_groups_for_topic(stream_id, topic_id)
+            .delete_consumer_groups_for_topic(stream_id_value, topic.id)
             .await;
         Ok(())
     }
@@ -232,12 +281,12 @@ impl System {
 
     pub async fn create_consumer_group(
         &mut self,
-        stream_id: u32,
-        topic_id: u32,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        self.get_stream_by_id_mut(stream_id)?
-            .get_topic_by_id_mut(topic_id)?
+        self.get_stream_mut(stream_id)?
+            .get_topic_mut(topic_id)?
             .create_consumer_group(consumer_group_id)
             .await?;
         Ok(())
@@ -245,22 +294,32 @@ impl System {
 
     pub async fn delete_consumer_group(
         &mut self,
-        stream_id: u32,
-        topic_id: u32,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        let consumer_group = self
-            .get_stream_by_id_mut(stream_id)?
-            .get_topic_by_id_mut(topic_id)?
-            .delete_consumer_group(consumer_group_id)
-            .await?;
+        let stream_id_value;
+        let topic_id_value;
+        let consumer_group;
+        {
+            let stream = self.get_stream_mut(stream_id)?;
+            stream_id_value = stream.id;
+            let topic = stream.get_topic_mut(topic_id)?;
+            topic_id_value = topic.id;
+            consumer_group = topic.delete_consumer_group(consumer_group_id).await?;
+        }
 
         let client_manager = self.client_manager.read().await;
         let consumer_group = consumer_group.read().await;
         for member in consumer_group.get_members() {
             let member = member.read().await;
             client_manager
-                .leave_consumer_group(member.id, stream_id, topic_id, consumer_group_id)
+                .leave_consumer_group(
+                    member.id,
+                    stream_id_value,
+                    topic_id_value,
+                    consumer_group_id,
+                )
                 .await?;
         }
 
@@ -270,17 +329,30 @@ impl System {
     pub async fn join_consumer_group(
         &self,
         client_id: u32,
-        stream_id: u32,
-        topic_id: u32,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        self.get_stream_by_id(stream_id)?
-            .get_topic_by_id(topic_id)?
-            .join_consumer_group(consumer_group_id, client_id)
-            .await?;
+        let stream_id_value;
+        let topic_id_value;
+        {
+            let stream = self.get_stream(stream_id)?;
+            stream_id_value = stream.id;
+            let topic = stream.get_topic(topic_id)?;
+            topic_id_value = topic.id;
+            topic
+                .join_consumer_group(consumer_group_id, client_id)
+                .await?;
+        }
+
         let client_manager = self.client_manager.read().await;
         client_manager
-            .join_consumer_group(client_id, stream_id, topic_id, consumer_group_id)
+            .join_consumer_group(
+                client_id,
+                stream_id_value,
+                topic_id_value,
+                consumer_group_id,
+            )
             .await?;
         Ok(())
     }
@@ -288,17 +360,30 @@ impl System {
     pub async fn leave_consumer_group(
         &self,
         client_id: u32,
-        stream_id: u32,
-        topic_id: u32,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        self.get_stream_by_id(stream_id)?
-            .get_topic_by_id(topic_id)?
-            .leave_consumer_group(consumer_group_id, client_id)
-            .await?;
+        let stream_id_value;
+        let topic_id_value;
+        {
+            let stream = self.get_stream(stream_id)?;
+            stream_id_value = stream.id;
+            let topic = stream.get_topic(topic_id)?;
+            topic_id_value = topic.id;
+            topic
+                .leave_consumer_group(consumer_group_id, client_id)
+                .await?;
+        }
+
         let client_manager = self.client_manager.read().await;
         client_manager
-            .leave_consumer_group(client_id, stream_id, topic_id, consumer_group_id)
+            .leave_consumer_group(
+                client_id,
+                stream_id_value,
+                topic_id_value,
+                consumer_group_id,
+            )
             .await?;
         Ok(())
     }
@@ -334,7 +419,12 @@ impl System {
 
         for (stream_id, topic_id, consumer_group_id) in consumer_groups.iter() {
             if let Err(error) = self
-                .leave_consumer_group(client_id, *stream_id, *topic_id, *consumer_group_id)
+                .leave_consumer_group(
+                    client_id,
+                    &Identifier::numeric(*stream_id).unwrap(),
+                    &Identifier::numeric(*topic_id).unwrap(),
+                    *consumer_group_id,
+                )
                 .await
             {
                 error!(

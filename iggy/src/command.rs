@@ -5,11 +5,11 @@ use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
 use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
+use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
+use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::Error;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
-use crate::offsets::get_offset::GetOffset;
-use crate::offsets::store_offset::StoreOffset;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 use crate::streams::create_stream::CreateStream;
@@ -45,10 +45,10 @@ pub const POLL_MESSAGES: &str = "message.poll";
 pub const POLL_MESSAGES_CODE: u32 = 100;
 pub const SEND_MESSAGES: &str = "message.send";
 pub const SEND_MESSAGES_CODE: u32 = 101;
-pub const GET_OFFSET: &str = "offset.get";
-pub const GET_OFFSET_CODE: u32 = 120;
-pub const STORE_OFFSET: &str = "offset.store";
-pub const STORE_OFFSET_CODE: u32 = 121;
+pub const GET_CONSUMER_OFFSET: &str = "consumer_offset.get";
+pub const GET_CONSUMER_OFFSET_CODE: u32 = 120;
+pub const STORE_CONSUMER_OFFSET: &str = "consumer_offset.store";
+pub const STORE_CONSUMER_OFFSET_CODE: u32 = 121;
 pub const GET_STREAM: &str = "stream.get";
 pub const GET_STREAM_CODE: u32 = 200;
 pub const GET_STREAMS: &str = "stream.list";
@@ -92,8 +92,8 @@ pub enum Command {
     GetClients(GetClients),
     SendMessages(SendMessages),
     PollMessages(PollMessages),
-    GetOffset(GetOffset),
-    StoreOffset(StoreOffset),
+    GetConsumerOffset(GetConsumerOffset),
+    StoreConsumerOffset(StoreConsumerOffset),
     GetStream(GetStream),
     GetStreams(GetStreams),
     CreateStream(CreateStream),
@@ -125,8 +125,12 @@ impl BytesSerializable for Command {
             Command::GetClients(payload) => as_bytes(GET_CLIENTS_CODE, &payload.as_bytes()),
             Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, &payload.as_bytes()),
             Command::PollMessages(payload) => as_bytes(POLL_MESSAGES_CODE, &payload.as_bytes()),
-            Command::StoreOffset(payload) => as_bytes(STORE_OFFSET_CODE, &payload.as_bytes()),
-            Command::GetOffset(payload) => as_bytes(GET_OFFSET_CODE, &payload.as_bytes()),
+            Command::StoreConsumerOffset(payload) => {
+                as_bytes(STORE_CONSUMER_OFFSET_CODE, &payload.as_bytes())
+            }
+            Command::GetConsumerOffset(payload) => {
+                as_bytes(GET_CONSUMER_OFFSET_CODE, &payload.as_bytes())
+            }
             Command::GetStream(payload) => as_bytes(GET_STREAM_CODE, &payload.as_bytes()),
             Command::GetStreams(payload) => as_bytes(GET_STREAMS_CODE, &payload.as_bytes()),
             Command::CreateStream(payload) => as_bytes(CREATE_STREAM_CODE, &payload.as_bytes()),
@@ -168,8 +172,12 @@ impl BytesSerializable for Command {
             GET_CLIENTS_CODE => Ok(Command::GetClients(GetClients::from_bytes(payload)?)),
             SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
             POLL_MESSAGES_CODE => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
-            STORE_OFFSET_CODE => Ok(Command::StoreOffset(StoreOffset::from_bytes(payload)?)),
-            GET_OFFSET_CODE => Ok(Command::GetOffset(GetOffset::from_bytes(payload)?)),
+            STORE_CONSUMER_OFFSET_CODE => Ok(Command::StoreConsumerOffset(
+                StoreConsumerOffset::from_bytes(payload)?,
+            )),
+            GET_CONSUMER_OFFSET_CODE => Ok(Command::GetConsumerOffset(
+                GetConsumerOffset::from_bytes(payload)?,
+            )),
             GET_STREAM_CODE => Ok(Command::GetStream(GetStream::from_bytes(payload)?)),
             GET_STREAMS_CODE => Ok(Command::GetStreams(GetStreams::from_bytes(payload)?)),
             CREATE_STREAM_CODE => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
@@ -227,8 +235,12 @@ impl FromStr for Command {
             GET_CLIENTS => Ok(Command::GetClients(GetClients::from_str(payload)?)),
             SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
             POLL_MESSAGES => Ok(Command::PollMessages(PollMessages::from_str(payload)?)),
-            STORE_OFFSET => Ok(Command::StoreOffset(StoreOffset::from_str(payload)?)),
-            GET_OFFSET => Ok(Command::GetOffset(GetOffset::from_str(payload)?)),
+            STORE_CONSUMER_OFFSET => Ok(Command::StoreConsumerOffset(
+                StoreConsumerOffset::from_str(payload)?,
+            )),
+            GET_CONSUMER_OFFSET => Ok(Command::GetConsumerOffset(GetConsumerOffset::from_str(
+                payload,
+            )?)),
             GET_STREAM => Ok(Command::GetStream(GetStream::from_str(payload)?)),
             GET_STREAMS => Ok(Command::GetStreams(GetStreams::from_str(payload)?)),
             CREATE_STREAM => Ok(Command::CreateStream(CreateStream::from_str(payload)?)),
@@ -283,8 +295,12 @@ impl Display for Command {
             }
             Command::PollMessages(payload) => write!(formatter, "{}|{}", POLL_MESSAGES, payload),
             Command::SendMessages(payload) => write!(formatter, "{}|{}", SEND_MESSAGES, payload),
-            Command::StoreOffset(payload) => write!(formatter, "{}|{}", STORE_OFFSET, payload),
-            Command::GetOffset(payload) => write!(formatter, "{}|{}", GET_OFFSET, payload),
+            Command::StoreConsumerOffset(payload) => {
+                write!(formatter, "{}|{}", STORE_CONSUMER_OFFSET, payload)
+            }
+            Command::GetConsumerOffset(payload) => {
+                write!(formatter, "{}|{}", GET_CONSUMER_OFFSET, payload)
+            }
             Command::GetGroup(payload) => write!(formatter, "{}|{}", GET_CONSUMER_GROUP, payload),
             Command::GetGroups(payload) => write!(formatter, "{}|{}", GET_CONSUMER_GROUPS, payload),
             Command::CreateGroup(payload) => {
@@ -348,14 +364,14 @@ mod tests {
             &PollMessages::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::StoreOffset(StoreOffset::default()),
-            STORE_OFFSET_CODE,
-            &StoreOffset::default(),
+            &Command::StoreConsumerOffset(StoreConsumerOffset::default()),
+            STORE_CONSUMER_OFFSET_CODE,
+            &StoreConsumerOffset::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::GetOffset(GetOffset::default()),
-            GET_OFFSET_CODE,
-            &GetOffset::default(),
+            &Command::GetConsumerOffset(GetConsumerOffset::default()),
+            GET_CONSUMER_OFFSET_CODE,
+            &GetConsumerOffset::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetStream(GetStream::default()),
@@ -470,14 +486,14 @@ mod tests {
             &PollMessages::default(),
         );
         assert_read_from_string(
-            &Command::StoreOffset(StoreOffset::default()),
-            STORE_OFFSET,
-            &StoreOffset::default(),
+            &Command::StoreConsumerOffset(StoreConsumerOffset::default()),
+            STORE_CONSUMER_OFFSET,
+            &StoreConsumerOffset::default(),
         );
         assert_read_from_string(
-            &Command::GetOffset(GetOffset::default()),
-            GET_OFFSET,
-            &GetOffset::default(),
+            &Command::GetConsumerOffset(GetConsumerOffset::default()),
+            GET_CONSUMER_OFFSET,
+            &GetConsumerOffset::default(),
         );
         assert_read_from_string(
             &Command::GetStream(GetStream::default()),

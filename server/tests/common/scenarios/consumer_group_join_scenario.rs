@@ -4,6 +4,7 @@ use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
+use iggy::identifier::Identifier;
 use iggy::models::client_info::ClientInfoDetails;
 use iggy::models::consumer_group::ConsumerGroupDetails;
 use iggy::streams::create_stream::CreateStream;
@@ -37,7 +38,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 2. Create the topic
     let create_topic = CreateTopic {
-        stream_id: STREAM_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: TOPIC_ID,
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
@@ -46,8 +47,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 3. Create the consumer group
     let create_group = CreateConsumerGroup {
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
     };
     system_client
@@ -108,8 +109,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
 async fn join_consumer_group(client: &IggyClient) {
     let join_group = JoinConsumerGroup {
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
     };
     client.join_consumer_group(&join_group).await.unwrap();
@@ -136,8 +137,8 @@ async fn get_consumer_group_and_validate_members(
     members_count: u32,
 ) -> ConsumerGroupDetails {
     let get_group = GetConsumerGroup {
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
     };
     let consumer_group = client.get_consumer_group(&get_group).await.unwrap();

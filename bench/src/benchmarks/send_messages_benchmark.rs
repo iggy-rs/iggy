@@ -33,7 +33,6 @@ pub async fn run(
         stream_id: Identifier::numeric(stream_id)?,
         topic_id: Identifier::numeric(topic_id)?,
         key: Key::partition_id(partition_id),
-        messages_count: args.messages_per_batch,
         messages,
     };
 

@@ -5,6 +5,7 @@ use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use iggy::identifier::Identifier;
 use iggy::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use iggy::validatable::Validatable;
 use std::sync::Arc;
@@ -49,26 +50,32 @@ async fn get_consumer_groups(
 
 async fn create_consumer_group(
     State(system): State<Arc<RwLock<System>>>,
-    Path((stream_id, topic_id)): Path<(u32, u32)>,
+    Path((stream_id, topic_id)): Path<(String, String)>,
     Json(mut command): Json<CreateConsumerGroup>,
 ) -> Result<StatusCode, CustomError> {
-    command.stream_id = stream_id;
-    command.topic_id = topic_id;
+    command.stream_id = Identifier::from_str_value(&stream_id)?;
+    command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
     let mut system = system.write().await;
     system
-        .create_consumer_group(stream_id, topic_id, command.consumer_group_id)
+        .create_consumer_group(
+            &command.stream_id,
+            &command.topic_id,
+            command.consumer_group_id,
+        )
         .await?;
     Ok(StatusCode::CREATED)
 }
 
 async fn delete_consumer_group(
     State(system): State<Arc<RwLock<System>>>,
-    Path((stream_id, topic_id, consumer_group_id)): Path<(u32, u32, u32)>,
+    Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, u32)>,
 ) -> Result<StatusCode, CustomError> {
     let mut system = system.write().await;
+    let stream_id = Identifier::from_str_value(&stream_id)?;
+    let topic_id = Identifier::from_str_value(&topic_id)?;
     system
-        .delete_consumer_group(stream_id, topic_id, consumer_group_id)
+        .delete_consumer_group(&stream_id, &topic_id, consumer_group_id)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

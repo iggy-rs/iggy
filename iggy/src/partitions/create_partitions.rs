@@ -1,6 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -11,9 +12,9 @@ const MAX_PARTITIONS_COUNT: u32 = 100000;
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreatePartitions {
     #[serde(skip)]
-    pub stream_id: u32,
+    pub stream_id: Identifier,
     #[serde(skip)]
-    pub topic_id: u32,
+    pub topic_id: Identifier,
     pub partitions_count: u32,
 }
 
@@ -22,8 +23,8 @@ impl CommandPayload for CreatePartitions {}
 impl Default for CreatePartitions {
     fn default() -> Self {
         CreatePartitions {
-            stream_id: 1,
-            topic_id: 1,
+            stream_id: Identifier::default(),
+            topic_id: Identifier::default(),
             partitions_count: 1,
         }
     }
@@ -31,14 +32,6 @@ impl Default for CreatePartitions {
 
 impl Validatable for CreatePartitions {
     fn validate(&self) -> Result<(), Error> {
-        if self.stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
-        if self.topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         if !(1..=MAX_PARTITIONS_COUNT).contains(&self.partitions_count) {
             return Err(Error::TooManyPartitions);
         }
@@ -55,8 +48,8 @@ impl FromStr for CreatePartitions {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = parts[0].parse::<u32>()?;
-        let topic_id = parts[1].parse::<u32>()?;
+        let stream_id = parts[0].parse::<Identifier>()?;
+        let topic_id = parts[1].parse::<Identifier>()?;
         let partitions_count = parts[2].parse::<u32>()?;
         let command = CreatePartitions {
             stream_id,
@@ -70,21 +63,26 @@ impl FromStr for CreatePartitions {
 
 impl BytesSerializable for CreatePartitions {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(12);
-        bytes.extend(self.stream_id.to_le_bytes());
-        bytes.extend(self.topic_id.to_le_bytes());
+        let stream_id_bytes = self.stream_id.as_bytes();
+        let topic_id_bytes = self.topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes.extend(self.partitions_count.to_le_bytes());
         bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<CreatePartitions, Error> {
-        if bytes.len() != 12 {
+        if bytes.len() < 10 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        let partitions_count = u32::from_le_bytes(bytes[8..12].try_into()?);
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(bytes)?;
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        position += topic_id.get_size_bytes() as usize;
+        let partitions_count = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let command = CreatePartitions {
             stream_id,
             topic_id,
@@ -112,15 +110,19 @@ mod tests {
     #[test]
     fn should_be_serialized_as_bytes() {
         let command = CreatePartitions {
-            stream_id: 1,
-            topic_id: 2,
+            stream_id: Identifier::numeric(1).unwrap(),
+            topic_id: Identifier::numeric(2).unwrap(),
             partitions_count: 3,
         };
 
         let bytes = command.as_bytes();
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
-        let partitions_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        position += topic_id.get_size_bytes() as usize;
+        let partitions_count =
+            u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -130,15 +132,15 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let stream_id = 1u32;
-        let topic_id = 2u32;
+        let stream_id = Identifier::numeric(1).unwrap();
+        let topic_id = Identifier::numeric(2).unwrap();
         let partitions_count = 3u32;
-        let bytes = [
-            stream_id.to_le_bytes(),
-            topic_id.to_le_bytes(),
-            partitions_count.to_le_bytes(),
-        ]
-        .concat();
+        let stream_id_bytes = stream_id.as_bytes();
+        let topic_id_bytes = topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
+        bytes.extend(partitions_count.to_le_bytes());
         let command = CreatePartitions::from_bytes(&bytes);
         assert!(command.is_ok());
 
@@ -150,8 +152,8 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let stream_id = 1u32;
-        let topic_id = 2u32;
+        let stream_id = Identifier::numeric(1).unwrap();
+        let topic_id = Identifier::numeric(2).unwrap();
         let partitions_count = 3u32;
         let input = format!("{}|{}|{}", stream_id, topic_id, partitions_count);
         let command = CreatePartitions::from_str(&input);

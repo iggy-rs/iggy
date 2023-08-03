@@ -19,8 +19,8 @@ pub async fn handle(
     system
         .leave_consumer_group(
             client_context.client_id,
-            command.stream_id,
-            command.topic_id,
+            &command.stream_id,
+            &command.topic_id,
             command.consumer_group_id,
         )
         .await?;

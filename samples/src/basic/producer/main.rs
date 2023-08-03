@@ -48,7 +48,6 @@ async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
                 stream_id: Identifier::numeric(args.stream_id)?,
                 topic_id: Identifier::numeric(args.topic_id)?,
                 key: Key::partition_id(args.partition_id),
-                messages_count: messages.len() as u32,
                 messages,
             })
             .await?;

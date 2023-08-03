@@ -9,9 +9,9 @@ use tokio::sync::RwLock;
 use tracing::{error, trace};
 
 impl Partition {
-    pub async fn get_offset(&self, consumer: PollingConsumer) -> Result<u64, Error> {
+    pub async fn get_consumer_offset(&self, consumer: PollingConsumer) -> Result<u64, Error> {
         trace!(
-            "Getting offset for {}, partition: {}, current: {}...",
+            "Getting consumer offset for {}, partition: {}, current: {}...",
             consumer,
             self.id,
             self.current_offset
@@ -35,7 +35,11 @@ impl Partition {
         Ok(0)
     }
 
-    pub async fn store_offset(&self, consumer: PollingConsumer, offset: u64) -> Result<(), Error> {
+    pub async fn store_consumer_offset(
+        &self,
+        consumer: PollingConsumer,
+        offset: u64,
+    ) -> Result<(), Error> {
         trace!(
             "Storing offset: {} for {}, partition: {}, current: {}...",
             offset,

@@ -1,6 +1,7 @@
 use crate::args::Args;
 use crate::client_factory::ClientFactory;
 use iggy::error::Error;
+use iggy::identifier::Identifier;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::get_streams::GetStreams;
 use iggy::topics::create_topic::CreateTopic;
@@ -32,7 +33,7 @@ pub async fn init_streams(
             let name = format!("topic {}", topic_id);
             client
                 .create_topic(&CreateTopic {
-                    stream_id,
+                    stream_id: Identifier::numeric(stream_id)?,
                     topic_id,
                     partitions_count,
                     name,

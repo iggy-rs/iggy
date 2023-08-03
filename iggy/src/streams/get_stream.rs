@@ -1,30 +1,22 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct GetStream {
-    pub stream_id: u32,
+    #[serde(skip)]
+    pub stream_id: Identifier,
 }
 
 impl CommandPayload for GetStream {}
 
-impl Default for GetStream {
-    fn default() -> Self {
-        GetStream { stream_id: 1 }
-    }
-}
-
 impl Validatable for GetStream {
     fn validate(&self) -> Result<(), Error> {
-        if self.stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         Ok(())
     }
 }
@@ -37,7 +29,7 @@ impl FromStr for GetStream {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = parts[0].parse::<u32>()?;
+        let stream_id = parts[0].parse::<Identifier>()?;
         let command = GetStream { stream_id };
         command.validate()?;
         Ok(command)
@@ -46,17 +38,15 @@ impl FromStr for GetStream {
 
 impl BytesSerializable for GetStream {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(4);
-        bytes.extend(self.stream_id.to_le_bytes());
-        bytes
+        self.stream_id.as_bytes()
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<GetStream, Error> {
-        if bytes.len() != 4 {
+        if bytes.len() < 3 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = u32::from_le_bytes(bytes.try_into()?);
+        let stream_id = Identifier::from_bytes(bytes)?;
         let command = GetStream { stream_id };
         command.validate()?;
         Ok(command)
@@ -75,10 +65,12 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes() {
-        let command = GetStream { stream_id: 1 };
+        let command = GetStream {
+            stream_id: Identifier::numeric(1).unwrap(),
+        };
 
         let bytes = command.as_bytes();
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
+        let stream_id = Identifier::from_bytes(&bytes).unwrap();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -86,8 +78,8 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let stream_id = 1u32;
-        let bytes = stream_id.to_le_bytes();
+        let stream_id = Identifier::numeric(1).unwrap();
+        let bytes = stream_id.as_bytes();
         let command = GetStream::from_bytes(&bytes);
         assert!(command.is_ok());
 
@@ -97,7 +89,7 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let stream_id = 1u32;
+        let stream_id = Identifier::numeric(1).unwrap();
         let input = format!("{}", stream_id);
         let command = GetStream::from_str(&input);
         assert!(command.is_ok());

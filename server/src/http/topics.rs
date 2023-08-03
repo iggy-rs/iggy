@@ -4,6 +4,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
+use iggy::identifier::Identifier;
 use iggy::models::topic::{Topic, TopicDetails};
 use iggy::topics::create_topic::CreateTopic;
 use iggy::validatable::Validatable;
@@ -42,14 +43,14 @@ async fn get_topics(
 
 async fn create_topic(
     State(system): State<Arc<RwLock<System>>>,
-    Path(stream_id): Path<u32>,
+    Path(stream_id): Path<String>,
     Json(mut command): Json<CreateTopic>,
 ) -> Result<StatusCode, CustomError> {
-    command.stream_id = stream_id;
+    command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
     let mut system = system.write().await;
     system
-        .get_stream_by_id_mut(stream_id)?
+        .get_stream_mut(&command.stream_id)?
         .create_topic(command.topic_id, &command.name, command.partitions_count)
         .await?;
     Ok(StatusCode::CREATED)
@@ -57,9 +58,11 @@ async fn create_topic(
 
 async fn delete_topic(
     State(system): State<Arc<RwLock<System>>>,
-    Path((stream_id, topic_id)): Path<(u32, u32)>,
+    Path((stream_id, topic_id)): Path<(String, String)>,
 ) -> Result<StatusCode, CustomError> {
+    let stream_id = Identifier::from_str_value(&stream_id)?;
+    let topic_id = Identifier::from_str_value(&topic_id)?;
     let mut system = system.write().await;
-    system.delete_topic(stream_id, topic_id).await?;
+    system.delete_topic(&stream_id, &topic_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

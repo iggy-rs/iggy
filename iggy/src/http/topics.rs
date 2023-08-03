@@ -14,7 +14,7 @@ impl TopicClient for HttpClient {
         let response = self
             .get(&format!(
                 "{}/{}",
-                get_path(command.stream_id),
+                get_path(&command.stream_id.as_string()),
                 command.topic_id
             ))
             .await?;
@@ -23,23 +23,28 @@ impl TopicClient for HttpClient {
     }
 
     async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error> {
-        let response = self.get(&get_path(command.stream_id)).await?;
+        let response = self.get(&get_path(&command.stream_id.as_string())).await?;
         let topics = response.json().await?;
         Ok(topics)
     }
 
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error> {
-        self.post(&get_path(command.stream_id), &command).await?;
+        self.post(&get_path(&command.stream_id.as_string()), &command)
+            .await?;
         Ok(())
     }
 
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
-        let path = format!("{}/{}", get_path(command.stream_id), command.topic_id);
+        let path = format!(
+            "{}/{}",
+            get_path(&command.stream_id.as_string()),
+            command.topic_id
+        );
         self.delete(&path).await?;
         Ok(())
     }
 }
 
-fn get_path(stream_id: u32) -> String {
+fn get_path(stream_id: &str) -> String {
     format!("streams/{}/topics", stream_id)
 }

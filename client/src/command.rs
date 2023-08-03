@@ -1,4 +1,4 @@
-use crate::{consumer_groups, messages, offsets, partitions, streams, system, topics};
+use crate::{consumer_groups, consumer_offsets, messages, partitions, streams, system, topics};
 use iggy::client::Client;
 use iggy::client_error::ClientError;
 use iggy::command::Command;
@@ -17,8 +17,12 @@ pub async fn handle(input: &str, client: &dyn Client) -> Result<(), ClientError>
         Command::GetClients(payload) => system::get_clients(&payload, client).await,
         Command::SendMessages(payload) => messages::send_messages(&payload, client).await,
         Command::PollMessages(payload) => messages::poll_messages(&payload, client).await,
-        Command::StoreOffset(payload) => offsets::store_offset(&payload, client).await,
-        Command::GetOffset(payload) => offsets::get_offset(&payload, client).await,
+        Command::StoreConsumerOffset(payload) => {
+            consumer_offsets::store_consumer_offset(&payload, client).await
+        }
+        Command::GetConsumerOffset(payload) => {
+            consumer_offsets::get_consumer_offset(&payload, client).await
+        }
         Command::GetStream(payload) => streams::get_stream(&payload, client).await,
         Command::GetStreams(payload) => streams::get_streams(&payload, client).await,
         Command::CreateStream(payload) => streams::create_stream(&payload, client).await,

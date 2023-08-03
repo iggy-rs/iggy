@@ -1,6 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -8,8 +9,10 @@ use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct LeaveConsumerGroup {
-    pub stream_id: u32,
-    pub topic_id: u32,
+    #[serde(skip)]
+    pub stream_id: Identifier,
+    #[serde(skip)]
+    pub topic_id: Identifier,
     pub consumer_group_id: u32,
 }
 
@@ -18,8 +21,8 @@ impl CommandPayload for LeaveConsumerGroup {}
 impl Default for LeaveConsumerGroup {
     fn default() -> Self {
         LeaveConsumerGroup {
-            stream_id: 1,
-            topic_id: 1,
+            stream_id: Identifier::default(),
+            topic_id: Identifier::default(),
             consumer_group_id: 1,
         }
     }
@@ -27,14 +30,6 @@ impl Default for LeaveConsumerGroup {
 
 impl Validatable for LeaveConsumerGroup {
     fn validate(&self) -> Result<(), Error> {
-        if self.stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
-        if self.topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         if self.consumer_group_id == 0 {
             return Err(Error::InvalidConsumerGroupId);
         }
@@ -51,8 +46,8 @@ impl FromStr for LeaveConsumerGroup {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = parts[0].parse::<u32>()?;
-        let topic_id = parts[1].parse::<u32>()?;
+        let stream_id = parts[0].parse::<Identifier>()?;
+        let topic_id = parts[1].parse::<Identifier>()?;
         let consumer_group_id = parts[2].parse::<u32>()?;
         let command = LeaveConsumerGroup {
             stream_id,
@@ -66,21 +61,26 @@ impl FromStr for LeaveConsumerGroup {
 
 impl BytesSerializable for LeaveConsumerGroup {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(12);
-        bytes.extend(self.stream_id.to_le_bytes());
-        bytes.extend(self.topic_id.to_le_bytes());
+        let stream_id_bytes = self.stream_id.as_bytes();
+        let topic_id_bytes = self.topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes.extend(self.consumer_group_id.to_le_bytes());
         bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<LeaveConsumerGroup, Error> {
-        if bytes.len() != 12 {
+        if bytes.len() < 10 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        let consumer_group_id = u32::from_le_bytes(bytes[8..12].try_into()?);
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(bytes)?;
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        position += topic_id.get_size_bytes() as usize;
+        let consumer_group_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let command = LeaveConsumerGroup {
             stream_id,
             topic_id,
@@ -108,15 +108,19 @@ mod tests {
     #[test]
     fn should_be_serialized_as_bytes() {
         let command = LeaveConsumerGroup {
-            stream_id: 1,
-            topic_id: 2,
+            stream_id: Identifier::numeric(1).unwrap(),
+            topic_id: Identifier::numeric(2).unwrap(),
             consumer_group_id: 3,
         };
 
         let bytes = command.as_bytes();
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
-        let consumer_group_id = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        position += topic_id.get_size_bytes() as usize;
+        let consumer_group_id =
+            u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -126,15 +130,15 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let stream_id = 1u32;
-        let topic_id = 2u32;
+        let stream_id = Identifier::numeric(1).unwrap();
+        let topic_id = Identifier::numeric(2).unwrap();
         let consumer_group_id = 3u32;
-        let bytes = [
-            stream_id.to_le_bytes(),
-            topic_id.to_le_bytes(),
-            consumer_group_id.to_le_bytes(),
-        ]
-        .concat();
+        let stream_id_bytes = stream_id.as_bytes();
+        let topic_id_bytes = topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
+        bytes.extend(consumer_group_id.to_le_bytes());
         let command = LeaveConsumerGroup::from_bytes(&bytes);
         assert!(command.is_ok());
 
@@ -146,8 +150,8 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let stream_id = 1u32;
-        let topic_id = 2u32;
+        let stream_id = Identifier::numeric(1).unwrap();
+        let topic_id = Identifier::numeric(2).unwrap();
         let consumer_group_id = 3u32;
         let input = format!("{}|{}|{}", stream_id, topic_id, consumer_group_id);
         let command = LeaveConsumerGroup::from_str(&input);

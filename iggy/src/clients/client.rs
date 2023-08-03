@@ -1,6 +1,6 @@
 use crate::client::{
-    Client, ConsumerGroupClient, MessageClient, PartitionClient, StreamClient, SystemClient,
-    TopicClient,
+    Client, ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient,
+    StreamClient, SystemClient, TopicClient,
 };
 use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
@@ -8,8 +8,10 @@ use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
 use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
+use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
+use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::Error;
-use crate::identifier::{IdKind, Identifier};
+use crate::identifier::Identifier;
 use crate::messages::poll_messages::{Kind, PollMessages};
 use crate::messages::send_messages::{Key, KeyKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
@@ -19,8 +21,6 @@ use crate::models::offset::Offset;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
-use crate::offsets::get_offset::GetOffset;
-use crate::offsets::store_offset::StoreOffset;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 use crate::streams::create_stream::CreateStream;
@@ -193,29 +193,12 @@ impl IggyClient {
     }
 
     async fn store_offset(client: &dyn Client, poll_messages: &PollMessages, offset: u64) {
-        // TODO: Support string stream IDs.
-        let stream_id = match poll_messages.stream_id.kind {
-            IdKind::Numeric => poll_messages.stream_id.as_u32().unwrap(),
-            IdKind::String => {
-                error!("Storing offset for string stream ID is not supported yet.");
-                return;
-            }
-        };
-
-        let topic_id = match poll_messages.topic_id.kind {
-            IdKind::Numeric => poll_messages.topic_id.as_u32().unwrap(),
-            IdKind::String => {
-                error!("Storing offset for string stream ID is not supported yet.");
-                return;
-            }
-        };
-
         let result = client
-            .store_offset(&StoreOffset {
+            .store_consumer_offset(&StoreConsumerOffset {
                 consumer_type: poll_messages.consumer_type,
                 consumer_id: poll_messages.consumer_id,
-                stream_id,
-                topic_id,
+                stream_id: Identifier::from_identifier(&poll_messages.stream_id),
+                topic_id: Identifier::from_identifier(&poll_messages.topic_id),
                 partition_id: poll_messages.partition_id,
                 offset,
             })
@@ -254,8 +237,8 @@ impl IggyClient {
                             break;
                         }
 
-                        stream_id = Identifier::from(&send_messages.stream_id);
-                        topic_id = Identifier::from(&send_messages.topic_id);
+                        stream_id = Identifier::from_identifier(&send_messages.stream_id);
+                        topic_id = Identifier::from_identifier(&send_messages.topic_id);
                         key.value = send_messages.key.value.clone();
                         initialized = true;
                     }
@@ -293,9 +276,8 @@ impl IggyClient {
 
                 while let Some(messages) = batches.pop_front() {
                     let send_messages = SendMessages {
-                        stream_id: Identifier::from(&stream_id),
-                        topic_id: Identifier::from(&topic_id),
-                        messages_count: messages.len() as u32,
+                        stream_id: Identifier::from_identifier(&stream_id),
+                        topic_id: Identifier::from_identifier(&topic_id),
                         key: Key {
                             kind: KeyKind::PartitionId,
                             length: 4,
@@ -418,9 +400,8 @@ impl MessageClient for IggyClient {
 
         let mut batch = self.send_messages_batch.lock().await;
         let send_messages = SendMessages {
-            stream_id: Identifier::from(&command.stream_id),
-            topic_id: Identifier::from(&command.topic_id),
-            messages_count: command.messages_count,
+            stream_id: Identifier::from_identifier(&command.stream_id),
+            topic_id: Identifier::from_identifier(&command.topic_id),
             key: Key {
                 kind: command.key.kind,
                 length: command.key.length,
@@ -439,13 +420,20 @@ impl MessageClient for IggyClient {
         batch.commands.push_back(send_messages);
         Ok(())
     }
+}
 
-    async fn store_offset(&self, command: &StoreOffset) -> Result<(), Error> {
-        self.client.read().await.store_offset(command).await
+#[async_trait]
+impl ConsumerOffsetClient for IggyClient {
+    async fn store_consumer_offset(&self, command: &StoreConsumerOffset) -> Result<(), Error> {
+        self.client
+            .read()
+            .await
+            .store_consumer_offset(command)
+            .await
     }
 
-    async fn get_offset(&self, command: &GetOffset) -> Result<Offset, Error> {
-        self.client.read().await.get_offset(command).await
+    async fn get_consumer_offset(&self, command: &GetConsumerOffset) -> Result<Offset, Error> {
+        self.client.read().await.get_consumer_offset(command).await
     }
 }
 

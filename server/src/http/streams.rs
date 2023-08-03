@@ -4,6 +4,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
+use iggy::identifier::Identifier;
 use iggy::models::stream::{Stream, StreamDetails};
 use iggy::streams::create_stream::CreateStream;
 use iggy::validatable::Validatable;
@@ -50,8 +51,9 @@ async fn create_stream(
 
 async fn delete_stream(
     State(system): State<Arc<RwLock<System>>>,
-    Path(stream_id): Path<u32>,
+    Path(stream_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    system.write().await.delete_stream(stream_id).await?;
+    let stream_id = Identifier::from_str_value(&stream_id)?;
+    system.write().await.delete_stream(&stream_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

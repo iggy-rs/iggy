@@ -19,7 +19,10 @@ impl ConsumerGroupClient for HttpClient {
         let response = self
             .get(&format!(
                 "{}/{}",
-                get_path(command.stream_id, command.topic_id),
+                get_path(
+                    &command.stream_id.as_string(),
+                    &command.topic_id.as_string()
+                ),
                 command.stream_id
             ))
             .await?;
@@ -32,22 +35,34 @@ impl ConsumerGroupClient for HttpClient {
         command: &GetConsumerGroups,
     ) -> Result<Vec<ConsumerGroup>, Error> {
         let response = self
-            .get(&get_path(command.stream_id, command.topic_id))
+            .get(&get_path(
+                &command.stream_id.as_string(),
+                &command.topic_id.as_string(),
+            ))
             .await?;
         let consumer_groups = response.json().await?;
         Ok(consumer_groups)
     }
 
     async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), Error> {
-        self.post(&get_path(command.stream_id, command.topic_id), &command)
-            .await?;
+        self.post(
+            &get_path(
+                &command.stream_id.as_string(),
+                &command.topic_id.as_string(),
+            ),
+            &command,
+        )
+        .await?;
         Ok(())
     }
 
     async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), Error> {
         let path = format!(
             "{}/{}",
-            get_path(command.stream_id, command.topic_id),
+            get_path(
+                &command.stream_id.as_string(),
+                &command.topic_id.as_string()
+            ),
             command.consumer_group_id
         );
         self.delete(&path).await?;
@@ -63,6 +78,6 @@ impl ConsumerGroupClient for HttpClient {
     }
 }
 
-fn get_path(stream_id: u32, topic_id: u32) -> String {
+fn get_path(stream_id: &str, topic_id: &str) -> String {
     format!("streams/{}/topics/{}/consumer-groups", stream_id, topic_id)
 }

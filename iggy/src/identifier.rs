@@ -35,7 +35,7 @@ impl Default for Identifier {
 }
 
 impl Identifier {
-    pub fn as_u32(&self) -> Result<u32, Error> {
+    pub fn get_u32_value(&self) -> Result<u32, Error> {
         if self.kind != IdKind::Numeric {
             return Err(Error::InvalidCommand);
         }
@@ -47,7 +47,7 @@ impl Identifier {
         Ok(u32::from_le_bytes(self.value.clone().try_into().unwrap()))
     }
 
-    pub fn as_string(&self) -> Result<String, Error> {
+    pub fn get_string_value(&self) -> Result<String, Error> {
         if self.kind != IdKind::String {
             return Err(Error::InvalidCommand);
         }
@@ -55,11 +55,34 @@ impl Identifier {
         Ok(String::from_utf8_lossy(&self.value).to_string())
     }
 
-    pub fn from(identifier: &Identifier) -> Self {
+    pub fn as_string(&self) -> String {
+        match self.kind {
+            IdKind::Numeric => self.get_u32_value().unwrap().to_string(),
+            IdKind::String => self.get_string_value().unwrap(),
+        }
+    }
+
+    pub fn get_size_bytes(&self) -> u32 {
+        2 + self.length as u32
+    }
+
+    pub fn from_identifier(identifier: &Identifier) -> Self {
         Self {
             kind: identifier.kind,
             length: identifier.length,
             value: identifier.value.clone(),
+        }
+    }
+
+    pub fn from_str_value(value: &str) -> Result<Self, Error> {
+        let length = value.len();
+        if length == 0 || length > 255 {
+            return Err(Error::InvalidCommand);
+        }
+
+        match value.parse::<u32>() {
+            Ok(id) => Identifier::numeric(id),
+            Err(_) => Identifier::string(&value),
         }
     }
 
@@ -146,6 +169,17 @@ impl FromStr for IdKind {
             "s" | "string" => Ok(IdKind::String),
             _ => Err(Error::InvalidCommand),
         }
+    }
+}
+
+impl FromStr for Identifier {
+    type Err = Error;
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
+        if let Ok(value) = input.parse::<u32>() {
+            return Identifier::numeric(value);
+        }
+
+        Identifier::string(input)
     }
 }
 

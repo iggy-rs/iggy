@@ -3,9 +3,9 @@ use crate::binary::handlers::consumer_groups::{
     create_consumer_group_handler, delete_consumer_group_handler, get_consumer_group_handler,
     get_consumer_groups_handler, join_consumer_group_handler, leave_consumer_group_handler,
 };
+use crate::binary::handlers::consumer_offsets::*;
 use crate::binary::handlers::messages::*;
-use crate::binary::handlers::offsets::*;
-use crate::binary::handlers::partitions::{create_partitions_handler, delete_partitions_handler};
+use crate::binary::handlers::partitions::*;
 use crate::binary::handlers::streams::*;
 use crate::binary::handlers::system::*;
 use crate::binary::handlers::topics::*;
@@ -87,11 +87,11 @@ async fn try_handle(
         Command::PollMessages(command) => {
             poll_messages_handler::handle(command, sender, client_context, system).await
         }
-        Command::GetOffset(command) => {
-            get_offset_handler::handle(command, sender, client_context, system).await
+        Command::GetConsumerOffset(command) => {
+            get_consumer_offset_handler::handle(command, sender, client_context, system).await
         }
-        Command::StoreOffset(command) => {
-            store_offset_handler::handle(command, sender, client_context, system).await
+        Command::StoreConsumerOffset(command) => {
+            store_consumer_offset_handler::handle(command, sender, client_context, system).await
         }
         Command::GetStream(command) => get_stream_handler::handle(command, sender, system).await,
         Command::GetStreams(command) => get_streams_handler::handle(command, sender, system).await,

@@ -4,6 +4,8 @@ use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
 use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
+use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
+use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::Error;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
@@ -14,8 +16,6 @@ use crate::models::offset::Offset;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
-use crate::offsets::get_offset::GetOffset;
-use crate::offsets::store_offset::StoreOffset;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 use crate::streams::create_stream::CreateStream;
@@ -42,6 +42,7 @@ pub trait Client:
     + TopicClient
     + PartitionClient
     + MessageClient
+    + ConsumerOffsetClient
     + ConsumerGroupClient
     + Sync
     + Send
@@ -87,8 +88,12 @@ pub trait PartitionClient {
 pub trait MessageClient {
     async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error>;
     async fn send_messages(&self, command: &SendMessages) -> Result<(), Error>;
-    async fn store_offset(&self, command: &StoreOffset) -> Result<(), Error>;
-    async fn get_offset(&self, command: &GetOffset) -> Result<Offset, Error>;
+}
+
+#[async_trait]
+pub trait ConsumerOffsetClient {
+    async fn store_consumer_offset(&self, command: &StoreConsumerOffset) -> Result<(), Error>;
+    async fn get_consumer_offset(&self, command: &GetConsumerOffset) -> Result<Offset, Error>;
 }
 
 #[async_trait]

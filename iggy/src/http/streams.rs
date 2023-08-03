@@ -13,7 +13,9 @@ const PATH: &str = "/streams";
 #[async_trait]
 impl StreamClient for HttpClient {
     async fn get_stream(&self, command: &GetStream) -> Result<StreamDetails, Error> {
-        let response = self.get(&format!("{}/{}", PATH, command.stream_id)).await?;
+        let response = self
+            .get(&format!("{}/{}", PATH, command.stream_id.as_string()))
+            .await?;
         let stream = response.json().await?;
         Ok(stream)
     }
@@ -30,7 +32,7 @@ impl StreamClient for HttpClient {
     }
 
     async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error> {
-        let path = format!("{}/{}", PATH, command.stream_id);
+        let path = format!("{}/{}", PATH, command.stream_id.as_string());
         self.delete(&path).await?;
         Ok(())
     }

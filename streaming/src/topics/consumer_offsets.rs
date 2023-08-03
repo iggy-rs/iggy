@@ -3,7 +3,7 @@ use crate::topics::topic::Topic;
 use iggy::error::Error;
 
 impl Topic {
-    pub async fn store_offset(
+    pub async fn store_consumer_offset(
         &self,
         consumer: PollingConsumer,
         partition_id: u32,
@@ -16,10 +16,10 @@ impl Topic {
 
         let partition = partition.unwrap();
         let partition = partition.read().await;
-        partition.store_offset(consumer, offset).await
+        partition.store_consumer_offset(consumer, offset).await
     }
 
-    pub async fn get_offset(
+    pub async fn get_consumer_offset(
         &self,
         consumer: PollingConsumer,
         partition_id: u32,
@@ -31,6 +31,6 @@ impl Topic {
 
         let partition = partition.unwrap();
         let partition = partition.read().await;
-        partition.get_offset(consumer).await
+        partition.get_consumer_offset(consumer).await
     }
 }

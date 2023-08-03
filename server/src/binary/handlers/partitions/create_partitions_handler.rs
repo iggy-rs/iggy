@@ -15,8 +15,8 @@ pub async fn handle(
     trace!("{}", command);
     let mut system = system.write().await;
     let topic = system
-        .get_stream_by_id_mut(command.stream_id)?
-        .get_topic_by_id_mut(command.topic_id)?;
+        .get_stream_mut(&command.stream_id)?
+        .get_topic_mut(&command.topic_id)?;
     topic
         .add_persisted_partitions(command.partitions_count)
         .await?;

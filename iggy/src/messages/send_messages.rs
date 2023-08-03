@@ -1,7 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
-use crate::identifier::{IdKind, Identifier};
+use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
@@ -21,8 +21,6 @@ pub struct SendMessages {
     #[serde(skip)]
     pub topic_id: Identifier,
     pub key: Key,
-    #[serde(skip)]
-    pub messages_count: u32,
     pub messages: Vec<Message>,
 }
 
@@ -66,7 +64,6 @@ impl Default for SendMessages {
             stream_id: Identifier::default(),
             topic_id: Identifier::default(),
             key: Key::default(),
-            messages_count: 1,
             messages: vec![Message::default()],
         }
     }
@@ -135,13 +132,17 @@ impl Key {
             value: entity_id.to_le_bytes().to_vec(),
         }
     }
+
+    pub fn get_size_bytes(&self) -> u32 {
+        2 + self.length as u32
+    }
 }
 
 impl CommandPayload for SendMessages {}
 
 impl Validatable for SendMessages {
     fn validate(&self) -> Result<(), Error> {
-        if self.messages_count == 0 {
+        if self.messages.is_empty() {
             return Err(Error::InvalidMessagesCount);
         }
 
@@ -319,18 +320,8 @@ impl FromStr for SendMessages {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = match parts[0].parse::<u32>() {
-            Ok(stream_id) => Identifier::numeric(stream_id),
-            Err(_) => Identifier::string(parts[0]),
-        }
-        .unwrap();
-
-        let topic_id = match parts[1].parse::<u32>() {
-            Ok(topic_id) => Identifier::numeric(topic_id),
-            Err(_) => Identifier::string(parts[1]),
-        }
-        .unwrap();
-
+        let stream_id = parts[0].parse::<Identifier>()?;
+        let topic_id = parts[1].parse::<Identifier>()?;
         let key_kind = parts[2];
         let key_kind = KeyKind::from_str(key_kind)?;
         let (key_value, key_length) = match key_kind {
@@ -346,7 +337,6 @@ impl FromStr for SendMessages {
         let payload = Bytes::from(parts[5].as_bytes().to_vec());
 
         // For now, we only support a single payload.
-        let messages_count = 1;
         let message = Message {
             id: message_id,
             length: payload.len() as u32,
@@ -361,7 +351,6 @@ impl FromStr for SendMessages {
                 length: key_length,
                 value: key_value,
             },
-            messages_count,
             messages: vec![message],
         };
         command.validate()?;
@@ -381,15 +370,11 @@ impl BytesSerializable for SendMessages {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
         let mut bytes = Vec::with_capacity(
-            4 + stream_id_bytes.len()
-                + topic_id_bytes.len()
-                + key_bytes.len()
-                + messages_size as usize,
+            stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages_size as usize,
         );
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
         bytes.extend(key_bytes);
-        bytes.extend(self.messages_count.to_le_bytes());
         for message in &self.messages {
             bytes.extend(message.id.to_le_bytes());
             bytes.extend(message.length.to_le_bytes());
@@ -400,29 +385,20 @@ impl BytesSerializable for SendMessages {
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<SendMessages, Error> {
-        if bytes.len() < 15 {
+        if bytes.len() < 11 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id_kind = IdKind::from_code(bytes[0])?;
-        let stream_id_length = bytes[1];
-        let stream_id_value = bytes[2..2 + stream_id_length as usize].to_vec();
-        let topic_id_kind = IdKind::from_code(bytes[2 + stream_id_length as usize])?;
-        let topic_id_length = bytes[3 + stream_id_length as usize];
-        let topic_id_value = bytes[4 + stream_id_length as usize
-            ..4 + stream_id_length as usize + topic_id_length as usize]
-            .to_vec();
-        let current_position = 4 + stream_id_length as usize + topic_id_length as usize;
-        let key_kind = KeyKind::from_code(bytes[current_position])?;
-        let key_length = bytes[current_position + 1];
-        let key_value =
-            bytes[current_position + 2..current_position + 2 + key_length as usize].to_vec();
-        let current_position = current_position + 2 + key_length as usize;
-        let messages_count =
-            u32::from_le_bytes(bytes[current_position..current_position + 4].try_into()?);
-        let messages_payloads = &bytes[current_position + 4..];
         let mut position = 0;
-        let mut messages = Vec::with_capacity(messages_count as usize);
+        let stream_id = Identifier::from_bytes(bytes)?;
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        position += topic_id.get_size_bytes() as usize;
+        let key = Key::from_bytes(&bytes[position..])?;
+        position += key.get_size_bytes() as usize;
+        let messages_payloads = &bytes[position..];
+        position = 0;
+        let mut messages = Vec::new();
         while position < messages_payloads.len() {
             let message = Message::from_bytes(&messages_payloads[position..])?;
             position += message.get_size_bytes() as usize;
@@ -430,22 +406,9 @@ impl BytesSerializable for SendMessages {
         }
 
         let command = SendMessages {
-            stream_id: Identifier {
-                kind: stream_id_kind,
-                length: stream_id_length,
-                value: stream_id_value,
-            },
-            topic_id: Identifier {
-                kind: topic_id_kind,
-                length: topic_id_length,
-                value: topic_id_value,
-            },
-            key: Key {
-                kind: key_kind,
-                length: key_length,
-                value: key_value,
-            },
-            messages_count,
+            stream_id,
+            topic_id,
+            key,
             messages,
         };
         command.validate()?;
@@ -511,31 +474,19 @@ mod tests {
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(2).unwrap(),
             key: Key::partition_id(4),
-            messages_count: messages.len() as u32,
             messages,
         };
 
         let bytes = command.as_bytes();
-        let stream_id_kind = IdKind::from_code(bytes[0]).unwrap();
-        let stream_id_length = bytes[1];
-        let stream_id_value = bytes[2..2 + stream_id_length as usize].to_vec();
-        let topic_id_kind = IdKind::from_code(bytes[2 + stream_id_length as usize]).unwrap();
-        let topic_id_length = bytes[3 + stream_id_length as usize];
-        let topic_id_value = bytes[4 + stream_id_length as usize
-            ..4 + stream_id_length as usize + topic_id_length as usize]
-            .to_vec();
-        let current_position = 4 + stream_id_length as usize + topic_id_length as usize;
-        let key_kind = KeyKind::from_code(bytes[current_position]).unwrap();
-        let key_length = bytes[current_position + 1];
-        let key_value =
-            bytes[current_position + 2..current_position + 2 + key_length as usize].to_vec();
-        let current_position = current_position + 2 + key_length as usize;
-        let messages_count = u32::from_le_bytes(
-            bytes[current_position..current_position + 4]
-                .try_into()
-                .unwrap(),
-        );
-        let messages = &bytes[current_position + 4..];
+
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        position += topic_id.get_size_bytes() as usize;
+        let key = Key::from_bytes(&bytes[position..]).unwrap();
+        position += key.get_size_bytes() as usize;
+        let messages = &bytes[position..];
         let command_messages = &command
             .messages
             .iter()
@@ -544,16 +495,9 @@ mod tests {
             .concat();
 
         assert!(!bytes.is_empty());
-        assert_eq!(stream_id_kind, command.stream_id.kind);
-        assert_eq!(stream_id_length, command.stream_id.length);
-        assert_eq!(stream_id_value, command.stream_id.value);
-        assert_eq!(topic_id_kind, command.topic_id.kind);
-        assert_eq!(topic_id_length, command.topic_id.length);
-        assert_eq!(topic_id_value, command.topic_id.value);
-        assert_eq!(key_kind, command.key.kind);
-        assert_eq!(key_length, command.key.length);
-        assert_eq!(key_value, command.key.value);
-        assert_eq!(messages_count, command.messages_count);
+        assert_eq!(stream_id, command.stream_id);
+        assert_eq!(topic_id, command.topic_id);
+        assert_eq!(key, command.key);
         assert_eq!(messages, command_messages);
     }
 
@@ -562,7 +506,6 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
         let key = Key::partition_id(4);
-        let messages_count = 3u32;
 
         let message_1 = Message::from_str("hello 1").unwrap();
         let message_2 = Message::from_str("2|hello 2").unwrap();
@@ -577,14 +520,11 @@ mod tests {
         let key_bytes = key.as_bytes();
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
-        let current_position = 4 + stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len();
-        let mut bytes = Vec::with_capacity(
-            4 + stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages.len(),
-        );
+        let current_position = stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len();
+        let mut bytes = Vec::with_capacity(current_position);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
         bytes.extend(key_bytes);
-        bytes.extend(messages_count.to_le_bytes());
         bytes.extend(messages);
 
         let command = SendMessages::from_bytes(&bytes);
@@ -592,7 +532,7 @@ mod tests {
 
         let messages_payloads = &bytes[current_position..];
         let mut position = 0;
-        let mut messages = Vec::with_capacity(messages_count as usize);
+        let mut messages = Vec::new();
         while position < messages_payloads.len() {
             let message = Message::from_bytes(&messages_payloads[position..]).unwrap();
             position += message.get_size_bytes() as usize;
@@ -603,10 +543,9 @@ mod tests {
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
         assert_eq!(command.key, key);
-        assert_eq!(command.messages_count, messages_count);
-        for i in 0..command.messages_count {
-            let message = &messages[i as usize];
-            let command_message = &command.messages[i as usize];
+        for i in 0..command.messages.len() {
+            let message = &messages[i];
+            let command_message = &command.messages[i];
             assert_eq!(command_message.id, message.id);
             assert_eq!(command_message.length, message.length);
             assert_eq!(command_message.payload, message.payload);
@@ -619,7 +558,6 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
         let key = Key::partition_id(4);
-        let messages_count = 1u32;
         let message_id = 1u128;
         let payload = "hello";
         let input = format!(
@@ -635,7 +573,6 @@ mod tests {
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
         assert_eq!(command.key, key);
-        assert_eq!(command.messages_count, messages_count);
         assert_eq!(message.id, message_id);
         assert_eq!(message.length, payload.len() as u32);
         assert_eq!(message.payload, payload.as_bytes());

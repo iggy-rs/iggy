@@ -1,7 +1,8 @@
 use crate::common::{ClientFactory, TestServer};
 use bytes::Bytes;
 use iggy::client::{
-    ConsumerGroupClient, MessageClient, PartitionClient, StreamClient, SystemClient, TopicClient,
+    ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient, StreamClient,
+    SystemClient, TopicClient,
 };
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
@@ -10,14 +11,14 @@ use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
+use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
+use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::Kind::{Next, Offset};
 use iggy::messages::poll_messages::{Format, PollMessages};
 use iggy::messages::send_messages::{Key, Message, SendMessages};
-use iggy::offsets::get_offset::GetOffset;
-use iggy::offsets::store_offset::StoreOffset;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::streams::create_stream::CreateStream;
@@ -81,7 +82,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 5. Get stream details
     let stream = client
         .get_stream(&GetStream {
-            stream_id: STREAM_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -99,7 +100,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 7. Create the topic
     let mut create_topic = CreateTopic {
-        stream_id: STREAM_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: TOPIC_ID,
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
@@ -109,7 +110,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 8. Get topics and validate that created topic exists
     let topics = client
         .get_topics(&GetTopics {
-            stream_id: STREAM_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -124,8 +125,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 9. Get topic details
     let topic = client
         .get_topic(&GetTopic {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -148,7 +149,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 10. Get stream details and validate that created topic exists
     let stream = client
         .get_stream(&GetStream {
-            stream_id: STREAM_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -185,7 +186,6 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         key: Key::partition_id(PARTITION_ID),
-        messages_count: MESSAGES_COUNT,
         messages,
     };
     client.send_messages(&send_messages).await.unwrap();
@@ -242,8 +242,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 15. Get topic details and validate the partition details
     let topic = client
         .get_topic(&GetTopic {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -278,11 +278,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 17. Get the existing customer offset and ensure it's 0
     let offset = client
-        .get_offset(&GetOffset {
+        .get_consumer_offset(&GetConsumerOffset {
             consumer_type: CONSUMER_TYPE,
             consumer_id: CONSUMER_ID,
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
         })
         .await
@@ -293,11 +293,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 18. Store the consumer offset
     let stored_offset = 10;
     client
-        .store_offset(&StoreOffset {
+        .store_consumer_offset(&StoreConsumerOffset {
             consumer_type: CONSUMER_TYPE,
             consumer_id: CONSUMER_ID,
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
             offset: stored_offset,
         })
@@ -306,11 +306,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 19. Get the existing customer offset and ensure it's the previously stored value
     let offset = client
-        .get_offset(&GetOffset {
+        .get_consumer_offset(&GetConsumerOffset {
             consumer_type: CONSUMER_TYPE,
             consumer_id: CONSUMER_ID,
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
         })
         .await
@@ -343,11 +343,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 21. Get the existing customer offset and ensure that auto commit during poll has worked
     let offset = client
-        .get_offset(&GetOffset {
+        .get_consumer_offset(&GetConsumerOffset {
             consumer_type: CONSUMER_TYPE,
             consumer_id: CONSUMER_ID,
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
         })
         .await
@@ -358,8 +358,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 22. Get the consumer groups and validate that there are no groups
     let consumer_groups = client
         .get_consumer_groups(&GetConsumerGroups {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -369,8 +369,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 23. Create the consumer group
     client
         .create_consumer_group(&CreateConsumerGroup {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
@@ -379,8 +379,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 24. Get the consumer groups and validate that there is one group
     let consumer_groups = client
         .get_consumer_groups(&GetConsumerGroups {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -394,8 +394,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 25. Get the consumer group details
     let consumer_group = client
         .get_consumer_group(&GetConsumerGroup {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
@@ -409,8 +409,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 26. Join the consumer group and then leave it if the feature is available
     let result = client
         .join_consumer_group(&JoinConsumerGroup {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await;
@@ -419,8 +419,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         Ok(_) => {
             let consumer_group = client
                 .get_consumer_group(&GetConsumerGroup {
-                    stream_id: STREAM_ID,
-                    topic_id: TOPIC_ID,
+                    stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+                    topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
                     consumer_group_id: CONSUMER_GROUP_ID,
                 })
                 .await
@@ -443,8 +443,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
             client
                 .leave_consumer_group(&LeaveConsumerGroup {
-                    stream_id: STREAM_ID,
-                    topic_id: TOPIC_ID,
+                    stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+                    topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
                     consumer_group_id: CONSUMER_GROUP_ID,
                 })
                 .await
@@ -452,8 +452,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
             let consumer_group = client
                 .get_consumer_group(&GetConsumerGroup {
-                    stream_id: STREAM_ID,
-                    topic_id: TOPIC_ID,
+                    stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+                    topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
                     consumer_group_id: CONSUMER_GROUP_ID,
                 })
                 .await
@@ -492,8 +492,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 28. Delete the consumer group
     client
         .delete_consumer_group(&DeleteConsumerGroup {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
@@ -502,8 +502,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 29. Create new partitions and validate that the number of partitions is increased
     client
         .create_partitions(&CreatePartitions {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partitions_count: PARTITIONS_COUNT,
         })
         .await
@@ -511,8 +511,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     let topic = client
         .get_topic(&GetTopic {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -522,8 +522,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 30. Delete the partitions and validate that the number of partitions is decreased
     client
         .delete_partitions(&DeletePartitions {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partitions_count: PARTITIONS_COUNT,
         })
         .await
@@ -531,8 +531,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     let topic = client
         .get_topic(&GetTopic {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -542,14 +542,14 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 31. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(&DeleteTopic {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         })
         .await
         .unwrap();
     let topics = client
         .get_topics(&GetTopics {
-            stream_id: STREAM_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -558,7 +558,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 32. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(&DeleteStream {
-            stream_id: STREAM_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         })
         .await
         .unwrap();

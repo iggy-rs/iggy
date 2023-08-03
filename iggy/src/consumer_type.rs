@@ -14,15 +14,15 @@ pub enum ConsumerType {
 impl ConsumerType {
     pub fn as_code(&self) -> u8 {
         match self {
-            ConsumerType::Consumer => 0,
-            ConsumerType::ConsumerGroup => 1,
+            ConsumerType::Consumer => 1,
+            ConsumerType::ConsumerGroup => 2,
         }
     }
 
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
-            0 => Ok(ConsumerType::Consumer),
-            1 => Ok(ConsumerType::ConsumerGroup),
+            1 => Ok(ConsumerType::Consumer),
+            2 => Ok(ConsumerType::ConsumerGroup),
             _ => Err(Error::InvalidCommand),
         }
     }

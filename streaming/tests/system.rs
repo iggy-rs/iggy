@@ -1,6 +1,7 @@
 mod common;
 
 use crate::common::TestSetup;
+use iggy::identifier::Identifier;
 use streaming::system::System;
 use tokio::fs;
 
@@ -47,7 +48,10 @@ async fn should_delete_persisted_stream() {
     assert_persisted_stream(&system.streams_path, stream_id).await;
     let stream_path = system.get_stream_by_id(stream_id).unwrap().path.clone();
 
-    system.delete_stream(stream_id).await.unwrap();
+    system
+        .delete_stream(&Identifier::numeric(1).unwrap())
+        .await
+        .unwrap();
 
     assert!(fs::metadata(stream_path).await.is_err());
 }

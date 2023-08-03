@@ -1,6 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -12,7 +13,7 @@ const MAX_PARTITIONS_COUNT: u32 = 100000;
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateTopic {
     #[serde(skip)]
-    pub stream_id: u32,
+    pub stream_id: Identifier,
     pub topic_id: u32,
     pub partitions_count: u32,
     pub name: String,
@@ -23,7 +24,7 @@ impl CommandPayload for CreateTopic {}
 impl Default for CreateTopic {
     fn default() -> Self {
         CreateTopic {
-            stream_id: 1,
+            stream_id: Identifier::default(),
             topic_id: 1,
             partitions_count: 1,
             name: "topic".to_string(),
@@ -33,10 +34,6 @@ impl Default for CreateTopic {
 
 impl Validatable for CreateTopic {
     fn validate(&self) -> Result<(), Error> {
-        if self.stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
         if self.topic_id == 0 {
             return Err(Error::InvalidTopicId);
         }
@@ -61,7 +58,7 @@ impl FromStr for CreateTopic {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = parts[0].parse::<u32>()?;
+        let stream_id = parts[0].parse::<Identifier>()?;
         let topic_id = parts[1].parse::<u32>()?;
         let partitions_count = parts[2].parse::<u32>()?;
         let name = parts[3].to_string();
@@ -78,8 +75,9 @@ impl FromStr for CreateTopic {
 
 impl BytesSerializable for CreateTopic {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(12 + self.name.len());
-        bytes.extend(self.stream_id.to_le_bytes());
+        let stream_id_bytes = self.stream_id.as_bytes();
+        let mut bytes = Vec::with_capacity(8 + stream_id_bytes.len() + self.name.len());
+        bytes.extend(stream_id_bytes);
         bytes.extend(self.topic_id.to_le_bytes());
         bytes.extend(self.partitions_count.to_le_bytes());
         bytes.extend(self.name.as_bytes());
@@ -91,10 +89,12 @@ impl BytesSerializable for CreateTopic {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
-        let partitions_count = u32::from_le_bytes(bytes[8..12].try_into()?);
-        let name = from_utf8(&bytes[12..])?.to_string();
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(bytes)?;
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let partitions_count = u32::from_le_bytes(bytes[position + 4..position + 8].try_into()?);
+        let name = from_utf8(&bytes[position + 8..])?.to_string();
         let command = CreateTopic {
             stream_id,
             topic_id,
@@ -123,17 +123,20 @@ mod tests {
     #[test]
     fn should_be_serialized_as_bytes() {
         let command = CreateTopic {
-            stream_id: 1,
+            stream_id: Identifier::numeric(1).unwrap(),
             topic_id: 2,
             partitions_count: 3,
             name: "test".to_string(),
         };
 
         let bytes = command.as_bytes();
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
-        let partitions_count = u32::from_le_bytes(bytes[8..12].try_into().unwrap());
-        let name = from_utf8(&bytes[12..]).unwrap();
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
+        let partitions_count =
+            u32::from_le_bytes(bytes[position + 4..position + 8].try_into().unwrap());
+        let name = from_utf8(&bytes[position + 8..]).unwrap().to_string();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -144,17 +147,18 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let stream_id = 1u32;
+        let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = 2u32;
         let partitions_count = 3u32;
         let name = "test".to_string();
-        let bytes = [
-            &stream_id.to_le_bytes(),
-            &topic_id.to_le_bytes(),
-            &partitions_count.to_le_bytes(),
-            name.as_bytes(),
-        ]
-        .concat();
+
+        let stream_id_bytes = stream_id.as_bytes();
+        let mut bytes = Vec::with_capacity(8 + stream_id_bytes.len() + name.len());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id.to_le_bytes());
+        bytes.extend(partitions_count.to_le_bytes());
+        bytes.extend(name.as_bytes());
+
         let command = CreateTopic::from_bytes(&bytes);
         assert!(command.is_ok());
 
@@ -167,7 +171,7 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let stream_id = 1u32;
+        let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = 2u32;
         let partitions_count = 3u32;
         let name = "test".to_string();

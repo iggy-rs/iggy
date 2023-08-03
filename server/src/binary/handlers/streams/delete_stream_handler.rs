@@ -14,7 +14,7 @@ pub async fn handle(
 ) -> Result<(), Error> {
     trace!("{}", command);
     let mut system = system.write().await;
-    system.delete_stream(command.stream_id).await?;
+    system.delete_stream(&command.stream_id).await?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

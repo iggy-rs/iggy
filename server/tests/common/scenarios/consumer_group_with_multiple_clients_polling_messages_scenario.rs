@@ -39,7 +39,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     execute_using_entity_id_key(&system_client, &client1, &client2, &client3).await;
     system_client
         .delete_stream(&DeleteStream {
-            stream_id: STREAM_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -68,7 +68,7 @@ async fn init_system(
 
     // 2. Create the topic
     let create_topic = CreateTopic {
-        stream_id: STREAM_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: TOPIC_ID,
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
@@ -77,8 +77,8 @@ async fn init_system(
 
     // 3. Create the consumer group
     let create_group = CreateConsumerGroup {
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
     };
     system_client
@@ -87,8 +87,8 @@ async fn init_system(
         .unwrap();
 
     let join_group = JoinConsumerGroup {
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
     };
 
@@ -100,8 +100,8 @@ async fn init_system(
     // 5. Get the consumer group details
     let consumer_group_info = system_client
         .get_consumer_group(&GetConsumerGroup {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
@@ -126,7 +126,6 @@ async fn execute_using_entity_id_key(
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             key: Key::entity_id_u32(entity_id),
-            messages_count: 1,
             messages,
         };
         system_client.send_messages(&send_messages).await.unwrap();
@@ -188,7 +187,6 @@ async fn execute_using_none_key(
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             key: Key::none(),
-            messages_count: 1,
             messages,
         };
         system_client.send_messages(&send_messages).await.unwrap();
@@ -196,8 +194,8 @@ async fn execute_using_none_key(
 
     let consumer_group_info = system_client
         .get_consumer_group(&GetConsumerGroup {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await

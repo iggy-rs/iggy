@@ -4,7 +4,6 @@ use crate::binary::sender::Sender;
 use anyhow::Result;
 use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
-use iggy::identifier::IdKind;
 use iggy::messages::poll_messages::PollMessages;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
@@ -74,15 +73,8 @@ pub async fn handle(
     }
 
     let system = system.read().await;
-    let stream = match command.stream_id.kind {
-        IdKind::Numeric => system.get_stream_by_id(command.stream_id.as_u32().unwrap())?,
-        IdKind::String => system.get_stream_by_name(&command.stream_id.as_string().unwrap())?,
-    };
-    let topic = match command.topic_id.kind {
-        IdKind::Numeric => stream.get_topic_by_id(command.topic_id.as_u32().unwrap())?,
-        IdKind::String => stream.get_topic_by_name(&command.topic_id.as_string().unwrap())?,
-    };
-
+    let stream = system.get_stream(&command.stream_id)?;
+    let topic = stream.get_topic(&command.topic_id)?;
     if !topic.has_partitions() {
         return Err(Error::NoPartitions(topic.id, topic.stream_id));
     }
@@ -121,7 +113,9 @@ pub async fn handle(
     let messages = mapper::map_messages(&messages);
     if command.auto_commit {
         trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
-        topic.store_offset(consumer, partition_id, offset).await?;
+        topic
+            .store_consumer_offset(consumer, partition_id, offset)
+            .await?;
     }
 
     sender.send_ok_response(&messages).await?;

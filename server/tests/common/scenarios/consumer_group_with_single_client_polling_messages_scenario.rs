@@ -35,7 +35,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     execute_using_entity_id_key(&client).await;
     client
         .delete_stream(&DeleteStream {
-            stream_id: STREAM_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -54,7 +54,7 @@ async fn init_system(client: &IggyClient) {
 
     // 2. Create the topic
     let create_topic = CreateTopic {
-        stream_id: STREAM_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: TOPIC_ID,
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
@@ -63,15 +63,15 @@ async fn init_system(client: &IggyClient) {
 
     // 3. Create the consumer group
     let create_group = CreateConsumerGroup {
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
     };
     client.create_consumer_group(&create_group).await.unwrap();
 
     let join_group = JoinConsumerGroup {
-        stream_id: STREAM_ID,
-        topic_id: TOPIC_ID,
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
     };
 
@@ -81,8 +81,8 @@ async fn init_system(client: &IggyClient) {
     // 5. Validate that group contains the single client with all partitions assigned
     let consumer_group_info = client
         .get_consumer_group(&GetConsumerGroup {
-            stream_id: STREAM_ID,
-            topic_id: TOPIC_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             consumer_group_id: CONSUMER_GROUP_ID,
         })
         .await
@@ -107,7 +107,6 @@ async fn execute_using_entity_id_key(client: &IggyClient) {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             key: Key::entity_id_u32(entity_id),
-            messages_count: 1,
             messages,
         };
         client.send_messages(&send_messages).await.unwrap();
@@ -155,7 +154,6 @@ async fn execute_using_none_key(client: &IggyClient) {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             key: Key::none(),
-            messages_count: 1,
             messages,
         };
         client.send_messages(&send_messages).await.unwrap();

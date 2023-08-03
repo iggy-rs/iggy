@@ -1,7 +1,7 @@
 mod command;
 mod consumer_groups;
+mod consumer_offsets;
 mod messages;
-mod offsets;
 mod partitions;
 mod streams;
 mod system;

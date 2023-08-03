@@ -1,38 +1,24 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct DeleteTopic {
-    pub stream_id: u32,
-    pub topic_id: u32,
+    #[serde(skip)]
+    pub stream_id: Identifier,
+    #[serde(skip)]
+    pub topic_id: Identifier,
 }
 
 impl CommandPayload for DeleteTopic {}
 
-impl Default for DeleteTopic {
-    fn default() -> Self {
-        DeleteTopic {
-            stream_id: 1,
-            topic_id: 1,
-        }
-    }
-}
-
 impl Validatable for DeleteTopic {
     fn validate(&self) -> Result<(), Error> {
-        if self.stream_id == 0 {
-            return Err(Error::InvalidStreamId);
-        }
-
-        if self.topic_id == 0 {
-            return Err(Error::InvalidTopicId);
-        }
-
         Ok(())
     }
 }
@@ -45,8 +31,8 @@ impl FromStr for DeleteTopic {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = parts[0].parse::<u32>()?;
-        let topic_id = parts[1].parse::<u32>()?;
+        let stream_id = parts[0].parse::<Identifier>()?;
+        let topic_id = parts[1].parse::<Identifier>()?;
         let command = DeleteTopic {
             stream_id,
             topic_id,
@@ -58,19 +44,23 @@ impl FromStr for DeleteTopic {
 
 impl BytesSerializable for DeleteTopic {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(8);
-        bytes.extend(self.stream_id.to_le_bytes());
-        bytes.extend(self.topic_id.to_le_bytes());
+        let stream_id_bytes = self.stream_id.as_bytes();
+        let topic_id_bytes = self.topic_id.as_bytes();
+        let mut bytes = Vec::with_capacity(stream_id_bytes.len() + topic_id_bytes.len());
+        bytes.extend(stream_id_bytes);
+        bytes.extend(topic_id_bytes);
         bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<DeleteTopic, Error> {
-        if bytes.len() != 8 {
+        if bytes.len() < 10 {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into()?);
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(bytes)?;
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..])?;
         let command = DeleteTopic {
             stream_id,
             topic_id,
@@ -93,13 +83,15 @@ mod tests {
     #[test]
     fn should_be_serialized_as_bytes() {
         let command = DeleteTopic {
-            stream_id: 1,
-            topic_id: 2,
+            stream_id: Identifier::numeric(1).unwrap(),
+            topic_id: Identifier::numeric(2).unwrap(),
         };
 
         let bytes = command.as_bytes();
-        let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
-        let topic_id = u32::from_le_bytes(bytes[4..8].try_into().unwrap());
+        let mut position = 0;
+        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        position += stream_id.get_size_bytes() as usize;
+        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -108,9 +100,9 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let stream_id = 1u32;
-        let topic_id = 2u32;
-        let bytes = [stream_id.to_le_bytes(), topic_id.to_le_bytes()].concat();
+        let stream_id = Identifier::numeric(1).unwrap();
+        let topic_id = Identifier::numeric(2).unwrap();
+        let bytes = [stream_id.as_bytes(), topic_id.as_bytes()].concat();
         let command = DeleteTopic::from_bytes(&bytes);
         assert!(command.is_ok());
 
@@ -121,8 +113,8 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let stream_id = 1u32;
-        let topic_id = 2u32;
+        let stream_id = Identifier::numeric(1).unwrap();
+        let topic_id = Identifier::numeric(2).unwrap();
         let input = format!("{}|{}", stream_id, topic_id);
         let command = DeleteTopic::from_str(&input);
         assert!(command.is_ok());

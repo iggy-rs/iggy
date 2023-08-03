@@ -46,8 +46,8 @@ async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
             PollMessages {
                 consumer_type: ConsumerType::from_code(args.consumer_type)?,
                 consumer_id: args.consumer_id,
-                stream_id: Identifier::numeric(args.stream_id).unwrap(),
-                topic_id: Identifier::numeric(args.topic_id).unwrap(),
+                stream_id: Identifier::numeric(args.stream_id)?,
+                topic_id: Identifier::numeric(args.topic_id)?,
                 partition_id: args.partition_id,
                 kind: Kind::Next,
                 value: 0,

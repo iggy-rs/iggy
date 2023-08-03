@@ -2,6 +2,7 @@ use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
 use crate::utils::text;
 use iggy::error::Error;
+use iggy::identifier::{IdKind, Identifier};
 use tracing::info;
 
 impl Stream {
@@ -38,6 +39,20 @@ impl Stream {
         self.topics.insert(id, topic);
 
         Ok(())
+    }
+
+    pub fn get_topic(&self, identifier: &Identifier) -> Result<&Topic, Error> {
+        match identifier.kind {
+            IdKind::Numeric => self.get_topic_by_id(identifier.get_u32_value().unwrap()),
+            IdKind::String => self.get_topic_by_name(&identifier.get_string_value().unwrap()),
+        }
+    }
+
+    pub fn get_topic_mut(&mut self, identifier: &Identifier) -> Result<&mut Topic, Error> {
+        match identifier.kind {
+            IdKind::Numeric => self.get_topic_by_id_mut(identifier.get_u32_value().unwrap()),
+            IdKind::String => self.get_topic_by_name_mut(&identifier.get_string_value().unwrap()),
+        }
     }
 
     pub fn get_topic_by_id(&self, id: u32) -> Result<&Topic, Error> {
@@ -84,18 +99,36 @@ impl Stream {
         self.topics.values_mut().collect()
     }
 
-    pub async fn delete_topic(&mut self, id: u32) -> Result<(), Error> {
-        let topic = self.topics.remove(&id);
-        if topic.is_none() {
-            return Err(Error::TopicIdNotFound(id, self.id));
-        }
+    pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, Error> {
+        let topic = match id.kind {
+            IdKind::Numeric => {
+                let topic_id = id.get_u32_value().unwrap();
+                let topic = self.topics.remove(&topic_id);
+                if topic.is_none() {
+                    return Err(Error::TopicIdNotFound(topic_id, self.id));
+                }
 
-        let topic = topic.unwrap();
-        self.topics_ids.remove(&topic.name);
+                let topic = topic.unwrap();
+                self.topics_ids.remove(&topic.name);
+                topic
+            }
+            IdKind::String => {
+                let topic_name = id.get_string_value().unwrap();
+                let topic_id = self.topics_ids.remove(&topic_name);
+                if topic_id.is_none() {
+                    return Err(Error::TopicNameNotFound(topic_name, self.id));
+                }
+
+                let topic_id = topic_id.unwrap();
+                let topic = self.topics.remove(&topic_id);
+                topic.unwrap()
+            }
+        };
+
         if topic.delete().await.is_err() {
-            return Err(Error::CannotDeleteTopic(id, self.id));
+            return Err(Error::CannotDeleteTopic(topic.id, self.id));
         }
 
-        Ok(())
+        Ok(topic)
     }
 }

@@ -16,8 +16,8 @@ pub async fn handle(
     let mut system = system.write().await;
     system
         .create_consumer_group(
-            command.stream_id,
-            command.topic_id,
+            &command.stream_id,
+            &command.topic_id,
             command.consumer_group_id,
         )
         .await?;

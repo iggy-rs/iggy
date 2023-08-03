@@ -37,7 +37,7 @@ async fn init_system(client: &dyn Client) {
 
     match client
         .create_topic(&CreateTopic {
-            stream_id: STREAM_ID,
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: TOPIC_ID,
             partitions_count: 1,
             name: "sample-topic".to_string(),
@@ -74,7 +74,6 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
                 stream_id: Identifier::numeric(STREAM_ID)?,
                 topic_id: Identifier::numeric(TOPIC_ID)?,
                 key: Key::partition_id(PARTITION_ID),
-                messages_count: messages.len() as u32,
                 messages,
             })
             .await?;

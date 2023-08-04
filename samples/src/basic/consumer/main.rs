@@ -2,7 +2,7 @@ use clap::Parser;
 use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::consumer_type::ConsumerType;
+use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{Format, Kind, PollMessages};
 use iggy::models::message::Message;
@@ -34,8 +34,10 @@ async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
     loop {
         let messages = client
             .poll_messages(&PollMessages {
-                consumer_type: ConsumerType::from_code(args.consumer_type)?,
-                consumer_id: args.consumer_id,
+                consumer: Consumer {
+                    kind: ConsumerKind::from_code(args.consumer_kind)?,
+                    id: args.consumer_id,
+                },
                 stream_id: Identifier::numeric(args.stream_id)?,
                 topic_id: Identifier::numeric(args.topic_id)?,
                 partition_id: args.partition_id,

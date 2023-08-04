@@ -1,5 +1,5 @@
 use iggy::client::Client;
-use iggy::consumer_type::ConsumerType;
+use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{Format, Kind, PollMessages};
 use iggy::models::message::Message;
@@ -36,8 +36,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
     loop {
         let messages = client
             .poll_messages(&PollMessages {
-                consumer_type: ConsumerType::Consumer,
-                consumer_id: 0,
+                consumer: Consumer::default(),
                 stream_id: Identifier::numeric(STREAM_ID)?,
                 topic_id: Identifier::numeric(TOPIC_ID)?,
                 partition_id: PARTITION_ID,

@@ -97,7 +97,7 @@ Content-Type: application/json
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages?consumer_id={{consumer_id}}&partition_id={{partition_id}}&kind=offset&value=0&count=10&auto_commit=false
 
 ###
-PUT {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages/consumer-offsets
+PUT {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-offsets
 Content-Type: application/json
 
 {
@@ -107,7 +107,7 @@ Content-Type: application/json
 }
 
 ###
-GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages/consumer-offsets?consumer_id={{consumer_id}}&partition_id={{partition_id}}
+GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-offsets?consumer_id={{consumer_id}}&partition_id={{partition_id}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups

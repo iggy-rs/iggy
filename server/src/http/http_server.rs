@@ -1,4 +1,6 @@
-use crate::http::{consumer_groups, messages, partitions, streams, system, topics};
+use crate::http::{
+    consumer_groups, consumer_offsets, messages, partitions, streams, system, topics,
+};
 use axum::http::Method;
 use axum::Router;
 use std::sync::Arc;
@@ -23,6 +25,10 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
                         consumer_groups::router(system.clone()),
                     )
                     .nest("/:topic_id/messages", messages::router(system.clone()))
+                    .nest(
+                        "/:topic_id/consumer-offsets",
+                        consumer_offsets::router(system.clone()),
+                    )
                     .nest("/:topic_id/partitions", partitions::router(system.clone())),
             ),
         ),

@@ -1,10 +1,10 @@
 use crate::common::{ClientFactory, TestServer};
 use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::consumer::Consumer;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
-use iggy::consumer_type::ConsumerType;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::Kind::Next;
 use iggy::messages::poll_messages::{Format, PollMessages};
@@ -114,8 +114,7 @@ async fn execute_using_entity_id_key(client: &IggyClient) {
 
     // 2. Poll the messages for the single client which has assigned all partitions in the consumer group
     let poll_messages = PollMessages {
-        consumer_type: ConsumerType::ConsumerGroup,
-        consumer_id: CONSUMER_GROUP_ID,
+        consumer: Consumer::group(CONSUMER_GROUP_ID),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: 0,
@@ -161,8 +160,7 @@ async fn execute_using_none_key(client: &IggyClient) {
 
     // 2. Poll the messages for the single client which has assigned all partitions in the consumer group
     let poll_messages = PollMessages {
-        consumer_type: ConsumerType::ConsumerGroup,
-        consumer_id: CONSUMER_GROUP_ID,
+        consumer: Consumer::group(CONSUMER_GROUP_ID),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: 0,

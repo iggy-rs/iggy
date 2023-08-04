@@ -1,5 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
+use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -31,6 +32,28 @@ impl Default for Identifier {
             length: 4,
             value: 1u32.to_le_bytes().to_vec(),
         }
+    }
+}
+
+impl Validatable for Identifier {
+    fn validate(&self) -> Result<(), Error> {
+        if self.length == 0 {
+            return Err(Error::InvalidCommand);
+        }
+
+        if self.value.is_empty() {
+            return Err(Error::InvalidCommand);
+        }
+
+        if self.length != self.value.len() as u8 {
+            return Err(Error::InvalidCommand);
+        }
+
+        if self.kind == IdKind::Numeric && self.length != 4 {
+            return Err(Error::InvalidCommand);
+        }
+
+        Ok(())
     }
 }
 
@@ -136,11 +159,13 @@ impl BytesSerializable for Identifier {
             return Err(Error::InvalidCommand);
         }
 
-        Ok(Identifier {
+        let identifier = Identifier {
             kind,
             length,
             value,
-        })
+        };
+        identifier.validate()?;
+        Ok(identifier)
     }
 }
 
@@ -179,7 +204,9 @@ impl FromStr for Identifier {
             return Identifier::numeric(value);
         }
 
-        Identifier::string(input)
+        let identifier = Identifier::string(input)?;
+        identifier.validate()?;
+        Ok(identifier)
     }
 }
 

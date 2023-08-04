@@ -2,7 +2,6 @@ use crate::binary::client_context::ClientContext;
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use anyhow::Result;
-use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
 use iggy::messages::poll_messages::PollMessages;
 use std::sync::Arc;
@@ -79,13 +78,7 @@ pub async fn handle(
         return Err(Error::NoPartitions(topic.id, topic.stream_id));
     }
 
-    let consumer = match command.consumer_type {
-        ConsumerType::Consumer => PollingConsumer::Consumer(command.consumer_id),
-        ConsumerType::ConsumerGroup => {
-            PollingConsumer::ConsumerGroup(command.consumer_id, client_context.client_id)
-        }
-    };
-
+    let consumer = PollingConsumer::from_consumer(&command.consumer, client_context.client_id);
     let partition_id = match consumer {
         PollingConsumer::Consumer(_) => command.partition_id,
         PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
@@ -112,7 +105,7 @@ pub async fn handle(
     let offset = messages.last().unwrap().offset;
     let messages = mapper::map_messages(&messages);
     if command.auto_commit {
-        trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, command.consumer_id, command.stream_id, command.topic_id, command.partition_id);
+        trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, command.consumer.id, command.stream_id, command.topic_id, command.partition_id);
         topic
             .store_consumer_offset(consumer, partition_id, offset)
             .await?;

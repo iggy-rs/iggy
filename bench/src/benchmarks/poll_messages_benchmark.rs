@@ -2,7 +2,7 @@ use crate::args::Args;
 use crate::benchmark::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
-use iggy::consumer_type::ConsumerType;
+use iggy::consumer::Consumer;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{Format, Kind, PollMessages};
@@ -28,8 +28,7 @@ pub async fn run(
     );
 
     let mut command = PollMessages {
-        consumer_type: ConsumerType::Consumer,
-        consumer_id,
+        consumer: Consumer::new(consumer_id),
         stream_id: Identifier::numeric(stream_id).unwrap(),
         topic_id: Identifier::numeric(topic_id).unwrap(),
         partition_id,

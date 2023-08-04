@@ -1,7 +1,7 @@
 use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::polling_consumer::PollingConsumer;
 use crate::utils::file;
-use iggy::consumer_type::ConsumerType;
+use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::Error;
 use tokio::fs;
 use tokio::io::AsyncReadExt;
@@ -96,7 +96,7 @@ impl Partition {
         Ok(())
     }
 
-    pub async fn load_offsets(&mut self, consumer_type: ConsumerType) -> Result<(), Error> {
+    pub async fn load_offsets(&mut self, consumer_kind: ConsumerKind) -> Result<(), Error> {
         trace!(
                 "Loading consumer offsets for partition with ID: {} for topic with ID: {} and stream with ID: {}...",
                 self.id,
@@ -104,12 +104,12 @@ impl Partition {
                 self.stream_id
             );
 
-        let (path, mut offsets) = match consumer_type {
-            ConsumerType::Consumer => (
+        let (path, mut offsets) = match consumer_kind {
+            ConsumerKind::Consumer => (
                 &self.consumer_offsets_path,
                 self.consumer_offsets.write().await,
             ),
-            ConsumerType::ConsumerGroup => (
+            ConsumerKind::ConsumerGroup => (
                 &self.consumer_group_offsets_path,
                 self.consumer_group_offsets.write().await,
             ),
@@ -145,6 +145,10 @@ impl Partition {
             let consumer_id = consumer_id.unwrap();
             let mut file = file::open(&path).await?;
             let offset = file.read_u64_le().await?;
+            let consumer = Consumer {
+                id: consumer_id,
+                kind: consumer_kind,
+            };
             offsets.offsets.insert(
                 consumer_id,
                 RwLock::new(ConsumerOffset {
@@ -157,8 +161,8 @@ impl Partition {
             trace!(
                 "Loaded consumer offset: {} for {} ID: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
                 offset,
-                consumer_type,
-                consumer_id,
+                consumer.kind,
+                consumer.id,
                 self.id,
                 self.topic_id,
                 self.stream_id

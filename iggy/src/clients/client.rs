@@ -2,6 +2,7 @@ use crate::client::{
     Client, ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient,
     StreamClient, SystemClient, TopicClient,
 };
+use crate::consumer::Consumer;
 use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
@@ -195,8 +196,7 @@ impl IggyClient {
     async fn store_offset(client: &dyn Client, poll_messages: &PollMessages, offset: u64) {
         let result = client
             .store_consumer_offset(&StoreConsumerOffset {
-                consumer_type: poll_messages.consumer_type,
-                consumer_id: poll_messages.consumer_id,
+                consumer: Consumer::from_consumer(&poll_messages.consumer),
                 stream_id: Identifier::from_identifier(&poll_messages.stream_id),
                 topic_id: Identifier::from_identifier(&poll_messages.topic_id),
                 partition_id: poll_messages.partition_id,

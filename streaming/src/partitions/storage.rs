@@ -1,7 +1,7 @@
 use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::persister::Persister;
 use async_trait::async_trait;
-use iggy::consumer_type::ConsumerType;
+use iggy::consumer::ConsumerKind;
 use iggy::error::Error;
 use std::sync::Arc;
 use tokio::fs;
@@ -140,8 +140,8 @@ impl Storage<Partition> for FilePartitionStorage {
         }
 
         partition.current_offset = last_segment.current_offset;
-        partition.load_offsets(ConsumerType::Consumer).await?;
-        partition.load_offsets(ConsumerType::ConsumerGroup).await?;
+        partition.load_offsets(ConsumerKind::Consumer).await?;
+        partition.load_offsets(ConsumerKind::ConsumerGroup).await?;
         info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
             partition.id, partition.stream_id, partition.topic_id, partition.current_offset

@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::consumer_type::ConsumerType;
+use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -10,10 +10,8 @@ use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct PollMessages {
-    #[serde(default = "default_consumer_type")]
-    pub consumer_type: ConsumerType,
-    #[serde(default = "default_consumer_id")]
-    pub consumer_id: u32,
+    #[serde(flatten)]
+    pub consumer: Consumer,
     #[serde(skip)]
     pub stream_id: Identifier,
     #[serde(skip)]
@@ -35,8 +33,7 @@ pub struct PollMessages {
 impl Default for PollMessages {
     fn default() -> Self {
         Self {
-            consumer_type: default_consumer_type(),
-            consumer_id: default_consumer_id(),
+            consumer: Consumer::default(),
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(1).unwrap(),
             partition_id: default_partition_id(),
@@ -68,14 +65,6 @@ pub enum Format {
     None,
     Binary,
     String,
-}
-
-fn default_consumer_type() -> ConsumerType {
-    ConsumerType::Consumer
-}
-
-fn default_consumer_id() -> u32 {
-    0
 }
 
 fn default_partition_id() -> u32 {
@@ -157,8 +146,12 @@ impl FromStr for PollMessages {
             return Err(Error::InvalidCommand);
         }
 
-        let consumer_type = ConsumerType::from_str(parts[0])?;
+        let consumer_kind = ConsumerKind::from_str(parts[0])?;
         let consumer_id = parts[1].parse::<u32>()?;
+        let consumer = Consumer {
+            kind: consumer_kind,
+            id: consumer_id,
+        };
         let stream_id = parts[2].parse::<Identifier>()?;
         let topic_id = parts[3].parse::<Identifier>()?;
         let partition_id = parts[4].parse::<u32>()?;
@@ -183,8 +176,7 @@ impl FromStr for PollMessages {
         };
 
         let command = PollMessages {
-            consumer_type,
-            consumer_id,
+            consumer,
             stream_id,
             topic_id,
             partition_id,
@@ -201,11 +193,13 @@ impl FromStr for PollMessages {
 
 impl BytesSerializable for PollMessages {
     fn as_bytes(&self) -> Vec<u8> {
+        let consumer_bytes = self.consumer.as_bytes();
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
-        let mut bytes = Vec::with_capacity(23 + stream_id_bytes.len() + topic_id_bytes.len());
-        bytes.extend(self.consumer_type.as_code().to_le_bytes());
-        bytes.extend(self.consumer_id.to_le_bytes());
+        let mut bytes = Vec::with_capacity(
+            18 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
+        );
+        bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
         bytes.extend(self.partition_id.to_le_bytes());
@@ -227,8 +221,12 @@ impl BytesSerializable for PollMessages {
         }
 
         let mut position = 0;
-        let consumer_type = ConsumerType::from_code(bytes[0])?;
+        let consumer_kind = ConsumerKind::from_code(bytes[0])?;
         let consumer_id = u32::from_le_bytes(bytes[1..5].try_into()?);
+        let consumer = Consumer {
+            kind: consumer_kind,
+            id: consumer_id,
+        };
         position += 5;
         let stream_id = Identifier::from_bytes(&bytes[position..])?;
         position += stream_id.get_size_bytes() as usize;
@@ -247,8 +245,7 @@ impl BytesSerializable for PollMessages {
         };
         let format = Format::None;
         let command = PollMessages {
-            consumer_type,
-            consumer_id,
+            consumer,
             stream_id,
             topic_id,
             partition_id,
@@ -267,9 +264,8 @@ impl Display for PollMessages {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}",
-            self.consumer_type,
-            self.consumer_id,
+            "{}|{}|{}|{}|{}|{}|{}|{}",
+            self.consumer,
             self.stream_id,
             self.topic_id,
             self.partition_id,
@@ -296,8 +292,7 @@ mod tests {
     #[test]
     fn should_be_serialized_as_bytes() {
         let command = PollMessages {
-            consumer_type: ConsumerType::Consumer,
-            consumer_id: 1,
+            consumer: Consumer::new(1),
             stream_id: Identifier::numeric(2).unwrap(),
             topic_id: Identifier::numeric(3).unwrap(),
             partition_id: 4,
@@ -310,8 +305,12 @@ mod tests {
 
         let bytes = command.as_bytes();
         let mut position = 0;
-        let consumer_type = ConsumerType::from_code(bytes[0]).unwrap();
+        let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
         let consumer_id = u32::from_le_bytes(bytes[1..5].try_into().unwrap());
+        let consumer = Consumer {
+            kind: consumer_kind,
+            id: consumer_id,
+        };
         position += 5;
         let stream_id = Identifier::from_bytes(&bytes[position..]).unwrap();
         position += stream_id.get_size_bytes() as usize;
@@ -330,8 +329,7 @@ mod tests {
         };
 
         assert!(!bytes.is_empty());
-        assert_eq!(consumer_type, command.consumer_type);
-        assert_eq!(consumer_id, command.consumer_id);
+        assert_eq!(consumer, command.consumer);
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
         assert_eq!(partition_id, command.partition_id);
@@ -343,8 +341,7 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let consumer_type = ConsumerType::Consumer;
-        let consumer_id = 1u32;
+        let consumer = Consumer::new(1);
         let stream_id = Identifier::numeric(2).unwrap();
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
@@ -353,11 +350,13 @@ mod tests {
         let count = 3u32;
         let auto_commit = 1u8;
 
+        let consumer_bytes = consumer.as_bytes();
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
-        let mut bytes = Vec::with_capacity(23 + stream_id_bytes.len() + topic_id_bytes.len());
-        bytes.extend(consumer_type.as_code().to_le_bytes());
-        bytes.extend(consumer_id.to_le_bytes());
+        let mut bytes = Vec::with_capacity(
+            18 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
+        );
+        bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
         bytes.extend(partition_id.to_le_bytes());
@@ -376,8 +375,7 @@ mod tests {
         };
 
         let command = command.unwrap();
-        assert_eq!(command.consumer_type, consumer_type);
-        assert_eq!(command.consumer_id, consumer_id);
+        assert_eq!(command.consumer, consumer);
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
         assert_eq!(command.partition_id, partition_id);
@@ -389,8 +387,7 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let consumer_type = ConsumerType::Consumer;
-        let consumer_id = 1u32;
+        let consumer = Consumer::new(1);
         let stream_id = Identifier::numeric(2).unwrap();
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
@@ -401,16 +398,8 @@ mod tests {
         let auto_commit_str = "auto_commit";
 
         let input = format!(
-            "{}|{}|{}|{}|{}|{}|{}|{}|{}",
-            consumer_type,
-            consumer_id,
-            stream_id,
-            topic_id,
-            partition_id,
-            kind,
-            value,
-            count,
-            auto_commit_str
+            "{}|{}|{}|{}|{}|{}|{}|{}",
+            consumer, stream_id, topic_id, partition_id, kind, value, count, auto_commit_str
         );
         let command = PollMessages::from_str(&input);
         assert!(command.is_ok());
@@ -422,8 +411,7 @@ mod tests {
         };
 
         let command = command.unwrap();
-        assert_eq!(command.consumer_type, consumer_type);
-        assert_eq!(command.consumer_id, consumer_id);
+        assert_eq!(command.consumer, consumer);
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
         assert_eq!(command.partition_id, partition_id);

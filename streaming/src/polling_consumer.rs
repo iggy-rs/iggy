@@ -1,9 +1,19 @@
+use iggy::consumer::{Consumer, ConsumerKind};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum PollingConsumer {
     Consumer(u32),
     ConsumerGroup(u32, u32),
+}
+
+impl PollingConsumer {
+    pub fn from_consumer(consumer: &Consumer, client_id: u32) -> Self {
+        match consumer.kind {
+            ConsumerKind::Consumer => PollingConsumer::Consumer(consumer.id),
+            ConsumerKind::ConsumerGroup => PollingConsumer::ConsumerGroup(consumer.id, client_id),
+        }
+    }
 }
 
 impl Display for PollingConsumer {

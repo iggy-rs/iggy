@@ -2,7 +2,6 @@ use crate::binary::client_context::ClientContext;
 use crate::binary::sender::Sender;
 use anyhow::Result;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
-use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
@@ -17,13 +16,7 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
-    let consumer = match command.consumer_type {
-        ConsumerType::Consumer => PollingConsumer::Consumer(command.consumer_id),
-        ConsumerType::ConsumerGroup => {
-            PollingConsumer::ConsumerGroup(command.consumer_id, client_context.client_id)
-        }
-    };
-
+    let consumer = PollingConsumer::from_consumer(&command.consumer, client_context.client_id);
     let system = system.read().await;
     let topic = system
         .get_stream(&command.stream_id)?

@@ -1,6 +1,6 @@
 [package]
 name = "iggy"
-version = "0.0.15"
+version = "0.0.16"
 description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
 license = "MIT"
@@ -21,6 +21,7 @@ reqwest-retry = "0.2.2"
 serde = { version = "1.0.159", features = ["derive", "rc"] }
 serde_json = "1.0.95"
 serde_with = { version = "3.0.0", features = ["base64"] }
+serde_qs = "0.12.0"
 thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"] }
 tokio-rustls = "0.24.0"

@@ -5,6 +5,7 @@ use iggy::client::{
     SystemClient, TopicClient,
 };
 use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
@@ -13,7 +14,6 @@ use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
-use iggy::consumer_type::ConsumerType;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::Kind::{Next, Offset};
@@ -40,7 +40,7 @@ const TOPIC_ID: u32 = 1;
 const PARTITION_ID: u32 = 1;
 const PARTITIONS_COUNT: u32 = 3;
 const CONSUMER_ID: u32 = 1;
-const CONSUMER_TYPE: ConsumerType = ConsumerType::Consumer;
+const CONSUMER_KIND: ConsumerKind = ConsumerKind::Consumer;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const CONSUMER_GROUP_ID: u32 = 1;
@@ -192,8 +192,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 13. Poll messages from the specific partition in topic
     let poll_messages = PollMessages {
-        consumer_type: CONSUMER_TYPE,
-        consumer_id: CONSUMER_ID,
+        consumer: Consumer {
+            kind: CONSUMER_KIND,
+            id: CONSUMER_ID,
+        },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID,
@@ -218,8 +220,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     for i in 0..batches_count {
         let start_offset = (i * batch_size) as u64;
         let poll_messages = PollMessages {
-            consumer_type: CONSUMER_TYPE,
-            consumer_id: CONSUMER_ID,
+            consumer: Consumer {
+                kind: CONSUMER_KIND,
+                id: CONSUMER_ID,
+            },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
@@ -262,8 +266,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 16. Ensure that messages do not exist in the second partition in the same topic
     let poll_messages = PollMessages {
-        consumer_type: CONSUMER_TYPE,
-        consumer_id: CONSUMER_ID,
+        consumer: Consumer {
+            kind: CONSUMER_KIND,
+            id: CONSUMER_ID,
+        },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID + 1,
@@ -279,8 +285,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 17. Get the existing customer offset and ensure it's 0
     let offset = client
         .get_consumer_offset(&GetConsumerOffset {
-            consumer_type: CONSUMER_TYPE,
-            consumer_id: CONSUMER_ID,
+            consumer: Consumer {
+                kind: CONSUMER_KIND,
+                id: CONSUMER_ID,
+            },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
@@ -294,8 +302,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let stored_offset = 10;
     client
         .store_consumer_offset(&StoreConsumerOffset {
-            consumer_type: CONSUMER_TYPE,
-            consumer_id: CONSUMER_ID,
+            consumer: Consumer {
+                kind: CONSUMER_KIND,
+                id: CONSUMER_ID,
+            },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
@@ -307,8 +317,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 19. Get the existing customer offset and ensure it's the previously stored value
     let offset = client
         .get_consumer_offset(&GetConsumerOffset {
-            consumer_type: CONSUMER_TYPE,
-            consumer_id: CONSUMER_ID,
+            consumer: Consumer {
+                kind: CONSUMER_KIND,
+                id: CONSUMER_ID,
+            },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
@@ -321,8 +333,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 20. Poll messages from the specific partition in topic using next with auto commit
     let messages_count = 10;
     let poll_messages = PollMessages {
-        consumer_type: CONSUMER_TYPE,
-        consumer_id: CONSUMER_ID,
+        consumer: Consumer {
+            kind: CONSUMER_KIND,
+            id: CONSUMER_ID,
+        },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID,
@@ -344,8 +358,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 21. Get the existing customer offset and ensure that auto commit during poll has worked
     let offset = client
         .get_consumer_offset(&GetConsumerOffset {
-            consumer_type: CONSUMER_TYPE,
-            consumer_id: CONSUMER_ID,
+            consumer: Consumer {
+                kind: CONSUMER_KIND,
+                id: CONSUMER_ID,
+            },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,

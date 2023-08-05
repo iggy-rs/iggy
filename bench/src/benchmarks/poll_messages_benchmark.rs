@@ -5,7 +5,7 @@ use crate::client_factory::ClientFactory;
 use iggy::consumer::Consumer;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, Kind, PollMessages};
+use iggy::messages::poll_messages::{Format, PollMessages, PollingKind};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
@@ -32,7 +32,7 @@ pub async fn run(
         stream_id: Identifier::numeric(stream_id).unwrap(),
         topic_id: Identifier::numeric(topic_id).unwrap(),
         partition_id,
-        kind: Kind::Offset,
+        kind: PollingKind::Offset,
         value: 0,
         count: args.messages_per_batch,
         auto_commit: false,

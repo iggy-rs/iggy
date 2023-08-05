@@ -4,7 +4,7 @@ use iggy::error::Error;
 use iggy::messages::send_messages::SendMessages;
 use std::sync::Arc;
 use streaming::message::Message;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 
@@ -21,7 +21,9 @@ pub async fn handle(
     let system = system.read().await;
     let stream = system.get_stream(&command.stream_id)?;
     let topic = stream.get_topic(&command.topic_id)?;
-    topic.append_messages(&command.key, messages).await?;
+    topic
+        .append_messages(&command.partitioning, messages)
+        .await?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

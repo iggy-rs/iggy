@@ -21,7 +21,7 @@ use clap::Parser;
 use std::sync::Arc;
 use streaming::persister::FileWithSyncPersister;
 use streaming::segments::storage::FileSegmentStorage;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::signal;
 use tokio::sync::RwLock;
 use tracing::info;
@@ -32,7 +32,7 @@ async fn main() -> Result<(), ServerError> {
     tracing_subscriber::fmt::init();
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(config_provider.as_ref()).await?;
-    let mut system = System::create(config.system.clone());
+    let mut system = System::new(config.system.clone());
     system.init().await?;
     let system = Arc::new(RwLock::new(system));
     let (sender, receiver) = flume::unbounded::<ServerCommand>();

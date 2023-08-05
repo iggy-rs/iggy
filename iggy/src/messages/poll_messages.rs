@@ -19,7 +19,7 @@ pub struct PollMessages {
     #[serde(default = "default_partition_id")]
     pub partition_id: u32,
     #[serde(default = "default_kind")]
-    pub kind: Kind,
+    pub kind: PollingKind,
     #[serde(default = "default_value")]
     pub value: u64,
     #[serde(default = "default_count")]
@@ -50,7 +50,7 @@ impl CommandPayload for PollMessages {}
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
-pub enum Kind {
+pub enum PollingKind {
     #[default]
     Offset,
     Timestamp,
@@ -71,8 +71,8 @@ fn default_partition_id() -> u32 {
     1
 }
 
-fn default_kind() -> Kind {
-    Kind::Offset
+fn default_kind() -> PollingKind {
+    PollingKind::Offset
 }
 
 fn default_value() -> u64 {
@@ -89,51 +89,51 @@ impl Validatable for PollMessages {
     }
 }
 
-impl Kind {
+impl PollingKind {
     pub fn as_code(&self) -> u8 {
         match self {
-            Kind::Offset => 0,
-            Kind::Timestamp => 1,
-            Kind::First => 2,
-            Kind::Last => 3,
-            Kind::Next => 4,
+            PollingKind::Offset => 1,
+            PollingKind::Timestamp => 2,
+            PollingKind::First => 3,
+            PollingKind::Last => 4,
+            PollingKind::Next => 5,
         }
     }
 
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
-            0 => Ok(Kind::Offset),
-            1 => Ok(Kind::Timestamp),
-            2 => Ok(Kind::First),
-            3 => Ok(Kind::Last),
-            4 => Ok(Kind::Next),
+            1 => Ok(PollingKind::Offset),
+            2 => Ok(PollingKind::Timestamp),
+            3 => Ok(PollingKind::First),
+            4 => Ok(PollingKind::Last),
+            5 => Ok(PollingKind::Next),
             _ => Err(Error::InvalidCommand),
         }
     }
 }
 
-impl FromStr for Kind {
+impl FromStr for PollingKind {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
-            "o" | "offset" => Ok(Kind::Offset),
-            "t" | "timestamp" => Ok(Kind::Timestamp),
-            "f" | "first" => Ok(Kind::First),
-            "l" | "last" => Ok(Kind::Last),
-            "n" | "next" => Ok(Kind::Next),
+            "o" | "offset" => Ok(PollingKind::Offset),
+            "t" | "timestamp" => Ok(PollingKind::Timestamp),
+            "f" | "first" => Ok(PollingKind::First),
+            "l" | "last" => Ok(PollingKind::Last),
+            "n" | "next" => Ok(PollingKind::Next),
             _ => Err(Error::InvalidCommand),
         }
     }
 }
 
-impl Display for Kind {
+impl Display for PollingKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Kind::Offset => write!(f, "offset"),
-            Kind::Timestamp => write!(f, "timestamp"),
-            Kind::First => write!(f, "first"),
-            Kind::Last => write!(f, "last"),
-            Kind::Next => write!(f, "next"),
+            PollingKind::Offset => write!(f, "offset"),
+            PollingKind::Timestamp => write!(f, "timestamp"),
+            PollingKind::First => write!(f, "first"),
+            PollingKind::Last => write!(f, "last"),
+            PollingKind::Next => write!(f, "next"),
         }
     }
 }
@@ -155,7 +155,7 @@ impl FromStr for PollMessages {
         let stream_id = parts[2].parse::<Identifier>()?;
         let topic_id = parts[3].parse::<Identifier>()?;
         let partition_id = parts[4].parse::<u32>()?;
-        let kind = Kind::from_str(parts[5])?;
+        let kind = PollingKind::from_str(parts[5])?;
         let value = parts[6].parse::<u64>()?;
         let count = parts[7].parse::<u32>()?;
         let auto_commit = match parts.get(8) {
@@ -233,7 +233,7 @@ impl BytesSerializable for PollMessages {
         let topic_id = Identifier::from_bytes(&bytes[position..])?;
         position += topic_id.get_size_bytes() as usize;
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
-        let kind = Kind::from_code(bytes[position + 4])?;
+        let kind = PollingKind::from_code(bytes[position + 4])?;
         position += 5;
         let value = u64::from_le_bytes(bytes[position..position + 8].try_into()?);
         let count = u32::from_le_bytes(bytes[position + 8..position + 12].try_into()?);
@@ -296,7 +296,7 @@ mod tests {
             stream_id: Identifier::numeric(2).unwrap(),
             topic_id: Identifier::numeric(3).unwrap(),
             partition_id: 4,
-            kind: Kind::Offset,
+            kind: PollingKind::Offset,
             value: 2,
             count: 3,
             auto_commit: true,
@@ -317,7 +317,7 @@ mod tests {
         let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
         position += topic_id.get_size_bytes() as usize;
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
-        let kind = Kind::from_code(bytes[position + 4]).unwrap();
+        let kind = PollingKind::from_code(bytes[position + 4]).unwrap();
         position += 5;
         let value = u64::from_le_bytes(bytes[position..position + 8].try_into().unwrap());
         let count = u32::from_le_bytes(bytes[position + 8..position + 12].try_into().unwrap());
@@ -345,7 +345,7 @@ mod tests {
         let stream_id = Identifier::numeric(2).unwrap();
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
-        let kind = Kind::Offset;
+        let kind = PollingKind::Offset;
         let value = 2u64;
         let count = 3u32;
         let auto_commit = 1u8;
@@ -391,7 +391,7 @@ mod tests {
         let stream_id = Identifier::numeric(2).unwrap();
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
-        let kind = Kind::Timestamp;
+        let kind = PollingKind::Timestamp;
         let value = 2u64;
         let count = 3u32;
         let auto_commit = 1u8;

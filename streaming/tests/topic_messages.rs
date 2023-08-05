@@ -1,7 +1,7 @@
 use crate::common::TestSetup;
-use iggy::messages::poll_messages::Kind;
+use iggy::messages::poll_messages::PollingKind;
 use iggy::messages::send_messages;
-use iggy::messages::send_messages::Key;
+use iggy::messages::send_messages::Partitioning;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -19,7 +19,7 @@ async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_
     let partitions_count = 3;
     let messages_per_partition_count = 10;
     let topic = init_topic(&setup, partitions_count).await;
-    let key = Key::none();
+    let key = Partitioning::balanced();
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
         topic
@@ -39,7 +39,7 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
     let partitions_count = 3;
     let messages_per_partition_count = 10;
     let topic = init_topic(&setup, partitions_count).await;
-    let key = Key::partition_id(partition_id);
+    let key = Partitioning::partition_id(partition_id);
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
         topic
@@ -65,7 +65,7 @@ async fn given_key_entity_id_messages_should_be_appended_to_the_calculated_parti
     let topic = init_topic(&setup, partitions_count).await;
     for entity_id in 1..=partitions_count * messages_count {
         let payload = get_payload(entity_id);
-        let key = Key::entity_id_u32(entity_id);
+        let key = Partitioning::entity_id_u32(entity_id);
         topic
             .append_messages(&key, vec![get_message(&payload)])
             .await
@@ -74,7 +74,7 @@ async fn given_key_entity_id_messages_should_be_appended_to_the_calculated_parti
 
     let mut messages_count_per_partition = HashMap::new();
     for entity_id in 1..=partitions_count * messages_count {
-        let key = Key::entity_id_u32(entity_id);
+        let key = Partitioning::entity_id_u32(entity_id);
         let hash = hash::calculate(&key.value);
         let mut partition_id = (hash % partitions_count as u128) as u32;
         if partition_id == 0 {
@@ -99,7 +99,7 @@ fn get_payload(id: u32) -> String {
 async fn assert_messages(topic: &Topic, partition_id: u32, expected_messages: u32) {
     let consumer = PollingConsumer::Consumer(0);
     let messages = topic
-        .get_messages(consumer, partition_id, Kind::Offset, 0, 1000)
+        .get_messages(consumer, partition_id, PollingKind::Offset, 0, 1000)
         .await
         .unwrap();
     assert_eq!(messages.len() as u32, expected_messages);

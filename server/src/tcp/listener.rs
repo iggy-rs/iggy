@@ -7,7 +7,7 @@ use iggy::command::Command;
 use std::io::ErrorKind;
 use std::sync::Arc;
 use streaming::clients::client_manager::Transport;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::io::AsyncReadExt;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::RwLock;

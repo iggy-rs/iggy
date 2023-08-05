@@ -55,7 +55,7 @@ impl Stream {
         }
     }
 
-    pub fn get_topic_by_id(&self, id: u32) -> Result<&Topic, Error> {
+    fn get_topic_by_id(&self, id: u32) -> Result<&Topic, Error> {
         let topic = self.topics.get(&id);
         if topic.is_none() {
             return Err(Error::TopicIdNotFound(id, self.id));
@@ -64,7 +64,7 @@ impl Stream {
         Ok(topic.unwrap())
     }
 
-    pub fn get_topic_by_name(&self, name: &str) -> Result<&Topic, Error> {
+    fn get_topic_by_name(&self, name: &str) -> Result<&Topic, Error> {
         let topic_id = self.topics_ids.get(name);
         if topic_id.is_none() {
             return Err(Error::TopicNameNotFound(name.to_string(), self.id));
@@ -73,7 +73,7 @@ impl Stream {
         self.get_topic_by_id(*topic_id.unwrap())
     }
 
-    pub fn get_topic_by_id_mut(&mut self, id: u32) -> Result<&mut Topic, Error> {
+    fn get_topic_by_id_mut(&mut self, id: u32) -> Result<&mut Topic, Error> {
         let topic = self.topics.get_mut(&id);
         if topic.is_none() {
             return Err(Error::TopicIdNotFound(id, self.id));
@@ -82,7 +82,7 @@ impl Stream {
         Ok(topic.unwrap())
     }
 
-    pub fn get_topic_by_name_mut(&mut self, name: &str) -> Result<&mut Topic, Error> {
+    fn get_topic_by_name_mut(&mut self, name: &str) -> Result<&mut Topic, Error> {
         let topic_id = self.topics_ids.get(name);
         if topic_id.is_none() {
             return Err(Error::TopicNameNotFound(name.to_string(), self.id));
@@ -130,5 +130,38 @@ impl Stream {
         }
 
         Ok(topic)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::StreamConfig;
+    use crate::storage::tests::get_test_system_storage;
+    use std::sync::Arc;
+
+    #[tokio::test]
+    async fn should_get_topic_by_id_and_name() {
+        let stream_id = 1;
+        let stream_name = "test_stream";
+        let topic_id = 2;
+        let topic_name = "test_topic";
+        let path = "/stream";
+        let config = Arc::new(StreamConfig::default());
+        let storage = Arc::new(get_test_system_storage());
+        let mut stream = Stream::create(stream_id, stream_name, path, config, storage);
+        stream.create_topic(topic_id, topic_name, 1).await.unwrap();
+
+        let topic = stream.get_topic(&Identifier::numeric(topic_id).unwrap());
+        assert!(topic.is_ok());
+        let topic = topic.unwrap();
+        assert_eq!(topic.id, topic_id);
+        assert_eq!(topic.name, topic_name);
+
+        let topic = stream.get_topic(&Identifier::string(topic_name).unwrap());
+        assert!(topic.is_ok());
+        let topic = topic.unwrap();
+        assert_eq!(topic.id, topic_id);
+        assert_eq!(topic.name, topic_name);
     }
 }

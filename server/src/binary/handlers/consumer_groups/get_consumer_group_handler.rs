@@ -4,7 +4,7 @@ use anyhow::Result;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::error::Error;
 use std::sync::Arc;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 

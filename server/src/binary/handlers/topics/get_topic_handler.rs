@@ -4,7 +4,7 @@ use anyhow::Result;
 use iggy::error::Error;
 use iggy::topics::get_topic::GetTopic;
 use std::sync::Arc;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 

@@ -13,8 +13,8 @@ use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::Error;
 use crate::identifier::Identifier;
-use crate::messages::poll_messages::{Kind, PollMessages};
-use crate::messages::send_messages::{Key, KeyKind, SendMessages};
+use crate::messages::poll_messages::{PollMessages, PollingKind};
+use crate::messages::send_messages::{Partitioning, PartitioningKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::message::Message;
@@ -186,7 +186,7 @@ impl IggyClient {
                     Self::store_offset(client.as_ref(), &poll_messages, current_offset).await;
                 }
 
-                if poll_messages.kind == Kind::Offset {
+                if poll_messages.kind == PollingKind::Offset {
                     poll_messages.value = current_offset + 1;
                 }
             }
@@ -227,27 +227,27 @@ impl IggyClient {
                 let mut initialized = false;
                 let mut stream_id = Identifier::numeric(1).unwrap();
                 let mut topic_id = Identifier::numeric(1).unwrap();
-                let mut key = Key::partition_id(0);
+                let mut key = Partitioning::partition_id(0);
                 let mut batch_messages = true;
 
                 for send_messages in send_messages_batch.commands.iter() {
                     if !initialized {
-                        if send_messages.key.kind != KeyKind::PartitionId {
+                        if send_messages.partitioning.kind != PartitioningKind::PartitionId {
                             batch_messages = false;
                             break;
                         }
 
                         stream_id = Identifier::from_identifier(&send_messages.stream_id);
                         topic_id = Identifier::from_identifier(&send_messages.topic_id);
-                        key.value = send_messages.key.value.clone();
+                        key.value = send_messages.partitioning.value.clone();
                         initialized = true;
                     }
 
                     // Batching the messages is only possible for the same stream, topic and partition.
                     if send_messages.stream_id != stream_id
                         || send_messages.topic_id != topic_id
-                        || send_messages.key.kind != KeyKind::PartitionId
-                        || send_messages.key.value != key.value
+                        || send_messages.partitioning.kind != PartitioningKind::PartitionId
+                        || send_messages.partitioning.value != key.value
                     {
                         batch_messages = false;
                         break;
@@ -278,8 +278,8 @@ impl IggyClient {
                     let send_messages = SendMessages {
                         stream_id: Identifier::from_identifier(&stream_id),
                         topic_id: Identifier::from_identifier(&topic_id),
-                        key: Key {
-                            kind: KeyKind::PartitionId,
+                        partitioning: Partitioning {
+                            kind: PartitioningKind::PartitionId,
                             length: 4,
                             value: key.value.clone(),
                         },
@@ -402,10 +402,10 @@ impl MessageClient for IggyClient {
         let send_messages = SendMessages {
             stream_id: Identifier::from_identifier(&command.stream_id),
             topic_id: Identifier::from_identifier(&command.topic_id),
-            key: Key {
-                kind: command.key.kind,
-                length: command.key.length,
-                value: command.key.value.clone(),
+            partitioning: Partitioning {
+                kind: command.partitioning.kind,
+                length: command.partitioning.length,
+                value: command.partitioning.value.clone(),
             },
             messages: command
                 .messages

@@ -13,7 +13,7 @@ use crate::binary::sender::Sender;
 use iggy::command::Command;
 use iggy::error::Error;
 use std::sync::Arc;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 

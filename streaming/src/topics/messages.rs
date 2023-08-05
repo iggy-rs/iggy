@@ -3,8 +3,8 @@ use crate::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
 use crate::utils::hash;
 use iggy::error::Error;
-use iggy::messages::poll_messages::Kind;
-use iggy::messages::send_messages::{Key, KeyKind};
+use iggy::messages::poll_messages::PollingKind;
+use iggy::messages::send_messages::{Partitioning, PartitioningKind};
 use ringbuffer::RingBufferWrite;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -15,7 +15,7 @@ impl Topic {
         &self,
         consumer: PollingConsumer,
         partition_id: u32,
-        kind: Kind,
+        kind: PollingKind,
         value: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
@@ -32,15 +32,19 @@ impl Topic {
         let partition = partition.read().await;
 
         match kind {
-            Kind::Offset => partition.get_messages_by_offset(value, count).await,
-            Kind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
-            Kind::First => partition.get_first_messages(count).await,
-            Kind::Last => partition.get_last_messages(count).await,
-            Kind::Next => partition.get_next_messages(consumer, count).await,
+            PollingKind::Offset => partition.get_messages_by_offset(value, count).await,
+            PollingKind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
+            PollingKind::First => partition.get_first_messages(count).await,
+            PollingKind::Last => partition.get_last_messages(count).await,
+            PollingKind::Next => partition.get_next_messages(consumer, count).await,
         }
     }
 
-    pub async fn append_messages(&self, key: &Key, messages: Vec<Message>) -> Result<(), Error> {
+    pub async fn append_messages(
+        &self,
+        key: &Partitioning,
+        messages: Vec<Message>,
+    ) -> Result<(), Error> {
         if !self.has_partitions() {
             return Err(Error::NoPartitions(self.id, self.stream_id));
         }
@@ -50,11 +54,13 @@ impl Topic {
         }
 
         let partition_id = match key.kind {
-            KeyKind::None => self.get_next_partition_id(),
-            KeyKind::PartitionId => {
+            PartitioningKind::Balanced => self.get_next_partition_id(),
+            PartitioningKind::PartitionId => {
                 u32::from_le_bytes(key.value[..key.length as usize].try_into()?)
             }
-            KeyKind::EntityId => self.calculate_partition_id_by_entity_id_hash(&key.value),
+            PartitioningKind::MessagesKey => {
+                self.calculate_partition_id_by_entity_id_hash(&key.value)
+            }
         };
 
         self.append_messages_to_partition(partition_id, messages)
@@ -173,7 +179,7 @@ mod tests {
     #[tokio::test]
     async fn given_partition_id_key_messages_should_be_appended_only_to_the_chosen_partition() {
         let partition_id = 1;
-        let key = Key::partition_id(partition_id);
+        let key = Partitioning::partition_id(partition_id);
         let partitions_count = 3;
         let messages_count = 1000;
         let topic = init_topic(partitions_count);
@@ -204,7 +210,7 @@ mod tests {
         let topic = init_topic(partitions_count);
 
         for entity_id in 1..=messages_count {
-            let key = Key::entity_id_u32(entity_id);
+            let key = Partitioning::entity_id_u32(entity_id);
             let payload = Bytes::from("test");
             let messages = vec![Message::empty(1, entity_id as u128, payload, 1)];
             topic.append_messages(&key, messages).await.unwrap();
@@ -249,7 +255,7 @@ mod tests {
         let topic = init_topic(partitions_count);
 
         for entity_id in 1..=messages_count {
-            let key = Key::entity_id_u32(entity_id);
+            let key = Partitioning::entity_id_u32(entity_id);
             let partition_id = topic.calculate_partition_id_by_entity_id_hash(&key.value);
             let entity_id_hash = hash::calculate(&key.value);
             let mut expected_partition_id = (entity_id_hash % partitions_count as u128) as u32;

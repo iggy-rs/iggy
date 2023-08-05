@@ -8,7 +8,7 @@ use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {

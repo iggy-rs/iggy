@@ -8,7 +8,7 @@ use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Key, Message, SendMessages};
+use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use samples::shared::args::Args;
 use samples::shared::system;
 use std::error::Error;
@@ -54,7 +54,7 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
             .send_messages(&SendMessages {
                 stream_id: Identifier::numeric(args.stream_id)?,
                 topic_id: Identifier::numeric(args.topic_id)?,
-                key: Key::partition_id(args.partition_id),
+                partitioning: Partitioning::partition_id(args.partition_id),
                 messages,
             })
             .await?;

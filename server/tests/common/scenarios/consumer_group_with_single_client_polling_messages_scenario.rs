@@ -6,9 +6,9 @@ use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::Kind::Next;
+use iggy::messages::poll_messages::PollingKind::Next;
 use iggy::messages::poll_messages::{Format, PollMessages};
-use iggy::messages::send_messages::{Key, Message, SendMessages};
+use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::system::get_me::GetMe;
@@ -106,7 +106,7 @@ async fn execute_using_entity_id_key(client: &IggyClient) {
         let send_messages = SendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            key: Key::entity_id_u32(entity_id),
+            partitioning: Partitioning::entity_id_u32(entity_id),
             messages,
         };
         client.send_messages(&send_messages).await.unwrap();
@@ -152,7 +152,7 @@ async fn execute_using_none_key(client: &IggyClient) {
         let send_messages = SendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            key: Key::none(),
+            partitioning: Partitioning::balanced(),
             messages,
         };
         client.send_messages(&send_messages).await.unwrap();

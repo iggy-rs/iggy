@@ -11,7 +11,7 @@ use iggy::validatable::Validatable;
 use std::sync::Arc;
 use streaming::message::Message;
 use streaming::polling_consumer::PollingConsumer;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 
@@ -73,7 +73,7 @@ async fn send_messages(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
-    command.key.length = command.key.value.len() as u8;
+    command.partitioning.length = command.partitioning.value.len() as u8;
     command.validate()?;
 
     let mut messages = Vec::with_capacity(command.messages.len());
@@ -84,6 +84,8 @@ async fn send_messages(
     let system = system.read().await;
     let stream = system.get_stream(&command.stream_id)?;
     let topic = stream.get_topic(&command.topic_id)?;
-    topic.append_messages(&command.key, messages).await?;
+    topic
+        .append_messages(&command.partitioning, messages)
+        .await?;
     Ok(StatusCode::CREATED)
 }

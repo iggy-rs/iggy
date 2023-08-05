@@ -3,7 +3,7 @@ use flume::Receiver;
 use std::sync::Arc;
 use streaming::persister::Persister;
 use streaming::segments::storage::FileSegmentStorage;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::{error, info};
 

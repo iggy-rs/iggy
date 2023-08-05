@@ -20,14 +20,14 @@ pub struct SendMessages {
     pub stream_id: Identifier,
     #[serde(skip)]
     pub topic_id: Identifier,
-    pub key: Key,
+    pub partitioning: Partitioning,
     pub messages: Vec<Message>,
 }
 
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct Key {
-    pub kind: KeyKind,
+pub struct Partitioning {
+    pub kind: PartitioningKind,
     #[serde(skip)]
     pub length: u8,
     #[serde_as(as = "Base64")]
@@ -47,11 +47,11 @@ pub struct Message {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
-pub enum KeyKind {
+pub enum PartitioningKind {
     #[default]
-    None,
+    Balanced,
     PartitionId,
-    EntityId,
+    MessagesKey,
 }
 
 fn default_message_id() -> u128 {
@@ -63,30 +63,30 @@ impl Default for SendMessages {
         SendMessages {
             stream_id: Identifier::default(),
             topic_id: Identifier::default(),
-            key: Key::default(),
+            partitioning: Partitioning::default(),
             messages: vec![Message::default()],
         }
     }
 }
 
-impl Default for Key {
+impl Default for Partitioning {
     fn default() -> Self {
-        Key::none()
+        Partitioning::balanced()
     }
 }
 
-impl Key {
-    pub fn none() -> Self {
-        Key {
-            kind: KeyKind::None,
+impl Partitioning {
+    pub fn balanced() -> Self {
+        Partitioning {
+            kind: PartitioningKind::Balanced,
             length: 0,
             value: EMPTY_KEY_VALUE,
         }
     }
 
     pub fn partition_id(partition_id: u32) -> Self {
-        Key {
-            kind: KeyKind::PartitionId,
+        Partitioning {
+            kind: PartitioningKind::PartitionId,
             length: 4,
             value: partition_id.to_le_bytes().to_vec(),
         }
@@ -102,32 +102,32 @@ impl Key {
             return Err(Error::InvalidCommand);
         }
 
-        Ok(Key {
-            kind: KeyKind::EntityId,
+        Ok(Partitioning {
+            kind: PartitioningKind::MessagesKey,
             length: length as u8,
             value: entity_id.to_vec(),
         })
     }
 
     pub fn entity_id_u32(entity_id: u32) -> Self {
-        Key {
-            kind: KeyKind::EntityId,
+        Partitioning {
+            kind: PartitioningKind::MessagesKey,
             length: 4,
             value: entity_id.to_le_bytes().to_vec(),
         }
     }
 
     pub fn entity_id_u64(entity_id: u64) -> Self {
-        Key {
-            kind: KeyKind::EntityId,
+        Partitioning {
+            kind: PartitioningKind::MessagesKey,
             length: 8,
             value: entity_id.to_le_bytes().to_vec(),
         }
     }
 
     pub fn entity_id_u128(entity_id: u128) -> Self {
-        Key {
-            kind: KeyKind::EntityId,
+        Partitioning {
+            kind: PartitioningKind::MessagesKey,
             length: 16,
             value: entity_id.to_le_bytes().to_vec(),
         }
@@ -146,8 +146,10 @@ impl Validatable for SendMessages {
             return Err(Error::InvalidMessagesCount);
         }
 
-        let key_value_length = self.key.value.len();
-        if key_value_length > 255 || (self.key.kind != KeyKind::None && key_value_length == 0) {
+        let key_value_length = self.partitioning.value.len();
+        if key_value_length > 255
+            || (self.partitioning.kind != PartitioningKind::Balanced && key_value_length == 0)
+        {
             return Err(Error::InvalidKeyValueLength);
         }
 
@@ -167,32 +169,32 @@ impl Validatable for SendMessages {
     }
 }
 
-impl KeyKind {
+impl PartitioningKind {
     pub fn as_code(&self) -> u8 {
         match self {
-            KeyKind::None => 0,
-            KeyKind::PartitionId => 1,
-            KeyKind::EntityId => 2,
+            PartitioningKind::Balanced => 1,
+            PartitioningKind::PartitionId => 2,
+            PartitioningKind::MessagesKey => 3,
         }
     }
 
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
-            0 => Ok(KeyKind::None),
-            1 => Ok(KeyKind::PartitionId),
-            2 => Ok(KeyKind::EntityId),
+            1 => Ok(PartitioningKind::Balanced),
+            2 => Ok(PartitioningKind::PartitionId),
+            3 => Ok(PartitioningKind::MessagesKey),
             _ => Err(Error::InvalidCommand),
         }
     }
 }
 
-impl FromStr for KeyKind {
+impl FromStr for PartitioningKind {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
-            "n" | "none" => Ok(KeyKind::None),
-            "p" | "partition_id" => Ok(KeyKind::PartitionId),
-            "c" | "entity_id" => Ok(KeyKind::EntityId),
+            "b" | "balanced" => Ok(PartitioningKind::Balanced),
+            "p" | "partition_id" => Ok(PartitioningKind::PartitionId),
+            "c" | "entity_id" => Ok(PartitioningKind::MessagesKey),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -222,7 +224,7 @@ impl Display for Message {
     }
 }
 
-impl BytesSerializable for Key {
+impl BytesSerializable for Partitioning {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(2 + self.length as usize);
         bytes.extend(self.kind.as_code().to_le_bytes());
@@ -239,14 +241,14 @@ impl BytesSerializable for Key {
             return Err(Error::InvalidCommand);
         }
 
-        let kind = KeyKind::from_code(bytes[0])?;
+        let kind = PartitioningKind::from_code(bytes[0])?;
         let length = bytes[1];
         let value = bytes[2..2 + length as usize].to_vec();
         if value.len() != length as usize {
             return Err(Error::InvalidCommand);
         }
 
-        Ok(Key {
+        Ok(Partitioning {
             kind,
             length,
             value,
@@ -323,11 +325,11 @@ impl FromStr for SendMessages {
         let stream_id = parts[0].parse::<Identifier>()?;
         let topic_id = parts[1].parse::<Identifier>()?;
         let key_kind = parts[2];
-        let key_kind = KeyKind::from_str(key_kind)?;
+        let key_kind = PartitioningKind::from_str(key_kind)?;
         let (key_value, key_length) = match key_kind {
-            KeyKind::None => (EMPTY_KEY_VALUE, 0),
-            KeyKind::PartitionId => (parts[3].parse::<u32>()?.to_le_bytes().to_vec(), 4),
-            KeyKind::EntityId => {
+            PartitioningKind::Balanced => (EMPTY_KEY_VALUE, 0),
+            PartitioningKind::PartitionId => (parts[3].parse::<u32>()?.to_le_bytes().to_vec(), 4),
+            PartitioningKind::MessagesKey => {
                 let key_value = parts[3].as_bytes().to_vec();
                 let key_length = parts[3].len() as u8;
                 (key_value, key_length)
@@ -346,7 +348,7 @@ impl FromStr for SendMessages {
         let command = SendMessages {
             stream_id,
             topic_id,
-            key: Key {
+            partitioning: Partitioning {
                 kind: key_kind,
                 length: key_length,
                 value: key_value,
@@ -366,7 +368,7 @@ impl BytesSerializable for SendMessages {
             .map(|message| message.get_size_bytes())
             .sum::<u32>();
 
-        let key_bytes = self.key.as_bytes();
+        let key_bytes = self.partitioning.as_bytes();
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
         let mut bytes = Vec::with_capacity(
@@ -394,7 +396,7 @@ impl BytesSerializable for SendMessages {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(&bytes[position..])?;
         position += topic_id.get_size_bytes() as usize;
-        let key = Key::from_bytes(&bytes[position..])?;
+        let key = Partitioning::from_bytes(&bytes[position..])?;
         position += key.get_size_bytes() as usize;
         let messages_payloads = &bytes[position..];
         position = 0;
@@ -408,7 +410,7 @@ impl BytesSerializable for SendMessages {
         let command = SendMessages {
             stream_id,
             topic_id,
-            key,
+            partitioning: key,
             messages,
         };
         command.validate()?;
@@ -423,7 +425,7 @@ impl Display for SendMessages {
             "{}|{}|{}|{}",
             self.stream_id,
             self.topic_id,
-            self.key,
+            self.partitioning,
             self.messages
                 .iter()
                 .map(|message| message.to_string())
@@ -433,29 +435,29 @@ impl Display for SendMessages {
     }
 }
 
-impl Display for Key {
+impl Display for Partitioning {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.kind {
-            KeyKind::None => write!(f, "{}|0", self.kind),
-            KeyKind::PartitionId => write!(
+            PartitioningKind::Balanced => write!(f, "{}|0", self.kind),
+            PartitioningKind::PartitionId => write!(
                 f,
                 "{}|{}",
                 self.kind,
                 u32::from_le_bytes(self.value[..4].try_into().unwrap())
             ),
-            KeyKind::EntityId => {
+            PartitioningKind::MessagesKey => {
                 write!(f, "{}|{}", self.kind, String::from_utf8_lossy(&self.value))
             }
         }
     }
 }
 
-impl Display for KeyKind {
+impl Display for PartitioningKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            KeyKind::None => write!(f, "none"),
-            KeyKind::PartitionId => write!(f, "partition_id"),
-            KeyKind::EntityId => write!(f, "entity_id"),
+            PartitioningKind::Balanced => write!(f, "balanced"),
+            PartitioningKind::PartitionId => write!(f, "partition_id"),
+            PartitioningKind::MessagesKey => write!(f, "entity_id"),
         }
     }
 }
@@ -473,7 +475,7 @@ mod tests {
         let command = SendMessages {
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(2).unwrap(),
-            key: Key::partition_id(4),
+            partitioning: Partitioning::partition_id(4),
             messages,
         };
 
@@ -484,7 +486,7 @@ mod tests {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
         position += topic_id.get_size_bytes() as usize;
-        let key = Key::from_bytes(&bytes[position..]).unwrap();
+        let key = Partitioning::from_bytes(&bytes[position..]).unwrap();
         position += key.get_size_bytes() as usize;
         let messages = &bytes[position..];
         let command_messages = &command
@@ -497,7 +499,7 @@ mod tests {
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
-        assert_eq!(key, command.key);
+        assert_eq!(key, command.partitioning);
         assert_eq!(messages, command_messages);
     }
 
@@ -505,7 +507,7 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
-        let key = Key::partition_id(4);
+        let key = Partitioning::partition_id(4);
 
         let message_1 = Message::from_str("hello 1").unwrap();
         let message_2 = Message::from_str("2|hello 2").unwrap();
@@ -542,7 +544,7 @@ mod tests {
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.key, key);
+        assert_eq!(command.partitioning, key);
         for i in 0..command.messages.len() {
             let message = &messages[i];
             let command_message = &command.messages[i];
@@ -557,7 +559,7 @@ mod tests {
     fn should_be_read_from_string() {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
-        let key = Key::partition_id(4);
+        let key = Partitioning::partition_id(4);
         let message_id = 1u128;
         let payload = "hello";
         let input = format!(
@@ -572,52 +574,61 @@ mod tests {
         let message = &command.messages[0];
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.key, key);
+        assert_eq!(command.partitioning, key);
         assert_eq!(message.id, message_id);
         assert_eq!(message.length, payload.len() as u32);
         assert_eq!(message.payload, payload.as_bytes());
     }
 
     #[test]
-    fn key_of_type_none_should_have_empty_value() {
-        let key = Key::none();
-        assert_eq!(key.kind, KeyKind::None);
+    fn key_of_type_balanced_should_have_empty_value() {
+        let key = Partitioning::balanced();
+        assert_eq!(key.kind, PartitioningKind::Balanced);
         assert_eq!(key.length, 0);
         assert_eq!(key.value, EMPTY_KEY_VALUE);
-        assert_eq!(KeyKind::from_code(0).unwrap(), KeyKind::None);
+        assert_eq!(
+            PartitioningKind::from_code(1).unwrap(),
+            PartitioningKind::Balanced
+        );
     }
 
     #[test]
     fn key_of_type_partition_should_have_value_of_const_length_4() {
         let partition_id = 1234u32;
-        let key = Key::partition_id(partition_id);
-        assert_eq!(key.kind, KeyKind::PartitionId);
+        let key = Partitioning::partition_id(partition_id);
+        assert_eq!(key.kind, PartitioningKind::PartitionId);
         assert_eq!(key.length, 4);
         assert_eq!(key.value, partition_id.to_le_bytes());
-        assert_eq!(KeyKind::from_code(1).unwrap(), KeyKind::PartitionId);
+        assert_eq!(
+            PartitioningKind::from_code(2).unwrap(),
+            PartitioningKind::PartitionId
+        );
     }
 
     #[test]
     fn key_of_type_entity_id_should_have_value_of_dynamic_length() {
         let entity_id = "hello world";
-        let key = Key::entity_id_str(entity_id).unwrap();
-        assert_eq!(key.kind, KeyKind::EntityId);
+        let key = Partitioning::entity_id_str(entity_id).unwrap();
+        assert_eq!(key.kind, PartitioningKind::MessagesKey);
         assert_eq!(key.length, entity_id.len() as u8);
         assert_eq!(key.value, entity_id.as_bytes());
-        assert_eq!(KeyKind::from_code(2).unwrap(), KeyKind::EntityId);
+        assert_eq!(
+            PartitioningKind::from_code(3).unwrap(),
+            PartitioningKind::MessagesKey
+        );
     }
 
     #[test]
     fn key_of_type_entity_id_that_has_length_0_should_fail() {
         let entity_id = "";
-        let key = Key::entity_id_str(entity_id);
+        let key = Partitioning::entity_id_str(entity_id);
         assert!(key.is_err());
     }
 
     #[test]
     fn key_of_type_entity_id_that_has_length_greater_than_255_should_fail() {
         let entity_id = "a".repeat(256);
-        let key = Key::entity_id_str(&entity_id);
+        let key = Partitioning::entity_id_str(&entity_id);
         assert!(key.is_err());
     }
 }

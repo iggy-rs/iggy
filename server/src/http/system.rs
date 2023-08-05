@@ -6,7 +6,7 @@ use axum::{Json, Router};
 use iggy::models::client_info::{ClientInfo, ClientInfoDetails};
 use iggy::models::stats::Stats;
 use std::sync::Arc;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 
 const NAME: &str = "Iggy HTTP";

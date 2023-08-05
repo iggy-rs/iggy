@@ -4,7 +4,7 @@ use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Key, Message, SendMessages};
+use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -32,7 +32,7 @@ pub async fn run(
     let command = SendMessages {
         stream_id: Identifier::numeric(stream_id)?,
         topic_id: Identifier::numeric(topic_id)?,
-        key: Key::partition_id(partition_id),
+        partitioning: Partitioning::partition_id(partition_id),
         messages,
     };
 

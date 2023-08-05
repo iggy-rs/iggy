@@ -7,6 +7,6 @@ pub mod polling_consumer;
 pub mod segments;
 pub mod storage;
 pub mod streams;
-pub mod system;
+pub mod systems;
 pub mod topics;
 pub mod utils;

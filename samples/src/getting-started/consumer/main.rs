@@ -1,7 +1,7 @@
 use iggy::client::Client;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, Kind, PollMessages};
+use iggy::messages::poll_messages::{Format, PollMessages, PollingKind};
 use iggy::models::message::Message;
 use iggy::tcp::client::TcpClient;
 use std::error::Error;
@@ -40,7 +40,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
                 stream_id: Identifier::numeric(STREAM_ID)?,
                 topic_id: Identifier::numeric(TOPIC_ID)?,
                 partition_id: PARTITION_ID,
-                kind: Kind::Offset,
+                kind: PollingKind::Offset,
                 value: offset,
                 count: messages_per_batch,
                 auto_commit: false,

@@ -3,7 +3,7 @@ use anyhow::Result;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::error::Error;
 use std::sync::Arc;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 

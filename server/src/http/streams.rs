@@ -9,7 +9,7 @@ use iggy::models::stream::{Stream, StreamDetails};
 use iggy::streams::create_stream::CreateStream;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {
@@ -21,10 +21,11 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
 
 async fn get_stream(
     State(system): State<Arc<RwLock<System>>>,
-    Path(stream_id): Path<u32>,
+    Path(stream_id): Path<String>,
 ) -> Result<Json<StreamDetails>, CustomError> {
     let system = system.read().await;
-    let stream = system.get_stream_by_id(stream_id)?;
+    let stream_id = Identifier::from_str_value(&stream_id)?;
+    let stream = system.get_stream(&stream_id)?;
     let stream = mapper::map_stream(stream).await;
     Ok(Json(stream))
 }

@@ -5,7 +5,7 @@ use quinn::{Endpoint, IdleTimeout, VarInt};
 use std::error::Error;
 use std::sync::Arc;
 use std::time::Duration;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::info;
 

@@ -6,7 +6,7 @@ use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::error::Error;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 

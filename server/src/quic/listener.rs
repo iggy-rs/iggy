@@ -7,7 +7,7 @@ use iggy::command::Command;
 use quinn::Endpoint;
 use std::sync::Arc;
 use streaming::clients::client_manager::Transport;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::log::trace;
 use tracing::{error, info};

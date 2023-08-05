@@ -10,7 +10,7 @@ use iggy::models::offset::Offset;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::sync::RwLock;
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {

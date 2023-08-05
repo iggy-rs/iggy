@@ -2,13 +2,13 @@ mod common;
 
 use crate::common::TestSetup;
 use iggy::identifier::Identifier;
-use streaming::system::System;
+use streaming::systems::system::System;
 use tokio::fs;
 
 #[tokio::test]
 async fn should_initialize_system_and_base_directories() {
     let setup = TestSetup::init().await;
-    let mut system = System::create(setup.config.clone());
+    let mut system = System::new(setup.config.clone());
 
     system.init().await.unwrap();
 
@@ -27,7 +27,7 @@ async fn should_initialize_system_and_base_directories() {
 #[tokio::test]
 async fn should_create_and_persist_stream() {
     let setup = TestSetup::init().await;
-    let mut system = System::create(setup.config.clone());
+    let mut system = System::new(setup.config.clone());
     let stream_id = 1;
     let stream_name = "test";
     system.init().await.unwrap();
@@ -40,13 +40,17 @@ async fn should_create_and_persist_stream() {
 #[tokio::test]
 async fn should_delete_persisted_stream() {
     let setup = TestSetup::init().await;
-    let mut system = System::create(setup.config.clone());
+    let mut system = System::new(setup.config.clone());
     let stream_id = 1;
     let stream_name = "test";
     system.init().await.unwrap();
     system.create_stream(stream_id, stream_name).await.unwrap();
     assert_persisted_stream(&system.streams_path, stream_id).await;
-    let stream_path = system.get_stream_by_id(stream_id).unwrap().path.clone();
+    let stream_path = system
+        .get_stream(&Identifier::numeric(stream_id).unwrap())
+        .unwrap()
+        .path
+        .clone();
 
     system
         .delete_stream(&Identifier::numeric(1).unwrap())

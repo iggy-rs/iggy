@@ -83,9 +83,7 @@ impl Partition {
             consumer_group_offsets_path,
             messages: match config.messages_buffer {
                 0 => None,
-                _ => Some(AllocRingBuffer::with_capacity(
-                    config.messages_buffer as usize,
-                )),
+                _ => Some(AllocRingBuffer::new(config.messages_buffer as usize)),
             },
             message_ids: match config.deduplicate_messages {
                 true => Some(HashMap::new()),

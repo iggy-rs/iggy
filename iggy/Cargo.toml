@@ -1,6 +1,6 @@
 [package]
 name = "iggy"
-version = "0.0.18"
+version = "0.0.19"
 description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
 license = "MIT"
@@ -15,6 +15,8 @@ readme = "../README.md"
 async-trait = "0.1.68"
 bytes = "1.4.0"
 clap = { version = "4.1.11", features = ["derive"] }
+lazy_static = "1.4.0"
+regex = "1.9.1"
 reqwest = { version = "0.11.18", features = ["json"] }
 reqwest-middleware = "0.2.2"
 reqwest-retry = "0.2.2"

@@ -1,6 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::utils::text;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -32,6 +33,10 @@ impl Validatable for CreateStream {
         }
 
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
+            return Err(Error::InvalidStreamName);
+        }
+
+        if !text::is_resource_name_valid(&self.name) {
             return Err(Error::InvalidStreamName);
         }
 

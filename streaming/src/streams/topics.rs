@@ -1,8 +1,8 @@
 use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
-use crate::utils::text;
 use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
+use iggy::utils::text;
 use tracing::info;
 
 impl Stream {

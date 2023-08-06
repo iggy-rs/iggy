@@ -9,7 +9,8 @@ async-trait = "0.1.68"
 bytes = "1.4.0"
 crc32fast = "1.3.2"
 futures = "0.3.28"
-ringbuffer = "0.13.0"
+
+ringbuffer = "0.14.2"
 fastmurmur3 = "0.2.0"
 serde = { version = "1.0.159", features = ["derive", "rc"] }
 serde_with = { version = "3.0.0", features = ["base64"] }

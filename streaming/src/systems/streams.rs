@@ -1,9 +1,9 @@
 use crate::streams::stream::Stream;
 use crate::systems::system::System;
-use crate::utils::text;
 use futures::future::join_all;
 use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
+use iggy::utils::text;
 use std::sync::Arc;
 use tokio::fs::read_dir;
 use tokio::sync::Mutex;

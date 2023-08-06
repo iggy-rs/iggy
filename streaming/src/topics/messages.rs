@@ -5,7 +5,7 @@ use crate::utils::hash;
 use iggy::error::Error;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
-use ringbuffer::RingBufferWrite;
+use ringbuffer::RingBuffer;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
@@ -173,7 +173,6 @@ mod tests {
     use crate::config::TopicConfig;
     use crate::storage::tests::get_test_system_storage;
     use bytes::Bytes;
-    use ringbuffer::RingBufferExt;
 
     #[tokio::test]
     async fn given_partition_id_key_messages_should_be_appended_only_to_the_chosen_partition() {

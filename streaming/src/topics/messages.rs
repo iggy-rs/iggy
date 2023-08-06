@@ -3,7 +3,7 @@ use crate::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
 use crate::utils::hash;
 use iggy::error::Error;
-use iggy::messages::poll_messages::PollingKind;
+use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
 use ringbuffer::RingBufferWrite;
 use std::sync::atomic::Ordering;
@@ -15,8 +15,7 @@ impl Topic {
         &self,
         consumer: PollingConsumer,
         partition_id: u32,
-        kind: PollingKind,
-        value: u64,
+        strategy: PollingStrategy,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
         if !self.has_partitions() {
@@ -30,8 +29,8 @@ impl Topic {
 
         let partition = partition.unwrap();
         let partition = partition.read().await;
-
-        match kind {
+        let value = strategy.value;
+        match strategy.kind {
             PollingKind::Offset => partition.get_messages_by_offset(value, count).await,
             PollingKind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
             PollingKind::First => partition.get_first_messages(count).await,

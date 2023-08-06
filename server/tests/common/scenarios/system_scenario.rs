@@ -16,8 +16,7 @@ use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::PollingKind::{Next, Offset};
-use iggy::messages::poll_messages::{Format, PollMessages};
+use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
@@ -232,8 +231,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID,
-        kind: Offset,
-        value: 0,
+        strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
         format: Format::None,
@@ -260,8 +258,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partition_id: PARTITION_ID,
-            kind: Offset,
-            value: start_offset,
+            strategy: PollingStrategy::offset(start_offset),
             count: batch_size,
             auto_commit: false,
             format: Format::None,
@@ -306,8 +303,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID + 1,
-        kind: Offset,
-        value: 0,
+        strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
         format: Format::None,
@@ -373,8 +369,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: PARTITION_ID,
-        kind: Next,
-        value: 0,
+        strategy: PollingStrategy::next(),
         count: messages_count,
         auto_commit: true,
         format: Format::None,

@@ -5,7 +5,7 @@ use crate::client_factory::ClientFactory;
 use iggy::consumer::Consumer;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, PollMessages, PollingKind};
+use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
@@ -32,8 +32,7 @@ pub async fn run(
         stream_id: Identifier::numeric(stream_id).unwrap(),
         topic_id: Identifier::numeric(topic_id).unwrap(),
         partition_id,
-        kind: PollingKind::Offset,
-        value: 0,
+        strategy: PollingStrategy::offset(0),
         count: args.messages_per_batch,
         auto_commit: false,
         format: Format::Binary,
@@ -45,7 +44,7 @@ pub async fn run(
     let mut received_messages = 0;
     while received_messages < total_messages {
         let offset = (current_iteration * args.messages_per_batch) as u64;
-        command.value = offset;
+        command.strategy.value = offset;
 
         let latency_start = Instant::now();
         let messages = client.poll_messages(&command).await;

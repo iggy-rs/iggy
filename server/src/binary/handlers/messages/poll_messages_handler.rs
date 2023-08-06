@@ -88,13 +88,7 @@ pub async fn handle(
     };
 
     let messages = topic
-        .get_messages(
-            consumer,
-            partition_id,
-            command.kind,
-            command.value,
-            command.count,
-        )
+        .get_messages(consumer, partition_id, command.strategy, command.count)
         .await?;
 
     if messages.is_empty() {

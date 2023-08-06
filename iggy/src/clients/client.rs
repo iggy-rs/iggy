@@ -186,8 +186,8 @@ impl IggyClient {
                     Self::store_offset(client.as_ref(), &poll_messages, current_offset).await;
                 }
 
-                if poll_messages.kind == PollingKind::Offset {
-                    poll_messages.value = current_offset + 1;
+                if poll_messages.strategy.kind == PollingKind::Offset {
+                    poll_messages.strategy.value = current_offset + 1;
                 }
             }
         })

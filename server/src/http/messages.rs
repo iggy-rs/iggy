@@ -42,13 +42,7 @@ async fn poll_messages(
     }
 
     let messages = topic
-        .get_messages(
-            consumer,
-            query.partition_id,
-            query.kind,
-            query.value,
-            query.count,
-        )
+        .get_messages(consumer, query.partition_id, query.strategy, query.count)
         .await?;
 
     if messages.is_empty() {

@@ -6,8 +6,7 @@ use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::PollingKind::Next;
-use iggy::messages::poll_messages::{Format, PollMessages};
+use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::models::consumer_group::ConsumerGroupDetails;
 use iggy::streams::create_stream::CreateStream;
@@ -146,8 +145,7 @@ async fn poll_messages(client: &IggyClient) -> u32 {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: 0,
-        kind: Next,
-        value: 0,
+        strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
         format: Format::None,
@@ -228,8 +226,7 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: 0,
-        kind: Next,
-        value: 0,
+        strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
         format: Format::None,

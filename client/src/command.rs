@@ -2,6 +2,7 @@ use crate::{consumer_groups, consumer_offsets, messages, partitions, streams, sy
 use iggy::client::Client;
 use iggy::client_error::ClientError;
 use iggy::command::Command;
+use iggy::messages::poll_messages::PollMessages;
 use std::str::FromStr;
 use tracing::info;
 
@@ -16,7 +17,18 @@ pub async fn handle(input: &str, client: &dyn Client) -> Result<(), ClientError>
         Command::GetClient(payload) => system::get_client(&payload, client).await,
         Command::GetClients(payload) => system::get_clients(&payload, client).await,
         Command::SendMessages(payload) => messages::send_messages(&payload, client).await,
-        Command::PollMessages(payload) => messages::poll_messages(&payload, client).await,
+        Command::PollMessages(payload) => {
+            let format = match input.split('|').last() {
+                Some(format) => match format {
+                    "b" | "binary" => Format::Binary,
+                    "s" | "string" => Format::String,
+                    _ => Format::None,
+                },
+                None => Format::None,
+            };
+            let payload = PollMessagesWithFormat { payload, format };
+            messages::poll_messages(&payload, client).await
+        }
         Command::StoreConsumerOffset(payload) => {
             consumer_offsets::store_consumer_offset(&payload, client).await
         }
@@ -46,4 +58,18 @@ pub async fn handle(input: &str, client: &dyn Client) -> Result<(), ClientError>
             consumer_groups::leave_consumer_group(&payload, client).await
         }
     }
+}
+
+#[derive(Debug)]
+pub struct PollMessagesWithFormat {
+    pub payload: PollMessages,
+    pub format: Format,
+}
+
+#[derive(Debug, PartialEq, Default, Copy, Clone)]
+pub enum Format {
+    #[default]
+    None,
+    Binary,
+    String,
 }

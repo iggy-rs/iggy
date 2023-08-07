@@ -58,14 +58,14 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
 }
 
 #[tokio::test]
-async fn given_key_entity_id_messages_should_be_appended_to_the_calculated_partition() {
+async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_partition() {
     let setup = TestSetup::init().await;
     let partitions_count = 3;
     let messages_count = 10;
     let topic = init_topic(&setup, partitions_count).await;
     for entity_id in 1..=partitions_count * messages_count {
         let payload = get_payload(entity_id);
-        let key = Partitioning::entity_id_u32(entity_id);
+        let key = Partitioning::messages_key_u32(entity_id);
         topic
             .append_messages(&key, vec![get_message(&payload)])
             .await
@@ -74,7 +74,7 @@ async fn given_key_entity_id_messages_should_be_appended_to_the_calculated_parti
 
     let mut messages_count_per_partition = HashMap::new();
     for entity_id in 1..=partitions_count * messages_count {
-        let key = Partitioning::entity_id_u32(entity_id);
+        let key = Partitioning::messages_key_u32(entity_id);
         let hash = hash::calculate(&key.value);
         let mut partition_id = (hash % partitions_count as u128) as u32;
         if partition_id == 0 {

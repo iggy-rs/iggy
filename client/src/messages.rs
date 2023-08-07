@@ -1,6 +1,6 @@
+use crate::command::{Format, PollMessagesWithFormat};
 use iggy::client::Client;
 use iggy::client_error::ClientError;
-use iggy::messages::poll_messages::{Format, PollMessages};
 use iggy::messages::send_messages::SendMessages;
 use std::str::from_utf8;
 use tracing::info;
@@ -10,9 +10,12 @@ pub async fn send_messages(command: &SendMessages, client: &dyn Client) -> Resul
     Ok(())
 }
 
-pub async fn poll_messages(command: &PollMessages, client: &dyn Client) -> Result<(), ClientError> {
+pub async fn poll_messages(
+    command: &PollMessagesWithFormat,
+    client: &dyn Client,
+) -> Result<(), ClientError> {
     let format = command.format;
-    let messages = client.poll_messages(command).await?;
+    let messages = client.poll_messages(&command.payload).await?;
     if messages.is_empty() {
         info!("No messages found");
         return Ok(());

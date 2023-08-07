@@ -1,7 +1,7 @@
 use iggy::client::Client;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::message::Message;
 use iggy::tcp::client::TcpClient;
 use std::error::Error;
@@ -43,7 +43,6 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
                 strategy: PollingStrategy::offset(offset),
                 count: messages_per_batch,
                 auto_commit: false,
-                format: Format::None,
             })
             .await?;
         if messages.is_empty() {

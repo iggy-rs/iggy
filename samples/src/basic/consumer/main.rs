@@ -4,7 +4,7 @@ use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::message::Message;
 use samples::shared::args::Args;
 use samples::shared::system;
@@ -44,7 +44,6 @@ async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
                 strategy: PollingStrategy::next(),
                 count: args.messages_per_batch,
                 auto_commit: true,
-                format: Format::None,
             })
             .await?;
         if messages.is_empty() {

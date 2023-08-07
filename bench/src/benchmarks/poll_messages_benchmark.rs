@@ -5,7 +5,7 @@ use crate::client_factory::ClientFactory;
 use iggy::consumer::Consumer;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
@@ -35,7 +35,6 @@ pub async fn run(
         strategy: PollingStrategy::offset(0),
         count: args.messages_per_batch,
         auto_commit: false,
-        format: Format::Binary,
     };
 
     let mut latencies: Vec<Duration> = Vec::with_capacity(args.message_batches as usize);

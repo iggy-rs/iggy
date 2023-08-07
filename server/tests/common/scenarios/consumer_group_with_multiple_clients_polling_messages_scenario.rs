@@ -6,7 +6,7 @@ use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::models::consumer_group::ConsumerGroupDetails;
 use iggy::streams::create_stream::CreateStream;
@@ -35,7 +35,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client3 = create_client(client_factory).await;
 
     init_system(&system_client, &client1, &client2, &client3).await;
-    execute_using_entity_id_key(&system_client, &client1, &client2, &client3).await;
+    execute_using_messages_key_key(&system_client, &client1, &client2, &client3).await;
     system_client
         .delete_stream(&DeleteStream {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
@@ -111,7 +111,7 @@ async fn init_system(
     }
 }
 
-async fn execute_using_entity_id_key(
+async fn execute_using_messages_key_key(
     system_client: &IggyClient,
     client1: &IggyClient,
     client2: &IggyClient,
@@ -124,7 +124,7 @@ async fn execute_using_entity_id_key(
         let send_messages = SendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partitioning: Partitioning::entity_id_u32(entity_id),
+            partitioning: Partitioning::messages_key_u32(entity_id),
             messages,
         };
         system_client.send_messages(&send_messages).await.unwrap();
@@ -148,7 +148,6 @@ async fn poll_messages(client: &IggyClient) -> u32 {
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
-        format: Format::None,
     };
 
     let mut total_read_messages_count = 0;
@@ -229,7 +228,6 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
-        format: Format::None,
     };
 
     for i in 1..=MESSAGES_COUNT {

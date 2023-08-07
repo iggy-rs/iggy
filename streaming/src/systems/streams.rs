@@ -206,7 +206,7 @@ mod tests {
         assert_eq!(stream.id, stream_id);
         assert_eq!(stream.name, stream_name);
 
-        let stream = system.get_stream(&Identifier::string(stream_name).unwrap());
+        let stream = system.get_stream(&Identifier::named(stream_name).unwrap());
         assert!(stream.is_ok());
         let stream = stream.unwrap();
         assert_eq!(stream.id, stream_id);

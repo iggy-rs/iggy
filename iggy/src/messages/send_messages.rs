@@ -92,12 +92,8 @@ impl Partitioning {
         }
     }
 
-    pub fn entity_id_str(entity_id: &str) -> Result<Self, Error> {
-        Self::entity_id_bytes(entity_id.as_bytes())
-    }
-
-    pub fn entity_id_bytes(entity_id: &[u8]) -> Result<Self, Error> {
-        let length = entity_id.len();
+    pub fn messages_key(value: &[u8]) -> Result<Self, Error> {
+        let length = value.len();
         if length == 0 || length > 255 {
             return Err(Error::InvalidCommand);
         }
@@ -105,31 +101,35 @@ impl Partitioning {
         Ok(Partitioning {
             kind: PartitioningKind::MessagesKey,
             length: length as u8,
-            value: entity_id.to_vec(),
+            value: value.to_vec(),
         })
     }
 
-    pub fn entity_id_u32(entity_id: u32) -> Self {
+    pub fn messages_key_str(value: &str) -> Result<Self, Error> {
+        Self::messages_key(value.as_bytes())
+    }
+
+    pub fn messages_key_u32(value: u32) -> Self {
         Partitioning {
             kind: PartitioningKind::MessagesKey,
             length: 4,
-            value: entity_id.to_le_bytes().to_vec(),
+            value: value.to_le_bytes().to_vec(),
         }
     }
 
-    pub fn entity_id_u64(entity_id: u64) -> Self {
+    pub fn messages_key_u64(value: u64) -> Self {
         Partitioning {
             kind: PartitioningKind::MessagesKey,
             length: 8,
-            value: entity_id.to_le_bytes().to_vec(),
+            value: value.to_le_bytes().to_vec(),
         }
     }
 
-    pub fn entity_id_u128(entity_id: u128) -> Self {
+    pub fn messages_key_u128(value: u128) -> Self {
         Partitioning {
             kind: PartitioningKind::MessagesKey,
             length: 16,
-            value: entity_id.to_le_bytes().to_vec(),
+            value: value.to_le_bytes().to_vec(),
         }
     }
 
@@ -194,7 +194,7 @@ impl FromStr for PartitioningKind {
         match input {
             "b" | "balanced" => Ok(PartitioningKind::Balanced),
             "p" | "partition_id" => Ok(PartitioningKind::PartitionId),
-            "c" | "entity_id" => Ok(PartitioningKind::MessagesKey),
+            "k" | "messages_key" => Ok(PartitioningKind::MessagesKey),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -457,7 +457,7 @@ impl Display for PartitioningKind {
         match self {
             PartitioningKind::Balanced => write!(f, "balanced"),
             PartitioningKind::PartitionId => write!(f, "partition_id"),
-            PartitioningKind::MessagesKey => write!(f, "entity_id"),
+            PartitioningKind::MessagesKey => write!(f, "messages_key"),
         }
     }
 }
@@ -606,12 +606,12 @@ mod tests {
     }
 
     #[test]
-    fn key_of_type_entity_id_should_have_value_of_dynamic_length() {
-        let entity_id = "hello world";
-        let key = Partitioning::entity_id_str(entity_id).unwrap();
+    fn key_of_type_messages_key_should_have_value_of_dynamic_length() {
+        let messages_key = "hello world";
+        let key = Partitioning::messages_key_str(messages_key).unwrap();
         assert_eq!(key.kind, PartitioningKind::MessagesKey);
-        assert_eq!(key.length, entity_id.len() as u8);
-        assert_eq!(key.value, entity_id.as_bytes());
+        assert_eq!(key.length, messages_key.len() as u8);
+        assert_eq!(key.value, messages_key.as_bytes());
         assert_eq!(
             PartitioningKind::from_code(3).unwrap(),
             PartitioningKind::MessagesKey
@@ -619,16 +619,16 @@ mod tests {
     }
 
     #[test]
-    fn key_of_type_entity_id_that_has_length_0_should_fail() {
-        let entity_id = "";
-        let key = Partitioning::entity_id_str(entity_id);
+    fn key_of_type_messages_key_that_has_length_0_should_fail() {
+        let messages_key = "";
+        let key = Partitioning::messages_key_str(messages_key);
         assert!(key.is_err());
     }
 
     #[test]
-    fn key_of_type_entity_id_that_has_length_greater_than_255_should_fail() {
-        let entity_id = "a".repeat(256);
-        let key = Partitioning::entity_id_str(&entity_id);
+    fn key_of_type_messages_key_that_has_length_greater_than_255_should_fail() {
+        let messages_key = "a".repeat(256);
+        let key = Partitioning::messages_key_str(&messages_key);
         assert!(key.is_err());
     }
 }

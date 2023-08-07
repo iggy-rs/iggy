@@ -158,7 +158,7 @@ mod tests {
         assert_eq!(topic.id, topic_id);
         assert_eq!(topic.name, topic_name);
 
-        let topic = stream.get_topic(&Identifier::string(topic_name).unwrap());
+        let topic = stream.get_topic(&Identifier::named(topic_name).unwrap());
         assert!(topic.is_ok());
         let topic = topic.unwrap();
         assert_eq!(topic.id, topic_id);

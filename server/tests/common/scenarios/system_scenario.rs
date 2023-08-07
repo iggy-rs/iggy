@@ -16,7 +16,7 @@ use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
@@ -95,7 +95,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 6. Get stream details by name
     let stream = client
         .get_stream(&GetStream {
-            stream_id: Identifier::string(STREAM_NAME).unwrap(),
+            stream_id: Identifier::named(STREAM_NAME).unwrap(),
         })
         .await
         .unwrap();
@@ -165,7 +165,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topic = client
         .get_topic(&GetTopic {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-            topic_id: Identifier::string(TOPIC_NAME).unwrap(),
+            topic_id: Identifier::named(TOPIC_NAME).unwrap(),
         })
         .await
         .unwrap();
@@ -234,7 +234,6 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
-        format: Format::None,
     };
 
     let messages = client.poll_messages(&poll_messages).await.unwrap();
@@ -261,7 +260,6 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             strategy: PollingStrategy::offset(start_offset),
             count: batch_size,
             auto_commit: false,
-            format: Format::None,
         };
 
         let messages = client.poll_messages(&poll_messages).await.unwrap();
@@ -306,7 +304,6 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
-        format: Format::None,
     };
     let messages = client.poll_messages(&poll_messages).await.unwrap();
     assert!(messages.is_empty());
@@ -372,7 +369,6 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         strategy: PollingStrategy::next(),
         count: messages_count,
         auto_commit: true,
-        format: Format::None,
     };
 
     let messages = client.poll_messages(&poll_messages).await.unwrap();

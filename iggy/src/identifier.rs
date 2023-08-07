@@ -105,7 +105,7 @@ impl Identifier {
 
         match value.parse::<u32>() {
             Ok(id) => Identifier::numeric(id),
-            Err(_) => Identifier::string(&value),
+            Err(_) => Identifier::named(value),
         }
     }
 
@@ -121,7 +121,7 @@ impl Identifier {
         })
     }
 
-    pub fn string(value: &str) -> Result<Self, Error> {
+    pub fn named(value: &str) -> Result<Self, Error> {
         let length = value.len();
         if length == 0 || length > 255 {
             return Err(Error::InvalidCommand);
@@ -204,7 +204,7 @@ impl FromStr for Identifier {
             return Identifier::numeric(value);
         }
 
-        let identifier = Identifier::string(input)?;
+        let identifier = Identifier::named(input)?;
         identifier.validate()?;
         Ok(identifier)
     }

@@ -6,7 +6,7 @@ use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{Format, PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
@@ -31,7 +31,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;
     let client = IggyClient::new(client, IggyClientConfig::default());
     init_system(&client).await;
-    execute_using_entity_id_key(&client).await;
+    execute_using_messages_key_key(&client).await;
     client
         .delete_stream(&DeleteStream {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
@@ -97,7 +97,7 @@ async fn init_system(client: &IggyClient) {
     assert_eq!(member.partitions_count, PARTITIONS_COUNT);
 }
 
-async fn execute_using_entity_id_key(client: &IggyClient) {
+async fn execute_using_messages_key_key(client: &IggyClient) {
     // 1. Send messages to the calculated partition ID on the server side by using entity ID as a key
     for entity_id in 1..=MESSAGES_COUNT {
         let message = Message::from_str(&get_message_payload(entity_id)).unwrap();
@@ -105,7 +105,7 @@ async fn execute_using_entity_id_key(client: &IggyClient) {
         let send_messages = SendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partitioning: Partitioning::entity_id_u32(entity_id),
+            partitioning: Partitioning::messages_key_u32(entity_id),
             messages,
         };
         client.send_messages(&send_messages).await.unwrap();
@@ -120,7 +120,6 @@ async fn execute_using_entity_id_key(client: &IggyClient) {
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
-        format: Format::None,
     };
 
     let mut total_read_messages_count = 0;
@@ -165,7 +164,6 @@ async fn execute_using_none_key(client: &IggyClient) {
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
-        format: Format::None,
     };
 
     let mut partition_id = 1;

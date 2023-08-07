@@ -25,8 +25,6 @@ pub struct PollMessages {
     pub count: u32,
     #[serde(default)]
     pub auto_commit: bool,
-    #[serde(skip)]
-    pub format: Format,
 }
 
 #[serde_as]
@@ -51,14 +49,6 @@ pub enum PollingKind {
     Next,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
-pub enum Format {
-    #[default]
-    None,
-    Binary,
-    String,
-}
-
 impl Default for PollMessages {
     fn default() -> Self {
         Self {
@@ -69,7 +59,6 @@ impl Default for PollMessages {
             strategy: default_strategy(),
             count: default_count(),
             auto_commit: false,
-            format: Format::None,
         }
     }
 }
@@ -229,14 +218,6 @@ impl FromStr for PollMessages {
             },
             None => false,
         };
-        let format = match parts.get(9) {
-            Some(format) => match *format {
-                "b" | "binary" => Format::Binary,
-                "s" | "string" => Format::String,
-                _ => return Err(Error::InvalidFormat),
-            },
-            None => Format::None,
-        };
 
         let command = PollMessages {
             consumer,
@@ -246,7 +227,6 @@ impl FromStr for PollMessages {
             strategy,
             count,
             auto_commit,
-            format,
         };
         command.validate()?;
         Ok(command)
@@ -312,7 +292,6 @@ impl BytesSerializable for PollMessages {
             1 => true,
             _ => false,
         };
-        let format = Format::None;
         let command = PollMessages {
             consumer,
             stream_id,
@@ -321,7 +300,6 @@ impl BytesSerializable for PollMessages {
             strategy,
             count,
             auto_commit,
-            format,
         };
         command.validate()?;
         Ok(command)
@@ -392,7 +370,6 @@ mod tests {
             strategy: PollingStrategy::offset(2),
             count: 3,
             auto_commit: true,
-            format: Format::Binary,
         };
 
         let bytes = command.as_bytes();

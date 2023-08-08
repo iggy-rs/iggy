@@ -21,7 +21,12 @@
   },
   "tcp": {
     "enabled": true,
-    "address": "0.0.0.0:8090"
+    "address": "0.0.0.0:8090",
+    "tls": {
+      "enabled": false,
+      "certificate": "certs/iggy.pfx",
+      "password": "iggy123"
+    }
   },
   "quic": {
     "enabled": true,

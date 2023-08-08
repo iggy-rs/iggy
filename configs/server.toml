@@ -15,6 +15,11 @@ allow_private_network = false
 enabled = true
 address = "0.0.0.0:8090"
 
+[tcp.tls]
+enabled = false
+certificate = "certs/iggy.pfx"
+password = "iggy123"
+
 [quic]
 enabled = true
 address = "0.0.0.0:8080"

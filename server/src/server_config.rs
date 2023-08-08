@@ -32,6 +32,14 @@ pub struct QuicConfig {
 pub struct TcpConfig {
     pub enabled: bool,
     pub address: String,
+    pub tls: TlsConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub struct TlsConfig {
+    pub enabled: bool,
+    pub certificate: String,
+    pub password: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -92,6 +100,7 @@ impl Default for TcpConfig {
         TcpConfig {
             enabled: true,
             address: "127.0.0.1:8090".to_string(),
+            tls: TlsConfig::default(),
         }
     }
 }

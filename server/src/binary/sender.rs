@@ -3,6 +3,7 @@ use iggy::error::Error;
 
 #[async_trait]
 pub trait Sender: Sync + Send {
+    async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, Error>;
     async fn send_empty_ok_response(&mut self) -> Result<(), Error>;
     async fn send_ok_response(&mut self, payload: &[u8]) -> Result<(), Error>;
     async fn send_error_response(&mut self, error: Error) -> Result<(), Error>;

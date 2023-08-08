@@ -57,6 +57,8 @@ impl ClientProviderConfig {
                     server_address: args.tcp_server_address,
                     reconnection_retries: args.tcp_reconnection_retries,
                     reconnection_interval: args.tcp_reconnection_interval,
+                    tls_enabled: args.tcp_tls_enabled,
+                    tls_domain: args.tcp_tls_domain,
                 }));
             }
             _ => return Err(ClientError::InvalidTransport(config.transport.clone())),

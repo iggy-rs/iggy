@@ -42,6 +42,12 @@ pub struct Args {
     #[arg(long, default_value = "127.0.0.1:8090")]
     pub tcp_server_address: String,
 
+    #[arg(long, default_value = "false")]
+    pub tcp_tls_enabled: bool,
+
+    #[arg(long, default_value = "localhost")]
+    pub tcp_tls_domain: String,
+
     #[arg(long, default_value = "127.0.0.1:0")]
     pub quic_client_address: String,
 
@@ -91,6 +97,8 @@ impl Args {
             tcp_server_address: self.tcp_server_address.clone(),
             tcp_reconnection_retries: self.tcp_reconnection_retries,
             tcp_reconnection_interval: self.tcp_reconnection_interval,
+            tcp_tls_enabled: self.tcp_tls_enabled,
+            tcp_tls_domain: self.tcp_tls_domain.clone(),
             quic_client_address: self.quic_client_address.clone(),
             quic_server_address: self.quic_server_address.clone(),
             quic_server_name: self.quic_server_name.clone(),

@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use async_trait::async_trait;
 use iggy::error::Error;
-use quinn::SendStream;
+use quinn::{RecvStream, SendStream};
 use tracing::trace;
 
 const STATUS_OK: &[u8] = &[0; 4];
@@ -9,6 +9,7 @@ const STATUS_OK: &[u8] = &[0; 4];
 #[derive(Debug)]
 pub struct QuicSender {
     pub(crate) send: SendStream,
+    pub(crate) recv: RecvStream,
 }
 
 unsafe impl Send for QuicSender {}
@@ -16,6 +17,15 @@ unsafe impl Sync for QuicSender {}
 
 #[async_trait]
 impl Sender for QuicSender {
+    async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, Error> {
+        let read_bytes = self.recv.read(buffer).await;
+        if let Err(error) = read_bytes {
+            return Err(Error::from(error));
+        }
+
+        Ok(read_bytes.unwrap().unwrap())
+    }
+
     async fn send_empty_ok_response(&mut self) -> Result<(), Error> {
         self.send_ok_response(&[]).await
     }

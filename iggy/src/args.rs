@@ -21,6 +21,12 @@ pub struct Args {
     #[arg(long, default_value = "1000")]
     pub tcp_reconnection_interval: u64,
 
+    #[arg(long, default_value = "false")]
+    pub tcp_tls_enabled: bool,
+
+    #[arg(long, default_value = "localhost")]
+    pub tcp_tls_domain: String,
+
     #[arg(long, default_value = "127.0.0.1:0")]
     pub quic_client_address: String,
 

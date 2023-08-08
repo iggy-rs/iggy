@@ -64,6 +64,8 @@ Additionally, you can run the `client` which is available in the running contain
 
 Keep in mind that running the container on the OS other than Linux, where the Docker is running in the VM, might result in the significant performance degradation.
 
+The official image can be found [here](https://hub.docker.com/r/iggyrs/iggy), simply type `docker pull iggyrs/iggy`.
+
 ---
 
 ### Configuration
@@ -214,7 +216,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 - [x] Make use of HTTP protocol
 - [x] Create a basic TCP server
 - [x] Make use of TCP protocol
-- [ ] Add support for TLS
+- [x] Add support for TLS
 - [ ] Implement user authentication & roles management
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
@@ -232,7 +234,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 - [x] Make use of HTTP protocol
 - [x] Create a basic TCP client
 - [x] Make use of TCP protocol
-- [ ] Add support for TLS
+- [x] Add support for TLS
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
 - [x] Communicate with the server using established binary protocol

@@ -3,6 +3,8 @@ use crate::http::{
 };
 use axum::http::Method;
 use axum::Router;
+use axum_server::tls_rustls::RustlsConfig;
+use std::path::PathBuf;
 use std::sync::Arc;
 use streaming::systems::system::System;
 use tokio::sync::RwLock;
@@ -12,7 +14,11 @@ use crate::server_config::{CorsConfig, HttpConfig};
 use tracing::info;
 
 pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
-    info!("Starting HTTP API on: {:?}", config.address);
+    let api_name = match config.tls.enabled {
+        true => "HTTP API (TLS)",
+        false => "HTTP API",
+    };
+
     let mut app = Router::new().nest(
         "/",
         system::router(system.clone()).nest(
@@ -38,7 +44,24 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         app = app.layer(configure_cors(config.cors));
     }
 
-    axum::Server::bind(&config.address.parse().unwrap())
+    info!("Started {api_name} on: {:?}", config.address);
+
+    if !config.tls.enabled {
+        axum::Server::bind(&config.address.parse().unwrap())
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+        return;
+    }
+
+    let tls_config = RustlsConfig::from_pem_file(
+        PathBuf::from(config.tls.cert_file),
+        PathBuf::from(config.tls.key_file),
+    )
+    .await
+    .unwrap();
+
+    axum_server::bind_rustls(config.address.parse().unwrap(), tls_config)
         .serve(app.into_make_service())
         .await
         .unwrap();

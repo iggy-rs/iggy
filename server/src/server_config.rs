@@ -32,11 +32,11 @@ pub struct QuicConfig {
 pub struct TcpConfig {
     pub enabled: bool,
     pub address: String,
-    pub tls: TlsConfig,
+    pub tls: TcpTlsConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
-pub struct TlsConfig {
+pub struct TcpTlsConfig {
     pub enabled: bool,
     pub certificate: String,
     pub password: String,
@@ -47,6 +47,14 @@ pub struct HttpConfig {
     pub enabled: bool,
     pub address: String,
     pub cors: CorsConfig,
+    pub tls: HttpTlsConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub struct HttpTlsConfig {
+    pub enabled: bool,
+    pub cert_file: String,
+    pub key_file: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -100,7 +108,7 @@ impl Default for TcpConfig {
         TcpConfig {
             enabled: true,
             address: "127.0.0.1:8090".to_string(),
-            tls: TlsConfig::default(),
+            tls: TcpTlsConfig::default(),
         }
     }
 }
@@ -111,6 +119,7 @@ impl Default for HttpConfig {
             enabled: true,
             address: "127.0.0.1:3000".to_string(),
             cors: CorsConfig::default(),
+            tls: HttpTlsConfig::default(),
         }
     }
 }

@@ -1,4 +1,4 @@
-use crate::server_config::TlsConfig;
+use crate::server_config::TcpTlsConfig;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_tls_sender::TcpTlsSender;
 use std::sync::Arc;
@@ -9,7 +9,7 @@ use tokio_native_tls::native_tls;
 use tokio_native_tls::native_tls::Identity;
 use tracing::{error, info};
 
-pub(crate) fn start(address: &str, config: TlsConfig, system: Arc<RwLock<System>>) {
+pub(crate) fn start(address: &str, config: TcpTlsConfig, system: Arc<RwLock<System>>) {
     let address = address.to_string();
     tokio::spawn(async move {
         let certificate = std::fs::read(config.certificate.clone());

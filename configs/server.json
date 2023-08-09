@@ -17,6 +17,11 @@
       "exposed_headers": [],
       "allow_credentials": false,
       "allow_private_network": false
+    },
+    "tls": {
+      "enabled": false,
+      "cert_file": "certs/iggy_cert.pem",
+      "key_file": "certs/iggy_key.pem"
     }
   },
   "tcp": {

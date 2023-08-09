@@ -11,6 +11,11 @@ exposed_headers = [ ]
 allow_credentials = false
 allow_private_network = false
 
+[http.tls]
+enabled = false
+cert_file = "certs/iggy_cert.pem"
+key_file = "certs/iggy_key.pem"
+
 [tcp]
 enabled = true
 address = "0.0.0.0:8090"

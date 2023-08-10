@@ -15,6 +15,7 @@ impl ClientFactory for QuicClientFactory {
             &args.quic_client_address,
             &args.quic_server_address,
             &args.quic_server_name,
+            args.quic_validate_certificate,
         )
         .unwrap();
         client.connect().await.unwrap();

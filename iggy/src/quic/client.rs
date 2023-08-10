@@ -107,11 +107,13 @@ impl QuicClient {
         client_address: &str,
         server_address: &str,
         server_name: &str,
+        validate_certificate: bool,
     ) -> Result<Self, Error> {
         Self::create(Arc::new(QuicClientConfig {
             client_address: client_address.to_string(),
             server_address: server_address.to_string(),
             server_name: server_name.to_string(),
+            validate_certificate,
             ..Default::default()
         }))
     }
@@ -185,11 +187,6 @@ fn configure(config: &QuicClientConfig) -> Result<ClientConfig, Error> {
         return Err(Error::InvalidConfiguration);
     }
 
-    let crypto = rustls::ClientConfig::builder()
-        .with_safe_defaults()
-        .with_custom_certificate_verifier(SkipServerVerification::new())
-        .with_no_client_auth();
-
     let mut transport = quinn::TransportConfig::default();
     transport.initial_mtu(config.initial_mtu);
     transport.send_window(config.send_window);
@@ -209,10 +206,17 @@ fn configure(config: &QuicClientConfig) -> Result<ClientConfig, Error> {
         transport.max_idle_timeout(Some(max_idle_timeout.unwrap()));
     }
 
-    let mut config = ClientConfig::new(Arc::new(crypto));
-    config.transport_config(Arc::new(transport));
-
-    Ok(config)
+    let mut client_config = match config.validate_certificate {
+        true => ClientConfig::with_native_roots(),
+        false => ClientConfig::new(Arc::new(
+            rustls::ClientConfig::builder()
+                .with_safe_defaults()
+                .with_custom_certificate_verifier(SkipServerVerification::new())
+                .with_no_client_auth(),
+        )),
+    };
+    client_config.transport_config(Arc::new(transport));
+    Ok(client_config)
 }
 
 struct SkipServerVerification;

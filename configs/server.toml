@@ -36,6 +36,11 @@ receive_window = 100_000
 keep_alive_interval = 5_000
 max_idle_timeout = 10_000
 
+[quic.certificate]
+self_signed = true
+cert_file = "certs/iggy_cert.pem"
+key_file = "certs/iggy_key.pem"
+
 [message_saver]
 enabled = true
 enforce_sync = true

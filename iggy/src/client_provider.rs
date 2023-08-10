@@ -44,6 +44,7 @@ impl ClientProviderConfig {
                     receive_window: args.quic_receive_window,
                     keep_alive_interval: args.quic_keep_alive_interval,
                     max_idle_timeout: args.quic_max_idle_timeout,
+                    validate_certificate: args.quic_validate_certificate,
                 }));
             }
             HTTP_TRANSPORT => {

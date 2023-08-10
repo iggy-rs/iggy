@@ -26,6 +26,9 @@ pub struct Args {
     #[arg(long, default_value = "localhost")]
     pub quic_server_name: String,
 
+    #[arg(long, default_value = "false")]
+    pub quic_validate_certificate: bool,
+
     #[arg(long, default_value = "2000000")]
     pub quic_start_stream_id: u32,
 

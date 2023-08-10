@@ -42,7 +42,12 @@
     "send_window": 100000,
     "receive_window": 100000,
     "keep_alive_interval": 5000,
-    "max_idle_timeout": 10000
+    "max_idle_timeout": 10000,
+    "certificate": {
+      "self_signed": true,
+      "cert_file": "certs/iggy_cert.pem",
+      "key_file": "certs/iggy_key.pem"
+    }
   },
   "message_saver": {
     "enabled": true,

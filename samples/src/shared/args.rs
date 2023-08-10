@@ -86,6 +86,9 @@ pub struct Args {
 
     #[arg(long, default_value = "10000")]
     pub quic_max_idle_timeout: u64,
+
+    #[arg(long, default_value = "false")]
+    pub quic_validate_certificate: bool,
 }
 
 impl Args {
@@ -112,6 +115,7 @@ impl Args {
             quic_response_buffer_size: self.quic_response_buffer_size,
             quic_keep_alive_interval: self.quic_keep_alive_interval,
             quic_max_idle_timeout: self.quic_max_idle_timeout,
+            quic_validate_certificate: self.quic_validate_certificate,
         }
     }
 }

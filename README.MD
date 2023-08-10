@@ -211,7 +211,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 
 - [x] Create a basic UDP server
 - [x] Make use of QUIC protocol
-- [ ] Extend QUIC configuration with custom certificates
+- [x] Extend QUIC configuration with custom certificates
 - [x] Create a basic HTTP server
 - [x] Make use of HTTP protocol
 - [x] Create a basic TCP server
@@ -229,7 +229,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 
 - [x] Create a basic UDP client
 - [x] Make use of QUIC protocol
-- [ ] Extend QUIC configuration with custom certificates
+- [x] Extend QUIC configuration with custom certificates
 - [x] Create a basic HTTP client
 - [x] Make use of HTTP protocol
 - [x] Create a basic TCP client

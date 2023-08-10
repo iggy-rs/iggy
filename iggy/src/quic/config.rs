@@ -13,6 +13,7 @@ pub struct QuicClientConfig {
     pub receive_window: u64,
     pub keep_alive_interval: u64,
     pub max_idle_timeout: u64,
+    pub validate_certificate: bool,
 }
 
 impl Default for QuicClientConfig {
@@ -31,6 +32,7 @@ impl Default for QuicClientConfig {
             receive_window: 100000,
             keep_alive_interval: 5000,
             max_idle_timeout: 10000,
+            validate_certificate: false,
         }
     }
 }

@@ -26,6 +26,14 @@ pub struct QuicConfig {
     pub receive_window: u64,
     pub keep_alive_interval: u64,
     pub max_idle_timeout: u64,
+    pub certificate: QuicCertificateConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct QuicCertificateConfig {
+    pub self_signed: bool,
+    pub cert_file: String,
+    pub key_file: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -99,6 +107,17 @@ impl Default for QuicConfig {
             receive_window: 100000,
             keep_alive_interval: 5000,
             max_idle_timeout: 10000,
+            certificate: QuicCertificateConfig::default(),
+        }
+    }
+}
+
+impl Default for QuicCertificateConfig {
+    fn default() -> QuicCertificateConfig {
+        QuicCertificateConfig {
+            self_signed: true,
+            cert_file: "certs/iggy_cert.pem".to_string(),
+            key_file: "certs/iggy_key.pem".to_string(),
         }
     }
 }

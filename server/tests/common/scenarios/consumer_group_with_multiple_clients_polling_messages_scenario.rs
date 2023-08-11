@@ -49,7 +49,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
 async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
     let client = client_factory.create_client().await;
-    IggyClient::new(client, IggyClientConfig::default())
+    IggyClient::new(client, IggyClientConfig::default(), None)
 }
 
 async fn init_system(

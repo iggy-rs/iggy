@@ -153,5 +153,5 @@ async fn get_consumer_group_and_validate_members(
 
 async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
     let client = client_factory.create_client().await;
-    IggyClient::new(client, IggyClientConfig::default())
+    IggyClient::new(client, IggyClientConfig::default(), None)
 }

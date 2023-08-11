@@ -14,6 +14,7 @@ pub mod http;
 pub mod identifier;
 pub mod messages;
 pub mod models;
+pub mod partitioner;
 pub mod partitions;
 pub mod quic;
 pub mod streams;

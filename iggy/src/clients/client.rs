@@ -22,6 +22,7 @@ use crate::models::offset::Offset;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
+use crate::partitioner::Partitioner;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 use crate::streams::create_stream::CreateStream;
@@ -52,6 +53,7 @@ pub struct IggyClient {
     client: Arc<RwLock<Box<dyn Client>>>,
     config: IggyClientConfig,
     send_messages_batch: Arc<Mutex<SendMessagesBatch>>,
+    partitioner: Option<Box<dyn Partitioner>>,
 }
 
 #[derive(Debug)]
@@ -106,7 +108,11 @@ impl Default for PollMessagesConfig {
 }
 
 impl IggyClient {
-    pub fn new(client: Box<dyn Client>, config: IggyClientConfig) -> Self {
+    pub fn new(
+        client: Box<dyn Client>,
+        config: IggyClientConfig,
+        partitioner: Option<Box<dyn Partitioner>>,
+    ) -> Self {
         let client = Arc::new(RwLock::new(client));
         let send_messages_batch = Arc::new(Mutex::new(SendMessagesBatch {
             commands: VecDeque::new(),
@@ -124,6 +130,7 @@ impl IggyClient {
             client,
             config,
             send_messages_batch,
+            partitioner,
         }
     }
 
@@ -191,6 +198,21 @@ impl IggyClient {
                 }
             }
         })
+    }
+
+    pub async fn send_messages_using_partitioner(
+        &self,
+        command: &mut SendMessages,
+        partitioner: &dyn Partitioner,
+    ) -> Result<(), Error> {
+        let partition_id = partitioner.calculate_partition_id(
+            &command.stream_id,
+            &command.topic_id,
+            &command.partitioning,
+            &command.messages,
+        )?;
+        command.partitioning = Partitioning::partition_id(partition_id);
+        self.send_messages(command).await
     }
 
     async fn store_offset(client: &dyn Client, poll_messages: &PollMessages, offset: u64) {
@@ -394,31 +416,60 @@ impl MessageClient for IggyClient {
     }
 
     async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
+        let send_messages = match &self.partitioner {
+            Some(partitioner) => {
+                let partition_id = partitioner.calculate_partition_id(
+                    &command.stream_id,
+                    &command.topic_id,
+                    &command.partitioning,
+                    &command.messages,
+                )?;
+                let partitioning = Partitioning::partition_id(partition_id);
+                Some(map_send_messages(command, partitioning))
+            }
+            None => None,
+        };
+
         if !self.config.send_messages.enabled || self.config.send_messages.interval == 0 {
+            if let Some(send_messages) = send_messages {
+                return self.client.read().await.send_messages(&send_messages).await;
+            }
+
             return self.client.read().await.send_messages(command).await;
         }
 
-        let mut batch = self.send_messages_batch.lock().await;
-        let send_messages = SendMessages {
-            stream_id: Identifier::from_identifier(&command.stream_id),
-            topic_id: Identifier::from_identifier(&command.topic_id),
-            partitioning: Partitioning {
-                kind: command.partitioning.kind,
-                length: command.partitioning.length,
-                value: command.partitioning.value.clone(),
-            },
-            messages: command
-                .messages
-                .iter()
-                .map(|message| crate::messages::send_messages::Message {
-                    id: message.id,
-                    length: message.length,
-                    payload: message.payload.clone(),
-                })
-                .collect(),
+        let send_messages = match send_messages {
+            Some(send_messages) => send_messages,
+            None => {
+                let partitioning = Partitioning {
+                    kind: command.partitioning.kind,
+                    length: command.partitioning.length,
+                    value: command.partitioning.value.clone(),
+                };
+                map_send_messages(command, partitioning)
+            }
         };
+
+        let mut batch = self.send_messages_batch.lock().await;
         batch.commands.push_back(send_messages);
         Ok(())
+    }
+}
+
+fn map_send_messages(command: &SendMessages, partitioning: Partitioning) -> SendMessages {
+    SendMessages {
+        stream_id: Identifier::from_identifier(&command.stream_id),
+        topic_id: Identifier::from_identifier(&command.topic_id),
+        partitioning,
+        messages: command
+            .messages
+            .iter()
+            .map(|message| crate::messages::send_messages::Message {
+                id: message.id,
+                length: message.length,
+                payload: message.payload.clone(),
+            })
+            .collect(),
     }
 }
 

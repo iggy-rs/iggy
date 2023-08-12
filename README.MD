@@ -37,6 +37,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 - **Consumer groups** providing the message ordering and horizontal scaling across the connected clients
 - Additional features such as **server side message deduplication**
 - **TLS** support for all transport protocols
+- Optional client-side data encryption using AES-256-GCM
 - Built-in benchmarking app to test the performance
 - **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)

@@ -29,7 +29,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     test_server.start();
     sleep(std::time::Duration::from_secs(1)).await;
     let client = client_factory.create_client().await;
-    let client = IggyClient::new(client, IggyClientConfig::default(), None);
+    let client = IggyClient::new(client, IggyClientConfig::default(), None, None);
     init_system(&client).await;
     execute_using_messages_key_key(&client).await;
     client

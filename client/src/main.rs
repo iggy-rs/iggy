@@ -10,10 +10,13 @@ mod topics;
 use anyhow::Result;
 use clap::Parser;
 use iggy::args::Args;
+use iggy::client::Client;
 use iggy::client_error::ClientError;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
+use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::error::Error;
+use iggy::utils::text;
 use std::io;
 use std::sync::Arc;
 use tracing::{error, info};
@@ -22,10 +25,15 @@ use tracing::{error, info};
 async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
+    let encryption_key = if args.encryption_key.is_empty() {
+        None
+    } else {
+        Some(text::from_base64_as_bytes(&args.encryption_key)?)
+    };
     info!("Selected transport: {}", args.transport);
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args)?);
-    let mut client = client_provider::get_client(client_provider_config).await?;
-    let client = client.as_mut();
+    let client = client_provider::get_client(client_provider_config).await?;
+    let mut client = IggyClient::new(client, IggyClientConfig::default(), None, encryption_key);
     let stdin = io::stdin();
     let mut user_input = String::new();
 
@@ -40,7 +48,7 @@ async fn main() -> Result<(), ClientError> {
             user_input.pop();
         }
 
-        if let Err(error) = command::handle(&user_input, client).await {
+        if let Err(error) = command::handle(&user_input, &client).await {
             match error {
                 ClientError::SdkError(Error::NotConnected) => {
                     error!("Client is not connected. Client will be reconnected.");

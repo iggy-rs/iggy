@@ -122,6 +122,8 @@ pub enum Error {
     TooManyPartitions,
     #[error("Cannot append message")]
     CannotAppendMessage,
+    #[error("Cannot decrypt message")]
+    CannotDecryptMessage,
     #[error("Cannot create partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
     CannotCreatePartition(u32, u32, u32),
     #[error("Failed to create directory for partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
@@ -314,6 +316,7 @@ impl Error {
             Error::CannotReadMessageChecksum => 4020,
             Error::InvalidMessageChecksum(_, _, _) => 4021,
             Error::InvalidKeyValueLength => 4022,
+            Error::CannotDecryptMessage => 4023,
             Error::InvalidOffset(_) => 4100,
             Error::CannotReadConsumerOffsets(_) => 4101,
             Error::ConsumerGroupNotFound(_, _) => 5000,
@@ -420,6 +423,7 @@ impl Error {
             4020 => "cannot_read_message_checksum",
             4021 => "invalid_message_checksum",
             4022 => "invalid_key_value_length",
+            4023 => "cannot_decrypt_message",
             4100 => "invalid_offset",
             4101 => "cannot_read_consumer_offsets",
             5000 => "consumer_group_not_found",
@@ -512,6 +516,7 @@ impl Error {
             Error::CannotReadMessageChecksum => "cannot_read_message_checksum",
             Error::InvalidMessageChecksum(_, _, _) => "invalid_message_checksum",
             Error::InvalidKeyValueLength => "invalid_key_value_length",
+            Error::CannotDecryptMessage => "cannot_decrypt_message",
             Error::ConsumerGroupNotFound(_, _) => "consumer_group_not_found",
             Error::ConsumerGroupAlreadyExists(_, _) => "consumer_group_already_exists",
             Error::ConsumerGroupMemberNotFound(_, _, _) => "consumer_group_member_not_found",

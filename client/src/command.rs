@@ -1,12 +1,12 @@
 use crate::{consumer_groups, consumer_offsets, messages, partitions, streams, system, topics};
-use iggy::client::Client;
 use iggy::client_error::ClientError;
+use iggy::clients::client::IggyClient;
 use iggy::command::Command;
 use iggy::messages::poll_messages::PollMessages;
 use std::str::FromStr;
 use tracing::info;
 
-pub async fn handle(input: &str, client: &dyn Client) -> Result<(), ClientError> {
+pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError> {
     let command = Command::from_str(input).map_err(|_| ClientError::InvalidCommand)?;
     info!("Handling '{}' command...", command);
     match command {

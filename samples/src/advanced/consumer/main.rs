@@ -34,6 +34,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             ..Default::default()
         },
         None,
+        None,
     );
     system::init_by_consumer(&args, &client).await;
     consume_messages(&args, &client).await

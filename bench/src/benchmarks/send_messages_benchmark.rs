@@ -2,6 +2,8 @@ use crate::args::Args;
 use crate::benchmark::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
 use crate::client_factory::ClientFactory;
+use iggy::client::MessageClient;
+use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::error::Error;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
@@ -21,6 +23,7 @@ pub async fn run(
     let partition_id: u32 = 1;
     let total_messages = (args.messages_per_batch * args.message_batches) as u64;
     let client = client_factory.create_client(args.clone()).await;
+    let client = IggyClient::new(client, IggyClientConfig::default(), None, None);
     info!("Producer #{} → preparing the test messages...", producer_id);
     let payload = create_payload(args.message_size);
     let mut messages = Vec::with_capacity(args.messages_per_batch as usize);

@@ -39,21 +39,26 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use aes_gcm::aead::generic_array::GenericArray;
+use aes_gcm::aead::{Aead, OsRng};
+use aes_gcm::{AeadCore, Aes256Gcm, KeyInit};
 use async_trait::async_trait;
+use bytes::Bytes;
 use std::collections::VecDeque;
+use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
-use tracing::error;
+use tracing::{error, info};
 
-#[derive(Debug)]
 pub struct IggyClient {
     client: Arc<RwLock<Box<dyn Client>>>,
     config: IggyClientConfig,
     send_messages_batch: Arc<Mutex<SendMessagesBatch>>,
     partitioner: Option<Box<dyn Partitioner>>,
+    cipher: Option<Aes256Gcm>,
 }
 
 #[derive(Debug)]
@@ -112,12 +117,14 @@ impl IggyClient {
         client: Box<dyn Client>,
         config: IggyClientConfig,
         partitioner: Option<Box<dyn Partitioner>>,
+        encryption_key: Option<Vec<u8>>,
     ) -> Self {
         let client = Arc::new(RwLock::new(client));
         let send_messages_batch = Arc::new(Mutex::new(SendMessagesBatch {
             commands: VecDeque::new(),
         }));
         if config.send_messages.enabled && config.send_messages.interval > 0 {
+            info!("Messages will be sent in background.");
             Self::send_messages_in_background(
                 config.send_messages.interval,
                 config.send_messages.max_messages,
@@ -125,12 +132,22 @@ impl IggyClient {
                 send_messages_batch.clone(),
             );
         }
+        if partitioner.is_some() {
+            info!("Partitioner is enabled.");
+        }
+        if encryption_key.is_some() {
+            if encryption_key.as_ref().unwrap().len() != 32 {
+                panic!("Encryption key must be 32 bytes long.");
+            }
+            info!("Encryption is enabled.");
+        }
 
         IggyClient {
             client,
             config,
             send_messages_batch,
             partitioner,
+            cipher: encryption_key.map(|key| Aes256Gcm::new(key.as_slice().into())),
         }
     }
 
@@ -320,6 +337,48 @@ impl IggyClient {
             }
         });
     }
+
+    fn map_send_messages(
+        &self,
+        command: &SendMessages,
+        partitioning: Partitioning,
+    ) -> SendMessages {
+        SendMessages {
+            stream_id: Identifier::from_identifier(&command.stream_id),
+            topic_id: Identifier::from_identifier(&command.topic_id),
+            partitioning,
+            messages: command
+                .messages
+                .iter()
+                .map(|message| {
+                    if self.cipher.is_none() {
+                        crate::messages::send_messages::Message {
+                            id: message.id,
+                            length: message.length,
+                            payload: message.payload.clone(),
+                        }
+                    } else {
+                        let cipher = self.cipher.as_ref().unwrap();
+                        let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+                        let encrypted_payload =
+                            cipher.encrypt(&nonce, message.payload.as_ref()).unwrap();
+                        let payload = [&nonce, encrypted_payload.as_slice()].concat();
+                        crate::messages::send_messages::Message {
+                            id: message.id,
+                            length: payload.len() as u32,
+                            payload: Bytes::from(payload),
+                        }
+                    }
+                })
+                .collect(),
+        }
+    }
+}
+
+impl Debug for IggyClient {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("IggyClient").finish()
+    }
 }
 
 #[async_trait]
@@ -412,7 +471,30 @@ impl PartitionClient for IggyClient {
 #[async_trait]
 impl MessageClient for IggyClient {
     async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
-        self.client.read().await.poll_messages(command).await
+        let messages = self.client.read().await.poll_messages(command).await?;
+        if let Some(ref cipher) = self.cipher {
+            let mut decrypted_messages = Vec::with_capacity(messages.len());
+            for message in messages {
+                let nonce = GenericArray::from_slice(&message.payload[0..12]);
+                let payload = cipher.decrypt(nonce, &message.payload[12..]);
+                if payload.is_err() {
+                    error!("Cannot decrypt the message.");
+                    return Err(Error::CannotDecryptMessage);
+                }
+
+                let payload = payload.unwrap();
+                decrypted_messages.push(Message {
+                    id: message.id,
+                    offset: message.offset,
+                    timestamp: message.timestamp,
+                    length: payload.len() as u32,
+                    payload,
+                });
+            }
+            Ok(decrypted_messages)
+        } else {
+            Ok(messages)
+        }
     }
 
     async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
@@ -425,9 +507,20 @@ impl MessageClient for IggyClient {
                     &command.messages,
                 )?;
                 let partitioning = Partitioning::partition_id(partition_id);
-                Some(map_send_messages(command, partitioning))
+                Some(self.map_send_messages(command, partitioning))
             }
-            None => None,
+            None => {
+                if self.cipher.is_some() {
+                    let partitioning = Partitioning {
+                        kind: command.partitioning.kind,
+                        length: command.partitioning.length,
+                        value: command.partitioning.value.clone(),
+                    };
+                    Some(self.map_send_messages(command, partitioning))
+                } else {
+                    None
+                }
+            }
         };
 
         if !self.config.send_messages.enabled || self.config.send_messages.interval == 0 {
@@ -446,30 +539,13 @@ impl MessageClient for IggyClient {
                     length: command.partitioning.length,
                     value: command.partitioning.value.clone(),
                 };
-                map_send_messages(command, partitioning)
+                self.map_send_messages(command, partitioning)
             }
         };
 
         let mut batch = self.send_messages_batch.lock().await;
         batch.commands.push_back(send_messages);
         Ok(())
-    }
-}
-
-fn map_send_messages(command: &SendMessages, partitioning: Partitioning) -> SendMessages {
-    SendMessages {
-        stream_id: Identifier::from_identifier(&command.stream_id),
-        topic_id: Identifier::from_identifier(&command.topic_id),
-        partitioning,
-        messages: command
-            .messages
-            .iter()
-            .map(|message| crate::messages::send_messages::Message {
-                id: message.id,
-                length: message.length,
-                payload: message.payload.clone(),
-            })
-            .collect(),
     }
 }
 

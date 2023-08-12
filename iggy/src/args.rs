@@ -6,6 +6,9 @@ pub struct Args {
     #[arg(long, default_value = "tcp")]
     pub transport: String,
 
+    #[arg(long, default_value = "")]
+    pub encryption_key: String,
+
     #[arg(long, default_value = "http://localhost:3000")]
     pub http_api_url: String,
 

@@ -24,7 +24,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 - Support for multiple streams, topics and partitions
 - Support for **multiple transport protocols** (QUIC, TCP, HTTP)
 - Fully operational RESTful API which can be optionally enabled
-- Available client SDK in Rust (more languages to come)
+- Available client SDK in multiple languages
 - **Works directly with the binary data** (lack of enforced schema and serialization/deserialization)
 - Configurable server features (e.g. caching, segment size, data flush interval, transport protocols etc.)
 - Possibility of storing the **consumer offsets** on the server
@@ -36,8 +36,8 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 - Possibility of **auto committing the offset** (e.g. to achieve *at-most-once* delivery)
 - **Consumer groups** providing the message ordering and horizontal scaling across the connected clients
 - Additional features such as **server side message deduplication**
-- **TLS** support for all transport protocols
-- Optional client-side data encryption using AES-256-GCM
+- **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
+- Optional server-side as well as client-side **data encryption** using AES-256-GCM
 - Built-in benchmarking app to test the performance
 - **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)

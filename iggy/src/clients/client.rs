@@ -139,7 +139,7 @@ impl IggyClient {
             if encryption_key.as_ref().unwrap().len() != 32 {
                 panic!("Encryption key must be 32 bytes long.");
             }
-            info!("Encryption is enabled.");
+            info!("Client-side encryption is enabled.");
         }
 
         IggyClient {

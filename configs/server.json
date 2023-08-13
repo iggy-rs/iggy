@@ -56,6 +56,10 @@
   },
   "system": {
     "path": "local_data",
+    "encryption": {
+      "enabled": false,
+      "key": ""
+    },
     "stream": {
       "path": "streams",
       "topic": {

@@ -67,44 +67,20 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
-    if command.count == 0 {
-        return Err(Error::InvalidMessagesCount);
-    }
-
-    let system = system.read().await;
-    let stream = system.get_stream(&command.stream_id)?;
-    let topic = stream.get_topic(&command.topic_id)?;
-    if !topic.has_partitions() {
-        return Err(Error::NoPartitions(topic.id, topic.stream_id));
-    }
-
     let consumer = PollingConsumer::from_consumer(&command.consumer, client_context.client_id);
-    let partition_id = match consumer {
-        PollingConsumer::Consumer(_) => command.partition_id,
-        PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
-            let consumer_group = topic.get_consumer_group(consumer_group_id)?.read().await;
-            consumer_group.calculate_partition_id(member_id).await?
-        }
-    };
-
-    let messages = topic
-        .get_messages(consumer, partition_id, command.strategy, command.count)
+    let system = system.read().await;
+    let messages = system
+        .poll_messages(
+            &command.stream_id,
+            &command.topic_id,
+            consumer,
+            command.partition_id,
+            command.strategy,
+            command.count,
+            command.auto_commit,
+        )
         .await?;
-
-    if messages.is_empty() {
-        sender.send_empty_ok_response().await?;
-        return Ok(());
-    }
-
-    let offset = messages.last().unwrap().offset;
     let messages = mapper::map_messages(&messages);
-    if command.auto_commit {
-        trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, command.consumer.id, command.stream_id, command.topic_id, command.partition_id);
-        topic
-            .store_consumer_offset(consumer, partition_id, offset)
-            .await?;
-    }
-
     sender.send_ok_response(&messages).await?;
     Ok(())
 }

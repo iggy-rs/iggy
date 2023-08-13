@@ -198,7 +198,7 @@ impl Segment {
             self.partition_id
         );
 
-        let saved_bytes = storage.save_messages(&self, unsaved_messages).await?;
+        let saved_bytes = storage.save_messages(self, unsaved_messages).await?;
         let current_position = self.current_size_bytes - saved_bytes;
         storage
             .save_index(self, current_position, unsaved_messages)

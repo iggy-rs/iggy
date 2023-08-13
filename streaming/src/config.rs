@@ -5,6 +5,13 @@ use std::sync::Arc;
 pub struct SystemConfig {
     pub path: String,
     pub stream: Arc<StreamConfig>,
+    pub encryption: EncryptionConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub struct EncryptionConfig {
+    pub enabled: bool,
+    pub key: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -42,6 +49,7 @@ impl Default for SystemConfig {
         SystemConfig {
             path: "local_data".to_string(),
             stream: Arc::new(StreamConfig::default()),
+            encryption: EncryptionConfig::default(),
         }
     }
 }

@@ -19,11 +19,11 @@ async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_
     let partitions_count = 3;
     let messages_per_partition_count = 10;
     let topic = init_topic(&setup, partitions_count).await;
-    let key = Partitioning::balanced();
+    let partitioning = Partitioning::balanced();
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
         topic
-            .append_messages(&key, vec![get_message(&payload)])
+            .append_messages(&partitioning, vec![get_message(&payload)])
             .await
             .unwrap();
     }
@@ -39,11 +39,11 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
     let partitions_count = 3;
     let messages_per_partition_count = 10;
     let topic = init_topic(&setup, partitions_count).await;
-    let key = Partitioning::partition_id(partition_id);
+    let partitioning = Partitioning::partition_id(partition_id);
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
         topic
-            .append_messages(&key, vec![get_message(&payload)])
+            .append_messages(&partitioning, vec![get_message(&payload)])
             .await
             .unwrap();
     }
@@ -65,9 +65,9 @@ async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_pa
     let topic = init_topic(&setup, partitions_count).await;
     for entity_id in 1..=partitions_count * messages_count {
         let payload = get_payload(entity_id);
-        let key = Partitioning::messages_key_u32(entity_id);
+        let partitioning = Partitioning::messages_key_u32(entity_id);
         topic
-            .append_messages(&key, vec![get_message(&payload)])
+            .append_messages(&partitioning, vec![get_message(&payload)])
             .await
             .unwrap();
     }

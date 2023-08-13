@@ -41,7 +41,7 @@ impl Topic {
 
     pub async fn append_messages(
         &self,
-        key: &Partitioning,
+        partitioning: &Partitioning,
         messages: Vec<Message>,
     ) -> Result<(), Error> {
         if !self.has_partitions() {
@@ -52,13 +52,13 @@ impl Topic {
             return Ok(());
         }
 
-        let partition_id = match key.kind {
+        let partition_id = match partitioning.kind {
             PartitioningKind::Balanced => self.get_next_partition_id(),
             PartitioningKind::PartitionId => {
-                u32::from_le_bytes(key.value[..key.length as usize].try_into()?)
+                u32::from_le_bytes(partitioning.value[..partitioning.length as usize].try_into()?)
             }
             PartitioningKind::MessagesKey => {
-                self.calculate_partition_id_by_messages_key_hash(&key.value)
+                self.calculate_partition_id_by_messages_key_hash(&partitioning.value)
             }
         };
 
@@ -177,7 +177,7 @@ mod tests {
     #[tokio::test]
     async fn given_partition_id_key_messages_should_be_appended_only_to_the_chosen_partition() {
         let partition_id = 1;
-        let key = Partitioning::partition_id(partition_id);
+        let partitioning = Partitioning::partition_id(partition_id);
         let partitions_count = 3;
         let messages_count = 1000;
         let topic = init_topic(partitions_count);
@@ -185,7 +185,10 @@ mod tests {
         for entity_id in 1..=messages_count {
             let payload = Bytes::from("test");
             let messages = vec![Message::empty(1, entity_id as u128, payload, 1)];
-            topic.append_messages(&key, messages).await.unwrap();
+            topic
+                .append_messages(&partitioning, messages)
+                .await
+                .unwrap();
         }
 
         let partitions = topic.get_partitions();
@@ -208,10 +211,13 @@ mod tests {
         let topic = init_topic(partitions_count);
 
         for entity_id in 1..=messages_count {
-            let key = Partitioning::messages_key_u32(entity_id);
+            let partitioning = Partitioning::messages_key_u32(entity_id);
             let payload = Bytes::from("test");
             let messages = vec![Message::empty(1, entity_id as u128, payload, 1)];
-            topic.append_messages(&key, messages).await.unwrap();
+            topic
+                .append_messages(&partitioning, messages)
+                .await
+                .unwrap();
         }
 
         let mut read_messages_count = 0;

@@ -2,7 +2,6 @@ use crate::command::{Format, PollMessagesWithFormat};
 use iggy::client::Client;
 use iggy::client_error::ClientError;
 use iggy::messages::send_messages::SendMessages;
-use std::str::from_utf8;
 use tracing::info;
 
 pub async fn send_messages(command: &SendMessages, client: &dyn Client) -> Result<(), ClientError> {
@@ -34,7 +33,7 @@ pub async fn poll_messages(
         );
         match format {
             Format::Binary => text += &format!("{:?}", message.payload),
-            Format::String => text += from_utf8(&message.payload).unwrap(),
+            Format::String => text += String::from_utf8_lossy(&message.payload).as_ref(),
             _ => {}
         }
     }

@@ -5,11 +5,11 @@ edition = "2021"
 
 [dependencies]
 iggy = { path = "../iggy" }
+aes-gcm = "0.10.2"
 async-trait = "0.1.68"
 bytes = "1.4.0"
 crc32fast = "1.3.2"
 futures = "0.3.28"
-
 ringbuffer = "0.14.2"
 fastmurmur3 = "0.2.0"
 serde = { version = "1.0.159", features = ["derive", "rc"] }

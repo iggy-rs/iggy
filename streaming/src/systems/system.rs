@@ -3,7 +3,9 @@ use crate::config::SystemConfig;
 use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
+use aes_gcm::{Aes256Gcm, KeyInit};
 use iggy::error::Error;
+use iggy::utils::text;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -20,6 +22,7 @@ pub struct System {
     pub(crate) streams_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: Arc<RwLock<ClientManager>>,
+    pub(crate) cipher: Option<Aes256Gcm>,
 }
 
 impl System {
@@ -28,13 +31,24 @@ impl System {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };
-
         Self::create(config, SystemStorage::new(persister))
     }
 
     pub fn create(config: Arc<SystemConfig>, storage: SystemStorage) -> System {
         let base_path = config.path.to_string();
         let streams_path = format!("{}/{}", base_path, &config.stream.path);
+        let encryption_key = if config.encryption.enabled {
+            Some(text::from_base64_as_bytes(&config.encryption.key).unwrap())
+        } else {
+            None
+        };
+
+        if encryption_key.is_some() {
+            if encryption_key.as_ref().unwrap().len() != 32 {
+                panic!("Encryption key must be 32 bytes long.");
+            }
+            info!("Server-side encryption is enabled.");
+        }
 
         System {
             config,
@@ -44,6 +58,7 @@ impl System {
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),
             client_manager: Arc::new(RwLock::new(ClientManager::new())),
+            cipher: encryption_key.map(|key| Aes256Gcm::new(key.as_slice().into())),
         }
     }
 

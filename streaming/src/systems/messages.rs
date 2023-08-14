@@ -1,9 +1,6 @@
 use crate::message::Message;
 use crate::polling_consumer::PollingConsumer;
 use crate::systems::system::System;
-use aes_gcm::aead::generic_array::GenericArray;
-use aes_gcm::aead::{Aead, OsRng};
-use aes_gcm::{AeadCore, Aes256Gcm};
 use bytes::Bytes;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
@@ -58,18 +55,17 @@ impl System {
                 .await?;
         }
 
-        if self.cipher.is_none() {
+        if self.encryptor.is_none() {
             return Ok(messages);
         }
 
-        let cipher = self.cipher.as_ref().unwrap();
+        let encryptor = self.encryptor.as_ref().unwrap();
         let mut decrypted_messages = Vec::with_capacity(messages.len());
         for message in messages {
-            let nonce = GenericArray::from_slice(&message.payload[0..12]);
-            let payload = cipher.decrypt(nonce, &message.payload[12..]);
+            let payload = encryptor.decrypt(&message.payload);
             if payload.is_err() {
                 error!("Cannot decrypt the message.");
-                return Err(Error::CannotDecryptMessage);
+                return Err(Error::CannotDecryptData);
             }
 
             let payload = payload.unwrap();
@@ -96,12 +92,9 @@ impl System {
         let mut received_messages = Vec::with_capacity(messages.len());
         for message in messages {
             let encrypted_message;
-            let message = match self.cipher {
-                Some(ref cipher) => {
-                    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-                    let encrypted_payload =
-                        cipher.encrypt(&nonce, message.payload.as_ref()).unwrap();
-                    let payload = [&nonce, encrypted_payload.as_slice()].concat();
+            let message = match self.encryptor {
+                Some(ref encryptor) => {
+                    let payload = encryptor.encrypt(message.payload.as_ref())?;
                     encrypted_message = send_messages::Message {
                         id: message.id,
                         length: payload.len() as u32,

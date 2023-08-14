@@ -3,9 +3,8 @@ use crate::config::SystemConfig;
 use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
-use aes_gcm::{Aes256Gcm, KeyInit};
 use iggy::error::Error;
-use iggy::utils::text;
+use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -22,7 +21,7 @@ pub struct System {
     pub(crate) streams_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: Arc<RwLock<ClientManager>>,
-    pub(crate) cipher: Option<Aes256Gcm>,
+    pub(crate) encryptor: Option<Box<dyn Encryptor>>,
 }
 
 impl System {
@@ -37,20 +36,17 @@ impl System {
     pub fn create(config: Arc<SystemConfig>, storage: SystemStorage) -> System {
         let base_path = config.path.to_string();
         let streams_path = format!("{}/{}", base_path, &config.stream.path);
-        let encryption_key = if config.encryption.enabled {
-            Some(text::from_base64_as_bytes(&config.encryption.key).unwrap())
-        } else {
-            None
-        };
-
-        if encryption_key.is_some() {
-            if encryption_key.as_ref().unwrap().len() != 32 {
-                panic!("Encryption key must be 32 bytes long.");
-            }
+        if config.encryption.enabled {
             info!("Server-side encryption is enabled.");
         }
 
         System {
+            encryptor: match config.encryption.enabled {
+                true => Some(Box::new(
+                    Aes256GcmEncryptor::new_from_base64_key(&config.encryption.key).unwrap(),
+                )),
+                false => None,
+            },
             config,
             base_path,
             streams_path,
@@ -58,7 +54,6 @@ impl System {
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),
             client_manager: Arc::new(RwLock::new(ClientManager::new())),
-            cipher: encryption_key.map(|key| Aes256Gcm::new(key.as_slice().into())),
         }
     }
 

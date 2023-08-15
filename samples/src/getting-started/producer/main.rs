@@ -70,7 +70,7 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
             messages.push(message);
         }
         client
-            .send_messages(&SendMessages {
+            .send_messages(&mut SendMessages {
                 stream_id: Identifier::numeric(STREAM_ID)?,
                 topic_id: Identifier::numeric(TOPIC_ID)?,
                 partitioning: Partitioning::partition_id(PARTITION_ID),

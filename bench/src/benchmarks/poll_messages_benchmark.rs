@@ -30,7 +30,7 @@ pub async fn run(
         consumer_id, total_messages, args.message_batches, args.messages_per_batch
     );
 
-    let mut command = PollMessages {
+    let mut poll_messages = PollMessages {
         consumer: Consumer::new(consumer_id),
         stream_id: Identifier::numeric(stream_id).unwrap(),
         topic_id: Identifier::numeric(topic_id).unwrap(),
@@ -46,10 +46,10 @@ pub async fn run(
     let mut received_messages = 0;
     while received_messages < total_messages {
         let offset = (current_iteration * args.messages_per_batch) as u64;
-        command.strategy.value = offset;
+        poll_messages.strategy.value = offset;
 
         let latency_start = Instant::now();
-        let messages = client.poll_messages(&command).await;
+        let messages = client.poll_messages(&poll_messages).await;
         let latency_end = latency_start.elapsed();
         if messages.is_err() {
             trace!("Offset: {} is not available yet, retrying...", offset);

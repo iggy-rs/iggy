@@ -214,13 +214,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         });
     }
 
-    let send_messages = SendMessages {
+    let mut send_messages = SendMessages {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partitioning: Partitioning::partition_id(PARTITION_ID),
         messages,
     };
-    client.send_messages(&send_messages).await.unwrap();
+    client.send_messages(&mut send_messages).await.unwrap();
 
     // 18. Poll messages from the specific partition in topic
     let poll_messages = PollMessages {

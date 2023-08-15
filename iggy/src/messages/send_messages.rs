@@ -133,6 +133,14 @@ impl Partitioning {
         }
     }
 
+    pub fn from_partitioning(partitioning: &Partitioning) -> Self {
+        Partitioning {
+            kind: partitioning.kind,
+            length: partitioning.length,
+            value: partitioning.value.clone(),
+        }
+    }
+
     pub fn get_size_bytes(&self) -> u32 {
         2 + self.length as u32
     }

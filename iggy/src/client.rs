@@ -87,7 +87,7 @@ pub trait PartitionClient {
 #[async_trait]
 pub trait MessageClient {
     async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error>;
-    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error>;
+    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), Error>;
 }
 
 #[async_trait]

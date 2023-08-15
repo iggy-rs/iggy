@@ -51,7 +51,7 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
             serializable_messages.push(serializable_message);
         }
         client
-            .send_messages(&SendMessages {
+            .send_messages(&mut SendMessages {
                 stream_id: Identifier::numeric(args.stream_id)?,
                 topic_id: Identifier::numeric(args.topic_id)?,
                 partitioning: Partitioning::partition_id(args.partition_id),

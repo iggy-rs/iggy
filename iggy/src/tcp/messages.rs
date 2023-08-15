@@ -13,7 +13,7 @@ impl MessageClient for TcpClient {
         binary::messages::poll_messages(self, command).await
     }
 
-    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
+    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), Error> {
         binary::messages::send_messages(self, command).await
     }
 }

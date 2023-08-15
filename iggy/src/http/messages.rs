@@ -22,7 +22,7 @@ impl MessageClient for HttpClient {
         Ok(messages)
     }
 
-    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
+    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), Error> {
         self.post(
             &get_path(
                 &command.stream_id.as_string(),

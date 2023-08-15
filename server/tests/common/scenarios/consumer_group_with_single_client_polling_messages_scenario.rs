@@ -102,13 +102,13 @@ async fn execute_using_messages_key_key(client: &IggyClient) {
     for entity_id in 1..=MESSAGES_COUNT {
         let message = Message::from_str(&get_message_payload(entity_id)).unwrap();
         let messages = vec![message];
-        let send_messages = SendMessages {
+        let mut send_messages = SendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partitioning: Partitioning::messages_key_u32(entity_id),
             messages,
         };
-        client.send_messages(&send_messages).await.unwrap();
+        client.send_messages(&mut send_messages).await.unwrap();
     }
 
     // 2. Poll the messages for the single client which has assigned all partitions in the consumer group
@@ -146,13 +146,13 @@ async fn execute_using_none_key(client: &IggyClient) {
         let message =
             Message::from_str(&get_extended_message_payload(partition_id, entity_id)).unwrap();
         let messages = vec![message];
-        let send_messages = SendMessages {
+        let mut send_messages = SendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partitioning: Partitioning::balanced(),
             messages,
         };
-        client.send_messages(&send_messages).await.unwrap();
+        client.send_messages(&mut send_messages).await.unwrap();
     }
 
     // 2. Poll the messages for the single client which has assigned all partitions in the consumer group

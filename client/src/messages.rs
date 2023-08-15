@@ -4,7 +4,10 @@ use iggy::client_error::ClientError;
 use iggy::messages::send_messages::SendMessages;
 use tracing::info;
 
-pub async fn send_messages(command: &SendMessages, client: &dyn Client) -> Result<(), ClientError> {
+pub async fn send_messages(
+    command: &mut SendMessages,
+    client: &dyn Client,
+) -> Result<(), ClientError> {
     client.send_messages(command).await?;
     Ok(())
 }

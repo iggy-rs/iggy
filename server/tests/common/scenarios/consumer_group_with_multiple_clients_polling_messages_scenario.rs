@@ -121,13 +121,16 @@ async fn execute_using_messages_key_key(
     for entity_id in 1..=MESSAGES_COUNT {
         let message = Message::from_str(&get_message_payload(entity_id)).unwrap();
         let messages = vec![message];
-        let send_messages = SendMessages {
+        let mut send_messages = SendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partitioning: Partitioning::messages_key_u32(entity_id),
             messages,
         };
-        system_client.send_messages(&send_messages).await.unwrap();
+        system_client
+            .send_messages(&mut send_messages)
+            .await
+            .unwrap();
     }
 
     // 2. Poll the messages for each client per assigned partition in the consumer group
@@ -179,13 +182,16 @@ async fn execute_using_none_key(
         let message =
             Message::from_str(&get_extended_message_payload(partition_id, entity_id)).unwrap();
         let messages = vec![message];
-        let send_messages = SendMessages {
+        let mut send_messages = SendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partitioning: Partitioning::balanced(),
             messages,
         };
-        system_client.send_messages(&send_messages).await.unwrap();
+        system_client
+            .send_messages(&mut send_messages)
+            .await
+            .unwrap();
     }
 
     let consumer_group_info = system_client

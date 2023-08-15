@@ -118,6 +118,13 @@ impl IggyClient {
         partitioner: Option<Box<dyn Partitioner>>,
         encryptor: Option<Box<dyn Encryptor>>,
     ) -> Self {
+        if partitioner.is_some() {
+            info!("Partitioner is enabled.");
+        }
+        if encryptor.is_some() {
+            info!("Client-side encryption is enabled.");
+        }
+
         let client = Arc::new(RwLock::new(client));
         let send_messages_batch = Arc::new(Mutex::new(SendMessagesBatch {
             commands: VecDeque::new(),
@@ -130,12 +137,6 @@ impl IggyClient {
                 client.clone(),
                 send_messages_batch.clone(),
             );
-        }
-        if partitioner.is_some() {
-            info!("Partitioner is enabled.");
-        }
-        if encryptor.is_some() {
-            info!("Client-side encryption is enabled.");
         }
 
         IggyClient {
@@ -290,7 +291,7 @@ impl IggyClient {
                 }
 
                 if !batch_messages {
-                    for send_messages in send_messages_batch.commands.iter() {
+                    for send_messages in send_messages_batch.commands.iter_mut() {
                         if let Err(error) = client.read().await.send_messages(send_messages).await {
                             error!("There was an error when sending the messages: {:?}", error);
                         }
@@ -310,7 +311,7 @@ impl IggyClient {
                 }
 
                 while let Some(messages) = batches.pop_front() {
-                    let send_messages = SendMessages {
+                    let mut send_messages = SendMessages {
                         stream_id: Identifier::from_identifier(&stream_id),
                         topic_id: Identifier::from_identifier(&topic_id),
                         partitioning: Partitioning {
@@ -321,7 +322,8 @@ impl IggyClient {
                         messages,
                     };
 
-                    if let Err(error) = client.read().await.send_messages(&send_messages).await {
+                    if let Err(error) = client.read().await.send_messages(&mut send_messages).await
+                    {
                         error!(
                             "There was an error when sending the messages batch: {:?}",
                             error
@@ -332,38 +334,6 @@ impl IggyClient {
                 send_messages_batch.commands.clear();
             }
         });
-    }
-
-    fn map_send_messages(
-        &self,
-        command: &SendMessages,
-        partitioning: Partitioning,
-    ) -> SendMessages {
-        SendMessages {
-            stream_id: Identifier::from_identifier(&command.stream_id),
-            topic_id: Identifier::from_identifier(&command.topic_id),
-            partitioning,
-            messages: command
-                .messages
-                .iter()
-                .map(|message| {
-                    if let Some(ref encryptor) = self.encryptor {
-                        let payload = encryptor.encrypt(message.payload.as_ref()).unwrap();
-                        crate::messages::send_messages::Message {
-                            id: message.id,
-                            length: payload.len() as u32,
-                            payload: Bytes::from(payload),
-                        }
-                    } else {
-                        crate::messages::send_messages::Message {
-                            id: message.id,
-                            length: message.length,
-                            payload: message.payload.clone(),
-                        }
-                    }
-                })
-                .collect(),
-        }
     }
 }
 
@@ -476,50 +446,46 @@ impl MessageClient for IggyClient {
         }
     }
 
-    async fn send_messages(&self, command: &SendMessages) -> Result<(), Error> {
-        let send_messages = match &self.partitioner {
-            Some(partitioner) => {
-                let partition_id = partitioner.calculate_partition_id(
-                    &command.stream_id,
-                    &command.topic_id,
-                    &command.partitioning,
-                    &command.messages,
-                )?;
-                let partitioning = Partitioning::partition_id(partition_id);
-                Some(self.map_send_messages(command, partitioning))
+    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), Error> {
+        if command.messages.is_empty() {
+            return Ok(());
+        }
+
+        if let Some(partitioner) = &self.partitioner {
+            let partition_id = partitioner.calculate_partition_id(
+                &command.stream_id,
+                &command.topic_id,
+                &command.partitioning,
+                &command.messages,
+            )?;
+            command.partitioning = Partitioning::partition_id(partition_id);
+        }
+
+        if let Some(encryptor) = &self.encryptor {
+            for message in &mut command.messages {
+                message.payload = Bytes::from(encryptor.encrypt(&message.payload)?);
+                message.length = message.payload.len() as u32;
             }
-            None => {
-                if self.encryptor.is_some() {
-                    let partitioning = Partitioning {
-                        kind: command.partitioning.kind,
-                        length: command.partitioning.length,
-                        value: command.partitioning.value.clone(),
-                    };
-                    Some(self.map_send_messages(command, partitioning))
-                } else {
-                    None
-                }
-            }
-        };
+        }
 
         if !self.config.send_messages.enabled || self.config.send_messages.interval == 0 {
-            if let Some(send_messages) = send_messages {
-                return self.client.read().await.send_messages(&send_messages).await;
-            }
-
             return self.client.read().await.send_messages(command).await;
         }
 
-        let send_messages = match send_messages {
-            Some(send_messages) => send_messages,
-            None => {
-                let partitioning = Partitioning {
-                    kind: command.partitioning.kind,
-                    length: command.partitioning.length,
-                    value: command.partitioning.value.clone(),
-                };
-                self.map_send_messages(command, partitioning)
-            }
+        let mut messages = Vec::with_capacity(command.messages.len());
+        for message in &command.messages {
+            let message = crate::messages::send_messages::Message {
+                id: message.id,
+                length: message.length,
+                payload: message.payload.clone(),
+            };
+            messages.push(message);
+        }
+        let send_messages = SendMessages {
+            stream_id: Identifier::from_identifier(&command.stream_id),
+            topic_id: Identifier::from_identifier(&command.topic_id),
+            partitioning: Partitioning::from_partitioning(&command.partitioning),
+            messages,
         };
 
         let mut batch = self.send_messages_batch.lock().await;

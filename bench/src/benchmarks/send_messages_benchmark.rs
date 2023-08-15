@@ -32,7 +32,7 @@ pub async fn run(
         messages.push(message);
     }
 
-    let command = SendMessages {
+    let mut send_messages = SendMessages {
         stream_id: Identifier::numeric(stream_id)?,
         topic_id: Identifier::numeric(topic_id)?,
         partitioning: Partitioning::partition_id(partition_id),
@@ -47,7 +47,7 @@ pub async fn run(
     let mut latencies: Vec<Duration> = Vec::with_capacity(args.message_batches as usize);
     for _ in 0..args.message_batches {
         let latency_start = Instant::now();
-        client.send_messages(&command).await?;
+        client.send_messages(&mut send_messages).await?;
         let latency_end = latency_start.elapsed();
         latencies.push(latency_end);
     }

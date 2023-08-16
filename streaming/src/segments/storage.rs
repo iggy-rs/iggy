@@ -529,7 +529,9 @@ async fn load_messages_by_range(
         let timestamp = timestamp.unwrap();
         let id = id.unwrap();
         let checksum = checksum.unwrap();
-        let message = Message::create(offset, timestamp, id, Bytes::from(payload), checksum);
+
+        // TODO: Load headers
+        let message = Message::create(offset, timestamp, id, Bytes::from(payload), checksum, None);
         read_messages += 1;
         on_message(message)?;
     }

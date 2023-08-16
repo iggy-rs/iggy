@@ -1,12 +1,14 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::header::{HeaderKey, HeaderValue};
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
+use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -43,6 +45,7 @@ pub struct Message {
     pub length: u32,
     #[serde_as(as = "Base64")]
     pub payload: Bytes,
+    pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
@@ -210,8 +213,19 @@ impl FromStr for PartitioningKind {
 
 impl Message {
     pub fn get_size_bytes(&self) -> u32 {
-        // ID + Length + Payload
-        16 + 4 + self.payload.len() as u32
+        // ID + Length + Payload + Headers
+        16 + 4 + self.payload.len() as u32 + self.get_headers_size_bytes()
+    }
+
+    fn get_headers_size_bytes(&self) -> u32 {
+        let mut size = 0;
+        if let Some(headers) = &self.headers {
+            for (key, value) in headers {
+                // Kind + Key + Value
+                size += 1 + key.as_str().len() as u32 + value.value.len() as u32;
+            }
+        }
+        size
     }
 }
 
@@ -222,6 +236,7 @@ impl Default for Message {
             id: 0,
             length: payload.len() as u32,
             payload,
+            headers: None,
         }
     }
 }
@@ -264,6 +279,7 @@ impl BytesSerializable for Partitioning {
     }
 }
 
+// TODO: Implement headers serialization
 impl BytesSerializable for Message {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(self.get_size_bytes() as usize);
@@ -293,6 +309,7 @@ impl BytesSerializable for Message {
             id,
             length,
             payload,
+            headers: None,
         })
     }
 }
@@ -318,6 +335,7 @@ impl FromStr for Message {
             id,
             length,
             payload,
+            headers: None,
         })
     }
 }
@@ -351,6 +369,7 @@ impl FromStr for SendMessages {
             id: message_id,
             length: payload.len() as u32,
             payload,
+            headers: None,
         };
 
         let command = SendMessages {

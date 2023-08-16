@@ -211,6 +211,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             id,
             length: payload.len() as u32,
             payload,
+            headers: None,
         });
     }
 

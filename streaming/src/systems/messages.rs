@@ -76,6 +76,7 @@ impl System {
                 checksum: message.checksum,
                 length: payload.len() as u32,
                 payload: Bytes::from(payload),
+                headers: message.headers.clone(),
             }));
         }
 
@@ -99,6 +100,7 @@ impl System {
                         id: message.id,
                         length: payload.len() as u32,
                         payload: Bytes::from(payload),
+                        headers: message.headers.clone(),
                     };
                     &encrypted_message
                 }

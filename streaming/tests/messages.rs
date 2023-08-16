@@ -39,7 +39,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         let id = i as u128;
         let payload = Bytes::from(format!("message {}", i));
         let checksum = checksum::calculate(&payload);
-        let message = Message::create(offset, timestamp, id, payload, checksum);
+        let message = Message::create(offset, timestamp, id, payload, checksum, None);
         appended_messages.push(message.clone());
         messages.push(message);
     }

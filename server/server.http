@@ -80,7 +80,7 @@ POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages
 Content-Type: application/json
 
 {
-  "key": {
+  "partitioning": {
     "kind": "partition_id",
     "value": "{{partition_id_payload_base64}}"
   },

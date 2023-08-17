@@ -29,7 +29,7 @@ tracing-subscriber = {version = "0.3.16"}
 chrono = "0.4.24"
 anyhow = "1.0.70"
 tokio-graceful-shutdown = "0.12.1"
-rcgen = "0.10.0"
+rcgen = "0.11.1"
 quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 

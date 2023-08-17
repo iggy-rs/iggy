@@ -1,14 +1,18 @@
 [package]
-name = "client"
+name = "tools"
 version = "0.0.1"
 edition = "2021"
+
+[[bin]]
+name = "data-seeder-tool"
+path = "src/data-seeder/main.rs"
 
 [dependencies]
 iggy = { path = "../iggy" }
 anyhow = "1.0.70"
 bytes = "1.4.0"
 clap = { version = "4.1.11", features = ["derive"] }
-quinn = "0.10.0"
+rand = "0.8.5"
 rcgen = "0.11.1"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 tracing = { version = "0.1.37"}

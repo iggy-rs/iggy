@@ -9,5 +9,6 @@ members = [
     "samples",
     "iggy",
     "server",
-    "streaming"
+    "streaming",
+    "tools"
 ]

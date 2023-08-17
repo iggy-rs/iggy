@@ -1,7 +1,11 @@
+use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
+
+const EMPTY_BYTES: Vec<u8> = vec![];
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HeaderKey(String);
@@ -49,6 +53,49 @@ pub enum HeaderKind {
     Uint128,
     Float32,
     Float64,
+}
+
+impl HeaderKind {
+    pub fn as_code(&self) -> u8 {
+        match self {
+            HeaderKind::Raw => 1,
+            HeaderKind::String => 2,
+            HeaderKind::Bool => 3,
+            HeaderKind::Int8 => 4,
+            HeaderKind::Int16 => 5,
+            HeaderKind::Int32 => 6,
+            HeaderKind::Int64 => 7,
+            HeaderKind::Int128 => 8,
+            HeaderKind::Uint8 => 9,
+            HeaderKind::Uint16 => 10,
+            HeaderKind::Uint32 => 11,
+            HeaderKind::Uint64 => 12,
+            HeaderKind::Uint128 => 13,
+            HeaderKind::Float32 => 14,
+            HeaderKind::Float64 => 15,
+        }
+    }
+
+    pub fn from_code(code: u8) -> Result<Self, Error> {
+        match code {
+            1 => Ok(HeaderKind::Raw),
+            2 => Ok(HeaderKind::String),
+            3 => Ok(HeaderKind::Bool),
+            4 => Ok(HeaderKind::Int8),
+            5 => Ok(HeaderKind::Int16),
+            6 => Ok(HeaderKind::Int32),
+            7 => Ok(HeaderKind::Int64),
+            8 => Ok(HeaderKind::Int128),
+            9 => Ok(HeaderKind::Uint8),
+            10 => Ok(HeaderKind::Uint16),
+            11 => Ok(HeaderKind::Uint32),
+            12 => Ok(HeaderKind::Uint64),
+            13 => Ok(HeaderKind::Uint128),
+            14 => Ok(HeaderKind::Float32),
+            15 => Ok(HeaderKind::Float64),
+            _ => Err(Error::InvalidCommand),
+        }
+    }
 }
 
 impl Display for HeaderValue {
@@ -210,5 +257,146 @@ impl HeaderValue {
 
     pub fn float64(value: f64) -> Result<Self, Error> {
         Self::raw(value.to_le_bytes().to_vec())
+    }
+}
+
+impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
+    fn as_bytes(&self) -> Vec<u8> {
+        if self.is_empty() {
+            return EMPTY_BYTES;
+        }
+
+        let mut bytes = vec![];
+        for (key, value) in self {
+            bytes.extend((key.0.len() as u32).to_le_bytes());
+            bytes.extend(key.0.as_bytes());
+            bytes.extend(value.kind.as_code().to_le_bytes());
+            bytes.extend((value.value.len() as u32).to_le_bytes());
+            bytes.extend(&value.value);
+        }
+
+        bytes
+    }
+
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        if bytes.is_empty() {
+            return Ok(Self::new());
+        }
+
+        let mut headers = Self::new();
+        let mut position = 0;
+        while position < bytes.len() {
+            let key_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?) as usize;
+            position += 4;
+            let key = String::from_utf8(bytes[position..position + key_length].to_vec());
+            if key.is_err() {
+                return Err(Error::InvalidHeaderKey);
+            }
+
+            let key = key.unwrap();
+            position += key_length;
+            let kind = HeaderKind::from_code(bytes[position])?;
+            position += 1;
+            let value_length =
+                u32::from_le_bytes(bytes[position..position + 4].try_into()?) as usize;
+            position += 4;
+            let value = bytes[position..position + value_length].to_vec();
+            position += value_length;
+            headers.insert(HeaderKey(key), HeaderValue { kind, value });
+        }
+
+        Ok(headers)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_be_serialized_as_bytes() {
+        let mut headers = HashMap::new();
+        headers.insert(
+            HeaderKey("key-1".to_string()),
+            HeaderValue::string("Value 1".to_string()).unwrap(),
+        );
+        headers.insert(
+            HeaderKey("key-2".to_string()),
+            HeaderValue::uint64(12345).unwrap(),
+        );
+        headers.insert(
+            HeaderKey("key-3".to_string()),
+            HeaderValue::bool(true).unwrap(),
+        );
+
+        let bytes = headers.as_bytes();
+
+        let mut position = 0;
+        let mut headers_count = 0;
+        while position < bytes.len() {
+            let key_length =
+                u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap()) as usize;
+            position += 4;
+            let key = String::from_utf8(bytes[position..position + key_length].to_vec()).unwrap();
+            position += key_length;
+            let kind = HeaderKind::from_code(bytes[position]).unwrap();
+            position += 1;
+            let value_length =
+                u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap()) as usize;
+            position += 4;
+            let value = bytes[position..position + value_length].to_vec();
+            position += value_length;
+            let header = headers.get(&HeaderKey(key));
+            assert!(header.is_some());
+            let header = header.unwrap();
+            assert_eq!(header.kind, kind);
+            assert_eq!(header.value, value);
+            headers_count += 1;
+        }
+
+        assert_eq!(headers_count, headers.len());
+    }
+
+    #[test]
+    fn should_be_deserialized_from_bytes() {
+        let mut headers = HashMap::new();
+        headers.insert(
+            HeaderKey("key-1".to_string()),
+            HeaderValue::string("Value 1".to_string()).unwrap(),
+        );
+        headers.insert(
+            HeaderKey("key-2".to_string()),
+            HeaderValue::uint64(12345).unwrap(),
+        );
+        headers.insert(
+            HeaderKey("key-3".to_string()),
+            HeaderValue::bool(true).unwrap(),
+        );
+
+        let mut bytes = vec![];
+        for (key, value) in &headers {
+            bytes.extend((key.0.len() as u32).to_le_bytes());
+            bytes.extend(key.0.as_bytes());
+            bytes.extend(value.kind.as_code().to_le_bytes());
+            bytes.extend((value.value.len() as u32).to_le_bytes());
+            bytes.extend(&value.value);
+        }
+
+        let deserialized_headers = HashMap::<HeaderKey, HeaderValue>::from_bytes(&bytes);
+
+        assert!(deserialized_headers.is_ok());
+        let deserialized_headers = deserialized_headers.unwrap();
+        assert_eq!(deserialized_headers.len(), headers.len());
+
+        for (key, value) in &headers {
+            let deserialized_value = deserialized_headers.get(key);
+            assert!(deserialized_value.is_some());
+            let deserialized_value = deserialized_value.unwrap();
+            assert_eq!(deserialized_value.kind, value.kind);
+            assert_eq!(deserialized_value.value, value.value);
+        }
     }
 }

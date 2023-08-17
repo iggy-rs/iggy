@@ -26,10 +26,7 @@ impl Message {
     pub fn from_message(message: &send_messages::Message) -> Self {
         let timestamp = timestamp::get();
         let checksum = checksum::calculate(&message.payload);
-        let headers = match &message.headers {
-            Some(headers) => Some(headers.clone()),
-            None => None,
-        };
+        let headers = message.headers.as_ref().map(|headers| headers.clone());
 
         Self::empty(
             timestamp,
@@ -81,7 +78,7 @@ impl Message {
     }
 
     fn _get_headers_size_bytes(&self) -> u32 {
-        // Headers count field
+        // Headers payload length field
         let mut size = 1;
         if let Some(headers) = &self.headers {
             for (key, value) in headers {

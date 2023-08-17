@@ -472,7 +472,6 @@ impl MessageClient for IggyClient {
             return self.client.read().await.send_messages(command).await;
         }
 
-        // TODO: Clone headers
         let mut messages = Vec::with_capacity(command.messages.len());
         for message in &command.messages {
             let message = crate::messages::send_messages::Message {

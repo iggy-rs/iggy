@@ -105,21 +105,26 @@ async fn send_messages(client: &IggyClient) -> Result<(), Error> {
 
         for topic in topics {
             let mut messages = Vec::new();
-            let messages_count = rng.gen_range(1000..=20000);
-            for message_id in 1..=messages_count {
-                let payload = format!("{}_data_{}", topic.name, message_id);
-                let message = Message::from_str(&payload)?;
-                messages.push(message);
+            let message_batches = rng.gen_range(100..=1000);
+            let mut message_id = 1;
+            for _ in 1..=message_batches {
+                let messages_count = rng.gen_range(10..=100);
+                for _ in 1..=messages_count {
+                    let payload = format!("{}_data_{}", topic.name, message_id);
+                    let message = Message::from_str(&payload)?;
+                    messages.push(message);
+                    message_id += 1;
+                }
+                client
+                    .send_messages(&mut SendMessages {
+                        stream_id: Identifier::numeric(stream_id)?,
+                        topic_id: Identifier::numeric(topic.id)?,
+                        partitioning: Partitioning::balanced(),
+                        messages,
+                    })
+                    .await?;
+                messages = Vec::new();
             }
-
-            client
-                .send_messages(&mut SendMessages {
-                    stream_id: Identifier::numeric(stream_id)?,
-                    topic_id: Identifier::numeric(topic.id)?,
-                    partitioning: Partitioning::balanced(),
-                    messages,
-                })
-                .await?;
         }
     }
     Ok(())

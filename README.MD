@@ -38,6 +38,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 - Additional features such as **server side message deduplication**
 - **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM
+- Optional metadata support in the form of message headers
 - Built-in benchmarking app to test the performance
 - **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)
@@ -219,6 +220,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 - [x] Create a basic TCP server
 - [x] Make use of TCP protocol
 - [x] Add support for TLS
+  [x] Add optional data encryption for server-side
 - [ ] Implement user authentication & roles management
 - [x] Use async runtime from tokio
 - [x] Define the custom binary protocol for communication
@@ -237,6 +239,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 - [x] Create a basic TCP client
 - [x] Make use of TCP protocol
 - [x] Add support for TLS
+- [x] Add optional data encryption for client-side
 - [x] Provide configuration via terminal arguments
 - [ ] Provide configuration via custom configuration file
 - [x] Communicate with the server using established binary protocol
@@ -277,6 +280,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 - [ ] Implement efficient message writing on disk
 - [ ] Implement efficient message reading from disk
 - [ ] Implement zero-copy message reading from disk → sending to network buffer
+- [x] Implement optional message headers
 - [x] Implement message deduplication
 - [x] Implement consumer groups for message ordering & horizontal scaling
 - [ ] Delete old messages bases on retention policy

@@ -484,18 +484,23 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
         let mut position = 0;
         while position < bytes.len() {
             let key_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?) as usize;
+            if key_length == 0 || key_length > 255 {
+                return Err(Error::InvalidHeaderKey);
+            }
             position += 4;
             let key = String::from_utf8(bytes[position..position + key_length].to_vec());
             if key.is_err() {
                 return Err(Error::InvalidHeaderKey);
             }
-
             let key = key.unwrap();
             position += key_length;
             let kind = HeaderKind::from_code(bytes[position])?;
             position += 1;
             let value_length =
                 u32::from_le_bytes(bytes[position..position + 4].try_into()?) as usize;
+            if value_length == 0 || value_length > 255 {
+                return Err(Error::InvalidHeaderValue);
+            }
             position += 4;
             let value = bytes[position..position + value_length].to_vec();
             position += value_length;

@@ -1,6 +1,8 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
 use serde::{Deserialize, Serialize};
+use serde_with::base64::Base64;
+use serde_with::serde_as;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -11,12 +13,12 @@ const EMPTY_BYTES: Vec<u8> = vec![];
 pub struct HeaderKey(String);
 
 impl HeaderKey {
-    pub fn new(key: String) -> Result<Self, Error> {
+    pub fn new(key: &str) -> Result<Self, Error> {
         if key.is_empty() || key.len() > 255 {
             return Err(Error::InvalidHeaderKey);
         }
 
-        Ok(Self(key))
+        Ok(Self(key.to_lowercase().to_string()))
     }
 
     pub fn as_str(&self) -> &str {
@@ -30,13 +32,16 @@ impl Hash for HeaderKey {
     }
 }
 
+#[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HeaderValue {
     pub kind: HeaderKind,
+    #[serde_as(as = "Base64")]
     pub value: Vec<u8>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum HeaderKind {
     Raw,
     String,
@@ -192,71 +197,260 @@ impl Display for HeaderKind {
 }
 
 impl HeaderValue {
-    pub fn raw(value: Vec<u8>) -> Result<Self, Error> {
+    pub fn from_raw(value: &[u8]) -> Result<Self, Error> {
+        Self::from(HeaderKind::Raw, value)
+    }
+
+    pub fn as_raw(&self) -> Result<&[u8], Error> {
+        if self.kind != HeaderKind::Raw {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(&self.value)
+    }
+
+    pub fn from_str(value: &str) -> Result<Self, Error> {
+        Self::from(HeaderKind::String, value.as_bytes())
+    }
+
+    pub fn as_str(&self) -> Result<&str, Error> {
+        if self.kind != HeaderKind::String {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(std::str::from_utf8(&self.value)?)
+    }
+
+    pub fn from_bool(value: bool) -> Result<Self, Error> {
+        Self::from(
+            HeaderKind::Bool,
+            match value {
+                true => &[1],
+                false => &[0],
+            },
+        )
+    }
+
+    pub fn as_bool(&self) -> Result<bool, Error> {
+        if self.kind != HeaderKind::Bool {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        match self.value[0] {
+            0 => Ok(false),
+            1 => Ok(true),
+            _ => Err(Error::InvalidHeaderValue),
+        }
+    }
+
+    pub fn from_int8(value: i8) -> Result<Self, Error> {
+        Self::from(HeaderKind::Int8, &value.to_le_bytes())
+    }
+
+    pub fn as_int8(&self) -> Result<i8, Error> {
+        if self.kind != HeaderKind::Int8 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(i8::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_int16(value: i16) -> Result<Self, Error> {
+        Self::from(HeaderKind::Int16, &value.to_le_bytes())
+    }
+
+    pub fn as_int16(&self) -> Result<i16, Error> {
+        if self.kind != HeaderKind::Int16 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(i16::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_int32(value: i32) -> Result<Self, Error> {
+        Self::from(HeaderKind::Int32, &value.to_le_bytes())
+    }
+
+    pub fn as_int32(&self) -> Result<i32, Error> {
+        if self.kind != HeaderKind::Int32 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(i32::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_int64(value: i64) -> Result<Self, Error> {
+        Self::from(HeaderKind::Int64, &value.to_le_bytes())
+    }
+
+    pub fn as_int64(&self) -> Result<i64, Error> {
+        if self.kind != HeaderKind::Int64 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(i64::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_int128(value: i128) -> Result<Self, Error> {
+        Self::from(HeaderKind::Int128, &value.to_le_bytes())
+    }
+
+    pub fn as_int128(&self) -> Result<i128, Error> {
+        if self.kind != HeaderKind::Int128 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(i128::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_uint8(value: u8) -> Result<Self, Error> {
+        Self::from(HeaderKind::Uint8, &value.to_le_bytes())
+    }
+
+    pub fn as_uint8(&self) -> Result<u8, Error> {
+        if self.kind != HeaderKind::Uint8 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(self.value[0])
+    }
+
+    pub fn from_uint16(value: u16) -> Result<Self, Error> {
+        Self::from(HeaderKind::Uint16, &value.to_le_bytes())
+    }
+
+    pub fn as_uint16(&self) -> Result<u16, Error> {
+        if self.kind != HeaderKind::Uint16 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(u16::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_uint32(value: u32) -> Result<Self, Error> {
+        Self::from(HeaderKind::Uint32, &value.to_le_bytes())
+    }
+
+    pub fn as_uint32(&self) -> Result<u32, Error> {
+        if self.kind != HeaderKind::Uint32 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(u32::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_uint64(value: u64) -> Result<Self, Error> {
+        Self::from(HeaderKind::Uint64, &value.to_le_bytes())
+    }
+
+    pub fn as_uint64(&self) -> Result<u64, Error> {
+        if self.kind != HeaderKind::Uint64 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(u64::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_uint128(value: u128) -> Result<Self, Error> {
+        Self::from(HeaderKind::Uint128, &value.to_le_bytes())
+    }
+
+    pub fn as_uint128(&self) -> Result<u128, Error> {
+        if self.kind != HeaderKind::Uint128 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(u128::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_float32(value: f32) -> Result<Self, Error> {
+        Self::from(HeaderKind::Float32, &value.to_le_bytes())
+    }
+
+    pub fn as_float32(&self) -> Result<f32, Error> {
+        if self.kind != HeaderKind::Float32 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(f32::from_le_bytes(value.unwrap()))
+    }
+
+    pub fn from_float64(value: f64) -> Result<Self, Error> {
+        Self::from(HeaderKind::Float64, &value.to_le_bytes())
+    }
+
+    pub fn as_float64(&self) -> Result<f64, Error> {
+        if self.kind != HeaderKind::Float64 {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        let value = self.value.clone().try_into();
+        if value.is_err() {
+            return Err(Error::InvalidHeaderValue);
+        }
+
+        Ok(f64::from_le_bytes(value.unwrap()))
+    }
+
+    fn from(kind: HeaderKind, value: &[u8]) -> Result<Self, Error> {
         if value.is_empty() || value.len() > 255 {
             return Err(Error::InvalidHeaderValue);
         }
 
         Ok(Self {
-            kind: HeaderKind::Raw,
-            value,
+            kind,
+            value: value.to_vec(),
         })
-    }
-
-    pub fn string(value: String) -> Result<Self, Error> {
-        Self::raw(value.into_bytes())
-    }
-
-    pub fn bool(value: bool) -> Result<Self, Error> {
-        Self::raw(vec![value as u8])
-    }
-
-    pub fn int8(value: i8) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn int16(value: i16) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn int32(value: i32) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn int64(value: i64) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn int128(value: i128) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn uint8(value: u8) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn uint16(value: u16) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn uint32(value: u32) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn uint64(value: u64) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn uint128(value: u128) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn float32(value: f32) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
-    }
-
-    pub fn float64(value: f64) -> Result<Self, Error> {
-        Self::raw(value.to_le_bytes().to_vec())
     }
 }
 
@@ -320,16 +514,16 @@ mod tests {
     fn should_be_serialized_as_bytes() {
         let mut headers = HashMap::new();
         headers.insert(
-            HeaderKey("key-1".to_string()),
-            HeaderValue::string("Value 1".to_string()).unwrap(),
+            HeaderKey::new("key-1").unwrap(),
+            HeaderValue::from_str("Value 1").unwrap(),
         );
         headers.insert(
-            HeaderKey("key-2".to_string()),
-            HeaderValue::uint64(12345).unwrap(),
+            HeaderKey::new("key 1").unwrap(),
+            HeaderValue::from_uint64(12345).unwrap(),
         );
         headers.insert(
-            HeaderKey("key-3".to_string()),
-            HeaderValue::bool(true).unwrap(),
+            HeaderKey::new("key_3").unwrap(),
+            HeaderValue::from_bool(true).unwrap(),
         );
 
         let bytes = headers.as_bytes();
@@ -349,7 +543,7 @@ mod tests {
             position += 4;
             let value = bytes[position..position + value_length].to_vec();
             position += value_length;
-            let header = headers.get(&HeaderKey(key));
+            let header = headers.get(&HeaderKey::new(&key).unwrap());
             assert!(header.is_some());
             let header = header.unwrap();
             assert_eq!(header.kind, kind);
@@ -364,16 +558,16 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let mut headers = HashMap::new();
         headers.insert(
-            HeaderKey("key-1".to_string()),
-            HeaderValue::string("Value 1".to_string()).unwrap(),
+            HeaderKey::new("key-1").unwrap(),
+            HeaderValue::from_str("Value 1").unwrap(),
         );
         headers.insert(
-            HeaderKey("key-2".to_string()),
-            HeaderValue::uint64(12345).unwrap(),
+            HeaderKey::new("key 2").unwrap(),
+            HeaderValue::from_uint64(12345).unwrap(),
         );
         headers.insert(
-            HeaderKey("key-3".to_string()),
-            HeaderValue::bool(true).unwrap(),
+            HeaderKey::new("key_3").unwrap(),
+            HeaderValue::from_bool(true).unwrap(),
         );
 
         let mut bytes = vec![];
@@ -399,4 +593,16 @@ mod tests {
             assert_eq!(deserialized_value.value, value.value);
         }
     }
+}
+
+pub fn get_headers_size_bytes(headers: &Option<HashMap<HeaderKey, HeaderValue>>) -> u32 {
+    // Headers length field
+    let mut size = 4;
+    if let Some(headers) = headers {
+        for (key, value) in headers {
+            // Key length + Key + Kind + Value length + Value
+            size += 4 + key.as_str().len() as u32 + 1 + 4 + value.value.len() as u32;
+        }
+    }
+    size
 }

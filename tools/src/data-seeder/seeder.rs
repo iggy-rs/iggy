@@ -1,12 +1,14 @@
 use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::IggyClient;
 use iggy::error::Error;
+use iggy::header::{HeaderKey, HeaderValue};
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topics::GetTopics;
 use rand::Rng;
+use std::collections::HashMap;
 use std::str::FromStr;
 
 const PROD_STREAM_ID: u32 = 1;
@@ -111,7 +113,22 @@ async fn send_messages(client: &IggyClient) -> Result<(), Error> {
                 let messages_count = rng.gen_range(10..=100);
                 for _ in 1..=messages_count {
                     let payload = format!("{}_data_{}", topic.name, message_id);
-                    let message = Message::from_str(&payload)?;
+                    let headers = match rng.gen_bool(0.5) {
+                        false => None,
+                        true => {
+                            let mut headers = HashMap::new();
+                            headers
+                                .insert(HeaderKey::new("key 1")?, HeaderValue::from_str("value1")?);
+                            headers.insert(HeaderKey::new("key-2")?, HeaderValue::from_bool(true)?);
+                            headers.insert(
+                                HeaderKey::new("key_3")?,
+                                HeaderValue::from_uint64(123456)?,
+                            );
+                            Some(headers)
+                        }
+                    };
+                    let mut message = Message::from_str(&payload)?;
+                    message.headers = headers;
                     messages.push(message);
                     message_id += 1;
                 }

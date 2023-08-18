@@ -1,5 +1,7 @@
 use crate::utils::{checksum, timestamp};
 use bytes::Bytes;
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::header;
 use iggy::header::{HeaderKey, HeaderValue};
 use iggy::messages::send_messages;
 use serde::{Deserialize, Serialize};
@@ -13,13 +15,13 @@ pub struct Message {
     pub offset: u64,
     pub timestamp: u64,
     pub id: u128,
+    pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
     #[serde(skip)]
     pub checksum: u32,
     #[serde(skip)]
     pub length: u32,
     #[serde_as(as = "Base64")]
     pub payload: Bytes,
-    pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
 }
 
 impl Message {
@@ -66,10 +68,9 @@ impl Message {
         }
     }
 
-    // TODO: Include headers size once implemented
     pub fn get_size_bytes(&self, with_checksum: bool) -> u32 {
         // Offset + Timestamp + ID + Length + Payload + Headers
-        let size = 8 + 8 + 16 + 4 + self.length;
+        let size = 8 + 8 + 16 + 4 + self.length + header::get_headers_size_bytes(&self.headers);
         if with_checksum {
             size + 4
         } else {
@@ -77,26 +78,19 @@ impl Message {
         }
     }
 
-    fn _get_headers_size_bytes(&self) -> u32 {
-        // Headers payload length field
-        let mut size = 1;
-        if let Some(headers) = &self.headers {
-            for (key, value) in headers {
-                // Kind + Key + Value
-                size += 1 + key.as_str().len() as u32 + value.value.len() as u32;
-            }
-        }
-
-        size
-    }
-
-    // TODO: Include headers
     pub fn extend(&self, bytes: &mut Vec<u8>, with_checksum: bool) {
         bytes.extend(self.offset.to_le_bytes());
         bytes.extend(self.timestamp.to_le_bytes());
         bytes.extend(self.id.to_le_bytes());
         if with_checksum {
             bytes.extend(self.checksum.to_le_bytes());
+        }
+        if let Some(headers) = &self.headers {
+            let headers_bytes = headers.as_bytes();
+            bytes.extend((headers_bytes.len() as u32).to_le_bytes());
+            bytes.extend(&headers_bytes);
+        } else {
+            bytes.extend(0u32.to_le_bytes());
         }
         bytes.extend(self.length.to_le_bytes());
         bytes.extend(&self.payload);

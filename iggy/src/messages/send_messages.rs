@@ -1,6 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::header;
 use crate::header::{HeaderKey, HeaderValue};
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -12,6 +13,7 @@ use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::FromStr;
 
+const MAX_HEADERS_SIZE: u32 = 100 * 1024;
 const MAX_PAYLOAD_SIZE: u32 = 10 * 1024 * 1024;
 
 const EMPTY_KEY_VALUE: Vec<u8> = vec![];
@@ -164,8 +166,17 @@ impl Validatable for SendMessages {
             return Err(Error::InvalidKeyValueLength);
         }
 
+        let mut headers_size = 0;
         let mut payload_size = 0;
         for message in &self.messages {
+            if let Some(headers) = &message.headers {
+                for (_, value) in headers {
+                    headers_size += value.value.len() as u32;
+                    if headers_size > MAX_HEADERS_SIZE {
+                        return Err(Error::TooBigHeadersPayload);
+                    }
+                }
+            }
             payload_size += message.payload.len() as u32;
             if payload_size > MAX_PAYLOAD_SIZE {
                 return Err(Error::TooBigMessagePayload);
@@ -214,18 +225,7 @@ impl FromStr for PartitioningKind {
 impl Message {
     pub fn get_size_bytes(&self) -> u32 {
         // ID + Length + Payload + Headers
-        16 + 4 + self.payload.len() as u32 + self.get_headers_size_bytes()
-    }
-
-    fn get_headers_size_bytes(&self) -> u32 {
-        let mut size = 0;
-        if let Some(headers) = &self.headers {
-            for (key, value) in headers {
-                // Kind + Key + Value
-                size += 1 + key.as_str().len() as u32 + value.value.len() as u32;
-            }
-        }
-        size
+        16 + 4 + self.payload.len() as u32 + header::get_headers_size_bytes(&self.headers)
     }
 }
 
@@ -279,37 +279,58 @@ impl BytesSerializable for Partitioning {
     }
 }
 
-// TODO: Implement headers serialization
 impl BytesSerializable for Message {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(self.get_size_bytes() as usize);
         bytes.extend(self.id.to_le_bytes());
+        if let Some(headers) = &self.headers {
+            let headers_bytes = headers.as_bytes();
+            bytes.extend((headers_bytes.len() as u32).to_le_bytes());
+            bytes.extend(&headers_bytes);
+        } else {
+            bytes.extend(0u32.to_le_bytes());
+        }
         bytes.extend(self.length.to_le_bytes());
         bytes.extend(&self.payload);
         bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
-        if bytes.len() < 20 {
+        if bytes.len() < 24 {
             return Err(Error::InvalidCommand);
         }
 
         let id = u128::from_le_bytes(bytes[..16].try_into()?);
-        let length = u32::from_le_bytes(bytes[16..20].try_into()?);
-        if length == 0 {
+        let headers_length = u32::from_le_bytes(bytes[16..20].try_into()?);
+        let headers = if headers_length > 0 {
+            Some(HashMap::from_bytes(
+                &bytes[20..20 + headers_length as usize],
+            )?)
+        } else {
+            None
+        };
+
+        let payload_length = u32::from_le_bytes(
+            bytes[20 + headers_length as usize..24 + headers_length as usize].try_into()?,
+        );
+        if payload_length == 0 {
             return Err(Error::EmptyMessagePayload);
         }
 
-        let payload = Bytes::from(bytes[20..20 + length as usize].to_vec());
-        if payload.len() != length as usize {
+        let payload = Bytes::from(
+            bytes[24 + headers_length as usize
+                ..24 + headers_length as usize + payload_length as usize]
+                .to_vec(),
+        );
+        if payload.len() != payload_length as usize {
             return Err(Error::InvalidMessagePayloadLength);
         }
 
         Ok(Message {
             id,
-            length,
+            length: payload_length,
             payload,
-            headers: None,
+            headers,
         })
     }
 }
@@ -405,9 +426,7 @@ impl BytesSerializable for SendMessages {
         bytes.extend(topic_id_bytes);
         bytes.extend(key_bytes);
         for message in &self.messages {
-            bytes.extend(message.id.to_le_bytes());
-            bytes.extend(message.length.to_le_bytes());
-            bytes.extend(&message.payload);
+            bytes.extend(message.as_bytes());
         }
 
         bytes

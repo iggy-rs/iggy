@@ -437,6 +437,7 @@ impl MessageClient for IggyClient {
                     offset: message.offset,
                     timestamp: message.timestamp,
                     length: payload.len() as u32,
+                    headers: message.headers,
                     payload,
                 });
             }

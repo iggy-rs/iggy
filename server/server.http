@@ -8,6 +8,7 @@
 @partition_id_payload_base64 = AQAAAA==
 @message_1_payload_base64 = aGVsbG8=
 @message_2_payload_base64 = d29ybGQ=
+@header_1_payload_base_64 = dmFsdWUgMQ==
 
 ###
 GET {{url}}
@@ -89,7 +90,13 @@ Content-Type: application/json
     "payload": "{{message_1_payload_base64}}"
   }, {
     "id": 0,
-    "payload": "{{message_2_payload_base64}}"
+    "payload": "{{message_2_payload_base64}}",
+    "headers": {
+      "key_1": {
+        "kind": "string",
+        "value": "{{header_1_payload_base_64}}"
+      }
+    }
   }]
 }
 

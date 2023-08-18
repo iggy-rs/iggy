@@ -2,7 +2,9 @@ use crate::message::Message;
 use crate::persister::Persister;
 use async_trait::async_trait;
 use bytes::Bytes;
+use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::Error;
+use std::collections::HashMap;
 use std::io::SeekFrom;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
@@ -515,12 +517,31 @@ async fn load_messages_by_range(
             return Err(Error::CannotReadMessageChecksum);
         }
 
-        let length = reader.read_u32_le().await;
-        if length.is_err() {
+        let headers_length = reader.read_u32_le().await;
+        if headers_length.is_err() {
+            return Err(Error::CannotReadHeadersLength);
+        }
+
+        let headers_length = headers_length.unwrap();
+        let headers = match headers_length {
+            0 => None,
+            _ => {
+                let mut headers_payload = vec![0; headers_length as usize];
+                if reader.read_exact(&mut headers_payload).await.is_err() {
+                    return Err(Error::CannotReadHeadersPayload);
+                }
+
+                let headers = HashMap::from_bytes(&headers_payload)?;
+                Some(headers)
+            }
+        };
+
+        let payload_length = reader.read_u32_le().await;
+        if payload_length.is_err() {
             return Err(Error::CannotReadMessageLength);
         }
 
-        let mut payload = vec![0; length.unwrap() as usize];
+        let mut payload = vec![0; payload_length.unwrap() as usize];
         if reader.read_exact(&mut payload).await.is_err() {
             return Err(Error::CannotReadMessagePayload);
         }
@@ -530,8 +551,14 @@ async fn load_messages_by_range(
         let id = id.unwrap();
         let checksum = checksum.unwrap();
 
-        // TODO: Load headers
-        let message = Message::create(offset, timestamp, id, Bytes::from(payload), checksum, None);
+        let message = Message::create(
+            offset,
+            timestamp,
+            id,
+            Bytes::from(payload),
+            checksum,
+            headers,
+        );
         read_messages += 1;
         on_message(message)?;
     }

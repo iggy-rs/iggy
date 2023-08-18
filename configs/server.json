@@ -13,7 +13,7 @@
       "allowed_origins": [
         "*"
       ],
-      "allowed_headers": [],
+      "allowed_headers": ["content-type"],
       "exposed_headers": [],
       "allow_credentials": false,
       "allow_private_network": false

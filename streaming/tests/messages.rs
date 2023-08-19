@@ -2,6 +2,8 @@ mod common;
 
 use crate::common::TestSetup;
 use bytes::Bytes;
+use iggy::header::{HeaderKey, HeaderValue};
+use std::collections::HashMap;
 use std::sync::Arc;
 use streaming::config::PartitionConfig;
 use streaming::message::Message;
@@ -39,7 +41,20 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         let id = i as u128;
         let payload = Bytes::from(format!("message {}", i));
         let checksum = checksum::calculate(&payload);
-        let message = Message::create(offset, timestamp, id, payload, checksum, None);
+        let mut headers = HashMap::new();
+        headers.insert(
+            HeaderKey::new("key_1").unwrap(),
+            HeaderValue::from_str("Value 1").unwrap(),
+        );
+        headers.insert(
+            HeaderKey::new("key 2").unwrap(),
+            HeaderValue::from_bool(true).unwrap(),
+        );
+        headers.insert(
+            HeaderKey::new("key-3").unwrap(),
+            HeaderValue::from_uint64(123456).unwrap(),
+        );
+        let message = Message::create(offset, timestamp, id, payload, checksum, Some(headers));
         appended_messages.push(message.clone());
         messages.push(message);
     }
@@ -72,5 +87,6 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         assert_eq!(loaded_message.checksum, appended_message.checksum);
         assert_eq!(loaded_message.length, appended_message.length);
         assert_eq!(loaded_message.payload, appended_message.payload);
+        assert_eq!(loaded_message.headers, appended_message.headers);
     }
 }

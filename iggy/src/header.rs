@@ -511,9 +511,232 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
     }
 }
 
+pub fn get_headers_size_bytes(headers: &Option<HashMap<HeaderKey, HeaderValue>>) -> u32 {
+    // Headers length field
+    let mut size = 4;
+    if let Some(headers) = headers {
+        for (key, value) in headers {
+            // Key length + Key + Kind + Value length + Value
+            size += 4 + key.as_str().len() as u32 + 1 + 4 + value.value.len() as u32;
+        }
+    }
+    size
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn header_key_should_be_created_for_valid_value() {
+        let value = "key-1";
+        let header_key = HeaderKey::new(value);
+        assert!(header_key.is_ok());
+        assert_eq!(header_key.unwrap().0, value);
+    }
+
+    #[test]
+    fn header_key_should_not_be_created_for_empty_value() {
+        let value = "";
+        let header_key = HeaderKey::new(value);
+        assert!(header_key.is_err());
+        let error = header_key.unwrap_err();
+        assert_eq!(error.as_code(), Error::InvalidHeaderKey.as_code());
+    }
+
+    #[test]
+    fn header_key_should_not_be_created_for_too_long_value() {
+        let value = "a".repeat(256);
+        let header_key = HeaderKey::new(&value);
+        assert!(header_key.is_err());
+        let error = header_key.unwrap_err();
+        assert_eq!(error.as_code(), Error::InvalidHeaderKey.as_code());
+    }
+
+    #[test]
+    fn header_value_should_not_be_created_for_empty_value() {
+        let header_value = HeaderValue::from(HeaderKind::Raw, &[]);
+        assert!(header_value.is_err());
+        let error = header_value.unwrap_err();
+        assert_eq!(error.as_code(), Error::InvalidHeaderValue.as_code());
+    }
+
+    #[test]
+    fn header_value_should_not_be_created_for_too_long_value() {
+        let value = b"a".repeat(256);
+        let header_value = HeaderValue::from(HeaderKind::Raw, &value);
+        assert!(header_value.is_err());
+        let error = header_value.unwrap_err();
+        assert_eq!(error.as_code(), Error::InvalidHeaderValue.as_code());
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_raw_bytes() {
+        let value = b"Value 1";
+        let header_value = HeaderValue::from_raw(value);
+        assert!(header_value.is_ok());
+        assert_eq!(header_value.unwrap().value, value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_str() {
+        let value = "Value 1";
+        let header_value = HeaderValue::from_str(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::String);
+        assert_eq!(header_value.value, value.as_bytes());
+        assert_eq!(header_value.as_str().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_bool() {
+        let value = true;
+        let header_value = HeaderValue::from_bool(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Bool);
+        assert_eq!(
+            header_value.value,
+            match value {
+                true => [1],
+                false => [0],
+            }
+        );
+        assert_eq!(header_value.as_bool().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_int8() {
+        let value = 123;
+        let header_value = HeaderValue::from_int8(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int8);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_int8().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_int16() {
+        let value = 12345;
+        let header_value = HeaderValue::from_int16(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int16);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_int16().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_int32() {
+        let value = 123456;
+        let header_value = HeaderValue::from_int32(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int32);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_int32().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_int64() {
+        let value = 1234567;
+        let header_value = HeaderValue::from_int64(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int64);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_int64().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_int128() {
+        let value = 12345678;
+        let header_value = HeaderValue::from_int128(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int128);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_int128().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_uint8() {
+        let value = 123;
+        let header_value = HeaderValue::from_uint8(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint8);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_uint8().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_uint16() {
+        let value = 12345;
+        let header_value = HeaderValue::from_uint16(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint16);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_uint16().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_uint32() {
+        let value = 123456;
+        let header_value = HeaderValue::from_uint32(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint32);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_uint32().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_uint64() {
+        let value = 1234567;
+        let header_value = HeaderValue::from_uint64(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint64);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_uint64().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_uint128() {
+        let value = 12345678;
+        let header_value = HeaderValue::from_uint128(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint128);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_uint128().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_float32() {
+        let value = 123.01;
+        let header_value = HeaderValue::from_float32(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Float32);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_float32().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_from_float64() {
+        let value = 1234.01234;
+        let header_value = HeaderValue::from_float64(value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Float64);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_float64().unwrap(), value);
+    }
 
     #[test]
     fn should_be_serialized_as_bytes() {
@@ -598,16 +821,4 @@ mod tests {
             assert_eq!(deserialized_value.value, value.value);
         }
     }
-}
-
-pub fn get_headers_size_bytes(headers: &Option<HashMap<HeaderKey, HeaderValue>>) -> u32 {
-    // Headers length field
-    let mut size = 4;
-    if let Some(headers) = headers {
-        for (key, value) in headers {
-            // Key length + Key + Kind + Value length + Value
-            size += 4 + key.as_str().len() as u32 + 1 + 4 + value.value.len() as u32;
-        }
-    }
-    size
 }

@@ -38,7 +38,7 @@ It is a pet project of mine to learn more about distributed systems and Rust. Th
 - Additional features such as **server side message deduplication**
 - **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM
-- Optional metadata support in the form of message headers
+- Optional metadata support in the form of **message headers**
 - Built-in benchmarking app to test the performance
 - **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)
@@ -165,7 +165,7 @@ To see the detailed logs from the client/server, run it with `RUST_LOG=trace` en
 
 You can find the sample consumer & producer applications under `samples` directory. The purpose of these apps is to showcase the usage of the client SDK. To find out more about building the applications, please refer to the [getting started](https://docs.iggy.rs/introduction/getting-started) guide.
 
-To run the sample, first start the server with `cargo r --bin server` and then run the producer and consumer apps with `cargo r --bin advanced-producer-sample` and `cargo r --bin advanced-consumer-sample` respectively.
+To run the sample, first start the server with `cargo r --bin server` and then run the producer and consumer apps with `cargo r --bin message-envelope-producer-sample` and `cargo r --bin message-envelope-consumer-sample` respectively.
 
 You might start multiple producers and consumers at the same time to see how the messages are being handled across multiple clients. Check the [Args](https://github.com/spetz/iggy/blob/master/samples/src/shared/args.rs) struct to see the available options, such as the transport protocol, stream, topic, partition, consumer ID, message size etc.
 

@@ -20,12 +20,21 @@ name = "basic-producer-sample"
 path = "src/basic/producer/main.rs"
 
 [[bin]]
-name = "advanced-consumer-sample"
-path = "src/advanced/consumer/main.rs"
+name = "message-envelope-consumer-sample"
+path = "src/message-envelope/consumer/main.rs"
 
 [[bin]]
-name = "advanced-producer-sample"
-path = "src/advanced/producer/main.rs"
+name = "message-envelope-producer-sample"
+path = "src/message-envelope/producer/main.rs"
+
+[[bin]]
+name = "message-headers-consumer-sample"
+path = "src/message-headers/consumer/main.rs"
+
+[[bin]]
+name = "message-headers-producer-sample"
+path = "src/message-headers/producer/main.rs"
+
 
 [dependencies]
 iggy = { path = "../iggy" }

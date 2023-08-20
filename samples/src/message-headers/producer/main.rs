@@ -1,18 +1,18 @@
-mod messages_generator;
-
-use crate::messages_generator::MessagesGenerator;
 use anyhow::Result;
+use bytes::Bytes;
 use clap::Parser;
 use iggy::client::MessageClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::header::{HeaderKey, HeaderValue};
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use samples::shared::args::Args;
+use samples::shared::messages_generator::MessagesGenerator;
 use samples::shared::system;
+use std::collections::HashMap;
 use std::error::Error;
-use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
 
@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     info!(
-        "Advanced producer has started, selected transport: {}",
+        "Message headers producer has started, selected transport: {}",
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
@@ -44,8 +44,17 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
         for _ in 0..args.messages_per_batch {
             let serializable_message = message_generator.generate();
             // You can send the different message types to the same partition, or stick to the single type.
-            let json_envelope = serializable_message.to_json_envelope();
-            let message = Message::from_str(&json_envelope)?;
+            let message_type = serializable_message.get_message_type();
+            let json = serializable_message.to_json();
+
+            // The message type will be stored in the custom message header.
+            let mut headers = HashMap::new();
+            headers.insert(
+                HeaderKey::new("message_type").unwrap(),
+                HeaderValue::from_str(message_type).unwrap(),
+            );
+
+            let message = Message::new(None, Bytes::from(json), Some(headers));
             messages.push(message);
             // This is used for the logging purposes only.
             serializable_messages.push(serializable_message);

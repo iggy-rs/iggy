@@ -223,6 +223,19 @@ impl FromStr for PartitioningKind {
 }
 
 impl Message {
+    pub fn new(
+        id: Option<u128>,
+        payload: Bytes,
+        headers: Option<HashMap<HeaderKey, HeaderValue>>,
+    ) -> Self {
+        Message {
+            id: id.unwrap_or_else(|| 0),
+            length: payload.len() as u32,
+            payload,
+            headers,
+        }
+    }
+
     pub fn get_size_bytes(&self) -> u32 {
         // ID + Length + Payload + Headers
         16 + 4 + self.payload.len() as u32 + header::get_headers_size_bytes(&self.headers)

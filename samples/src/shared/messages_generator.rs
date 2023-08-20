@@ -1,7 +1,7 @@
+use crate::shared::messages::{OrderConfirmed, OrderCreated, OrderRejected, SerializableMessage};
+use crate::shared::utils;
 use rand::rngs::ThreadRng;
 use rand::Rng;
-use samples::shared::messages::{OrderConfirmed, OrderCreated, OrderRejected, SerializableMessage};
-use samples::shared::utils;
 
 const CURRENCY_PAIRS: &[&str] = &["EUR/USD", "EUR/GBP", "USD/GBP", "EUR/PLN", "USD/PLN"];
 
@@ -30,7 +30,7 @@ impl MessagesGenerator {
     fn generate_order_created(&mut self) -> Box<dyn SerializableMessage> {
         self.order_id += 1;
         Box::new(OrderCreated {
-            id: self.order_id,
+            order_id: self.order_id,
             timestamp: utils::timestamp(),
             currency_pair: CURRENCY_PAIRS[self.rng.gen_range(0..CURRENCY_PAIRS.len())].to_string(),
             price: self.rng.gen_range(10.0..=1000.0),
@@ -45,7 +45,7 @@ impl MessagesGenerator {
 
     fn generate_order_confirmed(&mut self) -> Box<dyn SerializableMessage> {
         Box::new(OrderConfirmed {
-            id: self.order_id,
+            order_id: self.order_id,
             timestamp: utils::timestamp(),
             price: self.rng.gen_range(10.0..=1000.0),
         })
@@ -53,7 +53,7 @@ impl MessagesGenerator {
 
     fn generate_order_rejected(&mut self) -> Box<dyn SerializableMessage> {
         Box::new(OrderRejected {
-            id: self.order_id,
+            order_id: self.order_id,
             timestamp: utils::timestamp(),
             reason: match self.rng.gen_range(0..=1) {
                 0 => "cancelled_by_user",

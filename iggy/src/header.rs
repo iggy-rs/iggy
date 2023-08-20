@@ -32,6 +32,19 @@ impl Hash for HeaderKey {
     }
 }
 
+impl TryFrom<&str> for HeaderKey {
+    type Error = Error;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::new(value)
+    }
+}
+
+impl Into<String> for HeaderKey {
+    fn into(self) -> String {
+        self.0
+    }
+}
+
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HeaderValue {

@@ -1,3 +1,4 @@
+use bytes::BufMut;
 use iggy::models::stats::Stats;
 use std::sync::Arc;
 use streaming::clients::client_manager::{Client, Transport};
@@ -10,38 +11,38 @@ use tokio::sync::RwLock;
 
 pub fn map_stats(stats: &Stats) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(104);
-    bytes.extend(stats.process_id.to_le_bytes());
-    bytes.extend(stats.cpu_usage.to_le_bytes());
-    bytes.extend(stats.memory_usage.to_le_bytes());
-    bytes.extend(stats.total_memory.to_le_bytes());
-    bytes.extend(stats.available_memory.to_le_bytes());
-    bytes.extend(stats.run_time.to_le_bytes());
-    bytes.extend(stats.start_time.to_le_bytes());
-    bytes.extend(stats.read_bytes.to_le_bytes());
-    bytes.extend(stats.written_bytes.to_le_bytes());
-    bytes.extend(stats.messages_size_bytes.to_le_bytes());
-    bytes.extend(stats.streams_count.to_le_bytes());
-    bytes.extend(stats.topics_count.to_le_bytes());
-    bytes.extend(stats.partitions_count.to_le_bytes());
-    bytes.extend(stats.segments_count.to_le_bytes());
-    bytes.extend(stats.messages_count.to_le_bytes());
-    bytes.extend(stats.clients_count.to_le_bytes());
+    bytes.put_u32_le(stats.process_id);
+    bytes.put_f32_le(stats.cpu_usage);
+    bytes.put_u64_le(stats.memory_usage);
+    bytes.put_u64_le(stats.total_memory);
+    bytes.put_u64_le(stats.available_memory);
+    bytes.put_u64_le(stats.run_time);
+    bytes.put_u64_le(stats.start_time);
+    bytes.put_u64_le(stats.read_bytes);
+    bytes.put_u64_le(stats.written_bytes);
+    bytes.put_u64_le(stats.messages_size_bytes);
+    bytes.put_u32_le(stats.streams_count);
+    bytes.put_u32_le(stats.topics_count);
+    bytes.put_u32_le(stats.partitions_count);
+    bytes.put_u32_le(stats.segments_count);
+    bytes.put_u64_le(stats.messages_count);
+    bytes.put_u32_le(stats.clients_count);
     bytes.extend(stats.consumer_groups_count.to_le_bytes());
-    bytes.extend((stats.hostname.len() as u32).to_le_bytes());
+    bytes.put_u32_le(stats.hostname.len() as u32);
     bytes.extend(stats.hostname.as_bytes());
-    bytes.extend((stats.os_name.len() as u32).to_le_bytes());
+    bytes.put_u32_le(stats.os_name.len() as u32);
     bytes.extend(stats.os_name.as_bytes());
-    bytes.extend((stats.os_version.len() as u32).to_le_bytes());
+    bytes.put_u32_le(stats.os_version.len() as u32);
     bytes.extend(stats.os_version.as_bytes());
-    bytes.extend((stats.kernel_version.len() as u32).to_le_bytes());
+    bytes.put_u32_le(stats.kernel_version.len() as u32);
     bytes.extend(stats.kernel_version.as_bytes());
     bytes
 }
 
 pub fn map_offset(consumer_id: u32, offset: u64) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(12);
-    bytes.extend(consumer_id.to_le_bytes());
-    bytes.extend(offset.to_le_bytes());
+    bytes.put_u32_le(consumer_id);
+    bytes.put_u64_le(offset);
     bytes
 }
 
@@ -49,9 +50,9 @@ pub async fn map_client(client: &Client) -> Vec<u8> {
     let mut bytes = Vec::new();
     extend_client(client, &mut bytes);
     for consumer_group in &client.consumer_groups {
-        bytes.extend(consumer_group.consumer_group_id.to_le_bytes());
-        bytes.extend(consumer_group.topic_id.to_le_bytes());
-        bytes.extend(consumer_group.stream_id.to_le_bytes());
+        bytes.put_u32_le(consumer_group.consumer_group_id);
+        bytes.put_u32_le(consumer_group.topic_id);
+        bytes.put_u32_le(consumer_group.stream_id);
     }
     bytes
 }
@@ -75,7 +76,7 @@ pub fn map_messages(messages: &[Arc<Message>]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(4 + messages_size as usize);
     bytes.extend(messages_count.to_le_bytes());
     for message in messages {
-        message.extend(&mut bytes, false);
+        message.extend(&mut bytes, false, false);
     }
 
     bytes
@@ -122,11 +123,11 @@ pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> Vec<u8> {
     let members = consumer_group.get_members();
     for member in members {
         let member = member.read().await;
-        bytes.extend(member.id.to_le_bytes());
+        bytes.put_u32_le(member.id);
         let partitions = member.get_partitions();
-        bytes.extend((partitions.len() as u32).to_le_bytes());
+        bytes.put_u32_le(partitions.len() as u32);
         for partition in partitions {
-            bytes.extend(partition.to_le_bytes());
+            bytes.put_u32_le(partition);
         }
     }
     bytes
@@ -142,46 +143,46 @@ pub async fn map_consumer_groups(consumer_groups: &[&RwLock<ConsumerGroup>]) -> 
 }
 
 async fn extend_stream(stream: &Stream, bytes: &mut Vec<u8>) {
-    bytes.extend(stream.id.to_le_bytes());
-    bytes.extend((stream.get_topics().len() as u32).to_le_bytes());
-    bytes.extend((stream.get_size_bytes().await).to_le_bytes());
-    bytes.extend((stream.get_messages_count().await).to_le_bytes());
-    bytes.extend((stream.name.len() as u32).to_le_bytes());
+    bytes.put_u32_le(stream.id);
+    bytes.put_u32_le(stream.get_topics().len() as u32);
+    bytes.put_u64_le(stream.get_size_bytes().await);
+    bytes.put_u64_le(stream.get_messages_count().await);
+    bytes.put_u32_le(stream.name.len() as u32);
     bytes.extend(stream.name.as_bytes());
 }
 
 async fn extend_topic(topic: &Topic, bytes: &mut Vec<u8>) {
-    bytes.extend(topic.id.to_le_bytes());
-    bytes.extend((topic.get_partitions().len() as u32).to_le_bytes());
-    bytes.extend((topic.get_size_bytes().await).to_le_bytes());
-    bytes.extend((topic.get_messages_count().await).to_le_bytes());
-    bytes.extend((topic.name.len() as u32).to_le_bytes());
+    bytes.put_u32_le(topic.id);
+    bytes.put_u32_le(topic.get_partitions().len() as u32);
+    bytes.put_u64_le(topic.get_size_bytes().await);
+    bytes.put_u64_le(topic.get_messages_count().await);
+    bytes.put_u32_le(topic.name.len() as u32);
     bytes.extend(topic.name.as_bytes());
 }
 
 fn extend_partition(partition: &Partition, bytes: &mut Vec<u8>) {
-    bytes.extend(partition.id.to_le_bytes());
-    bytes.extend((partition.get_segments().len() as u32).to_le_bytes());
-    bytes.extend(partition.current_offset.to_le_bytes());
-    bytes.extend(partition.get_size_bytes().to_le_bytes());
-    bytes.extend(partition.get_messages_count().to_le_bytes());
+    bytes.put_u32_le(partition.id);
+    bytes.put_u32_le(partition.get_segments().len() as u32);
+    bytes.put_u64_le(partition.current_offset);
+    bytes.put_u64_le(partition.get_size_bytes());
+    bytes.put_u64_le(partition.get_messages_count());
 }
 
 fn extend_consumer_group(consumer_group: &ConsumerGroup, bytes: &mut Vec<u8>) {
-    bytes.extend(consumer_group.id.to_le_bytes());
-    bytes.extend(consumer_group.partitions_count.to_le_bytes());
-    bytes.extend((consumer_group.get_members().len() as u32).to_le_bytes());
+    bytes.put_u32_le(consumer_group.id);
+    bytes.put_u32_le(consumer_group.partitions_count);
+    bytes.put_u32_le(consumer_group.get_members().len() as u32);
 }
 
 fn extend_client(client: &Client, bytes: &mut Vec<u8>) {
-    bytes.extend(client.id.to_le_bytes());
+    bytes.put_u32_le(client.id);
     let transport: u8 = match client.transport {
         Transport::Tcp => 1,
         Transport::Quic => 2,
     };
-    bytes.extend(transport.to_le_bytes());
+    bytes.put_u8(transport);
     let address = client.address.to_string();
-    bytes.extend((address.len() as u32).to_le_bytes());
+    bytes.put_u32_le(address.len() as u32);
     bytes.extend(address.as_bytes());
-    bytes.extend((client.consumer_groups.len() as u32).to_le_bytes());
+    bytes.put_u32_le(client.consumer_groups.len() as u32);
 }

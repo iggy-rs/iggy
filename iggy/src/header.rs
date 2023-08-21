@@ -1,11 +1,13 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::str::FromStr;
 
 const EMPTY_BYTES: Vec<u8> = vec![];
 
@@ -29,6 +31,13 @@ impl HeaderKey {
 impl Hash for HeaderKey {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
+    }
+}
+
+impl FromStr for HeaderKey {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
     }
 }
 
@@ -111,6 +120,30 @@ impl HeaderKind {
             13 => Ok(HeaderKind::Uint128),
             14 => Ok(HeaderKind::Float32),
             15 => Ok(HeaderKind::Float64),
+            _ => Err(Error::InvalidCommand),
+        }
+    }
+}
+
+impl FromStr for HeaderKind {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "raw" => Ok(HeaderKind::Raw),
+            "string" => Ok(HeaderKind::String),
+            "bool" => Ok(HeaderKind::Bool),
+            "int8" => Ok(HeaderKind::Int8),
+            "int16" => Ok(HeaderKind::Int16),
+            "int32" => Ok(HeaderKind::Int32),
+            "int64" => Ok(HeaderKind::Int64),
+            "int128" => Ok(HeaderKind::Int128),
+            "uint8" => Ok(HeaderKind::Uint8),
+            "uint16" => Ok(HeaderKind::Uint16),
+            "uint32" => Ok(HeaderKind::Uint32),
+            "uint64" => Ok(HeaderKind::Uint64),
+            "uint128" => Ok(HeaderKind::Uint128),
+            "float32" => Ok(HeaderKind::Float32),
+            "float64" => Ok(HeaderKind::Float64),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -475,10 +508,10 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
 
         let mut bytes = vec![];
         for (key, value) in self {
-            bytes.extend((key.0.len() as u32).to_le_bytes());
+            bytes.put_u32_le(key.0.len() as u32);
             bytes.extend(key.0.as_bytes());
-            bytes.extend(value.kind.as_code().to_le_bytes());
-            bytes.extend((value.value.len() as u32).to_le_bytes());
+            bytes.put_u8(value.kind.as_code());
+            bytes.put_u32_le(value.value.len() as u32);
             bytes.extend(&value.value);
         }
 
@@ -813,10 +846,10 @@ mod tests {
 
         let mut bytes = vec![];
         for (key, value) in &headers {
-            bytes.extend((key.0.len() as u32).to_le_bytes());
+            bytes.put_u32_le(key.0.len() as u32);
             bytes.extend(key.0.as_bytes());
-            bytes.extend(value.kind.as_code().to_le_bytes());
-            bytes.extend((value.value.len() as u32).to_le_bytes());
+            bytes.put_u8(value.kind.as_code());
+            bytes.put_u32_le(value.value.len() as u32);
             bytes.extend(&value.value);
         }
 

@@ -1,6 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::fmt::Display;
@@ -60,7 +61,7 @@ impl Consumer {
 impl BytesSerializable for Consumer {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(5);
-        bytes.extend(self.kind.as_code().to_le_bytes());
+        bytes.put_u8(self.kind.as_code());
         bytes.extend(self.id.to_le_bytes());
         bytes
     }

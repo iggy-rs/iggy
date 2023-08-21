@@ -71,6 +71,7 @@ impl System {
             let payload = payload.unwrap();
             decrypted_messages.push(Arc::new(Message {
                 id: message.id,
+                state: message.state,
                 offset: message.offset,
                 timestamp: message.timestamp,
                 checksum: message.checksum,

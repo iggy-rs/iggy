@@ -171,6 +171,7 @@ impl Topic {
 mod tests {
     use super::*;
     use crate::config::TopicConfig;
+    use crate::message::MessageState;
     use crate::storage::tests::get_test_system_storage;
     use bytes::Bytes;
 
@@ -184,7 +185,14 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let payload = Bytes::from("test");
-            let messages = vec![Message::empty(1, entity_id as u128, payload, 1, None)];
+            let messages = vec![Message::empty(
+                1,
+                MessageState::Available,
+                entity_id as u128,
+                payload,
+                1,
+                None,
+            )];
             topic
                 .append_messages(&partitioning, messages)
                 .await
@@ -213,7 +221,14 @@ mod tests {
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
             let payload = Bytes::from("test");
-            let messages = vec![Message::empty(1, entity_id as u128, payload, 1, None)];
+            let messages = vec![Message::empty(
+                1,
+                MessageState::Available,
+                entity_id as u128,
+                payload,
+                1,
+                None,
+            )];
             topic
                 .append_messages(&partitioning, messages)
                 .await

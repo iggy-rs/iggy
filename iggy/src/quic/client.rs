@@ -3,6 +3,7 @@ use crate::client::Client;
 use crate::error::Error;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
+use bytes::BufMut;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -87,8 +88,8 @@ impl BinaryClient for QuicClient {
         if let Some(connection) = &self.connection {
             let payload_length = payload.len() + 4;
             let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
-            buffer.extend((payload_length as u32).to_le_bytes());
-            buffer.extend(command.to_le_bytes());
+            buffer.put_u32_le(payload_length as u32);
+            buffer.put_u32_le(command);
             buffer.extend(payload);
 
             let (mut send, mut recv) = connection.open_bi().await?;

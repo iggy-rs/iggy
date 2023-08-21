@@ -4,6 +4,7 @@ use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::fmt::Display;
@@ -339,7 +340,7 @@ fn auto_commit_to_string(auto_commit: bool) -> &'static str {
 impl BytesSerializable for PollingStrategy {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(9);
-        bytes.extend(self.kind.as_code().to_le_bytes());
+        bytes.put_u8(self.kind.as_code());
         bytes.extend(self.value.to_le_bytes());
         bytes
     }

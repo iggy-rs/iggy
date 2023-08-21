@@ -5,7 +5,7 @@ use crate::header;
 use crate::header::{HeaderKey, HeaderValue};
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use bytes::Bytes;
+use bytes::{BufMut, Bytes};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -263,7 +263,7 @@ impl Display for Message {
 impl BytesSerializable for Partitioning {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(2 + self.length as usize);
-        bytes.extend(self.kind.as_code().to_le_bytes());
+        bytes.put_u8(self.kind.as_code());
         bytes.extend(self.length.to_le_bytes());
         bytes.extend(&self.value);
         bytes
@@ -298,7 +298,7 @@ impl BytesSerializable for Message {
         bytes.extend(self.id.to_le_bytes());
         if let Some(headers) = &self.headers {
             let headers_bytes = headers.as_bytes();
-            bytes.extend((headers_bytes.len() as u32).to_le_bytes());
+            bytes.put_u32_le(headers_bytes.len() as u32);
             bytes.extend(&headers_bytes);
         } else {
             bytes.extend(0u32.to_le_bytes());

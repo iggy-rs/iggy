@@ -6,7 +6,7 @@ use iggy::header::{HeaderKey, HeaderValue};
 use std::collections::HashMap;
 use std::sync::Arc;
 use streaming::config::PartitionConfig;
-use streaming::message::Message;
+use streaming::message::{Message, MessageState};
 use streaming::partitions::partition::Partition;
 use streaming::storage::SystemStorage;
 use streaming::utils::{checksum, timestamp};
@@ -37,6 +37,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     let mut appended_messages = Vec::with_capacity(messages_count as usize);
     for i in 1..=messages_count {
         let offset = (i - 1) as u64;
+        let state = MessageState::Available;
         let timestamp = timestamp::get();
         let id = i as u128;
         let payload = Bytes::from(format!("message {}", i));
@@ -54,7 +55,15 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
             HeaderKey::new("key-3").unwrap(),
             HeaderValue::from_uint64(123456).unwrap(),
         );
-        let message = Message::create(offset, timestamp, id, payload, checksum, Some(headers));
+        let message = Message::create(
+            offset,
+            state,
+            timestamp,
+            id,
+            payload,
+            checksum,
+            Some(headers),
+        );
         appended_messages.push(message.clone());
         messages.push(message);
     }
@@ -82,6 +91,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         let loaded_message = &loaded_messages[index];
         let appended_message = &appended_messages[index];
         assert_eq!(loaded_message.offset, appended_message.offset);
+        assert_eq!(loaded_message.state, appended_message.state);
         assert_eq!(loaded_message.timestamp, appended_message.timestamp);
         assert_eq!(loaded_message.id, appended_message.id);
         assert_eq!(loaded_message.checksum, appended_message.checksum);

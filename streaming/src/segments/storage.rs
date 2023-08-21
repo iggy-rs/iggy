@@ -1,4 +1,4 @@
-use crate::message::Message;
+use crate::message::{Message, MessageState};
 use crate::persister::Persister;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -188,7 +188,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         let mut bytes = Vec::with_capacity(messages_size as usize);
         for message in messages {
-            message.extend(&mut bytes, true);
+            message.extend(&mut bytes, true, true);
         }
 
         if let Err(error) = self.persister.append(&segment.log_path, &bytes).await {
@@ -502,6 +502,12 @@ async fn load_messages_by_range(
             break;
         }
 
+        let state = reader.read_u8().await;
+        if state.is_err() {
+            return Err(Error::CannotReadMessageState);
+        }
+
+        let state = MessageState::from_code(state.unwrap())?;
         let timestamp = reader.read_u64_le().await;
         if timestamp.is_err() {
             return Err(Error::CannotReadMessageTimestamp);
@@ -553,6 +559,7 @@ async fn load_messages_by_range(
 
         let message = Message::create(
             offset,
+            state,
             timestamp,
             id,
             Bytes::from(payload),

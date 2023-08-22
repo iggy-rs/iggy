@@ -3,6 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::utils::text;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
@@ -63,7 +64,7 @@ impl FromStr for CreateStream {
 impl BytesSerializable for CreateStream {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(4 + self.name.len());
-        bytes.extend(&self.stream_id.to_le_bytes());
+        bytes.put_u32_le(self.stream_id);
         bytes.extend(self.name.as_bytes());
         bytes
     }

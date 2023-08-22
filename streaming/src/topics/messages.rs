@@ -1,10 +1,10 @@
-use crate::message::Message;
 use crate::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
 use crate::utils::hash;
 use iggy::error::Error;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
+use iggy::models::message::Message;
 use ringbuffer::RingBuffer;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -171,9 +171,9 @@ impl Topic {
 mod tests {
     use super::*;
     use crate::config::TopicConfig;
-    use crate::message::MessageState;
     use crate::storage::tests::get_test_system_storage;
     use bytes::Bytes;
+    use iggy::models::message::MessageState;
 
     #[tokio::test]
     async fn given_partition_id_key_messages_should_be_appended_only_to_the_chosen_partition() {

@@ -4,6 +4,7 @@ use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::utils::text;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
@@ -83,8 +84,8 @@ impl BytesSerializable for CreateTopic {
         let stream_id_bytes = self.stream_id.as_bytes();
         let mut bytes = Vec::with_capacity(8 + stream_id_bytes.len() + self.name.len());
         bytes.extend(stream_id_bytes);
-        bytes.extend(self.topic_id.to_le_bytes());
-        bytes.extend(self.partitions_count.to_le_bytes());
+        bytes.put_u32_le(self.topic_id);
+        bytes.put_u32_le(self.partitions_count);
         bytes.extend(self.name.as_bytes());
         bytes
     }
@@ -124,6 +125,7 @@ impl Display for CreateTopic {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytes::BufMut;
 
     #[test]
     fn should_be_serialized_as_bytes() {
@@ -160,8 +162,8 @@ mod tests {
         let stream_id_bytes = stream_id.as_bytes();
         let mut bytes = Vec::with_capacity(8 + stream_id_bytes.len() + name.len());
         bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id.to_le_bytes());
-        bytes.extend(partitions_count.to_le_bytes());
+        bytes.put_u32_le(topic_id);
+        bytes.put_u32_le(partitions_count);
         bytes.extend(name.as_bytes());
 
         let command = CreateTopic::from_bytes(&bytes);

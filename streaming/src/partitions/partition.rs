@@ -1,7 +1,7 @@
 use crate::config::PartitionConfig;
-use crate::message::Message;
 use crate::segments::segment::Segment;
 use crate::storage::SystemStorage;
+use iggy::models::message::Message;
 use ringbuffer::AllocRingBuffer;
 use std::collections::HashMap;
 use std::sync::Arc;

@@ -1,9 +1,10 @@
-use crate::message::{Message, MessageState};
 use crate::persister::Persister;
 use async_trait::async_trait;
-use bytes::Bytes;
+use bytes::{BufMut, Bytes};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::Error;
+use iggy::models::message::{Message, MessageState};
+use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::io::SeekFrom;
 use std::sync::Arc;
@@ -15,7 +16,7 @@ use crate::segments::index::{Index, IndexRange};
 use crate::segments::segment::Segment;
 use crate::segments::time_index::TimeIndex;
 use crate::storage::{SegmentStorage, Storage};
-use crate::utils::{checksum, file};
+use crate::utils::file;
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
@@ -183,12 +184,12 @@ impl SegmentStorage for FileSegmentStorage {
     ) -> Result<u32, Error> {
         let messages_size = messages
             .iter()
-            .map(|message| message.get_size_bytes(true))
+            .map(|message| message.get_size_bytes())
             .sum::<u32>();
 
         let mut bytes = Vec::with_capacity(messages_size as usize);
         for message in messages {
-            message.extend(&mut bytes, true, true);
+            message.extend(&mut bytes);
         }
 
         if let Err(error) = self.persister.append(&segment.log_path, &bytes).await {
@@ -369,8 +370,8 @@ impl SegmentStorage for FileSegmentStorage {
         let mut bytes = Vec::with_capacity(messages.len() * 4);
         for message in messages {
             trace!("Persisting index for position: {}", current_position);
-            bytes.extend(current_position.to_le_bytes());
-            current_position += message.get_size_bytes(true);
+            bytes.put_u32_le(current_position);
+            current_position += message.get_size_bytes();
         }
 
         if self
@@ -456,7 +457,7 @@ impl SegmentStorage for FileSegmentStorage {
     ) -> Result<(), Error> {
         let mut bytes = Vec::with_capacity(messages.len() * 8);
         for message in messages {
-            bytes.extend(message.timestamp.to_le_bytes());
+            bytes.put_u64_le(message.timestamp);
         }
 
         if self

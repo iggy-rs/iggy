@@ -140,7 +140,7 @@ impl BytesSerializable for Identifier {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
-        bytes.extend(self.length.to_le_bytes());
+        bytes.put_u8(self.length);
         bytes.extend(&self.value);
         bytes
     }

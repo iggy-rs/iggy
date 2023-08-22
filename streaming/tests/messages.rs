@@ -2,14 +2,14 @@ mod common;
 
 use crate::common::TestSetup;
 use bytes::Bytes;
-use iggy::header::{HeaderKey, HeaderValue};
+use iggy::models::header::{HeaderKey, HeaderValue};
+use iggy::models::message::{Message, MessageState};
+use iggy::utils::{checksum, timestamp};
 use std::collections::HashMap;
 use std::sync::Arc;
 use streaming::config::PartitionConfig;
-use streaming::message::{Message, MessageState};
 use streaming::partitions::partition::Partition;
 use streaming::storage::SystemStorage;
-use streaming::utils::{checksum, timestamp};
 
 #[tokio::test]
 async fn should_persist_messages_and_then_load_them_from_disk() {
@@ -55,6 +55,15 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
             HeaderKey::new("key-3").unwrap(),
             HeaderValue::from_uint64(123456).unwrap(),
         );
+        let appended_message = Message::create(
+            offset,
+            state,
+            timestamp,
+            id,
+            payload.clone(),
+            checksum,
+            Some(headers.clone()),
+        );
         let message = Message::create(
             offset,
             state,
@@ -64,7 +73,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
             checksum,
             Some(headers),
         );
-        appended_messages.push(message.clone());
+        appended_messages.push(appended_message);
         messages.push(message);
     }
 

@@ -4,6 +4,7 @@ use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -81,8 +82,8 @@ impl BytesSerializable for StoreConsumerOffset {
         bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(self.partition_id.to_le_bytes());
-        bytes.extend(self.offset.to_le_bytes());
+        bytes.put_u32_le(self.partition_id);
+        bytes.put_u64_le(self.offset);
         bytes
     }
 
@@ -182,8 +183,8 @@ mod tests {
         bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(partition_id.to_le_bytes());
-        bytes.extend(offset.to_le_bytes());
+        bytes.put_u32_le(partition_id);
+        bytes.put_u64_le(offset);
 
         let command = StoreConsumerOffset::from_bytes(&bytes);
         assert!(command.is_ok());

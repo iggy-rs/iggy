@@ -3,6 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -66,7 +67,7 @@ impl BytesSerializable for CreateConsumerGroup {
         let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(self.consumer_group_id.to_le_bytes());
+        bytes.put_u32_le(self.consumer_group_id);
         bytes
     }
 
@@ -138,7 +139,7 @@ mod tests {
         let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(consumer_group_id.to_le_bytes());
+        bytes.put_u32_le(consumer_group_id);
         let command = CreateConsumerGroup::from_bytes(&bytes);
         assert!(command.is_ok());
 

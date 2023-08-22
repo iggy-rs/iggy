@@ -1,9 +1,9 @@
 use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::IggyClient;
 use iggy::error::Error;
-use iggy::header::{HeaderKey, HeaderValue};
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topics::GetTopics;

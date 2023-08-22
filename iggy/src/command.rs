@@ -26,6 +26,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use bytes::BufMut;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
@@ -217,7 +218,7 @@ impl BytesSerializable for Command {
 
 fn as_bytes(command: u32, payload: &[u8]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(4 + payload.len());
-    bytes.extend(command.to_le_bytes());
+    bytes.put_u32_le(command);
     bytes.extend(payload);
     bytes
 }
@@ -593,7 +594,7 @@ mod tests {
     ) {
         let payload = payload.as_bytes();
         let mut bytes = Vec::with_capacity(4 + payload.len());
-        bytes.extend(command_id.to_le_bytes());
+        bytes.put_u32_le(command_id);
         bytes.extend(payload);
         assert_eq!(command.as_bytes(), bytes);
     }
@@ -605,7 +606,7 @@ mod tests {
     ) {
         let payload = payload.as_bytes();
         let mut bytes = Vec::with_capacity(4 + payload.len());
-        bytes.extend(command_id.to_le_bytes());
+        bytes.put_u32_le(command_id);
         bytes.extend(payload);
         assert_eq!(&Command::from_bytes(&bytes).unwrap(), command);
     }

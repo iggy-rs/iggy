@@ -249,13 +249,13 @@ impl BytesSerializable for PollMessages {
         bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(self.partition_id.to_le_bytes());
+        bytes.put_u32_le(self.partition_id);
         bytes.extend(strategy_bytes);
-        bytes.extend(self.count.to_le_bytes());
+        bytes.put_u32_le(self.count);
         if self.auto_commit {
-            bytes.extend(1u8.to_le_bytes());
+            bytes.put_u8(1);
         } else {
-            bytes.extend(0u8.to_le_bytes());
+            bytes.put_u8(0);
         }
 
         bytes
@@ -341,7 +341,7 @@ impl BytesSerializable for PollingStrategy {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(9);
         bytes.put_u8(self.kind.as_code());
-        bytes.extend(self.value.to_le_bytes());
+        bytes.put_u64_le(self.value);
         bytes
     }
 
@@ -435,10 +435,10 @@ mod tests {
         bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(partition_id.to_le_bytes());
+        bytes.put_u32_le(partition_id);
         bytes.extend(strategy_bytes);
-        bytes.extend(count.to_le_bytes());
-        bytes.extend(auto_commit.to_le_bytes());
+        bytes.put_u32_le(count);
+        bytes.put_u8(auto_commit);
 
         let command = PollMessages::from_bytes(&bytes);
         assert!(command.is_ok());

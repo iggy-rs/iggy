@@ -4,6 +4,7 @@ use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -82,7 +83,7 @@ impl BytesSerializable for GetConsumerOffset {
         bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(self.partition_id.to_le_bytes());
+        bytes.put_u32_le(self.partition_id);
         bytes
     }
 
@@ -176,7 +177,7 @@ mod tests {
         bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(partition_id.to_le_bytes());
+        bytes.put_u32_le(partition_id);
 
         let command = GetConsumerOffset::from_bytes(&bytes);
         assert!(command.is_ok());

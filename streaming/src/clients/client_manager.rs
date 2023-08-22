@@ -1,5 +1,5 @@
-use crate::utils::checksum;
 use iggy::error::Error;
+use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;

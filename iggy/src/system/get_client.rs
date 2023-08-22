@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -47,7 +48,7 @@ impl FromStr for GetClient {
 impl BytesSerializable for GetClient {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(4);
-        bytes.extend(self.client_id.to_le_bytes());
+        bytes.put_u32_le(self.client_id);
         bytes
     }
 

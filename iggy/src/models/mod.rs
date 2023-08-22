@@ -1,5 +1,6 @@
 pub mod client_info;
 pub mod consumer_group;
+pub mod header;
 pub mod message;
 pub mod offset;
 pub mod partition;

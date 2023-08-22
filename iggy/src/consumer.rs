@@ -62,7 +62,7 @@ impl BytesSerializable for Consumer {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(5);
         bytes.put_u8(self.kind.as_code());
-        bytes.extend(self.id.to_le_bytes());
+        bytes.put_u32_le(self.id);
         bytes
     }
 

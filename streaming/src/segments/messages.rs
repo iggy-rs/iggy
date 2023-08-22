@@ -1,9 +1,9 @@
-use crate::message::Message;
 use crate::segments::index::{Index, IndexRange};
 use crate::segments::segment::Segment;
 use crate::segments::time_index::TimeIndex;
 use crate::storage::SegmentStorage;
 use iggy::error::Error;
+use iggy::models::message::Message;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -171,7 +171,7 @@ impl Segment {
             });
         }
 
-        self.current_size_bytes += message.get_size_bytes(true);
+        self.current_size_bytes += message.get_size_bytes();
         self.current_offset = message.offset;
         self.unsaved_messages.as_mut().unwrap().push(message);
 

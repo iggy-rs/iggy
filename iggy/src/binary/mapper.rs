@@ -2,12 +2,13 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails, ConsumerGroupInfo};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
-use crate::models::message::Message;
+use crate::models::message::{Message, MessageState};
 use crate::models::offset::Offset;
 use crate::models::partition::Partition;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
+use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
 
@@ -151,36 +152,39 @@ pub fn map_messages(payload: &[u8]) -> Result<Vec<Message>, Error> {
     let mut messages = Vec::new();
     while position < length {
         let offset = u64::from_le_bytes(payload[position..position + 8].try_into()?);
-        let timestamp = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
-        let id = u128::from_le_bytes(payload[position + 16..position + 32].try_into()?);
-        let headers_length = u32::from_le_bytes(payload[position + 32..position + 36].try_into()?);
+        let state = MessageState::from_code(payload[position + 8])?;
+        let timestamp = u64::from_le_bytes(payload[position + 9..position + 17].try_into()?);
+        let id = u128::from_le_bytes(payload[position + 17..position + 33].try_into()?);
+        let checksum = u32::from_le_bytes(payload[position + 33..position + 37].try_into()?);
+        let headers_length = u32::from_le_bytes(payload[position + 37..position + 41].try_into()?);
         let headers = if headers_length > 0 {
-            let headers_payload = &payload[position + 36..position + 36 + headers_length as usize];
+            let headers_payload = &payload[position + 41..position + 41 + headers_length as usize];
             Some(HashMap::from_bytes(headers_payload)?)
         } else {
             None
         };
         position += headers_length as usize;
-        let message_length = u32::from_le_bytes(payload[position + 36..position + 40].try_into()?);
-
-        let payload_range = position + 40..position + 40 + message_length as usize;
+        let message_length = u32::from_le_bytes(payload[position + 41..position + 45].try_into()?);
+        let payload_range = position + 45..position + 45 + message_length as usize;
         if payload_range.start > length || payload_range.end > length {
             break;
         }
 
         let payload = payload[payload_range].to_vec();
-        let total_size = 40 + message_length as usize;
+        let total_size = 45 + message_length as usize;
         position += total_size;
         messages.push(Message {
             offset,
             timestamp,
+            state,
+            checksum,
             id,
             headers,
             length: message_length,
-            payload,
+            payload: Bytes::from(payload),
         });
 
-        if position + 40 >= length {
+        if position + 45 >= length {
             break;
         }
     }

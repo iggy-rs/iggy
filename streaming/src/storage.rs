@@ -1,4 +1,3 @@
-use crate::message::Message;
 use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::partitions::storage::FilePartitionStorage;
 use crate::persister::{FilePersister, Persister};
@@ -13,6 +12,7 @@ use crate::topics::storage::FileTopicStorage;
 use crate::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::error::Error;
+use iggy::models::message::Message;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -140,7 +140,6 @@ impl Debug for dyn SegmentStorage {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use crate::message::Message;
     use crate::partitions::partition::Partition;
     use crate::segments::index::{Index, IndexRange};
     use crate::segments::segment::Segment;
@@ -149,6 +148,7 @@ pub(crate) mod tests {
     use crate::streams::stream::Stream;
     use crate::topics::topic::Topic;
     use async_trait::async_trait;
+    use iggy::models::message::Message;
     use std::sync::Arc;
 
     struct TestStreamStorage {}

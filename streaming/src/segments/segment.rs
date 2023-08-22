@@ -1,8 +1,8 @@
 use crate::config::SegmentConfig;
-use crate::message::Message;
 use crate::segments::index::Index;
 use crate::segments::time_index::TimeIndex;
 use crate::storage::SystemStorage;
+use iggy::models::message::Message;
 use std::sync::Arc;
 
 pub const LOG_EXTENSION: &str = "log";

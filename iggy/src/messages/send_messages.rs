@@ -1,9 +1,9 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
-use crate::header;
-use crate::header::{HeaderKey, HeaderValue};
 use crate::identifier::Identifier;
+use crate::models::header;
+use crate::models::header::{HeaderKey, HeaderValue};
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes};
 use serde::{Deserialize, Serialize};
@@ -264,7 +264,7 @@ impl BytesSerializable for Partitioning {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
-        bytes.extend(self.length.to_le_bytes());
+        bytes.put_u8(self.length);
         bytes.extend(&self.value);
         bytes
     }
@@ -295,15 +295,15 @@ impl BytesSerializable for Partitioning {
 impl BytesSerializable for Message {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(self.get_size_bytes() as usize);
-        bytes.extend(self.id.to_le_bytes());
+        bytes.put_u128_le(self.id);
         if let Some(headers) = &self.headers {
             let headers_bytes = headers.as_bytes();
             bytes.put_u32_le(headers_bytes.len() as u32);
             bytes.extend(&headers_bytes);
         } else {
-            bytes.extend(0u32.to_le_bytes());
+            bytes.put_u32_le(0);
         }
-        bytes.extend(self.length.to_le_bytes());
+        bytes.put_u32_le(self.length);
         bytes.extend(&self.payload);
         bytes
     }

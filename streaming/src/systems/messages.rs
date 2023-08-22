@@ -1,4 +1,3 @@
-use crate::message::Message;
 use crate::polling_consumer::PollingConsumer;
 use crate::systems::system::System;
 use bytes::Bytes;
@@ -7,6 +6,7 @@ use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
+use iggy::models::message::Message;
 use std::sync::Arc;
 use tracing::{error, trace};
 

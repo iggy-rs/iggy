@@ -3,6 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
@@ -68,7 +69,7 @@ impl BytesSerializable for CreatePartitions {
         let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(self.partitions_count.to_le_bytes());
+        bytes.put_u32_le(self.partitions_count);
         bytes
     }
 
@@ -106,6 +107,7 @@ impl Display for CreatePartitions {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytes::BufMut;
 
     #[test]
     fn should_be_serialized_as_bytes() {
@@ -140,7 +142,7 @@ mod tests {
         let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.extend(partitions_count.to_le_bytes());
+        bytes.put_u32_le(partitions_count);
         let command = CreatePartitions::from_bytes(&bytes);
         assert!(command.is_ok());
 

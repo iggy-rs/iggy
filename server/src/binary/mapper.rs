@@ -1,8 +1,8 @@
 use bytes::BufMut;
+use iggy::models::message::Message;
 use iggy::models::stats::Stats;
 use std::sync::Arc;
 use streaming::clients::client_manager::{Client, Transport};
-use streaming::message::Message;
 use streaming::partitions::partition::Partition;
 use streaming::streams::stream::Stream;
 use streaming::topics::consumer_group::ConsumerGroup;
@@ -27,7 +27,7 @@ pub fn map_stats(stats: &Stats) -> Vec<u8> {
     bytes.put_u32_le(stats.segments_count);
     bytes.put_u64_le(stats.messages_count);
     bytes.put_u32_le(stats.clients_count);
-    bytes.extend(stats.consumer_groups_count.to_le_bytes());
+    bytes.put_u32_le(stats.consumer_groups_count);
     bytes.put_u32_le(stats.hostname.len() as u32);
     bytes.extend(stats.hostname.as_bytes());
     bytes.put_u32_le(stats.os_name.len() as u32);
@@ -70,13 +70,13 @@ pub fn map_messages(messages: &[Arc<Message>]) -> Vec<u8> {
     let messages_count = messages.len() as u32;
     let messages_size = messages
         .iter()
-        .map(|message| message.get_size_bytes(false))
+        .map(|message| message.get_size_bytes())
         .sum::<u32>();
 
     let mut bytes = Vec::with_capacity(4 + messages_size as usize);
-    bytes.extend(messages_count.to_le_bytes());
+    bytes.put_u32_le(messages_count);
     for message in messages {
-        message.extend(&mut bytes, false, false);
+        message.extend(&mut bytes);
     }
 
     bytes

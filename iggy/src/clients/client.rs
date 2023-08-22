@@ -434,11 +434,13 @@ impl MessageClient for IggyClient {
                 let payload = encryptor.decrypt(&message.payload)?;
                 decrypted_messages.push(Message {
                     id: message.id,
+                    state: message.state,
+                    checksum: message.checksum,
                     offset: message.offset,
                     timestamp: message.timestamp,
                     length: payload.len() as u32,
                     headers: message.headers,
-                    payload,
+                    payload: Bytes::from(payload),
                 });
             }
             Ok(decrypted_messages)

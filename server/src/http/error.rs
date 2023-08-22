@@ -16,6 +16,7 @@ pub struct ErrorResponse {
     pub id: u32,
     pub code: String,
     pub reason: String,
+    pub field: Option<String>,
 }
 
 impl IntoResponse for CustomError {
@@ -50,6 +51,20 @@ impl ErrorResponse {
             id: error.as_code(),
             code: error.as_string().to_string(),
             reason: error.to_string(),
+            field: match error {
+                Error::StreamIdNotFound(_) => Some("stream_id".to_string()),
+                Error::TopicIdNotFound(_, _) => Some("topic_id".to_string()),
+                Error::PartitionNotFound(_) => Some("partition_id".to_string()),
+                Error::SegmentNotFound => Some("segment_id".to_string()),
+                Error::ClientNotFound(_) => Some("client_id".to_string()),
+                Error::InvalidStreamName => Some("name".to_string()),
+                Error::InvalidTopicName => Some("name".to_string()),
+                Error::InvalidStreamId => Some("stream_id".to_string()),
+                Error::InvalidTopicId => Some("topic_id".to_string()),
+                Error::InvalidOffset(_) => Some("offset".to_string()),
+                Error::InvalidConsumerGroupId => Some("consumer_group_id".to_string()),
+                _ => None,
+            },
         }
     }
 }

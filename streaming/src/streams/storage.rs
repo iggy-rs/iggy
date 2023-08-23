@@ -75,7 +75,7 @@ impl Storage<Stream> for FileStreamStorage {
                 stream.id,
                 topic_id,
                 &stream.topics_path,
-                stream.config.topic.clone(),
+                stream.config.clone(),
                 stream.storage.clone(),
             );
             unloaded_topics.push(topic);

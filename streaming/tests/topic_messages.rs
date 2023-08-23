@@ -116,7 +116,7 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         name,
         partitions_count,
         &setup.path,
-        setup.config.stream.topic.clone(),
+        setup.config.clone(),
         storage.clone(),
         None,
     )

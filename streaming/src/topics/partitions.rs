@@ -24,7 +24,7 @@ impl Topic {
                 partition_id,
                 &self.get_partitions_path(),
                 true,
-                self.config.partition.clone(),
+                self.config.clone(),
                 self.storage.clone(),
             );
             self.partitions.insert(partition_id, RwLock::new(partition));

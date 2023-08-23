@@ -1,4 +1,4 @@
-use crate::config::TopicConfig;
+use crate::config::SystemConfig;
 use crate::partitions::partition::Partition;
 use crate::storage::SystemStorage;
 use crate::topics::consumer_group::ConsumerGroup;
@@ -17,7 +17,7 @@ pub struct Topic {
     pub name: String,
     pub path: String,
     pub(crate) info_path: String,
-    pub(crate) config: Arc<TopicConfig>,
+    pub(crate) config: Arc<SystemConfig>,
     pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
@@ -30,7 +30,7 @@ impl Topic {
         stream_id: u32,
         id: u32,
         topics_path: &str,
-        config: Arc<TopicConfig>,
+        config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Topic {
         Topic::create(stream_id, id, "", 0, topics_path, config, storage, None).unwrap()
@@ -42,7 +42,7 @@ impl Topic {
         name: &str,
         partitions_count: u32,
         topics_path: &str,
-        config: Arc<TopicConfig>,
+        config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: Option<u32>,
     ) -> Result<Topic, Error> {
@@ -60,7 +60,7 @@ impl Topic {
             current_partition_id: AtomicU32::new(1),
             message_expiry: match message_expiry {
                 Some(expiry) => Some(expiry),
-                None => match config.message_expiry {
+                None => match config.segment.message_expiry {
                     0 => None,
                     expiry => Some(expiry),
                 },
@@ -132,7 +132,7 @@ mod tests {
         let name = "test";
         let partitions_count = 3;
         let message_expiry = 10;
-        let config = Arc::new(TopicConfig::default());
+        let config = Arc::new(SystemConfig::default());
         let path = Topic::get_path(id, topics_path);
         let info_path = Topic::get_info_path(&path);
 

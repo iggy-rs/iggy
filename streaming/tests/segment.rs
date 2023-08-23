@@ -23,7 +23,7 @@ async fn should_persist_segment() {
             partition_id,
             start_offset,
             partition_path,
-            setup.config.stream.topic.partition.segment.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
 
@@ -48,7 +48,7 @@ async fn should_load_existing_segment_from_disk() {
             partition_id,
             start_offset,
             partition_path,
-            setup.config.stream.topic.partition.segment.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         segment.persist().await.unwrap();
@@ -60,7 +60,7 @@ async fn should_load_existing_segment_from_disk() {
             partition_id,
             start_offset,
             partition_path,
-            setup.config.stream.topic.partition.segment.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         loaded_segment.load().await.unwrap();

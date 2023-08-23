@@ -161,8 +161,9 @@ impl ServerConfig {
     }
 
     fn validate_config(config: &ServerConfig) -> Result<(), ServerError> {
-        let partition_config = &config.system.stream.topic.partition;
-        if partition_config.segment.size_bytes > segment::MAX_SIZE_BYTES {
+        let partition_config = &config.system.partition;
+        let segment_config = &config.system.segment;
+        if segment_config.size_bytes > segment::MAX_SIZE_BYTES {
             error!(
                 "Segment configuration -> size cannot be greater than: {} bytes.",
                 segment::MAX_SIZE_BYTES

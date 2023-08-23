@@ -1,4 +1,4 @@
-use crate::config::StreamConfig;
+use crate::config::SystemConfig;
 use crate::storage::SystemStorage;
 use crate::topics::topic::Topic;
 use std::collections::HashMap;
@@ -15,7 +15,7 @@ pub struct Stream {
     pub info_path: String,
     pub(crate) topics: HashMap<u32, Topic>,
     pub(crate) topics_ids: HashMap<String, u32>,
-    pub(crate) config: Arc<StreamConfig>,
+    pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
 }
 
@@ -23,7 +23,7 @@ impl Stream {
     pub fn empty(
         id: u32,
         streams_path: &str,
-        config: Arc<StreamConfig>,
+        config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Self {
         Stream::create(id, "", streams_path, config, storage)
@@ -33,7 +33,7 @@ impl Stream {
         id: u32,
         name: &str,
         streams_path: &str,
-        config: Arc<StreamConfig>,
+        config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Self {
         let path = Self::get_path(id, streams_path);
@@ -93,7 +93,7 @@ mod tests {
         let id = 1;
         let name = "test";
         let streams_path = "/streams";
-        let config = Arc::new(StreamConfig::default());
+        let config = Arc::new(SystemConfig::default());
         let path = Stream::get_path(id, streams_path);
         let info_path = Stream::get_info_path(&path);
         let topics_path = Stream::get_topics_path(&path, &config.topic.path);

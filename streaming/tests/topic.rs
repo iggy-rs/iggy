@@ -21,7 +21,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             &name,
             partitions_count,
             &setup.path,
-            setup.config.stream.topic.clone(),
+            setup.config.clone(),
             storage.clone(),
             None,
         )
@@ -48,7 +48,7 @@ async fn should_load_existing_topic_from_disk() {
             &name,
             partitions_count,
             &setup.path,
-            setup.config.stream.topic.clone(),
+            setup.config.clone(),
             storage.clone(),
             None,
         )
@@ -60,7 +60,7 @@ async fn should_load_existing_topic_from_disk() {
             stream_id,
             topic_id,
             &setup.path,
-            setup.config.stream.topic.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         loaded_topic.load().await.unwrap();
@@ -88,7 +88,7 @@ async fn should_delete_existing_topic_from_disk() {
             &name,
             partitions_count,
             &setup.path,
-            setup.config.stream.topic.clone(),
+            setup.config.clone(),
             storage.clone(),
             None,
         )

@@ -111,7 +111,7 @@ impl Topic {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::TopicConfig;
+    use crate::config::SystemConfig;
     use crate::storage::tests::get_test_system_storage;
     use std::sync::Arc;
 
@@ -216,7 +216,7 @@ mod tests {
         let topics_path = "/topics";
         let name = "test";
         let partitions_count = 3;
-        let config = Arc::new(TopicConfig::default());
+        let config = Arc::new(SystemConfig::default());
 
         Topic::create(
             stream_id,

@@ -7,7 +7,7 @@ use iggy::models::message::{Message, MessageState};
 use iggy::utils::{checksum, timestamp};
 use std::collections::HashMap;
 use std::sync::Arc;
-use streaming::config::PartitionConfig;
+use streaming::config::{PartitionConfig, SystemConfig};
 use streaming::partitions::partition::Partition;
 use streaming::storage::SystemStorage;
 
@@ -19,8 +19,11 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     let topic_id = 1;
     let partition_id = 1;
     let messages_count = 1000;
-    let config = Arc::new(PartitionConfig {
-        messages_required_to_save: messages_count,
+    let config = Arc::new(SystemConfig {
+        partition: PartitionConfig {
+            messages_required_to_save: messages_count,
+            ..Default::default()
+        },
         ..Default::default()
     });
     let mut partition = Partition::create(

@@ -218,7 +218,7 @@ impl Storage<Topic> for FileTopicStorage {
                 partition_id,
                 &topic.get_partitions_path(),
                 false,
-                topic.config.partition.clone(),
+                topic.config.clone(),
                 topic.storage.clone(),
             );
             unloaded_partitions.push(partition);

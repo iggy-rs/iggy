@@ -61,24 +61,24 @@
       "key": ""
     },
     "stream": {
-      "path": "streams",
-      "topic": {
-        "path": "topics",
-        "message_expiry": 0,
-        "partition": {
-          "path": "partitions",
-          "deduplicate_messages": false,
-          "enforce_sync": false,
-          "validate_checksum": false,
-          "messages_required_to_save": 10000,
-          "messages_buffer": 1048576,
-          "segment": {
-            "size_bytes": 1000000000,
-            "cache_indexes": true,
-            "cache_time_indexes": true
-          }
-        }
-      }
+      "path": "streams"
+    },
+    "topic": {
+      "path": "topics"
+    },
+    "partition": {
+      "path": "partitions",
+      "deduplicate_messages": false,
+      "enforce_sync": false,
+      "validate_checksum": false,
+      "messages_required_to_save": 10000,
+      "messages_buffer": 1048576
+    },
+    "segment": {
+      "message_expiry": 0,
+      "size_bytes": 1000000000,
+      "cache_indexes": true,
+      "cache_time_indexes": true
     }
   }
 }

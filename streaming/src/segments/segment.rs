@@ -1,4 +1,4 @@
-use crate::config::SegmentConfig;
+use crate::config::SystemConfig;
 use crate::segments::index::Index;
 use crate::segments::time_index::TimeIndex;
 use crate::storage::SystemStorage;
@@ -24,7 +24,7 @@ pub struct Segment {
     pub current_size_bytes: u32,
     pub is_closed: bool,
     pub(crate) unsaved_messages: Option<Vec<Arc<Message>>>,
-    pub(crate) config: Arc<SegmentConfig>,
+    pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,
     pub(crate) storage: Arc<SystemStorage>,
@@ -37,7 +37,7 @@ impl Segment {
         partition_id: u32,
         start_offset: u64,
         partition_path: &str,
-        config: Arc<SegmentConfig>,
+        config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Segment {
         let path = Self::get_path(partition_path, start_offset);
@@ -53,11 +53,11 @@ impl Segment {
             index_path: Self::get_index_path(&path),
             time_index_path: Self::get_time_index_path(&path),
             current_size_bytes: 0,
-            indexes: match config.cache_indexes {
+            indexes: match config.segment.cache_indexes {
                 true => Some(Vec::new()),
                 false => None,
             },
-            time_indexes: match config.cache_time_indexes {
+            time_indexes: match config.segment.cache_time_indexes {
                 true => Some(Vec::new()),
                 false => None,
             },
@@ -70,7 +70,7 @@ impl Segment {
 
     // TODO: Extend with the message expiry validation
     pub fn is_full(&self) -> bool {
-        self.current_size_bytes >= self.config.size_bytes
+        self.current_size_bytes >= self.config.segment.size_bytes
     }
 
     pub async fn is_expired(&self, message_expiry: u32, now: u64) -> bool {
@@ -112,6 +112,7 @@ impl Segment {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::SegmentConfig;
     use crate::storage::tests::get_test_system_storage;
 
     #[test]
@@ -122,7 +123,7 @@ mod tests {
         let partition_id = 3;
         let partition_path = "/topics/2/3";
         let start_offset = 0;
-        let config = Arc::new(SegmentConfig::default());
+        let config = Arc::new(SystemConfig::default());
         let path = Segment::get_path(partition_path, start_offset);
         let log_path = Segment::get_log_path(&path);
         let index_path = Segment::get_index_path(&path);
@@ -163,9 +164,12 @@ mod tests {
         let partition_id = 3;
         let partition_path = "/topics/1/1";
         let start_offset = 0;
-        let config = Arc::new(SegmentConfig {
-            cache_indexes: false,
-            ..SegmentConfig::default()
+        let config = Arc::new(SystemConfig {
+            segment: SegmentConfig {
+                cache_indexes: false,
+                ..Default::default()
+            },
+            ..Default::default()
         });
 
         let segment = Segment::create(
@@ -189,9 +193,12 @@ mod tests {
         let partition_id = 3;
         let partition_path = "/topics/2/3";
         let start_offset = 0;
-        let config = Arc::new(SegmentConfig {
-            cache_time_indexes: false,
-            ..SegmentConfig::default()
+        let config = Arc::new(SystemConfig {
+            segment: SegmentConfig {
+                cache_time_indexes: false,
+                ..Default::default()
+            },
+            ..Default::default()
         });
 
         let segment = Segment::create(

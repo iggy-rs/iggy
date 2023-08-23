@@ -26,7 +26,7 @@ pub struct System {
 
 impl System {
     pub fn new(config: Arc<SystemConfig>) -> System {
-        let persister: Arc<dyn Persister> = match config.stream.topic.partition.enforce_sync {
+        let persister: Arc<dyn Persister> = match config.partition.enforce_sync {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };

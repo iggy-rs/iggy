@@ -17,13 +17,13 @@ async fn should_persist_stream_with_topics_directory_and_info_file() {
             stream_id,
             &name,
             &setup.path,
-            setup.config.stream.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
 
         stream.persist().await.unwrap();
 
-        assert_persisted_stream(&stream.path, &setup.config.stream.topic.path).await;
+        assert_persisted_stream(&stream.path, &setup.config.topic.path).await;
     }
 }
 
@@ -38,16 +38,16 @@ async fn should_load_existing_stream_from_disk() {
             stream_id,
             &name,
             &setup.path,
-            setup.config.stream.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         stream.persist().await.unwrap();
-        assert_persisted_stream(&stream.path, &setup.config.stream.topic.path).await;
+        assert_persisted_stream(&stream.path, &setup.config.topic.path).await;
 
         let mut loaded_stream = Stream::empty(
             stream_id,
             &setup.path,
-            setup.config.stream.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         loaded_stream.load().await.unwrap();
@@ -71,11 +71,11 @@ async fn should_delete_existing_stream_from_disk() {
             stream_id,
             &name,
             &setup.path,
-            setup.config.stream.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         stream.persist().await.unwrap();
-        assert_persisted_stream(&stream.path, &setup.config.stream.topic.path).await;
+        assert_persisted_stream(&stream.path, &setup.config.topic.path).await;
 
         stream.delete().await.unwrap();
 

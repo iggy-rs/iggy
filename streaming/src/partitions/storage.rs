@@ -81,7 +81,7 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.id,
                 start_offset,
                 &partition.path,
-                partition.config.segment.clone(),
+                partition.config.clone(),
                 partition.storage.clone(),
             );
             segment.load().await?;
@@ -94,7 +94,7 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.should_increment_offset = segment.current_size_bytes > 0;
             }
 
-            if partition.config.validate_checksum {
+            if partition.config.partition.validate_checksum {
                 info!("Validating messages checksum for partition with ID: {} and segment with start offset: {}...", partition.id, segment.start_offset);
                 segment.storage.segment.load_checksums(&segment).await?;
                 info!("Validated messages checksum for partition with ID: {} and segment with start offset: {}.", partition.id, segment.start_offset);

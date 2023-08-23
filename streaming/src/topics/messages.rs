@@ -192,7 +192,7 @@ impl Topic {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::TopicConfig;
+    use crate::config::SystemConfig;
     use crate::storage::tests::get_test_system_storage;
     use bytes::Bytes;
     use iggy::models::message::MessageState;
@@ -314,7 +314,7 @@ mod tests {
         let id = 2;
         let topics_path = "/topics";
         let name = "test";
-        let config = Arc::new(TopicConfig::default());
+        let config = Arc::new(SystemConfig::default());
 
         Topic::create(
             stream_id,

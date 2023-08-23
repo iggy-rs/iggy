@@ -56,11 +56,10 @@ key = ""
 [system.stream]
 path = "streams"
 
-[system.stream.topic]
+[system.topic]
 path = "topics"
-message_expiry = 0
 
-[system.stream.topic.partition]
+[system.partition]
 path = "partitions"
 deduplicate_messages = false
 enforce_sync = false
@@ -68,7 +67,8 @@ validate_checksum = false
 messages_required_to_save = 10_000
 messages_buffer = 1_048_576
 
-[system.stream.topic.partition.segment]
+[system.segment]
+message_expiry = 0
 size_bytes = 1_000_000_000
 cache_indexes = true
 cache_time_indexes = true

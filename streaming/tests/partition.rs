@@ -23,7 +23,7 @@ async fn should_persist_partition_with_segment() {
             partition_id,
             &setup.path,
             with_segment,
-            setup.config.stream.topic.partition.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
 
@@ -48,7 +48,7 @@ async fn should_load_existing_partition_from_disk() {
             partition_id,
             &setup.path,
             with_segment,
-            setup.config.stream.topic.partition.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         partition.persist().await.unwrap();
@@ -59,7 +59,7 @@ async fn should_load_existing_partition_from_disk() {
             topic_id,
             partition.id,
             &setup.path,
-            setup.config.stream.topic.partition.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         loaded_partition.load().await.unwrap();
@@ -107,7 +107,7 @@ async fn should_delete_existing_partition_from_disk() {
             partition_id,
             &setup.path,
             with_segment,
-            setup.config.stream.topic.partition.clone(),
+            setup.config.clone(),
             storage.clone(),
         );
         partition.persist().await.unwrap();

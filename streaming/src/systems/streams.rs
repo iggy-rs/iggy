@@ -31,7 +31,7 @@ impl System {
             let stream = Stream::empty(
                 stream_id,
                 &self.streams_path,
-                self.config.stream.clone(),
+                self.config.clone(),
                 self.storage.clone(),
             );
             unloaded_streams.push(stream);
@@ -140,7 +140,7 @@ impl System {
             id,
             &name,
             &self.streams_path,
-            self.config.stream.clone(),
+            self.config.clone(),
             self.storage.clone(),
         );
         stream.persist().await?;

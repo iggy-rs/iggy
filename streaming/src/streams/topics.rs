@@ -28,7 +28,7 @@ impl Stream {
             &name,
             partitions_count,
             &self.topics_path,
-            self.config.topic.clone(),
+            self.config.clone(),
             self.storage.clone(),
             None,
         )?;
@@ -138,7 +138,7 @@ impl Stream {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::StreamConfig;
+    use crate::config::SystemConfig;
     use crate::storage::tests::get_test_system_storage;
     use std::sync::Arc;
 
@@ -149,7 +149,7 @@ mod tests {
         let topic_id = 2;
         let topic_name = "test_topic";
         let path = "/stream";
-        let config = Arc::new(StreamConfig::default());
+        let config = Arc::new(SystemConfig::default());
         let storage = Arc::new(get_test_system_storage());
         let mut stream = Stream::create(stream_id, stream_name, path, config, storage);
         stream.create_topic(topic_id, topic_name, 1).await.unwrap();

@@ -1,4 +1,4 @@
-use crate::config::PartitionConfig;
+use crate::config::SystemConfig;
 use crate::segments::segment::Segment;
 use crate::storage::SystemStorage;
 use iggy::models::message::Message;
@@ -24,7 +24,7 @@ pub struct Partition {
     pub(crate) consumer_offsets: RwLock<ConsumerOffsets>,
     pub(crate) consumer_group_offsets: RwLock<ConsumerOffsets>,
     pub(crate) segments: Vec<Segment>,
-    pub(crate) config: Arc<PartitionConfig>,
+    pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
 }
 
@@ -46,7 +46,7 @@ impl Partition {
         topic_id: u32,
         id: u32,
         partitions_path: &str,
-        config: Arc<PartitionConfig>,
+        config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Partition {
         Partition::create(
@@ -66,7 +66,7 @@ impl Partition {
         id: u32,
         partitions_path: &str,
         with_segment: bool,
-        config: Arc<PartitionConfig>,
+        config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Partition {
         let path = Self::get_path(id, partitions_path);
@@ -81,11 +81,13 @@ impl Partition {
             offsets_path,
             consumer_offsets_path,
             consumer_group_offsets_path,
-            messages: match config.messages_buffer {
+            messages: match config.partition.messages_buffer {
                 0 => None,
-                _ => Some(AllocRingBuffer::new(config.messages_buffer as usize)),
+                _ => Some(AllocRingBuffer::new(
+                    config.partition.messages_buffer as usize,
+                )),
             },
-            message_ids: match config.deduplicate_messages {
+            message_ids: match config.partition.deduplicate_messages {
                 true => Some(HashMap::new()),
                 false => None,
             },
@@ -110,7 +112,7 @@ impl Partition {
                 id,
                 0,
                 &partition.path,
-                partition.config.segment.clone(),
+                partition.config.clone(),
                 partition.storage.clone(),
             );
             partition.segments.push(segment);
@@ -177,7 +179,7 @@ impl Partition {
 
 #[cfg(test)]
 mod tests {
-    use crate::config::PartitionConfig;
+    use crate::config::{PartitionConfig, SystemConfig};
     use crate::partitions::partition::Partition;
     use crate::storage::tests::get_test_system_storage;
     use ringbuffer::RingBuffer;
@@ -191,12 +193,12 @@ mod tests {
         let id = 3;
         let partitions_path = &format!("/topics/{topic_id}/partitions");
         let with_segment = true;
-        let config = Arc::new(PartitionConfig::default());
+        let config = Arc::new(SystemConfig::default());
         let path = Partition::get_path(id, partitions_path);
         let offsets_path = Partition::get_offsets_path(&path);
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
-        let messages_buffer_capacity = config.messages_buffer as usize;
+        let messages_buffer_capacity = config.partition.messages_buffer as usize;
 
         let partition = Partition::create(
             stream_id,
@@ -243,8 +245,11 @@ mod tests {
             1,
             partitions_path,
             true,
-            Arc::new(PartitionConfig {
-                messages_buffer: 0,
+            Arc::new(SystemConfig {
+                partition: PartitionConfig {
+                    messages_buffer: 0,
+                    ..Default::default()
+                },
                 ..Default::default()
             }),
             storage,
@@ -263,7 +268,7 @@ mod tests {
             1,
             partitions_path,
             false,
-            Arc::new(PartitionConfig::default()),
+            Arc::new(SystemConfig::default()),
             storage,
         );
         assert!(partition.segments.is_empty());

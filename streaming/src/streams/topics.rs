@@ -21,6 +21,7 @@ impl Stream {
             return Err(Error::TopicNameAlreadyExists(name, self.id));
         }
 
+        // TODO: Include message expiry
         let topic = Topic::create(
             self.id,
             id,
@@ -29,6 +30,7 @@ impl Stream {
             &self.topics_path,
             self.config.topic.clone(),
             self.storage.clone(),
+            None,
         )?;
         topic.persist().await?;
         info!(

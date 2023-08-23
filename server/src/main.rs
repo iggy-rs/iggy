@@ -9,7 +9,7 @@ mod server_error;
 mod tcp;
 
 use crate::args::Args;
-use crate::components::{channel, config_provider, message_saver};
+use crate::components::{channel, config_provider, message_cleaner, message_saver};
 use crate::http::http_server;
 use crate::quic::quic_server;
 use crate::server_command::ServerCommand;
@@ -36,6 +36,7 @@ async fn main() -> Result<(), ServerError> {
     system.init().await?;
     let system = Arc::new(RwLock::new(system));
     let (sender, receiver) = flume::unbounded::<ServerCommand>();
+    message_cleaner::start(system.clone());
     message_saver::start(config.message_saver, sender.clone());
     channel::start(system.clone(), receiver);
 

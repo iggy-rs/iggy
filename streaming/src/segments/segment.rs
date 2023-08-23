@@ -68,8 +68,28 @@ impl Segment {
         }
     }
 
+    // TODO: Extend with the message expiry validation
     pub fn is_full(&self) -> bool {
         self.current_size_bytes >= self.config.size_bytes
+    }
+
+    pub async fn is_expired(&self, message_expiry: u32, now: u64) -> bool {
+        if !self.is_closed || message_expiry == 0 {
+            return false;
+        }
+
+        let last_message = self.get_messages(self.end_offset, 1).await;
+        if last_message.is_err() {
+            return false;
+        }
+
+        let last_message = last_message.unwrap();
+        if last_message.is_empty() {
+            return false;
+        }
+
+        let last_message = last_message[0].as_ref();
+        (last_message.timestamp + message_expiry as u64) <= now
     }
 
     fn get_path(partition_path: &str, start_offset: u64) -> String {

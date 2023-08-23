@@ -23,6 +23,7 @@ pub struct StreamConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TopicConfig {
     pub path: String,
+    pub message_expiry: u32,
     pub partition: Arc<PartitionConfig>,
 }
 
@@ -67,6 +68,7 @@ impl Default for TopicConfig {
     fn default() -> TopicConfig {
         TopicConfig {
             path: "topics".to_string(),
+            message_expiry: 0,
             partition: Arc::new(PartitionConfig::default()),
         }
     }

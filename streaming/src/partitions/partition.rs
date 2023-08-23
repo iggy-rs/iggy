@@ -144,6 +144,20 @@ impl Partition {
         &mut self.segments
     }
 
+    pub async fn get_expired_segments_start_offsets(
+        &self,
+        message_expiry: u32,
+        now: u64,
+    ) -> Vec<u64> {
+        let mut expired_segments = Vec::new();
+        for segment in &self.segments {
+            if segment.is_expired(message_expiry, now).await {
+                expired_segments.push(segment.start_offset);
+            }
+        }
+        expired_segments
+    }
+
     fn get_path(id: u32, partitions_path: &str) -> String {
         format!("{}/{}", partitions_path, id)
     }

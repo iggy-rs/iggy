@@ -22,6 +22,7 @@ pub struct Topic {
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
     pub(crate) current_partition_id: AtomicU32,
+    pub(crate) message_expiry: Option<u32>,
 }
 
 impl Topic {
@@ -32,7 +33,7 @@ impl Topic {
         config: Arc<TopicConfig>,
         storage: Arc<SystemStorage>,
     ) -> Topic {
-        Topic::create(stream_id, id, "", 0, topics_path, config, storage).unwrap()
+        Topic::create(stream_id, id, "", 0, topics_path, config, storage, None).unwrap()
     }
 
     pub fn create(
@@ -43,6 +44,7 @@ impl Topic {
         topics_path: &str,
         config: Arc<TopicConfig>,
         storage: Arc<SystemStorage>,
+        message_expiry: Option<u32>,
     ) -> Result<Topic, Error> {
         let path = Self::get_path(id, topics_path);
         let info_path = Self::get_info_path(&path);
@@ -53,10 +55,17 @@ impl Topic {
             partitions: HashMap::new(),
             path,
             info_path,
-            config,
             storage,
             consumer_groups: HashMap::new(),
             current_partition_id: AtomicU32::new(1),
+            message_expiry: match message_expiry {
+                Some(expiry) => Some(expiry),
+                None => match config.message_expiry {
+                    0 => None,
+                    expiry => Some(expiry),
+                },
+            },
+            config,
         };
         topic.add_partitions(partitions_count)?;
         Ok(topic)
@@ -122,6 +131,7 @@ mod tests {
         let topics_path = "/topics";
         let name = "test";
         let partitions_count = 3;
+        let message_expiry = 10;
         let config = Arc::new(TopicConfig::default());
         let path = Topic::get_path(id, topics_path);
         let info_path = Topic::get_info_path(&path);
@@ -134,6 +144,7 @@ mod tests {
             topics_path,
             config,
             storage,
+            Some(message_expiry),
         )
         .unwrap();
 
@@ -143,6 +154,7 @@ mod tests {
         assert_eq!(topic.info_path, info_path);
         assert_eq!(topic.name, name);
         assert_eq!(topic.partitions.len(), partitions_count as usize);
+        assert_eq!(topic.message_expiry, Some(message_expiry));
 
         for (id, partition) in topic.partitions {
             let partition = partition.blocking_read();

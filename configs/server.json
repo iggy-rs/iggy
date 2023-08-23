@@ -64,6 +64,7 @@
       "path": "streams",
       "topic": {
         "path": "topics",
+        "message_expiry": 0,
         "partition": {
           "path": "partitions",
           "deduplicate_messages": false,

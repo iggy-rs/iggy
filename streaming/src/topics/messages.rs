@@ -6,6 +6,7 @@ use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
 use iggy::models::message::Message;
 use ringbuffer::RingBuffer;
+use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
@@ -165,6 +166,27 @@ impl Topic {
 
         Ok(())
     }
+
+    pub async fn get_expired_segments_start_offsets_per_partition(
+        &self,
+        now: u64,
+    ) -> HashMap<u32, Vec<u64>> {
+        let mut expired_segments = HashMap::new();
+        if self.message_expiry.is_none() {
+            return expired_segments;
+        }
+
+        let message_expiry = self.message_expiry.unwrap();
+        for (_, partition) in self.partitions.iter() {
+            let partition = partition.read().await;
+            let segments = partition
+                .get_expired_segments_start_offsets(message_expiry, now)
+                .await;
+            expired_segments.insert(partition.id, segments);
+        }
+
+        expired_segments
+    }
 }
 
 #[cfg(test)]
@@ -302,6 +324,7 @@ mod tests {
             topics_path,
             config,
             storage,
+            None,
         )
         .unwrap()
     }

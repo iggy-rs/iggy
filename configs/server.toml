@@ -58,6 +58,7 @@ path = "streams"
 
 [system.stream.topic]
 path = "topics"
+message_expiry = 0
 
 [system.stream.topic.partition]
 path = "partitions"

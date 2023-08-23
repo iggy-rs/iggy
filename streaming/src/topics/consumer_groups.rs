@@ -226,6 +226,7 @@ mod tests {
             topics_path,
             config,
             storage,
+            None,
         )
         .unwrap()
     }

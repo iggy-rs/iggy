@@ -179,6 +179,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::CannotOpenTopicInfo(topic.id, topic.stream_id));
         }
 
+        // TODO: Load message expiry
         let mut topic_info = String::new();
         if topic_info_file
             .unwrap()
@@ -281,6 +282,7 @@ impl Storage<Topic> for FileTopicStorage {
             ));
         }
 
+        // TODO: Save message expiry
         if self
             .persister
             .overwrite(&topic.info_path, topic.name.as_bytes())

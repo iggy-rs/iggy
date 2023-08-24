@@ -220,6 +220,7 @@ impl Storage<Topic> for FileTopicStorage {
                 false,
                 topic.config.clone(),
                 topic.storage.clone(),
+                topic.message_expiry,
             );
             unloaded_partitions.push(partition);
         }

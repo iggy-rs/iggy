@@ -21,6 +21,7 @@ pub struct Partition {
     pub message_ids: Option<HashMap<u128, bool>>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
+    pub(crate) message_expiry: Option<u32>,
     pub(crate) consumer_offsets: RwLock<ConsumerOffsets>,
     pub(crate) consumer_group_offsets: RwLock<ConsumerOffsets>,
     pub(crate) segments: Vec<Segment>,
@@ -57,6 +58,7 @@ impl Partition {
             false,
             config,
             storage,
+            None,
         )
     }
 
@@ -68,6 +70,7 @@ impl Partition {
         with_segment: bool,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
+        message_expiry: Option<u32>,
     ) -> Partition {
         let path = Self::get_path(id, partitions_path);
         let offsets_path = Self::get_offsets_path(&path);
@@ -81,6 +84,7 @@ impl Partition {
             offsets_path,
             consumer_offsets_path,
             consumer_group_offsets_path,
+            message_expiry,
             messages: match config.partition.messages_buffer {
                 0 => None,
                 _ => Some(AllocRingBuffer::new(
@@ -114,6 +118,7 @@ impl Partition {
                 &partition.path,
                 partition.config.clone(),
                 partition.storage.clone(),
+                partition.message_expiry,
             );
             partition.segments.push(segment);
         }
@@ -146,14 +151,10 @@ impl Partition {
         &mut self.segments
     }
 
-    pub async fn get_expired_segments_start_offsets(
-        &self,
-        message_expiry: u32,
-        now: u64,
-    ) -> Vec<u64> {
+    pub async fn get_expired_segments_start_offsets(&self, now: u64) -> Vec<u64> {
         let mut expired_segments = Vec::new();
         for segment in &self.segments {
-            if segment.is_expired(message_expiry, now).await {
+            if segment.is_expired(now).await {
                 expired_segments.push(segment.start_offset);
             }
         }
@@ -199,6 +200,7 @@ mod tests {
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
         let messages_buffer_capacity = config.partition.messages_buffer as usize;
+        let message_expiry = Some(10);
 
         let partition = Partition::create(
             stream_id,
@@ -208,6 +210,7 @@ mod tests {
             with_segment,
             config,
             storage,
+            message_expiry,
         );
 
         assert_eq!(partition.stream_id, stream_id);
@@ -232,6 +235,7 @@ mod tests {
         assert!(partition.messages.as_ref().unwrap().is_empty());
         let consumer_offsets = partition.consumer_offsets.blocking_read();
         assert!(consumer_offsets.offsets.is_empty());
+        assert_eq!(partition.message_expiry, message_expiry);
     }
 
     #[test]
@@ -253,6 +257,7 @@ mod tests {
                 ..Default::default()
             }),
             storage,
+            None,
         );
         assert!(partition.messages.is_none());
     }
@@ -270,6 +275,7 @@ mod tests {
             false,
             Arc::new(SystemConfig::default()),
             storage,
+            None,
         );
         assert!(partition.segments.is_empty());
     }

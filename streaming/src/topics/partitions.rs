@@ -26,6 +26,7 @@ impl Topic {
                 true,
                 self.config.clone(),
                 self.storage.clone(),
+                self.message_expiry,
             );
             self.partitions.insert(partition_id, RwLock::new(partition));
             partition_ids.push(partition_id)

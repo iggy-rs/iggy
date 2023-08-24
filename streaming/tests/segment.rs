@@ -25,6 +25,7 @@ async fn should_persist_segment() {
             partition_path,
             setup.config.clone(),
             storage.clone(),
+            None,
         );
 
         segment.persist().await.unwrap();
@@ -50,6 +51,7 @@ async fn should_load_existing_segment_from_disk() {
             partition_path,
             setup.config.clone(),
             storage.clone(),
+            None,
         );
         segment.persist().await.unwrap();
         assert_persisted_segment(partition_path, start_offset).await;
@@ -62,6 +64,7 @@ async fn should_load_existing_segment_from_disk() {
             partition_path,
             setup.config.clone(),
             storage.clone(),
+            None,
         );
         loaded_segment.load().await.unwrap();
 

@@ -16,13 +16,13 @@ pub fn start(config: MessageSaverConfig, sender: Sender<ServerCommand>) {
         let mut interval = time::interval(duration);
         info!(
             "Message saver is enabled, buffered messages will be automatically saved every: {:?}, enforce sync: {:?}",
-            duration, config.enforce_sync
+            duration, config.enforce_fsync
         );
         interval.tick().await;
         loop {
             interval.tick().await;
             sender
-                .send_async(ServerCommand::SaveMessages(config.enforce_sync))
+                .send_async(ServerCommand::SaveMessages(config.enforce_fsync))
                 .await
                 .unwrap();
         }

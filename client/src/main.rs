@@ -51,6 +51,9 @@ async fn main() -> Result<(), ClientError> {
 
         if let Err(error) = command::handle(&user_input, &client).await {
             match error {
+                ClientError::InvalidCommand => {
+                    error!("Invalid command: {}", user_input);
+                }
                 ClientError::SdkError(Error::NotConnected) => {
                     error!("Client is not connected. Client will be reconnected.");
                     client.connect().await?;

@@ -97,6 +97,15 @@ impl Topic {
         self.partitions.values().collect()
     }
 
+    pub fn get_partition(&self, partition_id: u32) -> Result<&RwLock<Partition>, Error> {
+        let partition = self.partitions.get(&partition_id);
+        if let None = partition {
+            return Err(Error::PartitionNotFound(partition_id));
+        }
+
+        Ok(partition.unwrap())
+    }
+
     pub fn get_partitions_path(&self) -> String {
         format!("{}/{}", self.path, self.config.partition.path)
     }

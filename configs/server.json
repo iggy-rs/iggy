@@ -51,7 +51,7 @@
   },
   "message_saver": {
     "enabled": true,
-    "enforce_sync": true,
+    "enforce_fsync": true,
     "interval": 30
   },
   "system": {
@@ -69,7 +69,7 @@
     "partition": {
       "path": "partitions",
       "deduplicate_messages": false,
-      "enforce_sync": false,
+      "enforce_fsync": false,
       "validate_checksum": false,
       "messages_required_to_save": 10000,
       "messages_buffer": 1048576

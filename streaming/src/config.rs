@@ -32,7 +32,7 @@ pub struct PartitionConfig {
     pub messages_required_to_save: u32,
     pub messages_buffer: u32,
     pub deduplicate_messages: bool,
-    pub enforce_sync: bool,
+    pub enforce_fsync: bool,
     pub validate_checksum: bool,
 }
 
@@ -80,7 +80,7 @@ impl Default for PartitionConfig {
             messages_required_to_save: 1000,
             messages_buffer: 1024,
             deduplicate_messages: false,
-            enforce_sync: false,
+            enforce_fsync: false,
             validate_checksum: false,
         }
     }

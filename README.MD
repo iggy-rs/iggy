@@ -97,7 +97,7 @@ Start the server:
 
 Start the client (transports: `quic`, `tcp`, `http`):
 
-`cargo r --bin client -r --transport tcp`
+`cargo r --bin client -r -- --transport tcp`
 
 Create a stream named `dev` with ID 1:
 

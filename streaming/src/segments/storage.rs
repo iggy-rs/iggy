@@ -95,7 +95,7 @@ impl Storage<Segment> for FileSegmentStorage {
             }
         }
 
-        if segment.is_full() {
+        if segment.is_full().await {
             segment.is_closed = true;
         }
 

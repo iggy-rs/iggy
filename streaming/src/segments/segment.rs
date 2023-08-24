@@ -3,6 +3,7 @@ use crate::segments::index::Index;
 use crate::segments::time_index::TimeIndex;
 use crate::storage::SystemStorage;
 use iggy::models::message::Message;
+use iggy::utils::timestamp;
 use std::sync::Arc;
 
 pub const LOG_EXTENSION: &str = "log";
@@ -23,6 +24,7 @@ pub struct Segment {
     pub time_index_path: String,
     pub current_size_bytes: u32,
     pub is_closed: bool,
+    pub(crate) message_expiry: Option<u32>,
     pub(crate) unsaved_messages: Option<Vec<Arc<Message>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
@@ -39,6 +41,7 @@ impl Segment {
         partition_path: &str,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
+        message_expiry: Option<u32>,
     ) -> Segment {
         let path = Self::get_path(partition_path, start_offset);
 
@@ -53,6 +56,7 @@ impl Segment {
             index_path: Self::get_index_path(&path),
             time_index_path: Self::get_time_index_path(&path),
             current_size_bytes: 0,
+            message_expiry,
             indexes: match config.segment.cache_indexes {
                 true => Some(Vec::new()),
                 false => None,
@@ -68,28 +72,32 @@ impl Segment {
         }
     }
 
-    // TODO: Extend with the message expiry validation
-    pub fn is_full(&self) -> bool {
-        self.current_size_bytes >= self.config.segment.size_bytes
+    pub async fn is_full(&self) -> bool {
+        if self.current_size_bytes >= self.config.segment.size_bytes {
+            return true;
+        }
+
+        self.is_expired(timestamp::get()).await
     }
 
-    pub async fn is_expired(&self, message_expiry: u32, now: u64) -> bool {
-        if !self.is_closed || message_expiry == 0 {
+    pub async fn is_expired(&self, now: u64) -> bool {
+        if self.message_expiry.is_none() {
             return false;
         }
 
-        let last_message = self.get_messages(self.end_offset, 1).await;
-        if last_message.is_err() {
+        let last_messages = self.get_messages(self.end_offset, 1).await;
+        if last_messages.is_err() {
             return false;
         }
 
-        let last_message = last_message.unwrap();
-        if last_message.is_empty() {
+        let last_messages = last_messages.unwrap();
+        if last_messages.is_empty() {
             return false;
         }
 
-        let last_message = last_message[0].as_ref();
-        (last_message.timestamp + message_expiry as u64) <= now
+        let last_message = last_messages[0].as_ref();
+        let message_expiry = (self.message_expiry.unwrap() * 1000) as u64;
+        (last_message.timestamp + message_expiry) <= now
     }
 
     fn get_path(partition_path: &str, start_offset: u64) -> String {
@@ -115,8 +123,8 @@ mod tests {
     use crate::config::SegmentConfig;
     use crate::storage::tests::get_test_system_storage;
 
-    #[test]
-    fn should_be_created_given_valid_parameters() {
+    #[tokio::test]
+    async fn should_be_created_given_valid_parameters() {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
@@ -128,6 +136,7 @@ mod tests {
         let log_path = Segment::get_log_path(&path);
         let index_path = Segment::get_index_path(&path);
         let time_index_path = Segment::get_time_index_path(&path);
+        let message_expiry = Some(10);
 
         let segment = Segment::create(
             stream_id,
@@ -137,6 +146,7 @@ mod tests {
             partition_path,
             config,
             storage,
+            message_expiry,
         );
 
         assert_eq!(segment.stream_id, stream_id);
@@ -149,11 +159,12 @@ mod tests {
         assert_eq!(segment.log_path, log_path);
         assert_eq!(segment.index_path, index_path);
         assert_eq!(segment.time_index_path, time_index_path);
+        assert_eq!(segment.message_expiry, message_expiry);
         assert!(segment.unsaved_messages.is_none());
         assert!(segment.indexes.is_some());
         assert!(segment.time_indexes.is_some());
         assert!(!segment.is_closed);
-        assert!(!segment.is_full());
+        assert!(!segment.is_full().await);
     }
 
     #[test]
@@ -180,6 +191,7 @@ mod tests {
             partition_path,
             config,
             storage,
+            None,
         );
 
         assert!(segment.indexes.is_none());
@@ -209,6 +221,7 @@ mod tests {
             partition_path,
             config,
             storage,
+            None,
         );
 
         assert!(segment.time_indexes.is_none());

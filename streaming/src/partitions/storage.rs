@@ -83,6 +83,7 @@ impl Storage<Partition> for FilePartitionStorage {
                 &partition.path,
                 partition.config.clone(),
                 partition.storage.clone(),
+                partition.message_expiry,
             );
             segment.load().await?;
             if !segment.is_closed {
@@ -134,12 +135,15 @@ impl Storage<Partition> for FilePartitionStorage {
             segment.end_offset = end_offsets[end_offset_index];
         }
 
-        let last_segment = partition.segments.last_mut().unwrap();
-        if last_segment.is_closed {
-            last_segment.end_offset = last_segment.current_offset;
+        if !partition.segments.is_empty() {
+            let last_segment = partition.segments.last_mut().unwrap();
+            if last_segment.is_closed {
+                last_segment.end_offset = last_segment.current_offset;
+            }
+
+            partition.current_offset = last_segment.current_offset;
         }
 
-        partition.current_offset = last_segment.current_offset;
         partition.load_offsets(ConsumerKind::Consumer).await?;
         partition.load_offsets(ConsumerKind::ConsumerGroup).await?;
         info!(

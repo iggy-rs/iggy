@@ -25,6 +25,7 @@ async fn should_persist_partition_with_segment() {
             with_segment,
             setup.config.clone(),
             storage.clone(),
+            None,
         );
 
         partition.persist().await.unwrap();
@@ -50,6 +51,7 @@ async fn should_load_existing_partition_from_disk() {
             with_segment,
             setup.config.clone(),
             storage.clone(),
+            None,
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.path, with_segment).await;
@@ -109,6 +111,7 @@ async fn should_delete_existing_partition_from_disk() {
             with_segment,
             setup.config.clone(),
             storage.clone(),
+            None,
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.path, with_segment).await;

@@ -176,13 +176,12 @@ impl Topic {
             return expired_segments;
         }
 
-        let message_expiry = self.message_expiry.unwrap();
         for (_, partition) in self.partitions.iter() {
             let partition = partition.read().await;
-            let segments = partition
-                .get_expired_segments_start_offsets(message_expiry, now)
-                .await;
-            expired_segments.insert(partition.id, segments);
+            let segments = partition.get_expired_segments_start_offsets(now).await;
+            if !segments.is_empty() {
+                expired_segments.insert(partition.id, segments);
+            }
         }
 
         expired_segments

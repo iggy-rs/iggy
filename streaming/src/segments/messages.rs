@@ -213,7 +213,7 @@ impl Segment {
             saved_bytes
         );
 
-        if self.is_full() {
+        if self.is_full().await {
             self.end_offset = self.current_offset;
             self.is_closed = true;
             self.unsaved_messages = None;

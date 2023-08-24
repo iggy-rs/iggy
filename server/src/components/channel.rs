@@ -18,9 +18,9 @@ pub fn start(system: Arc<RwLock<System>>, receiver: Receiver<ServerCommand>) {
 
             let server_command = server_command.unwrap();
             match server_command {
-                ServerCommand::SaveMessages(enforce_sync) => {
+                ServerCommand::SaveMessages(enforce_fsync) => {
                     let system = system.read().await;
-                    let persister: Arc<dyn Persister> = match enforce_sync {
+                    let persister: Arc<dyn Persister> = match enforce_fsync {
                         true => Arc::new(streaming::persister::FileWithSyncPersister),
                         false => Arc::new(streaming::persister::FilePersister),
                     };

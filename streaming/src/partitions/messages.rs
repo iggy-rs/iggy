@@ -346,7 +346,7 @@ impl Partition {
 
         self.unsaved_messages_count += messages_count;
         if self.unsaved_messages_count >= self.config.partition.messages_required_to_save
-            || segment.is_full()
+            || segment.is_full().await
         {
             trace!(
             "Segment with start offset: {} for partition with ID: {} will be persisted on disk...",
@@ -375,6 +375,7 @@ impl Partition {
             &self.path,
             self.config.clone(),
             self.storage.clone(),
+            self.message_expiry,
         );
         new_segment.persist().await?;
         self.segments.push(new_segment);

@@ -79,7 +79,7 @@ pub struct CorsConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MessageSaverConfig {
     pub enabled: bool,
-    pub enforce_sync: bool,
+    pub enforce_fsync: bool,
     pub interval: u64,
 }
 
@@ -147,7 +147,7 @@ impl Default for MessageSaverConfig {
     fn default() -> MessageSaverConfig {
         MessageSaverConfig {
             enabled: true,
-            enforce_sync: true,
+            enforce_fsync: true,
             interval: 1000,
         }
     }

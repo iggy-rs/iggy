@@ -280,7 +280,7 @@ impl Partition {
                 "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
                 start_offset, self.id
             );
-            self.process_new_segment(start_offset).await?;
+            self.add_persisted_segment(start_offset).await?;
             segment = self.segments.last_mut().unwrap();
         }
 
@@ -358,27 +358,6 @@ impl Partition {
                 .await?;
             self.unsaved_messages_count = 0;
         }
-
-        Ok(())
-    }
-
-    async fn process_new_segment(&mut self, start_offset: u64) -> Result<(), Error> {
-        trace!(
-            "Current segment is full, creating new segment for partition with ID: {}",
-            self.id
-        );
-        let new_segment = Segment::create(
-            self.stream_id,
-            self.topic_id,
-            self.id,
-            start_offset,
-            &self.path,
-            self.config.clone(),
-            self.storage.clone(),
-            self.message_expiry,
-        );
-        new_segment.persist().await?;
-        self.segments.push(new_segment);
 
         Ok(())
     }

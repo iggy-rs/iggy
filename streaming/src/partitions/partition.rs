@@ -158,6 +158,8 @@ impl Partition {
                 expired_segments.push(segment.start_offset);
             }
         }
+
+        expired_segments.sort();
         expired_segments
     }
 

@@ -59,7 +59,10 @@ impl Topic {
             consumer_groups: HashMap::new(),
             current_partition_id: AtomicU32::new(1),
             message_expiry: match message_expiry {
-                Some(expiry) => Some(expiry),
+                Some(expiry) => match expiry {
+                    0 => None,
+                    _ => Some(expiry),
+                },
                 None => match config.segment.message_expiry {
                     0 => None,
                     expiry => Some(expiry),

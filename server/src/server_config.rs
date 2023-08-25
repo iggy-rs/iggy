@@ -8,6 +8,7 @@ use tracing::error;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ServerConfig {
+    pub message_cleaner: MessageCleanerConfig,
     pub message_saver: MessageSaverConfig,
     pub system: Arc<SystemConfig>,
     pub quic: QuicConfig,
@@ -77,6 +78,12 @@ pub struct CorsConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct MessageCleanerConfig {
+    pub enabled: bool,
+    pub interval: u64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct MessageSaverConfig {
     pub enabled: bool,
     pub enforce_fsync: bool,
@@ -86,6 +93,7 @@ pub struct MessageSaverConfig {
 impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
+            message_cleaner: MessageCleanerConfig::default(),
             message_saver: MessageSaverConfig::default(),
             system: Arc::new(SystemConfig::default()),
             quic: QuicConfig::default(),
@@ -139,6 +147,15 @@ impl Default for HttpConfig {
             address: "127.0.0.1:3000".to_string(),
             cors: CorsConfig::default(),
             tls: HttpTlsConfig::default(),
+        }
+    }
+}
+
+impl Default for MessageCleanerConfig {
+    fn default() -> MessageCleanerConfig {
+        MessageCleanerConfig {
+            enabled: true,
+            interval: 60,
         }
     }
 }

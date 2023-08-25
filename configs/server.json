@@ -49,6 +49,10 @@
       "key_file": "certs/iggy_key.pem"
     }
   },
+  "message_cleaner": {
+    "enabled": true,
+    "interval": 60
+  },
   "message_saver": {
     "enabled": true,
     "enforce_fsync": true,

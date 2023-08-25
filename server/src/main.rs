@@ -36,7 +36,7 @@ async fn main() -> Result<(), ServerError> {
     system.init().await?;
     let system = Arc::new(RwLock::new(system));
     let (sender, receiver) = flume::unbounded::<ServerCommand>();
-    message_cleaner::start(system.clone());
+    message_cleaner::start(config.message_cleaner, system.clone());
     message_saver::start(config.message_saver, sender.clone());
     channel::start(system.clone(), receiver);
 

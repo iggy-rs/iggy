@@ -1,3 +1,5 @@
+use crate::server_config::MessageCleanerConfig;
+use iggy::error::Error;
 use iggy::utils::timestamp;
 use std::sync::Arc;
 use std::time::Duration;
@@ -7,10 +9,23 @@ use tokio::sync::RwLock;
 use tokio::{task, time};
 use tracing::{error, info};
 
-pub fn start(system: Arc<RwLock<System>>) {
-    let duration = Duration::from_secs(60);
+pub fn start(config: MessageCleanerConfig, system: Arc<RwLock<System>>) {
+    if !config.enabled {
+        info!("Message cleaner is disabled.");
+        return;
+    }
+
+    if config.interval == 0 {
+        panic!("Message cleaner interval must be greater than 0.")
+    }
+
+    let duration = Duration::from_secs(config.interval);
     task::spawn(async move {
         let mut interval = time::interval(duration);
+        info!(
+            "Message cleaner is enabled, expired messages will be deleted every: {:?}.",
+            duration
+        );
         interval.tick().await;
         loop {
             interval.tick().await;
@@ -20,15 +35,19 @@ pub fn start(system: Arc<RwLock<System>>) {
             for stream in streams {
                 let topics = stream.get_topics();
                 for topic in topics {
-                    delete_expired_segments(topic, now).await;
+                    if delete_expired_segments(topic, now).await.is_err() {
+                        error!(
+                            "Failed to delete expired segments for stream ID: {}, topic ID: {}",
+                            topic.stream_id, topic.id
+                        );
+                    }
                 }
             }
         }
     });
 }
 
-// TODO: When the only segment is removed from partition, it should somehow store its current offset
-async fn delete_expired_segments(topic: &Topic, now: u64) {
+async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
     let expired_segments = topic
         .get_expired_segments_start_offsets_per_partition(now)
         .await;
@@ -37,7 +56,7 @@ async fn delete_expired_segments(topic: &Topic, now: u64) {
             "No expired segments found for stream ID: {}, topic ID: {}",
             topic.stream_id, topic.id
         );
-        return;
+        return Ok(());
     }
 
     info!(
@@ -58,13 +77,17 @@ async fn delete_expired_segments(topic: &Topic, now: u64) {
         }
         let partition = partition.unwrap();
         let mut partition = partition.write().await;
+        let mut last_end_offset = 0;
         for start_offset in start_offsets {
-            if partition.delete_segment(*start_offset).await.is_err() {
-                error!(
-                    "Failed to delete segment with start offset: {} for partition with ID: {} and topic with ID: {} and stream with ID: {}",
-                    start_offset, partition.id, partition.topic_id, partition.stream_id
-                );
-            }
+            let deleted_segment = partition.delete_segment(*start_offset).await?;
+            last_end_offset = deleted_segment.end_offset;
+        }
+
+        if partition.get_segments().is_empty() {
+            let start_offset = last_end_offset + 1;
+            partition.add_persisted_segment(start_offset).await?;
         }
     }
+
+    Ok(())
 }

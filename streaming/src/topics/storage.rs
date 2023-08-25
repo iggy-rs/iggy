@@ -179,7 +179,6 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::CannotOpenTopicInfo(topic.id, topic.stream_id));
         }
 
-        // TODO: Load message expiry
         let mut topic_info = String::new();
         if topic_info_file
             .unwrap()
@@ -190,7 +189,15 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::CannotReadTopicInfo(topic.id, topic.stream_id));
         }
 
-        topic.name = text::to_lowercase_non_whitespace(&topic_info);
+        let lines = topic_info.lines().collect::<Vec<&str>>();
+        let topic_name = text::to_lowercase_non_whitespace(lines.get(0).unwrap());
+        let message_expiry = match lines.get(1) {
+            Some(line) => line.parse::<u32>().ok(),
+            None => None,
+        };
+
+        topic.name = topic_name;
+        topic.message_expiry = message_expiry;
         let dir_entries = fs::read_dir(&topic.get_partitions_path()).await;
         if dir_entries.is_err() {
             return Err(Error::CannotReadPartitions(topic.id, topic.stream_id));
@@ -253,8 +260,8 @@ impl Storage<Topic> for FileTopicStorage {
         topic.load_messages_to_cache().await?;
 
         info!(
-            "Loaded topic: '{}' with ID: {} for stream with ID: {} from disk.",
-            &topic.name, &topic.id, topic.stream_id
+            "Loaded topic: '{}' with ID: {} for stream with ID: {} from disk. Message expiry: {:?}",
+            &topic.name, &topic.id, topic.stream_id, topic.message_expiry
         );
 
         Ok(())
@@ -283,10 +290,10 @@ impl Storage<Topic> for FileTopicStorage {
             ));
         }
 
-        // TODO: Save message expiry
+        let topic_info = format!("{}\n{}", topic.name, topic.message_expiry.unwrap_or(0));
         if self
             .persister
-            .overwrite(&topic.info_path, topic.name.as_bytes())
+            .overwrite(&topic.info_path, topic_info.as_bytes())
             .await
             .is_err()
         {

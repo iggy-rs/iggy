@@ -5,7 +5,7 @@ lto = true
 
 members = [
     "bench",
-    "client",
+    "cli",
     "samples",
     "iggy",
     "server",

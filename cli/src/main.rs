@@ -9,6 +9,7 @@ mod topics;
 
 use anyhow::Result;
 use clap::Parser;
+use figlet_rs::FIGfont;
 use iggy::args::Args;
 use iggy::client::Client;
 use iggy::client_error::ClientError;
@@ -25,6 +26,9 @@ use tracing::{error, info};
 async fn main() -> Result<(), ClientError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
+    let standard_font = FIGfont::standard().unwrap();
+    let figure = standard_font.convert("Iggy CLI");
+    println!("{}", figure.unwrap());
     let encryptor: Option<Box<dyn Encryptor>> = match args.encryption_key.is_empty() {
         true => None,
         false => Some(Box::new(

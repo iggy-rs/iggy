@@ -12,7 +12,7 @@
 
 The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to scale horizontally and handle **millions of messages per second** (actually, **it's already very fast**, see the benchmarks below).
 
-It is a pet project of mine to learn more about distributed systems and Rust. The name is an abbreviation for the Italian Greyhound - small yet extremely fast dogs, the best in their class. Just like mine lovely [Fabio & Cookie](https://www.instagram.com/fabio.and.cookie/) ❤️
+The name is an abbreviation for the Italian Greyhound - small yet extremely fast dogs, the best in their class. Just like mine lovely [Fabio & Cookie](https://www.instagram.com/fabio.and.cookie/) ❤️
 
 ---
 
@@ -63,7 +63,7 @@ There's an ongoing effort to build the administrative web UI for the server, whi
 
 You can find the `Dockerfile` and `docker-compose` in the root of the repository. To build and start the server, run: `docker compose up`.
 
-Additionally, you can run the `client` which is available in the running container, by executing: `docker exec -it iggy-server /client`.
+Additionally, you can run the `CLI` which is available in the running container, by executing: `docker exec -it iggy-server /cli`.
 
 Keep in mind that running the container on the OS other than Linux, where the Docker is running in the VM, might result in the significant performance degradation.
 
@@ -95,9 +95,9 @@ Start the server:
 
 `cargo r --bin server -r`
 
-Start the client (transports: `quic`, `tcp`, `http`):
+Start the CLI (transports: `quic`, `tcp`, `http`):
 
-`cargo r --bin client -r -- --transport tcp`
+`cargo r --bin cli -r -- --transport tcp`
 
 Create a stream named `dev` with ID 1:
 
@@ -111,9 +111,9 @@ Get stream details (ID 1):
 
 `stream.get|1`
 
-Create a topic named `dummy` with ID 1 and 2 partitions (IDs 1 and 2) for stream `dev` (ID 1):
+Create a topic named `sample` with ID 1 and 2 partitions (IDs 1 and 2) for stream `dev` (ID 1):
 
-`topic.create|1|1|2|dummy`
+`topic.create|1|1|2|sample`
 
 List available topics for stream `dev` (ID 1):
 
@@ -123,7 +123,7 @@ Get topic details (ID 1) for stream `dev` (ID 1):
 
 `topic.get|1|1`
 
-Send a message 'hello world' (ID 1) to the stream `dev` (ID 1) to topic `dummy` (ID 1) and partition 1:
+Send a message 'hello world' (ID 1) to the stream `dev` (ID 1) to topic `sample` (ID 1) and partition 1:
 
 `message.send|1|1|p|1|1|hello world`
 
@@ -131,7 +131,7 @@ Send another message 'lorem ipsum' (ID 2) to the same stream, topic and partitio
 
 `message.send|1|1|p|1|2|lorem ipsum`
 
-Poll messages by a regular consumer `c` (`g` for consumer group) with ID 0 from the stream `dev` (ID 1) for topic `dummy` (ID 1) and partition with ID 1, starting with offset (`o`) 0, messages count 2, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload:
+Poll messages by a regular consumer `c` (`g` for consumer group) with ID 0 from the stream `dev` (ID 1) for topic `sample` (ID 1) and partition with ID 1, starting with offset (`o`) 0, messages count 2, without auto commit (`n`) (storing consumer offset on server) and using string format `s` to render messages payload:
 
 `message.poll|c|0|1|1|1|o|0|2|n|s`
 
@@ -139,7 +139,7 @@ Finally, restart the server to see it is able to load the persisted data.
 
 The HTTP API endpoints can be found in [server.http](https://github.com/spetz/iggy/blob/master/server/server.http) file, which can be used with [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension for VS Code.
 
-To see the detailed logs from the client/server, run it with `RUST_LOG=trace` environment variable.
+To see the detailed logs from the CLI/server, run it with `RUST_LOG=trace` environment variable.
 
 **See the images below**
 
@@ -151,9 +151,9 @@ To see the detailed logs from the client/server, run it with `RUST_LOG=trace` en
 
 ![server start](assets/server_start.png)
 
-*Client start*
+*CLI start*
 
-![client start](assets/client_start.png)
+![cli_start](assets/cli_start.png)
 
 *Server restart*
 
@@ -254,7 +254,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 - [x] Implement the HTTP SDK for the client
 - [x] Implement the TCP SDK for the client
 - [x] Make use of the SDK in client project
-- [ ] Implement another SDK in C# for dotnet clients
+- [x] Implement another SDK in C# for dotnet clients
 
 #### Streaming
 
@@ -283,7 +283,7 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 - [x] Implement optional message headers
 - [x] Implement message deduplication
 - [x] Implement consumer groups for message ordering & horizontal scaling
-- [ ] Delete old messages bases on retention policy
+- [x] Delete old messages bases on retention policy
 
 #### Distribution
 
@@ -305,4 +305,4 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 
 #### UI
 
-- [ ] Build a simple UI for the server using chosen framework
+- [x] Build a simple UI for the server using chosen framework

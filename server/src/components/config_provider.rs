@@ -61,8 +61,7 @@ impl ConfigProvider for FileConfigProvider {
         }
 
         let config = config.unwrap();
-        let config_json = serde_json::to_string_pretty(&config).unwrap();
-        info!("Config loaded from path: '{}'\n{}", self.path, config_json);
+        info!("Config loaded from path: '{}'\n", self.path);
         Ok(config)
     }
 }

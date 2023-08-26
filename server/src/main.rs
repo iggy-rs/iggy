@@ -18,6 +18,7 @@ use crate::server_error::ServerError;
 use crate::tcp::tcp_server;
 use anyhow::Result;
 use clap::Parser;
+use figlet_rs::FIGfont;
 use std::sync::Arc;
 use streaming::persister::FileWithSyncPersister;
 use streaming::segments::storage::FileSegmentStorage;
@@ -30,6 +31,9 @@ use tracing::info;
 async fn main() -> Result<(), ServerError> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
+    let standard_font = FIGfont::standard().unwrap();
+    let figure = standard_font.convert("Iggy Server");
+    println!("{}", figure.unwrap());
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(config_provider.as_ref()).await?;
     let mut system = System::new(config.system.clone());

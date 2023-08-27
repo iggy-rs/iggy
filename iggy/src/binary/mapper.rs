@@ -237,10 +237,10 @@ fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), Err
     let topics_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
     let size_bytes = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
     let messages_count = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
-    let name_length =
-        u32::from_le_bytes(payload[position + 24..position + 28].try_into()?) as usize;
-    let name = from_utf8(&payload[position + 28..position + 28 + name_length])?.to_string();
-    let read_bytes = 4 + 4 + 8 + 8 + 4 + name_length;
+    let name_length = payload[position + 24];
+    let name =
+        from_utf8(&payload[position + 25..position + 25 + name_length as usize])?.to_string();
+    let read_bytes = 4 + 4 + 8 + 8 + 1 + name_length as usize;
     Ok((
         Stream {
             id,
@@ -286,6 +286,7 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
         name: topic.name,
         size_bytes: topic.size_bytes,
         messages_count: topic.messages_count,
+        message_expiry: topic.message_expiry,
         partitions_count: partitions.len() as u32,
         partitions,
     };
@@ -295,18 +296,24 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
 fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), Error> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let partitions_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-    let size_bytes = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
-    let messages_count = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
-    let name_length =
-        u32::from_le_bytes(payload[position + 24..position + 28].try_into()?) as usize;
-    let name = from_utf8(&payload[position + 28..position + 28 + name_length])?.to_string();
-    let read_bytes = 4 + 4 + 8 + 8 + 4 + name_length;
+    let message_expiry = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
+    let message_expiry = match message_expiry {
+        0 => None,
+        _ => Some(message_expiry),
+    };
+    let size_bytes = u64::from_le_bytes(payload[position + 12..position + 20].try_into()?);
+    let messages_count = u64::from_le_bytes(payload[position + 20..position + 28].try_into()?);
+    let name_length = payload[position + 28];
+    let name =
+        from_utf8(&payload[position + 29..position + 29 + name_length as usize])?.to_string();
+    let read_bytes = 4 + 4 + 4 + 8 + 8 + 1 + name_length as usize;
     Ok((
         Topic {
             id,
             partitions_count,
             size_bytes,
             messages_count,
+            message_expiry,
             name,
         },
         read_bytes,

@@ -16,7 +16,12 @@ pub async fn handle(
     let mut system = system.write().await;
     system
         .get_stream_mut(&command.stream_id)?
-        .create_topic(command.topic_id, &command.name, command.partitions_count)
+        .create_topic(
+            command.topic_id,
+            &command.name,
+            command.partitions_count,
+            command.message_expiry,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

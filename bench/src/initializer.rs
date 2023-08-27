@@ -37,6 +37,7 @@ pub async fn init_streams(
                     topic_id,
                     partitions_count,
                     name,
+                    message_expiry: None,
                 })
                 .await?;
         }

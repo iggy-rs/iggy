@@ -71,6 +71,7 @@ async fn init_system(
         topic_id: TOPIC_ID,
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
+        message_expiry: None,
     };
     system_client.create_topic(&create_topic).await.unwrap();
 

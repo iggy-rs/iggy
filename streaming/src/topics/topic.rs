@@ -22,7 +22,7 @@ pub struct Topic {
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
     pub(crate) current_partition_id: AtomicU32,
-    pub(crate) message_expiry: Option<u32>,
+    pub message_expiry: Option<u32>,
 }
 
 impl Topic {

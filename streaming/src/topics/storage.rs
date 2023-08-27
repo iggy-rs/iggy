@@ -192,7 +192,14 @@ impl Storage<Topic> for FileTopicStorage {
         let lines = topic_info.lines().collect::<Vec<&str>>();
         let topic_name = text::to_lowercase_non_whitespace(lines.first().unwrap());
         let message_expiry = match lines.get(1) {
-            Some(line) => line.parse::<u32>().ok(),
+            Some(line) => {
+                let message_expiry = line.parse::<u32>().unwrap();
+                if message_expiry == 0 {
+                    None
+                } else {
+                    Some(message_expiry)
+                }
+            }
             None => None,
         };
 

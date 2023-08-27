@@ -147,16 +147,20 @@ async fn extend_stream(stream: &Stream, bytes: &mut Vec<u8>) {
     bytes.put_u32_le(stream.get_topics().len() as u32);
     bytes.put_u64_le(stream.get_size_bytes().await);
     bytes.put_u64_le(stream.get_messages_count().await);
-    bytes.put_u32_le(stream.name.len() as u32);
+    bytes.put_u8(stream.name.len() as u8);
     bytes.extend(stream.name.as_bytes());
 }
 
 async fn extend_topic(topic: &Topic, bytes: &mut Vec<u8>) {
     bytes.put_u32_le(topic.id);
     bytes.put_u32_le(topic.get_partitions().len() as u32);
+    match topic.message_expiry {
+        Some(message_expiry) => bytes.put_u32_le(message_expiry),
+        None => bytes.put_u32_le(0),
+    };
     bytes.put_u64_le(topic.get_size_bytes().await);
     bytes.put_u64_le(topic.get_messages_count().await);
-    bytes.put_u32_le(topic.name.len() as u32);
+    bytes.put_u8(topic.name.len() as u8);
     bytes.extend(topic.name.as_bytes());
 }
 

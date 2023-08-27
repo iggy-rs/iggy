@@ -63,19 +63,25 @@ impl FromStr for CreateStream {
 
 impl BytesSerializable for CreateStream {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(4 + self.name.len());
+        let mut bytes = Vec::with_capacity(5 + self.name.len());
         bytes.put_u32_le(self.stream_id);
+        bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
         bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<CreateStream, Error> {
-        if bytes.len() < 5 {
+        if bytes.len() < 6 {
             return Err(Error::InvalidCommand);
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
-        let name = from_utf8(&bytes[4..])?.to_string();
+        let name_length = bytes[4];
+        let name = from_utf8(&bytes[5..5 + name_length as usize])?.to_string();
+        if name.len() != name_length as usize {
+            return Err(Error::InvalidCommand);
+        }
+
         let command = CreateStream { stream_id, name };
         command.validate()?;
         Ok(command)
@@ -101,7 +107,8 @@ mod tests {
 
         let bytes = command.as_bytes();
         let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
-        let name = from_utf8(&bytes[4..]).unwrap();
+        let name_length = bytes[4];
+        let name = from_utf8(&bytes[5..5 + name_length as usize]).unwrap();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -112,7 +119,10 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let stream_id = 1u32;
         let name = "test".to_string();
-        let bytes = [&stream_id.to_le_bytes(), name.as_bytes()].concat();
+        let mut bytes = Vec::new();
+        bytes.put_u32_le(stream_id);
+        bytes.put_u8(name.len() as u8);
+        bytes.extend(name.as_bytes());
         let command = CreateStream::from_bytes(&bytes);
         assert!(command.is_ok());
 

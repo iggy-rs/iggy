@@ -41,6 +41,7 @@ async fn init_system(client: &dyn Client) {
             topic_id: TOPIC_ID,
             partitions_count: 1,
             name: "sample-topic".to_string(),
+            message_expiry: None,
         })
         .await
     {

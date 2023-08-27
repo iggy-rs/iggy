@@ -111,9 +111,9 @@ Get stream details (ID 1):
 
 `stream.get|1`
 
-Create a topic named `sample` with ID 1 and 2 partitions (IDs 1 and 2) for stream `dev` (ID 1):
+Create a topic named `sample` with ID 1, 2 partitions (IDs 1 and 2) and disabled message expiry (0 seconds) for stream `dev` (ID 1):
 
-`topic.create|1|1|2|sample`
+`topic.create|1|1|2|0|sample`
 
 List available topics for stream `dev` (ID 1):
 

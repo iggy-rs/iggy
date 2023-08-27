@@ -11,6 +11,7 @@ impl Stream {
         id: u32,
         name: &str,
         partitions_count: u32,
+        message_expiry: Option<u32>,
     ) -> Result<(), Error> {
         if self.topics.contains_key(&id) {
             return Err(Error::TopicIdAlreadyExists(id, self.id));
@@ -21,7 +22,6 @@ impl Stream {
             return Err(Error::TopicNameAlreadyExists(name, self.id));
         }
 
-        // TODO: Include message expiry
         let topic = Topic::create(
             self.id,
             id,
@@ -30,7 +30,7 @@ impl Stream {
             &self.topics_path,
             self.config.clone(),
             self.storage.clone(),
-            None,
+            message_expiry,
         )?;
         topic.persist().await?;
         info!(
@@ -149,10 +149,14 @@ mod tests {
         let topic_id = 2;
         let topic_name = "test_topic";
         let path = "/stream";
+        let message_expiry = Some(10);
         let config = Arc::new(SystemConfig::default());
         let storage = Arc::new(get_test_system_storage());
         let mut stream = Stream::create(stream_id, stream_name, path, config, storage);
-        stream.create_topic(topic_id, topic_name, 1).await.unwrap();
+        stream
+            .create_topic(topic_id, topic_name, 1, message_expiry)
+            .await
+            .unwrap();
 
         let topic = stream.get_topic(&Identifier::numeric(topic_id).unwrap());
         assert!(topic.is_ok());

@@ -6,6 +6,7 @@ pub struct Topic {
     pub id: u32,
     pub name: String,
     pub size_bytes: u64,
+    pub message_expiry: Option<u32>,
     pub messages_count: u64,
     pub partitions_count: u32,
 }
@@ -15,6 +16,7 @@ pub struct TopicDetails {
     pub id: u32,
     pub name: String,
     pub size_bytes: u64,
+    pub message_expiry: Option<u32>,
     pub messages_count: u64,
     pub partitions_count: u32,
     pub partitions: Vec<Partition>,

@@ -5,6 +5,7 @@ use rand::Rng;
 
 const CURRENCY_PAIRS: &[&str] = &["EUR/USD", "EUR/GBP", "USD/GBP", "EUR/PLN", "USD/PLN"];
 
+#[derive(Debug, Default)]
 pub struct MessagesGenerator {
     order_id: u64,
     rng: ThreadRng,

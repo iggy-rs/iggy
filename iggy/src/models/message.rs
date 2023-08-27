@@ -85,7 +85,7 @@ impl Message {
     pub fn from_message(message: &send_messages::Message) -> Self {
         let timestamp = timestamp::get();
         let checksum = checksum::calculate(&message.payload);
-        let headers = message.headers.as_ref().map(|headers| headers.clone());
+        let headers = message.headers.as_ref().cloned();
 
         Self::empty(
             timestamp,

@@ -10,6 +10,7 @@ use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
 use std::collections::HashMap;
+use std::str::FromStr;
 use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;

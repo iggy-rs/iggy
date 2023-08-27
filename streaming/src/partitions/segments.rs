@@ -29,7 +29,7 @@ impl Partition {
             .segments
             .iter()
             .find(|s| s.start_offset == start_offset);
-        if let None = segment {
+        if segment.is_none() {
             return Err(Error::SegmentNotFound);
         }
 

@@ -190,7 +190,7 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         let lines = topic_info.lines().collect::<Vec<&str>>();
-        let topic_name = text::to_lowercase_non_whitespace(lines.get(0).unwrap());
+        let topic_name = text::to_lowercase_non_whitespace(lines.first().unwrap());
         let message_expiry = match lines.get(1) {
             Some(line) => line.parse::<u32>().ok(),
             None => None,

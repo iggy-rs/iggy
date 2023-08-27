@@ -61,7 +61,7 @@ impl ConfigProvider for FileConfigProvider {
         }
 
         let config = config.unwrap();
-        info!("Config loaded from path: '{}'\n", self.path);
+        info!("Config loaded from path: '{}'", self.path);
         Ok(config)
     }
 }

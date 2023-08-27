@@ -170,7 +170,7 @@ impl Validatable for SendMessages {
         let mut payload_size = 0;
         for message in &self.messages {
             if let Some(headers) = &message.headers {
-                for (_, value) in headers {
+                for value in headers.values() {
                     headers_size += value.value.len() as u32;
                     if headers_size > MAX_HEADERS_SIZE {
                         return Err(Error::TooBigHeadersPayload);
@@ -229,7 +229,7 @@ impl Message {
         headers: Option<HashMap<HeaderKey, HeaderValue>>,
     ) -> Self {
         Message {
-            id: id.unwrap_or_else(|| 0),
+            id: id.unwrap_or(0),
             length: payload.len() as u32,
             payload,
             headers,

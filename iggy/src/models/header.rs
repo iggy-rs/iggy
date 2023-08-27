@@ -48,12 +48,6 @@ impl TryFrom<&str> for HeaderKey {
     }
 }
 
-impl Into<String> for HeaderKey {
-    fn into(self) -> String {
-        self.0
-    }
-}
-
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HeaderValue {
@@ -242,6 +236,13 @@ impl Display for HeaderKind {
     }
 }
 
+impl FromStr for HeaderValue {
+    type Err = Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::from(HeaderKind::String, s.as_bytes())
+    }
+}
+
 impl HeaderValue {
     pub fn from_raw(value: &[u8]) -> Result<Self, Error> {
         Self::from(HeaderKind::Raw, value)
@@ -253,10 +254,6 @@ impl HeaderValue {
         }
 
         Ok(&self.value)
-    }
-
-    pub fn from_str(value: &str) -> Result<Self, Error> {
-        Self::from(HeaderKind::String, value.as_bytes())
     }
 
     pub fn as_str(&self) -> Result<&str, Error> {

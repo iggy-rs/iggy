@@ -88,15 +88,15 @@ fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
     );
     match message_type {
         ORDER_CREATED_TYPE => {
-            let order_created = serde_json::from_str::<OrderCreated>(&payload)?;
+            let order_created = serde_json::from_str::<OrderCreated>(payload)?;
             info!("{:#?}", order_created);
         }
         ORDER_CONFIRMED_TYPE => {
-            let order_confirmed = serde_json::from_str::<OrderConfirmed>(&payload)?;
+            let order_confirmed = serde_json::from_str::<OrderConfirmed>(payload)?;
             info!("{:#?}", order_confirmed);
         }
         ORDER_REJECTED_TYPE => {
-            let order_rejected = serde_json::from_str::<OrderRejected>(&payload)?;
+            let order_rejected = serde_json::from_str::<OrderRejected>(payload)?;
             info!("{:#?}", order_rejected);
         }
         _ => {

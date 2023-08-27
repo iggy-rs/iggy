@@ -13,6 +13,7 @@ use samples::shared::messages_generator::MessagesGenerator;
 use samples::shared::system;
 use std::collections::HashMap;
 use std::error::Error;
+use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
 

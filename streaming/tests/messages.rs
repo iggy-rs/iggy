@@ -6,6 +6,7 @@ use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::models::message::{Message, MessageState};
 use iggy::utils::{checksum, timestamp};
 use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 use streaming::config::{PartitionConfig, SystemConfig};
 use streaming::partitions::partition::Partition;

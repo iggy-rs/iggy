@@ -263,7 +263,7 @@ impl IggyClient {
                 let mut initialized = false;
                 let mut stream_id = Identifier::numeric(1).unwrap();
                 let mut topic_id = Identifier::numeric(1).unwrap();
-                let mut key = Partitioning::partition_id(0);
+                let mut key = Partitioning::partition_id(1);
                 let mut batch_messages = true;
 
                 for send_messages in send_messages_batch.commands.iter() {
@@ -310,6 +310,10 @@ impl IggyClient {
                     }
                 }
 
+                if !messages.is_empty() {
+                    batches.push_back(messages);
+                }
+
                 while let Some(messages) = batches.pop_front() {
                     let mut send_messages = SendMessages {
                         stream_id: Identifier::from_identifier(&stream_id),
@@ -328,6 +332,10 @@ impl IggyClient {
                             "There was an error when sending the messages batch: {:?}",
                             error
                         );
+
+                        if !send_messages.messages.is_empty() {
+                            batches.push_back(send_messages.messages);
+                        }
                     }
                 }
 

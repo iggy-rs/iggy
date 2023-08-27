@@ -102,7 +102,7 @@ impl Topic {
 
     pub fn get_partition(&self, partition_id: u32) -> Result<&RwLock<Partition>, Error> {
         let partition = self.partitions.get(&partition_id);
-        if let None = partition {
+        if partition.is_none() {
             return Err(Error::PartitionNotFound(partition_id));
         }
 

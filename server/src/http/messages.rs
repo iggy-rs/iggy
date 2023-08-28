@@ -32,9 +32,9 @@ async fn poll_messages(
     let system = system.read().await;
     let messages = system
         .poll_messages(
+            consumer,
             &query.stream_id,
             &query.topic_id,
-            consumer,
             query.partition_id,
             query.strategy,
             query.count,

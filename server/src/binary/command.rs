@@ -17,25 +17,6 @@ use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tracing::trace;
 
-/*
-  FRAME: | COMMAND |   DATA    |
-         | 1 byte  |  n bytes  |
-
-1. PING: | COMMAND |
-         | 1 byte  |
-
-2. POLL: | COMMAND |   STREAM  |   TOPIC   |    KIND   |   VALUE   |   COUNT   |
-         | 1 byte  |  4 bytes  |  4 bytes  |   1 byte  |  8 bytes  |  4 bytes  |
-
-3. SEND: | COMMAND |   STREAM  |    TOPIC   |    KIND   |   VALUE   |   COUNT   |  PAYLOAD  |
-         | 1 byte  |  4 bytes  |   4 bytes  |   1 byte  |  8 bytes  |  4 bytes  |  n bytes  |
-*/
-
-/*
-  RESPONSE: |   STATUS  |   DATA    |
-            |   1 byte  |  n bytes  |
-*/
-
 pub async fn handle(
     command: &Command,
     sender: &mut dyn Sender,
@@ -73,7 +54,6 @@ async fn try_handle(
         client_context
     );
     match command {
-        Command::Kill(command) => kill_handler::handle(command, sender).await,
         Command::Ping(command) => ping_handler::handle(command, sender).await,
         Command::GetStats(command) => get_stats_handler::handle(command, sender, system).await,
         Command::GetMe(command) => {

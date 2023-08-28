@@ -10,7 +10,6 @@ pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError>
     let command = Command::from_str(input).map_err(|_| ClientError::InvalidCommand)?;
     info!("Handling '{}' command...", command);
     match command {
-        Command::Kill(payload) => system::kill(&payload, client).await,
         Command::Ping(payload) => system::ping(&payload, client).await,
         Command::GetStats(payload) => system::get_stats(&payload, client).await,
         Command::GetMe(payload) => system::get_me(&payload, client).await,

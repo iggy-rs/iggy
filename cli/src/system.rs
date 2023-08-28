@@ -4,14 +4,8 @@ use iggy::system::get_client::GetClient;
 use iggy::system::get_clients::GetClients;
 use iggy::system::get_me::GetMe;
 use iggy::system::get_stats::GetStats;
-use iggy::system::kill::Kill;
 use iggy::system::ping::Ping;
 use tracing::info;
-
-pub async fn kill(command: &Kill, client: &dyn Client) -> Result<(), ClientError> {
-    client.kill(command).await?;
-    Ok(())
-}
 
 pub async fn ping(command: &Ping, client: &dyn Client) -> Result<(), ClientError> {
     client.ping(command).await?;

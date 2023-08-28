@@ -20,7 +20,7 @@ impl Topic {
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
         if !self.has_partitions() {
-            return Err(Error::NoPartitions(self.id, self.stream_id));
+            return Err(Error::NoPartitions(self.topic_id, self.stream_id));
         }
 
         let partition = self.partitions.get(&partition_id);
@@ -46,7 +46,7 @@ impl Topic {
         messages: Vec<Message>,
     ) -> Result<(), Error> {
         if !self.has_partitions() {
-            return Err(Error::NoPartitions(self.id, self.stream_id));
+            return Err(Error::NoPartitions(self.topic_id, self.stream_id));
         }
 
         if messages.is_empty() {
@@ -120,7 +120,10 @@ impl Topic {
         for (_, partition) in self.partitions.iter_mut() {
             let mut partition = partition.write().await;
             if partition.segments.is_empty() {
-                trace!("No segments found for partition with ID: {}", partition.id);
+                trace!(
+                    "No segments found for partition with ID: {}",
+                    partition.partition_id
+                );
                 continue;
             }
 
@@ -135,7 +138,7 @@ impl Topic {
             trace!(
                 "Loading {} messages for partition with ID: {} for topic with ID: {} and stream with ID: {} from offset: {} to offset: {}...",
                 messages_count,
-                partition.id,
+                partition.partition_id,
                 partition.topic_id,
                 partition.stream_id,
                 start_offset,
@@ -156,7 +159,7 @@ impl Topic {
             trace!(
                 "Loaded {} messages for partition with ID: {} for topic with ID: {} and stream with ID: {} from offset: {} to offset: {}.",
                 messages_count,
-                partition.id,
+                partition.partition_id,
                 partition.topic_id,
                 partition.stream_id,
                 start_offset,
@@ -180,7 +183,7 @@ impl Topic {
             let partition = partition.read().await;
             let segments = partition.get_expired_segments_start_offsets(now).await;
             if !segments.is_empty() {
-                expired_segments.insert(partition.id, segments);
+                expired_segments.insert(partition.partition_id, segments);
             }
         }
 
@@ -225,7 +228,7 @@ mod tests {
         for partition in partitions {
             let partition = partition.read().await;
             let messages = partition.messages.as_ref().unwrap().to_vec();
-            if partition.id == partition_id {
+            if partition.partition_id == partition_id {
                 assert_eq!(messages.len() as u32, messages_count);
             } else {
                 assert_eq!(messages.len() as u32, 0);

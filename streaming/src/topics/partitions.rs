@@ -20,7 +20,7 @@ impl Topic {
         for partition_id in current_partitions_count + 1..=current_partitions_count + count {
             let partition = Partition::create(
                 self.stream_id,
-                self.id,
+                self.topic_id,
                 partition_id,
                 &self.get_partitions_path(),
                 true,

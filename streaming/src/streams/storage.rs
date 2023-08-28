@@ -89,7 +89,7 @@ impl Storage<Stream> for FileStreamStorage {
                 if topic.load().await.is_err() {
                     error!(
                         "Failed to load topic with ID: {} for stream with ID: {}.",
-                        topic.id, topic.stream_id
+                        topic.topic_id, topic.stream_id
                     );
                     return;
                 }
@@ -101,10 +101,10 @@ impl Storage<Stream> for FileStreamStorage {
 
         join_all(load_topics).await;
         for topic in loaded_topics.lock().await.drain(..) {
-            if stream.topics.contains_key(&topic.id) {
+            if stream.topics.contains_key(&topic.topic_id) {
                 error!(
                     "Topic with ID: '{}' already exists for stream with ID: {}.",
-                    &topic.id, &stream.id
+                    &topic.topic_id, &stream.id
                 );
                 continue;
             }
@@ -117,8 +117,8 @@ impl Storage<Stream> for FileStreamStorage {
                 continue;
             }
 
-            stream.topics_ids.insert(topic.name.clone(), topic.id);
-            stream.topics.insert(topic.id, topic);
+            stream.topics_ids.insert(topic.name.clone(), topic.topic_id);
+            stream.topics.insert(topic.topic_id, topic);
         }
 
         info!(

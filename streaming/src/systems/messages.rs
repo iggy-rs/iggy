@@ -13,9 +13,9 @@ use tracing::{error, trace};
 impl System {
     pub async fn poll_messages(
         &self,
+        consumer: PollingConsumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        consumer: PollingConsumer,
         partition_id: u32,
         strategy: PollingStrategy,
         count: u32,
@@ -28,7 +28,7 @@ impl System {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         if !topic.has_partitions() {
-            return Err(Error::NoPartitions(topic.id, topic.stream_id));
+            return Err(Error::NoPartitions(topic.topic_id, topic.stream_id));
         }
 
         let partition_id = match consumer {

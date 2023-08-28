@@ -11,7 +11,7 @@ use tokio::sync::RwLock;
 pub struct Partition {
     pub stream_id: u32,
     pub topic_id: u32,
-    pub id: u32,
+    pub partition_id: u32,
     pub path: String,
     pub offsets_path: String,
     pub consumer_offsets_path: String,
@@ -45,7 +45,7 @@ impl Partition {
     pub fn empty(
         stream_id: u32,
         topic_id: u32,
-        id: u32,
+        partition_id: u32,
         partitions_path: &str,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
@@ -53,7 +53,7 @@ impl Partition {
         Partition::create(
             stream_id,
             topic_id,
-            id,
+            partition_id,
             partitions_path,
             false,
             config,
@@ -65,21 +65,21 @@ impl Partition {
     pub fn create(
         stream_id: u32,
         topic_id: u32,
-        id: u32,
+        partition_id: u32,
         partitions_path: &str,
         with_segment: bool,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: Option<u32>,
     ) -> Partition {
-        let path = Self::get_path(id, partitions_path);
+        let path = Self::get_path(partition_id, partitions_path);
         let offsets_path = Self::get_offsets_path(&path);
         let consumer_offsets_path = Self::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Self::get_consumer_group_offsets_path(&offsets_path);
         let mut partition = Partition {
             stream_id,
             topic_id,
-            id,
+            partition_id,
             path,
             offsets_path,
             consumer_offsets_path,
@@ -113,7 +113,7 @@ impl Partition {
             let segment = Segment::create(
                 stream_id,
                 topic_id,
-                id,
+                partition_id,
                 0,
                 &partition.path,
                 partition.config.clone(),
@@ -193,11 +193,11 @@ mod tests {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
-        let id = 3;
+        let partition_id = 3;
         let partitions_path = &format!("/topics/{topic_id}/partitions");
         let with_segment = true;
         let config = Arc::new(SystemConfig::default());
-        let path = Partition::get_path(id, partitions_path);
+        let path = Partition::get_path(partition_id, partitions_path);
         let offsets_path = Partition::get_offsets_path(&path);
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
@@ -207,7 +207,7 @@ mod tests {
         let partition = Partition::create(
             stream_id,
             topic_id,
-            id,
+            partition_id,
             partitions_path,
             with_segment,
             config,
@@ -217,7 +217,7 @@ mod tests {
 
         assert_eq!(partition.stream_id, stream_id);
         assert_eq!(partition.topic_id, topic_id);
-        assert_eq!(partition.id, id);
+        assert_eq!(partition.partition_id, partition_id);
         assert_eq!(partition.path, path);
         assert_eq!(partition.offsets_path, offsets_path);
         assert_eq!(partition.consumer_offsets_path, consumer_offsets_path);

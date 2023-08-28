@@ -13,6 +13,7 @@ use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tracing::{info, trace};
 
+#[derive(Debug)]
 pub struct System {
     pub base_path: String,
     pub streams_path: String,

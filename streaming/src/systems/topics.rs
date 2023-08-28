@@ -20,7 +20,7 @@ impl System {
             .await?;
         let client_manager = self.client_manager.read().await;
         client_manager
-            .delete_consumer_groups_for_topic(stream_id_value, topic.id)
+            .delete_consumer_groups_for_topic(stream_id_value, topic.topic_id)
             .await;
         Ok(())
     }

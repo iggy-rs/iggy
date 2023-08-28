@@ -26,7 +26,6 @@ use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
 use crate::system::get_stats::GetStats;
-use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
@@ -59,7 +58,6 @@ pub trait SystemClient {
     async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, Error>;
     async fn get_clients(&self, command: &GetClients) -> Result<Vec<ClientInfo>, Error>;
     async fn ping(&self, command: &Ping) -> Result<(), Error>;
-    async fn kill(&self, command: &Kill) -> Result<(), Error>;
 }
 
 #[async_trait]

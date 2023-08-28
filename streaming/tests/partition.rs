@@ -59,7 +59,7 @@ async fn should_load_existing_partition_from_disk() {
         let mut loaded_partition = Partition::empty(
             stream_id,
             topic_id,
-            partition.id,
+            partition.partition_id,
             &setup.path,
             setup.config.clone(),
             storage.clone(),
@@ -67,7 +67,7 @@ async fn should_load_existing_partition_from_disk() {
         loaded_partition.load().await.unwrap();
 
         assert_eq!(loaded_partition.stream_id, partition.stream_id);
-        assert_eq!(loaded_partition.id, partition.id);
+        assert_eq!(loaded_partition.partition_id, partition.partition_id);
         assert_eq!(loaded_partition.path, partition.path);
         assert_eq!(loaded_partition.offsets_path, partition.offsets_path);
         assert_eq!(loaded_partition.current_offset, partition.current_offset);

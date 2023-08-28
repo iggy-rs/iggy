@@ -152,7 +152,7 @@ async fn extend_stream(stream: &Stream, bytes: &mut Vec<u8>) {
 }
 
 async fn extend_topic(topic: &Topic, bytes: &mut Vec<u8>) {
-    bytes.put_u32_le(topic.id);
+    bytes.put_u32_le(topic.topic_id);
     bytes.put_u32_le(topic.get_partitions().len() as u32);
     match topic.message_expiry {
         Some(message_expiry) => bytes.put_u32_le(message_expiry),
@@ -165,7 +165,7 @@ async fn extend_topic(topic: &Topic, bytes: &mut Vec<u8>) {
 }
 
 fn extend_partition(partition: &Partition, bytes: &mut Vec<u8>) {
-    bytes.put_u32_le(partition.id);
+    bytes.put_u32_le(partition.partition_id);
     bytes.put_u32_le(partition.get_segments().len() as u32);
     bytes.put_u64_le(partition.current_offset);
     bytes.put_u64_le(partition.get_size_bytes());

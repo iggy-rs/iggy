@@ -35,6 +35,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
   - Next N messages for the specific consumer
 - Possibility of **auto committing the offset** (e.g. to achieve *at-most-once* delivery)
 - **Consumer groups** providing the message ordering and horizontal scaling across the connected clients
+- **Message expiry** with auto deletion based on the configurable **retention policy**
 - Additional features such as **server side message deduplication**
 - **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM

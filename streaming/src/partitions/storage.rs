@@ -45,12 +45,12 @@ impl Storage<Partition> for FilePartitionStorage {
     async fn load(&self, partition: &mut Partition) -> Result<(), Error> {
         info!(
             "Loading partition with ID: {} for stream with ID: {} and topic with ID: {}, for path: {} from disk...",
-            partition.id, partition.stream_id, partition.topic_id, partition.path
+            partition.partition_id, partition.stream_id, partition.topic_id, partition.path
         );
         let dir_entries = fs::read_dir(&partition.path).await;
         if dir_entries.is_err() {
             return Err(Error::CannotReadPartitions(
-                partition.id,
+                partition.partition_id,
                 partition.stream_id,
             ));
         }
@@ -78,7 +78,7 @@ impl Storage<Partition> for FilePartitionStorage {
             let mut segment = Segment::create(
                 partition.stream_id,
                 partition.topic_id,
-                partition.id,
+                partition.partition_id,
                 start_offset,
                 &partition.path,
                 partition.config.clone(),
@@ -96,20 +96,20 @@ impl Storage<Partition> for FilePartitionStorage {
             }
 
             if partition.config.partition.validate_checksum {
-                info!("Validating messages checksum for partition with ID: {} and segment with start offset: {}...", partition.id, segment.start_offset);
+                info!("Validating messages checksum for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
                 segment.storage.segment.load_checksums(&segment).await?;
-                info!("Validated messages checksum for partition with ID: {} and segment with start offset: {}.", partition.id, segment.start_offset);
+                info!("Validated messages checksum for partition with ID: {} and segment with start offset: {}.", partition.partition_id, segment.start_offset);
             }
 
             // Load the unique message IDs for the partition if the deduplication feature is enabled.
             if partition.message_ids.is_some() {
-                info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", partition.id, segment.start_offset);
+                info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
                 let partition_message_ids = partition.message_ids.as_mut().unwrap();
                 let message_ids = segment.storage.segment.load_message_ids(&segment).await?;
                 for message_id in message_ids {
                     partition_message_ids.insert(message_id, true);
                 }
-                info!("Loaded: {} unique message IDs for partition with ID: {} and segment with start offset: {}...", partition_message_ids.len(), partition.id, segment.start_offset);
+                info!("Loaded: {} unique message IDs for partition with ID: {} and segment with start offset: {}...", partition_message_ids.len(), partition.partition_id, segment.start_offset);
             }
 
             partition.segments.push(segment);
@@ -148,7 +148,7 @@ impl Storage<Partition> for FilePartitionStorage {
         partition.load_offsets(ConsumerKind::ConsumerGroup).await?;
         info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
-            partition.id, partition.stream_id, partition.topic_id, partition.current_offset
+            partition.partition_id, partition.stream_id, partition.topic_id, partition.current_offset
         );
 
         Ok(())
@@ -157,11 +157,11 @@ impl Storage<Partition> for FilePartitionStorage {
     async fn save(&self, partition: &Partition) -> Result<(), Error> {
         info!(
             "Saving partition with start ID: {} for stream with ID: {} and topic with ID: {}...",
-            partition.id, partition.stream_id, partition.topic_id
+            partition.partition_id, partition.stream_id, partition.topic_id
         );
         if create_dir(&partition.path).await.is_err() {
             return Err(Error::CannotCreatePartitionDirectory(
-                partition.id,
+                partition.partition_id,
                 partition.stream_id,
                 partition.topic_id,
             ));
@@ -170,10 +170,10 @@ impl Storage<Partition> for FilePartitionStorage {
         if create_dir(&partition.offsets_path).await.is_err() {
             error!(
                 "Failed to create offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-                partition.id, partition.stream_id, partition.topic_id
+                partition.partition_id, partition.stream_id, partition.topic_id
             );
             return Err(Error::CannotCreatePartition(
-                partition.id,
+                partition.partition_id,
                 partition.stream_id,
                 partition.topic_id,
             ));
@@ -182,10 +182,10 @@ impl Storage<Partition> for FilePartitionStorage {
         if create_dir(&partition.consumer_offsets_path).await.is_err() {
             error!(
                 "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-                partition.id, partition.stream_id, partition.topic_id
+                partition.partition_id, partition.stream_id, partition.topic_id
             );
             return Err(Error::CannotCreatePartition(
-                partition.id,
+                partition.partition_id,
                 partition.stream_id,
                 partition.topic_id,
             ));
@@ -197,10 +197,10 @@ impl Storage<Partition> for FilePartitionStorage {
         {
             error!(
                 "Failed to create consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-                partition.id, partition.stream_id, partition.topic_id
+                partition.partition_id, partition.stream_id, partition.topic_id
             );
             return Err(Error::CannotCreatePartition(
-                partition.id,
+                partition.partition_id,
                 partition.stream_id,
                 partition.topic_id,
             ));
@@ -210,7 +210,7 @@ impl Storage<Partition> for FilePartitionStorage {
             segment.persist().await?;
         }
 
-        info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", partition.id, partition.stream_id, partition.topic_id, partition.path);
+        info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", partition.partition_id, partition.stream_id, partition.topic_id, partition.path);
 
         Ok(())
     }
@@ -218,18 +218,18 @@ impl Storage<Partition> for FilePartitionStorage {
     async fn delete(&self, partition: &Partition) -> Result<(), Error> {
         info!(
             "Deleting partition with ID: {} for stream with ID: {} and topic with ID: {}...",
-            partition.id, partition.stream_id, partition.topic_id,
+            partition.partition_id, partition.stream_id, partition.topic_id,
         );
         if fs::remove_dir_all(&partition.path).await.is_err() {
             return Err(Error::CannotDeletePartitionDirectory(
-                partition.id,
+                partition.partition_id,
                 partition.stream_id,
                 partition.topic_id,
             ));
         }
         info!(
             "Deleted partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-            partition.id, partition.stream_id, partition.topic_id,
+            partition.partition_id, partition.stream_id, partition.topic_id,
         );
         Ok(())
     }

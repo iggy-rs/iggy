@@ -89,7 +89,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     let mut loaded_partition = Partition::empty(
         stream_id,
         topic_id,
-        partition.id,
+        partition.partition_id,
         &setup.path,
         config.clone(),
         storage.clone(),

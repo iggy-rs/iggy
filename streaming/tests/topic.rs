@@ -66,7 +66,7 @@ async fn should_load_existing_topic_from_disk() {
         loaded_topic.load().await.unwrap();
 
         assert_eq!(loaded_topic.stream_id, topic.stream_id);
-        assert_eq!(loaded_topic.id, topic.id);
+        assert_eq!(loaded_topic.topic_id, topic.topic_id);
         assert_eq!(loaded_topic.name, topic.name);
         assert_eq!(loaded_topic.path, topic.path);
         assert_eq!(loaded_topic.get_partitions().len() as u32, partitions_count);

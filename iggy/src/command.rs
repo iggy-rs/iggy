@@ -20,7 +20,6 @@ use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
 use crate::system::get_stats::GetStats;
-use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
@@ -30,8 +29,6 @@ use bytes::BufMut;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-pub const KILL: &str = "kill";
-pub const KILL_CODE: u32 = 0;
 pub const PING: &str = "ping";
 pub const PING_CODE: u32 = 1;
 pub const GET_STATS: &str = "stats";
@@ -85,7 +82,6 @@ pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 605;
 
 #[derive(Debug, PartialEq)]
 pub enum Command {
-    Kill(Kill),
     Ping(Ping),
     GetStats(GetStats),
     GetMe(GetMe),
@@ -118,7 +114,6 @@ pub trait CommandPayload: BytesSerializable + Display {}
 impl BytesSerializable for Command {
     fn as_bytes(&self) -> Vec<u8> {
         match self {
-            Command::Kill(payload) => as_bytes(KILL_CODE, &payload.as_bytes()),
             Command::Ping(payload) => as_bytes(PING_CODE, &payload.as_bytes()),
             Command::GetStats(payload) => as_bytes(GET_STATS_CODE, &payload.as_bytes()),
             Command::GetMe(payload) => as_bytes(GET_ME_CODE, &payload.as_bytes()),
@@ -165,7 +160,6 @@ impl BytesSerializable for Command {
         let command = u32::from_le_bytes(bytes[..4].try_into()?);
         let payload = &bytes[4..];
         match command {
-            KILL_CODE => Ok(Command::Kill(Kill::from_bytes(payload)?)),
             PING_CODE => Ok(Command::Ping(Ping::from_bytes(payload)?)),
             GET_STATS_CODE => Ok(Command::GetStats(GetStats::from_bytes(payload)?)),
             GET_ME_CODE => Ok(Command::GetMe(GetMe::from_bytes(payload)?)),
@@ -228,7 +222,6 @@ impl FromStr for Command {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let (command, payload) = input.split_once('|').unwrap_or((input, ""));
         match command {
-            KILL => Ok(Command::Kill(Kill::from_str(payload)?)),
             PING => Ok(Command::Ping(Ping::from_str(payload)?)),
             GET_STATS => Ok(Command::GetStats(GetStats::from_str(payload)?)),
             GET_ME => Ok(Command::GetMe(GetMe::from_str(payload)?)),
@@ -274,7 +267,6 @@ impl FromStr for Command {
 impl Display for Command {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Command::Kill(_) => write!(formatter, "{}", KILL),
             Command::Ping(_) => write!(formatter, "{}", PING),
             Command::GetStats(_) => write!(formatter, "{}", GET_STATS),
             Command::GetMe(_) => write!(formatter, "{}", GET_ME),
@@ -324,11 +316,6 @@ mod tests {
 
     #[test]
     fn should_be_serialized_as_bytes_and_deserialized_from_bytes() {
-        assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::Kill(Kill::default()),
-            KILL_CODE,
-            &Kill::default(),
-        );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::Ping(Ping::default()),
             PING_CODE,
@@ -458,7 +445,6 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        assert_read_from_string(&Command::Kill(Kill::default()), KILL, &Kill::default());
         assert_read_from_string(&Command::Ping(Ping::default()), PING, &Ping::default());
         assert_read_from_string(
             &Command::GetStats(GetStats::default()),

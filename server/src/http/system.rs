@@ -13,20 +13,13 @@ const NAME: &str = "Iggy HTTP";
 const PONG: &str = "pong";
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {
-    let router = Router::new()
+    Router::new()
         .route("/", get(|| async { NAME }))
         .route("/ping", get(|| async { PONG }))
         .route("/stats", get(get_stats))
         .route("/clients", get(get_clients))
         .route("/clients/:client_id", get(get_client))
-        .with_state(system);
-    #[cfg(feature = "allow_kill_command")]
-    {
-        router.route("/kill", axum::routing::post(kill))
-    }
-
-    #[cfg(not(feature = "allow_kill_command"))]
-    router
+        .with_state(system)
 }
 
 async fn get_stats(State(system): State<Arc<RwLock<System>>>) -> Result<Json<Stats>, CustomError> {
@@ -53,10 +46,4 @@ async fn get_clients(
     let clients = system.get_clients().await;
     let clients = mapper::map_clients(&clients).await;
     Ok(Json(clients))
-}
-
-#[cfg(feature = "allow_kill_command")]
-async fn kill() -> axum::http::StatusCode {
-    tokio::spawn(async move { std::process::exit(0) });
-    axum::http::StatusCode::OK
 }

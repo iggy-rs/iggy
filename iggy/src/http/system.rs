@@ -7,12 +7,10 @@ use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
 use crate::system::get_stats::GetStats;
-use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use async_trait::async_trait;
 
 const PING: &str = "/ping";
-const KILL: &str = "/kill";
 const CLIENTS: &str = "/clients";
 const STATS: &str = "/stats";
 
@@ -43,11 +41,6 @@ impl SystemClient for HttpClient {
 
     async fn ping(&self, _command: &Ping) -> Result<(), Error> {
         self.get(PING).await?;
-        Ok(())
-    }
-
-    async fn kill(&self, _command: &Kill) -> Result<(), Error> {
-        self.post(KILL, &_command).await?;
         Ok(())
     }
 }

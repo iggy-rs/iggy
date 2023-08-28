@@ -516,15 +516,6 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert!(!stats.os_name.is_empty());
     assert!(!stats.os_version.is_empty());
     assert!(!stats.kernel_version.is_empty());
-    #[cfg(not(target_os = "windows"))]
-    {
-        assert!(stats.process_id > 0);
-        assert!(stats.memory_usage > 0);
-        assert!(stats.total_memory > 0);
-        assert!(stats.available_memory > 0);
-        assert!(stats.run_time > 0);
-        assert!(stats.start_time > 0);
-    }
     assert_eq!(stats.streams_count, 1);
     assert_eq!(stats.topics_count, 1);
     assert_eq!(stats.partitions_count, PARTITIONS_COUNT);

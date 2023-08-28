@@ -128,7 +128,7 @@ impl Stream {
         };
 
         if topic.delete().await.is_err() {
-            return Err(Error::CannotDeleteTopic(topic.id, self.id));
+            return Err(Error::CannotDeleteTopic(topic.topic_id, self.id));
         }
 
         Ok(topic)
@@ -161,13 +161,13 @@ mod tests {
         let topic = stream.get_topic(&Identifier::numeric(topic_id).unwrap());
         assert!(topic.is_ok());
         let topic = topic.unwrap();
-        assert_eq!(topic.id, topic_id);
+        assert_eq!(topic.topic_id, topic_id);
         assert_eq!(topic.name, topic_name);
 
         let topic = stream.get_topic(&Identifier::named(topic_name).unwrap());
         assert!(topic.is_ok());
         let topic = topic.unwrap();
-        assert_eq!(topic.id, topic_id);
+        assert_eq!(topic.topic_id, topic_id);
         assert_eq!(topic.name, topic_name);
     }
 }

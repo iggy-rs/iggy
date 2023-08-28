@@ -8,7 +8,6 @@ use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
 use crate::system::get_stats::GetStats;
-use crate::system::kill::Kill;
 use crate::system::ping::Ping;
 use async_trait::async_trait;
 
@@ -32,9 +31,5 @@ impl SystemClient for QuicClient {
 
     async fn ping(&self, command: &Ping) -> Result<(), Error> {
         binary::system::ping(self, command).await
-    }
-
-    async fn kill(&self, command: &Kill) -> Result<(), Error> {
-        binary::system::kill(self, command).await
     }
 }

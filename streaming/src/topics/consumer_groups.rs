@@ -13,7 +13,7 @@ impl Topic {
         let partitions_count = self.partitions.len() as u32;
         info!(
             "Reassigning consumer groups for topic with ID: {} for stream with ID with {}, partitions count: {}",
-            self.id, self.stream_id, partitions_count
+            self.topic_id, self.stream_id, partitions_count
         );
         for (_, consumer_group) in self.consumer_groups.iter_mut() {
             let mut consumer_group = consumer_group.write().await;
@@ -28,14 +28,14 @@ impl Topic {
     pub fn get_consumer_group(&self, id: u32) -> Result<&RwLock<ConsumerGroup>, Error> {
         let consumer_group = self.consumer_groups.get(&id);
         if consumer_group.is_none() {
-            return Err(Error::ConsumerGroupNotFound(id, self.id));
+            return Err(Error::ConsumerGroupNotFound(id, self.topic_id));
         }
 
         Ok(consumer_group.unwrap())
     }
 
     pub async fn create_consumer_group(&mut self, id: u32) -> Result<(), Error> {
-        let consumer_group = ConsumerGroup::new(self.id, id, self.partitions.len() as u32);
+        let consumer_group = ConsumerGroup::new(self.topic_id, id, self.partitions.len() as u32);
         if self
             .consumer_groups
             .insert(id, RwLock::new(consumer_group))
@@ -49,12 +49,12 @@ impl Topic {
                 .await?;
             info!(
                 "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
-                id, self.id, self.stream_id
+                id, self.topic_id, self.stream_id
             );
             return Ok(());
         }
 
-        Err(Error::ConsumerGroupAlreadyExists(id, self.id))
+        Err(Error::ConsumerGroupAlreadyExists(id, self.topic_id))
     }
 
     pub async fn delete_consumer_group(&mut self, id: u32) -> Result<RwLock<ConsumerGroup>, Error> {
@@ -68,13 +68,13 @@ impl Topic {
                     .await?;
                 info!(
                     "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
-                    id, self.id, self.stream_id
+                    id, self.topic_id, self.stream_id
                 );
             }
             return Ok(consumer_group);
         }
 
-        Err(Error::ConsumerGroupNotFound(id, self.id))
+        Err(Error::ConsumerGroupNotFound(id, self.topic_id))
     }
 
     pub async fn join_consumer_group(
@@ -87,7 +87,7 @@ impl Topic {
         consumer_group.add_member(member_id).await;
         info!(
             "Member with ID: {} has joined consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
-            member_id, consumer_group_id, self.id, self.stream_id
+            member_id, consumer_group_id, self.topic_id, self.stream_id
         );
         Ok(())
     }
@@ -102,7 +102,7 @@ impl Topic {
         consumer_group.delete_member(member_id).await;
         info!(
             "Member with ID: {} has left consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
-            member_id, consumer_group_id, self.id, self.stream_id
+            member_id, consumer_group_id, self.topic_id, self.stream_id
         );
         Ok(())
     }

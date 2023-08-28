@@ -38,7 +38,7 @@ pub fn start(config: MessageCleanerConfig, system: Arc<RwLock<System>>) {
                     if delete_expired_segments(topic, now).await.is_err() {
                         error!(
                             "Failed to delete expired segments for stream ID: {}, topic ID: {}",
-                            topic.stream_id, topic.id
+                            topic.stream_id, topic.topic_id
                         );
                     }
                 }
@@ -54,7 +54,7 @@ async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
     if expired_segments.is_empty() {
         info!(
             "No expired segments found for stream ID: {}, topic ID: {}",
-            topic.stream_id, topic.id
+            topic.stream_id, topic.topic_id
         );
         return Ok(());
     }
@@ -63,7 +63,7 @@ async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
         "Found {} expired segments for stream ID: {}, topic ID: {}, deleting...",
         expired_segments.len(),
         topic.stream_id,
-        topic.id
+        topic.topic_id
     );
 
     for (partition_id, start_offsets) in &expired_segments {
@@ -71,7 +71,7 @@ async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
         if partition.is_err() {
             error!(
                 "Partition with ID: {} not found for stream ID: {}, topic ID: {}",
-                partition_id, topic.stream_id, topic.id
+                partition_id, topic.stream_id, topic.topic_id
             );
             continue;
         }

@@ -7,12 +7,12 @@ impl Partition {
     pub async fn add_persisted_segment(&mut self, start_offset: u64) -> Result<(), Error> {
         info!(
             "Creating the new segment for partition with ID: {}, stream with ID: {}, topic with ID: {}...",
-            self.id, self.stream_id, self.topic_id
+            self.partition_id, self.stream_id, self.topic_id
         );
         let new_segment = Segment::create(
             self.stream_id,
             self.topic_id,
-            self.id,
+            self.partition_id,
             start_offset,
             &self.path,
             self.config.clone(),

@@ -26,9 +26,6 @@ GET {{url}}/ping
 GET {{url}}/stats
 
 ###
-POST {{url}}/kill
-
-###
 GET {{url}}/streams
 
 ###

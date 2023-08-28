@@ -13,7 +13,7 @@ impl Partition {
         trace!(
             "Getting consumer offset for {}, partition: {}, current: {}...",
             consumer,
-            self.id,
+            self.partition_id,
             self.current_offset
         );
 
@@ -44,7 +44,7 @@ impl Partition {
             "Storing offset: {} for {}, partition: {}, current: {}...",
             offset,
             consumer,
-            self.id,
+            self.partition_id,
             self.current_offset
         );
         if offset > self.current_offset {
@@ -99,7 +99,7 @@ impl Partition {
     pub async fn load_offsets(&mut self, consumer_kind: ConsumerKind) -> Result<(), Error> {
         trace!(
                 "Loading consumer offsets for partition with ID: {} for topic with ID: {} and stream with ID: {}...",
-                self.id,
+                self.partition_id,
                 self.topic_id,
                 self.stream_id
             );
@@ -117,7 +117,7 @@ impl Partition {
 
         let dir_entries = fs::read_dir(&path).await;
         if dir_entries.is_err() {
-            return Err(Error::CannotReadConsumerOffsets(self.id));
+            return Err(Error::CannotReadConsumerOffsets(self.partition_id));
         }
 
         let mut dir_entries = dir_entries.unwrap();
@@ -163,7 +163,7 @@ impl Partition {
                 offset,
                 consumer.kind,
                 consumer.id,
-                self.id,
+                self.partition_id,
                 self.topic_id,
                 self.stream_id
             );

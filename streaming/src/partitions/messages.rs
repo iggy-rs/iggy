@@ -121,7 +121,7 @@ impl Partition {
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
         let (consumer_offsets, consumer_id) = match consumer {
-            PollingConsumer::Consumer(consumer_id) => {
+            PollingConsumer::Consumer(consumer_id, _) => {
                 (self.consumer_offsets.read().await, consumer_id)
             }
             PollingConsumer::ConsumerGroup(consumer_group_id, _) => {

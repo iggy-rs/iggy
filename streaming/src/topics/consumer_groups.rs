@@ -213,21 +213,10 @@ mod tests {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let id = 2;
-        let topics_path = "/topics";
         let name = "test";
         let partitions_count = 3;
         let config = Arc::new(SystemConfig::default());
 
-        Topic::create(
-            stream_id,
-            id,
-            name,
-            partitions_count,
-            topics_path,
-            config,
-            storage,
-            None,
-        )
-        .unwrap()
+        Topic::create(stream_id, id, name, partitions_count, config, storage, None).unwrap()
     }
 }

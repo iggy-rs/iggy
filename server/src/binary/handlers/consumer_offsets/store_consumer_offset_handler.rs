@@ -16,22 +16,16 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
-    let consumer = PollingConsumer::from_consumer(&command.consumer, client_context.client_id);
+    let consumer = PollingConsumer::from_consumer(
+        &command.consumer,
+        client_context.client_id,
+        command.partition_id,
+    );
     let system = system.read().await;
-    let topic = system
+    system
         .get_stream(&command.stream_id)?
-        .get_topic(&command.topic_id)?;
-
-    let partition_id = match consumer {
-        PollingConsumer::Consumer(_) => command.partition_id,
-        PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
-            let consumer_group = topic.get_consumer_group(consumer_group_id)?.read().await;
-            consumer_group.get_current_partition_id(member_id).await?
-        }
-    };
-
-    topic
-        .store_consumer_offset(consumer, partition_id, command.offset)
+        .get_topic(&command.topic_id)?
+        .store_consumer_offset(consumer, command.offset)
         .await?;
 
     sender.send_empty_ok_response().await?;

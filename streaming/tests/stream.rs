@@ -9,17 +9,12 @@ use tokio::fs;
 #[tokio::test]
 async fn should_persist_stream_with_topics_directory_and_info_file() {
     let setup = TestSetup::init().await;
+    setup.create_streams_directory().await;
     let storage = Arc::new(SystemStorage::default());
     let stream_ids = get_stream_ids();
     for stream_id in stream_ids {
         let name = format!("test-{}", stream_id);
-        let stream = Stream::create(
-            stream_id,
-            &name,
-            &setup.path,
-            setup.config.clone(),
-            storage.clone(),
-        );
+        let stream = Stream::create(stream_id, &name, setup.config.clone(), storage.clone());
 
         stream.persist().await.unwrap();
 
@@ -30,26 +25,16 @@ async fn should_persist_stream_with_topics_directory_and_info_file() {
 #[tokio::test]
 async fn should_load_existing_stream_from_disk() {
     let setup = TestSetup::init().await;
+    setup.create_streams_directory().await;
     let storage = Arc::new(SystemStorage::default());
     let stream_ids = get_stream_ids();
     for stream_id in stream_ids {
         let name = format!("test-{}", stream_id);
-        let stream = Stream::create(
-            stream_id,
-            &name,
-            &setup.path,
-            setup.config.clone(),
-            storage.clone(),
-        );
+        let stream = Stream::create(stream_id, &name, setup.config.clone(), storage.clone());
         stream.persist().await.unwrap();
         assert_persisted_stream(&stream.path, &setup.config.topic.path).await;
 
-        let mut loaded_stream = Stream::empty(
-            stream_id,
-            &setup.path,
-            setup.config.clone(),
-            storage.clone(),
-        );
+        let mut loaded_stream = Stream::empty(stream_id, setup.config.clone(), storage.clone());
         loaded_stream.load().await.unwrap();
 
         assert_eq!(loaded_stream.id, stream.id);
@@ -63,17 +48,12 @@ async fn should_load_existing_stream_from_disk() {
 #[tokio::test]
 async fn should_delete_existing_stream_from_disk() {
     let setup = TestSetup::init().await;
+    setup.create_streams_directory().await;
     let storage = Arc::new(SystemStorage::default());
     let stream_ids = get_stream_ids();
     for stream_id in stream_ids {
         let name = format!("test-{}", stream_id);
-        let stream = Stream::create(
-            stream_id,
-            &name,
-            &setup.path,
-            setup.config.clone(),
-            storage.clone(),
-        );
+        let stream = Stream::create(stream_id, &name, setup.config.clone(), storage.clone());
         stream.persist().await.unwrap();
         assert_persisted_stream(&stream.path, &setup.config.topic.path).await;
 

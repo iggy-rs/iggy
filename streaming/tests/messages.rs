@@ -21,6 +21,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     let partition_id = 1;
     let messages_count = 1000;
     let config = Arc::new(SystemConfig {
+        path: setup.config.path.to_string(),
         partition: PartitionConfig {
             messages_required_to_save: messages_count,
             ..Default::default()
@@ -31,7 +32,6 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         stream_id,
         topic_id,
         partition_id,
-        &setup.path,
         true,
         config.clone(),
         storage.clone(),
@@ -82,6 +82,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         messages.push(message);
     }
 
+    setup.create_partitions_directory(stream_id, topic_id).await;
     partition.persist().await.unwrap();
     partition.append_messages(messages).await.unwrap();
     assert_eq!(partition.unsaved_messages_count, 0);
@@ -90,7 +91,6 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         stream_id,
         topic_id,
         partition.partition_id,
-        &setup.path,
         config.clone(),
         storage.clone(),
     );

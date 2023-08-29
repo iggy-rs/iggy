@@ -20,25 +20,19 @@ pub struct Stream {
 }
 
 impl Stream {
-    pub fn empty(
-        id: u32,
-        streams_path: &str,
-        config: Arc<SystemConfig>,
-        storage: Arc<SystemStorage>,
-    ) -> Self {
-        Stream::create(id, "", streams_path, config, storage)
+    pub fn empty(id: u32, config: Arc<SystemConfig>, storage: Arc<SystemStorage>) -> Self {
+        Stream::create(id, "", config, storage)
     }
 
     pub fn create(
         id: u32,
         name: &str,
-        streams_path: &str,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Self {
-        let path = Self::get_path(id, streams_path);
+        let path = config.get_stream_path(id);
         let info_path = Self::get_info_path(&path);
-        let topics_path = Self::get_topics_path(&path, &config.topic.path);
+        let topics_path = config.get_topics_path(id);
 
         Stream {
             id,
@@ -69,16 +63,8 @@ impl Stream {
         size_bytes
     }
 
-    fn get_path(id: u32, streams_path: &str) -> String {
-        format!("{}/{}", streams_path, id)
-    }
-
     fn get_info_path(path: &str) -> String {
         format!("{}/{}", path, STREAM_INFO)
-    }
-
-    fn get_topics_path(path: &str, topics_path: &str) -> String {
-        format!("{}/{}", path, topics_path)
     }
 }
 
@@ -92,13 +78,12 @@ mod tests {
         let storage = Arc::new(get_test_system_storage());
         let id = 1;
         let name = "test";
-        let streams_path = "/streams";
         let config = Arc::new(SystemConfig::default());
-        let path = Stream::get_path(id, streams_path);
+        let path = config.get_stream_path(id);
         let info_path = Stream::get_info_path(&path);
-        let topics_path = Stream::get_topics_path(&path, &config.topic.path);
+        let topics_path = config.get_topics_path(id);
 
-        let stream = Stream::create(id, name, streams_path, config, storage);
+        let stream = Stream::create(id, name, config, storage);
 
         assert_eq!(stream.id, id);
         assert_eq!(stream.name, name);

@@ -34,7 +34,7 @@ pub async fn run(
         consumer: Consumer::new(consumer_id),
         stream_id: Identifier::numeric(stream_id).unwrap(),
         topic_id: Identifier::numeric(topic_id).unwrap(),
-        partition_id,
+        partition_id: Some(partition_id),
         strategy: PollingStrategy::offset(0),
         count: args.messages_per_batch,
         auto_commit: false,

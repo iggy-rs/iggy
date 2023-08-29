@@ -40,7 +40,7 @@ async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
                 },
                 stream_id: Identifier::numeric(args.stream_id)?,
                 topic_id: Identifier::numeric(args.topic_id)?,
-                partition_id: args.partition_id,
+                partition_id: Some(args.partition_id),
                 strategy: PollingStrategy::next(),
                 count: args.messages_per_batch,
                 auto_commit: true,

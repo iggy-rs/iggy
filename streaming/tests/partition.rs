@@ -15,13 +15,13 @@ async fn should_persist_partition_with_segment() {
     let with_segment = true;
     let stream_id = 1;
     let topic_id = 2;
+    setup.create_partitions_directory(stream_id, topic_id).await;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
         let partition = Partition::create(
             stream_id,
             topic_id,
             partition_id,
-            &setup.path,
             with_segment,
             setup.config.clone(),
             storage.clone(),
@@ -41,13 +41,13 @@ async fn should_load_existing_partition_from_disk() {
     let with_segment = true;
     let stream_id = 1;
     let topic_id = 2;
+    setup.create_partitions_directory(stream_id, topic_id).await;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
         let partition = Partition::create(
             stream_id,
             topic_id,
             partition_id,
-            &setup.path,
             with_segment,
             setup.config.clone(),
             storage.clone(),
@@ -60,7 +60,6 @@ async fn should_load_existing_partition_from_disk() {
             stream_id,
             topic_id,
             partition.partition_id,
-            &setup.path,
             setup.config.clone(),
             storage.clone(),
         );
@@ -101,13 +100,13 @@ async fn should_delete_existing_partition_from_disk() {
     let with_segment = true;
     let stream_id = 1;
     let topic_id = 2;
+    setup.create_partitions_directory(stream_id, topic_id).await;
     let partition_ids = get_partition_ids();
     for partition_id in partition_ids {
         let partition = Partition::create(
             stream_id,
             topic_id,
             partition_id,
-            &setup.path,
             with_segment,
             setup.config.clone(),
             storage.clone(),

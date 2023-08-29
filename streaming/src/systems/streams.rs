@@ -28,12 +28,7 @@ impl System {
             }
 
             let stream_id = stream_id.unwrap();
-            let stream = Stream::empty(
-                stream_id,
-                &self.streams_path,
-                self.config.clone(),
-                self.storage.clone(),
-            );
+            let stream = Stream::empty(stream_id, self.config.clone(), self.storage.clone());
             unloaded_streams.push(stream);
         }
 
@@ -136,13 +131,7 @@ impl System {
             return Err(Error::StreamNameAlreadyExists(name.to_string()));
         }
 
-        let stream = Stream::create(
-            id,
-            &name,
-            &self.streams_path,
-            self.config.clone(),
-            self.storage.clone(),
-        );
+        let stream = Stream::create(id, &name, self.config.clone(), self.storage.clone());
         stream.persist().await?;
         info!("Created stream with ID: {}, name: '{}'.", id, name);
         self.streams_ids.insert(name, stream.id);

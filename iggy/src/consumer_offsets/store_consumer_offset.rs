@@ -17,7 +17,7 @@ pub struct StoreConsumerOffset {
     pub stream_id: Identifier,
     #[serde(skip)]
     pub topic_id: Identifier,
-    pub partition_id: u32,
+    pub partition_id: Option<u32>,
     pub offset: u64,
 }
 
@@ -27,7 +27,7 @@ impl Default for StoreConsumerOffset {
             consumer: Consumer::default(),
             stream_id: Identifier::default(),
             topic_id: Identifier::default(),
-            partition_id: 1,
+            partition_id: Some(1),
             offset: 0,
         }
     }
@@ -63,7 +63,7 @@ impl FromStr for StoreConsumerOffset {
             consumer,
             stream_id,
             topic_id,
-            partition_id,
+            partition_id: Some(partition_id),
             offset,
         };
         command.validate()?;
@@ -82,7 +82,11 @@ impl BytesSerializable for StoreConsumerOffset {
         bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.put_u32_le(self.partition_id);
+        if let Some(partition_id) = self.partition_id {
+            bytes.put_u32_le(partition_id);
+        } else {
+            bytes.put_u32_le(0);
+        }
         bytes.put_u64_le(self.offset);
         bytes
     }
@@ -105,6 +109,11 @@ impl BytesSerializable for StoreConsumerOffset {
         let topic_id = Identifier::from_bytes(&bytes[position..])?;
         position += topic_id.get_size_bytes() as usize;
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let partition_id = if partition_id == 0 {
+            None
+        } else {
+            Some(partition_id)
+        };
         let offset = u64::from_le_bytes(bytes[position + 4..position + 12].try_into()?);
         let command = StoreConsumerOffset {
             consumer,
@@ -123,7 +132,11 @@ impl Display for StoreConsumerOffset {
         write!(
             f,
             "{}|{}|{}|{}|{}",
-            self.consumer, self.stream_id, self.topic_id, self.partition_id, self.offset
+            self.consumer,
+            self.stream_id,
+            self.topic_id,
+            self.partition_id.unwrap_or(0),
+            self.offset
         )
     }
 }
@@ -138,7 +151,7 @@ mod tests {
             consumer: Consumer::new(1),
             stream_id: Identifier::numeric(2).unwrap(),
             topic_id: Identifier::numeric(3).unwrap(),
-            partition_id: 4,
+            partition_id: Some(4),
             offset: 5,
         };
 
@@ -162,7 +175,7 @@ mod tests {
         assert_eq!(consumer, command.consumer);
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
-        assert_eq!(partition_id, command.partition_id);
+        assert_eq!(Some(partition_id), command.partition_id);
         assert_eq!(offset, command.offset);
     }
 
@@ -193,7 +206,7 @@ mod tests {
         assert_eq!(command.consumer, consumer);
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.partition_id, partition_id);
+        assert_eq!(command.partition_id, Some(partition_id));
         assert_eq!(command.offset, offset);
     }
 
@@ -215,7 +228,7 @@ mod tests {
         assert_eq!(command.consumer, consumer);
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.partition_id, partition_id);
+        assert_eq!(command.partition_id, Some(partition_id));
         assert_eq!(command.offset, offset);
     }
 }

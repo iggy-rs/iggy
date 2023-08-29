@@ -19,20 +19,27 @@ async fn should_persist_segment() {
     let partition_id = 3;
     let start_offsets = get_start_offsets();
     for start_offset in start_offsets {
-        let partition_path = &setup.path;
         let segment = segment::Segment::create(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
-            partition_path,
             setup.config.clone(),
             storage.clone(),
             None,
         );
 
+        setup
+            .create_partition_directory(stream_id, topic_id, partition_id)
+            .await;
         segment.persist().await.unwrap();
-        assert_persisted_segment(partition_path, start_offset).await;
+        assert_persisted_segment(
+            &setup
+                .config
+                .get_partition_path(stream_id, topic_id, partition_id),
+            start_offset,
+        )
+        .await;
     }
 }
 
@@ -45,26 +52,32 @@ async fn should_load_existing_segment_from_disk() {
     let partition_id = 3;
     let start_offsets = get_start_offsets();
     for start_offset in start_offsets {
-        let partition_path = &setup.path;
         let segment = segment::Segment::create(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
-            partition_path,
             setup.config.clone(),
             storage.clone(),
             None,
         );
+        setup
+            .create_partition_directory(stream_id, topic_id, partition_id)
+            .await;
         segment.persist().await.unwrap();
-        assert_persisted_segment(partition_path, start_offset).await;
+        assert_persisted_segment(
+            &setup
+                .config
+                .get_partition_path(stream_id, topic_id, partition_id),
+            start_offset,
+        )
+        .await;
 
         let mut loaded_segment = segment::Segment::create(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
-            partition_path,
             setup.config.clone(),
             storage.clone(),
             None,
@@ -96,20 +109,27 @@ async fn should_persist_and_load_segment_with_messages() {
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let partition_path = &setup.path;
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
-        partition_path,
         setup.config.clone(),
         storage.clone(),
         None,
     );
 
+    setup
+        .create_partition_directory(stream_id, topic_id, partition_id)
+        .await;
     segment.persist().await.unwrap();
-    assert_persisted_segment(partition_path, start_offset).await;
+    assert_persisted_segment(
+        &setup
+            .config
+            .get_partition_path(stream_id, topic_id, partition_id),
+        start_offset,
+    )
+    .await;
     let messages_count = 10;
     for i in 0..messages_count {
         let message = create_message(i, "test", timestamp::get());
@@ -126,7 +146,6 @@ async fn should_persist_and_load_segment_with_messages() {
         topic_id,
         partition_id,
         start_offset,
-        partition_path,
         setup.config.clone(),
         storage.clone(),
         None,
@@ -147,21 +166,28 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let partition_path = &setup.path;
     let message_expiry = Some(10);
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
-        partition_path,
         setup.config.clone(),
         storage.clone(),
         message_expiry,
     );
 
+    setup
+        .create_partition_directory(stream_id, topic_id, partition_id)
+        .await;
     segment.persist().await.unwrap();
-    assert_persisted_segment(partition_path, start_offset).await;
+    assert_persisted_segment(
+        &setup
+            .config
+            .get_partition_path(stream_id, topic_id, partition_id),
+        start_offset,
+    )
+    .await;
     let messages_count = 10;
     let now = timestamp::get();
     let message_expiry = message_expiry.unwrap() as u64;
@@ -189,21 +215,28 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let partition_path = &setup.path;
     let message_expiry = Some(10);
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
-        partition_path,
         setup.config.clone(),
         storage.clone(),
         message_expiry,
     );
 
+    setup
+        .create_partition_directory(stream_id, topic_id, partition_id)
+        .await;
     segment.persist().await.unwrap();
-    assert_persisted_segment(partition_path, start_offset).await;
+    assert_persisted_segment(
+        &setup
+            .config
+            .get_partition_path(stream_id, topic_id, partition_id),
+        start_offset,
+    )
+    .await;
     let now = timestamp::get();
     let message_expiry = message_expiry.unwrap() as u64;
     let expired_timestamp = now - (1000 * 2 * message_expiry);

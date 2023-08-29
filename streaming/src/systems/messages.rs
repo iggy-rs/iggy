@@ -16,7 +16,6 @@ impl System {
         consumer: PollingConsumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        partition_id: u32,
         strategy: PollingStrategy,
         count: u32,
         auto_commit: bool,
@@ -32,7 +31,7 @@ impl System {
         }
 
         let partition_id = match consumer {
-            PollingConsumer::Consumer(_) => partition_id,
+            PollingConsumer::Consumer(_, partition_id) => partition_id,
             PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
                 let consumer_group = topic.get_consumer_group(consumer_group_id)?.read().await;
                 consumer_group.calculate_partition_id(member_id).await?
@@ -50,9 +49,7 @@ impl System {
         let offset = messages.last().unwrap().offset;
         if auto_commit {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
-            topic
-                .store_consumer_offset(consumer, partition_id, offset)
-                .await?;
+            topic.store_consumer_offset(consumer, offset).await?;
         }
 
         if self.encryptor.is_none() {

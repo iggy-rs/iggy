@@ -12,6 +12,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
     let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let partitions_count = 3;
+    setup.create_topics_directory(stream_id).await;
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
         let name = format!("test-{}", topic_id);
@@ -20,7 +21,6 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             topic_id,
             &name,
             partitions_count,
-            &setup.path,
             setup.config.clone(),
             storage.clone(),
             None,
@@ -29,7 +29,12 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
 
         topic.persist().await.unwrap();
 
-        assert_persisted_topic(&topic.path, &topic.get_partitions_path(), 3).await;
+        assert_persisted_topic(
+            &topic.path,
+            &setup.config.get_partitions_path(stream_id, topic_id),
+            3,
+        )
+        .await;
     }
 }
 
@@ -38,6 +43,7 @@ async fn should_load_existing_topic_from_disk() {
     let setup = TestSetup::init().await;
     let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
+    setup.create_topics_directory(stream_id).await;
     let partitions_count = 3;
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
@@ -47,22 +53,21 @@ async fn should_load_existing_topic_from_disk() {
             topic_id,
             &name,
             partitions_count,
-            &setup.path,
             setup.config.clone(),
             storage.clone(),
             None,
         )
         .unwrap();
         topic.persist().await.unwrap();
-        assert_persisted_topic(&topic.path, &topic.get_partitions_path(), partitions_count).await;
+        assert_persisted_topic(
+            &topic.path,
+            &setup.config.get_partitions_path(stream_id, topic_id),
+            partitions_count,
+        )
+        .await;
 
-        let mut loaded_topic = Topic::empty(
-            stream_id,
-            topic_id,
-            &setup.path,
-            setup.config.clone(),
-            storage.clone(),
-        );
+        let mut loaded_topic =
+            Topic::empty(stream_id, topic_id, setup.config.clone(), storage.clone());
         loaded_topic.load().await.unwrap();
 
         assert_eq!(loaded_topic.stream_id, topic.stream_id);
@@ -78,6 +83,7 @@ async fn should_delete_existing_topic_from_disk() {
     let setup = TestSetup::init().await;
     let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
+    setup.create_topics_directory(stream_id).await;
     let partitions_count = 3;
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
@@ -87,14 +93,18 @@ async fn should_delete_existing_topic_from_disk() {
             topic_id,
             &name,
             partitions_count,
-            &setup.path,
             setup.config.clone(),
             storage.clone(),
             None,
         )
         .unwrap();
         topic.persist().await.unwrap();
-        assert_persisted_topic(&topic.path, &topic.get_partitions_path(), partitions_count).await;
+        assert_persisted_topic(
+            &topic.path,
+            &setup.config.get_partitions_path(stream_id, topic_id),
+            partitions_count,
+        )
+        .await;
 
         topic.delete().await.unwrap();
 

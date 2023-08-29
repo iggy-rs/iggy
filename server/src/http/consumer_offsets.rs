@@ -28,13 +28,11 @@ async fn get_consumer_offset(
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
 
-    let consumer = PollingConsumer::Consumer(query.consumer.id);
+    let consumer = PollingConsumer::Consumer(query.consumer.id, query.partition_id.unwrap_or(0));
     let system = system.read().await;
     let stream = system.get_stream(&query.stream_id)?;
     let topic = stream.get_topic(&query.topic_id)?;
-    let offset = topic
-        .get_consumer_offset(consumer, query.partition_id)
-        .await?;
+    let offset = topic.get_consumer_offset(consumer).await?;
 
     Ok(Json(Offset {
         consumer_id: query.consumer.id,
@@ -51,12 +49,13 @@ async fn store_consumer_offset(
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
 
-    let consumer = PollingConsumer::Consumer(command.consumer.id);
+    let consumer =
+        PollingConsumer::Consumer(command.consumer.id, command.partition_id.unwrap_or(0));
     let system = system.read().await;
     let stream = system.get_stream(&command.stream_id)?;
     let topic = stream.get_topic(&command.topic_id)?;
     topic
-        .store_consumer_offset(consumer, command.partition_id, command.offset)
+        .store_consumer_offset(consumer, command.offset)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

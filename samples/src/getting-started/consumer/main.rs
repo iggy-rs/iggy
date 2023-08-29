@@ -39,7 +39,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
                 consumer: Consumer::default(),
                 stream_id: Identifier::numeric(STREAM_ID)?,
                 topic_id: Identifier::numeric(TOPIC_ID)?,
-                partition_id: PARTITION_ID,
+                partition_id: Some(PARTITION_ID),
                 strategy: PollingStrategy::offset(offset),
                 count: messages_per_batch,
                 auto_commit: false,

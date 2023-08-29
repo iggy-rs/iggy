@@ -29,21 +29,10 @@ impl Topic {
     pub fn empty(
         stream_id: u32,
         topic_id: u32,
-        topics_path: &str,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Topic {
-        Topic::create(
-            stream_id,
-            topic_id,
-            "",
-            0,
-            topics_path,
-            config,
-            storage,
-            None,
-        )
-        .unwrap()
+        Topic::create(stream_id, topic_id, "", 0, config, storage, None).unwrap()
     }
 
     pub fn create(
@@ -51,12 +40,11 @@ impl Topic {
         topic_id: u32,
         name: &str,
         partitions_count: u32,
-        topics_path: &str,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: Option<u32>,
     ) -> Result<Topic, Error> {
-        let path = Self::get_path(topic_id, topics_path);
+        let path = config.get_topic_path(stream_id, topic_id);
         let info_path = Self::get_info_path(&path);
         let mut topic = Topic {
             stream_id,
@@ -119,20 +107,12 @@ impl Topic {
         Ok(partition.unwrap())
     }
 
-    pub fn get_partitions_path(&self) -> String {
-        format!("{}/{}", self.path, self.config.partition.path)
-    }
-
     pub fn get_consumer_group_path(&self, id: u32) -> String {
         format!("{}/{}", self.get_consumer_groups_path(), id)
     }
 
     pub fn get_consumer_groups_path(&self) -> String {
         format!("{}/groups", self.path)
-    }
-
-    fn get_path(id: u32, topics_path: &str) -> String {
-        format!("{}/{}", topics_path, id)
     }
 
     fn get_info_path(path: &str) -> String {
@@ -150,12 +130,11 @@ mod tests {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
-        let topics_path = "/topics";
         let name = "test";
         let partitions_count = 3;
         let message_expiry = 10;
         let config = Arc::new(SystemConfig::default());
-        let path = Topic::get_path(topic_id, topics_path);
+        let path = config.get_topic_path(stream_id, topic_id);
         let info_path = Topic::get_info_path(&path);
 
         let topic = Topic::create(
@@ -163,7 +142,6 @@ mod tests {
             topic_id,
             name,
             partitions_count,
-            topics_path,
             config,
             storage,
             Some(message_expiry),

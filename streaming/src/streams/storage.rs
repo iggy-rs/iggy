@@ -74,7 +74,6 @@ impl Storage<Stream> for FileStreamStorage {
             let topic = Topic::empty(
                 stream.id,
                 topic_id,
-                &stream.topics_path,
                 stream.config.clone(),
                 stream.storage.clone(),
             );

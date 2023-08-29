@@ -19,7 +19,7 @@ pub struct PollMessages {
     #[serde(skip)]
     pub topic_id: Identifier,
     #[serde(default = "default_partition_id")]
-    pub partition_id: u32,
+    pub partition_id: Option<u32>,
     #[serde(default = "default_strategy", flatten)]
     pub strategy: PollingStrategy,
     #[serde(default = "default_count")]
@@ -75,8 +75,8 @@ impl Default for PollingStrategy {
 
 impl CommandPayload for PollMessages {}
 
-fn default_partition_id() -> u32 {
-    1
+fn default_partition_id() -> Option<u32> {
+    Some(1)
 }
 
 fn default_kind() -> PollingKind {
@@ -224,7 +224,7 @@ impl FromStr for PollMessages {
             consumer,
             stream_id,
             topic_id,
-            partition_id,
+            partition_id: Some(partition_id),
             strategy,
             count,
             auto_commit,
@@ -249,7 +249,11 @@ impl BytesSerializable for PollMessages {
         bytes.extend(consumer_bytes);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.put_u32_le(self.partition_id);
+        if let Some(partition_id) = self.partition_id {
+            bytes.put_u32_le(partition_id);
+        } else {
+            bytes.put_u32_le(0);
+        }
         bytes.extend(strategy_bytes);
         bytes.put_u32_le(self.count);
         if self.auto_commit {
@@ -279,6 +283,10 @@ impl BytesSerializable for PollMessages {
         let topic_id = Identifier::from_bytes(&bytes[position..])?;
         position += topic_id.get_size_bytes() as usize;
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let partition_id = match partition_id {
+            0 => None,
+            partition_id => Some(partition_id),
+        };
         let polling_kind = PollingKind::from_code(bytes[position + 4])?;
         position += 5;
         let value = u64::from_le_bytes(bytes[position..position + 8].try_into()?);
@@ -315,7 +323,7 @@ impl Display for PollMessages {
             self.consumer,
             self.stream_id,
             self.topic_id,
-            self.partition_id,
+            self.partition_id.unwrap_or(0),
             self.strategy,
             self.count,
             auto_commit_to_string(self.auto_commit)
@@ -367,7 +375,7 @@ mod tests {
             consumer: Consumer::new(1),
             stream_id: Identifier::numeric(2).unwrap(),
             topic_id: Identifier::numeric(3).unwrap(),
-            partition_id: 4,
+            partition_id: Some(4),
             strategy: PollingStrategy::offset(2),
             count: 3,
             auto_commit: true,
@@ -406,7 +414,7 @@ mod tests {
         assert_eq!(consumer, command.consumer);
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
-        assert_eq!(partition_id, command.partition_id);
+        assert_eq!(Some(partition_id), command.partition_id);
         assert_eq!(strategy, command.strategy);
         assert_eq!(count, command.count);
         assert_eq!(auto_commit, command.auto_commit);
@@ -453,7 +461,7 @@ mod tests {
         assert_eq!(command.consumer, consumer);
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.partition_id, partition_id);
+        assert_eq!(command.partition_id, Some(partition_id));
         assert_eq!(command.strategy, strategy);
         assert_eq!(command.count, count);
         assert_eq!(command.auto_commit, auto_commit);
@@ -487,7 +495,7 @@ mod tests {
         assert_eq!(command.consumer, consumer);
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.partition_id, partition_id);
+        assert_eq!(command.partition_id, Some(partition_id));
         assert_eq!(command.strategy, strategy);
         assert_eq!(command.count, count);
         assert_eq!(command.auto_commit, auto_commit);

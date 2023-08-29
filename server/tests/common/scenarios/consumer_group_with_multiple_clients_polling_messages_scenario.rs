@@ -136,9 +136,9 @@ async fn execute_using_messages_key_key(
 
     // 2. Poll the messages for each client per assigned partition in the consumer group
     let mut total_read_messages_count = 0;
-    total_read_messages_count += poll_messages(&client1).await;
-    total_read_messages_count += poll_messages(&client2).await;
-    total_read_messages_count += poll_messages(&client3).await;
+    total_read_messages_count += poll_messages(client1).await;
+    total_read_messages_count += poll_messages(client2).await;
+    total_read_messages_count += poll_messages(client3).await;
 
     assert_eq!(total_read_messages_count, MESSAGES_COUNT);
 }
@@ -148,7 +148,7 @@ async fn poll_messages(client: &IggyClient) -> u32 {
         consumer: Consumer::group(CONSUMER_GROUP_ID),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: 0,
+        partition_id: None,
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
@@ -231,7 +231,7 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
         consumer: Consumer::group(CONSUMER_GROUP_ID),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: 0,
+        partition_id: None,
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,

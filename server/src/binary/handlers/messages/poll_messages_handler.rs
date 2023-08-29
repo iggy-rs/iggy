@@ -17,14 +17,17 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
-    let consumer = PollingConsumer::from_consumer(&command.consumer, client_context.client_id);
+    let consumer = PollingConsumer::from_consumer(
+        &command.consumer,
+        client_context.client_id,
+        command.partition_id,
+    );
     let system = system.read().await;
     let messages = system
         .poll_messages(
             consumer,
             &command.stream_id,
             &command.topic_id,
-            command.partition_id,
             command.strategy,
             command.count,
             command.auto_commit,

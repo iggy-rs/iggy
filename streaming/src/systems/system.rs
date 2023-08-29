@@ -35,8 +35,6 @@ impl System {
     }
 
     pub fn create(config: Arc<SystemConfig>, storage: SystemStorage) -> System {
-        let base_path = config.path.to_string();
-        let streams_path = format!("{}/{}", base_path, &config.stream.path);
         if config.encryption.enabled {
             info!("Server-side encryption is enabled.");
         }
@@ -48,9 +46,9 @@ impl System {
                 )),
                 false => None,
             },
+            base_path: config.get_system_path(),
+            streams_path: config.get_streams_path(),
             config,
-            base_path,
-            streams_path,
             streams: HashMap::new(),
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),

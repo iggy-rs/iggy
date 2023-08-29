@@ -604,9 +604,8 @@ mod tests {
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
         assert_eq!(command.partitioning, key);
-        for i in 0..command.messages.len() {
-            let message = &messages[i];
-            let command_message = &command.messages[i];
+        for (index, message) in command.messages.iter().enumerate() {
+            let command_message = &command.messages[index];
             assert_eq!(command_message.id, message.id);
             assert_eq!(command_message.length, message.length);
             assert_eq!(command_message.payload, message.payload);

@@ -28,14 +28,13 @@ async fn poll_messages(
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
 
-    let consumer = PollingConsumer::Consumer(query.consumer.id);
+    let consumer = PollingConsumer::Consumer(query.consumer.id, query.partition_id.unwrap_or(0));
     let system = system.read().await;
     let messages = system
         .poll_messages(
             consumer,
             &query.stream_id,
             &query.topic_id,
-            query.partition_id,
             query.strategy,
             query.count,
             query.auto_commit,

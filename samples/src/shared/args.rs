@@ -16,6 +16,9 @@ pub struct Args {
     pub partition_id: u32,
 
     #[arg(long, default_value = "1")]
+    pub partitions_count: u32,
+
+    #[arg(long, default_value = "1")]
     pub consumer_kind: u8,
 
     #[arg(long, default_value = "0")]

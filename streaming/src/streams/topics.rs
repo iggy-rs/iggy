@@ -27,7 +27,6 @@ impl Stream {
             id,
             &name,
             partitions_count,
-            &self.topics_path,
             self.config.clone(),
             self.storage.clone(),
             message_expiry,
@@ -148,11 +147,10 @@ mod tests {
         let stream_name = "test_stream";
         let topic_id = 2;
         let topic_name = "test_topic";
-        let path = "/stream";
         let message_expiry = Some(10);
         let config = Arc::new(SystemConfig::default());
         let storage = Arc::new(get_test_system_storage());
-        let mut stream = Stream::create(stream_id, stream_name, path, config, storage);
+        let mut stream = Stream::create(stream_id, stream_name, config, storage);
         stream
             .create_topic(topic_id, topic_name, 1, message_expiry)
             .await

@@ -38,12 +38,11 @@ impl Segment {
         topic_id: u32,
         partition_id: u32,
         start_offset: u64,
-        partition_path: &str,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: Option<u32>,
     ) -> Segment {
-        let path = Self::get_path(partition_path, start_offset);
+        let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
 
         Segment {
             stream_id,
@@ -100,10 +99,6 @@ impl Segment {
         (last_message.timestamp + message_expiry) <= now
     }
 
-    fn get_path(partition_path: &str, start_offset: u64) -> String {
-        format!("{}/{:0>20}", partition_path, start_offset)
-    }
-
     fn get_log_path(path: &str) -> String {
         format!("{}.{}", path, LOG_EXTENSION)
     }
@@ -129,10 +124,9 @@ mod tests {
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
-        let partition_path = "/topics/2/3";
         let start_offset = 0;
         let config = Arc::new(SystemConfig::default());
-        let path = Segment::get_path(partition_path, start_offset);
+        let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
         let log_path = Segment::get_log_path(&path);
         let index_path = Segment::get_index_path(&path);
         let time_index_path = Segment::get_time_index_path(&path);
@@ -143,7 +137,6 @@ mod tests {
             topic_id,
             partition_id,
             start_offset,
-            partition_path,
             config,
             storage,
             message_expiry,
@@ -173,7 +166,6 @@ mod tests {
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
-        let partition_path = "/topics/1/1";
         let start_offset = 0;
         let config = Arc::new(SystemConfig {
             segment: SegmentConfig {
@@ -188,7 +180,6 @@ mod tests {
             topic_id,
             partition_id,
             start_offset,
-            partition_path,
             config,
             storage,
             None,
@@ -203,7 +194,6 @@ mod tests {
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
-        let partition_path = "/topics/2/3";
         let start_offset = 0;
         let config = Arc::new(SystemConfig {
             segment: SegmentConfig {
@@ -218,7 +208,6 @@ mod tests {
             topic_id,
             partition_id,
             start_offset,
-            partition_path,
             config,
             storage,
             None,

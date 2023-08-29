@@ -22,7 +22,6 @@ impl Topic {
                 self.stream_id,
                 self.topic_id,
                 partition_id,
-                &self.get_partitions_path(),
                 true,
                 self.config.clone(),
                 self.storage.clone(),

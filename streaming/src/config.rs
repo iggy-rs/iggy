@@ -96,3 +96,55 @@ impl Default for SegmentConfig {
         }
     }
 }
+
+impl SystemConfig {
+    pub fn get_system_path(&self) -> String {
+        self.path.to_string()
+    }
+
+    pub fn get_streams_path(&self) -> String {
+        format!("{}/{}", self.get_system_path(), self.stream.path)
+    }
+
+    pub fn get_stream_path(&self, stream_id: u32) -> String {
+        format!("{}/{}", self.get_streams_path(), stream_id)
+    }
+
+    pub fn get_topics_path(&self, stream_id: u32) -> String {
+        format!("{}/{}", self.get_stream_path(stream_id), self.topic.path)
+    }
+
+    pub fn get_topic_path(&self, stream_id: u32, topic_id: u32) -> String {
+        format!("{}/{}", self.get_topics_path(stream_id), topic_id)
+    }
+
+    pub fn get_partitions_path(&self, stream_id: u32, topic_id: u32) -> String {
+        format!(
+            "{}/{}",
+            self.get_topic_path(stream_id, topic_id),
+            self.partition.path
+        )
+    }
+
+    pub fn get_partition_path(&self, stream_id: u32, topic_id: u32, partition_id: u32) -> String {
+        format!(
+            "{}/{}",
+            self.get_partitions_path(stream_id, topic_id),
+            partition_id
+        )
+    }
+
+    pub fn get_segment_path(
+        &self,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+        start_offset: u64,
+    ) -> String {
+        format!(
+            "{}/{:0>20}",
+            self.get_partition_path(stream_id, topic_id, partition_id),
+            start_offset
+        )
+    }
+}

@@ -14,7 +14,6 @@ impl Partition {
             self.topic_id,
             self.partition_id,
             start_offset,
-            &self.path,
             self.config.clone(),
             self.storage.clone(),
             self.message_expiry,

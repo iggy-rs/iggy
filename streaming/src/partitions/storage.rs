@@ -80,7 +80,6 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.topic_id,
                 partition.partition_id,
                 start_offset,
-                &partition.path,
                 partition.config.clone(),
                 partition.storage.clone(),
                 partition.message_expiry,

@@ -18,7 +18,7 @@ impl Partition {
         );
 
         let (consumer_offsets, consumer_id) = match consumer {
-            PollingConsumer::Consumer(consumer_id) => {
+            PollingConsumer::Consumer(consumer_id, _) => {
                 (self.consumer_offsets.read().await, consumer_id)
             }
             PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
@@ -54,7 +54,7 @@ impl Partition {
         // This scope is required to avoid the potential deadlock by acquiring read lock and then write lock.
         {
             let (consumer_offsets, consumer_id) = match consumer {
-                PollingConsumer::Consumer(consumer_id) => {
+                PollingConsumer::Consumer(consumer_id, _) => {
                     (self.consumer_offsets.read().await, consumer_id)
                 }
                 PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
@@ -71,7 +71,7 @@ impl Partition {
         }
 
         let (mut consumer_offsets, consumer_id, path) = match consumer {
-            PollingConsumer::Consumer(consumer_id) => (
+            PollingConsumer::Consumer(consumer_id, _) => (
                 self.consumer_offsets.write().await,
                 consumer_id,
                 &self.consumer_offsets_path,

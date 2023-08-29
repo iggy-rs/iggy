@@ -35,7 +35,7 @@ impl TestServer {
         self.runtime.spawn(async {
             Command::new("cargo")
                 .kill_on_drop(true)
-                .args(&["r", "--bin", "server"])
+                .args(["r", "--bin", "server"])
                 .env("IGGY_SYSTEM_PATH", files_path)
                 .spawn()
                 .expect("Could not start server")

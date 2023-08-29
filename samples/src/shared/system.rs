@@ -71,7 +71,7 @@ pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), Er
         .create_topic(&CreateTopic {
             stream_id: Identifier::numeric(args.stream_id).unwrap(),
             topic_id: args.topic_id,
-            partitions_count: args.partition_id,
+            partitions_count: args.partitions_count,
             name: "orders".to_string(),
             message_expiry: None,
         })

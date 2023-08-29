@@ -232,7 +232,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: PARTITION_ID,
+        partition_id: Some(PARTITION_ID),
         strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
@@ -258,7 +258,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partition_id: PARTITION_ID,
+            partition_id: Some(PARTITION_ID),
             strategy: PollingStrategy::offset(start_offset),
             count: batch_size,
             auto_commit: false,
@@ -302,7 +302,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: PARTITION_ID + 1,
+        partition_id: Some(PARTITION_ID + 1),
         strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
@@ -319,7 +319,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partition_id: PARTITION_ID,
+            partition_id: Some(PARTITION_ID),
         })
         .await
         .unwrap();
@@ -336,7 +336,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partition_id: PARTITION_ID,
+            partition_id: Some(PARTITION_ID),
             offset: stored_offset,
         })
         .await
@@ -351,7 +351,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partition_id: PARTITION_ID,
+            partition_id: Some(PARTITION_ID),
         })
         .await
         .unwrap();
@@ -367,7 +367,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: PARTITION_ID,
+        partition_id: Some(PARTITION_ID),
         strategy: PollingStrategy::next(),
         count: messages_count,
         auto_commit: true,
@@ -390,7 +390,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partition_id: PARTITION_ID,
+            partition_id: Some(PARTITION_ID),
         })
         .await
         .unwrap();

@@ -46,7 +46,6 @@ impl Partition {
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
-        partitions_path: &str,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Partition {
@@ -54,7 +53,6 @@ impl Partition {
             stream_id,
             topic_id,
             partition_id,
-            partitions_path,
             false,
             config,
             storage,
@@ -66,13 +64,12 @@ impl Partition {
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
-        partitions_path: &str,
         with_segment: bool,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: Option<u32>,
     ) -> Partition {
-        let path = Self::get_path(partition_id, partitions_path);
+        let path = config.get_partition_path(stream_id, topic_id, partition_id);
         let offsets_path = Self::get_offsets_path(&path);
         let consumer_offsets_path = Self::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Self::get_consumer_group_offsets_path(&offsets_path);
@@ -115,7 +112,6 @@ impl Partition {
                 topic_id,
                 partition_id,
                 0,
-                &partition.path,
                 partition.config.clone(),
                 partition.storage.clone(),
                 partition.message_expiry,
@@ -163,10 +159,6 @@ impl Partition {
         expired_segments
     }
 
-    fn get_path(id: u32, partitions_path: &str) -> String {
-        format!("{}/{}", partitions_path, id)
-    }
-
     fn get_offsets_path(path: &str) -> String {
         format!("{}/offsets", path)
     }
@@ -194,10 +186,9 @@ mod tests {
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
-        let partitions_path = &format!("/topics/{topic_id}/partitions");
         let with_segment = true;
         let config = Arc::new(SystemConfig::default());
-        let path = Partition::get_path(partition_id, partitions_path);
+        let path = config.get_partition_path(stream_id, topic_id, partition_id);
         let offsets_path = Partition::get_offsets_path(&path);
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
@@ -208,7 +199,6 @@ mod tests {
             stream_id,
             topic_id,
             partition_id,
-            partitions_path,
             with_segment,
             config,
             storage,
@@ -243,13 +233,10 @@ mod tests {
     #[test]
     fn should_not_initialize_messages_buffer_given_zero_capacity() {
         let storage = Arc::new(get_test_system_storage());
-        let topic_id = 1;
-        let partitions_path = &format!("/topics/{topic_id}/partitions");
         let partition = Partition::create(
             1,
             1,
             1,
-            partitions_path,
             true,
             Arc::new(SystemConfig {
                 partition: PartitionConfig {
@@ -268,12 +255,10 @@ mod tests {
     fn should_not_initialize_segments_given_false_with_segment_parameter() {
         let storage = Arc::new(get_test_system_storage());
         let topic_id = 1;
-        let partitions_path = &format!("/topics/{topic_id}/partitions");
         let partition = Partition::create(
             1,
             topic_id,
             1,
-            partitions_path,
             false,
             Arc::new(SystemConfig::default()),
             storage,

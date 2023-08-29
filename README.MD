@@ -40,7 +40,8 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 - **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM
 - Optional metadata support in the form of **message headers**
-- Built-in benchmarking app to test the performance
+- Built-in **CLI** to manage the streaming server
+- Built-in **benchmarking app** to test the performance
 - **Single binary deployment** (no external dependencies)
 - Running as a single node (no cluster support yet)
 

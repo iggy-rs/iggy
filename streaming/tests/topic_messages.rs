@@ -97,7 +97,7 @@ fn get_payload(id: u32) -> String {
 }
 
 async fn assert_messages(topic: &Topic, partition_id: u32, expected_messages: u32) {
-    let consumer = PollingConsumer::Consumer(0);
+    let consumer = PollingConsumer::Consumer(0, partition_id);
     let messages = topic
         .get_messages(consumer, partition_id, PollingStrategy::offset(0), 1000)
         .await
@@ -108,6 +108,7 @@ async fn assert_messages(topic: &Topic, partition_id: u32, expected_messages: u3
 async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
     let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
+    setup.create_topics_directory(stream_id).await;
     let id = 2;
     let name = "test";
     let topic = Topic::create(
@@ -115,7 +116,6 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         id,
         name,
         partitions_count,
-        &setup.path,
         setup.config.clone(),
         storage.clone(),
         None,

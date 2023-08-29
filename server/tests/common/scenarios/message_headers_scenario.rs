@@ -57,7 +57,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         consumer: Consumer::default(),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: PARTITION_ID,
+        partition_id: Some(PARTITION_ID),
         strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
@@ -78,14 +78,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
                 .unwrap(),
             "Value 1"
         );
-        assert_eq!(
-            headers
-                .get(&HeaderKey::new("key 2").unwrap())
-                .unwrap()
-                .as_bool()
-                .unwrap(),
-            true
-        );
+        assert!(headers
+            .get(&HeaderKey::new("key 2").unwrap())
+            .unwrap()
+            .as_bool()
+            .unwrap(),);
         assert_eq!(
             headers
                 .get(&HeaderKey::new("key-3").unwrap())

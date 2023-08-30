@@ -47,9 +47,9 @@ const MESSAGES_COUNT: u32 = 1000;
 
 #[allow(dead_code)]
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let test_server = TestServer::default();
+    let mut test_server = TestServer::default();
     test_server.start();
-    sleep(std::time::Duration::from_secs(1)).await;
+    sleep(std::time::Duration::from_secs(5)).await;
     let client = client_factory.create_client().await;
     let client = IggyClient::new(client, IggyClientConfig::default(), None, None);
 

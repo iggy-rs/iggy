@@ -1,17 +1,180 @@
 name: Rust
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    branches:
+      - master
+      - test_release_branch
 env:
+  CRATE_NAME: iggy
+  GITHUB_TOKEN: ${{ github.token }}
+  RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  test:
+    name: ${{ matrix.platform.os_name }} with rust ${{ matrix.toolchain }}
+    runs-on: ${{ matrix.platform.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+        - os_name: Linux-x86_64-musl
+          os: ubuntu-22.04
+          target: x86_64-unknown-linux-musl
+          bin:
+            - iggy-server
+            - iggy-cli
+          name: iggy-Linux-x86_64-musl.tar.gz
+          cargo_command: cargo
+          docker_arch: linux/amd64
+          cross: false
+
+        # - os_name: Linux-aarch64
+        #   os: ubuntu-22.04
+        #   target: aarch64-unknown-linux-musl
+        #   bin:
+        #     - iggy-server
+        #     - iggy-cli
+        #   name: iggy-Linux-aarch64-musl.tar.gz
+        #   docker_arch: linux/arm64/v8
+        #   cross: true
+        #   qemu_runner: "qemu-aarch64"
+
+        # - os_name: Linux-arm
+        #   os: ubuntu-22.04
+        #   target: arm-unknown-linux-musleabi
+        #   bin:
+        #     - iggy-server
+        #     - iggy-cli
+        #   name: iggy-Linux-arm-musl.tar.gz
+        #   docker_arch: linux/arm/v7
+        #   cross: true
+        #   qemu_runner: "qemu-arm"
+
+        # - os_name: macOS-aarch64
+        #   os: macOS-latest
+        #   target: aarch64-apple-darwin
+        #   bin:
+        #     - iggy-server
+        #     - iggy-cli
+        #   name: iggy-Darwin-aarch64.tar.gz
+        #   skip_tests: true
+        #   docker_arch: darwin/aarch64
+        #   cross: false
+
+        # - os_name: Windows-x86_64
+        #   os: windows-latest
+        #   target: x86_64-pc-windows-msvc
+        #   bin:
+        #   - iggy-server
+        #   - iggy-cli
+        #   name: iggy-Windows-x86_64.zip
+        #   cross: false
+
+          # musl will be used, but this entry is here just in case
+          # - os_name: Linux-x86_64-gnu
+          #   os: ubuntu-22.04
+          #   target: x86_64-unknown-linux-gnu
+          #   bin:
+          #     - iggy-server
+          #     - iggy-cli
+          #   name: iggy-Linux-x86_64-gnu.tar.gz
+          #   docker_arch: linux/amd64
+          #   cargo_command: cargo
+
+        toolchain:
+          - stable
+          # - nightly
+          # - beta
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --verbose
+      - uses: actions/checkout@v3
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "v2"
+      - name: Configure Git
+        run: |
+          git config --global user.email "jdoe@example.com"
+          git config --global user.name "J. Doe"
+      - name: Set environment variables
+        run: |
+          export QEMU_RUNNER=${{ matrix.platform.qemu_runner }}
+        if: |
+          matrix.platform.cross
+      - name: Install musl-tools on Linux
+        run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools
+        if: contains(matrix.platform.name, 'musl')
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: "build"
+          target: ${{ matrix.platform.target }}
+          toolchain: ${{ matrix.toolchain }}
+          args: "--release"
+      - name: Run tests
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: "test"
+          target: ${{ matrix.platform.target }}
+          toolchain: ${{ matrix.toolchain }}
+          args: "--release --verbose"
+        if: ${{ !matrix.platform.skip_tests }}
+
+      - name: Package as archive
+        shell: bash
+        run: |
+          cd target/${{ matrix.platform.target }}/release
+          BINARIES=$(echo '${{ toJson(matrix.platform.bin) }}' | jq -r '.[]')
+          if [[ "${{ matrix.platform.os }}" == "windows-latest" ]]; then
+            7z a ../../../${{ matrix.platform.name }} $(echo "$BINARIES" | sed 's/$/.exe /g')
+          else
+            tar czvf ../../../${{ matrix.platform.name }} $BINARIES
+          fi
+          cd -
+        if: |
+          matrix.toolchain == 'stable' &&
+          ( startsWith( github.ref, 'refs/tags/v' ) ||
+            github.ref == 'refs/tags/test-release' )
+      - name: Publish release artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: iggy-${{ matrix.platform.os_name }}
+          path: "iggy-*"
+        if: matrix.toolchain == 'stable' && github.ref == 'refs/tags/test-release'
+      - name: Generate SHA-256
+        run: shasum -a 256 ${{ matrix.platform.name }}
+        if: |
+          matrix.toolchain == 'stable' &&
+          matrix.platform.os == 'macOS-latest' &&
+          ( startsWith( github.ref, 'refs/tags/v' ) ||
+            github.ref == 'refs/tags/test-release' )
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v1
+        with:
+          draft: true
+          files: "iggy-*"
+          body_path: Changes.md
+        if: matrix.toolchain == 'stable' && startsWith( github.ref, 'refs/tags/v' )
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: 'arm64,arm'
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./
+          file: ./Dockerfile
+          platforms: ${{ matrix.platform.docker_arch }}
+          push: true
+          tags: iggyrs/iggy:latest
+          build-args: |
+            IGGY_CLI_PATH=target/${{ matrix.platform.target }}/release/iggy-cli
+            IGGY_SERVER_PATH=target/${{ matrix.platform.target }}/release/iggy-server

@@ -28,7 +28,7 @@ pub async fn handle(
         .get_topic(&command.topic_id)?
         .get_consumer_offset(consumer)
         .await?;
-    let offset = mapper::map_offset(command.consumer.id, offset);
+    let offset = mapper::map_offset(&offset);
     sender.send_ok_response(&offset).await?;
     Ok(())
 }

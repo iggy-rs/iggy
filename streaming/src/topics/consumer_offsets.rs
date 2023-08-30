@@ -2,6 +2,7 @@ use crate::partitions::partition::Partition;
 use crate::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
 use iggy::error::Error;
+use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use tokio::sync::RwLock;
 
 impl Topic {
@@ -15,10 +16,18 @@ impl Topic {
         partition.store_consumer_offset(consumer, offset).await
     }
 
-    pub async fn get_consumer_offset(&self, consumer: PollingConsumer) -> Result<u64, Error> {
+    pub async fn get_consumer_offset(
+        &self,
+        consumer: PollingConsumer,
+    ) -> Result<ConsumerOffsetInfo, Error> {
         let partition = self.resolve_partition(consumer).await?;
         let partition = partition.read().await;
-        partition.get_consumer_offset(consumer).await
+        let offset = partition.get_consumer_offset(consumer).await?;
+        Ok(ConsumerOffsetInfo {
+            partition_id: partition.partition_id,
+            current_offset: partition.current_offset,
+            stored_offset: offset,
+        })
     }
 
     async fn resolve_partition(

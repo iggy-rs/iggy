@@ -6,7 +6,7 @@ use axum::{Json, Router};
 use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::identifier::Identifier;
-use iggy::models::offset::Offset;
+use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
@@ -23,7 +23,7 @@ async fn get_consumer_offset(
     State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     mut query: Query<GetConsumerOffset>,
-) -> Result<Json<Offset>, CustomError> {
+) -> Result<Json<ConsumerOffsetInfo>, CustomError> {
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
@@ -34,10 +34,7 @@ async fn get_consumer_offset(
     let topic = stream.get_topic(&query.topic_id)?;
     let offset = topic.get_consumer_offset(consumer).await?;
 
-    Ok(Json(Offset {
-        consumer_id: query.consumer.id,
-        offset,
-    }))
+    Ok(Json(offset))
 }
 
 async fn store_consumer_offset(

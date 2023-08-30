@@ -323,8 +323,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         })
         .await
         .unwrap();
-    assert_eq!(offset.consumer_id, CONSUMER_ID);
-    assert_eq!(offset.offset, 0);
+    assert_eq!(offset.partition_id, PARTITION_ID);
+    assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
+    assert_eq!(offset.stored_offset, 0);
 
     // 23. Store the consumer offset
     let stored_offset = 10;
@@ -355,8 +356,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         })
         .await
         .unwrap();
-    assert_eq!(offset.consumer_id, CONSUMER_ID);
-    assert_eq!(offset.offset, stored_offset);
+    assert_eq!(offset.partition_id, PARTITION_ID);
+    assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
+    assert_eq!(offset.stored_offset, stored_offset);
 
     // 25. Poll messages from the specific partition in topic using next with auto commit
     let messages_count = 10;
@@ -394,8 +396,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         })
         .await
         .unwrap();
-    assert_eq!(offset.consumer_id, CONSUMER_ID);
-    assert_eq!(offset.offset, expected_last_offset);
+    assert_eq!(offset.partition_id, PARTITION_ID);
+    assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
+    assert_eq!(offset.stored_offset, expected_last_offset);
 
     // 27. Get the consumer groups and validate that there are no groups
     let consumer_groups = client

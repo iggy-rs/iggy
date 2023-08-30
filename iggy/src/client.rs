@@ -11,8 +11,8 @@ use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
+use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::message::Message;
-use crate::models::offset::Offset;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -91,7 +91,10 @@ pub trait MessageClient {
 #[async_trait]
 pub trait ConsumerOffsetClient {
     async fn store_consumer_offset(&self, command: &StoreConsumerOffset) -> Result<(), Error>;
-    async fn get_consumer_offset(&self, command: &GetConsumerOffset) -> Result<Offset, Error>;
+    async fn get_consumer_offset(
+        &self,
+        command: &GetConsumerOffset,
+    ) -> Result<ConsumerOffsetInfo, Error>;
 }
 
 #[async_trait]

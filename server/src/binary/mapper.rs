@@ -1,4 +1,5 @@
 use bytes::BufMut;
+use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::models::message::Message;
 use iggy::models::stats::Stats;
 use std::sync::Arc;
@@ -39,10 +40,11 @@ pub fn map_stats(stats: &Stats) -> Vec<u8> {
     bytes
 }
 
-pub fn map_offset(consumer_id: u32, offset: u64) -> Vec<u8> {
-    let mut bytes = Vec::with_capacity(12);
-    bytes.put_u32_le(consumer_id);
-    bytes.put_u64_le(offset);
+pub fn map_offset(offset: &ConsumerOffsetInfo) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(20);
+    bytes.put_u32_le(offset.partition_id);
+    bytes.put_u64_le(offset.current_offset);
+    bytes.put_u64_le(offset.stored_offset);
     bytes
 }
 

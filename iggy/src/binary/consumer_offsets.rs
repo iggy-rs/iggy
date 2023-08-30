@@ -5,7 +5,7 @@ use crate::command::{GET_CONSUMER_OFFSET_CODE, STORE_CONSUMER_OFFSET_CODE};
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::Error;
-use crate::models::offset::Offset;
+use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 
 pub async fn store_consumer_offset(
     client: &dyn BinaryClient,
@@ -20,7 +20,7 @@ pub async fn store_consumer_offset(
 pub async fn get_consumer_offset(
     client: &dyn BinaryClient,
     command: &GetConsumerOffset,
-) -> Result<Offset, Error> {
+) -> Result<ConsumerOffsetInfo, Error> {
     let response = client
         .send_with_response(GET_CONSUMER_OFFSET_CODE, &command.as_bytes())
         .await?;

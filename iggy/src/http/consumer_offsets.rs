@@ -3,7 +3,7 @@ use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::Error;
 use crate::http::client::HttpClient;
-use crate::models::offset::Offset;
+use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -20,7 +20,10 @@ impl ConsumerOffsetClient for HttpClient {
         Ok(())
     }
 
-    async fn get_consumer_offset(&self, command: &GetConsumerOffset) -> Result<Offset, Error> {
+    async fn get_consumer_offset(
+        &self,
+        command: &GetConsumerOffset,
+    ) -> Result<ConsumerOffsetInfo, Error> {
         let response = self
             .get_with_query(
                 &get_path(

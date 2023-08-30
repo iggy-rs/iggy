@@ -2,8 +2,8 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails, ConsumerGroupInfo};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
+use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::message::{Message, MessageState};
-use crate::models::offset::Offset;
 use crate::models::partition::Partition;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
@@ -85,12 +85,14 @@ pub fn map_stats(payload: &[u8]) -> Result<Stats, Error> {
     })
 }
 
-pub fn map_offset(payload: &[u8]) -> Result<Offset, Error> {
-    let consumer_id = u32::from_le_bytes(payload[..4].try_into()?);
-    let offset = u64::from_le_bytes(payload[4..12].try_into()?);
-    Ok(Offset {
-        consumer_id,
-        offset,
+pub fn map_offset(payload: &[u8]) -> Result<ConsumerOffsetInfo, Error> {
+    let partition_id = u32::from_le_bytes(payload[..4].try_into()?);
+    let current_offset = u64::from_le_bytes(payload[4..12].try_into()?);
+    let stored_offset = u64::from_le_bytes(payload[12..20].try_into()?);
+    Ok(ConsumerOffsetInfo {
+        partition_id,
+        current_offset,
+        stored_offset,
     })
 }
 

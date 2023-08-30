@@ -17,8 +17,8 @@ use crate::messages::poll_messages::{PollMessages, PollingKind};
 use crate::messages::send_messages::{Partitioning, PartitioningKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
+use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::message::Message;
-use crate::models::offset::Offset;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -511,7 +511,10 @@ impl ConsumerOffsetClient for IggyClient {
             .await
     }
 
-    async fn get_consumer_offset(&self, command: &GetConsumerOffset) -> Result<Offset, Error> {
+    async fn get_consumer_offset(
+        &self,
+        command: &GetConsumerOffset,
+    ) -> Result<ConsumerOffsetInfo, Error> {
         self.client.read().await.get_consumer_offset(command).await
     }
 }

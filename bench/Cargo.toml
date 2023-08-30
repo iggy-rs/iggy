@@ -17,3 +17,7 @@ bytes = "1.4.0"
 rcgen = "0.11.1"
 quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
+
+[[bin]]
+name = "iggy-bench"
+path = "src/main.rs"

@@ -17,3 +17,7 @@ tracing-subscriber = {version = "0.3.16"}
 thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"] }
 tokio-rustls = "0.24.0"
+
+[[bin]]
+name = "iggy-cli"
+path = "src/main.rs"

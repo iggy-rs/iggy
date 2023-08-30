@@ -2,7 +2,7 @@ use crate::systems::system::System;
 use iggy::models::stats::Stats;
 use sysinfo::{PidExt, ProcessExt, SystemExt};
 
-const PROCESS_NAME: &str = "server";
+const PROCESS_NAME: &str = "iggy-server";
 
 impl System {
     pub async fn get_stats(&self) -> Stats {

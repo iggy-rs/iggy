@@ -23,7 +23,7 @@ const PARTITION_ID: u32 = 1;
 
 #[allow(dead_code)]
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let test_server = TestServer::default();
+    let mut test_server = TestServer::default();
     test_server.start();
     sleep(std::time::Duration::from_secs(1)).await;
     let client = client_factory.create_client().await;

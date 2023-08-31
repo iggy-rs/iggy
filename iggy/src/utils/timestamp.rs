@@ -6,3 +6,7 @@ pub fn get() -> u64 {
         .unwrap()
         .as_micros() as u64
 }
+
+pub fn from(time: &SystemTime) -> u64 {
+    time.duration_since(UNIX_EPOCH).unwrap().as_micros() as u64
+}

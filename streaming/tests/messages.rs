@@ -3,7 +3,7 @@ mod common;
 use crate::common::TestSetup;
 use bytes::Bytes;
 use iggy::models::header::{HeaderKey, HeaderValue};
-use iggy::models::message::{Message, MessageState};
+use iggy::models::messages::{Message, MessageState};
 use iggy::utils::{checksum, timestamp};
 use std::collections::HashMap;
 use std::str::FromStr;

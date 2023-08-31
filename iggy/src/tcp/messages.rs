@@ -3,13 +3,13 @@ use crate::client::MessageClient;
 use crate::error::Error;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
-use crate::models::message::Message;
+use crate::models::messages::PolledMessages;
 use crate::tcp::client::TcpClient;
 use async_trait::async_trait;
 
 #[async_trait]
 impl MessageClient for TcpClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
+    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, Error> {
         binary::messages::poll_messages(self, command).await
     }
 

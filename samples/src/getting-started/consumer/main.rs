@@ -2,7 +2,7 @@ use iggy::client::Client;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use iggy::tcp::client::TcpClient;
 use std::error::Error;
 use std::time::Duration;
@@ -34,7 +34,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
     let mut offset = 0;
     let messages_per_batch = 10;
     loop {
-        let messages = client
+        let polled_messages = client
             .poll_messages(&PollMessages {
                 consumer: Consumer::default(),
                 stream_id: Identifier::numeric(STREAM_ID)?,
@@ -45,14 +45,14 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
                 auto_commit: false,
             })
             .await?;
-        if messages.is_empty() {
+        if polled_messages.messages.is_empty() {
             info!("No messages found.");
             sleep(interval).await;
             continue;
         }
 
-        offset += messages.len() as u64;
-        for message in messages {
+        offset += polled_messages.messages.len() as u64;
+        for message in polled_messages.messages {
             handle_message(&message)?;
         }
         sleep(interval).await;

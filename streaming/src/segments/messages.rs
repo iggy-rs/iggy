@@ -3,7 +3,7 @@ use crate::segments::segment::Segment;
 use crate::segments::time_index::TimeIndex;
 use crate::storage::SegmentStorage;
 use iggy::error::Error;
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use std::sync::Arc;
 use tracing::trace;
 

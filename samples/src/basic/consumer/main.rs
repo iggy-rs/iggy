@@ -5,7 +5,7 @@ use iggy::client_provider::ClientProviderConfig;
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use samples::shared::args::Args;
 use samples::shared::system;
 use std::error::Error;
@@ -32,7 +32,7 @@ async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
         args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
     loop {
-        let messages = client
+        let polled_messages = client
             .poll_messages(&PollMessages {
                 consumer: Consumer {
                     kind: ConsumerKind::from_code(args.consumer_kind)?,
@@ -46,12 +46,12 @@ async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
                 auto_commit: true,
             })
             .await?;
-        if messages.is_empty() {
+        if polled_messages.messages.is_empty() {
             info!("No messages found.");
             interval.tick().await;
             continue;
         }
-        for message in messages {
+        for message in polled_messages.messages {
             handle_message(&message)?;
         }
         interval.tick().await;

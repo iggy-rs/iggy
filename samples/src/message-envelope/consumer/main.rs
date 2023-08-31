@@ -6,7 +6,7 @@ use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, St
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use samples::shared::args::Args;
 use samples::shared::messages::*;
 use samples::shared::system;

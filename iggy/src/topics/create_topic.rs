@@ -201,14 +201,14 @@ mod tests {
         let topic_id = 2u32;
         let partitions_count = 3u32;
         let name = "test".to_string();
-        let message_expiry = Some(10);
+        let message_expiry = 10;
 
         let stream_id_bytes = stream_id.as_bytes();
         let mut bytes = Vec::with_capacity(8 + stream_id_bytes.len() + name.len());
         bytes.extend(stream_id_bytes);
         bytes.put_u32_le(topic_id);
         bytes.put_u32_le(partitions_count);
-        bytes.put_u32_le(message_expiry.unwrap());
+        bytes.put_u32_le(message_expiry);
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
 
@@ -227,15 +227,11 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = 2u32;
         let partitions_count = 3u32;
-        let message_expiry = Some(10);
+        let message_expiry = 10;
         let name = "test".to_string();
         let input = format!(
             "{}|{}|{}|{}|{}",
-            stream_id,
-            topic_id,
-            partitions_count,
-            message_expiry.unwrap(),
-            name
+            stream_id, topic_id, partitions_count, message_expiry, name
         );
         let command = CreateTopic::from_str(&input);
         assert!(command.is_ok());
@@ -244,7 +240,7 @@ mod tests {
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
         assert_eq!(command.partitions_count, partitions_count);
-        assert_eq!(command.message_expiry, message_expiry);
+        assert_eq!(command.message_expiry, Some(message_expiry));
         assert_eq!(command.name, name);
     }
 }

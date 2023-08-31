@@ -3,6 +3,7 @@ use crate::persister::Persister;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::Error;
+use iggy::utils::timestamp;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
@@ -54,6 +55,9 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.stream_id,
             ));
         }
+
+        let metadata = fs::metadata(&partition.path).await?;
+        partition.created_at = timestamp::from(&metadata.created()?);
 
         let mut dir_entries = dir_entries.unwrap();
         while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {

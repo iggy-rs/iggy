@@ -12,7 +12,7 @@ use crate::topics::storage::FileTopicStorage;
 use crate::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::error::Error;
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -148,7 +148,7 @@ pub(crate) mod tests {
     use crate::streams::stream::Stream;
     use crate::topics::topic::Topic;
     use async_trait::async_trait;
-    use iggy::models::message::Message;
+    use iggy::models::messages::Message;
     use std::sync::Arc;
 
     struct TestStreamStorage {}

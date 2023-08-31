@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::Error;
-use iggy::models::message::{Message, MessageState};
+use iggy::models::messages::{Message, MessageState};
 use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::io::SeekFrom;

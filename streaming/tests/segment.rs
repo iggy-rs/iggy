@@ -2,7 +2,7 @@ mod common;
 
 use crate::common::TestSetup;
 use bytes::Bytes;
-use iggy::models::message::{Message, MessageState};
+use iggy::models::messages::{Message, MessageState};
 use iggy::utils::{checksum, timestamp};
 use std::sync::Arc;
 use streaming::segments::segment;
@@ -166,7 +166,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let message_expiry = Some(10);
+    let message_expiry = 10;
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -174,7 +174,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         start_offset,
         setup.config.clone(),
         storage.clone(),
-        message_expiry,
+        Some(message_expiry),
     );
 
     setup
@@ -190,7 +190,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     .await;
     let messages_count = 10;
     let now = timestamp::get();
-    let message_expiry = message_expiry.unwrap() as u64;
+    let message_expiry = message_expiry as u64;
     let mut expired_timestamp = now - (1000 * 2 * message_expiry);
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
@@ -215,7 +215,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let message_expiry = Some(10);
+    let message_expiry = 10;
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -223,7 +223,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         start_offset,
         setup.config.clone(),
         storage.clone(),
-        message_expiry,
+        Some(message_expiry),
     );
 
     setup
@@ -238,7 +238,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     )
     .await;
     let now = timestamp::get();
-    let message_expiry = message_expiry.unwrap() as u64;
+    let message_expiry = message_expiry as u64;
     let expired_timestamp = now - (1000 * 2 * message_expiry);
     let not_expired_timestamp = now - (1000 * message_expiry) + 1;
     let expired_message = create_message(0, "test", expired_timestamp);

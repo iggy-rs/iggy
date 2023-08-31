@@ -3,7 +3,7 @@ use crate::error::Error;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails, ConsumerGroupInfo};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
-use crate::models::message::{Message, MessageState};
+use crate::models::messages::{Message, MessageState, PolledMessages};
 use crate::models::partition::Partition;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
@@ -85,7 +85,7 @@ pub fn map_stats(payload: &[u8]) -> Result<Stats, Error> {
     })
 }
 
-pub fn map_offset(payload: &[u8]) -> Result<ConsumerOffsetInfo, Error> {
+pub fn map_consumer_offset(payload: &[u8]) -> Result<ConsumerOffsetInfo, Error> {
     let partition_id = u32::from_le_bytes(payload[..4].try_into()?);
     let current_offset = u64::from_le_bytes(payload[4..12].try_into()?);
     let stored_offset = u64::from_le_bytes(payload[12..20].try_into()?);
@@ -144,13 +144,21 @@ pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, Error> {
     Ok(clients)
 }
 
-pub fn map_messages(payload: &[u8]) -> Result<Vec<Message>, Error> {
+pub fn map_polled_messages(payload: &[u8]) -> Result<PolledMessages, Error> {
     if payload.is_empty() {
-        return Ok(EMPTY_MESSAGES);
+        return Ok(PolledMessages {
+            messages: EMPTY_MESSAGES,
+            partition_id: 0,
+            current_offset: 0,
+        });
     }
 
     let length = payload.len();
-    let mut position = 4;
+    let partition_id = u32::from_le_bytes(payload[..4].try_into()?);
+    let current_offset = u64::from_le_bytes(payload[4..12].try_into()?);
+    // Currently ignored
+    let _messages_count = u32::from_le_bytes(payload[12..16].try_into()?);
+    let mut position = 16;
     let mut messages = Vec::new();
     while position < length {
         let offset = u64::from_le_bytes(payload[position..position + 8].try_into()?);
@@ -192,7 +200,11 @@ pub fn map_messages(payload: &[u8]) -> Result<Vec<Message>, Error> {
     }
 
     messages.sort_by(|x, y| x.offset.cmp(&y.offset));
-    Ok(messages)
+    Ok(PolledMessages {
+        messages,
+        partition_id,
+        current_offset,
+    })
 }
 
 pub fn map_streams(payload: &[u8]) -> Result<Vec<Stream>, Error> {
@@ -225,6 +237,7 @@ pub fn map_stream(payload: &[u8]) -> Result<StreamDetails, Error> {
     topics.sort_by(|x, y| x.id.cmp(&y.id));
     let stream = StreamDetails {
         id: stream.id,
+        created_at: stream.created_at,
         topics_count: stream.topics_count,
         size_bytes: stream.size_bytes,
         messages_count: stream.messages_count,
@@ -236,16 +249,18 @@ pub fn map_stream(payload: &[u8]) -> Result<StreamDetails, Error> {
 
 fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), Error> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let topics_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-    let size_bytes = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
-    let messages_count = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
-    let name_length = payload[position + 24];
+    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let topics_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
+    let size_bytes = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
+    let messages_count = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?);
+    let name_length = payload[position + 32];
     let name =
-        from_utf8(&payload[position + 25..position + 25 + name_length as usize])?.to_string();
-    let read_bytes = 4 + 4 + 8 + 8 + 1 + name_length as usize;
+        from_utf8(&payload[position + 33..position + 33 + name_length as usize])?.to_string();
+    let read_bytes = 4 + 8 + 4 + 8 + 8 + 1 + name_length as usize;
     Ok((
         Stream {
             id,
+            created_at,
             size_bytes,
             messages_count,
             topics_count,
@@ -285,6 +300,7 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
     partitions.sort_by(|x, y| x.id.cmp(&y.id));
     let topic = TopicDetails {
         id: topic.id,
+        created_at: topic.created_at,
         name: topic.name,
         size_bytes: topic.size_bytes,
         messages_count: topic.messages_count,
@@ -297,21 +313,23 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
 
 fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), Error> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let partitions_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-    let message_expiry = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
+    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let partitions_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
+    let message_expiry = u32::from_le_bytes(payload[position + 16..position + 20].try_into()?);
     let message_expiry = match message_expiry {
         0 => None,
         _ => Some(message_expiry),
     };
-    let size_bytes = u64::from_le_bytes(payload[position + 12..position + 20].try_into()?);
-    let messages_count = u64::from_le_bytes(payload[position + 20..position + 28].try_into()?);
-    let name_length = payload[position + 28];
+    let size_bytes = u64::from_le_bytes(payload[position + 20..position + 28].try_into()?);
+    let messages_count = u64::from_le_bytes(payload[position + 28..position + 36].try_into()?);
+    let name_length = payload[position + 36];
     let name =
-        from_utf8(&payload[position + 29..position + 29 + name_length as usize])?.to_string();
-    let read_bytes = 4 + 4 + 4 + 8 + 8 + 1 + name_length as usize;
+        from_utf8(&payload[position + 37..position + 37 + name_length as usize])?.to_string();
+    let read_bytes = 4 + 8 + 4 + 4 + 8 + 8 + 1 + name_length as usize;
     Ok((
         Topic {
             id,
+            created_at,
             partitions_count,
             size_bytes,
             messages_count,
@@ -324,14 +342,16 @@ fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), Error
 
 fn map_to_partition(payload: &[u8], position: usize) -> Result<(Partition, usize), Error> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let segments_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
-    let current_offset = u64::from_le_bytes(payload[position + 8..position + 16].try_into()?);
-    let size_bytes = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
-    let messages_count = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?);
-    let read_bytes = 4 + 4 + 8 + 8 + 8;
+    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let segments_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
+    let current_offset = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
+    let size_bytes = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?);
+    let messages_count = u64::from_le_bytes(payload[position + 32..position + 40].try_into()?);
+    let read_bytes = 4 + 8 + 4 + 8 + 8 + 8;
     Ok((
         Partition {
             id,
+            created_at,
             segments_count,
             current_offset,
             size_bytes,

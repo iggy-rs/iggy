@@ -2,7 +2,7 @@ use crate::config::SystemConfig;
 use crate::segments::index::Index;
 use crate::segments::time_index::TimeIndex;
 use crate::storage::SystemStorage;
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use iggy::utils::timestamp;
 use std::sync::Arc;
 

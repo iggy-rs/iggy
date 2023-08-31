@@ -2,6 +2,7 @@
 lto = true
 
 [workspace]
+resolver = "2"
 
 members = [
     "bench",

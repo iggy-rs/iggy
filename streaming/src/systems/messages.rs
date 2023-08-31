@@ -1,3 +1,4 @@
+use crate::models::messages::PolledMessages;
 use crate::polling_consumer::PollingConsumer;
 use crate::systems::system::System;
 use bytes::Bytes;
@@ -6,7 +7,7 @@ use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use std::sync::Arc;
 use tracing::{error, trace};
 
@@ -19,7 +20,7 @@ impl System {
         strategy: PollingStrategy,
         count: u32,
         auto_commit: bool,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<PolledMessages, Error> {
         if count == 0 {
             return Err(Error::InvalidMessagesCount);
         }
@@ -38,27 +39,27 @@ impl System {
             }
         };
 
-        let messages = topic
+        let mut polled_messages = topic
             .get_messages(consumer, partition_id, strategy, count)
             .await?;
 
-        if messages.is_empty() {
-            return Ok(messages);
+        if polled_messages.messages.is_empty() {
+            return Ok(polled_messages);
         }
 
-        let offset = messages.last().unwrap().offset;
+        let offset = polled_messages.messages.last().unwrap().offset;
         if auto_commit {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
             topic.store_consumer_offset(consumer, offset).await?;
         }
 
         if self.encryptor.is_none() {
-            return Ok(messages);
+            return Ok(polled_messages);
         }
 
         let encryptor = self.encryptor.as_ref().unwrap();
-        let mut decrypted_messages = Vec::with_capacity(messages.len());
-        for message in messages {
+        let mut decrypted_messages = Vec::with_capacity(polled_messages.messages.len());
+        for message in polled_messages.messages.iter() {
             let payload = encryptor.decrypt(&message.payload);
             if payload.is_err() {
                 error!("Cannot decrypt the message.");
@@ -78,7 +79,8 @@ impl System {
             }));
         }
 
-        Ok(decrypted_messages)
+        polled_messages.messages = decrypted_messages;
+        Ok(polled_messages)
     }
 
     pub async fn append_messages(

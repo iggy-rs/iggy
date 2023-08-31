@@ -6,7 +6,6 @@ use axum::{Json, Router};
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
-use iggy::models::message::Message;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
@@ -23,14 +22,15 @@ async fn poll_messages(
     State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     mut query: Query<PollMessages>,
-) -> Result<Json<Vec<Arc<Message>>>, CustomError> {
+) -> Result<Json<streaming::models::messages::PolledMessages>, CustomError> {
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
 
-    let consumer = PollingConsumer::Consumer(query.consumer.id, query.partition_id.unwrap_or(0));
+    let partition_id = query.partition_id.unwrap_or(0);
+    let consumer = PollingConsumer::Consumer(query.consumer.id, partition_id);
     let system = system.read().await;
-    let messages = system
+    let polled_messages = system
         .poll_messages(
             consumer,
             &query.stream_id,
@@ -40,7 +40,7 @@ async fn poll_messages(
             query.auto_commit,
         )
         .await?;
-    Ok(Json(messages))
+    Ok(Json(polled_messages))
 }
 
 async fn send_messages(

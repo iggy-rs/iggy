@@ -3,6 +3,7 @@ use crate::partitions::partition::Partition;
 use crate::storage::SystemStorage;
 use crate::topics::consumer_group::ConsumerGroup;
 use iggy::error::Error;
+use iggy::utils::timestamp;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
@@ -23,6 +24,7 @@ pub struct Topic {
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
     pub(crate) current_partition_id: AtomicU32,
     pub message_expiry: Option<u32>,
+    pub created_at: u64,
 }
 
 impl Topic {
@@ -67,6 +69,7 @@ impl Topic {
                 },
             },
             config,
+            created_at: timestamp::get(),
         };
         topic.add_partitions(partitions_count)?;
         Ok(topic)

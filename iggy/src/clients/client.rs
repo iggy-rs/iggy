@@ -18,7 +18,7 @@ use crate::messages::send_messages::{Partitioning, PartitioningKind, SendMessage
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
-use crate::models::message::Message;
+use crate::models::messages::{Message, PolledMessages};
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -182,13 +182,13 @@ impl IggyClient {
             loop {
                 sleep(interval).await;
                 let client = client.read().await;
-                let messages = client.poll_messages(&poll_messages).await;
-                if let Err(error) = messages {
+                let polled_messages = client.poll_messages(&poll_messages).await;
+                if let Err(error) = polled_messages {
                     error!("There was an error while polling messages: {:?}", error);
                     continue;
                 }
 
-                let messages = messages.unwrap();
+                let messages = polled_messages.unwrap().messages;
                 if messages.is_empty() {
                     continue;
                 }
@@ -429,27 +429,15 @@ impl PartitionClient for IggyClient {
 
 #[async_trait]
 impl MessageClient for IggyClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
-        let messages = self.client.read().await.poll_messages(command).await?;
+    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, Error> {
+        let mut polled_messages = self.client.read().await.poll_messages(command).await?;
         if let Some(ref encryptor) = self.encryptor {
-            let mut decrypted_messages = Vec::with_capacity(messages.len());
-            for message in messages {
+            for message in polled_messages.messages.iter_mut() {
                 let payload = encryptor.decrypt(&message.payload)?;
-                decrypted_messages.push(Message {
-                    id: message.id,
-                    state: message.state,
-                    checksum: message.checksum,
-                    offset: message.offset,
-                    timestamp: message.timestamp,
-                    length: payload.len() as u32,
-                    headers: message.headers,
-                    payload: Bytes::from(payload),
-                });
+                message.payload = Bytes::from(payload);
             }
-            Ok(decrypted_messages)
-        } else {
-            Ok(messages)
         }
+        Ok(polled_messages)
     }
 
     async fn send_messages(&self, command: &mut SendMessages) -> Result<(), Error> {

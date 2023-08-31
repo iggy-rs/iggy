@@ -66,6 +66,7 @@ async fn should_load_existing_partition_from_disk() {
         loaded_partition.load().await.unwrap();
 
         assert_eq!(loaded_partition.stream_id, partition.stream_id);
+        assert!(loaded_partition.created_at > 0);
         assert_eq!(loaded_partition.partition_id, partition.partition_id);
         assert_eq!(loaded_partition.path, partition.path);
         assert_eq!(loaded_partition.offsets_path, partition.offsets_path);

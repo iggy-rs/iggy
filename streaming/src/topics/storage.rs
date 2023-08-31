@@ -7,7 +7,7 @@ use crate::utils::file;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
-use iggy::utils::text;
+use iggy::utils::{text, timestamp};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
@@ -191,6 +191,9 @@ impl Storage<Topic> for FileTopicStorage {
         {
             return Err(Error::CannotReadTopicInfo(topic.topic_id, topic.stream_id));
         }
+
+        let metadata = fs::metadata(&topic.info_path).await?;
+        topic.created_at = timestamp::from(&metadata.created()?);
 
         let lines = topic_info.lines().collect::<Vec<&str>>();
         let topic_name = text::to_lowercase_non_whitespace(lines.first().unwrap());

@@ -24,5 +24,5 @@ pub async fn get_consumer_offset(
     let response = client
         .send_with_response(GET_CONSUMER_OFFSET_CODE, &command.as_bytes())
         .await?;
-    mapper::map_offset(&response)
+    mapper::map_consumer_offset(&response)
 }

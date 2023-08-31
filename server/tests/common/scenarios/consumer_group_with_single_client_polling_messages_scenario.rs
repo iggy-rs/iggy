@@ -125,8 +125,8 @@ async fn execute_using_messages_key_key(client: &IggyClient) {
 
     let mut total_read_messages_count = 0;
     for _ in 1..=PARTITIONS_COUNT * MESSAGES_COUNT {
-        let messages = client.poll_messages(&poll_messages).await.unwrap();
-        total_read_messages_count += messages.len() as u32;
+        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        total_read_messages_count += polled_messages.messages.len() as u32;
     }
 
     assert_eq!(total_read_messages_count, MESSAGES_COUNT);
@@ -171,9 +171,9 @@ async fn execute_using_none_key(client: &IggyClient) {
     let mut offset = 0;
     let mut entity_id = 1;
     for _ in 1..=PARTITIONS_COUNT * MESSAGES_COUNT {
-        let messages = client.poll_messages(&poll_messages).await.unwrap();
-        assert_eq!(messages.len(), 1);
-        let message = &messages[0];
+        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        assert_eq!(polled_messages.messages.len(), 1);
+        let message = &polled_messages.messages[0];
         assert_eq!(message.offset, offset);
         let payload = from_utf8(&message.payload).unwrap();
         assert_eq!(
@@ -189,8 +189,8 @@ async fn execute_using_none_key(client: &IggyClient) {
     }
 
     for _ in 1..=PARTITIONS_COUNT {
-        let messages = client.poll_messages(&poll_messages).await.unwrap();
-        assert!(messages.is_empty());
+        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        assert!(polled_messages.messages.is_empty());
     }
 }
 

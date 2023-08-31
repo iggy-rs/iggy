@@ -1,7 +1,8 @@
 use crate::config::SystemConfig;
 use crate::segments::segment::Segment;
 use crate::storage::SystemStorage;
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
+use iggy::utils::timestamp;
 use ringbuffer::AllocRingBuffer;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -21,6 +22,7 @@ pub struct Partition {
     pub message_ids: Option<HashMap<u128, bool>>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
+    pub created_at: u64,
     pub(crate) message_expiry: Option<u32>,
     pub(crate) consumer_offsets: RwLock<ConsumerOffsets>,
     pub(crate) consumer_group_offsets: RwLock<ConsumerOffsets>,
@@ -104,6 +106,7 @@ impl Partition {
             }),
             config,
             storage,
+            created_at: timestamp::get(),
         };
 
         if with_segment {

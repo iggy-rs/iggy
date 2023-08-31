@@ -17,19 +17,19 @@ pub async fn poll_messages(
     client: &dyn Client,
 ) -> Result<(), ClientError> {
     let format = command.format;
-    let messages = client.poll_messages(&command.payload).await?;
-    if messages.is_empty() {
+    let polled_messages = client.poll_messages(&command.payload).await?;
+    if polled_messages.messages.is_empty() {
         info!("No messages found");
         return Ok(());
     }
 
-    let mut text = format!("Received {} messages.", messages.len());
+    let mut text = format!("Received {} messages.", polled_messages.messages.len());
     if format == Format::None {
         info!("{}", text);
         return Ok(());
     }
 
-    for message in messages {
+    for message in polled_messages.messages {
         text += &format!(
             "\noffset: {}, timestamp: {}, ID: {}, length: {}, payload: ",
             message.offset, message.timestamp, message.id, message.length

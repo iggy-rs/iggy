@@ -63,10 +63,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         auto_commit: false,
     };
 
-    let messages = client.poll_messages(&poll_messages).await.unwrap();
-    assert_eq!(messages.len() as u32, MESSAGES_COUNT);
+    let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+    assert_eq!(polled_messages.messages.len() as u32, MESSAGES_COUNT);
     for i in 0..MESSAGES_COUNT {
-        let message = messages.get(i as usize).unwrap();
+        let message = polled_messages.messages.get(i as usize).unwrap();
         assert!(message.headers.is_some());
         let headers = message.headers.as_ref().unwrap();
         assert_eq!(headers.len(), 3);

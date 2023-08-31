@@ -571,7 +571,7 @@ mod tests {
         let message_1 = Message::from_str("hello 1").unwrap();
         let message_2 = Message::from_str("2|hello 2").unwrap();
         let message_3 = Message::from_str("3|hello 3").unwrap();
-        let messages = vec![
+        let messages = [
             message_1.as_bytes(),
             message_2.as_bytes(),
             message_3.as_bytes(),

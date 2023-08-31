@@ -1,14 +1,14 @@
+use crate::models::messages::PolledMessages;
 use crate::polling_consumer::PollingConsumer;
 use crate::topics::topic::Topic;
 use crate::utils::hash;
 use iggy::error::Error;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use ringbuffer::RingBuffer;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tracing::trace;
 
 impl Topic {
@@ -18,7 +18,7 @@ impl Topic {
         partition_id: u32,
         strategy: PollingStrategy,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<PolledMessages, Error> {
         if !self.has_partitions() {
             return Err(Error::NoPartitions(self.topic_id, self.stream_id));
         }
@@ -31,13 +31,19 @@ impl Topic {
         let partition = partition.unwrap();
         let partition = partition.read().await;
         let value = strategy.value;
-        match strategy.kind {
+        let messages = match strategy.kind {
             PollingKind::Offset => partition.get_messages_by_offset(value, count).await,
             PollingKind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
             PollingKind::First => partition.get_first_messages(count).await,
             PollingKind::Last => partition.get_last_messages(count).await,
             PollingKind::Next => partition.get_next_messages(consumer, count).await,
-        }
+        }?;
+
+        Ok(PolledMessages {
+            messages,
+            partition_id,
+            current_offset: partition.current_offset,
+        })
     }
 
     pub async fn append_messages(
@@ -197,7 +203,8 @@ mod tests {
     use crate::config::SystemConfig;
     use crate::storage::tests::get_test_system_storage;
     use bytes::Bytes;
-    use iggy::models::message::MessageState;
+    use iggy::models::messages::MessageState;
+    use std::sync::Arc;
 
     #[tokio::test]
     async fn given_partition_id_key_messages_should_be_appended_only_to_the_chosen_partition() {

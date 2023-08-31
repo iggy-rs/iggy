@@ -3,12 +3,12 @@ use crate::error::Error;
 use crate::http::client::HttpClient;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
-use crate::models::message::Message;
+use crate::models::messages::PolledMessages;
 use async_trait::async_trait;
 
 #[async_trait]
 impl MessageClient for HttpClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error> {
+    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, Error> {
         let response = self
             .get_with_query(
                 &get_path(

@@ -1,9 +1,10 @@
 use bytes::BufMut;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
-use iggy::models::message::Message;
+
 use iggy::models::stats::Stats;
 use std::sync::Arc;
 use streaming::clients::client_manager::{Client, Transport};
+use streaming::models::messages::PolledMessages;
 use streaming::partitions::partition::Partition;
 use streaming::streams::stream::Stream;
 use streaming::topics::consumer_group::ConsumerGroup;
@@ -40,7 +41,7 @@ pub fn map_stats(stats: &Stats) -> Vec<u8> {
     bytes
 }
 
-pub fn map_offset(offset: &ConsumerOffsetInfo) -> Vec<u8> {
+pub fn map_consumer_offset(offset: &ConsumerOffsetInfo) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(20);
     bytes.put_u32_le(offset.partition_id);
     bytes.put_u64_le(offset.current_offset);
@@ -68,16 +69,19 @@ pub async fn map_clients(clients: &[Arc<RwLock<Client>>]) -> Vec<u8> {
     bytes
 }
 
-pub fn map_messages(messages: &[Arc<Message>]) -> Vec<u8> {
-    let messages_count = messages.len() as u32;
-    let messages_size = messages
+pub fn map_polled_messages(polled_messages: &PolledMessages) -> Vec<u8> {
+    let messages_count = polled_messages.messages.len() as u32;
+    let messages_size = polled_messages
+        .messages
         .iter()
         .map(|message| message.get_size_bytes())
         .sum::<u32>();
 
-    let mut bytes = Vec::with_capacity(4 + messages_size as usize);
+    let mut bytes = Vec::with_capacity(20 + messages_size as usize);
+    bytes.put_u32_le(polled_messages.partition_id);
+    bytes.put_u64_le(polled_messages.current_offset);
     bytes.put_u32_le(messages_count);
-    for message in messages {
+    for message in polled_messages.messages.iter() {
         message.extend(&mut bytes);
     }
 
@@ -146,6 +150,7 @@ pub async fn map_consumer_groups(consumer_groups: &[&RwLock<ConsumerGroup>]) -> 
 
 async fn extend_stream(stream: &Stream, bytes: &mut Vec<u8>) {
     bytes.put_u32_le(stream.id);
+    bytes.put_u64_le(stream.created_at);
     bytes.put_u32_le(stream.get_topics().len() as u32);
     bytes.put_u64_le(stream.get_size_bytes().await);
     bytes.put_u64_le(stream.get_messages_count().await);
@@ -155,6 +160,7 @@ async fn extend_stream(stream: &Stream, bytes: &mut Vec<u8>) {
 
 async fn extend_topic(topic: &Topic, bytes: &mut Vec<u8>) {
     bytes.put_u32_le(topic.topic_id);
+    bytes.put_u64_le(topic.created_at);
     bytes.put_u32_le(topic.get_partitions().len() as u32);
     match topic.message_expiry {
         Some(message_expiry) => bytes.put_u32_le(message_expiry),
@@ -168,6 +174,7 @@ async fn extend_topic(topic: &Topic, bytes: &mut Vec<u8>) {
 
 fn extend_partition(partition: &Partition, bytes: &mut Vec<u8>) {
     bytes.put_u32_le(partition.partition_id);
+    bytes.put_u64_le(partition.created_at);
     bytes.put_u32_le(partition.get_segments().len() as u32);
     bytes.put_u64_le(partition.current_offset);
     bytes.put_u64_le(partition.get_size_bytes());

@@ -12,7 +12,7 @@ use crate::messages::send_messages::SendMessages;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
-use crate::models::message::Message;
+use crate::models::messages::PolledMessages;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -84,7 +84,7 @@ pub trait PartitionClient {
 
 #[async_trait]
 pub trait MessageClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<Vec<Message>, Error>;
+    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, Error>;
     async fn send_messages(&self, command: &mut SendMessages) -> Result<(), Error>;
 }
 

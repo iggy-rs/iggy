@@ -1,5 +1,6 @@
 pub mod clients;
 pub mod config;
+pub mod models;
 pub mod partitions;
 pub mod persister;
 pub mod polling_consumer;

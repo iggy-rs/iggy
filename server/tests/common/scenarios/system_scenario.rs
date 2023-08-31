@@ -73,6 +73,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(streams.len(), 1);
     let stream = streams.get(0).unwrap();
     assert_eq!(stream.id, STREAM_ID);
+    assert!(stream.created_at > 0);
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
     assert_eq!(stream.size_bytes, 0);
@@ -133,6 +134,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topics.len(), 1);
     let topic = topics.get(0).unwrap();
     assert_eq!(topic.id, TOPIC_ID);
+    assert!(topic.created_at > 0);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
     assert_eq!(topic.size_bytes, 0);
@@ -155,6 +157,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let mut id = 1;
     for topic_partition in topic.partitions {
         assert_eq!(topic_partition.id, id);
+        assert!(topic_partition.created_at > 0);
         assert_eq!(topic_partition.segments_count, 1);
         assert_eq!(topic_partition.size_bytes, 0);
         assert_eq!(topic_partition.current_offset, 0);
@@ -238,11 +241,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         auto_commit: false,
     };
 
-    let messages = client.poll_messages(&poll_messages).await.unwrap();
-    assert_eq!(messages.len() as u32, MESSAGES_COUNT);
+    let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+    assert_eq!(polled_messages.messages.len() as u32, MESSAGES_COUNT);
     for i in 0..MESSAGES_COUNT {
         let offset = i as u64;
-        let message = messages.get(i as usize).unwrap();
+        let message = polled_messages.messages.get(i as usize).unwrap();
         assert_message(message, offset);
     }
 
@@ -264,11 +267,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             auto_commit: false,
         };
 
-        let messages = client.poll_messages(&poll_messages).await.unwrap();
-        assert_eq!(messages.len() as u32, batch_size);
+        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        assert_eq!(polled_messages.messages.len() as u32, batch_size);
         for i in 0..batch_size as u64 {
             let offset = start_offset + i;
-            let message = messages.get(i as usize).unwrap();
+            let message = polled_messages.messages.get(i as usize).unwrap();
             assert_message(message, offset);
         }
     }
@@ -307,8 +310,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         count: MESSAGES_COUNT,
         auto_commit: false,
     };
-    let messages = client.poll_messages(&poll_messages).await.unwrap();
-    assert!(messages.is_empty());
+    let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+    assert!(polled_messages.messages.is_empty());
 
     // 22. Get the existing customer offset and ensure it's 0
     let offset = client
@@ -375,10 +378,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         auto_commit: true,
     };
 
-    let messages = client.poll_messages(&poll_messages).await.unwrap();
-    assert_eq!(messages.len() as u32, messages_count);
-    let first_offset = messages.first().unwrap().offset;
-    let last_offset = messages.last().unwrap().offset;
+    let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+    assert_eq!(polled_messages.messages.len() as u32, messages_count);
+    let first_offset = polled_messages.messages.first().unwrap().offset;
+    let last_offset = polled_messages.messages.last().unwrap().offset;
     let expected_last_offset = stored_offset + messages_count as u64;
     assert_eq!(first_offset, stored_offset + 1);
     assert_eq!(last_offset, expected_last_offset);
@@ -609,7 +612,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     test_server.stop();
 }
 
-fn assert_message(message: &iggy::models::message::Message, offset: u64) {
+fn assert_message(message: &iggy::models::messages::Message, offset: u64) {
     let expected_payload = get_message_payload(offset);
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);

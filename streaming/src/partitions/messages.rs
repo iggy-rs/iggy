@@ -3,7 +3,7 @@ use crate::polling_consumer::PollingConsumer;
 use crate::segments::segment::Segment;
 use crate::utils::random_id;
 use iggy::error::Error;
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use ringbuffer::RingBuffer;
 use std::sync::Arc;
 use tracing::{error, trace, warn};

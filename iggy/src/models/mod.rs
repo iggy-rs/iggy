@@ -2,7 +2,7 @@ pub mod client_info;
 pub mod consumer_group;
 pub mod consumer_offset_info;
 pub mod header;
-pub mod message;
+pub mod messages;
 pub mod partition;
 pub mod stats;
 pub mod stream;

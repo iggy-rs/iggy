@@ -6,7 +6,7 @@ use crate::utils::file;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
-use iggy::utils::text;
+use iggy::utils::{text, timestamp};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
@@ -54,6 +54,8 @@ impl Storage<Stream> for FileStreamStorage {
             return Err(Error::CannotReadStreamInfo(stream.id));
         }
 
+        let metadata = fs::metadata(&stream.info_path).await?;
+        stream.created_at = timestamp::from(&metadata.created()?);
         stream.name = text::to_lowercase_non_whitespace(&stream_info);
         let mut unloaded_topics = Vec::new();
         let dir_entries = fs::read_dir(&stream.topics_path).await;

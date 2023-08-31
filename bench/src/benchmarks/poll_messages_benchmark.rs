@@ -49,32 +49,32 @@ pub async fn run(
         poll_messages.strategy.value = offset;
 
         let latency_start = Instant::now();
-        let messages = client.poll_messages(&poll_messages).await;
+        let polled_messages = client.poll_messages(&poll_messages).await;
         let latency_end = latency_start.elapsed();
-        if messages.is_err() {
+        if polled_messages.is_err() {
             trace!("Offset: {} is not available yet, retrying...", offset);
             continue;
         }
 
-        let messages = messages.unwrap();
-        if messages.is_empty() {
+        let polled_messages = polled_messages.unwrap();
+        if polled_messages.messages.is_empty() {
             trace!("Messages are empty for offset: {}, retrying...", offset);
             continue;
         }
 
-        if messages.len() != args.messages_per_batch as usize {
+        if polled_messages.messages.len() != args.messages_per_batch as usize {
             trace!(
                 "Consumer #{} → expected {} messages, but got {} messages, retrying...",
                 consumer_id,
                 args.messages_per_batch,
-                messages.len()
+                polled_messages.messages.len()
             );
             continue;
         }
 
         latencies.push(latency_end);
-        received_messages += messages.len() as u64;
-        for message in messages {
+        received_messages += polled_messages.messages.len() as u64;
+        for message in polled_messages.messages {
             total_size_bytes += message.get_size_bytes() as u64;
         }
         current_iteration += 1;

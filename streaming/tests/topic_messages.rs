@@ -2,7 +2,7 @@ use crate::common::TestSetup;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
-use iggy::models::message::Message;
+use iggy::models::messages::Message;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -98,11 +98,11 @@ fn get_payload(id: u32) -> String {
 
 async fn assert_messages(topic: &Topic, partition_id: u32, expected_messages: u32) {
     let consumer = PollingConsumer::Consumer(0, partition_id);
-    let messages = topic
+    let polled_messages = topic
         .get_messages(consumer, partition_id, PollingStrategy::offset(0), 1000)
         .await
         .unwrap();
-    assert_eq!(messages.len() as u32, expected_messages);
+    assert_eq!(polled_messages.messages.len() as u32, expected_messages);
 }
 
 async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {

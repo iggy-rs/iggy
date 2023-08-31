@@ -33,7 +33,7 @@ pub async fn handle(
             command.auto_commit,
         )
         .await?;
-    let messages = mapper::map_messages(&messages);
+    let messages = mapper::map_polled_messages(&messages);
     sender.send_ok_response(&messages).await?;
     Ok(())
 }

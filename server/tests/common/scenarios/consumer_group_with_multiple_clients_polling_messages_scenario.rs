@@ -156,8 +156,8 @@ async fn poll_messages(client: &IggyClient) -> u32 {
 
     let mut total_read_messages_count = 0;
     for _ in 1..=PARTITIONS_COUNT * MESSAGES_COUNT {
-        let messages = client.poll_messages(&poll_messages).await.unwrap();
-        total_read_messages_count += messages.len() as u32;
+        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        total_read_messages_count += polled_messages.messages.len() as u32;
     }
 
     total_read_messages_count
@@ -238,9 +238,9 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
     };
 
     for i in 1..=MESSAGES_COUNT {
-        let messages = client.poll_messages(&poll_messages).await.unwrap();
-        assert_eq!(messages.len(), 1);
-        let message = &messages[0];
+        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        assert_eq!(polled_messages.messages.len(), 1);
+        let message = &polled_messages.messages[0];
         let offset = (i - 1) as u64;
         assert_eq!(message.offset, offset);
         let entity_id = start_entity_id + ((i - 1) * PARTITIONS_COUNT);
@@ -251,8 +251,8 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
         );
     }
 
-    let messages = client.poll_messages(&poll_messages).await.unwrap();
-    assert!(messages.is_empty())
+    let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+    assert!(polled_messages.messages.is_empty())
 }
 
 fn get_extended_message_payload(partition_id: u32, entity_id: u32) -> String {

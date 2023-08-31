@@ -1,6 +1,7 @@
 use crate::config::SystemConfig;
 use crate::storage::SystemStorage;
 use crate::topics::topic::Topic;
+use iggy::utils::timestamp;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -13,6 +14,7 @@ pub struct Stream {
     pub path: String,
     pub topics_path: String,
     pub info_path: String,
+    pub created_at: u64,
     pub(crate) topics: HashMap<u32, Topic>,
     pub(crate) topics_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
@@ -44,6 +46,7 @@ impl Stream {
             topics: HashMap::new(),
             topics_ids: HashMap::new(),
             storage,
+            created_at: timestamp::get(),
         }
     }
 

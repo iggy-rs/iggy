@@ -1,8 +1,8 @@
 [build.env]
 passthrough = ["IGGY_SYSTEM_PATH"]
 
-[target.aarch64-unknown-linux-gnu.env]
+[target.aarch64-unknown-linux-musl.env]
 passthrough = ["QEMU_RUNNER=qemu-aarch64"]
 
-[target.arm-unknown-linux-gnu.env]
+[target.arm-unknown-linux-musleabi.env]
 passthrough = ["QEMU_RUNNER=qemu-arm"]

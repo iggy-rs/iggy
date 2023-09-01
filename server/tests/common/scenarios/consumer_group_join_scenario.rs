@@ -10,7 +10,6 @@ use iggy::models::consumer_group::ConsumerGroupDetails;
 use iggy::streams::create_stream::CreateStream;
 use iggy::system::get_me::GetMe;
 use iggy::topics::create_topic::CreateTopic;
-use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -23,7 +22,6 @@ const CONSUMER_GROUP_ID: u32 = 1;
 pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();
     test_server.start();
-    sleep(std::time::Duration::from_secs(1)).await;
     let system_client = create_client(client_factory).await;
     let client1 = create_client(client_factory).await;
     let client2 = create_client(client_factory).await;

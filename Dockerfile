@@ -1,15 +1,12 @@
-FROM ubuntu:latest
+FROM rust:latest as builder
+WORKDIR /build
+COPY . /build
+RUN cargo build --bin iggy-cli --release
+RUN cargo build --bin iggy-server --release
 
-ARG IGGY_CLI_PATH
-RUN test -n "$IGGY_CLI_PATH" || (echo "IGGY_CLI_PATH  not set" && false)
-
-ARG IGGY_SERVER_PATH
-RUN test -n "$IGGY_SERVER_PATH" || (echo "IGGY_SERVER_PATH  not set" && false)
-
-WORKDIR /iggy
-
+FROM gcr.io/distroless/cc
 COPY configs ./configs
-COPY ${IGGY_CLI_PATH} ./
-COPY ${IGGY_SERVER_PATH} ./
+COPY --from=builder /build/target/release/iggy-cli .
+COPY --from=builder /build/target/release/iggy-server .
 
-CMD ["/iggy/iggy-server"]
+CMD ["/iggy-server"]

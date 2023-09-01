@@ -29,6 +29,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::streams::update_stream::UpdateStream;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
@@ -38,6 +39,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use crate::topics::update_topic::UpdateTopic;
 use crate::utils::crypto::Encryptor;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -392,6 +394,10 @@ impl StreamClient for IggyClient {
         self.client.read().await.create_stream(command).await
     }
 
+    async fn update_stream(&self, command: &UpdateStream) -> Result<(), Error> {
+        self.client.read().await.update_stream(command).await
+    }
+
     async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error> {
         self.client.read().await.delete_stream(command).await
     }
@@ -409,6 +415,10 @@ impl TopicClient for IggyClient {
 
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error> {
         self.client.read().await.create_topic(command).await
+    }
+
+    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), Error> {
+        self.client.read().await.update_topic(command).await
     }
 
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {

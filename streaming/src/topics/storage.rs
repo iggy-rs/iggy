@@ -193,7 +193,10 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         let metadata = fs::metadata(&topic.info_path).await?;
-        topic.created_at = timestamp::from(&metadata.created()?);
+        topic.created_at = match metadata.created() {
+            Ok(created) => timestamp::from(&created),
+            Err(_) => 0,
+        };
 
         let lines = topic_info.lines().collect::<Vec<&str>>();
         let topic_name = text::to_lowercase_non_whitespace(lines.first().unwrap());
@@ -211,12 +214,7 @@ impl Storage<Topic> for FileTopicStorage {
 
         topic.name = topic_name;
         topic.message_expiry = message_expiry;
-        let dir_entries = fs::read_dir(
-            &topic
-                .config
-                .get_partitions_path(topic.stream_id, topic.topic_id),
-        )
-        .await;
+        let dir_entries = fs::read_dir(&topic.partitions_path).await;
         if dir_entries.is_err() {
             return Err(Error::CannotReadPartitions(topic.topic_id, topic.stream_id));
         }
@@ -286,7 +284,23 @@ impl Storage<Topic> for FileTopicStorage {
 
     async fn save(&self, topic: &Topic) -> Result<(), Error> {
         if Path::new(&topic.path).exists() {
-            return Err(Error::TopicIdAlreadyExists(topic.topic_id, topic.stream_id));
+            let topic_info = format!("{}\n{}", topic.name, topic.message_expiry.unwrap_or(0));
+            if self
+                .persister
+                .overwrite(&topic.info_path, topic_info.as_bytes())
+                .await
+                .is_err()
+            {
+                return Err(Error::CannotCreateTopicInfo(
+                    topic.topic_id,
+                    topic.stream_id,
+                ));
+            }
+            info!(
+                "Topic with ID: {} was updated, path: {}",
+                topic.topic_id, topic.path
+            );
+            return Ok(());
         }
 
         if create_dir(&topic.path).await.is_err() {
@@ -296,14 +310,7 @@ impl Storage<Topic> for FileTopicStorage {
             ));
         }
 
-        if create_dir(
-            &topic
-                .config
-                .get_partitions_path(topic.stream_id, topic.topic_id),
-        )
-        .await
-        .is_err()
-        {
+        if create_dir(&topic.partitions_path).await.is_err() {
             return Err(Error::CannotCreatePartitionsDirectory(
                 topic.stream_id,
                 topic.topic_id,

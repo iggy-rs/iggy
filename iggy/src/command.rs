@@ -16,6 +16,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::streams::update_stream::UpdateStream;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
@@ -25,6 +26,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use crate::topics::update_topic::UpdateTopic;
 use bytes::BufMut;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -55,6 +57,8 @@ pub const CREATE_STREAM: &str = "stream.create";
 pub const CREATE_STREAM_CODE: u32 = 202;
 pub const DELETE_STREAM: &str = "stream.delete";
 pub const DELETE_STREAM_CODE: u32 = 203;
+pub const UPDATE_STREAM: &str = "stream.update";
+pub const UPDATE_STREAM_CODE: u32 = 204;
 pub const GET_TOPIC: &str = "topic.get";
 pub const GET_TOPIC_CODE: u32 = 300;
 pub const GET_TOPICS: &str = "topic.list";
@@ -63,6 +67,8 @@ pub const CREATE_TOPIC: &str = "topic.create";
 pub const CREATE_TOPIC_CODE: u32 = 302;
 pub const DELETE_TOPIC: &str = "topic.delete";
 pub const DELETE_TOPIC_CODE: u32 = 303;
+pub const UPDATE_TOPIC: &str = "topic.update";
+pub const UPDATE_TOPIC_CODE: u32 = 304;
 pub const CREATE_PARTITIONS: &str = "partition.create";
 pub const CREATE_PARTITIONS_CODE: u32 = 402;
 pub const DELETE_PARTITIONS: &str = "partition.delete";
@@ -95,10 +101,12 @@ pub enum Command {
     GetStreams(GetStreams),
     CreateStream(CreateStream),
     DeleteStream(DeleteStream),
+    UpdateStream(UpdateStream),
     GetTopic(GetTopic),
     GetTopics(GetTopics),
     CreateTopic(CreateTopic),
     DeleteTopic(DeleteTopic),
+    UpdateTopic(UpdateTopic),
     CreatePartitions(CreatePartitions),
     DeletePartitions(DeletePartitions),
     GetGroup(GetConsumerGroup),
@@ -131,10 +139,12 @@ impl BytesSerializable for Command {
             Command::GetStreams(payload) => as_bytes(GET_STREAMS_CODE, &payload.as_bytes()),
             Command::CreateStream(payload) => as_bytes(CREATE_STREAM_CODE, &payload.as_bytes()),
             Command::DeleteStream(payload) => as_bytes(DELETE_STREAM_CODE, &payload.as_bytes()),
+            Command::UpdateStream(payload) => as_bytes(UPDATE_STREAM_CODE, &payload.as_bytes()),
             Command::GetTopic(payload) => as_bytes(GET_TOPIC_CODE, &payload.as_bytes()),
             Command::GetTopics(payload) => as_bytes(GET_TOPICS_CODE, &payload.as_bytes()),
             Command::CreateTopic(payload) => as_bytes(CREATE_TOPIC_CODE, &payload.as_bytes()),
             Command::DeleteTopic(payload) => as_bytes(DELETE_TOPIC_CODE, &payload.as_bytes()),
+            Command::UpdateTopic(payload) => as_bytes(UPDATE_TOPIC_CODE, &payload.as_bytes()),
             Command::CreatePartitions(payload) => {
                 as_bytes(CREATE_PARTITIONS_CODE, &payload.as_bytes())
             }
@@ -177,10 +187,12 @@ impl BytesSerializable for Command {
             GET_STREAMS_CODE => Ok(Command::GetStreams(GetStreams::from_bytes(payload)?)),
             CREATE_STREAM_CODE => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
             DELETE_STREAM_CODE => Ok(Command::DeleteStream(DeleteStream::from_bytes(payload)?)),
+            UPDATE_STREAM_CODE => Ok(Command::UpdateStream(UpdateStream::from_bytes(payload)?)),
             GET_TOPIC_CODE => Ok(Command::GetTopic(GetTopic::from_bytes(payload)?)),
             GET_TOPICS_CODE => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
             CREATE_TOPIC_CODE => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
             DELETE_TOPIC_CODE => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
+            UPDATE_TOPIC_CODE => Ok(Command::UpdateTopic(UpdateTopic::from_bytes(payload)?)),
             CREATE_PARTITIONS_CODE => Ok(Command::CreatePartitions(CreatePartitions::from_bytes(
                 payload,
             )?)),
@@ -239,10 +251,12 @@ impl FromStr for Command {
             GET_STREAMS => Ok(Command::GetStreams(GetStreams::from_str(payload)?)),
             CREATE_STREAM => Ok(Command::CreateStream(CreateStream::from_str(payload)?)),
             DELETE_STREAM => Ok(Command::DeleteStream(DeleteStream::from_str(payload)?)),
+            UPDATE_STREAM => Ok(Command::UpdateStream(UpdateStream::from_str(payload)?)),
             GET_TOPIC => Ok(Command::GetTopic(GetTopic::from_str(payload)?)),
             GET_TOPICS => Ok(Command::GetTopics(GetTopics::from_str(payload)?)),
             CREATE_TOPIC => Ok(Command::CreateTopic(CreateTopic::from_str(payload)?)),
             DELETE_TOPIC => Ok(Command::DeleteTopic(DeleteTopic::from_str(payload)?)),
+            UPDATE_TOPIC => Ok(Command::UpdateTopic(UpdateTopic::from_str(payload)?)),
             CREATE_PARTITIONS => Ok(Command::CreatePartitions(CreatePartitions::from_str(
                 payload,
             )?)),
@@ -276,10 +290,12 @@ impl Display for Command {
             Command::GetStreams(_) => write!(formatter, "{}", GET_STREAMS),
             Command::CreateStream(payload) => write!(formatter, "{}|{}", CREATE_STREAM, payload),
             Command::DeleteStream(payload) => write!(formatter, "{}|{}", DELETE_STREAM, payload),
+            Command::UpdateStream(payload) => write!(formatter, "{}|{}", UPDATE_STREAM, payload),
             Command::GetTopic(payload) => write!(formatter, "{}|{}", GET_TOPIC, payload),
             Command::GetTopics(payload) => write!(formatter, "{}|{}", GET_TOPICS, payload),
             Command::CreateTopic(payload) => write!(formatter, "{}|{}", CREATE_TOPIC, payload),
             Command::DeleteTopic(payload) => write!(formatter, "{}|{}", DELETE_TOPIC, payload),
+            Command::UpdateTopic(payload) => write!(formatter, "{}|{}", UPDATE_TOPIC, payload),
             Command::CreatePartitions(payload) => {
                 write!(formatter, "{}|{}", CREATE_PARTITIONS, payload)
             }
@@ -382,6 +398,11 @@ mod tests {
             &DeleteStream::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::UpdateStream(UpdateStream::default()),
+            UPDATE_STREAM_CODE,
+            &UpdateStream::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetTopic(GetTopic::default()),
             GET_TOPIC_CODE,
             &GetTopic::default(),
@@ -400,6 +421,11 @@ mod tests {
             &Command::DeleteTopic(DeleteTopic::default()),
             DELETE_TOPIC_CODE,
             &DeleteTopic::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::UpdateTopic(UpdateTopic::default()),
+            UPDATE_TOPIC_CODE,
+            &UpdateTopic::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::CreatePartitions(CreatePartitions::default()),
@@ -503,6 +529,11 @@ mod tests {
             &DeleteStream::default(),
         );
         assert_read_from_string(
+            &Command::UpdateStream(UpdateStream::default()),
+            UPDATE_STREAM,
+            &UpdateStream::default(),
+        );
+        assert_read_from_string(
             &Command::GetTopic(GetTopic::default()),
             GET_TOPIC,
             &GetTopic::default(),
@@ -521,6 +552,11 @@ mod tests {
             &Command::DeleteTopic(DeleteTopic::default()),
             DELETE_TOPIC,
             &DeleteTopic::default(),
+        );
+        assert_read_from_string(
+            &Command::UpdateTopic(UpdateTopic::default()),
+            UPDATE_TOPIC,
+            &UpdateTopic::default(),
         );
         assert_read_from_string(
             &Command::CreatePartitions(CreatePartitions::default()),

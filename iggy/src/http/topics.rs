@@ -6,6 +6,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use crate::topics::update_topic::UpdateTopic;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -34,17 +35,32 @@ impl TopicClient for HttpClient {
         Ok(())
     }
 
+    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), Error> {
+        self.put(
+            &get_details_path(
+                &command.stream_id.as_string(),
+                &command.topic_id.as_string(),
+            ),
+            command,
+        )
+        .await?;
+        Ok(())
+    }
+
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
-        let path = format!(
-            "{}/{}",
-            get_path(&command.stream_id.as_string()),
-            command.topic_id
-        );
-        self.delete(&path).await?;
+        self.delete(&get_details_path(
+            &command.stream_id.as_string(),
+            &command.topic_id.as_string(),
+        ))
+        .await?;
         Ok(())
     }
 }
 
 fn get_path(stream_id: &str) -> String {
     format!("streams/{}/topics", stream_id)
+}
+
+fn get_details_path(stream_id: &str, topic_id: &str) -> String {
+    format!("{}/{}", get_path(stream_id), topic_id)
 }

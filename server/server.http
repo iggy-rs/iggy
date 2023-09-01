@@ -41,6 +41,14 @@ Content-Type: application/json
 }
 
 ###
+PUT {{url}}/streams/{{stream_id}}
+Content-Type: application/json
+
+{
+  "name": "stream1"
+}
+
+###
 DELETE {{url}}/streams/{{stream_id}}
 
 ###
@@ -58,6 +66,15 @@ Content-Type: application/json
   "name": "topic1",
   "partitions_count": 3,
   "message_expiry": 0
+}
+
+###
+PUT {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
+Content-Type: application/json
+
+{
+  "name": "topic1",
+  "message_expiry": 1000
 }
 
 ###

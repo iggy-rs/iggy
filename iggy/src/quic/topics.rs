@@ -7,6 +7,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use crate::topics::update_topic::UpdateTopic;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -21,6 +22,10 @@ impl TopicClient for QuicClient {
 
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error> {
         binary::topics::create_topic(self, command).await
+    }
+
+    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), Error> {
+        binary::topics::update_topic(self, command).await
     }
 
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {

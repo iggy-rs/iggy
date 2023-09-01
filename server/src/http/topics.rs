@@ -7,6 +7,7 @@ use axum::{Json, Router};
 use iggy::identifier::Identifier;
 use iggy::models::topic::{Topic, TopicDetails};
 use iggy::topics::create_topic::CreateTopic;
+use iggy::topics::update_topic::UpdateTopic;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 use streaming::systems::system::System;
@@ -15,7 +16,10 @@ use tokio::sync::RwLock;
 pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", get(get_topics).post(create_topic))
-        .route("/:topic_id", get(get_topic).delete(delete_topic))
+        .route(
+            "/:topic_id",
+            get(get_topic).put(update_topic).delete(delete_topic),
+        )
         .with_state(system)
 }
 
@@ -60,6 +64,22 @@ async fn create_topic(
         )
         .await?;
     Ok(StatusCode::CREATED)
+}
+
+async fn update_topic(
+    State(system): State<Arc<RwLock<System>>>,
+    Path((stream_id, topic_id)): Path<(String, String)>,
+    Json(mut command): Json<UpdateTopic>,
+) -> Result<StatusCode, CustomError> {
+    command.stream_id = Identifier::from_str_value(&stream_id)?;
+    command.topic_id = Identifier::from_str_value(&topic_id)?;
+    command.validate()?;
+    let mut system = system.write().await;
+    system
+        .get_stream_mut(&command.stream_id)?
+        .update_topic(&command.topic_id, &command.name, command.message_expiry)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn delete_topic(

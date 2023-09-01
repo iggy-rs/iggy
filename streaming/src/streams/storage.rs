@@ -55,7 +55,11 @@ impl Storage<Stream> for FileStreamStorage {
         }
 
         let metadata = fs::metadata(&stream.info_path).await?;
-        stream.created_at = timestamp::from(&metadata.created()?);
+        stream.created_at = match metadata.created() {
+            Ok(created) => timestamp::from(&created),
+            Err(_) => 0,
+        };
+
         stream.name = text::to_lowercase_non_whitespace(&stream_info);
         let mut unloaded_topics = Vec::new();
         let dir_entries = fs::read_dir(&stream.topics_path).await;
@@ -132,16 +136,26 @@ impl Storage<Stream> for FileStreamStorage {
 
     async fn save(&self, stream: &Stream) -> Result<(), Error> {
         if Path::new(&stream.path).exists() {
-            return Err(Error::StreamIdAlreadyExists(stream.id));
+            if self
+                .persister
+                .overwrite(&stream.info_path, stream.name.as_bytes())
+                .await
+                .is_err()
+            {
+                return Err(Error::CannotCreateStreamInfo(stream.id));
+            }
+            info!(
+                "Stream with ID: {} was updated, path: {}",
+                stream.id, stream.path
+            );
+            return Ok(());
         }
 
-        if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
+        if create_dir(&stream.path).await.is_err() {
             return Err(Error::CannotCreateStreamDirectory(stream.id));
         }
 
-        if !Path::new(&stream.topics_path).exists()
-            && create_dir(&stream.topics_path).await.is_err()
-        {
+        if create_dir(&stream.topics_path).await.is_err() {
             return Err(Error::CannotCreateTopicsDirectory(stream.id));
         }
 

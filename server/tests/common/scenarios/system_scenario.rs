@@ -24,6 +24,7 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::streams::get_streams::GetStreams;
+use iggy::streams::update_stream::UpdateStream;
 use iggy::system::get_clients::GetClients;
 use iggy::system::get_me::GetMe;
 use iggy::system::get_stats::GetStats;
@@ -32,6 +33,7 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
+use iggy::topics::update_topic::UpdateTopic;
 use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;
@@ -73,7 +75,6 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(streams.len(), 1);
     let stream = streams.get(0).unwrap();
     assert_eq!(stream.id, STREAM_ID);
-    assert!(stream.created_at > 0);
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
     assert_eq!(stream.size_bytes, 0);
@@ -134,11 +135,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topics.len(), 1);
     let topic = topics.get(0).unwrap();
     assert_eq!(topic.id, TOPIC_ID);
-    assert!(topic.created_at > 0);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
     assert_eq!(topic.size_bytes, 0);
     assert_eq!(topic.messages_count, 0);
+    assert_eq!(topic.message_expiry, None);
 
     // 11. Get topic details by ID
     let topic = client
@@ -157,7 +158,6 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let mut id = 1;
     for topic_partition in topic.partitions {
         assert_eq!(topic_partition.id, id);
-        assert!(topic_partition.created_at > 0);
         assert_eq!(topic_partition.segments_count, 1);
         assert_eq!(topic_partition.size_bytes, 0);
         assert_eq!(topic_partition.current_offset, 0);
@@ -578,7 +578,32 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
 
-    // 36. Delete the existing topic and ensure it doesn't exist anymore
+    // 36. Update the existing topic and ensure it's updated
+    let updated_topic_name = format!("{}-updated", TOPIC_NAME);
+    let updated_message_expiry = 1000;
+
+    client
+        .update_topic(&UpdateTopic {
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
+            name: updated_topic_name.clone(),
+            message_expiry: Some(updated_message_expiry),
+        })
+        .await
+        .unwrap();
+
+    let updated_topic = client
+        .get_topic(&GetTopic {
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(updated_topic.name, updated_topic_name);
+    assert_eq!(updated_topic.message_expiry, Some(updated_message_expiry));
+
+    // 37. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(&DeleteTopic {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
@@ -594,7 +619,27 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert!(topics.is_empty());
 
-    // 37. Delete the existing stream and ensure it doesn't exist anymore
+    // 38. Update the existing stream and ensure it's updated
+    let updated_stream_name = format!("{}-updated", STREAM_NAME);
+
+    client
+        .update_stream(&UpdateStream {
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            name: updated_stream_name.clone(),
+        })
+        .await
+        .unwrap();
+
+    let updated_stream = client
+        .get_stream(&GetStream {
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(updated_stream.name, updated_stream_name);
+
+    // 39. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(&DeleteStream {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
@@ -604,7 +649,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
-    // 38. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 40. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients(&GetClients {}).await.unwrap();
 
     assert!(clients.len() <= 1);

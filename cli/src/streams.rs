@@ -4,6 +4,7 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::streams::get_streams::GetStreams;
+use iggy::streams::update_stream::UpdateStream;
 use tracing::info;
 
 pub async fn get_stream(command: &GetStream, client: &dyn Client) -> Result<(), ClientError> {
@@ -30,5 +31,10 @@ pub async fn create_stream(command: &CreateStream, client: &dyn Client) -> Resul
 
 pub async fn delete_stream(command: &DeleteStream, client: &dyn Client) -> Result<(), ClientError> {
     client.delete_stream(command).await?;
+    Ok(())
+}
+
+pub async fn update_stream(command: &UpdateStream, client: &dyn Client) -> Result<(), ClientError> {
+    client.update_stream(command).await?;
     Ok(())
 }

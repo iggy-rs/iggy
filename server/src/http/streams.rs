@@ -7,6 +7,7 @@ use axum::{Json, Router};
 use iggy::identifier::Identifier;
 use iggy::models::stream::{Stream, StreamDetails};
 use iggy::streams::create_stream::CreateStream;
+use iggy::streams::update_stream::UpdateStream;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 use streaming::systems::system::System;
@@ -15,7 +16,10 @@ use tokio::sync::RwLock;
 pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", get(get_streams).post(create_stream))
-        .route("/:stream_id", get(get_stream).delete(delete_stream))
+        .route(
+            "/:stream_id",
+            get(get_stream).put(update_stream).delete(delete_stream),
+        )
         .with_state(system)
 }
 
@@ -48,6 +52,21 @@ async fn create_stream(
         .create_stream(command.stream_id, &command.name)
         .await?;
     Ok(StatusCode::CREATED)
+}
+
+async fn update_stream(
+    State(system): State<Arc<RwLock<System>>>,
+    Path(stream_id): Path<String>,
+    Json(mut command): Json<UpdateStream>,
+) -> Result<StatusCode, CustomError> {
+    command.stream_id = Identifier::from_str_value(&stream_id)?;
+    command.validate()?;
+    system
+        .write()
+        .await
+        .update_stream(&command.stream_id, &command.name)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn delete_stream(

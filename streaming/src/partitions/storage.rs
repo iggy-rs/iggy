@@ -57,7 +57,10 @@ impl Storage<Partition> for FilePartitionStorage {
         }
 
         let metadata = fs::metadata(&partition.path).await?;
-        partition.created_at = timestamp::from(&metadata.created()?);
+        partition.created_at = match metadata.created() {
+            Ok(created) => timestamp::from(&created),
+            Err(_) => 0,
+        };
 
         let mut dir_entries = dir_entries.unwrap();
         while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {

@@ -139,6 +139,59 @@ impl System {
         Ok(())
     }
 
+    pub async fn update_stream(&mut self, id: &Identifier, name: &str) -> Result<(), Error> {
+        let name = text::to_lowercase_non_whitespace(name);
+        match id.kind {
+            IdKind::Numeric => {
+                let stream_id = id.get_u32_value().unwrap();
+                let stream = self.streams.get(&stream_id);
+                if stream.is_none() {
+                    return Err(Error::StreamIdNotFound(stream_id));
+                }
+
+                let stream = stream.unwrap();
+                let stream_by_name = self.get_stream_by_name(&name);
+                if let Ok(stream_by_name) = stream_by_name {
+                    if stream_id != stream_by_name.id {
+                        return Err(Error::StreamNameAlreadyExists(name.to_string()));
+                    }
+                }
+
+                self.streams_ids.remove(&stream.name);
+                self.streams_ids.insert(name.clone(), stream_id);
+            }
+            IdKind::String => {
+                let stream_name = id.get_string_value().unwrap();
+                let stream_id = self.streams_ids.get(&stream_name);
+                if stream_id.is_none() {
+                    return Err(Error::StreamNameNotFound(stream_name));
+                }
+
+                let stream_id = *stream_id.unwrap();
+                if !self.streams.contains_key(&stream_id) {
+                    return Err(Error::StreamIdNotFound(stream_id));
+                }
+
+                let stream_by_name = self.get_stream_by_name(&name);
+                if let Ok(stream_by_name) = stream_by_name {
+                    if stream_id != stream_by_name.id {
+                        return Err(Error::StreamNameAlreadyExists(name.to_string()));
+                    }
+                }
+
+                self.streams_ids.remove(&stream_name);
+                self.streams_ids.insert(name.clone(), stream_id);
+            }
+        };
+
+        let stream = self.get_stream_mut(id)?;
+        stream.name = name;
+        stream.persist().await?;
+        info!("Updated stream: {} with ID: {}", stream.name, id);
+
+        Ok(())
+    }
+
     pub async fn delete_stream(&mut self, id: &Identifier) -> Result<(), Error> {
         let stream = match id.kind {
             IdKind::Numeric => {
@@ -160,8 +213,8 @@ impl System {
                 }
 
                 let stream_id = stream_id.unwrap();
-                let topic = self.streams.remove(&stream_id);
-                topic.unwrap()
+                let stream = self.streams.remove(&stream_id);
+                stream.unwrap()
             }
         };
 

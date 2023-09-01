@@ -81,6 +81,9 @@ async fn try_handle(
         Command::DeleteStream(command) => {
             delete_stream_handler::handle(command, sender, system).await
         }
+        Command::UpdateStream(command) => {
+            update_stream_handler::handle(command, sender, system).await
+        }
         Command::GetTopic(command) => get_topic_handler::handle(command, sender, system).await,
         Command::GetTopics(command) => get_topics_handler::handle(command, sender, system).await,
         Command::CreateTopic(command) => {
@@ -88,6 +91,9 @@ async fn try_handle(
         }
         Command::DeleteTopic(command) => {
             delete_topic_handler::handle(command, sender, system).await
+        }
+        Command::UpdateTopic(command) => {
+            update_topic_handler::handle(command, sender, system).await
         }
         Command::CreatePartitions(command) => {
             create_partitions_handler::handle(command, sender, system).await

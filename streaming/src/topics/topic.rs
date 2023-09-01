@@ -17,6 +17,7 @@ pub struct Topic {
     pub topic_id: u32,
     pub name: String,
     pub path: String,
+    pub partitions_path: String,
     pub(crate) info_path: String,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
@@ -47,6 +48,7 @@ impl Topic {
         message_expiry: Option<u32>,
     ) -> Result<Topic, Error> {
         let path = config.get_topic_path(stream_id, topic_id);
+        let partitions_path = config.get_partitions_path(stream_id, topic_id);
         let info_path = Self::get_info_path(&path);
         let mut topic = Topic {
             stream_id,
@@ -54,6 +56,7 @@ impl Topic {
             name: name.to_string(),
             partitions: HashMap::new(),
             path,
+            partitions_path,
             info_path,
             storage,
             consumer_groups: HashMap::new(),

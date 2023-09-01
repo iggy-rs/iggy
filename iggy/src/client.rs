@@ -22,6 +22,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::streams::update_stream::UpdateStream;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
@@ -31,6 +32,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use crate::topics::update_topic::UpdateTopic;
 use async_trait::async_trait;
 use std::fmt::Debug;
 
@@ -65,6 +67,7 @@ pub trait StreamClient {
     async fn get_stream(&self, command: &GetStream) -> Result<StreamDetails, Error>;
     async fn get_streams(&self, command: &GetStreams) -> Result<Vec<Stream>, Error>;
     async fn create_stream(&self, command: &CreateStream) -> Result<(), Error>;
+    async fn update_stream(&self, command: &UpdateStream) -> Result<(), Error>;
     async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error>;
 }
 
@@ -73,6 +76,7 @@ pub trait TopicClient {
     async fn get_topic(&self, command: &GetTopic) -> Result<TopicDetails, Error>;
     async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error>;
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error>;
+    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), Error>;
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error>;
 }
 

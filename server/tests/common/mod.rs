@@ -8,6 +8,8 @@ use async_trait::async_trait;
 use iggy::client::Client;
 use std::fs;
 use std::process::{Child, Command};
+use std::thread::sleep;
+use std::time::Duration;
 use streaming::utils::random_id;
 
 #[async_trait]
@@ -29,11 +31,15 @@ impl TestServer {
     }
 
     pub fn start(&mut self) {
+        // Sleep before starting server - it takes some time for the OS to release the port
+        sleep(Duration::from_secs(3));
+
         self.cleanup();
         let files_path = self.files_path.clone();
         let mut command = Command::cargo_bin("iggy-server").unwrap();
         command.env("IGGY_SYSTEM_PATH", files_path.clone());
 
+        // When running action from github CI, binary needs to be started via QEMU.
         if let Ok(runner) = std::env::var("QEMU_RUNNER") {
             let mut runner_command = Command::new(runner);
             runner_command
@@ -42,6 +48,17 @@ impl TestServer {
             command = runner_command;
         };
         self.child_handle = Some(command.spawn().unwrap());
+
+        // Sleep after starting server - it needs some time to bind to given port and start listening
+        let sleep_duration = if cfg!(any(
+            target = "aarch64-unknown-linux-musl",
+            target = "arm-unknown-linux-musleabi"
+        )) {
+            Duration::from_secs(40)
+        } else {
+            Duration::from_secs(3)
+        };
+        sleep(sleep_duration);
     }
 
     pub fn stop(&mut self) {

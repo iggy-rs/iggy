@@ -35,7 +35,6 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::users::login_user::LoginUser;
-use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -54,7 +53,6 @@ const PASSWORD: &str = "iggy";
 pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();
     test_server.start();
-    sleep(std::time::Duration::from_secs(5)).await;
     let client = client_factory.create_client().await;
     let client = IggyClient::new(client, IggyClientConfig::default(), None, None);
 

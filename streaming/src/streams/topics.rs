@@ -48,63 +48,42 @@ impl Stream {
         name: &str,
         message_expiry: Option<u32>,
     ) -> Result<(), Error> {
-        let name = text::to_lowercase_non_whitespace(name);
-        match id.kind {
-            IdKind::Numeric => {
-                let topic_id = id.get_u32_value().unwrap();
-                let topic = self.topics.get(&topic_id);
-                if topic.is_none() {
-                    return Err(Error::TopicIdNotFound(topic_id, self.id));
+        let topic_id;
+        {
+            let topic = self.get_topic(id)?;
+            topic_id = topic.topic_id;
+        }
+
+        let updated_name = text::to_lowercase_non_whitespace(name);
+
+        {
+            if let Some(topic_id_by_name) = self.topics_ids.get(&updated_name) {
+                if *topic_id_by_name != topic_id {
+                    return Err(Error::TopicNameAlreadyExists(
+                        updated_name.to_string(),
+                        self.id,
+                    ));
                 }
-
-                let topic = topic.unwrap();
-                let topic_by_name = self.get_topic_by_name(&name);
-                if let Ok(topic_by_name) = topic_by_name {
-                    if topic_id != topic_by_name.topic_id {
-                        return Err(Error::TopicNameAlreadyExists(name.to_string(), self.id));
-                    }
-                }
-
-                self.topics_ids.remove(&topic.name);
-                self.topics_ids.insert(name.clone(), topic_id);
-            }
-            IdKind::String => {
-                let topic_name = id.get_string_value().unwrap();
-                let topic_id = self.topics_ids.get(&topic_name);
-                if topic_id.is_none() {
-                    return Err(Error::TopicNameNotFound(topic_name, self.id));
-                }
-
-                let topic_id = *topic_id.unwrap();
-                if !self.topics.contains_key(&topic_id) {
-                    return Err(Error::TopicIdNotFound(topic_id, self.id));
-                }
-
-                let topic_by_name = self.get_topic_by_name(&name);
-                if let Ok(topic_by_name) = topic_by_name {
-                    if topic_id != topic_by_name.topic_id {
-                        return Err(Error::TopicNameAlreadyExists(name.to_string(), self.id));
-                    }
-                }
-
-                self.topics_ids.remove(&topic_name);
-                self.topics_ids.insert(name.clone(), topic_id);
-            }
-        };
-
-        let topic = self.get_topic_mut(id)?;
-        topic.name = name;
-        topic.message_expiry = message_expiry;
-        for partition in topic.partitions.values_mut() {
-            let mut partition = partition.write().await;
-            partition.message_expiry = message_expiry;
-            for segment in partition.segments.iter_mut() {
-                segment.message_expiry = message_expiry;
             }
         }
 
-        topic.persist().await?;
-        info!("Updated topic: {} with ID: {}", topic.name, id);
+        {
+            self.topics_ids.remove(&updated_name.clone());
+            self.topics_ids.insert(updated_name.clone(), topic_id);
+            let topic = self.get_topic_mut(id)?;
+            topic.name = updated_name;
+            topic.message_expiry = message_expiry;
+            for partition in topic.partitions.values_mut() {
+                let mut partition = partition.write().await;
+                partition.message_expiry = message_expiry;
+                for segment in partition.segments.iter_mut() {
+                    segment.message_expiry = message_expiry;
+                }
+            }
+
+            topic.persist().await?;
+            info!("Updated topic: {} with ID: {}", topic.name, id);
+        }
 
         Ok(())
     }
@@ -167,37 +146,17 @@ impl Stream {
         self.topics.values_mut().collect()
     }
 
-    pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, Error> {
-        let topic = match id.kind {
-            IdKind::Numeric => {
-                let topic_id = id.get_u32_value().unwrap();
-                let topic = self.topics.remove(&topic_id);
-                if topic.is_none() {
-                    return Err(Error::TopicIdNotFound(topic_id, self.id));
-                }
-
-                let topic = topic.unwrap();
-                self.topics_ids.remove(&topic.name);
-                topic
-            }
-            IdKind::String => {
-                let topic_name = id.get_string_value().unwrap();
-                let topic_id = self.topics_ids.remove(&topic_name);
-                if topic_id.is_none() {
-                    return Err(Error::TopicNameNotFound(topic_name, self.id));
-                }
-
-                let topic_id = topic_id.unwrap();
-                let topic = self.topics.remove(&topic_id);
-                topic.unwrap()
-            }
-        };
-
+    pub async fn delete_topic(&mut self, id: &Identifier) -> Result<u32, Error> {
+        let topic = self.get_topic(id)?;
+        let topic_id = topic.topic_id;
+        let topic_name = topic.name.clone();
         if topic.delete().await.is_err() {
             return Err(Error::CannotDeleteTopic(topic.topic_id, self.id));
         }
 
-        Ok(topic)
+        self.topics.remove(&topic_id);
+        self.topics_ids.remove(&topic_name);
+        Ok(topic_id)
     }
 }
 

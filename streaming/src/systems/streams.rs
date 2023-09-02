@@ -140,90 +140,48 @@ impl System {
     }
 
     pub async fn update_stream(&mut self, id: &Identifier, name: &str) -> Result<(), Error> {
-        let name = text::to_lowercase_non_whitespace(name);
-        match id.kind {
-            IdKind::Numeric => {
-                let stream_id = id.get_u32_value().unwrap();
-                let stream = self.streams.get(&stream_id);
-                if stream.is_none() {
-                    return Err(Error::StreamIdNotFound(stream_id));
-                }
+        let stream_id;
+        {
+            let stream = self.get_stream(id)?;
+            stream_id = stream.id;
+        }
 
-                let stream = stream.unwrap();
-                let stream_by_name = self.get_stream_by_name(&name);
-                if let Ok(stream_by_name) = stream_by_name {
-                    if stream_id != stream_by_name.id {
-                        return Err(Error::StreamNameAlreadyExists(name.to_string()));
-                    }
-                }
+        let updated_name = text::to_lowercase_non_whitespace(name);
 
-                self.streams_ids.remove(&stream.name);
-                self.streams_ids.insert(name.clone(), stream_id);
+        {
+            if let Some(stream_id_by_name) = self.streams_ids.get(&updated_name) {
+                if *stream_id_by_name != stream_id {
+                    return Err(Error::StreamNameAlreadyExists(updated_name.clone()));
+                }
             }
-            IdKind::String => {
-                let stream_name = id.get_string_value().unwrap();
-                let stream_id = self.streams_ids.get(&stream_name);
-                if stream_id.is_none() {
-                    return Err(Error::StreamNameNotFound(stream_name));
-                }
+        }
 
-                let stream_id = *stream_id.unwrap();
-                if !self.streams.contains_key(&stream_id) {
-                    return Err(Error::StreamIdNotFound(stream_id));
-                }
-
-                let stream_by_name = self.get_stream_by_name(&name);
-                if let Ok(stream_by_name) = stream_by_name {
-                    if stream_id != stream_by_name.id {
-                        return Err(Error::StreamNameAlreadyExists(name.to_string()));
-                    }
-                }
-
-                self.streams_ids.remove(&stream_name);
-                self.streams_ids.insert(name.clone(), stream_id);
-            }
-        };
-
-        let stream = self.get_stream_mut(id)?;
-        stream.name = name;
-        stream.persist().await?;
-        info!("Updated stream: {} with ID: {}", stream.name, id);
+        {
+            self.streams_ids.remove(&updated_name.clone());
+            self.streams_ids.insert(updated_name.clone(), stream_id);
+            let stream = self.get_stream_mut(id)?;
+            stream.name = updated_name;
+            stream.persist().await?;
+            info!("Updated stream: {} with ID: {}", stream.name, id);
+        }
 
         Ok(())
     }
 
-    pub async fn delete_stream(&mut self, id: &Identifier) -> Result<(), Error> {
-        let stream = match id.kind {
-            IdKind::Numeric => {
-                let stream_id = id.get_u32_value().unwrap();
-                let stream = self.streams.remove(&stream_id);
-                if stream.is_none() {
-                    return Err(Error::StreamIdNotFound(stream_id));
-                }
-
-                let stream = stream.unwrap();
-                self.streams_ids.remove(&stream.name);
-                stream
-            }
-            IdKind::String => {
-                let stream_name = id.get_string_value().unwrap();
-                let stream_id = self.streams_ids.remove(&stream_name);
-                if stream_id.is_none() {
-                    return Err(Error::StreamNameNotFound(stream_name));
-                }
-
-                let stream_id = stream_id.unwrap();
-                let stream = self.streams.remove(&stream_id);
-                stream.unwrap()
-            }
-        };
-
-        stream.delete().await?;
+    pub async fn delete_stream(&mut self, id: &Identifier) -> Result<u32, Error> {
+        let stream = self.get_stream(id)?;
+        let stream_id = stream.id;
+        let stream_name = stream.name.clone();
+        if stream.delete().await.is_err() {
+            return Err(Error::CannotDeleteStream(stream_id));
+        }
+        self.streams.remove(&stream_id);
+        self.streams_ids.remove(&stream_name);
         let client_manager = self.client_manager.read().await;
         client_manager
-            .delete_consumer_groups_for_stream(stream.id)
+            .delete_consumer_groups_for_stream(stream_id)
             .await;
-        Ok(())
+        Ok(stream_id)
     }
 }
 

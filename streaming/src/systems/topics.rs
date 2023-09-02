@@ -14,13 +14,13 @@ impl System {
             stream_id_value = stream.id;
         }
 
-        let topic = self
+        let deleted_topic_id = self
             .get_stream_mut(stream_id)?
             .delete_topic(topic_id)
             .await?;
         let client_manager = self.client_manager.read().await;
         client_manager
-            .delete_consumer_groups_for_topic(stream_id_value, topic.topic_id)
+            .delete_consumer_groups_for_topic(stream_id_value, deleted_topic_id)
             .await;
         Ok(())
     }

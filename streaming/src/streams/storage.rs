@@ -31,7 +31,6 @@ impl StreamStorage for FileStreamStorage {}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct StreamData {
-    id: u32,
     name: String,
     created_at: u64,
 }
@@ -152,7 +151,6 @@ impl Storage<Stream> for FileStreamStorage {
             .insert(
                 get_key(stream.id),
                 rmp_serde::to_vec(&StreamData {
-                    id: stream.id,
                     name: stream.name.clone(),
                     created_at: stream.created_at,
                 })

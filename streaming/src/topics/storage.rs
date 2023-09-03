@@ -176,8 +176,6 @@ impl TopicStorage for FileTopicStorage {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct TopicData {
-    topic_id: u32,
-    stream_id: u32,
     name: String,
     created_at: u64,
     message_expiry: Option<u32>,
@@ -314,8 +312,6 @@ impl Storage<Topic> for FileTopicStorage {
             .insert(
                 get_key(topic.stream_id, topic.topic_id),
                 rmp_serde::to_vec(&TopicData {
-                    topic_id: topic.topic_id,
-                    stream_id: topic.stream_id,
                     name: topic.name.clone(),
                     created_at: topic.created_at,
                     message_expiry: topic.message_expiry,

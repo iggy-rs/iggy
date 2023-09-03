@@ -46,9 +46,6 @@ impl PartitionStorage for FilePartitionStorage {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct PartitionData {
-    topic_id: u32,
-    stream_id: u32,
-    partition_id: u32,
     created_at: u64,
 }
 
@@ -257,36 +254,26 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        let insert_result = self.db.insert(
-            get_key(
-                partition.stream_id,
-                partition.topic_id,
-                partition.partition_id,
-            ),
-            rmp_serde::to_vec(&PartitionData {
-                topic_id: partition.topic_id,
-                stream_id: partition.stream_id,
-                partition_id: partition.partition_id,
-                created_at: partition.created_at,
-            })
-            .unwrap(),
-        );
-
-        if insert_result.is_err() {
+        if self
+            .db
+            .insert(
+                get_key(
+                    partition.stream_id,
+                    partition.topic_id,
+                    partition.partition_id,
+                ),
+                rmp_serde::to_vec(&PartitionData {
+                    created_at: partition.created_at,
+                })
+                .unwrap(),
+            )
+            .is_err()
+        {
             return Err(Error::CannotCreatePartition(
                 partition.partition_id,
                 partition.stream_id,
                 partition.topic_id,
             ));
-        }
-
-        let insert_result = insert_result.unwrap();
-        if insert_result.is_some() {
-            info!(
-                "Updated partition with ID: {} for topic with ID: {} for stream with ID: {}",
-                partition.partition_id, partition.topic_id, partition.stream_id
-            );
-            // return Ok(());
         }
 
         for segment in partition.get_segments() {
@@ -318,6 +305,7 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.stream_id,
             ));
         }
+
         if fs::remove_dir_all(&partition.path).await.is_err() {
             return Err(Error::CannotDeletePartitionDirectory(
                 partition.partition_id,

@@ -101,7 +101,7 @@ Start the CLI (transports: `quic`, `tcp`, `http`):
 
 `cargo r --bin iggy-cli -r -- --transport tcp`
 
-Create a stream named `dev` with ID 1:
+Create a stream with ID 1 named `dev`:
 
 `stream.create|1|dev`
 
@@ -113,7 +113,7 @@ Get stream details (ID 1):
 
 `stream.get|1`
 
-Create a topic named `sample` with ID 1, 2 partitions (IDs 1 and 2) and disabled message expiry (0 seconds) for stream `dev` (ID 1):
+Create a topic for stream `dev` (ID 1), with ID 1, 2 partitions (IDs 1 and 2), disabled message expiry (0 seconds), named `sample`:
 
 `topic.create|1|1|2|0|sample`
 

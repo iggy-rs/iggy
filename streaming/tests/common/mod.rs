@@ -1,13 +1,18 @@
+use sled::Db;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
 use streaming::config::SystemConfig;
+use streaming::persister::FilePersister;
+use streaming::storage::SystemStorage;
 use tokio::fs;
 
 static DIRECTORY_ID: AtomicUsize = AtomicUsize::new(1);
 
 pub struct TestSetup {
     pub config: Arc<SystemConfig>,
+    pub storage: Arc<SystemStorage>,
+    pub db: Arc<Db>,
 }
 
 #[allow(dead_code)]
@@ -20,7 +25,14 @@ impl TestSetup {
             ..Default::default()
         });
         fs::create_dir(config.get_system_path()).await.unwrap();
-        TestSetup { config }
+        let persister = FilePersister {};
+        let db = Arc::new(sled::open(config.get_database_path()).unwrap());
+        let storage = Arc::new(SystemStorage::new(db.clone(), Arc::new(persister)));
+        TestSetup {
+            config,
+            storage,
+            db,
+        }
     }
 
     pub async fn create_streams_directory(&self) {

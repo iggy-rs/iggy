@@ -9,8 +9,6 @@ use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-pub const TOPIC_INFO: &str = "topic.info";
-
 #[derive(Debug)]
 pub struct Topic {
     pub stream_id: u32,
@@ -18,7 +16,6 @@ pub struct Topic {
     pub name: String,
     pub path: String,
     pub partitions_path: String,
-    pub(crate) info_path: String,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
@@ -49,7 +46,6 @@ impl Topic {
     ) -> Result<Topic, Error> {
         let path = config.get_topic_path(stream_id, topic_id);
         let partitions_path = config.get_partitions_path(stream_id, topic_id);
-        let info_path = Self::get_info_path(&path);
         let mut topic = Topic {
             stream_id,
             topic_id,
@@ -57,7 +53,6 @@ impl Topic {
             partitions: HashMap::new(),
             path,
             partitions_path,
-            info_path,
             storage,
             consumer_groups: HashMap::new(),
             current_partition_id: AtomicU32::new(1),
@@ -107,7 +102,11 @@ impl Topic {
     pub fn get_partition(&self, partition_id: u32) -> Result<&RwLock<Partition>, Error> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
-            return Err(Error::PartitionNotFound(partition_id));
+            return Err(Error::PartitionNotFound(
+                partition_id,
+                self.topic_id,
+                self.stream_id,
+            ));
         }
 
         Ok(partition.unwrap())
@@ -119,10 +118,6 @@ impl Topic {
 
     pub fn get_consumer_groups_path(&self) -> String {
         format!("{}/groups", self.path)
-    }
-
-    fn get_info_path(path: &str) -> String {
-        format!("{}/{}", path, TOPIC_INFO)
     }
 }
 
@@ -141,7 +136,6 @@ mod tests {
         let message_expiry = 10;
         let config = Arc::new(SystemConfig::default());
         let path = config.get_topic_path(stream_id, topic_id);
-        let info_path = Topic::get_info_path(&path);
 
         let topic = Topic::create(
             stream_id,
@@ -157,7 +151,6 @@ mod tests {
         assert_eq!(topic.stream_id, stream_id);
         assert_eq!(topic.topic_id, topic_id);
         assert_eq!(topic.path, path);
-        assert_eq!(topic.info_path, info_path);
         assert_eq!(topic.name, name);
         assert_eq!(topic.partitions.len(), partitions_count as usize);
         assert_eq!(topic.message_expiry, Some(message_expiry));

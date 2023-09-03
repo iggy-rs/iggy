@@ -5,9 +5,7 @@ use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::Message;
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
-use streaming::storage::SystemStorage;
 use streaming::topics::topic::Topic;
 use streaming::utils::hash;
 
@@ -106,7 +104,6 @@ async fn assert_messages(topic: &Topic, partition_id: u32, expected_messages: u3
 }
 
 async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
-    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     setup.create_topics_directory(stream_id).await;
     let id = 2;
@@ -117,7 +114,7 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         name,
         partitions_count,
         setup.config.clone(),
-        storage.clone(),
+        setup.storage.clone(),
         None,
     )
     .unwrap();

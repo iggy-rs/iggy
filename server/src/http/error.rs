@@ -26,7 +26,7 @@ impl IntoResponse for CustomError {
                 let status_code = match error {
                     Error::StreamIdNotFound(_) => StatusCode::NOT_FOUND,
                     Error::TopicIdNotFound(_, _) => StatusCode::NOT_FOUND,
-                    Error::PartitionNotFound(_) => StatusCode::NOT_FOUND,
+                    Error::PartitionNotFound(_, _, _) => StatusCode::NOT_FOUND,
                     Error::SegmentNotFound => StatusCode::NOT_FOUND,
                     Error::ClientNotFound(_) => StatusCode::NOT_FOUND,
                     Error::ConsumerGroupNotFound(_, _) => StatusCode::NOT_FOUND,
@@ -54,7 +54,7 @@ impl ErrorResponse {
             field: match error {
                 Error::StreamIdNotFound(_) => Some("stream_id".to_string()),
                 Error::TopicIdNotFound(_, _) => Some("topic_id".to_string()),
-                Error::PartitionNotFound(_) => Some("partition_id".to_string()),
+                Error::PartitionNotFound(_, _, _) => Some("partition_id".to_string()),
                 Error::SegmentNotFound => Some("segment_id".to_string()),
                 Error::ClientNotFound(_) => Some("client_id".to_string()),
                 Error::InvalidStreamName => Some("name".to_string()),

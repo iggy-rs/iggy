@@ -36,7 +36,7 @@ async fn main() -> Result<(), ServerError> {
     println!("{}", figure.unwrap());
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(config_provider.as_ref()).await?;
-    let mut system = System::new(config.system.clone());
+    let mut system = System::new(config.system.clone(), None);
     system.init().await?;
     let system = Arc::new(RwLock::new(system));
     let (sender, receiver) = flume::unbounded::<ServerCommand>();

@@ -5,15 +5,12 @@ use iggy::utils::timestamp;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-pub const STREAM_INFO: &str = "stream.info";
-
 #[derive(Debug)]
 pub struct Stream {
     pub id: u32,
     pub name: String,
     pub path: String,
     pub topics_path: String,
-    pub info_path: String,
     pub created_at: u64,
     pub(crate) topics: HashMap<u32, Topic>,
     pub(crate) topics_ids: HashMap<String, u32>,
@@ -33,7 +30,6 @@ impl Stream {
         storage: Arc<SystemStorage>,
     ) -> Self {
         let path = config.get_stream_path(id);
-        let info_path = Self::get_info_path(&path);
         let topics_path = config.get_topics_path(id);
 
         Stream {
@@ -41,7 +37,6 @@ impl Stream {
             name: name.to_string(),
             path,
             topics_path,
-            info_path,
             config,
             topics: HashMap::new(),
             topics_ids: HashMap::new(),
@@ -65,10 +60,6 @@ impl Stream {
         }
         size_bytes
     }
-
-    fn get_info_path(path: &str) -> String {
-        format!("{}/{}", path, STREAM_INFO)
-    }
 }
 
 #[cfg(test)]
@@ -83,7 +74,6 @@ mod tests {
         let name = "test";
         let config = Arc::new(SystemConfig::default());
         let path = config.get_stream_path(id);
-        let info_path = Stream::get_info_path(&path);
         let topics_path = config.get_topics_path(id);
 
         let stream = Stream::create(id, name, config, storage);
@@ -91,7 +81,6 @@ mod tests {
         assert_eq!(stream.id, id);
         assert_eq!(stream.name, name);
         assert_eq!(stream.path, path);
-        assert_eq!(stream.info_path, info_path);
         assert_eq!(stream.topics_path, topics_path);
         assert!(stream.topics.is_empty());
     }

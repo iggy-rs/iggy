@@ -3,27 +3,27 @@ use crate::persister::Persister;
 use crate::storage::{Storage, TopicStorage};
 use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::topic::Topic;
-use crate::utils::file;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
-use iggy::utils::{text, timestamp};
+use serde::{Deserialize, Serialize};
+use sled::Db;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
-use tokio::io::AsyncReadExt;
 use tokio::sync::{Mutex, RwLock};
 use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct FileTopicStorage {
+    db: Arc<Db>,
     persister: Arc<dyn Persister>,
 }
 
 impl FileTopicStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
-        Self { persister }
+    pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
+        Self { db, persister }
     }
 }
 
@@ -35,7 +35,11 @@ impl TopicStorage for FileTopicStorage {
     async fn save_partitions(&self, topic: &Topic, partition_ids: &[u32]) -> Result<(), Error> {
         for partition_id in partition_ids {
             if !topic.partitions.contains_key(partition_id) {
-                return Err(Error::PartitionNotFound(*partition_id));
+                return Err(Error::PartitionNotFound(
+                    *partition_id,
+                    topic.topic_id,
+                    topic.stream_id,
+                ));
             }
         }
 
@@ -55,7 +59,11 @@ impl TopicStorage for FileTopicStorage {
     ) -> Result<(), Error> {
         for partition_id in partition_ids {
             if !topic.partitions.contains_key(partition_id) {
-                return Err(Error::PartitionNotFound(*partition_id));
+                return Err(Error::PartitionNotFound(
+                    *partition_id,
+                    topic.topic_id,
+                    topic.stream_id,
+                ));
             }
         }
 
@@ -166,6 +174,15 @@ impl TopicStorage for FileTopicStorage {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct TopicData {
+    topic_id: u32,
+    stream_id: u32,
+    name: String,
+    created_at: u64,
+    message_expiry: Option<u32>,
+}
+
 #[async_trait]
 impl Storage<Topic> for FileTopicStorage {
     async fn load(&self, topic: &mut Topic) -> Result<(), Error> {
@@ -177,43 +194,27 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::TopicIdNotFound(topic.topic_id, topic.stream_id));
         }
 
-        let topic_info_file = file::open(&topic.info_path).await;
-        if topic_info_file.is_err() {
-            return Err(Error::CannotOpenTopicInfo(topic.topic_id, topic.stream_id));
-        }
-
-        let mut topic_info = String::new();
-        if topic_info_file
-            .unwrap()
-            .read_to_string(&mut topic_info)
-            .await
-            .is_err()
-        {
+        let topic_data = self.db.get(get_key(topic.stream_id, topic.topic_id));
+        if topic_data.is_err() {
             return Err(Error::CannotReadTopicInfo(topic.topic_id, topic.stream_id));
         }
 
-        let metadata = fs::metadata(&topic.info_path).await?;
-        topic.created_at = match metadata.created() {
-            Ok(created) => timestamp::from(&created),
-            Err(_) => 0,
-        };
+        let topic_data = topic_data.unwrap();
+        if topic_data.is_none() {
+            return Err(Error::TopicIdNotFound(topic.topic_id, topic.stream_id));
+        }
 
-        let lines = topic_info.lines().collect::<Vec<&str>>();
-        let topic_name = text::to_lowercase_non_whitespace(lines.first().unwrap());
-        let message_expiry = match lines.get(1) {
-            Some(line) => {
-                let message_expiry = line.parse::<u32>().unwrap();
-                if message_expiry == 0 {
-                    None
-                } else {
-                    Some(message_expiry)
-                }
-            }
-            None => None,
-        };
+        let topic_data = topic_data.unwrap();
+        let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data);
+        if topic_data.is_err() {
+            return Err(Error::CannotReadTopicInfo(topic.topic_id, topic.stream_id));
+        }
 
-        topic.name = topic_name;
-        topic.message_expiry = message_expiry;
+        let topic_data = topic_data.unwrap();
+        topic.name = topic_data.name;
+        topic.created_at = topic_data.created_at;
+        topic.message_expiry = topic_data.message_expiry;
+
         let dir_entries = fs::read_dir(&topic.partitions_path).await;
         if dir_entries.is_err() {
             return Err(Error::CannotReadPartitions(topic.topic_id, topic.stream_id));
@@ -283,52 +284,44 @@ impl Storage<Topic> for FileTopicStorage {
     }
 
     async fn save(&self, topic: &Topic) -> Result<(), Error> {
-        if Path::new(&topic.path).exists() {
-            let topic_info = format!("{}\n{}", topic.name, topic.message_expiry.unwrap_or(0));
-            if self
-                .persister
-                .overwrite(&topic.info_path, topic_info.as_bytes())
-                .await
-                .is_err()
-            {
-                return Err(Error::CannotCreateTopicInfo(
-                    topic.topic_id,
-                    topic.stream_id,
-                ));
-            }
-            info!(
-                "Topic with ID: {} was updated, path: {}",
-                topic.topic_id, topic.path
-            );
-            return Ok(());
-        }
-
-        if create_dir(&topic.path).await.is_err() {
+        if !Path::new(&topic.path).exists() && create_dir(&topic.path).await.is_err() {
             return Err(Error::CannotCreateTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
             ));
         }
 
-        if create_dir(&topic.partitions_path).await.is_err() {
+        if !Path::new(&topic.partitions_path).exists()
+            && create_dir(&topic.partitions_path).await.is_err()
+        {
             return Err(Error::CannotCreatePartitionsDirectory(
                 topic.stream_id,
                 topic.topic_id,
             ));
         }
 
-        if create_dir(&topic.get_consumer_groups_path()).await.is_err() {
+        if !Path::new(&topic.get_consumer_groups_path()).exists()
+            && create_dir(&topic.get_consumer_groups_path()).await.is_err()
+        {
             return Err(Error::CannotCreateConsumerGroupsDirectory(
                 topic.stream_id,
                 topic.topic_id,
             ));
         }
 
-        let topic_info = format!("{}\n{}", topic.name, topic.message_expiry.unwrap_or(0));
         if self
-            .persister
-            .overwrite(&topic.info_path, topic_info.as_bytes())
-            .await
+            .db
+            .insert(
+                get_key(topic.stream_id, topic.topic_id),
+                rmp_serde::to_vec(&TopicData {
+                    topic_id: topic.topic_id,
+                    stream_id: topic.stream_id,
+                    name: topic.name.clone(),
+                    created_at: topic.created_at,
+                    message_expiry: topic.message_expiry,
+                })
+                .unwrap(),
+            )
             .is_err()
         {
             return Err(Error::CannotCreateTopicInfo(
@@ -338,12 +331,7 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         info!(
-            "Topic with ID: {} was saved, path: {}",
-            topic.topic_id, topic.path
-        );
-
-        info!(
-            "Creating {} partition(s) for topic with ID: {} and stream with ID: {}...",
+            "Saving {} partition(s) for topic with ID: {} and stream with ID: {}...",
             topic.partitions.len(),
             topic.topic_id,
             topic.stream_id
@@ -353,6 +341,11 @@ impl Storage<Topic> for FileTopicStorage {
             partition.persist().await?;
         }
 
+        info!(
+            "Saved topic with ID: {} for stream with ID: {}, path: {}",
+            topic.topic_id, topic.stream_id, topic.path
+        );
+
         Ok(())
     }
 
@@ -361,6 +354,13 @@ impl Storage<Topic> for FileTopicStorage {
             "Deleting topic with ID: {} for stream with ID: {}...",
             topic.topic_id, topic.stream_id
         );
+        if self
+            .db
+            .remove(get_key(topic.stream_id, topic.topic_id))
+            .is_err()
+        {
+            return Err(Error::CannotDeleteTopic(topic.topic_id, topic.stream_id));
+        }
         if fs::remove_dir_all(&topic.path).await.is_err() {
             return Err(Error::CannotDeleteTopicDirectory(
                 topic.topic_id,
@@ -375,4 +375,8 @@ impl Storage<Topic> for FileTopicStorage {
 
         Ok(())
     }
+}
+
+fn get_key(stream_id: u32, topic_id: u32) -> String {
+    format!("streams:{}:topics:{}", stream_id, topic_id)
 }

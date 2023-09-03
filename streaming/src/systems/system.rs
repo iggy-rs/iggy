@@ -5,6 +5,7 @@ use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
 use iggy::error::Error;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use sled::Db;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -26,12 +27,22 @@ pub struct System {
 }
 
 impl System {
-    pub fn new(config: Arc<SystemConfig>) -> System {
+    pub fn new(config: Arc<SystemConfig>, db: Option<Arc<Db>>) -> System {
+        let db = match db {
+            Some(db) => db,
+            None => {
+                let db = sled::open(config.get_database_path());
+                if db.is_err() {
+                    panic!("Cannot open database at: {}", config.get_database_path());
+                }
+                Arc::new(db.unwrap())
+            }
+        };
         let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };
-        Self::create(config, SystemStorage::new(persister))
+        Self::create(config, SystemStorage::new(db, persister))
     }
 
     pub fn create(config: Arc<SystemConfig>, storage: SystemStorage) -> System {

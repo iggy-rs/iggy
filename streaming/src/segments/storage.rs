@@ -7,6 +7,7 @@ use iggy::models::messages::{Message, MessageState};
 use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::io::SeekFrom;
+use std::path::Path;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::log::{trace, warn};
@@ -105,38 +106,41 @@ impl Storage<Segment> for FileSegmentStorage {
     async fn save(&self, segment: &Segment) -> Result<(), Error> {
         info!("Saving segment with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id);
-        if self
-            .persister
-            .overwrite(&segment.log_path, &[])
-            .await
-            .is_err()
+        if !Path::new(&segment.log_path).exists()
+            && self
+                .persister
+                .overwrite(&segment.log_path, &[])
+                .await
+                .is_err()
         {
             return Err(Error::CannotCreateSegmentLogFile(segment.log_path.clone()));
         }
 
-        if self
-            .persister
-            .overwrite(&segment.time_index_path, &[])
-            .await
-            .is_err()
+        if !Path::new(&segment.time_index_path).exists()
+            && self
+                .persister
+                .overwrite(&segment.time_index_path, &[])
+                .await
+                .is_err()
         {
             return Err(Error::CannotCreateSegmentTimeIndexFile(
                 segment.log_path.clone(),
             ));
         }
 
-        if self
-            .persister
-            .overwrite(&segment.index_path, &[])
-            .await
-            .is_err()
+        if !Path::new(&segment.index_path).exists()
+            && self
+                .persister
+                .overwrite(&segment.index_path, &[])
+                .await
+                .is_err()
         {
             return Err(Error::CannotCreateSegmentIndexFile(
                 segment.log_path.clone(),
             ));
         }
 
-        info!("Created segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
+        info!("Saved segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id);
 
         Ok(())

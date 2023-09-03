@@ -60,6 +60,9 @@
   },
   "system": {
     "path": "local_data",
+    "database": {
+      "path": "database"
+    },
     "encryption": {
       "enabled": false,
       "key": ""

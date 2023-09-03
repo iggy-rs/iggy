@@ -1,28 +1,26 @@
-use crate::persister::Persister;
 use crate::storage::{Storage, StreamStorage};
 use crate::streams::stream::Stream;
 use crate::topics::topic::Topic;
-use crate::utils::file;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
-use iggy::utils::{text, timestamp};
+use serde::{Deserialize, Serialize};
+use sled::Db;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
-use tokio::io::AsyncReadExt;
 use tokio::sync::Mutex;
 use tracing::{error, info};
 
 #[derive(Debug)]
 pub struct FileStreamStorage {
-    persister: Arc<dyn Persister>,
+    db: Arc<Db>,
 }
 
 impl FileStreamStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
-        Self { persister }
+    pub fn new(db: Arc<Db>) -> Self {
+        Self { db }
     }
 }
 
@@ -30,6 +28,13 @@ unsafe impl Send for FileStreamStorage {}
 unsafe impl Sync for FileStreamStorage {}
 
 impl StreamStorage for FileStreamStorage {}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct StreamData {
+    id: u32,
+    name: String,
+    created_at: u64,
+}
 
 #[async_trait]
 impl Storage<Stream> for FileStreamStorage {
@@ -39,28 +44,25 @@ impl Storage<Stream> for FileStreamStorage {
             return Err(Error::StreamIdNotFound(stream.id));
         }
 
-        let stream_info_file = file::open(&stream.info_path).await;
-        if stream_info_file.is_err() {
-            return Err(Error::CannotOpenStreamInfo(stream.id));
-        }
-
-        let mut stream_info = String::new();
-        if stream_info_file
-            .unwrap()
-            .read_to_string(&mut stream_info)
-            .await
-            .is_err()
-        {
+        let stream_data = self.db.get(get_key(stream.id));
+        if stream_data.is_err() {
             return Err(Error::CannotReadStreamInfo(stream.id));
         }
 
-        let metadata = fs::metadata(&stream.info_path).await?;
-        stream.created_at = match metadata.created() {
-            Ok(created) => timestamp::from(&created),
-            Err(_) => 0,
-        };
+        let stream_data = stream_data.unwrap();
+        if stream_data.is_none() {
+            return Err(Error::StreamIdNotFound(stream.id));
+        }
 
-        stream.name = text::to_lowercase_non_whitespace(&stream_info);
+        let stream_data = stream_data.unwrap();
+        let stream_data = rmp_serde::from_slice::<StreamData>(&stream_data);
+        if stream_data.is_err() {
+            return Err(Error::CannotReadStreamInfo(stream.id));
+        }
+
+        let stream_data = stream_data.unwrap();
+        stream.name = stream_data.name;
+        stream.created_at = stream_data.created_at;
         let mut unloaded_topics = Vec::new();
         let dir_entries = fs::read_dir(&stream.topics_path).await;
         if dir_entries.is_err() {
@@ -135,48 +137,50 @@ impl Storage<Stream> for FileStreamStorage {
     }
 
     async fn save(&self, stream: &Stream) -> Result<(), Error> {
-        if Path::new(&stream.path).exists() {
-            if self
-                .persister
-                .overwrite(&stream.info_path, stream.name.as_bytes())
-                .await
-                .is_err()
-            {
-                return Err(Error::CannotCreateStreamInfo(stream.id));
-            }
-            info!(
-                "Stream with ID: {} was updated, path: {}",
-                stream.id, stream.path
-            );
-            return Ok(());
-        }
-
-        if create_dir(&stream.path).await.is_err() {
+        if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
             return Err(Error::CannotCreateStreamDirectory(stream.id));
         }
 
-        if create_dir(&stream.topics_path).await.is_err() {
+        if !Path::new(&stream.topics_path).exists()
+            && create_dir(&stream.topics_path).await.is_err()
+        {
             return Err(Error::CannotCreateTopicsDirectory(stream.id));
         }
 
         if self
-            .persister
-            .overwrite(&stream.info_path, stream.name.as_bytes())
-            .await
+            .db
+            .insert(
+                get_key(stream.id),
+                rmp_serde::to_vec(&StreamData {
+                    id: stream.id,
+                    name: stream.name.clone(),
+                    created_at: stream.created_at,
+                })
+                .unwrap(),
+            )
             .is_err()
         {
             return Err(Error::CannotCreateStreamInfo(stream.id));
         }
+
+        info!("Saved stream with ID: {}.", stream.id);
 
         Ok(())
     }
 
     async fn delete(&self, stream: &Stream) -> Result<(), Error> {
         info!("Deleting stream with ID: {}...", stream.id);
+        if self.db.remove(get_key(stream.id)).is_err() {
+            return Err(Error::CannotDeleteStream(stream.id));
+        }
         if fs::remove_dir_all(&stream.path).await.is_err() {
             return Err(Error::CannotDeleteStreamDirectory(stream.id));
         }
         info!("Deleted stream with ID: {}.", stream.id);
         Ok(())
     }
+}
+
+fn get_key(stream_id: u32) -> String {
+    format!("streams:{}", stream_id)
 }

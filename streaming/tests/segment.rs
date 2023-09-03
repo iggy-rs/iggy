@@ -7,13 +7,11 @@ use iggy::utils::{checksum, timestamp};
 use std::sync::Arc;
 use streaming::segments::segment;
 use streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
-use streaming::storage::SystemStorage;
 use tokio::fs;
 
 #[tokio::test]
 async fn should_persist_segment() {
     let setup = TestSetup::init().await;
-    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
@@ -25,7 +23,7 @@ async fn should_persist_segment() {
             partition_id,
             start_offset,
             setup.config.clone(),
-            storage.clone(),
+            setup.storage.clone(),
             None,
         );
 
@@ -46,7 +44,6 @@ async fn should_persist_segment() {
 #[tokio::test]
 async fn should_load_existing_segment_from_disk() {
     let setup = TestSetup::init().await;
-    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
@@ -58,7 +55,7 @@ async fn should_load_existing_segment_from_disk() {
             partition_id,
             start_offset,
             setup.config.clone(),
-            storage.clone(),
+            setup.storage.clone(),
             None,
         );
         setup
@@ -79,7 +76,7 @@ async fn should_load_existing_segment_from_disk() {
             partition_id,
             start_offset,
             setup.config.clone(),
-            storage.clone(),
+            setup.storage.clone(),
             None,
         );
         loaded_segment.load().await.unwrap();
@@ -104,7 +101,6 @@ async fn should_load_existing_segment_from_disk() {
 #[tokio::test]
 async fn should_persist_and_load_segment_with_messages() {
     let setup = TestSetup::init().await;
-    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
@@ -115,7 +111,7 @@ async fn should_persist_and_load_segment_with_messages() {
         partition_id,
         start_offset,
         setup.config.clone(),
-        storage.clone(),
+        setup.storage.clone(),
         None,
     );
 
@@ -137,7 +133,7 @@ async fn should_persist_and_load_segment_with_messages() {
     }
 
     segment
-        .persist_messages(storage.segment.clone())
+        .persist_messages(setup.storage.segment.clone())
         .await
         .unwrap();
 
@@ -147,7 +143,7 @@ async fn should_persist_and_load_segment_with_messages() {
         partition_id,
         start_offset,
         setup.config.clone(),
-        storage.clone(),
+        setup.storage.clone(),
         None,
     );
     loaded_segment.load().await.unwrap();
@@ -161,7 +157,6 @@ async fn should_persist_and_load_segment_with_messages() {
 #[tokio::test]
 async fn given_all_expired_messages_segment_should_be_expired() {
     let setup = TestSetup::init().await;
-    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
@@ -173,7 +168,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         partition_id,
         start_offset,
         setup.config.clone(),
-        storage.clone(),
+        setup.storage.clone(),
         Some(message_expiry),
     );
 
@@ -199,7 +194,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     }
 
     segment
-        .persist_messages(storage.segment.clone())
+        .persist_messages(setup.storage.segment.clone())
         .await
         .unwrap();
 
@@ -210,7 +205,6 @@ async fn given_all_expired_messages_segment_should_be_expired() {
 #[tokio::test]
 async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() {
     let setup = TestSetup::init().await;
-    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
@@ -222,7 +216,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         partition_id,
         start_offset,
         setup.config.clone(),
-        storage.clone(),
+        setup.storage.clone(),
         Some(message_expiry),
     );
 
@@ -253,7 +247,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         .await
         .unwrap();
     segment
-        .persist_messages(storage.segment.clone())
+        .persist_messages(setup.storage.segment.clone())
         .await
         .unwrap();
 

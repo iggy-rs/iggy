@@ -10,12 +10,10 @@ use std::str::FromStr;
 use std::sync::Arc;
 use streaming::config::{PartitionConfig, SystemConfig};
 use streaming::partitions::partition::Partition;
-use streaming::storage::SystemStorage;
 
 #[tokio::test]
 async fn should_persist_messages_and_then_load_them_from_disk() {
     let setup = TestSetup::init().await;
-    let storage = Arc::new(SystemStorage::default());
     let stream_id = 1;
     let topic_id = 1;
     let partition_id = 1;
@@ -34,7 +32,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         partition_id,
         true,
         config.clone(),
-        storage.clone(),
+        setup.storage.clone(),
         None,
     );
 
@@ -92,7 +90,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         topic_id,
         partition.partition_id,
         config.clone(),
-        storage.clone(),
+        setup.storage.clone(),
     );
     loaded_partition.load().await.unwrap();
     let loaded_messages = loaded_partition

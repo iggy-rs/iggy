@@ -53,6 +53,9 @@ interval = 30
 [system]
 path = "local_data"
 
+[system.database]
+path = "database"
+
 [system.encryption]
 enabled = false
 key = ""

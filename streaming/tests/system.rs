@@ -8,26 +8,27 @@ use tokio::fs;
 #[tokio::test]
 async fn should_initialize_system_and_base_directories() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(setup.config.clone());
+    let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
 
     system.init().await.unwrap();
 
     let mut dir_entries = fs::read_dir(&setup.config.path).await.unwrap();
-    let entry = dir_entries.next_entry().await.unwrap();
-    assert!(entry.is_some());
-    let entry = entry.unwrap();
-    let metadata = entry.metadata().await.unwrap();
-    assert!(metadata.is_dir());
-    assert_eq!(
-        entry.file_name().into_string().unwrap(),
-        setup.config.stream.path
-    );
+    let mut names = Vec::new();
+    while let Some(entry) = dir_entries.next_entry().await.unwrap() {
+        let metadata = entry.metadata().await.unwrap();
+        assert!(metadata.is_dir());
+        names.push(entry.file_name().into_string().unwrap());
+    }
+
+    assert_eq!(names.len(), 2);
+    assert!(names.contains(&setup.config.stream.path));
+    assert!(names.contains(&setup.config.database.path));
 }
 
 #[tokio::test]
 async fn should_create_and_persist_stream() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(setup.config.clone());
+    let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
     let stream_id = 1;
     let stream_name = "test";
     system.init().await.unwrap();
@@ -40,7 +41,7 @@ async fn should_create_and_persist_stream() {
 #[tokio::test]
 async fn should_delete_persisted_stream() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(setup.config.clone());
+    let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
     let stream_id = 1;
     let stream_name = "test";
     system.init().await.unwrap();

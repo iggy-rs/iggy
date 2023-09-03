@@ -3,7 +3,9 @@ use crate::persister::Persister;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::Error;
-use iggy::utils::timestamp;
+use serde::{Deserialize, Serialize};
+use sled::Db;
+use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
@@ -14,12 +16,13 @@ use crate::storage::{PartitionStorage, Storage};
 
 #[derive(Debug)]
 pub struct FilePartitionStorage {
+    db: Arc<Db>,
     persister: Arc<dyn Persister>,
 }
 
 impl FilePartitionStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
-        Self { persister }
+    pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
+        Self { db, persister }
     }
 }
 
@@ -41,6 +44,14 @@ impl PartitionStorage for FilePartitionStorage {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+struct PartitionData {
+    topic_id: u32,
+    stream_id: u32,
+    partition_id: u32,
+    created_at: u64,
+}
+
 #[async_trait]
 impl Storage<Partition> for FilePartitionStorage {
     async fn load(&self, partition: &mut Partition) -> Result<(), Error> {
@@ -56,11 +67,40 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        let metadata = fs::metadata(&partition.path).await?;
-        partition.created_at = match metadata.created() {
-            Ok(created) => timestamp::from(&created),
-            Err(_) => 0,
-        };
+        let partition_data = self.db.get(get_key(
+            partition.stream_id,
+            partition.topic_id,
+            partition.partition_id,
+        ));
+        if partition_data.is_err() {
+            return Err(Error::PartitionNotFound(
+                partition.partition_id,
+                partition.topic_id,
+                partition.stream_id,
+            ));
+        }
+
+        let partition_data = partition_data.unwrap();
+        if partition_data.is_none() {
+            return Err(Error::PartitionNotFound(
+                partition.partition_id,
+                partition.topic_id,
+                partition.stream_id,
+            ));
+        }
+
+        let partition_data = partition_data.unwrap();
+        let partition_data = rmp_serde::from_slice::<PartitionData>(&partition_data);
+        if partition_data.is_err() {
+            return Err(Error::PartitionNotFound(
+                partition.partition_id,
+                partition.topic_id,
+                partition.stream_id,
+            ));
+        }
+
+        let partition_data = partition_data.unwrap();
+        partition.created_at = partition_data.created_at;
 
         let mut dir_entries = dir_entries.unwrap();
         while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
@@ -165,7 +205,7 @@ impl Storage<Partition> for FilePartitionStorage {
             "Saving partition with start ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id
         );
-        if create_dir(&partition.path).await.is_err() {
+        if !Path::new(&partition.path).exists() && create_dir(&partition.path).await.is_err() {
             return Err(Error::CannotCreatePartitionDirectory(
                 partition.partition_id,
                 partition.stream_id,
@@ -173,7 +213,9 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        if create_dir(&partition.offsets_path).await.is_err() {
+        if !Path::new(&partition.offsets_path).exists()
+            && create_dir(&partition.offsets_path).await.is_err()
+        {
             error!(
                 "Failed to create offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
                 partition.partition_id, partition.stream_id, partition.topic_id
@@ -185,7 +227,9 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        if create_dir(&partition.consumer_offsets_path).await.is_err() {
+        if !Path::new(&partition.consumer_offsets_path).exists()
+            && create_dir(&partition.consumer_offsets_path).await.is_err()
+        {
             error!(
                 "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
                 partition.partition_id, partition.stream_id, partition.topic_id
@@ -197,9 +241,10 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        if create_dir(&partition.consumer_group_offsets_path)
-            .await
-            .is_err()
+        if !Path::new(&partition.consumer_group_offsets_path).exists()
+            && create_dir(&partition.consumer_group_offsets_path)
+                .await
+                .is_err()
         {
             error!(
                 "Failed to create consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
@@ -210,6 +255,38 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.stream_id,
                 partition.topic_id,
             ));
+        }
+
+        let insert_result = self.db.insert(
+            get_key(
+                partition.stream_id,
+                partition.topic_id,
+                partition.partition_id,
+            ),
+            rmp_serde::to_vec(&PartitionData {
+                topic_id: partition.topic_id,
+                stream_id: partition.stream_id,
+                partition_id: partition.partition_id,
+                created_at: partition.created_at,
+            })
+            .unwrap(),
+        );
+
+        if insert_result.is_err() {
+            return Err(Error::CannotCreatePartition(
+                partition.partition_id,
+                partition.stream_id,
+                partition.topic_id,
+            ));
+        }
+
+        let insert_result = insert_result.unwrap();
+        if insert_result.is_some() {
+            info!(
+                "Updated partition with ID: {} for topic with ID: {} for stream with ID: {}",
+                partition.partition_id, partition.topic_id, partition.stream_id
+            );
+            // return Ok(());
         }
 
         for segment in partition.get_segments() {
@@ -226,6 +303,21 @@ impl Storage<Partition> for FilePartitionStorage {
             "Deleting partition with ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id,
         );
+        if self
+            .db
+            .remove(get_key(
+                partition.stream_id,
+                partition.topic_id,
+                partition.partition_id,
+            ))
+            .is_err()
+        {
+            return Err(Error::CannotDeletePartition(
+                partition.partition_id,
+                partition.topic_id,
+                partition.stream_id,
+            ));
+        }
         if fs::remove_dir_all(&partition.path).await.is_err() {
             return Err(Error::CannotDeletePartitionDirectory(
                 partition.partition_id,
@@ -239,4 +331,11 @@ impl Storage<Partition> for FilePartitionStorage {
         );
         Ok(())
     }
+}
+
+fn get_key(stream_id: u32, topic_id: u32, partition_id: u32) -> String {
+    format!(
+        "streams:{}:topics:{}:partitions:{}",
+        stream_id, topic_id, partition_id
+    )
 }

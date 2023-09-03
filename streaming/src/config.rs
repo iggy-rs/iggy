@@ -3,11 +3,17 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SystemConfig {
     pub path: String,
+    pub database: DatabaseConfig,
     pub stream: StreamConfig,
     pub topic: TopicConfig,
     pub partition: PartitionConfig,
     pub segment: SegmentConfig,
     pub encryption: EncryptionConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DatabaseConfig {
+    pub path: String,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -48,11 +54,20 @@ impl Default for SystemConfig {
     fn default() -> SystemConfig {
         SystemConfig {
             path: "local_data".to_string(),
+            database: DatabaseConfig::default(),
             stream: StreamConfig::default(),
             encryption: EncryptionConfig::default(),
             topic: TopicConfig::default(),
             partition: PartitionConfig::default(),
             segment: SegmentConfig::default(),
+        }
+    }
+}
+
+impl Default for DatabaseConfig {
+    fn default() -> DatabaseConfig {
+        DatabaseConfig {
+            path: "database".to_string(),
         }
     }
 }
@@ -100,6 +115,10 @@ impl Default for SegmentConfig {
 impl SystemConfig {
     pub fn get_system_path(&self) -> String {
         self.path.to_string()
+    }
+
+    pub fn get_database_path(&self) -> String {
+        format!("{}/{}", self.get_system_path(), self.database.path)
     }
 
     pub fn get_streams_path(&self) -> String {

@@ -1,6 +1,6 @@
 use crate::partitions::partition::{ConsumerOffset, Partition};
 use crate::partitions::storage::FilePartitionStorage;
-use crate::persister::{FilePersister, Persister};
+use crate::persister::Persister;
 use crate::segments::index::{Index, IndexRange};
 use crate::segments::segment::Segment;
 use crate::segments::storage::FileSegmentStorage;
@@ -13,6 +13,7 @@ use crate::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::error::Error;
 use iggy::models::messages::Message;
+use sled::Db;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -98,19 +99,13 @@ pub struct SystemStorage {
 }
 
 impl SystemStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
+    pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
         Self {
-            stream: Arc::new(FileStreamStorage::new(persister.clone())),
-            topic: Arc::new(FileTopicStorage::new(persister.clone())),
-            partition: Arc::new(FilePartitionStorage::new(persister.clone())),
+            stream: Arc::new(FileStreamStorage::new(db.clone())),
+            topic: Arc::new(FileTopicStorage::new(db.clone(), persister.clone())),
+            partition: Arc::new(FilePartitionStorage::new(db.clone(), persister.clone())),
             segment: Arc::new(FileSegmentStorage::new(persister.clone())),
         }
-    }
-}
-
-impl Default for SystemStorage {
-    fn default() -> Self {
-        Self::new(Arc::new(FilePersister {}))
     }
 }
 

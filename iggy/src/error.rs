@@ -158,8 +158,10 @@ pub enum Error {
         "Failed to read partitions directories for topic with ID: {0} and stream with ID: {1}"
     )]
     CannotReadPartitions(u32, u32),
-    #[error("Partition with ID: {0} was not found.")]
-    PartitionNotFound(u32),
+    #[error(
+        "Partition with ID: {0} for topic with ID: {1} for stream with ID: {2} was not found."
+    )]
+    PartitionNotFound(u32, u32, u32),
     #[error("Topic with ID: {0} for stream with ID: {1} has no partitions.")]
     NoPartitions(u32, u32),
     #[error("Invalid key value length")]
@@ -310,7 +312,7 @@ impl Error {
             Error::CannotReadPartitions(_, _) => 3004,
             Error::CannotDeletePartition(_, _, _) => 3005,
             Error::CannotDeletePartitionDirectory(_, _, _) => 3006,
-            Error::PartitionNotFound(_) => 3007,
+            Error::PartitionNotFound(_, _, _) => 3007,
             Error::NoPartitions(_, _) => 3008,
             Error::SegmentNotFound => 4000,
             Error::SegmentClosed(_, _) => 4001,
@@ -518,7 +520,7 @@ impl Error {
             Error::CannotCreateSegmentTimeIndexFile(_) => "cannot_create_segment_time_index_file",
             Error::CannotOpenPartitionLogFile => "cannot_open_partition_log_file",
             Error::CannotReadPartitions(_, _) => "cannot_read_partitions",
-            Error::PartitionNotFound(_) => "partition_not_found",
+            Error::PartitionNotFound(_, _, _) => "partition_not_found",
             Error::NoPartitions(_, _) => "no_partitions",
             Error::InvalidMessagesCount => "invalid_messages_count",
             Error::InvalidStreamId => "invalid_stream_id",

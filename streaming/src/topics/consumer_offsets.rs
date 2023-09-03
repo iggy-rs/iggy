@@ -44,7 +44,11 @@ impl Topic {
 
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
-            return Err(Error::PartitionNotFound(partition_id));
+            return Err(Error::PartitionNotFound(
+                partition_id,
+                self.stream_id,
+                self.stream_id,
+            ));
         }
 
         let partition = partition.unwrap();

@@ -10,6 +10,8 @@ use crate::streams::stream::Stream;
 use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::storage::FileTopicStorage;
 use crate::topics::topic::Topic;
+use crate::users::storage::FileUserStorage;
+use crate::users::user::User;
 use async_trait::async_trait;
 use iggy::error::Error;
 use iggy::models::messages::Message;
@@ -22,6 +24,11 @@ pub trait Storage<T>: Sync + Send {
     async fn load(&self, component: &mut T) -> Result<(), Error>;
     async fn save(&self, component: &T) -> Result<(), Error>;
     async fn delete(&self, component: &T) -> Result<(), Error>;
+}
+
+#[async_trait]
+pub trait UserStorage: Storage<User> {
+    async fn load_all(&self) -> Result<Vec<User>, Error>;
 }
 
 #[async_trait]
@@ -92,6 +99,7 @@ pub trait SegmentStorage: Storage<Segment> {
 
 #[derive(Debug)]
 pub struct SystemStorage {
+    pub user: Arc<dyn UserStorage>,
     pub stream: Arc<dyn StreamStorage>,
     pub topic: Arc<dyn TopicStorage>,
     pub partition: Arc<dyn PartitionStorage>,
@@ -101,11 +109,18 @@ pub struct SystemStorage {
 impl SystemStorage {
     pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
         Self {
+            user: Arc::new(FileUserStorage::new(db.clone())),
             stream: Arc::new(FileStreamStorage::new(db.clone())),
             topic: Arc::new(FileTopicStorage::new(db.clone(), persister.clone())),
             partition: Arc::new(FilePartitionStorage::new(db.clone(), persister.clone())),
             segment: Arc::new(FileSegmentStorage::new(persister.clone())),
         }
+    }
+}
+
+impl Debug for dyn UserStorage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "UserStorage")
     }
 }
 
@@ -146,10 +161,33 @@ pub(crate) mod tests {
     use iggy::models::messages::Message;
     use std::sync::Arc;
 
+    struct TestUserStorage {}
     struct TestStreamStorage {}
     struct TestTopicStorage {}
     struct TestPartitionStorage {}
     struct TestSegmentStorage {}
+
+    #[async_trait]
+    impl Storage<User> for TestUserStorage {
+        async fn load(&self, _user: &mut User) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn save(&self, _user: &User) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn delete(&self, _user: &User) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    #[async_trait]
+    impl UserStorage for TestUserStorage {
+        async fn load_all(&self) -> Result<Vec<User>, Error> {
+            Ok(vec![])
+        }
+    }
 
     #[async_trait]
     impl Storage<Stream> for TestStreamStorage {
@@ -330,6 +368,7 @@ pub(crate) mod tests {
 
     pub fn get_test_system_storage() -> SystemStorage {
         SystemStorage {
+            user: Arc::new(TestUserStorage {}),
             stream: Arc::new(TestStreamStorage {}),
             topic: Arc::new(TestTopicStorage {}),
             partition: Arc::new(TestPartitionStorage {}),

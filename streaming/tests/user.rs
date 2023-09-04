@@ -2,7 +2,7 @@ use crate::common::TestSetup;
 use iggy::utils::timestamp;
 use std::collections::HashMap;
 use streaming::users::permissions::{
-    GlobalPermissions, GlobalStreamPermissions, Permissions, StreamPermissions,
+    GlobalPermissions, GlobalStreamPermissions, Permissions, StreamPermissions, TopicPermissions,
 };
 use streaming::users::user::{Role, Status, User};
 
@@ -131,10 +131,21 @@ fn assert_user(user: &User, loaded_user: &User) {
             loaded_stream.global.send_messages,
             stream.global.send_messages
         );
-        assert_eq!(loaded_stream.managed_topics, stream.managed_topics);
-        assert_eq!(loaded_stream.readable_topics, stream.readable_topics);
-        assert_eq!(loaded_stream.poll_messages_from, stream.poll_messages_from);
-        assert_eq!(loaded_stream.send_messages_to, stream.send_messages_to);
+        if stream.topics.is_none() {
+            assert!(loaded_stream.topics.is_none());
+            continue;
+        }
+
+        let topics = stream.topics.as_ref().unwrap();
+        let loaded_topics = loaded_stream.topics.as_ref().unwrap();
+        assert_eq!(loaded_topics.len(), topics.len());
+        for (topic_id, topic) in topics {
+            let loaded_topic = loaded_topics.get(topic_id).unwrap();
+            assert_eq!(loaded_topic.manage_topic, topic.manage_topic);
+            assert_eq!(loaded_topic.read_topic, topic.read_topic);
+            assert_eq!(loaded_topic.poll_messages, topic.poll_messages);
+            assert_eq!(loaded_topic.send_messages, topic.send_messages);
+        }
     }
 }
 
@@ -167,10 +178,19 @@ fn create_user(id: u32) -> User {
                             poll_messages: true,
                             send_messages: true,
                         },
-                        managed_topics: None,
-                        readable_topics: None,
-                        poll_messages_from: None,
-                        send_messages_to: None,
+                        topics: Some({
+                            let mut map = HashMap::new();
+                            map.insert(
+                                1,
+                                TopicPermissions {
+                                    manage_topic: false,
+                                    read_topic: true,
+                                    poll_messages: true,
+                                    send_messages: true,
+                                },
+                            );
+                            map
+                        }),
                     },
                 );
                 map

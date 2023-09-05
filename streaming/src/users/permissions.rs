@@ -2,7 +2,7 @@ use crate::users::user::User;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Default)]
 pub struct PermissionsValidator {
     users_permissions: HashMap<u32, GlobalPermissions>,
     users_that_can_poll_messages_from_all_topics: HashSet<u32>,
@@ -14,15 +14,7 @@ pub struct PermissionsValidator {
 }
 
 impl PermissionsValidator {
-    pub fn new(users: Vec<User>) -> Self {
-        let mut users_permissions = HashMap::new();
-        let mut users_that_can_poll_messages_from_all_topics = HashSet::new();
-        let mut users_that_can_send_messages_to_all_topics = HashSet::new();
-        let mut users_that_can_poll_messages_from_streams = HashSet::new();
-        let mut users_that_can_send_messages_to_streams = HashSet::new();
-        let mut users_streams_permissions = HashMap::new();
-        let mut users_topics_permissions = HashMap::new();
-
+    pub fn init(&mut self, users: Vec<User>) {
         for user in users {
             if user.permissions.is_none() {
                 continue;
@@ -30,14 +22,16 @@ impl PermissionsValidator {
 
             let permissions = user.permissions.unwrap();
             if permissions.global.poll_messages {
-                users_that_can_poll_messages_from_all_topics.insert(user.id);
+                self.users_that_can_poll_messages_from_all_topics
+                    .insert(user.id);
             }
 
             if permissions.global.send_messages {
-                users_that_can_send_messages_to_all_topics.insert(user.id);
+                self.users_that_can_send_messages_to_all_topics
+                    .insert(user.id);
             }
 
-            users_permissions.insert(user.id, permissions.global);
+            self.users_permissions.insert(user.id, permissions.global);
             if permissions.streams.is_none() {
                 continue;
             }
@@ -45,31 +39,25 @@ impl PermissionsValidator {
             let streams = permissions.streams.unwrap();
             for (stream_id, stream) in streams {
                 if stream.global.poll_messages {
-                    users_that_can_poll_messages_from_streams.insert((user.id, stream_id));
+                    self.users_that_can_poll_messages_from_streams
+                        .insert((user.id, stream_id));
                 }
 
                 if stream.global.send_messages {
-                    users_that_can_send_messages_to_streams.insert((user.id, stream_id));
+                    self.users_that_can_send_messages_to_streams
+                        .insert((user.id, stream_id));
                 }
 
-                users_streams_permissions.insert((user.id, stream_id), stream.global);
+                self.users_streams_permissions
+                    .insert((user.id, stream_id), stream.global);
 
                 if let Some(topics) = stream.topics {
                     for (topic_id, topic) in topics {
-                        users_topics_permissions.insert((user.id, stream_id, topic_id), topic);
+                        self.users_topics_permissions
+                            .insert((user.id, stream_id, topic_id), topic);
                     }
                 }
             }
-        }
-
-        Self {
-            users_streams_permissions,
-            users_topics_permissions,
-            users_permissions,
-            users_that_can_poll_messages_from_all_topics,
-            users_that_can_send_messages_to_all_topics,
-            users_that_can_poll_messages_from_streams,
-            users_that_can_send_messages_to_streams,
         }
     }
 
@@ -105,7 +93,6 @@ impl PermissionsValidator {
         {
             return true;
         }
-
         if self
             .users_that_can_send_messages_to_streams
             .contains(&(user_id, stream_id))

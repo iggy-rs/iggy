@@ -62,7 +62,6 @@ impl Storage<User> for FileUserStorage {
         }
 
         let user_data = user_data.unwrap();
-        user.role = user_data.role;
         user.status = user_data.status;
         user.username = user_data.username;
         user.password = user_data.password;

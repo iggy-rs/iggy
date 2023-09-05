@@ -12,6 +12,10 @@ pub enum Error {
     EmptyResponse,
     #[error("Invalid configuration")]
     InvalidConfiguration,
+    #[error("Unauthenticated")]
+    Unauthenticated,
+    #[error("Unauthorized")]
+    Unauthorized,
     #[error("Not connected")]
     NotConnected,
     #[error("Request error")]
@@ -249,6 +253,8 @@ impl Error {
             Error::InvalidFormat => 4,
             Error::FeatureUnavailable => 5,
             Error::CannotCreateBaseDirectory => 10,
+            Error::Unauthenticated => 40,
+            Error::Unauthorized => 41,
             Error::NotConnected => 51,
             Error::RequestError(_) => 52,
             Error::InvalidEncryptionKey => 60,
@@ -364,6 +370,8 @@ impl Error {
             4 => "invalid_format",
             5 => "feature_unavailable",
             10 => "cannot_create_base_directory",
+            40 => "unauthenticated",
+            41 => "unauthorized",
             51 => "not_connected",
             52 => "request_error",
             60 => "invalid_encryption_key",
@@ -478,6 +486,8 @@ impl Error {
             Error::IoError(_) => "io_error",
             Error::InvalidCommand => "invalid_command",
             Error::InvalidFormat => "invalid_format",
+            Error::Unauthenticated => "unauthenticated",
+            Error::Unauthorized => "unauthorized",
             Error::InvalidEncryptionKey => "invalid_encryption_key",
             Error::CannotEncryptData => "cannot_encrypt_data",
             Error::CannotDecryptData => "cannot_decrypt_data",

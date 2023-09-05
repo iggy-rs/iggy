@@ -3,6 +3,7 @@ use crate::config::SystemConfig;
 use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
+use crate::users::permissions::PermissionsValidator;
 use iggy::error::Error;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use sled::Db;
@@ -19,6 +20,7 @@ pub struct System {
     pub base_path: String,
     pub streams_path: String,
     pub storage: Arc<SystemStorage>,
+    pub permissions_validator: PermissionsValidator,
     pub(crate) streams: HashMap<u32, Stream>,
     pub(crate) streams_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
@@ -64,6 +66,7 @@ impl System {
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),
             client_manager: Arc::new(RwLock::new(ClientManager::new())),
+            permissions_validator: PermissionsValidator::default(),
         }
     }
 
@@ -81,6 +84,7 @@ impl System {
             self.base_path
         );
         let now = Instant::now();
+        self.load_users().await?;
         self.load_streams().await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())

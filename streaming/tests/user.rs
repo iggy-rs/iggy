@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use streaming::users::permissions::{
     GlobalPermissions, GlobalStreamPermissions, Permissions, StreamPermissions, TopicPermissions,
 };
-use streaming::users::user::{Role, Status, User};
+use streaming::users::user::{Status, User};
 
 mod common;
 
@@ -68,7 +68,6 @@ fn assert_user(user: &User, loaded_user: &User) {
     assert_eq!(loaded_user.username, user.username);
     assert_eq!(loaded_user.password, user.password);
     assert_eq!(loaded_user.created_at, user.created_at);
-    assert_eq!(loaded_user.role, user.role);
     assert_eq!(loaded_user.status, user.status);
     if user.permissions.is_none() {
         assert!(loaded_user.permissions.is_none());
@@ -155,7 +154,6 @@ fn create_user(id: u32) -> User {
         username: format!("user{}", id),
         password: "secret".to_string(),
         created_at: timestamp::get(),
-        role: Role::User,
         status: Status::Active,
         permissions: Some(Permissions {
             global: GlobalPermissions {

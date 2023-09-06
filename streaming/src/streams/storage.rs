@@ -43,20 +43,21 @@ impl Storage<Stream> for FileStreamStorage {
             return Err(Error::StreamIdNotFound(stream.id));
         }
 
-        let stream_data = self.db.get(get_key(stream.id));
+        let key = get_key(stream.id);
+        let stream_data = self.db.get(&key);
         if stream_data.is_err() {
-            return Err(Error::CannotReadStreamInfo(stream.id));
+            return Err(Error::CannotLoadResource(key));
         }
 
         let stream_data = stream_data.unwrap();
         if stream_data.is_none() {
-            return Err(Error::StreamIdNotFound(stream.id));
+            return Err(Error::ResourceNotFound(key));
         }
 
         let stream_data = stream_data.unwrap();
         let stream_data = rmp_serde::from_slice::<StreamData>(&stream_data);
         if stream_data.is_err() {
-            return Err(Error::CannotReadStreamInfo(stream.id));
+            return Err(Error::CannotDeserializeResource(key));
         }
 
         let stream_data = stream_data.unwrap();
@@ -168,8 +169,9 @@ impl Storage<Stream> for FileStreamStorage {
 
     async fn delete(&self, stream: &Stream) -> Result<(), Error> {
         info!("Deleting stream with ID: {}...", stream.id);
-        if self.db.remove(get_key(stream.id)).is_err() {
-            return Err(Error::CannotDeleteStream(stream.id));
+        let key = get_key(stream.id);
+        if self.db.remove(&key).is_err() {
+            return Err(Error::CannotDeleteResource(key));
         }
         if fs::remove_dir_all(&stream.path).await.is_err() {
             return Err(Error::CannotDeleteStreamDirectory(stream.id));

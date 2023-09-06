@@ -42,23 +42,21 @@ impl UserStorage for FileUserStorage {
 #[async_trait]
 impl Storage<User> for FileUserStorage {
     async fn load(&self, user: &mut User) -> Result<(), Error> {
-        let user_data = self.db.get(get_key(user.id));
+        let key = get_key(user.id);
+        let user_data = self.db.get(&key);
         if user_data.is_err() {
-            // TODO: Return error
-            panic!("Cannot load user with ID: {}", user.id);
+            return Err(Error::CannotLoadResource(key));
         }
 
         let user_data = user_data.unwrap();
         if user_data.is_none() {
-            // TODO: Return error
-            panic!("Cannot load user with ID: {}", user.id);
+            return Err(Error::CannotLoadResource(key));
         }
 
         let user_data = user_data.unwrap();
         let user_data = rmp_serde::from_slice::<User>(&user_data);
         if user_data.is_err() {
-            // TODO: Return error
-            panic!("Cannot load user with ID: {}", user.id);
+            return Err(Error::CannotDeserializeResource(key));
         }
 
         let user_data = user_data.unwrap();
@@ -71,13 +69,13 @@ impl Storage<User> for FileUserStorage {
     }
 
     async fn save(&self, user: &User) -> Result<(), Error> {
+        let key = get_key(user.id);
         if self
             .db
-            .insert(get_key(user.id), rmp_serde::to_vec(&user).unwrap())
+            .insert(&key, rmp_serde::to_vec(&user).unwrap())
             .is_err()
         {
-            // TODO: Return error
-            panic!("Cannot save user with ID: {}", user.id);
+            return Err(Error::CannotSaveResource(key));
         }
 
         info!("Saved user with ID: {}.", user.id);
@@ -86,9 +84,9 @@ impl Storage<User> for FileUserStorage {
 
     async fn delete(&self, user: &User) -> Result<(), Error> {
         info!("Deleting user with ID: {}...", user.id);
-        if self.db.remove(get_key(user.id)).is_err() {
-            // TODO: Return error
-            panic!("Cannot delete user with ID: {}", user.id);
+        let key = get_key(user.id);
+        if self.db.remove(&key).is_err() {
+            return Err(Error::CannotDeleteResource(key));
         }
         info!("Deleted user with ID: {}.", user.id);
         Ok(())

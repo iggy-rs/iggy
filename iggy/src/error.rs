@@ -12,6 +12,18 @@ pub enum Error {
     EmptyResponse,
     #[error("Invalid configuration")]
     InvalidConfiguration,
+    #[error("Resource with key: {0} was not found.")]
+    ResourceNotFound(String),
+    #[error("Cannot load resource with key: {0}")]
+    CannotLoadResource(String),
+    #[error("Cannot save resource with key: {0}")]
+    CannotSaveResource(String),
+    #[error("Cannot delete resource with key: {0}")]
+    CannotDeleteResource(String),
+    #[error("Cannot serialize resource with key: {0}")]
+    CannotSerializeResource(String),
+    #[error("Cannot deserialize resource with key: {0}")]
+    CannotDeserializeResource(String),
     #[error("Unauthenticated")]
     Unauthenticated,
     #[error("Unauthorized")]
@@ -253,6 +265,12 @@ impl Error {
             Error::InvalidFormat => 4,
             Error::FeatureUnavailable => 5,
             Error::CannotCreateBaseDirectory => 10,
+            Error::ResourceNotFound(_) => 20,
+            Error::CannotLoadResource(_) => 21,
+            Error::CannotSaveResource(_) => 22,
+            Error::CannotDeleteResource(_) => 23,
+            Error::CannotSerializeResource(_) => 24,
+            Error::CannotDeserializeResource(_) => 25,
             Error::Unauthenticated => 40,
             Error::Unauthorized => 41,
             Error::NotConnected => 51,
@@ -370,6 +388,12 @@ impl Error {
             4 => "invalid_format",
             5 => "feature_unavailable",
             10 => "cannot_create_base_directory",
+            20 => "resource_not_found",
+            21 => "cannot_load_resource",
+            22 => "cannot_save_resource",
+            23 => "cannot_delete_resource",
+            24 => "cannot_serialize_resource",
+            25 => "cannot_deserialize_resource",
             40 => "unauthenticated",
             41 => "unauthorized",
             51 => "not_connected",
@@ -486,6 +510,12 @@ impl Error {
             Error::IoError(_) => "io_error",
             Error::InvalidCommand => "invalid_command",
             Error::InvalidFormat => "invalid_format",
+            Error::ResourceNotFound(_) => "resource_not_found",
+            Error::CannotLoadResource(_) => "cannot_load_resource",
+            Error::CannotSaveResource(_) => "cannot_save_resource",
+            Error::CannotDeleteResource(_) => "cannot_delete_resource",
+            Error::CannotSerializeResource(_) => "cannot_serialize_resource",
+            Error::CannotDeserializeResource(_) => "cannot_deserialize_resource",
             Error::Unauthenticated => "unauthenticated",
             Error::Unauthorized => "unauthorized",
             Error::InvalidEncryptionKey => "invalid_encryption_key",

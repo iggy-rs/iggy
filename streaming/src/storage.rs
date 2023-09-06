@@ -7,6 +7,8 @@ use crate::segments::storage::FileSegmentStorage;
 use crate::segments::time_index::TimeIndex;
 use crate::streams::storage::FileStreamStorage;
 use crate::streams::stream::Stream;
+use crate::systems::info::SystemInfo;
+use crate::systems::storage::FileSystemInfoStorage;
 use crate::topics::consumer_group::ConsumerGroup;
 use crate::topics::storage::FileTopicStorage;
 use crate::topics::topic::Topic;
@@ -25,6 +27,9 @@ pub trait Storage<T>: Sync + Send {
     async fn save(&self, component: &T) -> Result<(), Error>;
     async fn delete(&self, component: &T) -> Result<(), Error>;
 }
+
+#[async_trait]
+pub trait SystemInfoStorage: Storage<SystemInfo> {}
 
 #[async_trait]
 pub trait UserStorage: Storage<User> {
@@ -99,6 +104,7 @@ pub trait SegmentStorage: Storage<Segment> {
 
 #[derive(Debug)]
 pub struct SystemStorage {
+    pub info: Arc<dyn SystemInfoStorage>,
     pub user: Arc<dyn UserStorage>,
     pub stream: Arc<dyn StreamStorage>,
     pub topic: Arc<dyn TopicStorage>,
@@ -109,12 +115,19 @@ pub struct SystemStorage {
 impl SystemStorage {
     pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
         Self {
+            info: Arc::new(FileSystemInfoStorage::new(db.clone())),
             user: Arc::new(FileUserStorage::new(db.clone())),
             stream: Arc::new(FileStreamStorage::new(db.clone())),
             topic: Arc::new(FileTopicStorage::new(db.clone(), persister.clone())),
             partition: Arc::new(FilePartitionStorage::new(db.clone(), persister.clone())),
             segment: Arc::new(FileSegmentStorage::new(persister.clone())),
         }
+    }
+}
+
+impl Debug for dyn SystemInfoStorage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "SystemInfoStorage")
     }
 }
 
@@ -161,11 +174,30 @@ pub(crate) mod tests {
     use iggy::models::messages::Message;
     use std::sync::Arc;
 
+    struct TestSystemInfoStorage {}
     struct TestUserStorage {}
     struct TestStreamStorage {}
     struct TestTopicStorage {}
     struct TestPartitionStorage {}
     struct TestSegmentStorage {}
+
+    #[async_trait]
+    impl Storage<SystemInfo> for TestSystemInfoStorage {
+        async fn load(&self, _system_info: &mut SystemInfo) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn save(&self, _system_info: &SystemInfo) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn delete(&self, _system_info: &SystemInfo) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    #[async_trait]
+    impl SystemInfoStorage for TestSystemInfoStorage {}
 
     #[async_trait]
     impl Storage<User> for TestUserStorage {
@@ -368,6 +400,7 @@ pub(crate) mod tests {
 
     pub fn get_test_system_storage() -> SystemStorage {
         SystemStorage {
+            info: Arc::new(TestSystemInfoStorage {}),
             user: Arc::new(TestUserStorage {}),
             stream: Arc::new(TestStreamStorage {}),
             topic: Arc::new(TestTopicStorage {}),

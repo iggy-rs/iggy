@@ -192,20 +192,21 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::TopicIdNotFound(topic.topic_id, topic.stream_id));
         }
 
-        let topic_data = self.db.get(get_key(topic.stream_id, topic.topic_id));
+        let key = get_key(topic.stream_id, topic.topic_id);
+        let topic_data = self.db.get(&key);
         if topic_data.is_err() {
-            return Err(Error::CannotReadTopicInfo(topic.topic_id, topic.stream_id));
+            return Err(Error::CannotLoadResource(key));
         }
 
         let topic_data = topic_data.unwrap();
         if topic_data.is_none() {
-            return Err(Error::TopicIdNotFound(topic.topic_id, topic.stream_id));
+            return Err(Error::ResourceNotFound(key));
         }
 
         let topic_data = topic_data.unwrap();
         let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data);
         if topic_data.is_err() {
-            return Err(Error::CannotReadTopicInfo(topic.topic_id, topic.stream_id));
+            return Err(Error::CannotDeserializeResource(key));
         }
 
         let topic_data = topic_data.unwrap();
@@ -307,10 +308,11 @@ impl Storage<Topic> for FileTopicStorage {
             ));
         }
 
+        let key = get_key(topic.stream_id, topic.topic_id);
         if self
             .db
             .insert(
-                get_key(topic.stream_id, topic.topic_id),
+                &key,
                 rmp_serde::to_vec(&TopicData {
                     name: topic.name.clone(),
                     created_at: topic.created_at,
@@ -320,10 +322,7 @@ impl Storage<Topic> for FileTopicStorage {
             )
             .is_err()
         {
-            return Err(Error::CannotCreateTopicInfo(
-                topic.topic_id,
-                topic.stream_id,
-            ));
+            return Err(Error::CannotSaveResource(key));
         }
 
         info!(
@@ -350,12 +349,9 @@ impl Storage<Topic> for FileTopicStorage {
             "Deleting topic with ID: {} for stream with ID: {}...",
             topic.topic_id, topic.stream_id
         );
-        if self
-            .db
-            .remove(get_key(topic.stream_id, topic.topic_id))
-            .is_err()
-        {
-            return Err(Error::CannotDeleteTopic(topic.topic_id, topic.stream_id));
+        let key = get_key(topic.stream_id, topic.topic_id);
+        if self.db.remove(&key).is_err() {
+            return Err(Error::CannotDeleteResource(key));
         }
         if fs::remove_dir_all(&topic.path).await.is_err() {
             return Err(Error::CannotDeleteTopicDirectory(

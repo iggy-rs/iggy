@@ -64,36 +64,25 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        let partition_data = self.db.get(get_key(
+        let key = get_key(
             partition.stream_id,
             partition.topic_id,
             partition.partition_id,
-        ));
+        );
+        let partition_data = self.db.get(&key);
         if partition_data.is_err() {
-            return Err(Error::PartitionNotFound(
-                partition.partition_id,
-                partition.topic_id,
-                partition.stream_id,
-            ));
+            return Err(Error::CannotLoadResource(key));
         }
 
         let partition_data = partition_data.unwrap();
         if partition_data.is_none() {
-            return Err(Error::PartitionNotFound(
-                partition.partition_id,
-                partition.topic_id,
-                partition.stream_id,
-            ));
+            return Err(Error::ResourceNotFound(key));
         }
 
         let partition_data = partition_data.unwrap();
         let partition_data = rmp_serde::from_slice::<PartitionData>(&partition_data);
         if partition_data.is_err() {
-            return Err(Error::PartitionNotFound(
-                partition.partition_id,
-                partition.topic_id,
-                partition.stream_id,
-            ));
+            return Err(Error::CannotDeserializeResource(key));
         }
 
         let partition_data = partition_data.unwrap();
@@ -254,14 +243,15 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
+        let key = get_key(
+            partition.stream_id,
+            partition.topic_id,
+            partition.partition_id,
+        );
         if self
             .db
             .insert(
-                get_key(
-                    partition.stream_id,
-                    partition.topic_id,
-                    partition.partition_id,
-                ),
+                &key,
                 rmp_serde::to_vec(&PartitionData {
                     created_at: partition.created_at,
                 })
@@ -269,11 +259,7 @@ impl Storage<Partition> for FilePartitionStorage {
             )
             .is_err()
         {
-            return Err(Error::CannotCreatePartition(
-                partition.partition_id,
-                partition.stream_id,
-                partition.topic_id,
-            ));
+            return Err(Error::CannotSaveResource(key));
         }
 
         for segment in partition.get_segments() {

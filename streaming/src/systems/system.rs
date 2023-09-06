@@ -3,7 +3,7 @@ use crate::config::SystemConfig;
 use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
-use crate::users::permissions::PermissionsValidator;
+use crate::users::permissions_validator::PermissionsValidator;
 use iggy::error::Error;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use sled::Db;
@@ -84,6 +84,7 @@ impl System {
             self.base_path
         );
         let now = Instant::now();
+        self.load_version().await?;
         self.load_users().await?;
         self.load_streams().await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());

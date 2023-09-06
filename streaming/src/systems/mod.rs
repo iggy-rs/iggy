@@ -1,7 +1,9 @@
 pub mod clients;
 pub mod consumer_groups;
+pub mod info;
 pub mod messages;
 pub mod stats;
+pub mod storage;
 pub mod streams;
 pub mod system;
 pub mod topics;

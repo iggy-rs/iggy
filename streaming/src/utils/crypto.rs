@@ -1,7 +1,7 @@
-use bcrypt::{hash, verify, DEFAULT_COST};
+use bcrypt::{hash, verify};
 
 pub fn hash_password(password: &str) -> String {
-    hash(password, DEFAULT_COST).unwrap()
+    hash(password, 4).unwrap()
 }
 
 pub fn verify_password(password: &str, hash: &str) -> bool {

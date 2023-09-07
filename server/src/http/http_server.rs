@@ -1,5 +1,5 @@
 use crate::http::{
-    consumer_groups, consumer_offsets, messages, partitions, streams, system, topics,
+    consumer_groups, consumer_offsets, messages, partitions, streams, system, topics, users,
 };
 use axum::http::Method;
 use axum::Router;
@@ -21,23 +21,25 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
 
     let mut app = Router::new().nest(
         "/",
-        system::router(system.clone()).nest(
-            "/streams",
-            streams::router(system.clone()).nest(
-                "/:stream_id/topics",
-                topics::router(system.clone())
-                    .nest(
-                        "/:topic_id/consumer-groups",
-                        consumer_groups::router(system.clone()),
-                    )
-                    .nest("/:topic_id/messages", messages::router(system.clone()))
-                    .nest(
-                        "/:topic_id/consumer-offsets",
-                        consumer_offsets::router(system.clone()),
-                    )
-                    .nest("/:topic_id/partitions", partitions::router(system.clone())),
+        system::router(system.clone())
+            .nest("/users", users::router(system.clone()))
+            .nest(
+                "/streams",
+                streams::router(system.clone()).nest(
+                    "/:stream_id/topics",
+                    topics::router(system.clone())
+                        .nest(
+                            "/:topic_id/consumer-groups",
+                            consumer_groups::router(system.clone()),
+                        )
+                        .nest("/:topic_id/messages", messages::router(system.clone()))
+                        .nest(
+                            "/:topic_id/consumer-offsets",
+                            consumer_offsets::router(system.clone()),
+                        )
+                        .nest("/:topic_id/partitions", partitions::router(system.clone())),
+                ),
             ),
-        ),
     );
 
     if config.cors.enabled {

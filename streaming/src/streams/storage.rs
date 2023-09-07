@@ -147,19 +147,24 @@ impl Storage<Stream> for FileStreamStorage {
             return Err(Error::CannotCreateTopicsDirectory(stream.id));
         }
 
-        if self
-            .db
-            .insert(
-                get_key(stream.id),
-                rmp_serde::to_vec(&StreamData {
-                    name: stream.name.clone(),
-                    created_at: stream.created_at,
-                })
-                .unwrap(),
-            )
-            .is_err()
-        {
-            return Err(Error::CannotCreateStreamInfo(stream.id));
+        let key = get_key(stream.id);
+        match rmp_serde::to_vec(&StreamData {
+            name: stream.name.clone(),
+            created_at: stream.created_at,
+        }) {
+            Ok(data) => {
+                if let Err(err) = self.db.insert(&key, data) {
+                    error!("Cannot save stream with ID: {}. Error: {}", stream.id, err);
+                    return Err(Error::CannotSaveResource(key.to_string()));
+                }
+            }
+            Err(err) => {
+                error!(
+                    "Cannot serialize stream with ID: {}. Error: {}",
+                    stream.id, err
+                );
+                return Err(Error::CannotSerializeResource(key));
+            }
         }
 
         info!("Saved stream with ID: {}.", stream.id);

@@ -1,4 +1,6 @@
-use crate::{consumer_groups, consumer_offsets, messages, partitions, streams, system, topics};
+use crate::{
+    consumer_groups, consumer_offsets, messages, partitions, streams, system, topics, users,
+};
 use iggy::client_error::ClientError;
 use iggy::clients::client::IggyClient;
 use iggy::command::Command;
@@ -15,6 +17,7 @@ pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError>
         Command::GetMe(payload) => system::get_me(&payload, client).await,
         Command::GetClient(payload) => system::get_client(&payload, client).await,
         Command::GetClients(payload) => system::get_clients(&payload, client).await,
+        Command::LoginUser(payload) => users::login_user(&payload, client).await,
         Command::SendMessages(mut payload) => messages::send_messages(&mut payload, client).await,
         Command::PollMessages(payload) => {
             let format = match input.split('|').last() {

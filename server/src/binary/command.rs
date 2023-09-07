@@ -9,6 +9,7 @@ use crate::binary::handlers::partitions::*;
 use crate::binary::handlers::streams::*;
 use crate::binary::handlers::system::*;
 use crate::binary::handlers::topics::*;
+use crate::binary::handlers::users::login_user_handler;
 use crate::binary::sender::Sender;
 use iggy::command::Command;
 use iggy::error::Error;
@@ -61,6 +62,7 @@ async fn try_handle(
         }
         Command::GetClient(command) => get_client_handler::handle(command, sender, system).await,
         Command::GetClients(command) => get_clients_handler::handle(command, sender, system).await,
+        Command::LoginUser(command) => login_user_handler::handle(command, sender, system).await,
         Command::SendMessages(command) => {
             send_messages_handler::handle(command, sender, system).await
         }

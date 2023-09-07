@@ -309,20 +309,27 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         let key = get_key(topic.stream_id, topic.topic_id);
-        if self
-            .db
-            .insert(
-                &key,
-                rmp_serde::to_vec(&TopicData {
-                    name: topic.name.clone(),
-                    created_at: topic.created_at,
-                    message_expiry: topic.message_expiry,
-                })
-                .unwrap(),
-            )
-            .is_err()
-        {
-            return Err(Error::CannotSaveResource(key));
+        match rmp_serde::to_vec(&TopicData {
+            name: topic.name.clone(),
+            created_at: topic.created_at,
+            message_expiry: topic.message_expiry,
+        }) {
+            Ok(data) => {
+                if let Err(err) = self.db.insert(&key, data) {
+                    error!(
+                        "Cannot save topic with ID: {} for stream with ID: {}. Error: {}",
+                        topic.topic_id, topic.stream_id, err
+                    );
+                    return Err(Error::CannotSaveResource(key.to_string()));
+                }
+            }
+            Err(err) => {
+                error!(
+                    "Cannot serialize topic with ID: {} for stream with ID: {}. Error: {}",
+                    topic.topic_id, topic.stream_id, err
+                );
+                return Err(Error::CannotSerializeResource(key));
+            }
         }
 
         info!(

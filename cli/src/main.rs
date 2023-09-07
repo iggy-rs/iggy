@@ -6,6 +6,7 @@ mod partitions;
 mod streams;
 mod system;
 mod topics;
+mod users;
 
 use anyhow::Result;
 use clap::Parser;

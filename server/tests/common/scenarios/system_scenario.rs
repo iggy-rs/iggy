@@ -2,7 +2,7 @@ use crate::common::{ClientFactory, TestServer};
 use bytes::Bytes;
 use iggy::client::{
     ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient, StreamClient,
-    SystemClient, TopicClient,
+    SystemClient, TopicClient, UserClient,
 };
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::{Consumer, ConsumerKind};
@@ -34,6 +34,7 @@ use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
+use iggy::users::login_user::LoginUser;
 use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;
@@ -46,6 +47,8 @@ const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const CONSUMER_GROUP_ID: u32 = 1;
 const MESSAGES_COUNT: u32 = 1000;
+const USERNAME: &str = "iggy";
+const PASSWORD: &str = "iggy";
 
 #[allow(dead_code)]
 pub async fn run(client_factory: &dyn ClientFactory) {
@@ -54,6 +57,15 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     sleep(std::time::Duration::from_secs(5)).await;
     let client = client_factory.create_client().await;
     let client = IggyClient::new(client, IggyClientConfig::default(), None, None);
+
+    // 0. Login user
+    client
+        .login_user(&LoginUser {
+            username: USERNAME.to_string(),
+            password: PASSWORD.to_string(),
+        })
+        .await
+        .unwrap();
 
     // 1. Ping server
     let ping = Ping {};

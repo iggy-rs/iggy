@@ -21,5 +21,6 @@ pub mod streams;
 pub mod system;
 pub mod tcp;
 pub mod topics;
+pub mod users;
 pub mod utils;
 pub mod validatable;

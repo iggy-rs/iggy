@@ -39,3 +39,20 @@ pub struct TopicPermissions {
     pub poll_messages: bool,
     pub send_messages: bool,
 }
+
+impl Permissions {
+    pub fn root() -> Self {
+        Self {
+            global: GlobalPermissions {
+                manage_servers: true,
+                manage_users: true,
+                manage_streams: true,
+                manage_topics: true,
+                read_streams: true,
+                poll_messages: true,
+                send_messages: true,
+            },
+            streams: None,
+        }
+    }
+}

@@ -248,6 +248,21 @@ impl Storage<Partition> for FilePartitionStorage {
             partition.topic_id,
             partition.partition_id,
         );
+        match rmp_serde::to_vec(&PartitionData {
+            created_at: partition.created_at,
+        }) {
+            Ok(data) => {
+                if let Err(err) = self.db.insert(&key, data) {
+                    error!("Cannot save partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
+                    return Err(Error::CannotSaveResource(key.to_string()));
+                }
+            }
+            Err(err) => {
+                error!("Cannot serialize partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
+                return Err(Error::CannotSerializeResource(key));
+            }
+        }
+
         if self
             .db
             .insert(

@@ -1,6 +1,6 @@
 use crate::client::{
     Client, ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient,
-    StreamClient, SystemClient, TopicClient,
+    StreamClient, SystemClient, TopicClient, UserClient,
 };
 use crate::consumer::Consumer;
 use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
@@ -40,6 +40,7 @@ use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
+use crate::users::login_user::LoginUser;
 use crate::utils::crypto::Encryptor;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -343,6 +344,13 @@ impl IggyClient {
                 send_messages_batch.commands.clear();
             }
         });
+    }
+}
+
+#[async_trait]
+impl UserClient for IggyClient {
+    async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {
+        self.client.read().await.login_user(command).await
     }
 }
 

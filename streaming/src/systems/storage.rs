@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use iggy::error::Error;
 use sled::Db;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{error, info};
 
 const KEY: &str = "system";
 
@@ -50,12 +50,17 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
     }
 
     async fn save(&self, system_info: &SystemInfo) -> Result<(), Error> {
-        if self
-            .db
-            .insert(KEY, rmp_serde::to_vec(&system_info).unwrap())
-            .is_err()
-        {
-            return Err(Error::CannotSaveResource(KEY.to_string()));
+        match rmp_serde::to_vec(&system_info) {
+            Ok(data) => {
+                if let Err(err) = self.db.insert(KEY, data) {
+                    error!("Cannot save system info. Error: {}", err);
+                    return Err(Error::CannotSaveResource(KEY.to_string()));
+                }
+            }
+            Err(err) => {
+                error!("Cannot serialize system info. Error: {}", err);
+                return Err(Error::CannotSerializeResource(KEY.to_string()));
+            }
         }
 
         info!("Saved system info");

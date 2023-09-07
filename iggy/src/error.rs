@@ -72,6 +72,12 @@ pub enum Error {
     InvalidCommand,
     #[error("Invalid format")]
     InvalidFormat,
+    #[error("Invalid credentials")]
+    InvalidCredentials,
+    #[error("Invalid username")]
+    InvalidUsername,
+    #[error("Invalid password")]
+    InvalidPassword,
     #[error("Cannot create base directory")]
     CannotCreateBaseDirectory,
     #[error("Cannot create streams directory")]
@@ -273,6 +279,9 @@ impl Error {
             Error::CannotDeserializeResource(_) => 25,
             Error::Unauthenticated => 40,
             Error::Unauthorized => 41,
+            Error::InvalidCredentials => 42,
+            Error::InvalidUsername => 43,
+            Error::InvalidPassword => 44,
             Error::NotConnected => 51,
             Error::RequestError(_) => 52,
             Error::InvalidEncryptionKey => 60,
@@ -396,6 +405,9 @@ impl Error {
             25 => "cannot_deserialize_resource",
             40 => "unauthenticated",
             41 => "unauthorized",
+            42 => "invalid_credentials",
+            43 => "invalid_username",
+            44 => "invalid_password",
             51 => "not_connected",
             52 => "request_error",
             60 => "invalid_encryption_key",
@@ -518,6 +530,9 @@ impl Error {
             Error::CannotDeserializeResource(_) => "cannot_deserialize_resource",
             Error::Unauthenticated => "unauthenticated",
             Error::Unauthorized => "unauthorized",
+            Error::InvalidCredentials => "invalid_credentials",
+            Error::InvalidUsername => "invalid_username",
+            Error::InvalidPassword => "invalid_password",
             Error::InvalidEncryptionKey => "invalid_encryption_key",
             Error::CannotEncryptData => "cannot_encrypt_data",
             Error::CannotDecryptData => "cannot_decrypt_data",

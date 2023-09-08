@@ -13,7 +13,6 @@ use iggy::streams::delete_stream::DeleteStream;
 use iggy::system::get_me::GetMe;
 use iggy::topics::create_topic::CreateTopic;
 use std::str::{from_utf8, FromStr};
-use tokio::time::sleep;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -27,7 +26,6 @@ const MESSAGES_COUNT: u32 = 1000;
 pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();
     test_server.start();
-    sleep(std::time::Duration::from_secs(1)).await;
     let client = client_factory.create_client().await;
     let client = IggyClient::new(client, IggyClientConfig::default(), None, None);
     init_system(&client).await;

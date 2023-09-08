@@ -63,7 +63,17 @@ impl TestServer {
 
     pub fn stop(&mut self) {
         if let Some(mut child_handle) = self.child_handle.take() {
+            #[cfg(unix)]
+            unsafe {
+                use libc::kill;
+                use libc::SIGTERM;
+                kill(child_handle.id() as libc::pid_t, SIGTERM);
+            }
+
+            #[cfg(not(unix))]
             child_handle.kill().unwrap();
+
+            child_handle.wait().unwrap();
         }
         self.cleanup();
     }

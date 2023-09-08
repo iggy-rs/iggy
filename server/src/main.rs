@@ -23,14 +23,16 @@ use std::sync::Arc;
 use streaming::persister::FileWithSyncPersister;
 use streaming::segments::storage::FileSegmentStorage;
 use streaming::systems::system::System;
-use tokio::signal;
 use tokio::sync::RwLock;
+use tokio::time::Instant;
 use tracing::info;
-
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
     let args = Args::parse();
-    tracing_subscriber::fmt::init();
+    let (non_blocking, _guard) = tracing_appender::non_blocking(std::io::stdout());
+    let subscriber = tracing_subscriber::fmt().with_writer(non_blocking).finish();
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Unable to set global default tracing subscriber");
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
@@ -43,6 +45,18 @@ async fn main() -> Result<(), ServerError> {
     message_cleaner::start(config.message_cleaner, system.clone());
     message_saver::start(config.message_saver, sender.clone());
     channel::start(system.clone(), receiver);
+
+    #[cfg(unix)]
+    let (mut ctrl_c, mut sigterm) = {
+        use tokio::signal::unix::{signal, SignalKind};
+        (
+            signal(SignalKind::interrupt())?,
+            signal(SignalKind::terminate())?,
+        )
+    };
+
+    #[cfg(windows)]
+    let mut ctrl_c = tokio::signal::ctrl_c();
 
     if config.http.enabled {
         let system = system.clone();
@@ -59,19 +73,36 @@ async fn main() -> Result<(), ServerError> {
         tcp_server::start(config.tcp, system.clone());
     }
 
-    match signal::ctrl_c().await {
+    #[cfg(unix)]
+    tokio::select! {
+        _ = ctrl_c.recv() => {
+            info!("Received SIGINT. Shutting down Iggy server...");
+        },
+        _ = sigterm.recv() => {
+            info!("Received SIGTERM. Shutting down Iggy server...");
+        }
+    }
+
+    #[cfg(windows)]
+    match tokio::signal::ctrl_c().await {
         Ok(()) => {
-            info!("Shutting down Iggy server...");
-            let mut system = system.write().await;
-            let persister = Arc::new(FileWithSyncPersister);
-            let storage = Arc::new(FileSegmentStorage::new(persister));
-            system.shutdown(storage).await?;
-            info!("Iggy server has shutdown successfully.");
+            info!("Received CTRL-C. Shutting down Iggy server...");
         }
         Err(err) => {
             eprintln!("Unable to listen for shutdown signal: {}", err);
         }
     }
 
+    let start_time = Instant::now();
+    let mut system = system.write().await;
+    let persister = Arc::new(FileWithSyncPersister);
+    let storage = Arc::new(FileSegmentStorage::new(persister));
+    system.shutdown(storage).await?;
+    let elapsed_time = start_time.elapsed();
+
+    info!(
+        "Iggy server has shutdown successfully. Shutdown took {} ms.",
+        elapsed_time.as_millis()
+    );
     Ok(())
 }

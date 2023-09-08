@@ -1,4 +1,3 @@
-use crate::binary::client_context::ClientContext;
 use crate::binary::command;
 use crate::binary::sender::Sender;
 use crate::server_error::ServerError;
@@ -9,6 +8,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use streaming::clients::client_manager::Transport;
 use streaming::systems::system::System;
+use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
 use tracing::{error, info, trace};
 
@@ -19,12 +19,14 @@ pub(crate) async fn handle_connection(
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
+    // TODO: Authenticate the user and map ID
+    let user_id = 1;
     let client_id = system
         .read()
         .await
         .add_client(address, Transport::Tcp)
         .await;
-    let client_context = ClientContext { client_id };
+    let user_context = UserContext { client_id, user_id };
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
 
     loop {
@@ -47,7 +49,7 @@ pub(crate) async fn handle_connection(
             command,
             length
         );
-        let result = command::handle(&command, sender, &client_context, system.clone()).await;
+        let result = command::handle(&command, sender, &user_context, system.clone()).await;
         if result.is_err() {
             error!("Error when handling the TCP request: {:?}", result.err());
             continue;

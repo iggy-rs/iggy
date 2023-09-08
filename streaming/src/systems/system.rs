@@ -48,9 +48,20 @@ impl System {
     }
 
     pub fn create(config: Arc<SystemConfig>, storage: SystemStorage) -> System {
-        if config.encryption.enabled {
-            info!("Server-side encryption is enabled.");
-        }
+        info!(
+            "Server-side encryption is {}.",
+            match config.encryption.enabled {
+                true => "enabled",
+                false => "disabled",
+            }
+        );
+        info!(
+            "Authorization is {}.",
+            match config.user.authorization_enabled {
+                true => "enabled",
+                false => "disabled",
+            }
+        );
 
         System {
             encryptor: match config.encryption.enabled {

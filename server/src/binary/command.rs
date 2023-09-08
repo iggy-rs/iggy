@@ -1,4 +1,3 @@
-use crate::binary::client_context::ClientContext;
 use crate::binary::handlers::consumer_groups::{
     create_consumer_group_handler, delete_consumer_group_handler, get_consumer_group_handler,
     get_consumer_groups_handler, join_consumer_group_handler, leave_consumer_group_handler,
@@ -15,20 +14,21 @@ use iggy::command::Command;
 use iggy::error::Error;
 use std::sync::Arc;
 use streaming::systems::system::System;
+use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
     command: &Command,
     sender: &mut dyn Sender,
-    client_context: &ClientContext,
+    user_context: &UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    let result = try_handle(command, sender, client_context, system).await;
+    let result = try_handle(command, sender, user_context, system).await;
     if result.is_ok() {
         trace!(
             "Command was handled successfully, client: '{}'.",
-            client_context
+            user_context
         );
         return Ok(());
     }
@@ -36,7 +36,7 @@ pub async fn handle(
     let error = result.err().unwrap();
     trace!(
         "Command was not handled successfully, client: {}, error: '{:?}'.",
-        client_context,
+        user_context,
         error
     );
     sender.send_error_response(error).await?;
@@ -46,34 +46,34 @@ pub async fn handle(
 async fn try_handle(
     command: &Command,
     sender: &mut dyn Sender,
-    client_context: &ClientContext,
+    user_context: &UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!(
         "Handling command '{}', client: {}...",
         command,
-        client_context
+        user_context
     );
     match command {
         Command::Ping(command) => ping_handler::handle(command, sender).await,
         Command::GetStats(command) => get_stats_handler::handle(command, sender, system).await,
         Command::GetMe(command) => {
-            get_me_handler::handle(command, sender, client_context, system).await
+            get_me_handler::handle(command, sender, user_context, system).await
         }
         Command::GetClient(command) => get_client_handler::handle(command, sender, system).await,
         Command::GetClients(command) => get_clients_handler::handle(command, sender, system).await,
         Command::LoginUser(command) => login_user_handler::handle(command, sender, system).await,
         Command::SendMessages(command) => {
-            send_messages_handler::handle(command, sender, system).await
+            send_messages_handler::handle(command, sender, user_context, system).await
         }
         Command::PollMessages(command) => {
-            poll_messages_handler::handle(command, sender, client_context, system).await
+            poll_messages_handler::handle(command, sender, user_context, system).await
         }
         Command::GetConsumerOffset(command) => {
-            get_consumer_offset_handler::handle(command, sender, client_context, system).await
+            get_consumer_offset_handler::handle(command, sender, user_context, system).await
         }
         Command::StoreConsumerOffset(command) => {
-            store_consumer_offset_handler::handle(command, sender, client_context, system).await
+            store_consumer_offset_handler::handle(command, sender, user_context, system).await
         }
         Command::GetStream(command) => get_stream_handler::handle(command, sender, system).await,
         Command::GetStreams(command) => get_streams_handler::handle(command, sender, system).await,
@@ -116,10 +116,10 @@ async fn try_handle(
             delete_consumer_group_handler::handle(command, sender, system).await
         }
         Command::JoinGroup(command) => {
-            join_consumer_group_handler::handle(command, sender, client_context, system).await
+            join_consumer_group_handler::handle(command, sender, user_context, system).await
         }
         Command::LeaveGroup(command) => {
-            leave_consumer_group_handler::handle(command, sender, client_context, system).await
+            leave_consumer_group_handler::handle(command, sender, user_context, system).await
         }
     }
 }

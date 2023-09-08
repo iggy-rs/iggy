@@ -60,6 +60,9 @@ path = "database"
 enabled = false
 key = ""
 
+[system.user]
+authorization_enabled = false
+
 [system.stream]
 path = "streams"
 

@@ -1,4 +1,3 @@
-use crate::binary::client_context::ClientContext;
 use crate::binary::command;
 use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ServerError;
@@ -8,6 +7,7 @@ use quinn::Endpoint;
 use std::sync::Arc;
 use streaming::clients::client_manager::Transport;
 use streaming::systems::system::System;
+use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
 use tracing::log::trace;
 use tracing::{error, info};
@@ -44,12 +44,14 @@ async fn handle_connection(
     let address = connection.remote_address();
     async {
         info!("Client has connected: {}", address);
+        // TODO: Authenticate the user and map ID
+        let user_id = 1;
         let client_id = system
             .read()
             .await
             .add_client(&address, Transport::Quic)
             .await;
-        let client_context = ClientContext { client_id };
+        let user_context = UserContext { client_id, user_id };
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {
@@ -106,7 +108,7 @@ async fn handle_connection(
                     send: stream.0,
                     recv: stream.1,
                 },
-                &client_context,
+                &user_context,
                 system.clone(),
             )
             .await;

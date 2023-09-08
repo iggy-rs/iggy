@@ -67,6 +67,9 @@
       "enabled": false,
       "key": ""
     },
+    "user": {
+      "authorization_enabled": false
+    },
     "stream": {
       "path": "streams"
     },

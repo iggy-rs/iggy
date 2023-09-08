@@ -10,13 +10,10 @@
 
 name: Rust
 on:
-  push:
-    branches:
-      - master
-      - test_release_branch
   pull_request:
     branches:
       - master
+    types: [opened, synchronize, reopened, closed]
 env:
   CRATE_NAME: iggy
   GITHUB_TOKEN: ${{ github.token }}

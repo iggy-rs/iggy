@@ -33,7 +33,7 @@ async fn main() -> Result<(), ClientError> {
     let encryptor: Option<Box<dyn Encryptor>> = match args.encryption_key.is_empty() {
         true => None,
         false => Some(Box::new(
-            Aes256GcmEncryptor::new_from_base64_key(&args.encryption_key).unwrap(),
+            Aes256GcmEncryptor::from_base64_key(&args.encryption_key).unwrap(),
         )),
     };
     info!("Selected transport: {}", args.transport);

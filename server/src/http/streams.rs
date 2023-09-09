@@ -1,5 +1,5 @@
 use crate::http::error::CustomError;
-use crate::http::mapper;
+use crate::http::{auth, mapper};
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -27,9 +27,11 @@ async fn get_stream(
     State(system): State<Arc<RwLock<System>>>,
     Path(stream_id): Path<String>,
 ) -> Result<Json<StreamDetails>, CustomError> {
+    let user_id = auth::resolve_user_id();
     let system = system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let stream = system.get_stream(&stream_id)?;
+    system.permissioner.get_stream(user_id, stream.stream_id)?;
     let stream = mapper::map_stream(stream).await;
     Ok(Json(stream))
 }
@@ -37,7 +39,9 @@ async fn get_stream(
 async fn get_streams(
     State(system): State<Arc<RwLock<System>>>,
 ) -> Result<Json<Vec<Stream>>, CustomError> {
+    let user_id = auth::resolve_user_id();
     let system = system.read().await;
+    system.permissioner.get_streams(user_id)?;
     let streams = mapper::map_streams(&system.get_streams()).await;
     Ok(Json(streams))
 }
@@ -47,9 +51,11 @@ async fn create_stream(
     Json(command): Json<CreateStream>,
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
+    let user_id = auth::resolve_user_id();
     let mut system = system.write().await;
+    system.permissioner.create_stream(user_id)?;
     system
-        .create_stream(command.stream_id, &command.name)
+        .create_stream(user_id, command.stream_id, &command.name)
         .await?;
     Ok(StatusCode::CREATED)
 }
@@ -61,9 +67,10 @@ async fn update_stream(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
+    let user_id = auth::resolve_user_id();
+    let mut system = system.write().await;
+    system.permissioner.update_stream(user_id)?;
     system
-        .write()
-        .await
         .update_stream(&command.stream_id, &command.name)
         .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -73,7 +80,10 @@ async fn delete_stream(
     State(system): State<Arc<RwLock<System>>>,
     Path(stream_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
+    let user_id = auth::resolve_user_id();
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    system.write().await.delete_stream(&stream_id).await?;
+    let mut system = system.write().await;
+    system.permissioner.delete_stream(user_id)?;
+    system.delete_stream(&stream_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

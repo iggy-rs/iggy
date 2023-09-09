@@ -12,7 +12,7 @@ use tokio::sync::RwLock;
 pub async fn map_stream(stream: &Stream) -> StreamDetails {
     let topics = map_topics(&stream.get_topics()).await;
     let mut stream_details = StreamDetails {
-        id: stream.id,
+        id: stream.stream_id,
         created_at: stream.created_at,
         name: stream.name.clone(),
         topics_count: topics.len() as u32,
@@ -28,7 +28,7 @@ pub async fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Strea
     let mut streams_data = Vec::with_capacity(streams.len());
     for stream in streams {
         let stream = iggy::models::stream::Stream {
-            id: stream.id,
+            id: stream.stream_id,
             created_at: stream.created_at,
             name: stream.name.clone(),
             size_bytes: stream.get_size_bytes().await,

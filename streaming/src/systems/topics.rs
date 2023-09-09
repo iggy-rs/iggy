@@ -11,7 +11,7 @@ impl System {
         let stream_id_value;
         {
             let stream = self.get_stream(stream_id)?;
-            stream_id_value = stream.id;
+            stream_id_value = stream.stream_id;
         }
 
         let deleted_topic_id = self

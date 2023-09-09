@@ -149,7 +149,7 @@ pub async fn map_consumer_groups(consumer_groups: &[&RwLock<ConsumerGroup>]) -> 
 }
 
 async fn extend_stream(stream: &Stream, bytes: &mut Vec<u8>) {
-    bytes.put_u32_le(stream.id);
+    bytes.put_u32_le(stream.stream_id);
     bytes.put_u64_le(stream.created_at);
     bytes.put_u32_le(stream.get_topics().len() as u32);
     bytes.put_u64_le(stream.get_size_bytes().await);

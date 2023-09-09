@@ -27,7 +27,7 @@ impl System {
         let consumer_group;
         {
             let stream = self.get_stream_mut(stream_id)?;
-            stream_id_value = stream.id;
+            stream_id_value = stream.stream_id;
             let topic = stream.get_topic_mut(topic_id)?;
             topic_id_value = topic.topic_id;
             consumer_group = topic.delete_consumer_group(consumer_group_id).await?;
@@ -61,7 +61,7 @@ impl System {
         let topic_id_value;
         {
             let stream = self.get_stream(stream_id)?;
-            stream_id_value = stream.id;
+            stream_id_value = stream.stream_id;
             let topic = stream.get_topic(topic_id)?;
             topic_id_value = topic.topic_id;
             topic
@@ -92,7 +92,7 @@ impl System {
         let topic_id_value;
         {
             let stream = self.get_stream(stream_id)?;
-            stream_id_value = stream.id;
+            stream_id_value = stream.stream_id;
             let topic = stream.get_topic(topic_id)?;
             topic_id_value = topic.topic_id;
             topic

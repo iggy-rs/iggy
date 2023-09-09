@@ -75,16 +75,20 @@ async fn try_handle(
         Command::StoreConsumerOffset(command) => {
             store_consumer_offset_handler::handle(command, sender, user_context, system).await
         }
-        Command::GetStream(command) => get_stream_handler::handle(command, sender, system).await,
-        Command::GetStreams(command) => get_streams_handler::handle(command, sender, system).await,
+        Command::GetStream(command) => {
+            get_stream_handler::handle(command, sender, user_context, system).await
+        }
+        Command::GetStreams(command) => {
+            get_streams_handler::handle(command, sender, user_context, system).await
+        }
         Command::CreateStream(command) => {
-            create_stream_handler::handle(command, sender, system).await
+            create_stream_handler::handle(command, sender, user_context, system).await
         }
         Command::DeleteStream(command) => {
-            delete_stream_handler::handle(command, sender, system).await
+            delete_stream_handler::handle(command, sender, user_context, system).await
         }
         Command::UpdateStream(command) => {
-            update_stream_handler::handle(command, sender, system).await
+            update_stream_handler::handle(command, sender, user_context, system).await
         }
         Command::GetTopic(command) => get_topic_handler::handle(command, sender, system).await,
         Command::GetTopics(command) => get_topics_handler::handle(command, sender, system).await,

@@ -10,11 +10,11 @@ use crate::binary::handlers::system::*;
 use crate::binary::handlers::topics::*;
 use crate::binary::handlers::users::login_user_handler;
 use crate::binary::sender::Sender;
+use crate::streaming::systems::system::System;
+use crate::streaming::users::user_context::UserContext;
 use iggy::command::Command;
 use iggy::error::Error;
 use std::sync::Arc;
-use streaming::systems::system::System;
-use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
 use tracing::trace;
 

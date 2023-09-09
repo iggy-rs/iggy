@@ -1,13 +1,13 @@
 use crate::binary::command;
 use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ServerError;
+use crate::streaming::clients::client_manager::Transport;
+use crate::streaming::systems::system::System;
+use crate::streaming::users::user_context::UserContext;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use quinn::Endpoint;
 use std::sync::Arc;
-use streaming::clients::client_manager::Transport;
-use streaming::systems::system::System;
-use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
 use tracing::log::trace;
 use tracing::{error, info};
@@ -51,7 +51,7 @@ async fn handle_connection(
             .await
             .add_client(&address, Transport::Quic)
             .await;
-        let user_context = UserContext { client_id, user_id };
+        let user_context = UserContext::new(user_id, client_id);
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {

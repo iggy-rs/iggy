@@ -1,10 +1,10 @@
 use crate::binary::sender::Sender;
+use crate::streaming::systems::system::System;
+use crate::streaming::users::user_context::UserContext;
 use anyhow::Result;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::error::Error;
 use std::sync::Arc;
-use streaming::systems::system::System;
-use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
 use tracing::trace;
 

@@ -1,4 +1,6 @@
 use crate::http::error::CustomError;
+use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::systems::system::System;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -9,8 +11,6 @@ use iggy::identifier::Identifier;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use streaming::polling_consumer::PollingConsumer;
-use streaming::systems::system::System;
 use tokio::sync::RwLock;
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {

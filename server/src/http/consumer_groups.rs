@@ -1,5 +1,6 @@
 use crate::http::error::CustomError;
 use crate::http::mapper;
+use crate::streaming::systems::system::System;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -9,7 +10,6 @@ use iggy::identifier::Identifier;
 use iggy::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use streaming::systems::system::System;
 use tokio::sync::RwLock;
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {

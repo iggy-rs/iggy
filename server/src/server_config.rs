@@ -1,9 +1,9 @@
 use crate::components::config_provider::ConfigProvider;
 use crate::server_error::ServerError;
+use crate::streaming::config::SystemConfig;
+use crate::streaming::segments::segment;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use streaming::config::SystemConfig;
-use streaming::segments::segment;
 use tracing::error;
 
 #[derive(Debug, Deserialize, Serialize)]

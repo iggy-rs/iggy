@@ -1,4 +1,5 @@
 use crate::http::error::CustomError;
+use crate::streaming::systems::system::System;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::post;
@@ -8,7 +9,6 @@ use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use streaming::systems::system::System;
 use tokio::sync::RwLock;
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {

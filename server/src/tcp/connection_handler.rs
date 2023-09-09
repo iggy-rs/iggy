@@ -1,14 +1,14 @@
 use crate::binary::command;
 use crate::binary::sender::Sender;
 use crate::server_error::ServerError;
+use crate::streaming::clients::client_manager::Transport;
+use crate::streaming::systems::system::System;
+use crate::streaming::users::user_context::UserContext;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use streaming::clients::client_manager::Transport;
-use streaming::systems::system::System;
-use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
 use tracing::{error, info, trace};
 
@@ -26,7 +26,7 @@ pub(crate) async fn handle_connection(
         .await
         .add_client(address, Transport::Tcp)
         .await;
-    let user_context = UserContext { client_id, user_id };
+    let user_context = UserContext::new(user_id, client_id);
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
 
     loop {

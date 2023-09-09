@@ -6,6 +6,7 @@ mod quic;
 mod server_command;
 mod server_config;
 mod server_error;
+mod streaming;
 mod tcp;
 
 use crate::args::Args;
@@ -15,17 +16,18 @@ use crate::quic::quic_server;
 use crate::server_command::ServerCommand;
 use crate::server_config::ServerConfig;
 use crate::server_error::ServerError;
+use crate::streaming::persistence::persister::FileWithSyncPersister;
+use crate::streaming::segments::storage::FileSegmentStorage;
+use crate::streaming::systems::system::System;
 use crate::tcp::tcp_server;
 use anyhow::Result;
 use clap::Parser;
 use figlet_rs::FIGfont;
 use std::sync::Arc;
-use streaming::persister::FileWithSyncPersister;
-use streaming::segments::storage::FileSegmentStorage;
-use streaming::systems::system::System;
 use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tracing::info;
+
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
     let args = Args::parse();
@@ -36,14 +38,20 @@ async fn main() -> Result<(), ServerError> {
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
-    info!(
-        "Version: {}, hash: {}, built at: {} using rust version: {} for target: {}",
-        env!("CARGO_PKG_VERSION"),
-        env!("VERGEN_GIT_DESCRIBE"),
-        env!("VERGEN_BUILD_TIMESTAMP"),
-        env!("VERGEN_RUSTC_SEMVER"),
-        env!("VERGEN_CARGO_TARGET_TRIPLE")
-    );
+    if option_env!("IGGY_CI_BUILD") == Some("true") {
+        let version = std::env::var("CARGO_PKG_VERSION").unwrap();
+        let hash = std::env::var("VERGEN_GIT_SHA").unwrap();
+        let built_at = std::env::var("VERGEN_BUILD_TIMESTAMP").unwrap();
+        let rust_version = std::env::var("VERGEN_RUSTC_SEMVER").unwrap();
+        let target = std::env::var("VERGEN_CARGO_TARGET_TRIPLE").unwrap();
+        info!(
+            "Version: {}, hash: {}, built at: {} using rust version: {} for target: {}",
+            version, hash, built_at, rust_version, target
+        );
+    } else {
+        info!("It seems that you are a developer. Environment variable IGGY_CI_BUILD is not set to 'true', skipping build info print.")
+    }
+
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(config_provider.as_ref()).await?;
     let mut system = System::new(config.system.clone(), None);

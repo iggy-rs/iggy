@@ -1,5 +1,5 @@
 [build.env]
-passthrough = ["IGGY_SYSTEM_PATH"]
+passthrough = ["IGGY_SYSTEM_PATH", "IGGY_CI_BUILD"]
 
 [target.aarch64-unknown-linux-musl.env]
 passthrough = ["QEMU_RUNNER=qemu-aarch64"]

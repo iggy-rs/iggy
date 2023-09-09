@@ -1,12 +1,12 @@
+use crate::streaming::clients::client_manager::Client;
+use crate::streaming::streams::stream::Stream;
+use crate::streaming::topics::consumer_group::ConsumerGroup;
+use crate::streaming::topics::topic::Topic;
 use iggy::models::client_info::ConsumerGroupInfo;
 use iggy::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
 use std::sync::Arc;
-use streaming::clients::client_manager::Client;
-use streaming::streams::stream::Stream;
-use streaming::topics::consumer_group::ConsumerGroup;
-use streaming::topics::topic::Topic;
 use tokio::sync::RwLock;
 
 pub async fn map_stream(stream: &Stream) -> StreamDetails {

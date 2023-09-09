@@ -20,6 +20,7 @@ env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
   DOCKERHUB_REGISTRY_NAME: iggyrs/iggy
+  IGGY_CI_BUILD: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}

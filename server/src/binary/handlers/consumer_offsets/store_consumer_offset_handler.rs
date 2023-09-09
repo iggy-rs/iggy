@@ -1,11 +1,11 @@
 use crate::binary::sender::Sender;
+use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::systems::system::System;
+use crate::streaming::users::user_context::UserContext;
 use anyhow::Result;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::Error;
 use std::sync::Arc;
-use streaming::polling_consumer::PollingConsumer;
-use streaming::systems::system::System;
-use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
 use tracing::trace;
 

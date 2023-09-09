@@ -1,14 +1,14 @@
 use bytes::BufMut;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 
+use crate::streaming::clients::client_manager::{Client, Transport};
+use crate::streaming::models::messages::PolledMessages;
+use crate::streaming::partitions::partition::Partition;
+use crate::streaming::streams::stream::Stream;
+use crate::streaming::topics::consumer_group::ConsumerGroup;
+use crate::streaming::topics::topic::Topic;
 use iggy::models::stats::Stats;
 use std::sync::Arc;
-use streaming::clients::client_manager::{Client, Transport};
-use streaming::models::messages::PolledMessages;
-use streaming::partitions::partition::Partition;
-use streaming::streams::stream::Stream;
-use streaming::topics::consumer_group::ConsumerGroup;
-use streaming::topics::topic::Topic;
 use tokio::sync::RwLock;
 
 pub fn map_stats(stats: &Stats) -> Vec<u8> {

@@ -1,5 +1,6 @@
 use crate::http::error::CustomError;
 use crate::http::{auth, mapper};
+use crate::streaming::systems::system::System;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -10,7 +11,6 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::update_stream::UpdateStream;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use streaming::systems::system::System;
 use tokio::sync::RwLock;
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {

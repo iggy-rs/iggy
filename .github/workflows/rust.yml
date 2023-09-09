@@ -21,6 +21,10 @@ env:
   CARGO_TERM_COLOR: always
   DOCKERHUB_REGISTRY_NAME: iggyrs/iggy
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build_and_test:
     name: ${{ matrix.platform.skip_tests == true && 'build' || 'build and test' }} ${{ matrix.platform.os_name }}

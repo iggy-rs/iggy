@@ -36,6 +36,8 @@ impl IntoResponse for CustomError {
                     Error::CannotParseInt(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     Error::CannotParseSlice(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     Error::CannotParseUtf8(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                    Error::Unauthenticated => StatusCode::UNAUTHORIZED,
+                    Error::Unauthorized => StatusCode::FORBIDDEN,
                     _ => StatusCode::BAD_REQUEST,
                 };
                 (status_code, Json(ErrorResponse::from_error(error)))

@@ -13,7 +13,7 @@ impl System {
     pub(crate) async fn load_streams(&mut self) -> Result<(), Error> {
         info!("Loading streams from disk...");
         let mut unloaded_streams = Vec::new();
-        let dir_entries = read_dir(&self.streams_path).await;
+        let dir_entries = read_dir(&self.config.get_streams_path()).await;
         if dir_entries.is_err() {
             return Err(Error::CannotReadStreams);
         }
@@ -38,7 +38,7 @@ impl System {
             let loaded_streams = loaded_streams.clone();
             let load_stream = tokio::spawn(async move {
                 if stream.load().await.is_err() {
-                    error!("Failed to load stream with ID: {}.", stream.id);
+                    error!("Failed to load stream with ID: {}.", stream.stream_id);
                     return;
                 }
 
@@ -49,8 +49,8 @@ impl System {
 
         join_all(load_streams).await;
         for stream in loaded_streams.lock().await.drain(..) {
-            if self.streams.contains_key(&stream.id) {
-                error!("Stream with ID: '{}' already exists.", &stream.id);
+            if self.streams.contains_key(&stream.stream_id) {
+                error!("Stream with ID: '{}' already exists.", &stream.stream_id);
                 continue;
             }
 
@@ -59,8 +59,9 @@ impl System {
                 continue;
             }
 
-            self.streams_ids.insert(stream.name.clone(), stream.id);
-            self.streams.insert(stream.id, stream);
+            self.streams_ids
+                .insert(stream.name.clone(), stream.stream_id);
+            self.streams.insert(stream.stream_id, stream);
         }
 
         info!("Loaded {} stream(s) from disk.", self.streams.len());
@@ -85,15 +86,6 @@ impl System {
         }
     }
 
-    fn get_stream_by_id(&self, id: u32) -> Result<&Stream, Error> {
-        let stream = self.streams.get(&id);
-        if stream.is_none() {
-            return Err(Error::StreamIdNotFound(id));
-        }
-
-        Ok(stream.unwrap())
-    }
-
     fn get_stream_by_name(&self, name: &str) -> Result<&Stream, Error> {
         let stream_id = self.streams_ids.get(name);
         if stream_id.is_none() {
@@ -103,27 +95,47 @@ impl System {
         self.get_stream_by_id(*stream_id.unwrap())
     }
 
-    fn get_stream_by_id_mut(&mut self, id: u32) -> Result<&mut Stream, Error> {
-        let stream = self.streams.get_mut(&id);
+    fn get_stream_by_id(&self, stream_id: u32) -> Result<&Stream, Error> {
+        let stream = self.streams.get(&stream_id);
         if stream.is_none() {
-            return Err(Error::StreamIdNotFound(id));
+            return Err(Error::StreamIdNotFound(stream_id));
         }
 
         Ok(stream.unwrap())
     }
 
     fn get_stream_by_name_mut(&mut self, name: &str) -> Result<&mut Stream, Error> {
-        let stream_id = self.streams_ids.get_mut(name);
-        if stream_id.is_none() {
-            return Err(Error::StreamNameNotFound(name.to_string()));
+        let stream_id;
+        {
+            let id = self.streams_ids.get_mut(name);
+            if id.is_none() {
+                return Err(Error::StreamNameNotFound(name.to_string()));
+            }
+
+            stream_id = *id.unwrap();
         }
 
-        Ok(self.streams.get_mut(stream_id.unwrap()).unwrap())
+        self.get_stream_by_id_mut(stream_id)
     }
 
-    pub async fn create_stream(&mut self, id: u32, name: &str) -> Result<(), Error> {
-        if self.streams.contains_key(&id) {
-            return Err(Error::StreamIdAlreadyExists(id));
+    fn get_stream_by_id_mut(&mut self, stream_id: u32) -> Result<&mut Stream, Error> {
+        let stream = self.streams.get_mut(&stream_id);
+        if stream.is_none() {
+            return Err(Error::StreamIdNotFound(stream_id));
+        }
+
+        Ok(stream.unwrap())
+    }
+
+    pub async fn create_stream(
+        &mut self,
+        user_id: u32,
+        stream_id: u32,
+        name: &str,
+    ) -> Result<(), Error> {
+        self.permissioner.create_stream(user_id)?;
+        if self.streams.contains_key(&stream_id) {
+            return Err(Error::StreamIdAlreadyExists(stream_id));
         }
 
         let name = text::to_lowercase_non_whitespace(name);
@@ -131,11 +143,11 @@ impl System {
             return Err(Error::StreamNameAlreadyExists(name.to_string()));
         }
 
-        let stream = Stream::create(id, &name, self.config.clone(), self.storage.clone());
+        let stream = Stream::create(stream_id, &name, self.config.clone(), self.storage.clone());
         stream.persist().await?;
-        info!("Created stream with ID: {}, name: '{}'.", id, name);
-        self.streams_ids.insert(name, stream.id);
-        self.streams.insert(stream.id, stream);
+        info!("Created stream with ID: {}, name: '{}'.", stream_id, name);
+        self.streams_ids.insert(name, stream.stream_id);
+        self.streams.insert(stream.stream_id, stream);
         Ok(())
     }
 
@@ -143,7 +155,7 @@ impl System {
         let stream_id;
         {
             let stream = self.get_stream(id)?;
-            stream_id = stream.id;
+            stream_id = stream.stream_id;
         }
 
         let updated_name = text::to_lowercase_non_whitespace(name);
@@ -170,7 +182,7 @@ impl System {
 
     pub async fn delete_stream(&mut self, id: &Identifier) -> Result<u32, Error> {
         let stream = self.get_stream(id)?;
-        let stream_id = stream.id;
+        let stream_id = stream.stream_id;
         let stream_name = stream.name.clone();
         if stream.delete().await.is_err() {
             return Err(Error::CannotDeleteStream(stream_id));
@@ -193,23 +205,27 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_stream_by_id_and_name() {
+        let user_id = 1;
         let stream_id = 1;
         let stream_name = "test";
         let config = Arc::new(SystemConfig::default());
         let storage = get_test_system_storage();
         let mut system = System::create(config, storage);
-        system.create_stream(stream_id, stream_name).await.unwrap();
+        system
+            .create_stream(user_id, stream_id, stream_name)
+            .await
+            .unwrap();
 
         let stream = system.get_stream(&Identifier::numeric(stream_id).unwrap());
         assert!(stream.is_ok());
         let stream = stream.unwrap();
-        assert_eq!(stream.id, stream_id);
+        assert_eq!(stream.stream_id, stream_id);
         assert_eq!(stream.name, stream_name);
 
         let stream = system.get_stream(&Identifier::named(stream_name).unwrap());
         assert!(stream.is_ok());
         let stream = stream.unwrap();
-        assert_eq!(stream.id, stream_id);
+        assert_eq!(stream.stream_id, stream_id);
         assert_eq!(stream.name, stream_name);
     }
 }

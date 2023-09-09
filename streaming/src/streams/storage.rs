@@ -38,12 +38,12 @@ struct StreamData {
 #[async_trait]
 impl Storage<Stream> for FileStreamStorage {
     async fn load(&self, stream: &mut Stream) -> Result<(), Error> {
-        info!("Loading stream with ID: {} from disk...", stream.id);
+        info!("Loading stream with ID: {} from disk...", stream.stream_id);
         if !Path::new(&stream.path).exists() {
-            return Err(Error::StreamIdNotFound(stream.id));
+            return Err(Error::StreamIdNotFound(stream.stream_id));
         }
 
-        let key = get_key(stream.id);
+        let key = get_key(stream.stream_id);
         let stream_data = self.db.get(&key);
         if stream_data.is_err() {
             return Err(Error::CannotLoadResource(key));
@@ -66,7 +66,7 @@ impl Storage<Stream> for FileStreamStorage {
         let mut unloaded_topics = Vec::new();
         let dir_entries = fs::read_dir(&stream.topics_path).await;
         if dir_entries.is_err() {
-            return Err(Error::CannotReadTopics(stream.id));
+            return Err(Error::CannotReadTopics(stream.stream_id));
         }
 
         let mut dir_entries = dir_entries.unwrap();
@@ -80,7 +80,7 @@ impl Storage<Stream> for FileStreamStorage {
 
             let topic_id = topic_id.unwrap();
             let topic = Topic::empty(
-                stream.id,
+                stream.stream_id,
                 topic_id,
                 stream.config.clone(),
                 stream.storage.clone(),
@@ -111,7 +111,7 @@ impl Storage<Stream> for FileStreamStorage {
             if stream.topics.contains_key(&topic.topic_id) {
                 error!(
                     "Topic with ID: '{}' already exists for stream with ID: {}.",
-                    &topic.topic_id, &stream.id
+                    &topic.topic_id, &stream.stream_id
                 );
                 continue;
             }
@@ -119,7 +119,7 @@ impl Storage<Stream> for FileStreamStorage {
             if stream.topics_ids.contains_key(&topic.name) {
                 error!(
                     "Topic with name: '{}' already exists for stream with ID: {}.",
-                    &topic.name, &stream.id
+                    &topic.name, &stream.stream_id
                 );
                 continue;
             }
@@ -130,7 +130,7 @@ impl Storage<Stream> for FileStreamStorage {
 
         info!(
             "Loaded stream: '{}' with ID: {} from disk.",
-            &stream.name, &stream.id
+            &stream.name, &stream.stream_id
         );
 
         Ok(())
@@ -138,50 +138,53 @@ impl Storage<Stream> for FileStreamStorage {
 
     async fn save(&self, stream: &Stream) -> Result<(), Error> {
         if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
-            return Err(Error::CannotCreateStreamDirectory(stream.id));
+            return Err(Error::CannotCreateStreamDirectory(stream.stream_id));
         }
 
         if !Path::new(&stream.topics_path).exists()
             && create_dir(&stream.topics_path).await.is_err()
         {
-            return Err(Error::CannotCreateTopicsDirectory(stream.id));
+            return Err(Error::CannotCreateTopicsDirectory(stream.stream_id));
         }
 
-        let key = get_key(stream.id);
+        let key = get_key(stream.stream_id);
         match rmp_serde::to_vec(&StreamData {
             name: stream.name.clone(),
             created_at: stream.created_at,
         }) {
             Ok(data) => {
                 if let Err(err) = self.db.insert(&key, data) {
-                    error!("Cannot save stream with ID: {}. Error: {}", stream.id, err);
+                    error!(
+                        "Cannot save stream with ID: {}. Error: {}",
+                        stream.stream_id, err
+                    );
                     return Err(Error::CannotSaveResource(key.to_string()));
                 }
             }
             Err(err) => {
                 error!(
                     "Cannot serialize stream with ID: {}. Error: {}",
-                    stream.id, err
+                    stream.stream_id, err
                 );
                 return Err(Error::CannotSerializeResource(key));
             }
         }
 
-        info!("Saved stream with ID: {}.", stream.id);
+        info!("Saved stream with ID: {}.", stream.stream_id);
 
         Ok(())
     }
 
     async fn delete(&self, stream: &Stream) -> Result<(), Error> {
-        info!("Deleting stream with ID: {}...", stream.id);
-        let key = get_key(stream.id);
+        info!("Deleting stream with ID: {}...", stream.stream_id);
+        let key = get_key(stream.stream_id);
         if self.db.remove(&key).is_err() {
             return Err(Error::CannotDeleteResource(key));
         }
         if fs::remove_dir_all(&stream.path).await.is_err() {
-            return Err(Error::CannotDeleteStreamDirectory(stream.id));
+            return Err(Error::CannotDeleteStreamDirectory(stream.stream_id));
         }
-        info!("Deleted stream with ID: {}.", stream.id);
+        info!("Deleted stream with ID: {}.", stream.stream_id);
         Ok(())
     }
 }

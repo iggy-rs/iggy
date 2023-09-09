@@ -16,9 +16,14 @@ pub async fn handle(
 ) -> Result<(), Error> {
     trace!("{}", command);
     let system = system.read().await;
+    let stream = system.get_stream(&command.stream_id)?;
+    let topic = stream.get_topic(&command.topic_id)?;
+    system
+        .permissioner
+        .append_messages(user_context.user_id, stream.stream_id, topic.topic_id)?;
+
     system
         .append_messages(
-            user_context,
             &command.stream_id,
             &command.topic_id,
             &command.partitioning,

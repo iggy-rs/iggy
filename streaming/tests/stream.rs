@@ -44,7 +44,7 @@ async fn should_load_existing_stream_from_disk() {
             Stream::empty(stream_id, setup.config.clone(), setup.storage.clone());
         loaded_stream.load().await.unwrap();
 
-        assert_eq!(loaded_stream.id, stream.id);
+        assert_eq!(loaded_stream.stream_id, stream.stream_id);
         assert_eq!(loaded_stream.name, stream.name);
         assert_eq!(loaded_stream.path, stream.path);
         assert_eq!(loaded_stream.topics_path, stream.topics_path);

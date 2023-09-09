@@ -5,7 +5,6 @@ use iggy::error::Error;
 use iggy::messages::poll_messages::PollMessages;
 use std::sync::Arc;
 use streaming::polling_consumer::PollingConsumer;
-use streaming::systems::messages::PollMessagesArgs;
 use streaming::systems::system::System;
 use streaming::users::user_context::UserContext;
 use tokio::sync::RwLock;
@@ -24,17 +23,20 @@ pub async fn handle(
         command.partition_id,
     );
     let system = system.read().await;
+    let stream = system.get_stream(&command.stream_id)?;
+    let topic = stream.get_topic(&command.topic_id)?;
+    system
+        .permissioner
+        .poll_messages(user_context.user_id, stream.stream_id, topic.topic_id)?;
+
     let messages = system
         .poll_messages(
-            user_context,
             consumer,
             &command.stream_id,
             &command.topic_id,
-            PollMessagesArgs {
-                strategy: command.strategy,
-                count: command.count,
-                auto_commit: command.auto_commit,
-            },
+            command.strategy,
+            command.count,
+            command.auto_commit,
         )
         .await?;
     let messages = mapper::map_polled_messages(&messages);

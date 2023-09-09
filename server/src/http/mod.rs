@@ -1,3 +1,4 @@
+pub mod auth;
 pub mod consumer_groups;
 pub mod consumer_offsets;
 pub mod error;

@@ -3,7 +3,7 @@ use crate::config::SystemConfig;
 use crate::persister::*;
 use crate::storage::{SegmentStorage, SystemStorage};
 use crate::streams::stream::Stream;
-use crate::users::permissions_validator::PermissionsValidator;
+use crate::users::permissioner::Permissioner;
 use iggy::error::Error;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use sled::Db;
@@ -17,10 +17,8 @@ use tracing::{info, trace};
 
 #[derive(Debug)]
 pub struct System {
-    pub base_path: String,
-    pub streams_path: String,
-    pub storage: Arc<SystemStorage>,
-    pub permissions_validator: PermissionsValidator,
+    pub permissioner: Permissioner,
+    pub(crate) storage: Arc<SystemStorage>,
     pub(crate) streams: HashMap<u32, Stream>,
     pub(crate) streams_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
@@ -66,33 +64,34 @@ impl System {
         System {
             encryptor: match config.encryption.enabled {
                 true => Some(Box::new(
-                    Aes256GcmEncryptor::new_from_base64_key(&config.encryption.key).unwrap(),
+                    Aes256GcmEncryptor::from_base64_key(&config.encryption.key).unwrap(),
                 )),
                 false => None,
             },
-            base_path: config.get_system_path(),
-            streams_path: config.get_streams_path(),
             config,
             streams: HashMap::new(),
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),
             client_manager: Arc::new(RwLock::new(ClientManager::new())),
-            permissions_validator: PermissionsValidator::default(),
+            permissioner: Permissioner::default(),
         }
     }
 
     pub async fn init(&mut self) -> Result<(), Error> {
-        if !Path::new(&self.base_path).exists() && create_dir(&self.base_path).await.is_err() {
+        if !Path::new(&self.config.get_system_path()).exists()
+            && create_dir(&self.config.get_system_path()).await.is_err()
+        {
             return Err(Error::CannotCreateBaseDirectory);
         }
-        if !Path::new(&self.streams_path).exists() && create_dir(&self.streams_path).await.is_err()
+        if !Path::new(&self.config.get_streams_path()).exists()
+            && create_dir(&self.config.get_streams_path()).await.is_err()
         {
             return Err(Error::CannotCreateStreamsDirectory);
         }
 
         info!(
             "Initializing system, data will be stored at: {}",
-            self.base_path
+            self.config.get_system_path()
         );
         let now = Instant::now();
         self.load_version().await?;

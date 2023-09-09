@@ -18,9 +18,9 @@ impl System {
         }
 
         let users_count = users.len();
-        self.permissions_validator.init(users);
+        self.permissioner.init(users);
         if self.config.user.authorization_enabled {
-            self.permissions_validator.enable()
+            self.permissioner.enable()
         }
         info!("Initialized {} user(s).", users_count);
         Ok(())

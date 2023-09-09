@@ -33,7 +33,7 @@ impl Aes256GcmEncryptor {
         })
     }
 
-    pub fn new_from_base64_key(key: &str) -> Result<Self, Error> {
+    pub fn from_base64_key(key: &str) -> Result<Self, Error> {
         Self::new(&text::from_base64_as_bytes(key)?)
     }
 }

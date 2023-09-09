@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct Stream {
-    pub id: u32,
+    pub stream_id: u32,
     pub name: String,
     pub path: String,
     pub topics_path: String,
@@ -33,7 +33,7 @@ impl Stream {
         let topics_path = config.get_topics_path(id);
 
         Stream {
-            id,
+            stream_id: id,
             name: name.to_string(),
             path,
             topics_path,
@@ -78,7 +78,7 @@ mod tests {
 
         let stream = Stream::create(id, name, config, storage);
 
-        assert_eq!(stream.id, id);
+        assert_eq!(stream.stream_id, id);
         assert_eq!(stream.name, name);
         assert_eq!(stream.path, path);
         assert_eq!(stream.topics_path, topics_path);

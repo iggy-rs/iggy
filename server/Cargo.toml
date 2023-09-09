@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 
 [dependencies]
@@ -31,9 +31,10 @@ tower-service = "0.3.2"
 clap = { version = "4.1.11", features = ["derive"] }
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.16" }
-chrono = "0.4.24"
+tracing-appender = "0.2.2"
+chrono = "0.4.30"
 anyhow = "1.0.70"
-tokio-graceful-shutdown = "0.12.1"
+tokio-graceful-shutdown = "0.13.0"
 rcgen = "0.11.1"
 quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
@@ -41,6 +42,7 @@ rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 [dev-dependencies]
 assert_cmd = "2.0.12"
 predicates = "3.0.3"
+libc = "0.2.147"
 
 [[bin]]
 name = "iggy-server"

@@ -36,6 +36,14 @@ async fn main() -> Result<(), ServerError> {
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
+    info!(
+        "Version: {}, hash: {}, built at: {} using rust version: {} for target: {}",
+        env!("CARGO_PKG_VERSION"),
+        env!("VERGEN_GIT_DESCRIBE"),
+        env!("VERGEN_BUILD_TIMESTAMP"),
+        env!("VERGEN_RUSTC_SEMVER"),
+        env!("VERGEN_CARGO_TARGET_TRIPLE")
+    );
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(config_provider.as_ref()).await?;
     let mut system = System::new(config.system.clone(), None);

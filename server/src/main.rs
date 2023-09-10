@@ -39,11 +39,11 @@ async fn main() -> Result<(), ServerError> {
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
     if option_env!("IGGY_CI_BUILD") == Some("true") {
-        let version = std::env::var("CARGO_PKG_VERSION").unwrap();
-        let hash = std::env::var("VERGEN_GIT_SHA").unwrap();
-        let built_at = std::env::var("VERGEN_BUILD_TIMESTAMP").unwrap();
-        let rust_version = std::env::var("VERGEN_RUSTC_SEMVER").unwrap();
-        let target = std::env::var("VERGEN_CARGO_TARGET_TRIPLE").unwrap();
+        let version = option_env!("CARGO_PKG_VERSION").unwrap_or("unknown");
+        let hash = option_env!("VERGEN_GIT_SHA").unwrap_or("unknown");
+        let built_at = option_env!("VERGEN_BUILD_TIMESTAMP").unwrap_or("unknown");
+        let rust_version = option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown");
+        let target = option_env!("VERGEN_CARGO_TARGET_TRIPLE").unwrap_or("unknown");
         info!(
             "Version: {}, hash: {}, built at: {} using rust version: {} for target: {}",
             version, hash, built_at, rust_version, target

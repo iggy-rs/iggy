@@ -10,6 +10,7 @@ mod streaming;
 mod tcp;
 
 use crate::args::Args;
+use crate::components::logging::Logging;
 use crate::components::{channel, config_provider, message_cleaner, message_saver};
 use crate::http::http_server;
 use crate::quic::quic_server;
@@ -30,30 +31,22 @@ use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
-    let args = Args::parse();
-    let (non_blocking, _guard) = tracing_appender::non_blocking(std::io::stdout());
-    let subscriber = tracing_subscriber::fmt().with_writer(non_blocking).finish();
-    tracing::subscriber::set_global_default(subscriber)
-        .expect("Unable to set global default tracing subscriber");
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
-    if option_env!("IGGY_CI_BUILD") == Some("true") {
-        let version = option_env!("CARGO_PKG_VERSION").unwrap_or("unknown");
-        let hash = option_env!("VERGEN_GIT_SHA").unwrap_or("unknown");
-        let built_at = option_env!("VERGEN_BUILD_TIMESTAMP").unwrap_or("unknown");
-        let rust_version = option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown");
-        let target = option_env!("VERGEN_CARGO_TARGET_TRIPLE").unwrap_or("unknown");
-        info!(
-            "Version: {}, hash: {}, built at: {} using rust version: {} for target: {}",
-            version, hash, built_at, rust_version, target
-        );
-    } else {
-        info!("It seems that you are a developer. Environment variable IGGY_CI_BUILD is not set to 'true', skipping build info print.")
-    }
+
+    let mut logging = Logging::new();
+    logging.early_init();
+
+    // From this point on, we can use tracing macros to log messages.
+
+    let args = Args::parse();
 
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(config_provider.as_ref()).await?;
+
+    logging.late_init(config.system.get_system_path(), &config.system.logging)?;
+
     let mut system = System::new(config.system.clone(), None);
     system.init().await?;
     let system = Arc::new(RwLock::new(system));

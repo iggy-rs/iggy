@@ -1,9 +1,12 @@
+use std::fmt::{Display, Formatter};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SystemConfig {
     pub path: String,
     pub database: DatabaseConfig,
+    pub logging: LoggingConfig,
     pub stream: StreamConfig,
     pub topic: TopicConfig,
     pub partition: PartitionConfig,
@@ -15,6 +18,14 @@ pub struct SystemConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DatabaseConfig {
     pub path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LoggingConfig {
+    pub path: String,
+    pub level: String,
+    pub max_size_megabytes: u64,
+    pub retention_days: u32,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -61,6 +72,7 @@ impl Default for SystemConfig {
         SystemConfig {
             path: "local_data".to_string(),
             database: DatabaseConfig::default(),
+            logging: LoggingConfig::default(),
             stream: StreamConfig::default(),
             encryption: EncryptionConfig::default(),
             topic: TopicConfig::default(),
@@ -75,6 +87,17 @@ impl Default for DatabaseConfig {
     fn default() -> DatabaseConfig {
         DatabaseConfig {
             path: "database".to_string(),
+        }
+    }
+}
+
+impl Default for LoggingConfig {
+    fn default() -> LoggingConfig {
+        LoggingConfig {
+            path: "logs".to_string(),
+            level: "info".to_string(),
+            max_size_megabytes: 200,
+            retention_days: 7,
         }
     }
 }
@@ -116,6 +139,16 @@ impl Default for SegmentConfig {
             cache_indexes: true,
             cache_time_indexes: true,
         }
+    }
+}
+
+impl Display for LoggingConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "path: {}, level: {}, max_size_megabytes: {}, retention_days: {}",
+            self.path, self.level, self.max_size_megabytes, self.retention_days
+        )
     }
 }
 

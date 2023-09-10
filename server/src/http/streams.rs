@@ -69,7 +69,10 @@ async fn update_stream(
     command.validate()?;
     let user_id = auth::resolve_user_id();
     let mut system = system.write().await;
-    system.permissioner.update_stream(user_id)?;
+    let stream = system.get_stream(&command.stream_id)?;
+    system
+        .permissioner
+        .update_stream(user_id, stream.stream_id)?;
     system
         .update_stream(&command.stream_id, &command.name)
         .await?;
@@ -83,7 +86,10 @@ async fn delete_stream(
     let user_id = auth::resolve_user_id();
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let mut system = system.write().await;
-    system.permissioner.delete_stream(user_id)?;
+    let stream = system.get_stream(&stream_id)?;
+    system
+        .permissioner
+        .delete_stream(user_id, stream.stream_id)?;
     system.delete_stream(&stream_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

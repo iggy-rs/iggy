@@ -43,12 +43,12 @@ impl Permissioner {
 
             let streams = permissions.streams.unwrap();
             for (stream_id, stream) in streams {
-                if stream.global.poll_messages {
+                if stream.poll_messages {
                     self.users_that_can_poll_messages_from_specific_streams
                         .insert((user.id, stream_id));
                 }
 
-                if stream.global.send_messages {
+                if stream.send_messages {
                     self.users_that_can_send_messages_to_specific_streams
                         .insert((user.id, stream_id));
                 }

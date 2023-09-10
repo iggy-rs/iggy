@@ -1,5 +1,5 @@
 use crate::http::error::CustomError;
-use crate::http::mapper;
+use crate::http::{auth, mapper};
 use crate::streaming::systems::system::System;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -27,10 +27,15 @@ async fn get_topic(
     State(system): State<Arc<RwLock<System>>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
 ) -> Result<Json<TopicDetails>, CustomError> {
+    let user_id = auth::resolve_user_id();
     let system = system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let topic = system.get_stream(&stream_id)?.get_topic(&topic_id)?;
+    let stream = system.get_stream(&stream_id)?;
+    let topic = stream.get_topic(&topic_id)?;
+    system
+        .permissioner
+        .get_topic(user_id, stream.stream_id, topic.topic_id)?;
     let topic = mapper::map_topic(topic).await;
     Ok(Json(topic))
 }
@@ -39,9 +44,12 @@ async fn get_topics(
     State(system): State<Arc<RwLock<System>>>,
     Path(stream_id): Path<String>,
 ) -> Result<Json<Vec<Topic>>, CustomError> {
+    let user_id = auth::resolve_user_id();
     let system = system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let topics = system.get_stream(&stream_id)?.get_topics();
+    let stream = system.get_stream(&stream_id)?;
+    system.permissioner.get_topics(user_id, stream.stream_id)?;
+    let topics = stream.get_topics();
     let topics = mapper::map_topics(&topics).await;
     Ok(Json(topics))
 }
@@ -53,7 +61,14 @@ async fn create_topic(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
+    let user_id = auth::resolve_user_id();
     let mut system = system.write().await;
+    {
+        let stream = system.get_stream(&command.stream_id)?;
+        system
+            .permissioner
+            .create_topic(user_id, stream.stream_id)?;
+    }
     system
         .get_stream_mut(&command.stream_id)?
         .create_topic(
@@ -74,7 +89,15 @@ async fn update_topic(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
+    let user_id = auth::resolve_user_id();
     let mut system = system.write().await;
+    {
+        let stream = system.get_stream(&command.stream_id)?;
+        let topic = stream.get_topic(&command.topic_id)?;
+        system
+            .permissioner
+            .update_topic(user_id, stream.stream_id, topic.topic_id)?;
+    }
     system
         .get_stream_mut(&command.stream_id)?
         .update_topic(&command.topic_id, &command.name, command.message_expiry)
@@ -88,7 +111,15 @@ async fn delete_topic(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
+    let user_id = auth::resolve_user_id();
     let mut system = system.write().await;
+    {
+        let stream = system.get_stream(&stream_id)?;
+        let topic = stream.get_topic(&topic_id)?;
+        system
+            .permissioner
+            .delete_topic(user_id, stream.stream_id, topic.topic_id)?;
+    }
     system.delete_topic(&stream_id, &topic_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -8,16 +8,16 @@ impl Permissioner {
         }
 
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
-            if global_permissions.read_streams || global_permissions.manage_streams {
+            if global_permissions.manage_streams || global_permissions.read_streams {
                 return Ok(());
             }
         }
 
-        if self
-            .users_streams_permissions
-            .contains_key(&(user_id, stream_id))
+        if let Some(stream_permissions) = self.users_streams_permissions.get(&(user_id, stream_id))
         {
-            return Ok(());
+            if stream_permissions.manage_stream || stream_permissions.read_stream {
+                return Ok(());
+            }
         }
 
         Err(Error::Unauthorized)
@@ -29,7 +29,7 @@ impl Permissioner {
         }
 
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
-            if global_permissions.read_streams || global_permissions.manage_streams {
+            if global_permissions.manage_streams || global_permissions.read_streams {
                 return Ok(());
             }
         }
@@ -38,24 +38,41 @@ impl Permissioner {
     }
 
     pub fn create_stream(&self, user_id: u32) -> Result<(), Error> {
-        self.manage_streams(user_id)
-    }
-
-    pub fn update_stream(&self, user_id: u32) -> Result<(), Error> {
-        self.manage_streams(user_id)
-    }
-
-    pub fn delete_stream(&self, user_id: u32) -> Result<(), Error> {
-        self.manage_streams(user_id)
-    }
-
-    fn manage_streams(&self, user_id: u32) -> Result<(), Error> {
         if !self.enabled {
             return Ok(());
         }
 
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_streams {
+                return Ok(());
+            }
+        }
+
+        Err(Error::Unauthorized)
+    }
+
+    pub fn update_stream(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
+        self.manage_stream(user_id, stream_id)
+    }
+
+    pub fn delete_stream(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
+        self.manage_stream(user_id, stream_id)
+    }
+
+    fn manage_stream(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
+        if !self.enabled {
+            return Ok(());
+        }
+
+        if let Some(global_permissions) = self.users_permissions.get(&user_id) {
+            if global_permissions.manage_streams {
+                return Ok(());
+            }
+        }
+
+        let stream_permissions = self.users_streams_permissions.get(&(user_id, stream_id));
+        if let Some(stream_permissions) = stream_permissions {
+            if stream_permissions.manage_stream {
                 return Ok(());
             }
         }

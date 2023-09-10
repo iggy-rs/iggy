@@ -1,2 +1,3 @@
-pub mod messages;
+mod messages;
 mod streams;
+mod topics;

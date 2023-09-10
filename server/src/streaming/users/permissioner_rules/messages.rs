@@ -27,7 +27,7 @@ impl Permissioner {
         }
 
         let stream_permissions = stream_permissions.unwrap();
-        if stream_permissions.global.poll_messages {
+        if stream_permissions.poll_messages {
             return Ok(());
         }
 
@@ -76,7 +76,7 @@ impl Permissioner {
         }
 
         let stream_permissions = stream_permissions.unwrap();
-        if stream_permissions.global.send_messages {
+        if stream_permissions.send_messages {
             return Ok(());
         }
 

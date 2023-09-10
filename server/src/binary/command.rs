@@ -90,16 +90,20 @@ async fn try_handle(
         Command::UpdateStream(command) => {
             update_stream_handler::handle(command, sender, user_context, system).await
         }
-        Command::GetTopic(command) => get_topic_handler::handle(command, sender, system).await,
-        Command::GetTopics(command) => get_topics_handler::handle(command, sender, system).await,
+        Command::GetTopic(command) => {
+            get_topic_handler::handle(command, sender, user_context, system).await
+        }
+        Command::GetTopics(command) => {
+            get_topics_handler::handle(command, sender, user_context, system).await
+        }
         Command::CreateTopic(command) => {
-            create_topic_handler::handle(command, sender, system).await
+            create_topic_handler::handle(command, sender, user_context, system).await
         }
         Command::DeleteTopic(command) => {
-            delete_topic_handler::handle(command, sender, system).await
+            delete_topic_handler::handle(command, sender, user_context, system).await
         }
         Command::UpdateTopic(command) => {
-            update_topic_handler::handle(command, sender, system).await
+            update_topic_handler::handle(command, sender, user_context, system).await
         }
         Command::CreatePartitions(command) => {
             create_partitions_handler::handle(command, sender, system).await

@@ -1,7 +1,7 @@
 use crate::streaming_tests::common::test_setup::TestSetup;
 use iggy::utils::timestamp;
 use server::streaming::users::permissions::{
-    GlobalPermissions, GlobalStreamPermissions, Permissions, StreamPermissions, TopicPermissions,
+    GlobalPermissions, Permissions, StreamPermissions, TopicPermissions,
 };
 use server::streaming::users::user::{Status, User};
 use std::collections::HashMap;
@@ -80,20 +80,32 @@ fn assert_user(user: &User, loaded_user: &User) {
         user_permissions.global.manage_servers
     );
     assert_eq!(
+        loaded_user_permissions.global.read_servers,
+        user_permissions.global.read_servers
+    );
+    assert_eq!(
         loaded_user_permissions.global.manage_users,
         user_permissions.global.manage_users
+    );
+    assert_eq!(
+        loaded_user_permissions.global.read_users,
+        user_permissions.global.read_users
     );
     assert_eq!(
         loaded_user_permissions.global.manage_streams,
         user_permissions.global.manage_streams
     );
     assert_eq!(
+        loaded_user_permissions.global.read_streams,
+        user_permissions.global.read_streams
+    );
+    assert_eq!(
         loaded_user_permissions.global.manage_topics,
         user_permissions.global.manage_topics
     );
     assert_eq!(
-        loaded_user_permissions.global.read_streams,
-        user_permissions.global.read_streams
+        loaded_user_permissions.global.read_topics,
+        user_permissions.global.read_topics
     );
     assert_eq!(
         loaded_user_permissions.global.poll_messages,
@@ -115,19 +127,13 @@ fn assert_user(user: &User, loaded_user: &User) {
     assert_eq!(loaded_streams.len(), streams.len());
     for (stream_id, stream) in streams {
         let loaded_stream = loaded_streams.get(stream_id).unwrap();
-        assert_eq!(
-            loaded_stream.global.manage_topics,
-            stream.global.manage_topics
-        );
-        assert_eq!(loaded_stream.global.read_topics, stream.global.read_topics);
-        assert_eq!(
-            loaded_stream.global.poll_messages,
-            stream.global.poll_messages
-        );
-        assert_eq!(
-            loaded_stream.global.send_messages,
-            stream.global.send_messages
-        );
+        assert_eq!(loaded_stream.manage_stream, stream.manage_stream);
+        assert_eq!(loaded_stream.read_stream, stream.read_stream);
+        assert_eq!(loaded_stream.manage_topics, stream.manage_topics);
+        assert_eq!(loaded_stream.read_topics, stream.read_topics);
+        assert_eq!(loaded_stream.poll_messages, stream.poll_messages);
+        assert_eq!(loaded_stream.send_messages, stream.send_messages);
+
         if stream.topics.is_none() {
             assert!(loaded_stream.topics.is_none());
             continue;
@@ -156,24 +162,27 @@ fn create_user(id: u32) -> User {
         permissions: Some(Permissions {
             global: GlobalPermissions {
                 manage_servers: false,
+                read_servers: false,
                 manage_users: false,
+                read_users: false,
                 manage_streams: false,
                 manage_topics: false,
                 read_streams: true,
                 poll_messages: false,
                 send_messages: false,
+                read_topics: true,
             },
             streams: Some({
                 let mut map = HashMap::new();
                 map.insert(
                     1,
                     StreamPermissions {
-                        global: GlobalStreamPermissions {
-                            manage_topics: false,
-                            read_topics: true,
-                            poll_messages: true,
-                            send_messages: true,
-                        },
+                        manage_stream: false,
+                        read_stream: false,
+                        manage_topics: false,
+                        read_topics: true,
+                        poll_messages: true,
+                        send_messages: true,
                         topics: Some({
                             let mut map = HashMap::new();
                             map.insert(

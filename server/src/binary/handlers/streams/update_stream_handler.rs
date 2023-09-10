@@ -16,7 +16,10 @@ pub async fn handle(
 ) -> Result<(), Error> {
     trace!("{}", command);
     let mut system = system.write().await;
-    system.permissioner.update_stream(user_context.user_id)?;
+    let stream = system.get_stream(&command.stream_id)?;
+    system
+        .permissioner
+        .update_stream(user_context.user_id, stream.stream_id)?;
     system
         .update_stream(&command.stream_id, &command.name)
         .await?;

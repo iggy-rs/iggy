@@ -35,6 +35,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         },
         None,
         None,
+        None,
     );
     system::init_by_consumer(&args, &client).await;
     consume_messages(&args, &client).await
@@ -57,12 +58,12 @@ async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
                 count: args.messages_per_batch,
                 auto_commit: true,
             },
-            |message| {
+            Some(|message| {
                 let result = handle_message(&message);
                 if let Err(e) = result {
                     warn!("Error handling message: {}", e);
                 }
-            },
+            }),
             None,
         )
         .await?;

@@ -39,7 +39,7 @@ async fn main() -> Result<(), ClientError> {
     info!("Selected transport: {}", args.transport);
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args)?);
     let client = client_provider::get_client(client_provider_config).await?;
-    let mut client = IggyClient::new(client, IggyClientConfig::default(), None, encryptor);
+    let mut client = IggyClient::new(client, IggyClientConfig::default(), None, None, encryptor);
     let stdin = io::stdin();
     let mut user_input = String::new();
 

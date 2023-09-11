@@ -1071,7 +1071,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.0.70"
+version = "0.0.71"
 dependencies = [
  "aes-gcm",
  "async-trait",

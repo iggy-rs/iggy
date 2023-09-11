@@ -59,7 +59,7 @@ impl EarlyLogDumper for Logging {
     fn dump_to_file<W: Write>(&self, writer: &mut W) {
         let early_logs_buffer = self.early_logs_buffer.lock().unwrap();
         for log in early_logs_buffer.iter() {
-            let log = strip_ansi_escapes::strip(&log);
+            let log = strip_ansi_escapes::strip(log);
             writer.write_all(&log).unwrap();
         }
     }

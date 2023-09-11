@@ -13,6 +13,7 @@ use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::Error;
 use crate::identifier::Identifier;
+use crate::message_handler::MessageHandler;
 use crate::messages::poll_messages::{PollMessages, PollingKind};
 use crate::messages::send_messages::{Partitioning, PartitioningKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
@@ -60,6 +61,7 @@ pub struct IggyClient {
     send_messages_batch: Arc<Mutex<SendMessagesBatch>>,
     partitioner: Option<Box<dyn Partitioner>>,
     encryptor: Option<Box<dyn Encryptor>>,
+    message_handler: Option<Arc<Box<dyn MessageHandler>>>,
 }
 
 #[derive(Debug)]
@@ -117,6 +119,7 @@ impl IggyClient {
     pub fn new(
         client: Box<dyn Client>,
         config: IggyClientConfig,
+        message_handler: Option<Box<dyn MessageHandler>>,
         partitioner: Option<Box<dyn Partitioner>>,
         encryptor: Option<Box<dyn Encryptor>>,
     ) -> Self {
@@ -145,6 +148,7 @@ impl IggyClient {
             client,
             config,
             send_messages_batch,
+            message_handler: message_handler.map(Arc::new),
             partitioner,
             encryptor,
         }
@@ -153,7 +157,7 @@ impl IggyClient {
     pub fn start_polling_messages<F>(
         &self,
         mut poll_messages: PollMessages,
-        on_message: F,
+        on_message: Option<F>,
         config_override: Option<PollMessagesConfig>,
     ) -> JoinHandle<()>
     where
@@ -162,6 +166,7 @@ impl IggyClient {
         let client = self.client.clone();
         let config = config_override.unwrap_or(self.config.poll_messages);
         let interval = Duration::from_millis(config.interval);
+        let message_handler = self.message_handler.clone();
         let mut store_offset_after_processing_each_message = false;
         let mut store_offset_when_messages_are_processed = false;
         match config.store_offset_kind {
@@ -199,7 +204,11 @@ impl IggyClient {
                 let mut current_offset = 0;
                 for message in messages {
                     current_offset = message.offset;
-                    on_message(message);
+                    if let Some(message_handler) = &message_handler {
+                        message_handler.handle(message);
+                    } else if let Some(on_message) = &on_message {
+                        on_message(message);
+                    }
                     if store_offset_after_processing_each_message {
                         Self::store_offset(client.as_ref(), &poll_messages, current_offset).await;
                     }

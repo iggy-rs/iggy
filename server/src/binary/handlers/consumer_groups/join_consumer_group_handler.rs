@@ -16,6 +16,13 @@ pub async fn handle(
 ) -> Result<(), Error> {
     trace!("{}", command);
     let system = system.read().await;
+    let stream = system.get_stream(&command.stream_id)?;
+    let topic = stream.get_topic(&command.topic_id)?;
+    system.permissioner.join_consumer_group(
+        user_context.user_id,
+        stream.stream_id,
+        topic.topic_id,
+    )?;
     system
         .join_consumer_group(
             user_context.client_id,

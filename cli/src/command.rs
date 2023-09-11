@@ -49,16 +49,22 @@ pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError>
         Command::UpdateTopic(payload) => topics::update_topic(&payload, client).await,
         Command::CreatePartitions(payload) => partitions::create_partitions(&payload, client).await,
         Command::DeletePartitions(payload) => partitions::delete_partitions(&payload, client).await,
-        Command::GetGroup(payload) => consumer_groups::get_consumer_group(&payload, client).await,
-        Command::GetGroups(payload) => consumer_groups::get_consumer_groups(&payload, client).await,
-        Command::CreateGroup(payload) => {
+        Command::GetConsumerGroup(payload) => {
+            consumer_groups::get_consumer_group(&payload, client).await
+        }
+        Command::GetConsumerGroups(payload) => {
+            consumer_groups::get_consumer_groups(&payload, client).await
+        }
+        Command::CreateConsumerGroup(payload) => {
             consumer_groups::create_consumer_group(&payload, client).await
         }
-        Command::DeleteGroup(payload) => {
+        Command::DeleteConsumerGroup(payload) => {
             consumer_groups::delete_consumer_group(&payload, client).await
         }
-        Command::JoinGroup(payload) => consumer_groups::join_consumer_group(&payload, client).await,
-        Command::LeaveGroup(payload) => {
+        Command::JoinConsumerGroup(payload) => {
+            consumer_groups::join_consumer_group(&payload, client).await
+        }
+        Command::LeaveConsumerGroup(payload) => {
             consumer_groups::leave_consumer_group(&payload, client).await
         }
     }

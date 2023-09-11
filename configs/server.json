@@ -13,7 +13,9 @@
       "allowed_origins": [
         "*"
       ],
-      "allowed_headers": ["content-type"],
+      "allowed_headers": [
+        "content-type"
+      ],
       "exposed_headers": [],
       "allow_credentials": false,
       "allow_private_network": false
@@ -62,6 +64,12 @@
     "path": "local_data",
     "database": {
       "path": "database"
+    },
+    "logging": {
+      "path": "logs",
+      "level": "info",
+      "max_size_megabytes": 512,
+      "retention_days": 7
     },
     "encryption": {
       "enabled": false,

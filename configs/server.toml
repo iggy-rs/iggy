@@ -4,10 +4,10 @@ address = "0.0.0.0:3000"
 
 [http.cors]
 enabled = true
-allowed_methods = [ "GET", "POST", "PUT", "DELETE" ]
-allowed_origins = [ "*" ]
-allowed_headers = [ "content-type" ]
-exposed_headers = [ ]
+allowed_methods = ["GET", "POST", "PUT", "DELETE"]
+allowed_origins = ["*"]
+allowed_headers = ["content-type"]
+exposed_headers = []
 allow_credentials = false
 allow_private_network = false
 
@@ -55,6 +55,12 @@ path = "local_data"
 
 [system.database]
 path = "database"
+
+[system.logging]
+path = "logs"
+level = "info"
+max_size_megabytes = 512
+retention_days = 7
 
 [system.encryption]
 enabled = false

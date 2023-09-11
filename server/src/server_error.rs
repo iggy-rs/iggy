@@ -23,4 +23,10 @@ pub enum ServerError {
     ReadToEndError(#[from] ReadToEndError),
     #[error("Try from slice error")]
     TryFromSliceError(#[from] TryFromSliceError),
+    #[error("Logging filter reload failure")]
+    FilterReloadFailure,
+    #[error("Logging stdout reload failure")]
+    StdoutReloadFailure,
+    #[error("Logging file reload failure")]
+    FileReloadFailure,
 }

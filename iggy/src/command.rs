@@ -113,12 +113,12 @@ pub enum Command {
     UpdateTopic(UpdateTopic),
     CreatePartitions(CreatePartitions),
     DeletePartitions(DeletePartitions),
-    GetGroup(GetConsumerGroup),
-    GetGroups(GetConsumerGroups),
-    CreateGroup(CreateConsumerGroup),
-    DeleteGroup(DeleteConsumerGroup),
-    JoinGroup(JoinConsumerGroup),
-    LeaveGroup(LeaveConsumerGroup),
+    GetConsumerGroup(GetConsumerGroup),
+    GetConsumerGroups(GetConsumerGroups),
+    CreateConsumerGroup(CreateConsumerGroup),
+    DeleteConsumerGroup(DeleteConsumerGroup),
+    JoinConsumerGroup(JoinConsumerGroup),
+    LeaveConsumerGroup(LeaveConsumerGroup),
 }
 
 pub trait CommandPayload: BytesSerializable + Display {}
@@ -156,16 +156,22 @@ impl BytesSerializable for Command {
             Command::DeletePartitions(payload) => {
                 as_bytes(DELETE_PARTITIONS_CODE, &payload.as_bytes())
             }
-            Command::GetGroup(payload) => as_bytes(GET_CONSUMER_GROUP_CODE, &payload.as_bytes()),
-            Command::GetGroups(payload) => as_bytes(GET_CONSUMER_GROUPS_CODE, &payload.as_bytes()),
-            Command::CreateGroup(payload) => {
+            Command::GetConsumerGroup(payload) => {
+                as_bytes(GET_CONSUMER_GROUP_CODE, &payload.as_bytes())
+            }
+            Command::GetConsumerGroups(payload) => {
+                as_bytes(GET_CONSUMER_GROUPS_CODE, &payload.as_bytes())
+            }
+            Command::CreateConsumerGroup(payload) => {
                 as_bytes(CREATE_CONSUMER_GROUP_CODE, &payload.as_bytes())
             }
-            Command::DeleteGroup(payload) => {
+            Command::DeleteConsumerGroup(payload) => {
                 as_bytes(DELETE_CONSUMER_GROUP_CODE, &payload.as_bytes())
             }
-            Command::JoinGroup(payload) => as_bytes(JOIN_CONSUMER_GROUP_CODE, &payload.as_bytes()),
-            Command::LeaveGroup(payload) => {
+            Command::JoinConsumerGroup(payload) => {
+                as_bytes(JOIN_CONSUMER_GROUP_CODE, &payload.as_bytes())
+            }
+            Command::LeaveConsumerGroup(payload) => {
                 as_bytes(LEAVE_CONSUMER_GROUP_CODE, &payload.as_bytes())
             }
         }
@@ -205,24 +211,24 @@ impl BytesSerializable for Command {
             DELETE_PARTITIONS_CODE => Ok(Command::DeletePartitions(DeletePartitions::from_bytes(
                 payload,
             )?)),
-            GET_CONSUMER_GROUP_CODE => {
-                Ok(Command::GetGroup(GetConsumerGroup::from_bytes(payload)?))
-            }
-            GET_CONSUMER_GROUPS_CODE => {
-                Ok(Command::GetGroups(GetConsumerGroups::from_bytes(payload)?))
-            }
-            CREATE_CONSUMER_GROUP_CODE => Ok(Command::CreateGroup(
-                CreateConsumerGroup::from_bytes(payload)?,
-            )),
-            DELETE_CONSUMER_GROUP_CODE => Ok(Command::DeleteGroup(
-                DeleteConsumerGroup::from_bytes(payload)?,
-            )),
-            JOIN_CONSUMER_GROUP_CODE => {
-                Ok(Command::JoinGroup(JoinConsumerGroup::from_bytes(payload)?))
-            }
-            LEAVE_CONSUMER_GROUP_CODE => Ok(Command::LeaveGroup(LeaveConsumerGroup::from_bytes(
+            GET_CONSUMER_GROUP_CODE => Ok(Command::GetConsumerGroup(GetConsumerGroup::from_bytes(
                 payload,
             )?)),
+            GET_CONSUMER_GROUPS_CODE => Ok(Command::GetConsumerGroups(
+                GetConsumerGroups::from_bytes(payload)?,
+            )),
+            CREATE_CONSUMER_GROUP_CODE => Ok(Command::CreateConsumerGroup(
+                CreateConsumerGroup::from_bytes(payload)?,
+            )),
+            DELETE_CONSUMER_GROUP_CODE => Ok(Command::DeleteConsumerGroup(
+                DeleteConsumerGroup::from_bytes(payload)?,
+            )),
+            JOIN_CONSUMER_GROUP_CODE => Ok(Command::JoinConsumerGroup(
+                JoinConsumerGroup::from_bytes(payload)?,
+            )),
+            LEAVE_CONSUMER_GROUP_CODE => Ok(Command::LeaveConsumerGroup(
+                LeaveConsumerGroup::from_bytes(payload)?,
+            )),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -270,16 +276,24 @@ impl FromStr for Command {
             DELETE_PARTITIONS => Ok(Command::DeletePartitions(DeletePartitions::from_str(
                 payload,
             )?)),
-            GET_CONSUMER_GROUP => Ok(Command::GetGroup(GetConsumerGroup::from_str(payload)?)),
-            GET_CONSUMER_GROUPS => Ok(Command::GetGroups(GetConsumerGroups::from_str(payload)?)),
-            CREATE_CONSUMER_GROUP => Ok(Command::CreateGroup(CreateConsumerGroup::from_str(
+            GET_CONSUMER_GROUP => Ok(Command::GetConsumerGroup(GetConsumerGroup::from_str(
                 payload,
             )?)),
-            DELETE_CONSUMER_GROUP => Ok(Command::DeleteGroup(DeleteConsumerGroup::from_str(
+            GET_CONSUMER_GROUPS => Ok(Command::GetConsumerGroups(GetConsumerGroups::from_str(
                 payload,
             )?)),
-            JOIN_CONSUMER_GROUP => Ok(Command::JoinGroup(JoinConsumerGroup::from_str(payload)?)),
-            LEAVE_CONSUMER_GROUP => Ok(Command::LeaveGroup(LeaveConsumerGroup::from_str(payload)?)),
+            CREATE_CONSUMER_GROUP => Ok(Command::CreateConsumerGroup(
+                CreateConsumerGroup::from_str(payload)?,
+            )),
+            DELETE_CONSUMER_GROUP => Ok(Command::DeleteConsumerGroup(
+                DeleteConsumerGroup::from_str(payload)?,
+            )),
+            JOIN_CONSUMER_GROUP => Ok(Command::JoinConsumerGroup(JoinConsumerGroup::from_str(
+                payload,
+            )?)),
+            LEAVE_CONSUMER_GROUP => Ok(Command::LeaveConsumerGroup(LeaveConsumerGroup::from_str(
+                payload,
+            )?)),
             _ => Err(Error::InvalidCommand),
         }
     }
@@ -318,16 +332,22 @@ impl Display for Command {
             Command::GetConsumerOffset(payload) => {
                 write!(formatter, "{}|{}", GET_CONSUMER_OFFSET, payload)
             }
-            Command::GetGroup(payload) => write!(formatter, "{}|{}", GET_CONSUMER_GROUP, payload),
-            Command::GetGroups(payload) => write!(formatter, "{}|{}", GET_CONSUMER_GROUPS, payload),
-            Command::CreateGroup(payload) => {
+            Command::GetConsumerGroup(payload) => {
+                write!(formatter, "{}|{}", GET_CONSUMER_GROUP, payload)
+            }
+            Command::GetConsumerGroups(payload) => {
+                write!(formatter, "{}|{}", GET_CONSUMER_GROUPS, payload)
+            }
+            Command::CreateConsumerGroup(payload) => {
                 write!(formatter, "{}|{}", CREATE_CONSUMER_GROUP, payload)
             }
-            Command::DeleteGroup(payload) => {
+            Command::DeleteConsumerGroup(payload) => {
                 write!(formatter, "{}|{}", DELETE_CONSUMER_GROUP, payload)
             }
-            Command::JoinGroup(payload) => write!(formatter, "{}|{}", JOIN_CONSUMER_GROUP, payload),
-            Command::LeaveGroup(payload) => {
+            Command::JoinConsumerGroup(payload) => {
+                write!(formatter, "{}|{}", JOIN_CONSUMER_GROUP, payload)
+            }
+            Command::LeaveConsumerGroup(payload) => {
                 write!(formatter, "{}|{}", LEAVE_CONSUMER_GROUP, payload)
             }
         }
@@ -451,32 +471,32 @@ mod tests {
             &DeletePartitions::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::GetGroup(GetConsumerGroup::default()),
+            &Command::GetConsumerGroup(GetConsumerGroup::default()),
             GET_CONSUMER_GROUP_CODE,
             &GetConsumerGroup::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::GetGroups(GetConsumerGroups::default()),
+            &Command::GetConsumerGroups(GetConsumerGroups::default()),
             GET_CONSUMER_GROUPS_CODE,
             &GetConsumerGroups::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::CreateGroup(CreateConsumerGroup::default()),
+            &Command::CreateConsumerGroup(CreateConsumerGroup::default()),
             CREATE_CONSUMER_GROUP_CODE,
             &CreateConsumerGroup::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::DeleteGroup(DeleteConsumerGroup::default()),
+            &Command::DeleteConsumerGroup(DeleteConsumerGroup::default()),
             DELETE_CONSUMER_GROUP_CODE,
             &DeleteConsumerGroup::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::JoinGroup(JoinConsumerGroup::default()),
+            &Command::JoinConsumerGroup(JoinConsumerGroup::default()),
             JOIN_CONSUMER_GROUP_CODE,
             &JoinConsumerGroup::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::LeaveGroup(LeaveConsumerGroup::default()),
+            &Command::LeaveConsumerGroup(LeaveConsumerGroup::default()),
             LEAVE_CONSUMER_GROUP_CODE,
             &LeaveConsumerGroup::default(),
         );
@@ -587,32 +607,32 @@ mod tests {
             &DeletePartitions::default(),
         );
         assert_read_from_string(
-            &Command::GetGroup(GetConsumerGroup::default()),
+            &Command::GetConsumerGroup(GetConsumerGroup::default()),
             GET_CONSUMER_GROUP,
             &GetConsumerGroup::default(),
         );
         assert_read_from_string(
-            &Command::GetGroups(GetConsumerGroups::default()),
+            &Command::GetConsumerGroups(GetConsumerGroups::default()),
             GET_CONSUMER_GROUPS,
             &GetConsumerGroups::default(),
         );
         assert_read_from_string(
-            &Command::CreateGroup(CreateConsumerGroup::default()),
+            &Command::CreateConsumerGroup(CreateConsumerGroup::default()),
             CREATE_CONSUMER_GROUP,
             &CreateConsumerGroup::default(),
         );
         assert_read_from_string(
-            &Command::DeleteGroup(DeleteConsumerGroup::default()),
+            &Command::DeleteConsumerGroup(DeleteConsumerGroup::default()),
             DELETE_CONSUMER_GROUP,
             &DeleteConsumerGroup::default(),
         );
         assert_read_from_string(
-            &Command::JoinGroup(JoinConsumerGroup::default()),
+            &Command::JoinConsumerGroup(JoinConsumerGroup::default()),
             JOIN_CONSUMER_GROUP,
             &JoinConsumerGroup::default(),
         );
         assert_read_from_string(
-            &Command::LeaveGroup(LeaveConsumerGroup::default()),
+            &Command::LeaveConsumerGroup(LeaveConsumerGroup::default()),
             LEAVE_CONSUMER_GROUP,
             &LeaveConsumerGroup::default(),
         );

@@ -17,8 +17,8 @@ impl Display for UserContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "Client ID: {}, User ID: {}",
-            self.client_id, self.user_id
+            "User ID: {}, Client ID: {}",
+            self.user_id, self.client_id
         )
     }
 }

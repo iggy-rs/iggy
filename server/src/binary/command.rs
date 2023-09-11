@@ -56,12 +56,18 @@ async fn try_handle(
     );
     match command {
         Command::Ping(command) => ping_handler::handle(command, sender).await,
-        Command::GetStats(command) => get_stats_handler::handle(command, sender, system).await,
+        Command::GetStats(command) => {
+            get_stats_handler::handle(command, sender, user_context, system).await
+        }
         Command::GetMe(command) => {
             get_me_handler::handle(command, sender, user_context, system).await
         }
-        Command::GetClient(command) => get_client_handler::handle(command, sender, system).await,
-        Command::GetClients(command) => get_clients_handler::handle(command, sender, system).await,
+        Command::GetClient(command) => {
+            get_client_handler::handle(command, sender, user_context, system).await
+        }
+        Command::GetClients(command) => {
+            get_clients_handler::handle(command, sender, user_context, system).await
+        }
         Command::LoginUser(command) => login_user_handler::handle(command, sender, system).await,
         Command::SendMessages(command) => {
             send_messages_handler::handle(command, sender, user_context, system).await
@@ -106,27 +112,27 @@ async fn try_handle(
             update_topic_handler::handle(command, sender, user_context, system).await
         }
         Command::CreatePartitions(command) => {
-            create_partitions_handler::handle(command, sender, system).await
+            create_partitions_handler::handle(command, sender, user_context, system).await
         }
         Command::DeletePartitions(command) => {
-            delete_partitions_handler::handle(command, sender, system).await
+            delete_partitions_handler::handle(command, sender, user_context, system).await
         }
-        Command::GetGroup(command) => {
-            get_consumer_group_handler::handle(command, sender, system).await
+        Command::GetConsumerGroup(command) => {
+            get_consumer_group_handler::handle(command, sender, user_context, system).await
         }
-        Command::GetGroups(command) => {
-            get_consumer_groups_handler::handle(command, sender, system).await
+        Command::GetConsumerGroups(command) => {
+            get_consumer_groups_handler::handle(command, sender, user_context, system).await
         }
-        Command::CreateGroup(command) => {
-            create_consumer_group_handler::handle(command, sender, system).await
+        Command::CreateConsumerGroup(command) => {
+            create_consumer_group_handler::handle(command, sender, user_context, system).await
         }
-        Command::DeleteGroup(command) => {
-            delete_consumer_group_handler::handle(command, sender, system).await
+        Command::DeleteConsumerGroup(command) => {
+            delete_consumer_group_handler::handle(command, sender, user_context, system).await
         }
-        Command::JoinGroup(command) => {
+        Command::JoinConsumerGroup(command) => {
             join_consumer_group_handler::handle(command, sender, user_context, system).await
         }
-        Command::LeaveGroup(command) => {
+        Command::LeaveConsumerGroup(command) => {
             leave_consumer_group_handler::handle(command, sender, user_context, system).await
         }
     }

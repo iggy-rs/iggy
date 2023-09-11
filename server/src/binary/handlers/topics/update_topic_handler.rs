@@ -15,14 +15,16 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{}", command);
-    let mut system = system.write().await;
     {
+        let system = system.read().await;
         let stream = system.get_stream(&command.stream_id)?;
         let topic = stream.get_topic(&command.topic_id)?;
         system
             .permissioner
             .update_topic(user_context.user_id, stream.stream_id, topic.topic_id)?;
     }
+
+    let mut system = system.write().await;
     system
         .get_stream_mut(&command.stream_id)?
         .update_topic(&command.topic_id, &command.name, command.message_expiry)

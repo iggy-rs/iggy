@@ -62,13 +62,15 @@ async fn create_topic(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
     let user_id = auth::resolve_user_id();
-    let mut system = system.write().await;
     {
+        let system = system.read().await;
         let stream = system.get_stream(&command.stream_id)?;
         system
             .permissioner
             .create_topic(user_id, stream.stream_id)?;
     }
+
+    let mut system = system.write().await;
     system
         .get_stream_mut(&command.stream_id)?
         .create_topic(
@@ -90,14 +92,16 @@ async fn update_topic(
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
     let user_id = auth::resolve_user_id();
-    let mut system = system.write().await;
     {
+        let system = system.read().await;
         let stream = system.get_stream(&command.stream_id)?;
         let topic = stream.get_topic(&command.topic_id)?;
         system
             .permissioner
             .update_topic(user_id, stream.stream_id, topic.topic_id)?;
     }
+
+    let mut system = system.write().await;
     system
         .get_stream_mut(&command.stream_id)?
         .update_topic(&command.topic_id, &command.name, command.message_expiry)
@@ -112,14 +116,16 @@ async fn delete_topic(
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let user_id = auth::resolve_user_id();
-    let mut system = system.write().await;
     {
+        let system = system.read().await;
         let stream = system.get_stream(&stream_id)?;
         let topic = stream.get_topic(&topic_id)?;
         system
             .permissioner
             .delete_topic(user_id, stream.stream_id, topic.topic_id)?;
     }
+
+    let mut system = system.write().await;
     system.delete_topic(&stream_id, &topic_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }

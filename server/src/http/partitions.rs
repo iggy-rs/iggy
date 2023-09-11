@@ -11,6 +11,8 @@ use iggy::validatable::Validatable;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use super::auth;
+
 pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", post(create_partitions).delete(delete_partitions))
@@ -25,6 +27,16 @@ async fn create_partitions(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
+    let user_id = auth::resolve_user_id();
+    {
+        let system = system.read().await;
+        let stream = system.get_stream(&command.stream_id)?;
+        let topic = stream.get_topic(&command.topic_id)?;
+        system
+            .permissioner
+            .create_partitons(user_id, stream.stream_id, topic.topic_id)?;
+    }
+
     let mut system = system.write().await;
     let topic = system
         .get_stream_mut(&command.stream_id)?
@@ -44,6 +56,16 @@ async fn delete_partitions(
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
+    let user_id = auth::resolve_user_id();
+    {
+        let system = system.read().await;
+        let stream = system.get_stream(&query.stream_id)?;
+        let topic = stream.get_topic(&query.topic_id)?;
+        system
+            .permissioner
+            .delete_partitions(user_id, stream.stream_id, topic.topic_id)?;
+    }
+
     let mut system = system.write().await;
     let topic = system
         .get_stream_mut(&query.stream_id)?

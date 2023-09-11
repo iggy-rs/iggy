@@ -12,6 +12,7 @@ pub mod consumer_offsets;
 pub mod error;
 pub mod http;
 pub mod identifier;
+pub mod message_handler;
 pub mod messages;
 pub mod models;
 pub mod partitioner;

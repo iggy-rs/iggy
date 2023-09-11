@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     info!("Selected transport: {}", args.transport);
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args)?);
     let client = client_provider::get_client(client_provider_config).await?;
-    let client = IggyClient::new(client, IggyClientConfig::default(), None, encryptor);
+    let client = IggyClient::new(client, IggyClientConfig::default(), None, None, encryptor);
     info!("Data seeder has started...");
     seeder::seed(&client).await.unwrap();
     info!("Data seeder has finished.");

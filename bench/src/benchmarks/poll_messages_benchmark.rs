@@ -23,7 +23,7 @@ pub async fn run(
     let partition_id: u32 = 1;
     let total_messages = (args.messages_per_batch * args.message_batches) as u64;
     let client = client_factory.create_client(args.clone()).await;
-    let client = IggyClient::new(client, IggyClientConfig::default(), None, None);
+    let client = IggyClient::new(client, IggyClientConfig::default(), None, None, None);
     info!("Consumer #{} → preparing the test messages...", consumer_id);
     info!(
         "Consumer #{} → polling {} messages in {} batches of {} messages...",

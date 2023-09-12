@@ -131,6 +131,20 @@ impl Logging {
         tracing::subscriber::set_global_default(subscriber)
             .expect("Setting global default subscriber failed");
 
+        if option_env!("IGGY_CI_BUILD") == Some("true") {
+            let version = option_env!("CARGO_PKG_VERSION").unwrap_or("unknown");
+            let hash = option_env!("VERGEN_GIT_SHA").unwrap_or("unknown");
+            let built_at = option_env!("VERGEN_BUILD_TIMESTAMP").unwrap_or("unknown");
+            let rust_version = option_env!("VERGEN_RUSTC_SEMVER").unwrap_or("unknown");
+            let target = option_env!("VERGEN_CARGO_TARGET_TRIPLE").unwrap_or("unknown");
+            info!(
+                "Version: {}, hash: {}, built at: {} using rust version: {} for target: {}",
+                version, hash, built_at, rust_version, target
+            );
+        } else {
+            info!("It seems that you are a developer. Environment variable IGGY_CI_BUILD is not set to 'true', skipping build info print.")
+        }
+
         // This is moment when we can start logging something and not worry about losing it.
     }
 

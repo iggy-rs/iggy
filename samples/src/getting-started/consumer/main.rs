@@ -1,9 +1,9 @@
 use iggy::client::Client;
+use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
-use iggy::tcp::client::TcpClient;
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -16,7 +16,7 @@ const PARTITION_ID: u32 = 1;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let mut client = TcpClient::new("127.0.0.1:8090")?;
+    let mut client = IggyClient::default();
     client.connect().await?;
     consume_messages(&client).await
 }

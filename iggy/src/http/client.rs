@@ -27,6 +27,12 @@ impl Client for HttpClient {
 unsafe impl Send for HttpClient {}
 unsafe impl Sync for HttpClient {}
 
+impl Default for HttpClient {
+    fn default() -> Self {
+        HttpClient::create(Arc::new(HttpClientConfig::default())).unwrap()
+    }
+}
+
 impl HttpClient {
     pub fn new(api_url: &str) -> Result<Self, Error> {
         Self::create(Arc::new(HttpClientConfig {

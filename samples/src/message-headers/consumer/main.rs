@@ -25,19 +25,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_client(client_provider_config).await?;
-    let client = IggyClient::new(
-        client,
-        IggyClientConfig {
+    let client = IggyClient::builder(client)
+        .with_config(IggyClientConfig {
             poll_messages: PollMessagesConfig {
                 interval: args.interval,
-                store_offset_kind: StoreOffsetKind::WhenMessagesAreReceived,
+                store_offset_kind: StoreOffsetKind::WhenMessagesAreProcessed,
             },
             ..Default::default()
-        },
-        None,
-        None,
-        None,
-    );
+        })
+        .build();
     system::init_by_consumer(&args, &client).await;
     consume_messages(&args, &client).await
 }

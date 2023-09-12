@@ -57,11 +57,48 @@ use tracing::{error, info};
 #[derive(Debug)]
 pub struct IggyClient {
     client: Arc<RwLock<Box<dyn Client>>>,
-    config: IggyClientConfig,
-    send_messages_batch: Arc<Mutex<SendMessagesBatch>>,
+    config: Option<IggyClientConfig>,
+    send_messages_batch: Option<Arc<Mutex<SendMessagesBatch>>>,
     partitioner: Option<Box<dyn Partitioner>>,
     encryptor: Option<Box<dyn Encryptor>>,
     message_handler: Option<Arc<Box<dyn MessageHandler>>>,
+}
+
+#[derive(Debug)]
+pub struct IggyClientBuilder {
+    client: IggyClient,
+}
+
+impl IggyClientBuilder {
+    pub fn new(client: Box<dyn Client>) -> Self {
+        IggyClientBuilder {
+            client: IggyClient::new(client),
+        }
+    }
+
+    pub fn with_config(mut self, config: IggyClientConfig) -> Self {
+        self.client.config = Some(config);
+        self
+    }
+
+    pub fn with_partitioner(mut self, partitioner: Box<dyn Partitioner>) -> Self {
+        self.client.partitioner = Some(partitioner);
+        self
+    }
+
+    pub fn with_encryptor(mut self, encryptor: Box<dyn Encryptor>) -> Self {
+        self.client.encryptor = Some(encryptor);
+        self
+    }
+
+    pub fn with_message_handler(mut self, message_handler: Box<dyn MessageHandler>) -> Self {
+        self.client.message_handler = Some(Arc::new(message_handler));
+        self
+    }
+
+    pub fn build(self) -> IggyClient {
+        self.client
+    }
 }
 
 #[derive(Debug)]
@@ -116,7 +153,22 @@ impl Default for PollMessagesConfig {
 }
 
 impl IggyClient {
-    pub fn new(
+    pub fn builder(client: Box<dyn Client>) -> IggyClientBuilder {
+        IggyClientBuilder::new(client)
+    }
+
+    pub fn new(client: Box<dyn Client>) -> Self {
+        IggyClient {
+            client: Arc::new(RwLock::new(client)),
+            config: None,
+            send_messages_batch: None,
+            partitioner: None,
+            encryptor: None,
+            message_handler: None,
+        }
+    }
+
+    pub fn create(
         client: Box<dyn Client>,
         config: IggyClientConfig,
         message_handler: Option<Box<dyn MessageHandler>>,
@@ -146,8 +198,8 @@ impl IggyClient {
 
         IggyClient {
             client,
-            config,
-            send_messages_batch,
+            config: Some(config),
+            send_messages_batch: Some(send_messages_batch),
             message_handler: message_handler.map(Arc::new),
             partitioner,
             encryptor,
@@ -164,25 +216,34 @@ impl IggyClient {
         F: Fn(Message) + Send + Sync + 'static,
     {
         let client = self.client.clone();
-        let config = config_override.unwrap_or(self.config.poll_messages);
-        let interval = Duration::from_millis(config.interval);
+        let mut interval = Duration::from_millis(100);
         let message_handler = self.message_handler.clone();
         let mut store_offset_after_processing_each_message = false;
         let mut store_offset_when_messages_are_processed = false;
-        match config.store_offset_kind {
-            StoreOffsetKind::Never => {
-                poll_messages.auto_commit = false;
+
+        let config = match config_override {
+            Some(config) => Some(config),
+            None => self.config.as_ref().map(|config| config.poll_messages),
+        };
+        if let Some(config) = config {
+            if config.interval > 0 {
+                interval = Duration::from_millis(config.interval);
             }
-            StoreOffsetKind::WhenMessagesAreReceived => {
-                poll_messages.auto_commit = true;
-            }
-            StoreOffsetKind::WhenMessagesAreProcessed => {
-                poll_messages.auto_commit = false;
-                store_offset_when_messages_are_processed = true;
-            }
-            StoreOffsetKind::AfterProcessingEachMessage => {
-                poll_messages.auto_commit = false;
-                store_offset_after_processing_each_message = true;
+            match config.store_offset_kind {
+                StoreOffsetKind::Never => {
+                    poll_messages.auto_commit = false;
+                }
+                StoreOffsetKind::WhenMessagesAreReceived => {
+                    poll_messages.auto_commit = true;
+                }
+                StoreOffsetKind::WhenMessagesAreProcessed => {
+                    poll_messages.auto_commit = false;
+                    store_offset_when_messages_are_processed = true;
+                }
+                StoreOffsetKind::AfterProcessingEachMessage => {
+                    poll_messages.auto_commit = false;
+                    store_offset_after_processing_each_message = true;
+                }
             }
         }
 
@@ -489,7 +550,13 @@ impl MessageClient for IggyClient {
             }
         }
 
-        if !self.config.send_messages.enabled || self.config.send_messages.interval == 0 {
+        let send_messages_now = self.send_messages_batch.is_none()
+            || match &self.config {
+                Some(config) => !config.send_messages.enabled || config.send_messages.interval == 0,
+                None => true,
+            };
+
+        if send_messages_now {
             return self.client.read().await.send_messages(command).await;
         }
 
@@ -510,7 +577,7 @@ impl MessageClient for IggyClient {
             messages,
         };
 
-        let mut batch = self.send_messages_batch.lock().await;
+        let mut batch = self.send_messages_batch.as_ref().unwrap().lock().await;
         batch.commands.push_back(send_messages);
         Ok(())
     }

@@ -53,7 +53,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();
     test_server.start();
     let client = client_factory.create_client().await;
-    let client = IggyClient::new(client, IggyClientConfig::default(), None, None, None);
+    let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
     // 0. Login user
     client

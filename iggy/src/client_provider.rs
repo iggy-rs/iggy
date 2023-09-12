@@ -1,5 +1,6 @@
 use crate::client::Client;
 use crate::client_error::ClientError;
+use crate::clients::client::IggyClient;
 use crate::http::client::HttpClient;
 use crate::http::config::HttpClientConfig;
 use crate::quic::client::QuicClient;
@@ -12,11 +13,23 @@ const QUIC_TRANSPORT: &str = "quic";
 const HTTP_TRANSPORT: &str = "http";
 const TCP_TRANSPORT: &str = "tcp";
 
+#[derive(Debug)]
 pub struct ClientProviderConfig {
     pub transport: String,
     pub http: Option<Arc<HttpClientConfig>>,
     pub quic: Option<Arc<QuicClientConfig>>,
     pub tcp: Option<Arc<TcpClientConfig>>,
+}
+
+impl Default for ClientProviderConfig {
+    fn default() -> ClientProviderConfig {
+        ClientProviderConfig {
+            transport: TCP_TRANSPORT.to_string(),
+            http: Some(Arc::new(HttpClientConfig::default())),
+            quic: Some(Arc::new(QuicClientConfig::default())),
+            tcp: Some(Arc::new(TcpClientConfig::default())),
+        }
+    }
 }
 
 impl ClientProviderConfig {
@@ -69,7 +82,18 @@ impl ClientProviderConfig {
     }
 }
 
-pub async fn get_client(config: Arc<ClientProviderConfig>) -> Result<Box<dyn Client>, ClientError> {
+pub async fn get_default_client() -> Result<IggyClient, ClientError> {
+    get_client(Arc::new(ClientProviderConfig::default())).await
+}
+
+pub async fn get_client(config: Arc<ClientProviderConfig>) -> Result<IggyClient, ClientError> {
+    let client = get_raw_client(config).await?;
+    Ok(IggyClient::builder(client).build())
+}
+
+pub async fn get_raw_client(
+    config: Arc<ClientProviderConfig>,
+) -> Result<Box<dyn Client>, ClientError> {
     let transport = config.transport.clone();
     match transport.as_str() {
         QUIC_TRANSPORT => {

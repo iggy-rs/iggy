@@ -27,6 +27,12 @@ pub struct QuicClient {
 unsafe impl Send for QuicClient {}
 unsafe impl Sync for QuicClient {}
 
+impl Default for QuicClient {
+    fn default() -> Self {
+        QuicClient::create(Arc::new(QuicClientConfig::default())).unwrap()
+    }
+}
+
 #[async_trait]
 impl Client for QuicClient {
     async fn connect(&mut self) -> Result<(), Error> {

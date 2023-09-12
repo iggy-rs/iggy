@@ -1,8 +1,8 @@
-use iggy::client::Client;
+use iggy::client::{Client, StreamClient, TopicClient};
+use iggy::clients::client::IggyClient;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
-use iggy::tcp::client::TcpClient;
 use iggy::topics::create_topic::CreateTopic;
 use std::error::Error;
 use std::str::FromStr;
@@ -17,13 +17,13 @@ const PARTITION_ID: u32 = 1;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let mut client = TcpClient::new("127.0.0.1:8090")?;
+    let mut client = IggyClient::default();
     client.connect().await?;
     init_system(&client).await;
     produce_messages(&client).await
 }
 
-async fn init_system(client: &dyn Client) {
+async fn init_system(client: &IggyClient) {
     match client
         .create_stream(&CreateStream {
             stream_id: STREAM_ID,

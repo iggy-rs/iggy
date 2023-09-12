@@ -96,6 +96,12 @@ impl ConnectionStream for TcpTlsConnectionStream {
     }
 }
 
+impl Default for TcpClient {
+    fn default() -> Self {
+        TcpClient::create(Arc::new(TcpClientConfig::default())).unwrap()
+    }
+}
+
 #[async_trait]
 impl Client for TcpClient {
     async fn connect(&mut self) -> Result<(), Error> {

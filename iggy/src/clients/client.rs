@@ -36,6 +36,7 @@ use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
 use crate::system::get_stats::GetStats;
 use crate::system::ping::Ping;
+use crate::tcp::client::TcpClient;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
@@ -52,7 +53,7 @@ use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(Debug)]
 pub struct IggyClient {
@@ -149,6 +150,12 @@ impl Default for PollMessagesConfig {
             interval: 100,
             store_offset_kind: StoreOffsetKind::WhenMessagesAreProcessed,
         }
+    }
+}
+
+impl Default for IggyClient {
+    fn default() -> Self {
+        IggyClient::new(Box::<TcpClient>::default())
     }
 }
 
@@ -265,10 +272,12 @@ impl IggyClient {
                 let mut current_offset = 0;
                 for message in messages {
                     current_offset = message.offset;
-                    if let Some(message_handler) = &message_handler {
-                        message_handler.handle(message);
-                    } else if let Some(on_message) = &on_message {
+                    if let Some(on_message) = &on_message {
                         on_message(message);
+                    } else if let Some(message_handler) = &message_handler {
+                        message_handler.handle(message);
+                    } else {
+                        warn!("Received a message with ID: {} at offset: {} which won't be processed. Consider providing the custom `MessageHandler` trait implementation or `on_message` closure.", message.id, message.offset);
                     }
                     if store_offset_after_processing_each_message {
                         Self::store_offset(client.as_ref(), &poll_messages, current_offset).await;

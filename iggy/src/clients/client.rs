@@ -46,6 +46,7 @@ use crate::users::login_user::LoginUser;
 use crate::utils::crypto::Encryptor;
 use async_trait::async_trait;
 use bytes::Bytes;
+use flume::{Receiver, Sender};
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -63,6 +64,7 @@ pub struct IggyClient {
     partitioner: Option<Box<dyn Partitioner>>,
     encryptor: Option<Box<dyn Encryptor>>,
     message_handler: Option<Arc<Box<dyn MessageHandler>>>,
+    message_channel_sender: Option<Arc<Sender<Message>>>,
 }
 
 #[derive(Debug)]
@@ -172,6 +174,7 @@ impl IggyClient {
             partitioner: None,
             encryptor: None,
             message_handler: None,
+            message_channel_sender: None,
         }
     }
 
@@ -208,9 +211,16 @@ impl IggyClient {
             config: Some(config),
             send_messages_batch: Some(send_messages_batch),
             message_handler: message_handler.map(Arc::new),
+            message_channel_sender: None,
             partitioner,
             encryptor,
         }
+    }
+
+    pub fn subscribe_to_polled_messages(&mut self) -> Receiver<Message> {
+        let (sender, receiver) = flume::unbounded();
+        self.message_channel_sender = Some(Arc::new(sender));
+        receiver
     }
 
     pub fn start_polling_messages<F>(
@@ -225,6 +235,7 @@ impl IggyClient {
         let client = self.client.clone();
         let mut interval = Duration::from_millis(100);
         let message_handler = self.message_handler.clone();
+        let message_channel_sender = self.message_channel_sender.clone();
         let mut store_offset_after_processing_each_message = false;
         let mut store_offset_when_messages_are_processed = false;
 
@@ -272,7 +283,12 @@ impl IggyClient {
                 let mut current_offset = 0;
                 for message in messages {
                     current_offset = message.offset;
-                    if let Some(on_message) = &on_message {
+                    // Send a message to the subscribed channel (if created), otherwise to the provided closure or message handler.
+                    if let Some(sender) = &message_channel_sender {
+                        if sender.send_async(message).await.is_err() {
+                            error!("Error when sending a message to the channel.");
+                        }
+                    } else if let Some(on_message) = &on_message {
                         on_message(message);
                     } else if let Some(message_handler) = &message_handler {
                         message_handler.handle(message);

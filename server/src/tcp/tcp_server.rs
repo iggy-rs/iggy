@@ -6,9 +6,10 @@ use tokio::sync::RwLock;
 use tracing::info;
 
 pub(crate) fn start(config: TcpConfig, system: Arc<RwLock<System>>) {
-    let server_name = match config.tls.enabled {
-        true => "Iggy TCP TLS",
-        false => "Iggy TCP",
+    let server_name = if config.tls.enabled {
+        "Iggy TCP TLS"
+    } else {
+        "Iggy TCP"
     };
     info!("Initializing {server_name} server...");
     match config.tls.enabled {

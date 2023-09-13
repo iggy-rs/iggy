@@ -10,7 +10,7 @@ use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
 const MAX_NAME_LENGTH: usize = 255;
-const MAX_PARTITIONS_COUNT: u32 = 100000;
+const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateTopic {
@@ -101,6 +101,7 @@ impl BytesSerializable for CreateTopic {
             Some(message_expiry) => bytes.put_u32_le(message_expiry),
             None => bytes.put_u32_le(0),
         }
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
         bytes
@@ -209,6 +210,7 @@ mod tests {
         bytes.put_u32_le(topic_id);
         bytes.put_u32_le(partitions_count);
         bytes.put_u32_le(message_expiry);
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
 
@@ -230,10 +232,7 @@ mod tests {
         let partitions_count = 3u32;
         let message_expiry = 10;
         let name = "test".to_string();
-        let input = format!(
-            "{}|{}|{}|{}|{}",
-            stream_id, topic_id, partitions_count, message_expiry, name
-        );
+        let input = format!("{stream_id}|{topic_id}|{partitions_count}|{message_expiry}|{name}");
         let command = CreateTopic::from_str(&input);
         assert!(command.is_ok());
 

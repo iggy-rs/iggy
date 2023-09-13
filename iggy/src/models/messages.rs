@@ -130,6 +130,7 @@ impl Message {
             timestamp,
             id,
             checksum,
+            #[allow(clippy::cast_possible_truncation)]
             length: payload.len() as u32,
             payload,
             headers,
@@ -149,6 +150,7 @@ impl Message {
         bytes.put_u32_le(self.checksum);
         if let Some(headers) = &self.headers {
             let headers_bytes = headers.as_bytes();
+            #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(headers_bytes.len() as u32);
             bytes.extend(&headers_bytes);
         } else {

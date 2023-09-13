@@ -58,9 +58,9 @@ impl TopicClient for HttpClient {
 }
 
 fn get_path(stream_id: &str) -> String {
-    format!("streams/{}/topics", stream_id)
+    format!("streams/{stream_id}/topics")
 }
 
 fn get_details_path(stream_id: &str, topic_id: &str) -> String {
-    format!("{}/{}", get_path(stream_id), topic_id)
+    format!("{}/{topic_id}", get_path(stream_id))
 }

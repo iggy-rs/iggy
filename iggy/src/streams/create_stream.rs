@@ -65,6 +65,7 @@ impl BytesSerializable for CreateStream {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(5 + self.name.len());
         bytes.put_u32_le(self.stream_id);
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
         bytes
@@ -121,6 +122,7 @@ mod tests {
         let name = "test".to_string();
         let mut bytes = Vec::new();
         bytes.put_u32_le(stream_id);
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
         let command = CreateStream::from_bytes(&bytes);

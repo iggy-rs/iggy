@@ -265,13 +265,7 @@ impl HeaderValue {
     }
 
     pub fn from_bool(value: bool) -> Result<Self, Error> {
-        Self::from(
-            HeaderKind::Bool,
-            match value {
-                true => &[1],
-                false => &[0],
-            },
-        )
+        Self::from(HeaderKind::Bool, if value { &[1] } else { &[0] })
     }
 
     pub fn as_bool(&self) -> Result<bool, Error> {
@@ -505,9 +499,11 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
 
         let mut bytes = vec![];
         for (key, value) in self {
+            #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(key.0.len() as u32);
             bytes.extend(key.0.as_bytes());
             bytes.put_u8(value.kind.as_code());
+            #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(value.value.len() as u32);
             bytes.extend(&value.value);
         }
@@ -639,13 +635,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Bool);
-        assert_eq!(
-            header_value.value,
-            match value {
-                true => [1],
-                false => [0],
-            }
-        );
+        assert_eq!(header_value.value, if value { [1] } else { [0] });
         assert_eq!(header_value.as_bool().unwrap(), value);
     }
 
@@ -673,7 +663,7 @@ mod tests {
 
     #[test]
     fn header_value_should_be_created_from_int32() {
-        let value = 123456;
+        let value = 123_456;
         let header_value = HeaderValue::from_int32(value);
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
@@ -684,7 +674,7 @@ mod tests {
 
     #[test]
     fn header_value_should_be_created_from_int64() {
-        let value = 1234567;
+        let value = 123_4567;
         let header_value = HeaderValue::from_int64(value);
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
@@ -695,7 +685,7 @@ mod tests {
 
     #[test]
     fn header_value_should_be_created_from_int128() {
-        let value = 12345678;
+        let value = 1234_5678;
         let header_value = HeaderValue::from_int128(value);
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
@@ -728,7 +718,7 @@ mod tests {
 
     #[test]
     fn header_value_should_be_created_from_uint32() {
-        let value = 123456;
+        let value = 123_456;
         let header_value = HeaderValue::from_uint32(value);
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
@@ -739,7 +729,7 @@ mod tests {
 
     #[test]
     fn header_value_should_be_created_from_uint64() {
-        let value = 1234567;
+        let value = 123_4567;
         let header_value = HeaderValue::from_uint64(value);
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
@@ -750,7 +740,7 @@ mod tests {
 
     #[test]
     fn header_value_should_be_created_from_uint128() {
-        let value = 12345678;
+        let value = 1234_5678;
         let header_value = HeaderValue::from_uint128(value);
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();

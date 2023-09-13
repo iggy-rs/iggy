@@ -217,10 +217,7 @@ mod tests {
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
         let offset = 5u64;
-        let input = format!(
-            "{}|{}|{}|{}|{}",
-            consumer, stream_id, topic_id, partition_id, offset
-        );
+        let input = format!("{consumer}|{stream_id}|{topic_id}|{partition_id}|{offset}");
         let command = StoreConsumerOffset::from_str(&input);
         assert!(command.is_ok());
 

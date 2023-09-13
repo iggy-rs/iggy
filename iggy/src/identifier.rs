@@ -46,6 +46,7 @@ impl Validatable for Identifier {
             return Err(Error::InvalidCommand);
         }
 
+        #[allow(clippy::cast_possible_truncation)]
         if self.length != self.value.len() as u8 {
             return Err(Error::InvalidCommand);
         }
@@ -87,7 +88,7 @@ impl Identifier {
     }
 
     pub fn get_size_bytes(&self) -> u32 {
-        2 + self.length as u32
+        2 + u32::from(self.length)
     }
 
     pub fn from_identifier(identifier: &Identifier) -> Self {
@@ -130,6 +131,7 @@ impl Identifier {
 
         Ok(Self {
             kind: IdKind::String,
+            #[allow(clippy::cast_possible_truncation)]
             length: length as u8,
             value: value.as_bytes().to_vec(),
         })

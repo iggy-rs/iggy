@@ -201,9 +201,9 @@ pub fn map_polled_messages(payload: &[u8]) -> Result<PolledMessages, Error> {
 
     messages.sort_by(|x, y| x.offset.cmp(&y.offset));
     Ok(PolledMessages {
-        messages,
         partition_id,
         current_offset,
+        messages,
     })
 }
 
@@ -261,10 +261,10 @@ fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), Err
         Stream {
             id,
             created_at,
+            name,
             size_bytes,
             messages_count,
             topics_count,
-            name,
         },
         read_bytes,
     ))
@@ -305,6 +305,7 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
         size_bytes: topic.size_bytes,
         messages_count: topic.messages_count,
         message_expiry: topic.message_expiry,
+        #[allow(clippy::cast_possible_truncation)]
         partitions_count: partitions.len() as u32,
         partitions,
     };
@@ -330,11 +331,11 @@ fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), Error
         Topic {
             id,
             created_at,
+            name,
             partitions_count,
             size_bytes,
             messages_count,
             message_expiry,
-            name,
         },
         read_bytes,
     ))
@@ -457,8 +458,8 @@ fn map_to_client_info(payload: &[u8], mut position: usize) -> Result<(ClientInfo
     Ok((
         ClientInfo {
             id,
-            transport,
             address,
+            transport,
             consumer_groups_count,
         },
         read_bytes,

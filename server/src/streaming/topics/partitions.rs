@@ -3,7 +3,7 @@ use crate::streaming::topics::topic::Topic;
 use iggy::error::Error;
 use tokio::sync::RwLock;
 
-const MAX_PARTITIONS_COUNT: u32 = 100000;
+const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
 impl Topic {
     pub fn add_partitions(&mut self, count: u32) -> Result<Vec<u32>, Error> {

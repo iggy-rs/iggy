@@ -99,7 +99,7 @@ mod tests {
     #[test]
     fn should_be_read_from_string() {
         let client_id = 1u32;
-        let input = format!("{}", client_id);
+        let input = client_id.to_string();
         let command = GetClient::from_str(&input);
         assert!(command.is_ok());
 

@@ -90,6 +90,7 @@ impl BytesSerializable for UpdateTopic {
             Some(message_expiry) => bytes.put_u32_le(message_expiry),
             None => bytes.put_u32_le(0),
         }
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
         bytes
@@ -192,6 +193,7 @@ mod tests {
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
         bytes.put_u32_le(message_expiry);
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
 

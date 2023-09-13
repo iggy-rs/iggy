@@ -39,5 +39,5 @@ impl ConsumerOffsetClient for HttpClient {
 }
 
 fn get_path(stream_id: &str, topic_id: &str) -> String {
-    format!("streams/{}/topics/{}/consumer-offsets", stream_id, topic_id)
+    format!("streams/{stream_id}/topics/{topic_id}/consumer-offsets")
 }

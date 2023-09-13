@@ -79,5 +79,5 @@ impl ConsumerGroupClient for HttpClient {
 }
 
 fn get_path(stream_id: &str, topic_id: &str) -> String {
-    format!("streams/{}/topics/{}/consumer-groups", stream_id, topic_id)
+    format!("streams/{stream_id}/topics/{topic_id}/consumer-groups")
 }

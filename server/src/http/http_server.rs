@@ -1,6 +1,7 @@
 use crate::http::{
     consumer_groups, consumer_offsets, messages, partitions, streams, system, topics, users,
 };
+use crate::server_config::{CorsConfig, HttpConfig};
 use crate::streaming::systems::system::System;
 use axum::http::Method;
 use axum::Router;
@@ -9,14 +10,13 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-
-use crate::server_config::{CorsConfig, HttpConfig};
 use tracing::info;
 
 pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
-    let api_name = match config.tls.enabled {
-        true => "HTTP API (TLS)",
-        false => "HTTP API",
+    let api_name = if config.tls.enabled {
+        "HTTP API (TLS)"
+    } else {
+        "HTTP API"
     };
 
     let mut app = Router::new().nest(

@@ -73,8 +73,10 @@ impl FromStr for LoginUser {
 impl BytesSerializable for LoginUser {
     fn as_bytes(&self) -> Vec<u8> {
         let mut bytes = Vec::with_capacity(2 + self.username.len() + self.password.len());
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.username.len() as u8);
         bytes.extend(self.username.as_bytes());
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.password.len() as u8);
         bytes.extend(self.password.as_bytes());
         bytes
@@ -86,7 +88,7 @@ impl BytesSerializable for LoginUser {
         }
 
         let username_length = bytes[0];
-        let username = from_utf8(&bytes[1..1 + username_length as usize])?.to_string();
+        let username = from_utf8(&bytes[1..=(username_length as usize)])?.to_string();
         if username.len() != username_length as usize {
             return Err(Error::InvalidCommand);
         }
@@ -126,7 +128,7 @@ mod tests {
 
         let bytes = command.as_bytes();
         let username_length = bytes[0];
-        let username = from_utf8(&bytes[1..1 + username_length as usize]).unwrap();
+        let username = from_utf8(&bytes[1..=(username_length as usize)]).unwrap();
         let password_length = bytes[1 + username_length as usize];
         let password = from_utf8(
             &bytes[2 + username_length as usize
@@ -144,8 +146,10 @@ mod tests {
         let username = "user";
         let password = "secret";
         let mut bytes = Vec::new();
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(username.len() as u8);
         bytes.extend(username.as_bytes());
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(password.len() as u8);
         bytes.extend(password.as_bytes());
         let command = LoginUser::from_bytes(&bytes);

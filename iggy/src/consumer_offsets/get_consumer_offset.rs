@@ -207,7 +207,7 @@ mod tests {
         let stream_id = Identifier::numeric(2).unwrap();
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
-        let input = format!("{}|{}|{}|{}", consumer, stream_id, topic_id, partition_id);
+        let input = format!("{consumer}|{stream_id}|{topic_id}|{partition_id}");
         let command = GetConsumerOffset::from_str(&input);
         assert!(command.is_ok());
 

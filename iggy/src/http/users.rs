@@ -9,7 +9,7 @@ const PATH: &str = "/users";
 #[async_trait]
 impl UserClient for HttpClient {
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {
-        self.post(&format!("{}/login", PATH), &command).await?;
+        self.post(&format!("{PATH}/login"), &command).await?;
         Ok(())
     }
 }

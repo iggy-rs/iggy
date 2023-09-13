@@ -62,24 +62,24 @@ pub(crate) fn handle_error(error: ServerError) {
     match error {
         ServerError::IoError(error) => match error.kind() {
             ErrorKind::UnexpectedEof => {
-                info!("Connection has been closed.")
+                info!("Connection has been closed.");
             }
             ErrorKind::ConnectionAborted => {
-                info!("Connection has been aborted.")
+                info!("Connection has been aborted.");
             }
             ErrorKind::ConnectionRefused => {
-                info!("Connection has been refused.")
+                info!("Connection has been refused.");
             }
             ErrorKind::ConnectionReset => {
-                info!("Connection has been reset.")
+                info!("Connection has been reset.");
             }
             _ => {
-                error!("Connection has failed: {}", error.to_string())
+                error!("Connection has failed: {}", error.to_string());
             }
         },
         ServerError::SdkError(_) => {}
         _ => {
-            error!("Connection has failed 2: {}", error.to_string())
+            error!("Connection has failed 2: {}", error.to_string());
         }
     }
 }

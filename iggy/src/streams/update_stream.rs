@@ -64,6 +64,7 @@ impl BytesSerializable for UpdateStream {
         let stream_id_bytes = self.stream_id.as_bytes();
         let mut bytes = Vec::with_capacity(1 + stream_id_bytes.len() + self.name.len());
         bytes.extend(stream_id_bytes);
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
         bytes
@@ -129,6 +130,7 @@ mod tests {
         let stream_id_bytes = stream_id.as_bytes();
         let mut bytes = Vec::with_capacity(1 + stream_id_bytes.len() + name.len());
         bytes.extend(stream_id_bytes);
+        #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
         let command = UpdateStream::from_bytes(&bytes);

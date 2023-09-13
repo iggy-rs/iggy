@@ -154,7 +154,7 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
         let consumer_group_id = 3u32;
-        let input = format!("{}|{}|{}", stream_id, topic_id, consumer_group_id);
+        let input = format!("{stream_id}|{topic_id}|{consumer_group_id}");
         let command = JoinConsumerGroup::from_str(&input);
         assert!(command.is_ok());
 

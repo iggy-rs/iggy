@@ -105,6 +105,7 @@ impl Partitioning {
 
         Ok(Partitioning {
             kind: PartitioningKind::MessagesKey,
+            #[allow(clippy::cast_possible_truncation)]
             length: length as u8,
             value: value.to_vec(),
         })
@@ -147,7 +148,7 @@ impl Partitioning {
     }
 
     pub fn get_size_bytes(&self) -> u32 {
-        2 + self.length as u32
+        2 + u32::from(self.length)
     }
 }
 
@@ -230,6 +231,7 @@ impl Message {
     ) -> Self {
         Message {
             id: id.unwrap_or(0),
+            #[allow(clippy::cast_possible_truncation)]
             length: payload.len() as u32,
             payload,
             headers,
@@ -391,6 +393,7 @@ impl FromStr for SendMessages {
             PartitioningKind::PartitionId => (parts[3].parse::<u32>()?.to_le_bytes().to_vec(), 4),
             PartitioningKind::MessagesKey => {
                 let key_value = parts[3].as_bytes().to_vec();
+                #[allow(clippy::cast_possible_truncation)]
                 let key_length = parts[3].len() as u8;
                 (key_value, key_length)
             }
@@ -426,7 +429,7 @@ impl BytesSerializable for SendMessages {
         let messages_size = self
             .messages
             .iter()
-            .map(|message| message.get_size_bytes())
+            .map(Message::get_size_bytes)
             .sum::<u32>();
 
         let key_bytes = self.partitioning.as_bytes();
@@ -487,7 +490,7 @@ impl Display for SendMessages {
             self.partitioning,
             self.messages
                 .iter()
-                .map(|message| message.to_string())
+                .map(std::string::ToString::to_string)
                 .collect::<Vec<String>>()
                 .join("|")
         )
@@ -620,10 +623,7 @@ mod tests {
         let key = Partitioning::partition_id(4);
         let message_id = 1u128;
         let payload = "hello";
-        let input = format!(
-            "{}|{}|{}|{}|{}",
-            stream_id, topic_id, key, message_id, payload
-        );
+        let input = format!("{stream_id}|{topic_id}|{key}|{message_id}|{payload}");
 
         let command = SendMessages::from_str(&input);
 

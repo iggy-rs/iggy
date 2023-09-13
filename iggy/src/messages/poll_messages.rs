@@ -296,11 +296,7 @@ impl BytesSerializable for PollMessages {
         };
         let count = u32::from_le_bytes(bytes[position + 8..position + 12].try_into()?);
         let auto_commit = bytes[position + 12];
-        let auto_commit = match auto_commit {
-            0 => false,
-            1 => true,
-            _ => false,
-        };
+        let auto_commit = matches!(auto_commit, 1);
         let command = PollMessages {
             consumer,
             stream_id,
@@ -404,11 +400,7 @@ mod tests {
         };
         let count = u32::from_le_bytes(bytes[position + 8..position + 12].try_into().unwrap());
         let auto_commit = bytes[position + 12];
-        let auto_commit = match auto_commit {
-            0 => false,
-            1 => true,
-            _ => false,
-        };
+        let auto_commit = matches!(auto_commit, 1);
 
         assert!(!bytes.is_empty());
         assert_eq!(consumer, command.consumer);
@@ -451,11 +443,7 @@ mod tests {
         let command = PollMessages::from_bytes(&bytes);
         assert!(command.is_ok());
 
-        let auto_commit = match auto_commit {
-            0 => false,
-            1 => true,
-            _ => false,
-        };
+        let auto_commit = matches!(auto_commit, 1);
 
         let command = command.unwrap();
         assert_eq!(command.consumer, consumer);
@@ -479,17 +467,12 @@ mod tests {
         let auto_commit_str = "auto_commit";
 
         let input = format!(
-            "{}|{}|{}|{}|{}|{}|{}",
-            consumer, stream_id, topic_id, partition_id, strategy, count, auto_commit_str
+            "{consumer}|{stream_id}|{topic_id}|{partition_id}|{strategy}|{count}|{auto_commit_str}",
         );
         let command = PollMessages::from_str(&input);
         assert!(command.is_ok());
 
-        let auto_commit = match auto_commit {
-            0 => false,
-            1 => true,
-            _ => false,
-        };
+        let auto_commit = matches!(auto_commit, 1);
 
         let command = command.unwrap();
         assert_eq!(command.consumer, consumer);

@@ -302,53 +302,53 @@ impl FromStr for Command {
 impl Display for Command {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Command::Ping(_) => write!(formatter, "{}", PING),
-            Command::GetStats(_) => write!(formatter, "{}", GET_STATS),
-            Command::GetMe(_) => write!(formatter, "{}", GET_ME),
-            Command::GetClient(payload) => write!(formatter, "{}|{}", GET_CLIENT, payload),
+            Command::Ping(_) => write!(formatter, "{PING}"),
+            Command::GetStats(_) => write!(formatter, "{GET_STATS}"),
+            Command::GetMe(_) => write!(formatter, "{GET_ME}"),
+            Command::GetClient(payload) => write!(formatter, "{GET_CLIENT}|{payload}"),
             Command::GetClients(_) => write!(formatter, "{}", GET_CLIENTS),
-            Command::LoginUser(payload) => write!(formatter, "{}|{}", LOGIN_USER, payload),
-            Command::GetStream(payload) => write!(formatter, "{}|{}", GET_STREAM, payload),
-            Command::GetStreams(_) => write!(formatter, "{}", GET_STREAMS),
-            Command::CreateStream(payload) => write!(formatter, "{}|{}", CREATE_STREAM, payload),
-            Command::DeleteStream(payload) => write!(formatter, "{}|{}", DELETE_STREAM, payload),
-            Command::UpdateStream(payload) => write!(formatter, "{}|{}", UPDATE_STREAM, payload),
-            Command::GetTopic(payload) => write!(formatter, "{}|{}", GET_TOPIC, payload),
-            Command::GetTopics(payload) => write!(formatter, "{}|{}", GET_TOPICS, payload),
-            Command::CreateTopic(payload) => write!(formatter, "{}|{}", CREATE_TOPIC, payload),
-            Command::DeleteTopic(payload) => write!(formatter, "{}|{}", DELETE_TOPIC, payload),
-            Command::UpdateTopic(payload) => write!(formatter, "{}|{}", UPDATE_TOPIC, payload),
+            Command::LoginUser(payload) => write!(formatter, "{LOGIN_USER}|{payload}"),
+            Command::GetStream(payload) => write!(formatter, "{GET_STREAM}|{payload}"),
+            Command::GetStreams(_) => write!(formatter, "{GET_STREAMS}"),
+            Command::CreateStream(payload) => write!(formatter, "{CREATE_STREAM}|{payload}"),
+            Command::DeleteStream(payload) => write!(formatter, "{DELETE_STREAM}|{payload}"),
+            Command::UpdateStream(payload) => write!(formatter, "{UPDATE_STREAM}|{payload}"),
+            Command::GetTopic(payload) => write!(formatter, "{GET_TOPIC}|{payload}"),
+            Command::GetTopics(payload) => write!(formatter, "{GET_TOPICS}|{payload}"),
+            Command::CreateTopic(payload) => write!(formatter, "{CREATE_TOPIC}|{payload}"),
+            Command::DeleteTopic(payload) => write!(formatter, "{DELETE_TOPIC}|{payload}"),
+            Command::UpdateTopic(payload) => write!(formatter, "{UPDATE_TOPIC}|{payload}"),
             Command::CreatePartitions(payload) => {
-                write!(formatter, "{}|{}", CREATE_PARTITIONS, payload)
+                write!(formatter, "{CREATE_PARTITIONS}|{payload}")
             }
             Command::DeletePartitions(payload) => {
-                write!(formatter, "{}|{}", DELETE_PARTITIONS, payload)
+                write!(formatter, "{DELETE_PARTITIONS}|{payload}")
             }
-            Command::PollMessages(payload) => write!(formatter, "{}|{}", POLL_MESSAGES, payload),
-            Command::SendMessages(payload) => write!(formatter, "{}|{}", SEND_MESSAGES, payload),
+            Command::PollMessages(payload) => write!(formatter, "{POLL_MESSAGES}|{payload}"),
+            Command::SendMessages(payload) => write!(formatter, "{SEND_MESSAGES}|{payload}"),
             Command::StoreConsumerOffset(payload) => {
-                write!(formatter, "{}|{}", STORE_CONSUMER_OFFSET, payload)
+                write!(formatter, "{STORE_CONSUMER_OFFSET}|{payload}")
             }
             Command::GetConsumerOffset(payload) => {
-                write!(formatter, "{}|{}", GET_CONSUMER_OFFSET, payload)
+                write!(formatter, "{GET_CONSUMER_OFFSET}|{payload}")
             }
             Command::GetConsumerGroup(payload) => {
-                write!(formatter, "{}|{}", GET_CONSUMER_GROUP, payload)
+                write!(formatter, "{GET_CONSUMER_GROUP}|{payload}")
             }
             Command::GetConsumerGroups(payload) => {
-                write!(formatter, "{}|{}", GET_CONSUMER_GROUPS, payload)
+                write!(formatter, "{GET_CONSUMER_GROUPS}|{payload}")
             }
             Command::CreateConsumerGroup(payload) => {
-                write!(formatter, "{}|{}", CREATE_CONSUMER_GROUP, payload)
+                write!(formatter, "{CREATE_CONSUMER_GROUP}|{payload}")
             }
             Command::DeleteConsumerGroup(payload) => {
-                write!(formatter, "{}|{}", DELETE_CONSUMER_GROUP, payload)
+                write!(formatter, "{DELETE_CONSUMER_GROUP}|{payload}")
             }
             Command::JoinConsumerGroup(payload) => {
-                write!(formatter, "{}|{}", JOIN_CONSUMER_GROUP, payload)
+                write!(formatter, "{JOIN_CONSUMER_GROUP}|{payload}")
             }
             Command::LeaveConsumerGroup(payload) => {
-                write!(formatter, "{}|{}", LEAVE_CONSUMER_GROUP, payload)
+                write!(formatter, "{LEAVE_CONSUMER_GROUP}|{payload}")
             }
         }
     }

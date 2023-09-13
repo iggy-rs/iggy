@@ -90,7 +90,7 @@ mod tests {
     #[test]
     fn should_be_read_from_string() {
         let stream_id = Identifier::numeric(1).unwrap();
-        let input = format!("{}", stream_id);
+        let input = stream_id.to_string();
         let command = DeleteStream::from_str(&input);
         assert!(command.is_ok());
 

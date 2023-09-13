@@ -115,7 +115,7 @@ mod tests {
     fn should_be_read_from_string() {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
-        let input = format!("{}|{}", stream_id, topic_id);
+        let input = format!("{stream_id}|{topic_id}");
         let command = DeleteTopic::from_str(&input);
         assert!(command.is_ok());
 

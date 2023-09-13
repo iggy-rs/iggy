@@ -46,5 +46,5 @@ impl StreamClient for HttpClient {
 }
 
 fn get_details_path(stream_id: &str) -> String {
-    format!("{}/{}", PATH, stream_id)
+    format!("{PATH}/{stream_id}")
 }

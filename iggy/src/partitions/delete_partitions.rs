@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-const MAX_PARTITIONS_COUNT: u32 = 100000;
+const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct DeletePartitions {
@@ -157,7 +157,7 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
         let partitions_count = 3u32;
-        let input = format!("{}|{}|{}", stream_id, topic_id, partitions_count);
+        let input = format!("{stream_id}|{topic_id}|{partitions_count}");
         let command = DeletePartitions::from_str(&input);
         assert!(command.is_ok());
 

@@ -94,6 +94,7 @@ impl BinaryClient for QuicClient {
         if let Some(connection) = &self.connection {
             let payload_length = payload.len() + 4;
             let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
+            #[allow(clippy::cast_possible_truncation)]
             buffer.put_u32_le(payload_length as u32);
             buffer.put_u32_le(command);
             buffer.extend(payload);

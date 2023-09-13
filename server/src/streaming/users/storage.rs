@@ -44,15 +44,23 @@ impl UserStorage for FileUserStorage {
     }
 
     async fn load_all(&self) -> Result<Vec<User>, Error> {
-        let users = self
-            .db
-            .scan_prefix(format!("{}:", KEY_PREFIX))
-            .map(|x| {
-                let data = x.unwrap().1;
-                let user = rmp_serde::from_slice::<User>(&data);
-                user.unwrap()
-            })
-            .collect();
+        let mut users = Vec::new();
+        for data in self.db.scan_prefix(format!("{}:", KEY_PREFIX)) {
+            let user = match data {
+                Ok((_, value)) => match rmp_serde::from_slice::<User>(&value) {
+                    Ok(user) => user,
+                    Err(err) => {
+                        error!("Cannot deserialize user. Error: {}", err);
+                        return Err(Error::CannotDeserializeResource(KEY_PREFIX.to_string()));
+                    }
+                },
+                Err(err) => {
+                    error!("Cannot load user. Error: {}", err);
+                    return Err(Error::CannotLoadResource(KEY_PREFIX.to_string()));
+                }
+            };
+            users.push(user);
+        }
 
         Ok(users)
     }

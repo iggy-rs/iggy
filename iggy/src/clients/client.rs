@@ -73,6 +73,7 @@ pub struct IggyClientBuilder {
 }
 
 impl IggyClientBuilder {
+    #[must_use]
     pub fn new(client: Box<dyn Client>) -> Self {
         IggyClientBuilder {
             client: IggyClient::new(client),
@@ -363,7 +364,7 @@ impl IggyClient {
                 let mut key = Partitioning::partition_id(1);
                 let mut batch_messages = true;
 
-                for send_messages in send_messages_batch.commands.iter() {
+                for send_messages in &send_messages_batch.commands {
                     if !initialized {
                         if send_messages.partitioning.kind != PartitioningKind::PartitionId {
                             batch_messages = false;
@@ -388,7 +389,7 @@ impl IggyClient {
                 }
 
                 if !batch_messages {
-                    for send_messages in send_messages_batch.commands.iter_mut() {
+                    for send_messages in &mut send_messages_batch.commands {
                         if let Err(error) = client.read().await.send_messages(send_messages).await {
                             error!("There was an error when sending the messages: {:?}", error);
                         }
@@ -545,7 +546,7 @@ impl MessageClient for IggyClient {
     async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, Error> {
         let mut polled_messages = self.client.read().await.poll_messages(command).await?;
         if let Some(ref encryptor) = self.encryptor {
-            for message in polled_messages.messages.iter_mut() {
+            for message in &mut polled_messages.messages {
                 let payload = encryptor.decrypt(&message.payload)?;
                 message.payload = Bytes::from(payload);
             }

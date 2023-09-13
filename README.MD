@@ -2,6 +2,8 @@
 
 [Website](https://iggy.rs) | [Getting started](https://docs.iggy.rs/introduction/getting-started/) | [Documentation](https://docs.iggy.rs) | [Discord](https://iggy.rs/discord) | [Crates](https://crates.io/crates/iggy)
 
+![workflow](https://github.com/iggy-rs/iggy/actions/workflows/rust.yml/badge.svg)
+
 ---
 
 ![iggy](assets/iggy.png)
@@ -47,17 +49,35 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 
 ---
 
+### Roadmap
+
+- Streaming server caching and I/O improvements
+- Low level optimizations (zero-copy etc.)
+- Users & permissions management
+- Clustering & data replication
+- Rich console CLI
+- Advanced Web UI
+- Developer friendly SDK supporting multiple languages
+- Plugins & extensions support
+
+For the detailed information about current progress, please refer to the [project board](https://github.com/orgs/iggy-rs/projects/1).
+
+---
+
 ### Supported languages SDK (work in progress)
 
 - [Rust](https://crates.io/crates/iggy)
 - [C#](https://github.com/iggy-rs/iggy-dotnet-client)
 - [Go](https://github.com/iggy-rs/iggy-go-client)
 - [Node](https://github.com/iggy-rs/iggy-node-client)
+- [Python](https://github.com/iggy-rs/iggy-python-client)
 ---
 
 ### Web UI
 
 There's an ongoing effort to build the administrative web UI for the server, which will allow to manage the streams, topics, partitions, messages and so on. Check the [Web UI repository](https://github.com/iggy-rs/iggy-web-ui)
+
+![Web UI](assets/web_ui.png)
 
 ---
 
@@ -69,7 +89,7 @@ Additionally, you can run the `CLI` which is available in the running container,
 
 Keep in mind that running the container on the OS other than Linux, where the Docker is running in the VM, might result in the significant performance degradation.
 
-The official image can be found [here](https://hub.docker.com/r/iggyrs/iggy), simply type `docker pull iggyrs/iggy`.
+The official images can be found [here](https://hub.docker.com/r/iggyrs/iggy), simply type `docker pull iggyrs/iggy`.
 
 ---
 
@@ -196,115 +216,3 @@ Depending on the hardware, settings in `configs/server.toml` (the default config
 ![read benchmark](assets/read_benchmark.png)
 
 ---
-
-### TODO
-
-#### Project
-
-- [x] Setup workspace for different projects
-- [x] Create granular components with their own behavior and logic
-- [x] Define custom conventions such as error types, statuses etc.
-- [x] Make use of logging and observability crates
-- [x] Create the benchmarking app to test client/server performance
-- [x] Implement unit tests
-- [x] Implement integration tests
-- [x] Implement end-to-end tests
-- [x] Implement sample producer & consumer applications to showcase the real usage
-- [ ] Make use of `async trait` (instead of the crate) once available in stable Rust
-
-#### Server
-
-- [x] Create a basic UDP server
-- [x] Make use of QUIC protocol
-- [x] Extend QUIC configuration with custom certificates
-- [x] Create a basic HTTP server
-- [x] Make use of HTTP protocol
-- [x] Create a basic TCP server
-- [x] Make use of TCP protocol
-- [x] Add support for TLS
-  [x] Add optional data encryption for server-side
-- [ ] Implement user authentication & roles management
-- [x] Use async runtime from tokio
-- [x] Define the custom binary protocol for communication
-- [x] Allow multiple clients to connect to the server
-- [x] Provide configuration via terminal arguments
-- [x] Provide configuration via custom configuration file
-- [x] Implement the graceful shutdown
-
-#### Client
-
-- [x] Create a basic UDP client
-- [x] Make use of QUIC protocol
-- [x] Extend QUIC configuration with custom certificates
-- [x] Create a basic HTTP client
-- [x] Make use of HTTP protocol
-- [x] Create a basic TCP client
-- [x] Make use of TCP protocol
-- [x] Add support for TLS
-- [x] Add optional data encryption for client-side
-- [x] Provide configuration via terminal arguments
-- [ ] Provide configuration via custom configuration file
-- [x] Communicate with the server using established binary protocol
-- [x] Allow to send commands to the server via simple CLI
-- [x] Parse input from the CLI & handle the received response
-- [ ] Keep the history of the commands in the CLI
-- [ ] Create a simple terminal UI for the client
-
-#### SDK
-
-- [x] Implement the QUIC SDK for the client
-- [x] Implement the HTTP SDK for the client
-- [x] Implement the TCP SDK for the client
-- [x] Make use of the SDK in client project
-- [x] Implement another SDK in C# for dotnet clients
-
-#### Streaming
-
-- [x] Implement basic structures such as `stream`, `topic`, `partition`, `segment` etc.
-- [x] Encapsulate the logic of reading and writing to the stream
-- [x] Persist the stream structure to the disk & load it on startup
-- [x] Implement `Streams` consisting of multiple `Topics`
-- [x] Implement `Topic` consisting of multiple `Partitions`
-- [x] Implement `Partition` consisting of multiple `Segments`
-- [x] Store `Stream → Topic → Partition → Segment` structures on the disk in the separate directories
-- [x] Store messages on disk as append-only log using binary format
-- [x] Store messages indexes and time indexes on disk for fast access
-- [x] Automatically create new partition segments when the current one is full
-- [x] Allow clients to create/read/delete topics
-- [x] Allow clients to send messages to the specific stream, topic and partition
-- [x] Allow clients to poll messages by offsets from the specific partition
-- [x] Allow clients to poll messages by timestamps from the specific partition
-- [x] Make use of ring buffer to cache in-memory the latest messages to allow fast access to them
-- [x] Index messages by their offset to allow fast access to the specific messages
-- [x] Index messages by their timestamp to allow fast access to the specific messages
-- [x] Allow parallel reading/writing from/to the distinct partitions
-- [x] Allow storing client offset for the specific partition
-- [ ] Implement efficient message writing on disk
-- [ ] Implement efficient message reading from disk
-- [ ] Implement zero-copy message reading from disk → sending to network buffer
-- [x] Implement optional message headers
-- [x] Implement message deduplication
-- [x] Implement consumer groups for message ordering & horizontal scaling
-- [x] Delete old messages bases on retention policy
-
-#### Distribution
-
-- [ ] Implement consensus protocol for the cluster
-- [ ] Implement leader election for the cluster
-- [ ] Implement cluster membership protocol
-- [ ] Implement cluster discovery protocol
-- [ ] Implement cluster configuration protocol
-- [ ] Implement cluster state replication protocol
-- [ ] Implement cluster state synchronization protocol
-- [ ] Implement partition replication protocol on different servers
-- [ ] Allow clients to connect to the cluster
-
-#### API
-
-- [x] Implement REST API for the server using Axum
-- [x] Expose all the routes to achieve the same functionality as with the QUIC and TCP
-- [ ] Generate OpenAPI specification for the REST API
-
-#### UI
-
-- [x] Build a simple UI for the server using chosen framework

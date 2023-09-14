@@ -92,7 +92,7 @@
       "deduplicate_messages": false,
       "enforce_fsync": false,
       "validate_checksum": false,
-      "messages_required_to_save": 10000,
+      "messages_required_to_save": 10000
     },
     "segment": {
       "message_expiry": 0,

@@ -71,6 +71,9 @@
       "max_size_megabytes": 512,
       "retention_days": 7
     },
+    "cache": {
+      "messages_amount": 1048576
+    },
     "encryption": {
       "enabled": false,
       "key": ""
@@ -90,7 +93,6 @@
       "enforce_fsync": false,
       "validate_checksum": false,
       "messages_required_to_save": 10000,
-      "messages_buffer": 1048576
     },
     "segment": {
       "message_expiry": 0,

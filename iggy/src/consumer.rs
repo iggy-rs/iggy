@@ -29,7 +29,7 @@ fn default_id() -> u32 {
     0
 }
 
-impl Validatable for Consumer {
+impl Validatable<Error> for Consumer {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

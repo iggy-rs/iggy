@@ -1,4 +1,4 @@
-use crate::streaming::config::SystemConfig;
+use crate::configs::system::SystemConfig;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use iggy::models::messages::Message;
@@ -66,11 +66,9 @@ impl Partition {
             consumer_offsets_path,
             consumer_group_offsets_path,
             message_expiry,
-            messages: match config.partition.messages_buffer {
+            messages: match config.cache.messages_amount {
                 0 => None,
-                _ => Some(AllocRingBuffer::new(
-                    config.partition.messages_buffer as usize,
-                )),
+                _ => Some(AllocRingBuffer::new(config.cache.messages_amount as usize)),
             },
             message_ids: match config.partition.deduplicate_messages {
                 true => Some(HashMap::new()),
@@ -159,7 +157,7 @@ impl Partition {
 
 #[cfg(test)]
 mod tests {
-    use crate::streaming::config::{PartitionConfig, SystemConfig};
+    use crate::configs::system::{CacheConfig, SystemConfig};
     use crate::streaming::partitions::partition::Partition;
     use crate::streaming::storage::tests::get_test_system_storage;
     use ringbuffer::RingBuffer;
@@ -177,7 +175,7 @@ mod tests {
         let offsets_path = Partition::get_offsets_path(&path);
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
-        let messages_buffer_capacity = config.partition.messages_buffer as usize;
+        let messages_buffer_capacity = config.cache.messages_amount as usize;
         let message_expiry = Some(10);
 
         let partition = Partition::create(
@@ -224,10 +222,7 @@ mod tests {
             1,
             true,
             Arc::new(SystemConfig {
-                partition: PartitionConfig {
-                    messages_buffer: 0,
-                    ..Default::default()
-                },
+                cache: CacheConfig { messages_amount: 0 },
                 ..Default::default()
             }),
             storage,

@@ -38,7 +38,7 @@ fn default_partition_id() -> Option<u32> {
     Some(1)
 }
 
-impl Validatable for GetConsumerOffset {
+impl Validatable<Error> for GetConsumerOffset {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

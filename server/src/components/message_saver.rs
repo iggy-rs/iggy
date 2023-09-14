@@ -1,5 +1,5 @@
+use crate::configs::server::MessageSaverConfig;
 use crate::server_command::ServerCommand;
-use crate::server_config::MessageSaverConfig;
 use flume::Sender;
 use std::time::Duration;
 use tokio::{task, time};

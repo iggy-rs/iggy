@@ -11,7 +11,7 @@ pub struct GetStats {}
 
 impl CommandPayload for GetStats {}
 
-impl Validatable for GetStats {
+impl Validatable<Error> for GetStats {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

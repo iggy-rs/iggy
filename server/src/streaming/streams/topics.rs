@@ -159,7 +159,7 @@ impl Stream {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::streaming::config::SystemConfig;
+    use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use std::sync::Arc;
 

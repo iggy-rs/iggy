@@ -30,7 +30,7 @@ impl Default for LoginUser {
     }
 }
 
-impl Validatable for LoginUser {
+impl Validatable<Error> for LoginUser {
     fn validate(&self) -> Result<(), Error> {
         if self.username.is_empty()
             || self.username.len() > MAX_USERNAME_LENGTH

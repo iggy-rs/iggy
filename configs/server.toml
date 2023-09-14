@@ -62,6 +62,9 @@ level = "info"
 max_size_megabytes = 512
 retention_days = 7
 
+[system.cache]
+messages_amount = 1_048_576
+
 [system.encryption]
 enabled = false
 key = ""
@@ -81,7 +84,6 @@ deduplicate_messages = false
 enforce_fsync = false
 validate_checksum = false
 messages_required_to_save = 10_000
-messages_buffer = 1_048_576
 
 [system.segment]
 message_expiry = 0

@@ -1,4 +1,4 @@
-use crate::server_config::ServerConfig;
+use crate::configs::server::ServerConfig;
 use crate::server_error::ServerError;
 use async_trait::async_trait;
 use figment::providers::{Env, Format, Json, Toml};

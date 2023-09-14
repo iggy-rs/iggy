@@ -11,7 +11,7 @@ pub struct Ping {}
 
 impl CommandPayload for Ping {}
 
-impl Validatable for Ping {
+impl Validatable<Error> for Ping {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

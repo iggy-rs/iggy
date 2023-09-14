@@ -154,7 +154,7 @@ impl Partitioning {
 
 impl CommandPayload for SendMessages {}
 
-impl Validatable for SendMessages {
+impl Validatable<Error> for SendMessages {
     fn validate(&self) -> Result<(), Error> {
         if self.messages.is_empty() {
             return Err(Error::InvalidMessagesCount);

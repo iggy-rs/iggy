@@ -1,5 +1,5 @@
+use crate::configs::quic::QuicConfig;
 use crate::quic::listener;
-use crate::server_config::QuicConfig;
 use crate::streaming::systems::system::System;
 use anyhow::Result;
 use quinn::{Endpoint, IdleTimeout, VarInt};

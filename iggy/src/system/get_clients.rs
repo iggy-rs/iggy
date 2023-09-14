@@ -11,7 +11,7 @@ pub struct GetClients {}
 
 impl CommandPayload for GetClients {}
 
-impl Validatable for GetClients {
+impl Validatable<Error> for GetClients {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

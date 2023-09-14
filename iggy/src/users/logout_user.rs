@@ -11,7 +11,7 @@ pub struct LogoutUser {}
 
 impl CommandPayload for LogoutUser {}
 
-impl Validatable for LogoutUser {
+impl Validatable<Error> for LogoutUser {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

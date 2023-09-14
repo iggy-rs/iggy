@@ -17,7 +17,7 @@ pub struct GetConsumerGroups {
 
 impl CommandPayload for GetConsumerGroups {}
 
-impl Validatable for GetConsumerGroups {
+impl Validatable<Error> for GetConsumerGroups {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

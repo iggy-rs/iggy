@@ -1,4 +1,4 @@
-use crate::server_config::MessageCleanerConfig;
+use crate::configs::server::MessageCleanerConfig;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::Error;

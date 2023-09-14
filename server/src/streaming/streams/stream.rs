@@ -1,4 +1,4 @@
-use crate::streaming::config::SystemConfig;
+use crate::configs::system::SystemConfig;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::topic::Topic;
 use iggy::utils::timestamp;

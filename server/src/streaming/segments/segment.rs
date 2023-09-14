@@ -1,4 +1,4 @@
-use crate::streaming::config::SystemConfig;
+use crate::configs::system::SystemConfig;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
@@ -115,7 +115,7 @@ impl Segment {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::streaming::config::SegmentConfig;
+    use crate::configs::system::SegmentConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
 
     #[tokio::test]

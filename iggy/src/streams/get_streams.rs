@@ -11,7 +11,7 @@ pub struct GetStreams {}
 
 impl CommandPayload for GetStreams {}
 
-impl Validatable for GetStreams {
+impl Validatable<Error> for GetStreams {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

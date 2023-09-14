@@ -1,4 +1,4 @@
-use crate::server_config::TcpTlsConfig;
+use crate::configs::tcp::TcpTlsConfig;
 use crate::streaming::systems::system::System;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_tls_sender::TcpTlsSender;

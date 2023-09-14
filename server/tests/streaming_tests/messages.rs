@@ -3,7 +3,7 @@ use bytes::Bytes;
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::models::messages::{Message, MessageState};
 use iggy::utils::{checksum, timestamp};
-use server::streaming::config::{PartitionConfig, SystemConfig};
+use server::configs::system::{PartitionConfig, SystemConfig};
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;
 use std::str::FromStr;

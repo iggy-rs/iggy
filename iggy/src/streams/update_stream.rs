@@ -29,7 +29,7 @@ impl Default for UpdateStream {
     }
 }
 
-impl Validatable for UpdateStream {
+impl Validatable<Error> for UpdateStream {
     fn validate(&self) -> Result<(), Error> {
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
             return Err(Error::InvalidStreamName);

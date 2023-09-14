@@ -1,4 +1,4 @@
-use server::streaming::config::SystemConfig;
+use server::configs::system::SystemConfig;
 use server::streaming::persistence::persister::FilePersister;
 use server::streaming::storage::SystemStorage;
 use sled::Db;

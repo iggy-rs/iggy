@@ -29,7 +29,7 @@ impl Default for LeaveConsumerGroup {
     }
 }
 
-impl Validatable for LeaveConsumerGroup {
+impl Validatable<Error> for LeaveConsumerGroup {
     fn validate(&self) -> Result<(), Error> {
         if self.consumer_group_id == 0 {
             return Err(Error::InvalidConsumerGroupId);

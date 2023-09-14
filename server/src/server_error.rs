@@ -29,4 +29,6 @@ pub enum ServerError {
     StdoutReloadFailure,
     #[error("Logging file reload failure")]
     FileReloadFailure,
+    #[error("Cache config validation failure")]
+    CacheConfigValidationFailure,
 }

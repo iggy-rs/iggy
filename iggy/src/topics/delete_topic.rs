@@ -17,7 +17,7 @@ pub struct DeleteTopic {
 
 impl CommandPayload for DeleteTopic {}
 
-impl Validatable for DeleteTopic {
+impl Validatable<Error> for DeleteTopic {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

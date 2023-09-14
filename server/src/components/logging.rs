@@ -1,5 +1,5 @@
+use crate::configs::system::LoggingConfig;
 use crate::server_error::ServerError;
-use crate::streaming::config::LoggingConfig;
 
 use std::io::{self, Write};
 use std::path::PathBuf;
@@ -242,5 +242,11 @@ impl Logging {
 
     fn _install_log_rotation_handler(&self) {
         todo!("Implement log rotation handler based on size and retention time");
+    }
+}
+
+impl Default for Logging {
+    fn default() -> Self {
+        Self::new()
     }
 }

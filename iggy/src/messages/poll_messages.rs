@@ -95,7 +95,7 @@ fn default_count() -> u32 {
     10
 }
 
-impl Validatable for PollMessages {
+impl Validatable<Error> for PollMessages {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

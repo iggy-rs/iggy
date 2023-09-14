@@ -36,7 +36,7 @@ impl Default for Identifier {
     }
 }
 
-impl Validatable for Identifier {
+impl Validatable<Error> for Identifier {
     fn validate(&self) -> Result<(), Error> {
         if self.length == 0 {
             return Err(Error::InvalidCommand);

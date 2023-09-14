@@ -1,7 +1,7 @@
+use crate::configs::http::{HttpConfig, HttpCorsConfig};
 use crate::http::{
     consumer_groups, consumer_offsets, messages, partitions, streams, system, topics, users,
 };
-use crate::server_config::{CorsConfig, HttpConfig};
 use crate::streaming::systems::system::System;
 use axum::http::Method;
 use axum::Router;
@@ -69,7 +69,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         .unwrap();
 }
 
-fn configure_cors(config: CorsConfig) -> CorsLayer {
+fn configure_cors(config: HttpCorsConfig) -> CorsLayer {
     let allowed_origins = match config.allowed_origins {
         origins if origins.is_empty() => AllowOrigin::default(),
         origins if origins.first().unwrap() == "*" => AllowOrigin::any(),

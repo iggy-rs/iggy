@@ -35,7 +35,7 @@ impl Default for StoreConsumerOffset {
 
 impl CommandPayload for StoreConsumerOffset {}
 
-impl Validatable for StoreConsumerOffset {
+impl Validatable<Error> for StoreConsumerOffset {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

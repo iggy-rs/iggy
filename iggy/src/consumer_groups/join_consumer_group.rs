@@ -29,7 +29,7 @@ impl Default for JoinConsumerGroup {
     }
 }
 
-impl Validatable for JoinConsumerGroup {
+impl Validatable<Error> for JoinConsumerGroup {
     fn validate(&self) -> Result<(), Error> {
         if self.consumer_group_id == 0 {
             return Err(Error::InvalidConsumerGroupId);

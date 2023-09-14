@@ -126,7 +126,7 @@ impl Topic {
     }
 
     pub(crate) async fn load_messages_to_cache(&mut self) -> Result<(), Error> {
-        let messages_buffer_size = self.config.partition.messages_buffer as u64;
+        let messages_buffer_size = self.config.cache.messages_amount as u64;
         if messages_buffer_size == 0 {
             return Ok(());
         }
@@ -208,7 +208,7 @@ impl Topic {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::streaming::config::SystemConfig;
+    use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
     use iggy::models::messages::MessageState;

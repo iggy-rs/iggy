@@ -29,7 +29,7 @@ impl Default for DeleteConsumerGroup {
     }
 }
 
-impl Validatable for DeleteConsumerGroup {
+impl Validatable<Error> for DeleteConsumerGroup {
     fn validate(&self) -> Result<(), Error> {
         if self.consumer_group_id == 0 {
             return Err(Error::InvalidConsumerGroupId);

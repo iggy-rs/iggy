@@ -36,7 +36,7 @@ impl Default for CreateTopic {
     }
 }
 
-impl Validatable for CreateTopic {
+impl Validatable<Error> for CreateTopic {
     fn validate(&self) -> Result<(), Error> {
         if self.topic_id == 0 {
             return Err(Error::InvalidTopicId);

@@ -1,12 +1,12 @@
-use std::fmt::{Display, Formatter};
-
 use serde::{Deserialize, Serialize};
+use std::fmt::{Display, Formatter};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SystemConfig {
     pub path: String,
     pub database: DatabaseConfig,
     pub logging: LoggingConfig,
+    pub cache: CacheConfig,
     pub stream: StreamConfig,
     pub topic: TopicConfig,
     pub partition: PartitionConfig,
@@ -26,6 +26,11 @@ pub struct LoggingConfig {
     pub level: String,
     pub max_size_megabytes: u64,
     pub retention_days: u32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CacheConfig {
+    pub messages_amount: u32,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -53,7 +58,6 @@ pub struct TopicConfig {
 pub struct PartitionConfig {
     pub path: String,
     pub messages_required_to_save: u32,
-    pub messages_buffer: u32,
     pub deduplicate_messages: bool,
     pub enforce_fsync: bool,
     pub validate_checksum: bool,
@@ -65,91 +69,6 @@ pub struct SegmentConfig {
     pub size_bytes: u32,
     pub cache_indexes: bool,
     pub cache_time_indexes: bool,
-}
-
-impl Default for SystemConfig {
-    fn default() -> SystemConfig {
-        SystemConfig {
-            path: "local_data".to_string(),
-            database: DatabaseConfig::default(),
-            logging: LoggingConfig::default(),
-            stream: StreamConfig::default(),
-            encryption: EncryptionConfig::default(),
-            topic: TopicConfig::default(),
-            partition: PartitionConfig::default(),
-            segment: SegmentConfig::default(),
-            user: UserConfig::default(),
-        }
-    }
-}
-
-impl Default for DatabaseConfig {
-    fn default() -> DatabaseConfig {
-        DatabaseConfig {
-            path: "database".to_string(),
-        }
-    }
-}
-
-impl Default for LoggingConfig {
-    fn default() -> LoggingConfig {
-        LoggingConfig {
-            path: "logs".to_string(),
-            level: "info".to_string(),
-            max_size_megabytes: 200,
-            retention_days: 7,
-        }
-    }
-}
-
-impl Default for StreamConfig {
-    fn default() -> StreamConfig {
-        StreamConfig {
-            path: "streams".to_string(),
-        }
-    }
-}
-
-impl Default for TopicConfig {
-    fn default() -> TopicConfig {
-        TopicConfig {
-            path: "topics".to_string(),
-        }
-    }
-}
-
-impl Default for PartitionConfig {
-    fn default() -> PartitionConfig {
-        PartitionConfig {
-            path: "partitions".to_string(),
-            messages_required_to_save: 1000,
-            messages_buffer: 1024,
-            deduplicate_messages: false,
-            enforce_fsync: false,
-            validate_checksum: false,
-        }
-    }
-}
-
-impl Default for SegmentConfig {
-    fn default() -> SegmentConfig {
-        SegmentConfig {
-            message_expiry: 0,
-            size_bytes: 1024 * 1024 * 1024,
-            cache_indexes: true,
-            cache_time_indexes: true,
-        }
-    }
-}
-
-impl Display for LoggingConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "path: {}, level: {}, max_size_megabytes: {}, retention_days: {}",
-            self.path, self.level, self.max_size_megabytes, self.retention_days
-        )
-    }
 }
 
 impl SystemConfig {
@@ -204,6 +123,16 @@ impl SystemConfig {
             "{}/{:0>20}",
             self.get_partition_path(stream_id, topic_id, partition_id),
             start_offset
+        )
+    }
+}
+
+impl Display for LoggingConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "path: {}, level: {}, max_size_megabytes: {}, retention_days: {}",
+            self.path, self.level, self.max_size_megabytes, self.retention_days
         )
     }
 }

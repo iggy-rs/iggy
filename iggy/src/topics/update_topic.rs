@@ -34,7 +34,7 @@ impl Default for UpdateTopic {
     }
 }
 
-impl Validatable for UpdateTopic {
+impl Validatable<Error> for UpdateTopic {
     fn validate(&self) -> Result<(), Error> {
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
             return Err(Error::InvalidTopicName);

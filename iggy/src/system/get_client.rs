@@ -20,7 +20,7 @@ impl Default for GetClient {
     }
 }
 
-impl Validatable for GetClient {
+impl Validatable<Error> for GetClient {
     fn validate(&self) -> Result<(), Error> {
         if self.client_id == 0 {
             return Err(Error::InvalidClientId);

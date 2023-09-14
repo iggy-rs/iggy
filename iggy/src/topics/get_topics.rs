@@ -15,7 +15,7 @@ pub struct GetTopics {
 
 impl CommandPayload for GetTopics {}
 
-impl Validatable for GetTopics {
+impl Validatable<Error> for GetTopics {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
     }

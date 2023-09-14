@@ -27,7 +27,7 @@ impl Default for CreateStream {
     }
 }
 
-impl Validatable for CreateStream {
+impl Validatable<Error> for CreateStream {
     fn validate(&self) -> Result<(), Error> {
         if self.stream_id == 0 {
             return Err(Error::InvalidStreamId);

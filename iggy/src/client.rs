@@ -34,6 +34,7 @@ use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
 use crate::users::login_user::LoginUser;
+use crate::users::logout_user::LogoutUser;
 use async_trait::async_trait;
 use std::fmt::Debug;
 
@@ -67,6 +68,7 @@ pub trait SystemClient {
 #[async_trait]
 pub trait UserClient {
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error>;
+    async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error>;
 }
 
 #[async_trait]

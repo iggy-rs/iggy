@@ -8,7 +8,7 @@ use crate::binary::handlers::partitions::*;
 use crate::binary::handlers::streams::*;
 use crate::binary::handlers::system::*;
 use crate::binary::handlers::topics::*;
-use crate::binary::handlers::users::login_user_handler;
+use crate::binary::handlers::users::{login_user_handler, logout_user_handler};
 use crate::binary::sender::Sender;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user_context::UserContext;
@@ -21,7 +21,7 @@ use tracing::trace;
 pub async fn handle(
     command: &Command,
     sender: &mut dyn Sender,
-    user_context: &UserContext,
+    user_context: &mut UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     let result = try_handle(command, sender, user_context, system).await;
@@ -46,7 +46,7 @@ pub async fn handle(
 async fn try_handle(
     command: &Command,
     sender: &mut dyn Sender,
-    user_context: &UserContext,
+    user_context: &mut UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!(
@@ -68,7 +68,12 @@ async fn try_handle(
         Command::GetClients(command) => {
             get_clients_handler::handle(command, sender, user_context, system).await
         }
-        Command::LoginUser(command) => login_user_handler::handle(command, sender, system).await,
+        Command::LoginUser(command) => {
+            login_user_handler::handle(command, sender, user_context, system).await
+        }
+        Command::LogoutUser(command) => {
+            logout_user_handler::handle(command, sender, user_context, system).await
+        }
         Command::SendMessages(command) => {
             send_messages_handler::handle(command, sender, user_context, system).await
         }

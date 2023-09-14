@@ -11,6 +11,18 @@ impl UserContext {
     pub fn new(user_id: u32, client_id: u32) -> Self {
         Self { user_id, client_id }
     }
+
+    pub fn from_client_id(client_id: u32) -> Self {
+        Self::new(0, client_id)
+    }
+
+    pub fn set_user_id(&mut self, user_id: u32) {
+        self.user_id = user_id;
+    }
+
+    pub fn clear_user_id(&mut self) {
+        self.user_id = 0;
+    }
 }
 
 impl Display for UserContext {

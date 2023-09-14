@@ -43,6 +43,7 @@ use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
 use crate::users::login_user::LoginUser;
+use crate::users::logout_user::LogoutUser;
 use crate::utils::crypto::Encryptor;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -447,6 +448,10 @@ impl IggyClient {
 impl UserClient for IggyClient {
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {
         self.client.read().await.login_user(command).await
+    }
+
+    async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
+        self.client.read().await.logout_user(command).await
     }
 }
 

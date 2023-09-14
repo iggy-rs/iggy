@@ -35,6 +35,7 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::users::login_user::LoginUser;
+use iggy::users::logout_user::LogoutUser;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -55,7 +56,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
-    // 0. Login user
+    // 0. Login and logout user
     client
         .login_user(&LoginUser {
             username: USERNAME.to_string(),
@@ -63,6 +64,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         })
         .await
         .unwrap();
+
+    client.logout_user(&LogoutUser {}).await.unwrap();
 
     // 1. Ping server
     let ping = Ping {};

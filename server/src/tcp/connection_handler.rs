@@ -20,13 +20,12 @@ pub(crate) async fn handle_connection(
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
     // TODO: Authenticate the user and map ID
-    let user_id = 1;
     let client_id = system
         .read()
         .await
         .add_client(address, Transport::Tcp)
         .await;
-    let user_context = UserContext::new(user_id, client_id);
+    let mut user_context = UserContext::from_client_id(client_id);
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
 
     loop {
@@ -49,7 +48,7 @@ pub(crate) async fn handle_connection(
             command,
             length
         );
-        let result = command::handle(&command, sender, &user_context, system.clone()).await;
+        let result = command::handle(&command, sender, &mut user_context, system.clone()).await;
         if result.is_err() {
             error!("Error when handling the TCP request: {:?}", result.err());
             continue;

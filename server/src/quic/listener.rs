@@ -45,13 +45,12 @@ async fn handle_connection(
     async {
         info!("Client has connected: {}", address);
         // TODO: Authenticate the user and map ID
-        let user_id = 1;
         let client_id = system
             .read()
             .await
             .add_client(&address, Transport::Quic)
             .await;
-        let user_context = UserContext::new(user_id, client_id);
+        let mut user_context = UserContext::from_client_id(client_id);
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {
@@ -108,7 +107,7 @@ async fn handle_connection(
                     send: stream.0,
                     recv: stream.1,
                 },
-                &user_context,
+                &mut user_context,
                 system.clone(),
             )
             .await;

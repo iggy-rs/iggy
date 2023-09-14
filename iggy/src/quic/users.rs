@@ -3,11 +3,16 @@ use crate::client::UserClient;
 use crate::error::Error;
 use crate::quic::client::QuicClient;
 use crate::users::login_user::LoginUser;
+use crate::users::logout_user::LogoutUser;
 use async_trait::async_trait;
 
 #[async_trait]
 impl UserClient for QuicClient {
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {
         binary::users::login_user(self, command).await
+    }
+
+    async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
+        binary::users::logout_user(self, command).await
     }
 }

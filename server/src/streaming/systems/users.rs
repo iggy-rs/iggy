@@ -41,4 +41,14 @@ impl System {
         info!("Logged in user: {username}.");
         Ok(user)
     }
+
+    pub async fn logout_user(&self, user_id: u32) -> Result<(), Error> {
+        if user_id == 0 {
+            return Err(Error::InvalidCredentials);
+        }
+        info!("Logging out user: {user_id}...");
+        // TODO: Implement user logout on the system level
+        info!("Logged out user: {user_id}.");
+        Ok(())
+    }
 }

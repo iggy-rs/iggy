@@ -1,5 +1,6 @@
-use crate::streaming::users::permissions::Permissions;
 use crate::streaming::utils::crypto;
+use iggy::models::permissions::Permissions;
+use iggy::models::user_status::UserStatus;
 use iggy::utils::timestamp;
 use serde::{Deserialize, Serialize};
 
@@ -10,24 +11,18 @@ const ROOT_PASSWORD: &str = "iggy";
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: u32,
-    pub status: Status,
+    pub status: UserStatus,
     pub username: String,
     pub password: String,
     pub created_at: u64,
     pub permissions: Option<Permissions>,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub enum Status {
-    Active,
-    Inactive,
-}
-
 impl Default for User {
     fn default() -> Self {
         Self {
             id: 1,
-            status: Status::Active,
+            status: UserStatus::Active,
             username: "user".to_string(),
             password: "secret".to_string(),
             created_at: timestamp::get(),
@@ -50,7 +45,7 @@ impl User {
             username: username.to_string(),
             password: crypto::hash_password(password),
             created_at: timestamp::get(),
-            status: Status::Active,
+            status: UserStatus::Active,
             permissions,
         }
     }
@@ -62,6 +57,10 @@ impl User {
             ROOT_PASSWORD,
             Some(Permissions::root()),
         )
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.status == UserStatus::Active
     }
 }
 
@@ -76,7 +75,7 @@ mod tests {
         assert_eq!(user.username, ROOT_USERNAME);
         assert_ne!(user.password, ROOT_PASSWORD);
         assert!(crypto::verify_password(ROOT_PASSWORD, &user.password));
-        assert_eq!(user.status, Status::Active);
+        assert_eq!(user.status, UserStatus::Active);
         assert!(user.created_at > 0);
     }
 }

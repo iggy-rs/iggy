@@ -4,6 +4,8 @@ pub mod consumer_offset_info;
 pub mod header;
 pub mod messages;
 pub mod partition;
+pub mod permissions;
 pub mod stats;
 pub mod stream;
 pub mod topic;
+pub mod user_status;

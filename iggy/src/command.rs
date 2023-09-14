@@ -27,6 +27,7 @@ use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
+use crate::users::create_user::CreateUser;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use bytes::BufMut;
@@ -43,10 +44,12 @@ pub const GET_CLIENT: &str = "client.get";
 pub const GET_CLIENT_CODE: u32 = 21;
 pub const GET_CLIENTS: &str = "client.list";
 pub const GET_CLIENTS_CODE: u32 = 22;
+pub const CREATE_USER: &str = "user.create";
+pub const CREATE_USER_CODE: u32 = 32;
 pub const LOGIN_USER: &str = "user.login";
-pub const LOGIN_USER_CODE: u32 = 32;
+pub const LOGIN_USER_CODE: u32 = 37;
 pub const LOGOUT_USER: &str = "user.logout";
-pub const LOGOUT_USER_CODE: u32 = 33;
+pub const LOGOUT_USER_CODE: u32 = 38;
 pub const POLL_MESSAGES: &str = "message.poll";
 pub const POLL_MESSAGES_CODE: u32 = 100;
 pub const SEND_MESSAGES: &str = "message.send";
@@ -99,6 +102,7 @@ pub enum Command {
     GetMe(GetMe),
     GetClient(GetClient),
     GetClients(GetClients),
+    CreateUser(CreateUser),
     LoginUser(LoginUser),
     LogoutUser(LogoutUser),
     SendMessages(SendMessages),
@@ -135,6 +139,7 @@ impl BytesSerializable for Command {
             Command::GetMe(payload) => as_bytes(GET_ME_CODE, &payload.as_bytes()),
             Command::GetClient(payload) => as_bytes(GET_CLIENT_CODE, &payload.as_bytes()),
             Command::GetClients(payload) => as_bytes(GET_CLIENTS_CODE, &payload.as_bytes()),
+            Command::CreateUser(payload) => as_bytes(CREATE_USER_CODE, &payload.as_bytes()),
             Command::LoginUser(payload) => as_bytes(LOGIN_USER_CODE, &payload.as_bytes()),
             Command::LogoutUser(payload) => as_bytes(LOGOUT_USER_CODE, &payload.as_bytes()),
             Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, &payload.as_bytes()),
@@ -191,6 +196,7 @@ impl BytesSerializable for Command {
             GET_ME_CODE => Ok(Command::GetMe(GetMe::from_bytes(payload)?)),
             GET_CLIENT_CODE => Ok(Command::GetClient(GetClient::from_bytes(payload)?)),
             GET_CLIENTS_CODE => Ok(Command::GetClients(GetClients::from_bytes(payload)?)),
+            CREATE_USER_CODE => Ok(Command::CreateUser(CreateUser::from_bytes(payload)?)),
             LOGIN_USER_CODE => Ok(Command::LoginUser(LoginUser::from_bytes(payload)?)),
             LOGOUT_USER_CODE => Ok(Command::LogoutUser(LogoutUser::from_bytes(payload)?)),
             SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
@@ -257,6 +263,7 @@ impl FromStr for Command {
             GET_ME => Ok(Command::GetMe(GetMe::from_str(payload)?)),
             GET_CLIENT => Ok(Command::GetClient(GetClient::from_str(payload)?)),
             GET_CLIENTS => Ok(Command::GetClients(GetClients::from_str(payload)?)),
+            CREATE_USER => Ok(Command::CreateUser(CreateUser::from_str(payload)?)),
             LOGIN_USER => Ok(Command::LoginUser(LoginUser::from_str(payload)?)),
             LOGOUT_USER => Ok(Command::LogoutUser(LogoutUser::from_str(payload)?)),
             SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
@@ -314,6 +321,7 @@ impl Display for Command {
             Command::GetMe(_) => write!(formatter, "{GET_ME}"),
             Command::GetClient(payload) => write!(formatter, "{GET_CLIENT}|{payload}"),
             Command::GetClients(_) => write!(formatter, "{GET_CLIENTS}"),
+            Command::CreateUser(payload) => write!(formatter, "{CREATE_USER}|{payload}"),
             Command::LoginUser(payload) => write!(formatter, "{LOGIN_USER}|{payload}"),
             Command::LogoutUser(_) => write!(formatter, "{LOGOUT_USER}"),
             Command::GetStream(payload) => write!(formatter, "{GET_STREAM}|{payload}"),
@@ -392,6 +400,11 @@ mod tests {
             &Command::GetClients(GetClients::default()),
             GET_CLIENTS_CODE,
             &GetClients::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::CreateUser(CreateUser::default()),
+            CREATE_USER_CODE,
+            &CreateUser::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::LoginUser(LoginUser::default()),
@@ -533,6 +546,11 @@ mod tests {
             &Command::GetClients(GetClients::default()),
             GET_CLIENTS,
             &GetClients::default(),
+        );
+        assert_read_from_string(
+            &Command::CreateUser(CreateUser::default()),
+            CREATE_USER,
+            &CreateUser::default(),
         );
         assert_read_from_string(
             &Command::LoginUser(LoginUser::default()),

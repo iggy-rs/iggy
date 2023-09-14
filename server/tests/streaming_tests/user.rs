@@ -1,9 +1,10 @@
 use crate::streaming_tests::common::test_setup::TestSetup;
-use iggy::utils::timestamp;
-use server::streaming::users::permissions::{
+use iggy::models::permissions::{
     GlobalPermissions, Permissions, StreamPermissions, TopicPermissions,
 };
-use server::streaming::users::user::{Status, User};
+use iggy::models::user_status::UserStatus;
+use iggy::utils::timestamp;
+use server::streaming::users::user::User;
 use std::collections::HashMap;
 
 #[tokio::test]
@@ -158,7 +159,7 @@ fn create_user(id: u32) -> User {
         username: format!("user{}", id),
         password: "secret".to_string(),
         created_at: timestamp::get(),
-        status: Status::Active,
+        status: UserStatus::Active,
         permissions: Some(Permissions {
             global: GlobalPermissions {
                 manage_servers: false,

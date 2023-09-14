@@ -1,5 +1,5 @@
-use crate::streaming::users::permissions::{GlobalPermissions, StreamPermissions};
 use crate::streaming::users::user::User;
+use iggy::models::permissions::{GlobalPermissions, StreamPermissions};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -21,41 +21,45 @@ impl Permissioner {
 
     pub fn init(&mut self, users: Vec<User>) {
         for user in users {
-            if user.permissions.is_none() {
-                continue;
+            self.init_permissions_for_user(user);
+        }
+    }
+
+    pub fn init_permissions_for_user(&mut self, user: User) {
+        if user.permissions.is_none() {
+            return;
+        }
+
+        let permissions = user.permissions.unwrap();
+        if permissions.global.poll_messages {
+            self.users_that_can_poll_messages_from_all_streams
+                .insert(user.id);
+        }
+
+        if permissions.global.send_messages {
+            self.users_that_can_send_messages_to_all_streams
+                .insert(user.id);
+        }
+
+        self.users_permissions.insert(user.id, permissions.global);
+        if permissions.streams.is_none() {
+            return;
+        }
+
+        let streams = permissions.streams.unwrap();
+        for (stream_id, stream) in streams {
+            if stream.poll_messages {
+                self.users_that_can_poll_messages_from_specific_streams
+                    .insert((user.id, stream_id));
             }
 
-            let permissions = user.permissions.unwrap();
-            if permissions.global.poll_messages {
-                self.users_that_can_poll_messages_from_all_streams
-                    .insert(user.id);
+            if stream.send_messages {
+                self.users_that_can_send_messages_to_specific_streams
+                    .insert((user.id, stream_id));
             }
 
-            if permissions.global.send_messages {
-                self.users_that_can_send_messages_to_all_streams
-                    .insert(user.id);
-            }
-
-            self.users_permissions.insert(user.id, permissions.global);
-            if permissions.streams.is_none() {
-                continue;
-            }
-
-            let streams = permissions.streams.unwrap();
-            for (stream_id, stream) in streams {
-                if stream.poll_messages {
-                    self.users_that_can_poll_messages_from_specific_streams
-                        .insert((user.id, stream_id));
-                }
-
-                if stream.send_messages {
-                    self.users_that_can_send_messages_to_specific_streams
-                        .insert((user.id, stream_id));
-                }
-
-                self.users_streams_permissions
-                    .insert((user.id, stream_id), stream);
-            }
+            self.users_streams_permissions
+                .insert((user.id, stream_id), stream);
         }
     }
 }

@@ -18,6 +18,7 @@ use iggy::error::Error;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::models::user_status::UserStatus;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::streams::create_stream::CreateStream;
@@ -34,6 +35,7 @@ use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
+use iggy::users::create_user::CreateUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 
@@ -56,7 +58,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
-    // 0. Login and logout user
+    // 0. Login and logout the default user, try creating the new user and logging in and out
     client
         .login_user(&LoginUser {
             username: USERNAME.to_string(),
@@ -66,6 +68,39 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
 
     client.logout_user(&LogoutUser {}).await.unwrap();
+
+    let test_user = "user";
+    let test_password = "secret";
+    client
+        .create_user(&CreateUser {
+            username: test_user.to_string(),
+            password: test_password.to_string(),
+            status: UserStatus::Active,
+            permissions: None,
+        })
+        .await
+        .unwrap();
+
+    client
+        .login_user(&LoginUser {
+            username: test_user.to_string(),
+            password: test_password.to_string(),
+        })
+        .await
+        .unwrap();
+
+    client.logout_user(&LogoutUser {}).await.unwrap();
+
+    let create_duplicated_user = client
+        .create_user(&CreateUser {
+            username: test_user.to_string(),
+            password: test_password.to_string(),
+            status: UserStatus::Active,
+            permissions: None,
+        })
+        .await;
+
+    assert!(create_duplicated_user.is_err());
 
     // 1. Ping server
     let ping = Ping {};

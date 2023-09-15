@@ -95,9 +95,12 @@ impl BytesSerializable for CreateUser {
         bytes.put_u8(self.password.len() as u8);
         bytes.extend(self.password.as_bytes());
         bytes.put_u8(self.status.as_code());
-        if self.permissions.is_some() {
+        if let Some(permissions) = &self.permissions {
             bytes.put_u8(1);
-            // TODO: Include permissions
+            let permissions = permissions.as_bytes();
+            #[allow(clippy::cast_possible_truncation)]
+            bytes.put_u32_le(permissions.len() as u32);
+            bytes.extend(permissions);
         } else {
             bytes.put_u8(0);
         }
@@ -115,30 +118,39 @@ impl BytesSerializable for CreateUser {
             return Err(Error::InvalidCommand);
         }
 
-        let password_length = bytes[1 + username_length as usize];
-        let password = from_utf8(
-            &bytes[2 + username_length as usize
-                ..2 + username_length as usize + password_length as usize],
-        )?
-        .to_string();
+        let mut position = 1 + username_length as usize;
+        let password_length = bytes[position];
+        position += 1;
+        let password =
+            from_utf8(&bytes[position..position + password_length as usize])?.to_string();
         if password.len() != password_length as usize {
             return Err(Error::InvalidCommand);
         }
 
-        let status =
-            UserStatus::from_code(bytes[2 + username_length as usize + password_length as usize])?;
-        let has_permissions = bytes[3 + username_length as usize + password_length as usize];
+        position += password_length as usize;
+        let status = UserStatus::from_code(bytes[position])?;
+        position += 1;
+        let has_permissions = bytes[position];
         if has_permissions > 1 {
             return Err(Error::InvalidCommand);
         }
 
-        // TODO: Include permissions
+        position += 1;
+        let permissions = if has_permissions == 1 {
+            let permissions_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+            position += 4;
+            Some(Permissions::from_bytes(
+                &bytes[position..position + permissions_length as usize],
+            )?)
+        } else {
+            None
+        };
 
         let command = CreateUser {
             username,
             password,
             status,
-            permissions: None,
+            permissions,
         };
         command.validate()?;
         Ok(command)
@@ -163,6 +175,7 @@ impl Display for CreateUser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::permissions::GlobalPermissions;
 
     #[test]
     fn should_be_serialized_as_bytes() {
@@ -170,28 +183,49 @@ mod tests {
             username: "user".to_string(),
             password: "secret".to_string(),
             status: UserStatus::Active,
-            permissions: None,
+            permissions: Some(Permissions {
+                global: GlobalPermissions {
+                    manage_servers: false,
+                    read_servers: true,
+                    manage_users: false,
+                    read_users: true,
+                    manage_streams: false,
+                    read_streams: true,
+                    manage_topics: false,
+                    read_topics: true,
+                    poll_messages: true,
+                    send_messages: true,
+                },
+                streams: None,
+            }),
         };
 
         let bytes = command.as_bytes();
         let username_length = bytes[0];
         let username = from_utf8(&bytes[1..1 + username_length as usize]).unwrap();
-        let password_length = bytes[1 + username_length as usize];
-        let password = from_utf8(
-            &bytes[2 + username_length as usize
-                ..2 + username_length as usize + password_length as usize],
-        )
-        .unwrap();
-        let status =
-            UserStatus::from_code(bytes[2 + username_length as usize + password_length as usize])
-                .unwrap();
+        let mut position = 1 + username_length as usize;
+        let password_length = bytes[position];
+        position += 1;
+        let password = from_utf8(&bytes[position..position + password_length as usize]).unwrap();
+        position += password_length as usize;
+        let status = UserStatus::from_code(bytes[position]).unwrap();
+        position += 1;
         let has_permissions = bytes[3 + username_length as usize + password_length as usize];
+        position += 1;
+
+        let permissions_length =
+            u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
+        position += 4;
+        let permissions =
+            Permissions::from_bytes(&bytes[position..position + permissions_length as usize])
+                .unwrap();
 
         assert!(!bytes.is_empty());
         assert_eq!(username, command.username);
         assert_eq!(password, command.password);
         assert_eq!(status, command.status);
-        assert_eq!(has_permissions, 0);
+        assert_eq!(has_permissions, 1);
+        assert_eq!(permissions, command.permissions.unwrap());
     }
 
     #[test]
@@ -199,7 +233,22 @@ mod tests {
         let username = "user";
         let password = "secret";
         let status = UserStatus::Active;
-        let has_permissions = 0u8;
+        let has_permissions = 1u8;
+        let permissions = Permissions {
+            global: GlobalPermissions {
+                manage_servers: false,
+                read_servers: true,
+                manage_users: false,
+                read_users: true,
+                manage_streams: false,
+                read_streams: true,
+                manage_topics: false,
+                read_topics: true,
+                poll_messages: true,
+                send_messages: true,
+            },
+            streams: None,
+        };
         let mut bytes = Vec::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(username.len() as u8);
@@ -209,6 +258,11 @@ mod tests {
         bytes.extend(password.as_bytes());
         bytes.put_u8(status.as_code());
         bytes.put_u8(has_permissions);
+        let permissions_bytes = permissions.as_bytes();
+        #[allow(clippy::cast_possible_truncation)]
+        bytes.put_u32_le(permissions_bytes.len() as u32);
+        bytes.extend(permissions_bytes);
+
         let command = CreateUser::from_bytes(&bytes);
         assert!(command.is_ok());
 
@@ -216,7 +270,8 @@ mod tests {
         assert_eq!(command.username, username);
         assert_eq!(command.password, password);
         assert_eq!(command.status, status);
-        assert!(command.permissions.is_none());
+        assert!(command.permissions.is_some());
+        assert_eq!(command.permissions.unwrap(), permissions);
     }
 
     #[test]

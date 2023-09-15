@@ -1,33 +1,29 @@
 use crate::binary::sender::Sender;
-use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user_context::UserContext;
 use anyhow::Result;
-use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::Error;
+use iggy::users::create_user::CreateUser;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::trace;
 
 pub async fn handle(
-    command: &StoreConsumerOffset,
+    command: &CreateUser,
     sender: &mut dyn Sender,
-    user_context: &UserContext,
+    user_context: &mut UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{command}");
-    let consumer = PollingConsumer::from_consumer(
-        &command.consumer,
-        user_context.client_id,
-        command.partition_id,
-    );
     let system = system.read().await;
+    system.permissioner.create_user(user_context.user_id)?;
     system
-        .get_stream(&command.stream_id)?
-        .get_topic(&command.topic_id)?
-        .store_consumer_offset(consumer, command.offset)
+        .create_user(
+            &command.username,
+            &command.password,
+            command.permissions.clone(),
+        )
         .await?;
-
     sender.send_empty_ok_response().await?;
     Ok(())
 }

@@ -78,6 +78,12 @@ pub enum Error {
     InvalidUsername,
     #[error("Invalid password")]
     InvalidPassword,
+    #[error("Invalid user status")]
+    InvalidUserStatus,
+    #[error("User already exists")]
+    UserAlreadyExists,
+    #[error("User inactive")]
+    UserInactive,
     #[error("Cannot create base directory")]
     CannotCreateBaseDirectory,
     #[error("Cannot create streams directory")]
@@ -282,6 +288,9 @@ impl Error {
             Error::InvalidCredentials => 42,
             Error::InvalidUsername => 43,
             Error::InvalidPassword => 44,
+            Error::InvalidUserStatus => 45,
+            Error::UserAlreadyExists => 46,
+            Error::UserInactive => 47,
             Error::NotConnected => 51,
             Error::RequestError(_) => 52,
             Error::InvalidEncryptionKey => 60,
@@ -408,6 +417,9 @@ impl Error {
             42 => "invalid_credentials",
             43 => "invalid_username",
             44 => "invalid_password",
+            45 => "invalid_user_status",
+            46 => "user_already_exists",
+            47 => "user_inactive",
             51 => "not_connected",
             52 => "request_error",
             60 => "invalid_encryption_key",
@@ -533,6 +545,9 @@ impl Error {
             Error::InvalidCredentials => "invalid_credentials",
             Error::InvalidUsername => "invalid_username",
             Error::InvalidPassword => "invalid_password",
+            Error::InvalidUserStatus => "invalid_user_status",
+            Error::UserAlreadyExists => "user_already_exists",
+            Error::UserInactive => "user_inactive",
             Error::InvalidEncryptionKey => "invalid_encryption_key",
             Error::CannotEncryptData => "cannot_encrypt_data",
             Error::CannotDecryptData => "cannot_decrypt_data",

@@ -4,3 +4,4 @@ mod partitions;
 mod streams;
 mod system;
 mod topics;
+mod users;

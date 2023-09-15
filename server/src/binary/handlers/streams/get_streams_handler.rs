@@ -15,7 +15,7 @@ pub async fn handle(
     user_context: &UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("{}", command);
+    trace!("{command}");
     let system = system.read().await;
     system.permissioner.get_streams(user_context.user_id)?;
     let streams = system.get_streams();

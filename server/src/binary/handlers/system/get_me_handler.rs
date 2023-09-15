@@ -14,7 +14,7 @@ pub async fn handle(
     user_context: &UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("{}", command);
+    trace!("{command}");
     let bytes;
     {
         let system = system.read().await;

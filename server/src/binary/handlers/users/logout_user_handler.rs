@@ -14,7 +14,7 @@ pub async fn handle(
     user_context: &mut UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("{}", command);
+    trace!("{command}");
     let user_id = user_context.user_id;
     let system = system.read().await;
     system.logout_user(user_id).await?;

@@ -224,7 +224,7 @@ mod tests {
         let username = "user";
         let password = "secret";
         let status = UserStatus::Active;
-        let input = format!("{}|{}|{}", username, password, status);
+        let input = format!("{username}|{password}|{status}");
         let command = CreateUser::from_str(&input);
         assert!(command.is_ok());
 

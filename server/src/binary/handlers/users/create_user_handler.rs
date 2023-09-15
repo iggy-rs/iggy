@@ -14,7 +14,7 @@ pub async fn handle(
     user_context: &mut UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("{}", command);
+    trace!("{command}");
     let system = system.read().await;
     system.permissioner.create_user(user_context.user_id)?;
     system

@@ -15,7 +15,7 @@ pub async fn handle(
     user_context: &UserContext,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("{}", command);
+    trace!("{command}");
     let consumer = PollingConsumer::from_consumer(
         &command.consumer,
         user_context.client_id,

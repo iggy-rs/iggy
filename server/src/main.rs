@@ -31,6 +31,7 @@ use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), ServerError> {
+    let startup_timestamp = Instant::now();
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
@@ -82,6 +83,11 @@ async fn main() -> Result<(), ServerError> {
         tcp_server::start(config.tcp, system.clone());
     }
 
+    let elapsed_time = startup_timestamp.elapsed();
+    info!(
+        "Iggy server has started - overall startup took {} ms.",
+        elapsed_time.as_millis()
+    );
     #[cfg(unix)]
     tokio::select! {
         _ = ctrl_c.recv() => {
@@ -102,12 +108,12 @@ async fn main() -> Result<(), ServerError> {
         }
     }
 
-    let start_time = Instant::now();
+    let shutdown_timestamp = Instant::now();
     let mut system = system.write().await;
     let persister = Arc::new(FileWithSyncPersister);
     let storage = Arc::new(FileSegmentStorage::new(persister));
     system.shutdown(storage).await?;
-    let elapsed_time = start_time.elapsed();
+    let elapsed_time = shutdown_timestamp.elapsed();
 
     info!(
         "Iggy server has shutdown successfully. Shutdown took {} ms.",

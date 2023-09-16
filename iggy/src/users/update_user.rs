@@ -150,14 +150,11 @@ impl BytesSerializable for UpdateUser {
 
 impl Display for UpdateUser {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let username = match &self.username {
-            Some(username) => username,
-            None => "",
-        };
-        let status = match &self.status {
-            Some(status) => status.to_string(),
-            None => "".to_string(),
-        };
+        let username = self.username.as_deref().unwrap_or("");
+        let status = self
+            .status
+            .as_ref()
+            .map_or_else(String::new, |s| s.to_string());
         write!(f, "{}|{username}|{status}", self.user_id)
     }
 }

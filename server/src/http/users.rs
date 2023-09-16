@@ -1,10 +1,11 @@
 use crate::http::auth;
 use crate::http::error::CustomError;
 use crate::streaming::systems::system::System;
-use axum::extract::State;
+use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::post;
+use axum::routing::{delete, post};
 use axum::{Json, Router};
+use iggy::identifier::Identifier;
 use iggy::users::create_user::CreateUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
@@ -15,6 +16,7 @@ use tokio::sync::RwLock;
 pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", post(create_user))
+        .route("/:user_id", delete(delete_user))
         .route("/login", post(login_user))
         .route("/logout", post(logout_user))
         .with_state(system)
@@ -35,6 +37,18 @@ async fn create_user(
             command.permissions.clone(),
         )
         .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn delete_user(
+    State(system): State<Arc<RwLock<System>>>,
+    Path(user_id): Path<String>,
+) -> Result<StatusCode, CustomError> {
+    let user_id = Identifier::from_str_value(&user_id)?;
+    let authenticated_user_id = auth::resolve_user_id();
+    let mut system = system.write().await;
+    system.permissioner.delete_user(authenticated_user_id)?;
+    system.delete_user(&user_id).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

@@ -18,6 +18,7 @@ pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError>
         Command::GetClient(payload) => system::get_client(&payload, client).await,
         Command::GetClients(payload) => system::get_clients(&payload, client).await,
         Command::CreateUser(payload) => users::create_user(&payload, client).await,
+        Command::DeleteUser(payload) => users::delete_user(&payload, client).await,
         Command::LoginUser(payload) => users::login_user(&payload, client).await,
         Command::LogoutUser(payload) => users::logout_user(&payload, client).await,
         Command::SendMessages(mut payload) => messages::send_messages(&mut payload, client).await,

@@ -2,6 +2,7 @@ use crate::client::UserClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
 use crate::users::create_user::CreateUser;
+use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use async_trait::async_trait;
@@ -12,6 +13,11 @@ const PATH: &str = "/users";
 impl UserClient for HttpClient {
     async fn create_user(&self, command: &CreateUser) -> Result<(), Error> {
         self.post(PATH, &command).await?;
+        Ok(())
+    }
+
+    async fn delete_user(&self, command: &DeleteUser) -> Result<(), Error> {
+        self.delete(&format!("{PATH}/{}", command.user_id)).await?;
         Ok(())
     }
 

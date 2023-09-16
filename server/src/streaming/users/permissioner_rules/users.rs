@@ -6,6 +6,10 @@ impl Permissioner {
         self.manager_users(user_id)
     }
 
+    pub fn delete_user(&self, user_id: u32) -> Result<(), Error> {
+        self.manager_users(user_id)
+    }
+
     fn manager_users(&self, user_id: u32) -> Result<(), Error> {
         if !self.enabled {
             return Ok(());

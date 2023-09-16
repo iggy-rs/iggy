@@ -27,6 +27,7 @@ use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
+use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
@@ -55,6 +56,8 @@ pub const UPDATE_USER: &str = "user.update";
 pub const UPDATE_USER_CODE: u32 = 34;
 pub const UPDATE_PERMISSIONS: &str = "user.permissions";
 pub const UPDATE_PERMISSIONS_CODE: u32 = 35;
+pub const CHANGE_PASSWORD: &str = "user.password";
+pub const CHANGE_PASSWORD_CODE: u32 = 36;
 pub const LOGIN_USER: &str = "user.login";
 pub const LOGIN_USER_CODE: u32 = 37;
 pub const LOGOUT_USER: &str = "user.logout";
@@ -115,6 +118,7 @@ pub enum Command {
     DeleteUser(DeleteUser),
     UpdateUser(UpdateUser),
     UpdatePermissions(UpdatePermissions),
+    ChangePassword(ChangePassword),
     LoginUser(LoginUser),
     LogoutUser(LogoutUser),
     SendMessages(SendMessages),
@@ -157,6 +161,7 @@ impl BytesSerializable for Command {
             Command::UpdatePermissions(payload) => {
                 as_bytes(UPDATE_PERMISSIONS_CODE, &payload.as_bytes())
             }
+            Command::ChangePassword(payload) => as_bytes(CHANGE_PASSWORD_CODE, &payload.as_bytes()),
             Command::LoginUser(payload) => as_bytes(LOGIN_USER_CODE, &payload.as_bytes()),
             Command::LogoutUser(payload) => as_bytes(LOGOUT_USER_CODE, &payload.as_bytes()),
             Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, &payload.as_bytes()),
@@ -219,6 +224,9 @@ impl BytesSerializable for Command {
             UPDATE_PERMISSIONS_CODE => Ok(Command::UpdatePermissions(
                 UpdatePermissions::from_bytes(payload)?,
             )),
+            CHANGE_PASSWORD_CODE => Ok(Command::ChangePassword(ChangePassword::from_bytes(
+                payload,
+            )?)),
             LOGIN_USER_CODE => Ok(Command::LoginUser(LoginUser::from_bytes(payload)?)),
             LOGOUT_USER_CODE => Ok(Command::LogoutUser(LogoutUser::from_bytes(payload)?)),
             SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
@@ -291,6 +299,7 @@ impl FromStr for Command {
             UPDATE_PERMISSIONS => Ok(Command::UpdatePermissions(UpdatePermissions::from_str(
                 payload,
             )?)),
+            CHANGE_PASSWORD => Ok(Command::ChangePassword(ChangePassword::from_str(payload)?)),
             LOGIN_USER => Ok(Command::LoginUser(LoginUser::from_str(payload)?)),
             LOGOUT_USER => Ok(Command::LogoutUser(LogoutUser::from_str(payload)?)),
             SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
@@ -353,6 +362,9 @@ impl Display for Command {
             Command::UpdateUser(payload) => write!(formatter, "{UPDATE_USER}|{payload}"),
             Command::UpdatePermissions(payload) => {
                 write!(formatter, "{UPDATE_PERMISSIONS}|{payload}")
+            }
+            Command::ChangePassword(payload) => {
+                write!(formatter, "{CHANGE_PASSWORD}|{payload}")
             }
             Command::LoginUser(payload) => write!(formatter, "{LOGIN_USER}|{payload}"),
             Command::LogoutUser(_) => write!(formatter, "{LOGOUT_USER}"),
@@ -452,6 +464,11 @@ mod tests {
             &Command::UpdatePermissions(UpdatePermissions::default()),
             UPDATE_PERMISSIONS_CODE,
             &UpdatePermissions::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::ChangePassword(ChangePassword::default()),
+            CHANGE_PASSWORD_CODE,
+            &ChangePassword::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::LoginUser(LoginUser::default()),
@@ -613,6 +630,11 @@ mod tests {
             &Command::UpdatePermissions(UpdatePermissions::default()),
             UPDATE_PERMISSIONS,
             &UpdatePermissions::default(),
+        );
+        assert_read_from_string(
+            &Command::ChangePassword(ChangePassword::default()),
+            CHANGE_PASSWORD,
+            &ChangePassword::default(),
         );
         assert_read_from_string(
             &Command::LoginUser(LoginUser::default()),

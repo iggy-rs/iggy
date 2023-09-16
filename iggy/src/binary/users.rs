@@ -1,10 +1,11 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::{
-    CREATE_USER_CODE, DELETE_USER_CODE, LOGIN_USER_CODE, LOGOUT_USER_CODE, UPDATE_PERMISSIONS_CODE,
-    UPDATE_USER_CODE,
+    CHANGE_PASSWORD_CODE, CREATE_USER_CODE, DELETE_USER_CODE, LOGIN_USER_CODE, LOGOUT_USER_CODE,
+    UPDATE_PERMISSIONS_CODE, UPDATE_USER_CODE,
 };
 use crate::error::Error;
+use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
@@ -39,6 +40,16 @@ pub async fn update_permissions(
 ) -> Result<(), Error> {
     client
         .send_with_response(UPDATE_PERMISSIONS_CODE, &command.as_bytes())
+        .await?;
+    Ok(())
+}
+
+pub async fn change_password(
+    client: &dyn BinaryClient,
+    command: &ChangePassword,
+) -> Result<(), Error> {
+    client
+        .send_with_response(CHANGE_PASSWORD_CODE, &command.as_bytes())
         .await?;
     Ok(())
 }

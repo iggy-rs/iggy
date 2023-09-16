@@ -1,5 +1,6 @@
 use iggy::client::Client;
 use iggy::client_error::ClientError;
+use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::login_user::LoginUser;
@@ -27,6 +28,14 @@ pub async fn update_permissions(
     client: &dyn Client,
 ) -> Result<(), ClientError> {
     client.update_permissions(command).await?;
+    Ok(())
+}
+
+pub async fn change_password(
+    command: &ChangePassword,
+    client: &dyn Client,
+) -> Result<(), ClientError> {
+    client.change_password(command).await?;
     Ok(())
 }
 

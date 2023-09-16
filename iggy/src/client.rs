@@ -33,6 +33,7 @@ use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
+use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
@@ -75,6 +76,7 @@ pub trait UserClient {
     async fn delete_user(&self, command: &DeleteUser) -> Result<(), Error>;
     async fn update_user(&self, command: &UpdateUser) -> Result<(), Error>;
     async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), Error>;
+    async fn change_password(&self, command: &ChangePassword) -> Result<(), Error>;
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error>;
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error>;
 }

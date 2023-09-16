@@ -36,6 +36,7 @@ use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
+use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::login_user::LoginUser;
@@ -152,6 +153,27 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         })
         .await
         .unwrap();
+
+    let updated_test_password = "topsecret";
+
+    client
+        .change_password(&ChangePassword {
+            user_id: Identifier::named(updated_test_user).unwrap(),
+            current_password: test_password.to_string(),
+            new_password: updated_test_password.to_string(),
+        })
+        .await
+        .unwrap();
+
+    let change_password = client
+        .change_password(&ChangePassword {
+            user_id: Identifier::named(updated_test_user).unwrap(),
+            current_password: test_password.to_string(),
+            new_password: updated_test_password.to_string(),
+        })
+        .await;
+
+    assert!(change_password.is_err());
 
     client
         .delete_user(&DeleteUser {

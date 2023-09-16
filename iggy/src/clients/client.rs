@@ -42,6 +42,7 @@ use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
+use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
@@ -464,6 +465,10 @@ impl UserClient for IggyClient {
 
     async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), Error> {
         self.client.read().await.update_permissions(command).await
+    }
+
+    async fn change_password(&self, command: &ChangePassword) -> Result<(), Error> {
+        self.client.read().await.change_password(command).await
     }
 
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {

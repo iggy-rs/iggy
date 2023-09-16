@@ -2,6 +2,7 @@ use crate::binary;
 use crate::client::UserClient;
 use crate::error::Error;
 use crate::tcp::client::TcpClient;
+use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
@@ -26,6 +27,10 @@ impl UserClient for TcpClient {
 
     async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), Error> {
         binary::users::update_permissions(self, command).await
+    }
+
+    async fn change_password(&self, command: &ChangePassword) -> Result<(), Error> {
+        binary::users::change_password(self, command).await
     }
 
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {

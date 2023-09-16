@@ -21,6 +21,7 @@ pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError>
         Command::DeleteUser(payload) => users::delete_user(&payload, client).await,
         Command::UpdateUser(payload) => users::update_user(&payload, client).await,
         Command::UpdatePermissions(payload) => users::update_permissions(&payload, client).await,
+        Command::ChangePassword(payload) => users::change_password(&payload, client).await,
         Command::LoginUser(payload) => users::login_user(&payload, client).await,
         Command::LogoutUser(payload) => users::logout_user(&payload, client).await,
         Command::SendMessages(mut payload) => messages::send_messages(&mut payload, client).await,

@@ -1,3 +1,4 @@
+pub mod change_password_handler;
 pub mod create_user_handler;
 pub mod delete_user_handler;
 pub mod login_user_handler;

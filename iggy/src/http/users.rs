@@ -1,6 +1,7 @@
 use crate::client::UserClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
+use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
@@ -31,6 +32,12 @@ impl UserClient for HttpClient {
 
     async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), Error> {
         self.put(&format!("{PATH}/{}/permissions", command.user_id), &command)
+            .await?;
+        Ok(())
+    }
+
+    async fn change_password(&self, command: &ChangePassword) -> Result<(), Error> {
+        self.put(&format!("{PATH}/{}/password", command.user_id), &command)
             .await?;
         Ok(())
     }

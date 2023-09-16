@@ -6,6 +6,7 @@ use axum::http::StatusCode;
 use axum::routing::{post, put};
 use axum::{Json, Router};
 use iggy::identifier::Identifier;
+use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
@@ -20,6 +21,7 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
         .route("/", post(create_user))
         .route("/:user_id", put(update_user).delete(delete_user))
         .route("/:user_id/permissions", put(update_permissions))
+        .route("/:user_id/password", put(change_password))
         .route("/login", post(login_user))
         .route("/logout", post(logout_user))
         .with_state(system)
@@ -73,6 +75,26 @@ async fn update_permissions(
         .update_permissions(authenticated_user_id)?;
     system
         .update_permissions(&command.user_id, command.permissions)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn change_password(
+    State(system): State<Arc<RwLock<System>>>,
+    Path(user_id): Path<String>,
+    Json(mut command): Json<ChangePassword>,
+) -> Result<StatusCode, CustomError> {
+    command.user_id = Identifier::from_str_value(&user_id)?;
+    command.validate()?;
+    let authenticated_user_id = auth::resolve_user_id();
+    let system = system.read().await;
+    system.permissioner.change_password(authenticated_user_id)?;
+    system
+        .change_password(
+            &command.user_id,
+            &command.current_password,
+            &command.new_password,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

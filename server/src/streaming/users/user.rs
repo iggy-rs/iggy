@@ -59,6 +59,10 @@ impl User {
         )
     }
 
+    pub fn is_root(&self) -> bool {
+        self.id == ROOT_USER_ID
+    }
+
     pub fn is_active(&self) -> bool {
         self.status == UserStatus::Active
     }

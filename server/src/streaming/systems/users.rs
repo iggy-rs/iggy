@@ -2,6 +2,7 @@ use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
 use crate::streaming::utils::crypto;
 use iggy::error::Error;
+use iggy::identifier::{IdKind, Identifier};
 use iggy::models::permissions::Permissions;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::log::error;
@@ -48,6 +49,34 @@ impl System {
         let user = User::new(user_id, username, password, permissions);
         self.storage.user.save(&user).await?;
         info!("Created user: {username} with ID: {user_id}.");
+        Ok(user)
+    }
+
+    pub async fn delete_user(&mut self, user_id: &Identifier) -> Result<User, Error> {
+        let user = match user_id.kind {
+            IdKind::Numeric => {
+                self.storage
+                    .user
+                    .load_by_id(user_id.get_u32_value()?)
+                    .await?
+            }
+            IdKind::String => {
+                self.storage
+                    .user
+                    .load_by_username(&user_id.get_string_value()?)
+                    .await?
+            }
+        };
+
+        if user.is_root() {
+            error!("Cannot delete the root user.");
+            return Err(Error::CannotDeleteUser(user.id));
+        }
+
+        info!("Deleting user: {} with ID: {user_id}...", user.username);
+        self.storage.user.delete(&user).await?;
+        self.permissioner.delete_permissions_for_user(user.id);
+        info!("Deleted user: {} with ID: {user_id}.", user.username);
         Ok(user)
     }
 

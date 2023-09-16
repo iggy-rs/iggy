@@ -33,6 +33,7 @@ pub trait SystemInfoStorage: Storage<SystemInfo> {}
 
 #[async_trait]
 pub trait UserStorage: Storage<User> {
+    async fn load_by_id(&self, id: u32) -> Result<User, Error>;
     async fn load_by_username(&self, username: &str) -> Result<User, Error>;
     async fn load_all(&self) -> Result<Vec<User>, Error>;
 }
@@ -217,6 +218,10 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl UserStorage for TestUserStorage {
+        async fn load_by_id(&self, _id: u32) -> Result<User, Error> {
+            Ok(User::default())
+        }
+
         async fn load_by_username(&self, _username: &str) -> Result<User, Error> {
             Ok(User::default())
         }

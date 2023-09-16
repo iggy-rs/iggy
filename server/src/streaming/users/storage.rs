@@ -24,6 +24,12 @@ unsafe impl Sync for FileUserStorage {}
 
 #[async_trait]
 impl UserStorage for FileUserStorage {
+    async fn load_by_id(&self, id: u32) -> Result<User, Error> {
+        let mut user = User::empty(id);
+        self.load(&mut user).await?;
+        Ok(user)
+    }
+
     async fn load_by_username(&self, username: &str) -> Result<User, Error> {
         let user_id_key = get_user_id_key(username);
         let user_id = self.db.get(&user_id_key);
@@ -127,6 +133,10 @@ impl Storage<User> for FileUserStorage {
     async fn delete(&self, user: &User) -> Result<(), Error> {
         info!("Deleting user with ID: {}...", user.id);
         let key = get_key(user.id);
+        if self.db.remove(&key).is_err() {
+            return Err(Error::CannotDeleteResource(key));
+        }
+        let key = get_user_id_key(&user.username);
         if self.db.remove(&key).is_err() {
             return Err(Error::CannotDeleteResource(key));
         }

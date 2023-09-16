@@ -62,4 +62,18 @@ impl Permissioner {
                 .insert((user.id, stream_id), stream);
         }
     }
+
+    pub fn delete_permissions_for_user(&mut self, user_id: u32) {
+        self.users_permissions.remove(&user_id);
+        self.users_that_can_poll_messages_from_all_streams
+            .remove(&user_id);
+        self.users_that_can_send_messages_to_all_streams
+            .remove(&user_id);
+        self.users_streams_permissions
+            .retain(|(id, _), _| *id != user_id);
+        self.users_that_can_poll_messages_from_specific_streams
+            .retain(|(id, _)| *id != user_id);
+        self.users_that_can_send_messages_to_specific_streams
+            .retain(|(id, _)| *id != user_id);
+    }
 }

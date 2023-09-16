@@ -84,6 +84,8 @@ pub enum Error {
     UserAlreadyExists,
     #[error("User inactive")]
     UserInactive,
+    #[error("Cannot delete user with ID: {0}")]
+    CannotDeleteUser(u32),
     #[error("Cannot create base directory")]
     CannotCreateBaseDirectory,
     #[error("Cannot create streams directory")]
@@ -291,6 +293,7 @@ impl Error {
             Error::InvalidUserStatus => 45,
             Error::UserAlreadyExists => 46,
             Error::UserInactive => 47,
+            Error::CannotDeleteUser(_) => 48,
             Error::NotConnected => 51,
             Error::RequestError(_) => 52,
             Error::InvalidEncryptionKey => 60,
@@ -420,6 +423,7 @@ impl Error {
             45 => "invalid_user_status",
             46 => "user_already_exists",
             47 => "user_inactive",
+            48 => "cannot_delete_user",
             51 => "not_connected",
             52 => "request_error",
             60 => "invalid_encryption_key",
@@ -547,6 +551,7 @@ impl Error {
             Error::InvalidPassword => "invalid_password",
             Error::InvalidUserStatus => "invalid_user_status",
             Error::UserAlreadyExists => "user_already_exists",
+            Error::CannotDeleteUser(_) => "cannot_delete_user",
             Error::UserInactive => "user_inactive",
             Error::InvalidEncryptionKey => "invalid_encryption_key",
             Error::CannotEncryptData => "cannot_encrypt_data",

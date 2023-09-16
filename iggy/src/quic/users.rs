@@ -6,6 +6,7 @@ use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
+use crate::users::update_user::UpdateUser;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -16,6 +17,10 @@ impl UserClient for QuicClient {
 
     async fn delete_user(&self, command: &DeleteUser) -> Result<(), Error> {
         binary::users::delete_user(self, command).await
+    }
+
+    async fn update_user(&self, command: &UpdateUser) -> Result<(), Error> {
+        binary::users::update_user(self, command).await
     }
 
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {

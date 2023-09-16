@@ -31,6 +31,7 @@ use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
+use crate::users::update_user::UpdateUser;
 use bytes::BufMut;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
@@ -49,6 +50,8 @@ pub const CREATE_USER: &str = "user.create";
 pub const CREATE_USER_CODE: u32 = 32;
 pub const DELETE_USER: &str = "user.delete";
 pub const DELETE_USER_CODE: u32 = 33;
+pub const UPDATE_USER: &str = "user.update";
+pub const UPDATE_USER_CODE: u32 = 34;
 pub const LOGIN_USER: &str = "user.login";
 pub const LOGIN_USER_CODE: u32 = 37;
 pub const LOGOUT_USER: &str = "user.logout";
@@ -107,6 +110,7 @@ pub enum Command {
     GetClients(GetClients),
     CreateUser(CreateUser),
     DeleteUser(DeleteUser),
+    UpdateUser(UpdateUser),
     LoginUser(LoginUser),
     LogoutUser(LogoutUser),
     SendMessages(SendMessages),
@@ -145,6 +149,7 @@ impl BytesSerializable for Command {
             Command::GetClients(payload) => as_bytes(GET_CLIENTS_CODE, &payload.as_bytes()),
             Command::CreateUser(payload) => as_bytes(CREATE_USER_CODE, &payload.as_bytes()),
             Command::DeleteUser(payload) => as_bytes(DELETE_USER_CODE, &payload.as_bytes()),
+            Command::UpdateUser(payload) => as_bytes(UPDATE_USER_CODE, &payload.as_bytes()),
             Command::LoginUser(payload) => as_bytes(LOGIN_USER_CODE, &payload.as_bytes()),
             Command::LogoutUser(payload) => as_bytes(LOGOUT_USER_CODE, &payload.as_bytes()),
             Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, &payload.as_bytes()),
@@ -203,6 +208,7 @@ impl BytesSerializable for Command {
             GET_CLIENTS_CODE => Ok(Command::GetClients(GetClients::from_bytes(payload)?)),
             CREATE_USER_CODE => Ok(Command::CreateUser(CreateUser::from_bytes(payload)?)),
             DELETE_USER_CODE => Ok(Command::DeleteUser(DeleteUser::from_bytes(payload)?)),
+            UPDATE_USER_CODE => Ok(Command::UpdateUser(UpdateUser::from_bytes(payload)?)),
             LOGIN_USER_CODE => Ok(Command::LoginUser(LoginUser::from_bytes(payload)?)),
             LOGOUT_USER_CODE => Ok(Command::LogoutUser(LogoutUser::from_bytes(payload)?)),
             SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
@@ -271,6 +277,7 @@ impl FromStr for Command {
             GET_CLIENTS => Ok(Command::GetClients(GetClients::from_str(payload)?)),
             CREATE_USER => Ok(Command::CreateUser(CreateUser::from_str(payload)?)),
             DELETE_USER => Ok(Command::DeleteUser(DeleteUser::from_str(payload)?)),
+            UPDATE_USER => Ok(Command::UpdateUser(UpdateUser::from_str(payload)?)),
             LOGIN_USER => Ok(Command::LoginUser(LoginUser::from_str(payload)?)),
             LOGOUT_USER => Ok(Command::LogoutUser(LogoutUser::from_str(payload)?)),
             SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
@@ -330,6 +337,7 @@ impl Display for Command {
             Command::GetClients(_) => write!(formatter, "{GET_CLIENTS}"),
             Command::CreateUser(payload) => write!(formatter, "{CREATE_USER}|{payload}"),
             Command::DeleteUser(payload) => write!(formatter, "{DELETE_USER}|{payload}"),
+            Command::UpdateUser(payload) => write!(formatter, "{UPDATE_USER}|{payload}"),
             Command::LoginUser(payload) => write!(formatter, "{LOGIN_USER}|{payload}"),
             Command::LogoutUser(_) => write!(formatter, "{LOGOUT_USER}"),
             Command::GetStream(payload) => write!(formatter, "{GET_STREAM}|{payload}"),
@@ -418,6 +426,11 @@ mod tests {
             &Command::DeleteUser(DeleteUser::default()),
             DELETE_USER_CODE,
             &DeleteUser::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::UpdateUser(UpdateUser::default()),
+            UPDATE_USER_CODE,
+            &UpdateUser::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::LoginUser(LoginUser::default()),
@@ -569,6 +582,11 @@ mod tests {
             &Command::DeleteUser(DeleteUser::default()),
             DELETE_USER,
             &DeleteUser::default(),
+        );
+        assert_read_from_string(
+            &Command::UpdateUser(UpdateUser::default()),
+            UPDATE_USER,
+            &UpdateUser::default(),
         );
         assert_read_from_string(
             &Command::LoginUser(LoginUser::default()),

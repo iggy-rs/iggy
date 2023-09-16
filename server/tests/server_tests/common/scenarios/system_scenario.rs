@@ -40,6 +40,7 @@ use iggy::users::create_user::CreateUser;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
+use iggy::users::update_user::UpdateUser;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -118,9 +119,20 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(create_duplicated_user.is_err());
 
+    let updated_test_user = "user2";
+
+    client
+        .update_user(&UpdateUser {
+            user_id: Identifier::named(test_user).unwrap(),
+            username: Some(updated_test_user.to_string()),
+            status: Some(UserStatus::Inactive),
+        })
+        .await
+        .unwrap();
+
     client
         .delete_user(&DeleteUser {
-            user_id: Identifier::named(test_user).unwrap(),
+            user_id: Identifier::named(updated_test_user).unwrap(),
         })
         .await
         .unwrap();

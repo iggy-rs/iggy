@@ -37,6 +37,7 @@ use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
+use crate::users::update_user::UpdateUser;
 use async_trait::async_trait;
 use std::fmt::Debug;
 
@@ -71,6 +72,7 @@ pub trait SystemClient {
 pub trait UserClient {
     async fn create_user(&self, command: &CreateUser) -> Result<(), Error>;
     async fn delete_user(&self, command: &DeleteUser) -> Result<(), Error>;
+    async fn update_user(&self, command: &UpdateUser) -> Result<(), Error>;
     async fn login_user(&self, command: &LoginUser) -> Result<(), Error>;
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error>;
 }

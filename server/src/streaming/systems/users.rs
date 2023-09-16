@@ -4,6 +4,7 @@ use crate::streaming::utils::crypto;
 use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::models::permissions::Permissions;
+use iggy::models::user_status::UserStatus;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::log::error;
 use tracing::{info, warn};
@@ -53,7 +54,48 @@ impl System {
     }
 
     pub async fn delete_user(&mut self, user_id: &Identifier) -> Result<User, Error> {
-        let user = match user_id.kind {
+        let user = self.get_user(user_id).await?;
+        if user.is_root() {
+            error!("Cannot delete the root user.");
+            return Err(Error::CannotDeleteUser(user.id));
+        }
+
+        info!("Deleting user: {} with ID: {user_id}...", user.username);
+        self.storage.user.delete(&user).await?;
+        self.permissioner.delete_permissions_for_user(user.id);
+        info!("Deleted user: {} with ID: {user_id}.", user.username);
+        Ok(user)
+    }
+
+    pub async fn update_user(
+        &self,
+        user_id: &Identifier,
+        username: Option<String>,
+        status: Option<UserStatus>,
+    ) -> Result<User, Error> {
+        let mut user = self.get_user(user_id).await?;
+        if let Some(username) = username {
+            let existing_user = self.storage.user.load_by_username(&username).await;
+            if existing_user.is_ok() && existing_user.unwrap().id != user.id {
+                error!("User: {username} already exists.");
+                return Err(Error::UserAlreadyExists);
+            }
+
+            user.username = username;
+        }
+
+        if let Some(status) = status {
+            user.status = status;
+        }
+
+        info!("Updating user: {} with ID: {user_id}...", user.username);
+        self.storage.user.save(&user).await?;
+        info!("Updated user: {} with ID: {user_id}.", user.username);
+        Ok(user)
+    }
+
+    pub async fn get_user(&self, user_id: &Identifier) -> Result<User, Error> {
+        Ok(match user_id.kind {
             IdKind::Numeric => {
                 self.storage
                     .user
@@ -66,18 +108,7 @@ impl System {
                     .load_by_username(&user_id.get_string_value()?)
                     .await?
             }
-        };
-
-        if user.is_root() {
-            error!("Cannot delete the root user.");
-            return Err(Error::CannotDeleteUser(user.id));
-        }
-
-        info!("Deleting user: {} with ID: {user_id}...", user.username);
-        self.storage.user.delete(&user).await?;
-        self.permissioner.delete_permissions_for_user(user.id);
-        info!("Deleted user: {} with ID: {user_id}.", user.username);
-        Ok(user)
+        })
     }
 
     pub async fn login_user(&self, username: &str, password: &str) -> Result<User, Error> {

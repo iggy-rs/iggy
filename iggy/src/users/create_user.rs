@@ -63,7 +63,7 @@ impl FromStr for CreateUser {
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         // No support for permissions yet
         let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() < 2 {
+        if parts.len() < 2 || parts.len() > 4 {
             return Err(Error::InvalidCommand);
         }
 

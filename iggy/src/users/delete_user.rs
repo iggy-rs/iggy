@@ -29,8 +29,8 @@ impl FromStr for DeleteUser {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = parts[0].parse::<Identifier>()?;
-        let command = DeleteUser { user_id: stream_id };
+        let user_id = parts[0].parse::<Identifier>()?;
+        let command = DeleteUser { user_id };
         command.validate()?;
         Ok(command)
     }
@@ -46,8 +46,8 @@ impl BytesSerializable for DeleteUser {
             return Err(Error::InvalidCommand);
         }
 
-        let stream_id = Identifier::from_bytes(bytes)?;
-        let command = DeleteUser { user_id: stream_id };
+        let user_id = Identifier::from_bytes(bytes)?;
+        let command = DeleteUser { user_id };
         command.validate()?;
         Ok(command)
     }
@@ -70,31 +70,31 @@ mod tests {
         };
 
         let bytes = command.as_bytes();
-        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        let user_id = Identifier::from_bytes(&bytes).unwrap();
 
         assert!(!bytes.is_empty());
-        assert_eq!(stream_id, command.user_id);
+        assert_eq!(user_id, command.user_id);
     }
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let bytes = stream_id.as_bytes();
+        let user_id = Identifier::numeric(1).unwrap();
+        let bytes = user_id.as_bytes();
         let command = DeleteUser::from_bytes(&bytes);
         assert!(command.is_ok());
 
         let command = command.unwrap();
-        assert_eq!(command.user_id, stream_id);
+        assert_eq!(command.user_id, user_id);
     }
 
     #[test]
     fn should_be_read_from_string() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let input = stream_id.to_string();
+        let user_id = Identifier::numeric(1).unwrap();
+        let input = user_id.to_string();
         let command = DeleteUser::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();
-        assert_eq!(command.user_id, stream_id);
+        assert_eq!(command.user_id, user_id);
     }
 }

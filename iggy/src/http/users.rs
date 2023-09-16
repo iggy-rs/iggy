@@ -5,6 +5,7 @@ use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
+use crate::users::update_permissions::UpdatePermissions;
 use crate::users::update_user::UpdateUser;
 use async_trait::async_trait;
 
@@ -24,6 +25,12 @@ impl UserClient for HttpClient {
 
     async fn update_user(&self, command: &UpdateUser) -> Result<(), Error> {
         self.put(&format!("{PATH}/{}", command.user_id), &command)
+            .await?;
+        Ok(())
+    }
+
+    async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), Error> {
+        self.put(&format!("{PATH}/{}/permissions", command.user_id), &command)
             .await?;
         Ok(())
     }

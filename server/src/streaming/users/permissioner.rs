@@ -63,6 +63,11 @@ impl Permissioner {
         }
     }
 
+    pub fn update_permissions_for_user(&mut self, user: User) {
+        self.delete_permissions_for_user(user.id);
+        self.init_permissions_for_user(user);
+    }
+
     pub fn delete_permissions_for_user(&mut self, user_id: u32) {
         self.users_permissions.remove(&user_id);
         self.users_that_can_poll_messages_from_all_streams

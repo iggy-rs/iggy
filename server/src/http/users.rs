@@ -9,6 +9,7 @@ use iggy::identifier::Identifier;
 use iggy::users::create_user::CreateUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
+use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
@@ -18,6 +19,7 @@ pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
         .route("/", post(create_user))
         .route("/:user_id", put(update_user).delete(delete_user))
+        .route("/:user_id/permissions", put(update_permissions))
         .route("/login", post(login_user))
         .route("/logout", post(logout_user))
         .with_state(system)
@@ -53,6 +55,24 @@ async fn update_user(
     system.permissioner.update_user(authenticated_user_id)?;
     system
         .update_user(&command.user_id, command.username, command.status)
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn update_permissions(
+    State(system): State<Arc<RwLock<System>>>,
+    Path(user_id): Path<String>,
+    Json(mut command): Json<UpdatePermissions>,
+) -> Result<StatusCode, CustomError> {
+    command.user_id = Identifier::from_str_value(&user_id)?;
+    command.validate()?;
+    let authenticated_user_id = auth::resolve_user_id();
+    let mut system = system.write().await;
+    system
+        .permissioner
+        .update_permissions(authenticated_user_id)?;
+    system
+        .update_permissions(&command.user_id, command.permissions)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

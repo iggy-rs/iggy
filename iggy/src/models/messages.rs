@@ -3,6 +3,7 @@ use crate::error::Error;
 use crate::messages::send_messages;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
+use crate::sizeable::Sizeable;
 use crate::utils::{checksum, timestamp::TimeStamp};
 use bytes::{BufMut, Bytes};
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,7 @@ use serde_with::serde_as;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
+use std::sync::Arc;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PolledMessages {
@@ -85,6 +87,12 @@ impl FromStr for MessageState {
             "marked_for_deletion" => Ok(MessageState::MarkedForDeletion),
             _ => Err(Error::InvalidCommand),
         }
+    }
+}
+
+impl Sizeable for Arc<Message> {
+    fn get_size_bytes(&self) -> u32 {
+        self.as_ref().get_size_bytes()
     }
 }
 

@@ -175,13 +175,16 @@ impl ConfigProvider for FileConfigProvider {
         let config_builder = match extension {
             "json" => config_builder.merge(Json::file(&self.path)),
             "toml" => config_builder.merge(Toml::file(&self.path)),
-            _ => {
-                return Err(ServerError::CannotLoadConfiguration("Cannot load configuration: invalid file extension, only .json and .toml are supported.".to_owned()));
+            e => {
+                return Err(ServerError::CannotLoadConfiguration(format!("Cannot load configuration: invalid file extension: {e}, only .json and .toml are supported.")));
             }
         };
+
         let custom_env_provider = CustomEnvProvider::new("IGGY_");
-        let config_builder = config_builder.merge(custom_env_provider);
-        match config_builder.extract::<ServerConfig>() {
+        let config_result: Result<ServerConfig, figment::Error> =
+            config_builder.merge(custom_env_provider).extract();
+
+        match config_result {
             Ok(config) => {
                 info!("Config loaded from path: '{}'", self.path);
                 Ok(config)

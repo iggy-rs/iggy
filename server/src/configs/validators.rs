@@ -1,10 +1,13 @@
+extern crate sysinfo;
+
 use crate::configs::server::ServerConfig;
 use crate::configs::system::{CacheConfig, SegmentConfig};
-use crate::configs::utils::is_power_of_two;
 use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
+use byte_unit::{Byte, ByteUnit};
 use iggy::validatable::Validatable;
-use tracing::error;
+use sysinfo::SystemExt;
+use tracing::{error, info, warn};
 
 impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {
@@ -17,10 +20,39 @@ impl Validatable<ServerError> for ServerConfig {
 
 impl Validatable<ServerError> for CacheConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.messages_amount > 0 && !is_power_of_two(self.messages_amount) {
-            error!("Cache configuration -> messages buffer must be a power of two.");
-            return Err(ServerError::CacheConfigValidationFailure);
+        let limit_bytes = self.size.clone().into();
+        let mut sys = sysinfo::System::new_all();
+        sys.refresh_system();
+        sys.refresh_processes();
+        let total_memory = sys.total_memory();
+        let free_memory = sys.free_memory();
+        let cache_percentage = (limit_bytes as f64 / total_memory as f64) * 100.0;
+
+        let pretty_cache_limit =
+            Byte::from_bytes(limit_bytes as u128).get_adjusted_unit(ByteUnit::MB);
+        let pretty_total_memory =
+            Byte::from_bytes(total_memory as u128).get_adjusted_unit(ByteUnit::MB);
+        let pretty_free_memory =
+            Byte::from_bytes(free_memory as u128).get_adjusted_unit(ByteUnit::MB);
+
+        if limit_bytes > total_memory {
+            return Err(ServerError::CacheConfigValidationFailure(format!(
+                "Requested cache size exceeds 100% of total memory. Requested: {} ({:.2}% of total memory: {}).",
+                pretty_cache_limit, cache_percentage, pretty_total_memory
+            )));
         }
+
+        if limit_bytes > (total_memory as f64 * 0.75) as u64 {
+            warn!(
+                "Cache configuration -> cache size exceeds 75% of total memory. Set to: {} ({:.2}% of total memory: {}).",
+                pretty_cache_limit, cache_percentage, pretty_total_memory
+            );
+        }
+
+        info!(
+            "Cache configuration -> cache size set to {} ({:.2}% of total memory: {}, free memory: {}).",
+            pretty_cache_limit, cache_percentage, pretty_total_memory, pretty_free_memory
+        );
 
         Ok(())
     }

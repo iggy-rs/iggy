@@ -1,5 +1,4 @@
 use crate::streaming_tests::common::test_setup::TestSetup;
-use ringbuffer::RingBuffer;
 use server::streaming::partitions::partition::Partition;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
 use tokio::fs;
@@ -78,13 +77,10 @@ async fn should_load_existing_partition_from_disk() {
             loaded_partition.should_increment_offset,
             partition.should_increment_offset
         );
+        assert_eq!(loaded_partition.cache.is_some(), partition.cache.is_some());
         assert_eq!(
-            loaded_partition.messages.is_some(),
-            partition.messages.is_some()
-        );
-        assert_eq!(
-            loaded_partition.messages.unwrap().is_empty(),
-            partition.messages.unwrap().is_empty()
+            loaded_partition.cache.unwrap().is_empty(),
+            partition.cache.unwrap().is_empty()
         );
     }
 }

@@ -4,7 +4,6 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::utils::random_id;
 use iggy::error::Error;
 use iggy::models::messages::Message;
-use ringbuffer::RingBuffer;
 use std::sync::Arc;
 use tracing::{error, trace, warn};
 
@@ -219,12 +218,12 @@ impl Partition {
         start_offset: u64,
         end_offset: u64,
     ) -> Option<Vec<Arc<Message>>> {
-        let messages = self.messages.as_ref()?;
-        if messages.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
+        let cache = self.cache.as_ref()?;
+        if cache.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
             return None;
         }
 
-        let first_buffered_offset = messages[0].offset;
+        let first_buffered_offset = cache[0].offset;
         trace!(
             "First buffered offset: {} for partition: {}",
             first_buffered_offset,
@@ -245,22 +244,22 @@ impl Partition {
             end_offset
         );
 
-        if self.messages.is_none() || start_offset > end_offset {
+        if self.cache.is_none() || start_offset > end_offset {
             return EMPTY_MESSAGES;
         }
 
-        let partition_messages = self.messages.as_ref().unwrap();
-        if partition_messages.is_empty() {
+        let cache = self.cache.as_ref().unwrap();
+        if cache.is_empty() {
             return EMPTY_MESSAGES;
         }
 
         let messages_count = (1 + end_offset - start_offset) as usize;
-        let first_offset = partition_messages[0].offset;
+        let first_offset = cache[0].offset;
         let start_index = start_offset - first_offset;
 
         let mut messages = Vec::with_capacity(messages_count);
         for i in start_index..start_index + messages_count as u64 {
-            let message = partition_messages[i as isize].clone();
+            let message = cache[i as usize].clone();
             messages.push(message);
         }
 
@@ -282,96 +281,76 @@ impl Partition {
         messages
     }
 
-    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {
-        let segment = self.segments.last_mut();
-        if segment.is_none() {
-            return Err(Error::SegmentNotFound);
+    pub async fn append_messages(&mut self, mut messages: Vec<Message>) -> Result<(), Error> {
+        {
+            let last_segment = self.segments.last_mut().ok_or(Error::SegmentNotFound)?;
+
+            if last_segment.is_closed {
+                let start_offset = last_segment.end_offset + 1;
+                trace!(
+                    "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
+                    start_offset, self.partition_id
+                );
+                self.add_persisted_segment(start_offset).await?;
+            }
         }
 
-        let mut segment = segment.unwrap();
-        if segment.is_closed {
-            let start_offset = segment.end_offset + 1;
-            trace!(
-                "Current segment is closed, creating new segment with start offset: {} for partition with ID: {}...",
-                start_offset, self.partition_id
-            );
-            self.add_persisted_segment(start_offset).await?;
-            segment = self.segments.last_mut().unwrap();
+        if let Some(message_ids) = &mut self.message_ids {
+            messages = messages
+                .into_iter()
+                .filter_map(|mut message| {
+                    if message.id == 0 || !message_ids.contains(&message.id) {
+                        message.id = random_id::get();
+                        message_ids.insert(message.id);
+                        Some(message)
+                    } else {
+                        warn!(
+                            "Ignored the duplicated message ID: {} for partition with ID: {}.",
+                            message.id, self.partition_id
+                        );
+                        None
+                    }
+                })
+                .collect();
         }
 
         let messages_count = messages.len() as u32;
-        trace!(
-            "Appending {} messages to segment with start offset: {} for partition with ID: {}...",
-            messages_count,
-            segment.start_offset,
-            self.partition_id
-        );
 
-        let deduplicate_messages = self.message_ids.is_some();
-        for mut message in messages {
-            if message.id == 0 {
-                message.id = random_id::get();
-            }
-            if deduplicate_messages {
-                let message_ids = self.message_ids.as_mut().unwrap();
-                if message_ids.contains_key(&message.id) {
-                    warn!(
-                        "Ignored the duplicated message ID: {} for partition with ID: {}.",
-                        message.id, self.partition_id
-                    );
-                    continue;
-                }
-
-                message_ids.insert(message.id, true);
-            }
-
+        for message in &mut messages {
             if self.should_increment_offset {
                 self.current_offset += 1;
             } else {
                 self.should_increment_offset = true;
             }
-            trace!(
-                "Appending the message with offset: {} to segment with start offset: {} for partition with ID: {}...",
-                self.current_offset,
-                segment.start_offset,
-                self.partition_id
-            );
-
             message.offset = self.current_offset;
-            let message = Arc::new(message);
-            segment.append_message(message.clone()).await?;
-            if self.messages.is_some() {
-                self.messages.as_mut().unwrap().push(message);
-            }
-
-            trace!(
-                "Appended the message with offset: {} to segment with start offset: {} for partition with ID: {}.",
-                self.current_offset,
-                segment.start_offset,
-                self.partition_id
-            );
         }
 
-        trace!(
-            "Appended {} messages to segment with start offset: {} for partition with ID: {}.",
-            messages_count,
-            segment.start_offset,
-            self.partition_id
-        );
+        let messages = messages.into_iter().map(Arc::new).collect::<Vec<_>>();
+        {
+            let last_segment = self.segments.last_mut().ok_or(Error::SegmentNotFound)?;
+            last_segment.append_messages(&messages).await?;
+        }
+
+        if let Some(cache) = &mut self.cache {
+            cache.extend(messages);
+        }
 
         self.unsaved_messages_count += messages_count;
-        if self.unsaved_messages_count >= self.config.partition.messages_required_to_save
-            || segment.is_full().await
         {
-            trace!(
-            "Segment with start offset: {} for partition with ID: {} will be persisted on disk...",
-            segment.start_offset,
-            self.partition_id
-        );
-            segment
-                .persist_messages(self.storage.segment.clone())
-                .await?;
-            self.unsaved_messages_count = 0;
+            let last_segment = self.segments.last_mut().ok_or(Error::SegmentNotFound)?;
+            if self.unsaved_messages_count >= self.config.partition.messages_required_to_save
+                || last_segment.is_full().await
+            {
+                trace!(
+                    "Segment with start offset: {} for partition with ID: {} will be persisted on disk...",
+                    last_segment.start_offset,
+                    self.partition_id
+                );
+                last_segment
+                    .persist_messages(self.storage.segment.clone())
+                    .await?;
+                self.unsaved_messages_count = 0;
+            }
         }
 
         Ok(())

@@ -1,4 +1,5 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::clients::client_manager::ClientManager;
 use crate::streaming::diagnostics::metrics::Metrics;
 use crate::streaming::persistence::persister::*;
@@ -27,6 +28,10 @@ pub struct System {
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
 }
+
+/// For each cache eviction, we want to remove more than the size we need.
+/// This is done on purpose to avoid evicting messages on every write.
+const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 
 impl System {
     pub fn new(config: Arc<SystemConfig>, db: Option<Arc<Db>>) -> System {
@@ -119,6 +124,25 @@ impl System {
         match enabled {
             true => "enabled",
             false => "disabled",
+        }
+    }
+
+    pub async fn clean_cache(&self, size_to_clean: u64) {
+        for stream in self.streams.values() {
+            for topic in stream.get_topics() {
+                for partition in topic.get_partitions().into_iter() {
+                    tokio::task::spawn(async move {
+                        let memory_tracker = CacheMemoryTracker::get_instance().unwrap();
+                        let mut partition_guard = partition.write().await;
+                        let messages = &mut partition_guard.cache.as_mut().unwrap();
+                        let size_to_remove = (messages.current_size() as f64
+                            / memory_tracker.usage_bytes() as f64
+                            * size_to_clean as f64)
+                            .ceil() as u64;
+                        messages.evict_by_size(size_to_remove * CACHE_OVER_EVICTION_FACTOR);
+                    });
+                }
+            }
         }
     }
 }

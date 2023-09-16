@@ -1,3 +1,4 @@
+use crate::configs::resource_quota::MemoryResourceQuota;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 
@@ -30,7 +31,8 @@ pub struct LoggingConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CacheConfig {
-    pub messages_amount: u32,
+    pub enabled: bool,
+    pub size: MemoryResourceQuota,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]

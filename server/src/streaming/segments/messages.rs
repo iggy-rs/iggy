@@ -155,33 +155,77 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn append_message(&mut self, message: Arc<Message>) -> Result<(), Error> {
+    pub async fn append_messages(&mut self, messages: &[Arc<Message>]) -> Result<(), Error> {
         if self.is_closed {
             return Err(Error::SegmentClosed(self.start_offset, self.partition_id));
         }
 
-        if self.unsaved_messages.is_none() {
-            self.unsaved_messages = Some(Vec::new());
+        let len = messages.len();
+
+        let unsaved_messages = self.unsaved_messages.get_or_insert_with(Vec::new);
+        unsaved_messages.reserve(len);
+
+        if let Some(indexes) = &mut self.indexes {
+            indexes.reserve(len);
         }
 
-        let relative_offset = (message.offset - self.start_offset) as u32;
-        if let Some(indexes) = self.indexes.as_mut() {
-            indexes.push(Index {
-                relative_offset,
-                position: self.current_size_bytes,
-            });
+        if let Some(time_indexes) = &mut self.time_indexes {
+            time_indexes.reserve(len);
         }
 
-        if let Some(time_indexes) = self.time_indexes.as_mut() {
-            time_indexes.push(TimeIndex {
-                relative_offset,
-                timestamp: message.timestamp,
-            });
-        }
+        // Not the prettiest code. It's done this way to avoid repeatably
+        // checking if indexes and time_indexes are Some or None.
+        if self.indexes.is_some() && self.time_indexes.is_some() {
+            for message in messages {
+                let relative_offset = (message.offset - self.start_offset) as u32;
 
-        self.current_size_bytes += message.get_size_bytes();
-        self.current_offset = message.offset;
-        self.unsaved_messages.as_mut().unwrap().push(message);
+                self.indexes.as_mut().unwrap().push(Index {
+                    relative_offset,
+                    position: self.current_size_bytes,
+                });
+
+                self.time_indexes.as_mut().unwrap().push(TimeIndex {
+                    relative_offset,
+                    timestamp: message.timestamp,
+                });
+
+                self.current_size_bytes += message.get_size_bytes();
+                self.current_offset = message.offset;
+                unsaved_messages.push(message.clone());
+            }
+        } else if self.indexes.is_some() {
+            for message in messages {
+                let relative_offset = (message.offset - self.start_offset) as u32;
+
+                self.indexes.as_mut().unwrap().push(Index {
+                    relative_offset,
+                    position: self.current_size_bytes,
+                });
+
+                self.current_size_bytes += message.get_size_bytes();
+                self.current_offset = message.offset;
+                unsaved_messages.push(message.clone());
+            }
+        } else if self.time_indexes.is_some() {
+            for message in messages {
+                let relative_offset = (message.offset - self.start_offset) as u32;
+
+                self.time_indexes.as_mut().unwrap().push(TimeIndex {
+                    relative_offset,
+                    timestamp: message.timestamp,
+                });
+
+                self.current_size_bytes += message.get_size_bytes();
+                self.current_offset = message.offset;
+                unsaved_messages.push(message.clone());
+            }
+        } else {
+            for message in messages {
+                self.current_size_bytes += message.get_size_bytes();
+                self.current_offset = message.offset;
+                unsaved_messages.push(message.clone());
+            }
+        }
 
         Ok(())
     }

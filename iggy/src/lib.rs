@@ -19,6 +19,7 @@ pub mod models;
 pub mod partitioner;
 pub mod partitions;
 pub mod quic;
+pub mod sizeable;
 pub mod streams;
 pub mod system;
 pub mod tcp;

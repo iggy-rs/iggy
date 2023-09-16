@@ -1,10 +1,11 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::cache::buffer::SmartCache;
+use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::TimeStamp;
-use ringbuffer::AllocRingBuffer;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -18,8 +19,9 @@ pub struct Partition {
     pub consumer_offsets_path: String,
     pub consumer_group_offsets_path: String,
     pub current_offset: u64,
-    pub messages: Option<AllocRingBuffer<Arc<Message>>>,
-    pub message_ids: Option<HashMap<u128, bool>>,
+    pub cache: Option<SmartCache<Arc<Message>>>,
+    pub cached_memory_tracker: Option<Arc<CacheMemoryTracker>>,
+    pub message_ids: Option<HashSet<u128>>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
     pub created_at: u64,
@@ -57,6 +59,14 @@ impl Partition {
         let offsets_path = Self::get_offsets_path(&path);
         let consumer_offsets_path = Self::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Self::get_consumer_group_offsets_path(&offsets_path);
+        let (cached_memory_tracker, messages) = match config.cache.enabled {
+            false => (None, None),
+            true => (
+                CacheMemoryTracker::initialize(&config.cache),
+                Some(SmartCache::new()),
+            ),
+        };
+
         let mut partition = Partition {
             stream_id,
             topic_id,
@@ -66,12 +76,10 @@ impl Partition {
             consumer_offsets_path,
             consumer_group_offsets_path,
             message_expiry,
-            messages: match config.cache.messages_amount {
-                0 => None,
-                _ => Some(AllocRingBuffer::new(config.cache.messages_amount as usize)),
-            },
+            cache: messages,
+            cached_memory_tracker,
             message_ids: match config.partition.deduplicate_messages {
-                true => Some(HashMap::new()),
+                true => Some(HashSet::new()),
                 false => None,
             },
             segments: vec![],
@@ -130,7 +138,6 @@ mod tests {
     use crate::configs::system::{CacheConfig, SystemConfig};
     use crate::streaming::partitions::partition::Partition;
     use crate::streaming::storage::tests::get_test_system_storage;
-    use ringbuffer::RingBuffer;
     use std::sync::Arc;
 
     #[test]
@@ -145,9 +152,7 @@ mod tests {
         let offsets_path = Partition::get_offsets_path(&path);
         let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
         let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
-        let messages_buffer_capacity = config.cache.messages_amount as usize;
         let message_expiry = Some(10);
-
         let partition = Partition::create(
             stream_id,
             topic_id,
@@ -171,20 +176,16 @@ mod tests {
         assert_eq!(partition.current_offset, 0);
         assert_eq!(partition.unsaved_messages_count, 0);
         assert_eq!(partition.segments.len(), 1);
-        assert!(partition.messages.is_some());
-        assert_eq!(
-            partition.messages.as_ref().unwrap().capacity(),
-            messages_buffer_capacity
-        );
+        assert!(partition.cache.is_some());
         assert!(!partition.should_increment_offset);
-        assert!(partition.messages.as_ref().unwrap().is_empty());
+        assert!(partition.cache.as_ref().unwrap().is_empty());
         let consumer_offsets = partition.consumer_offsets.blocking_read();
         assert!(consumer_offsets.offsets.is_empty());
         assert_eq!(partition.message_expiry, message_expiry);
     }
 
     #[test]
-    fn should_not_initialize_messages_buffer_given_zero_capacity() {
+    fn should_not_initialize_cache_given_zero_capacity() {
         let storage = Arc::new(get_test_system_storage());
         let partition = Partition::create(
             1,
@@ -192,13 +193,16 @@ mod tests {
             1,
             true,
             Arc::new(SystemConfig {
-                cache: CacheConfig { messages_amount: 0 },
+                cache: CacheConfig {
+                    enabled: false,
+                    size: "0".parse().unwrap(),
+                },
                 ..Default::default()
             }),
             storage,
             None,
         );
-        assert!(partition.messages.is_none());
+        assert!(partition.cache.is_none());
     }
 
     #[test]

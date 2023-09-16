@@ -94,6 +94,27 @@ impl System {
         Ok(user)
     }
 
+    pub async fn update_permissions(
+        &mut self,
+        user_id: &Identifier,
+        permissions: Option<Permissions>,
+    ) -> Result<(), Error> {
+        let mut user = self.get_user(user_id).await?;
+        user.permissions = permissions;
+        let username = user.username.clone();
+        info!(
+            "Updating permissions for user: {} with ID: {user_id}...",
+            username
+        );
+        self.storage.user.save(&user).await?;
+        self.permissioner.update_permissions_for_user(user);
+        info!(
+            "Updated permissions for user: {} with ID: {user_id}.",
+            username
+        );
+        Ok(())
+    }
+
     pub async fn get_user(&self, user_id: &Identifier) -> Result<User, Error> {
         Ok(match user_id.kind {
             IdKind::Numeric => {

@@ -40,6 +40,7 @@ use iggy::users::create_user::CreateUser;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
+use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 
 const STREAM_ID: u32 = 1;
@@ -126,6 +127,28 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             user_id: Identifier::named(test_user).unwrap(),
             username: Some(updated_test_user.to_string()),
             status: Some(UserStatus::Inactive),
+        })
+        .await
+        .unwrap();
+
+    client
+        .update_permissions(&UpdatePermissions {
+            user_id: Identifier::named(updated_test_user).unwrap(),
+            permissions: Some(Permissions {
+                global: GlobalPermissions {
+                    manage_servers: false,
+                    read_servers: true,
+                    manage_users: false,
+                    read_users: true,
+                    manage_streams: false,
+                    read_streams: true,
+                    manage_topics: false,
+                    read_topics: true,
+                    poll_messages: true,
+                    send_messages: true,
+                },
+                streams: None,
+            }),
         })
         .await
         .unwrap();

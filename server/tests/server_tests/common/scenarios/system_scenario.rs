@@ -18,6 +18,7 @@ use iggy::error::Error;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
@@ -76,7 +77,21 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             username: test_user.to_string(),
             password: test_password.to_string(),
             status: UserStatus::Active,
-            permissions: None,
+            permissions: Some(Permissions {
+                global: GlobalPermissions {
+                    manage_servers: false,
+                    read_servers: true,
+                    manage_users: false,
+                    read_users: true,
+                    manage_streams: false,
+                    read_streams: true,
+                    manage_topics: false,
+                    read_topics: true,
+                    poll_messages: true,
+                    send_messages: true,
+                },
+                streams: None,
+            }),
         })
         .await
         .unwrap();

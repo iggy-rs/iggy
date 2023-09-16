@@ -19,7 +19,6 @@ pub(crate) async fn handle_connection(
     sender: &mut dyn Sender,
     system: Arc<RwLock<System>>,
 ) -> Result<(), ServerError> {
-    // TODO: Authenticate the user and map ID
     let client_id = system
         .read()
         .await

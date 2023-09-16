@@ -44,7 +44,6 @@ async fn handle_connection(
     let address = connection.remote_address();
     async {
         info!("Client has connected: {}", address);
-        // TODO: Authenticate the user and map ID
         let client_id = system
             .read()
             .await

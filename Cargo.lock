@@ -1146,8 +1146,6 @@ dependencies = [
  "comfy-table",
  "iggy",
  "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

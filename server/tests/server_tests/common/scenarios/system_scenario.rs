@@ -39,6 +39,8 @@ use iggy::topics::update_topic::UpdateTopic;
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
 use iggy::users::delete_user::DeleteUser;
+use iggy::users::get_user::GetUser;
+use iggy::users::get_users::GetUsers;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
@@ -64,6 +66,28 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
     // 0. Login and logout the default user, try creating the new user and logging in and out
+    let users = client.get_users(&GetUsers {}).await.unwrap();
+    assert_eq!(users.len(), 1);
+
+    let user = users.get(0).unwrap();
+    assert_eq!(user.id, 1);
+    assert!(user.created_at > 0);
+    assert_eq!(user.username, ROOT_USERNAME);
+    assert_eq!(user.status, UserStatus::Active);
+
+    let user = client
+        .get_user(&GetUser {
+            user_id: Identifier::named(ROOT_USERNAME).unwrap(),
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(user.id, 1);
+    assert!(user.created_at > 0);
+    assert_eq!(user.username, ROOT_USERNAME);
+    assert_eq!(user.status, UserStatus::Active);
+    assert!(user.permissions.is_some());
+
     client
         .login_user(&LoginUser {
             username: ROOT_USERNAME.to_string(),

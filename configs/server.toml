@@ -70,6 +70,7 @@ enabled = false
 key = ""
 
 [system.user]
+authentication_enabled = false
 authorization_enabled = false
 
 [system.stream]

@@ -5,9 +5,12 @@ use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, Consume
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::messages::{Message, MessageState, PolledMessages};
 use crate::models::partition::Partition;
+use crate::models::permissions::Permissions;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
+use crate::models::user_info::{UserInfo, UserInfoDetails};
+use crate::models::user_status::UserStatus;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
@@ -16,6 +19,7 @@ const EMPTY_MESSAGES: Vec<Message> = vec![];
 const EMPTY_TOPICS: Vec<Topic> = vec![];
 const EMPTY_STREAMS: Vec<Stream> = vec![];
 const EMPTY_CLIENTS: Vec<ClientInfo> = vec![];
+const EMPTY_USERS: Vec<UserInfo> = vec![];
 const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
 
 pub fn map_stats(payload: &[u8]) -> Result<Stats, Error> {
@@ -94,6 +98,45 @@ pub fn map_consumer_offset(payload: &[u8]) -> Result<ConsumerOffsetInfo, Error> 
         current_offset,
         stored_offset,
     })
+}
+
+pub fn map_user(payload: &[u8]) -> Result<UserInfoDetails, Error> {
+    let (user, position) = map_to_user_info(payload, 0)?;
+    let has_permissions = payload[position];
+    let permissions = if has_permissions == 1 {
+        let permissions_length =
+            u32::from_le_bytes(payload[position + 1..position + 5].try_into()?) as usize;
+        let permissions = &payload[position + 5..position + 5 + permissions_length];
+        Some(Permissions::from_bytes(permissions)?)
+    } else {
+        None
+    };
+
+    let user = UserInfoDetails {
+        id: user.id,
+        created_at: user.created_at,
+        status: user.status,
+        username: user.username,
+        permissions,
+    };
+    Ok(user)
+}
+
+pub fn map_users(payload: &[u8]) -> Result<Vec<UserInfo>, Error> {
+    if payload.is_empty() {
+        return Ok(EMPTY_USERS);
+    }
+
+    let mut users = Vec::new();
+    let length = payload.len();
+    let mut position = 0;
+    while position < length {
+        let (user, read_bytes) = map_to_user_info(payload, position)?;
+        users.push(user);
+        position += read_bytes;
+    }
+    users.sort_by(|x, y| x.id.cmp(&y.id));
+    Ok(users)
 }
 
 pub fn map_client(payload: &[u8]) -> Result<ClientInfoDetails, Error> {
@@ -461,6 +504,27 @@ fn map_to_client_info(payload: &[u8], mut position: usize) -> Result<(ClientInfo
             address,
             transport,
             consumer_groups_count,
+        },
+        read_bytes,
+    ))
+}
+
+fn map_to_user_info(payload: &[u8], position: usize) -> Result<(UserInfo, usize), Error> {
+    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let status = payload[position + 12];
+    let status = UserStatus::from_code(status)?;
+    let username_length = payload[position + 13];
+    let username =
+        from_utf8(&payload[position + 14..position + 14 + username_length as usize])?.to_string();
+    let read_bytes = 4 + 8 + 1 + 1 + username_length as usize;
+
+    Ok((
+        UserInfo {
+            id,
+            created_at,
+            status,
+            username,
         },
         read_bytes,
     ))

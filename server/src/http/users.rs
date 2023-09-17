@@ -1,11 +1,12 @@
-use crate::http::auth;
 use crate::http::error::CustomError;
+use crate::http::{auth, mapper};
 use crate::streaming::systems::system::System;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::{post, put};
+use axum::routing::{get, post, put};
 use axum::{Json, Router};
 use iggy::identifier::Identifier;
+use iggy::models::user_info::{UserInfo, UserInfoDetails};
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
 use iggy::users::login_user::LoginUser;
@@ -18,13 +19,42 @@ use tokio::sync::RwLock;
 
 pub fn router(system: Arc<RwLock<System>>) -> Router {
     Router::new()
-        .route("/", post(create_user))
-        .route("/:user_id", put(update_user).delete(delete_user))
+        .route("/", get(get_users).post(create_user))
+        .route(
+            "/:user_id",
+            get(get_user).put(update_user).delete(delete_user),
+        )
         .route("/:user_id/permissions", put(update_permissions))
         .route("/:user_id/password", put(change_password))
         .route("/login", post(login_user))
         .route("/logout", post(logout_user))
         .with_state(system)
+}
+
+async fn get_user(
+    State(system): State<Arc<RwLock<System>>>,
+    Path(user_id): Path<String>,
+) -> Result<Json<UserInfoDetails>, CustomError> {
+    let user_id = Identifier::from_str_value(&user_id)?;
+    let authenticated_user_id = auth::resolve_user_id();
+    let system = system.read().await;
+    let user = system.get_user(&user_id).await?;
+    if user.id != authenticated_user_id {
+        system.permissioner.get_user(authenticated_user_id)?;
+    }
+    let user = mapper::map_user(&user);
+    Ok(Json(user))
+}
+
+async fn get_users(
+    State(system): State<Arc<RwLock<System>>>,
+) -> Result<Json<Vec<UserInfo>>, CustomError> {
+    let user_id = auth::resolve_user_id();
+    let system = system.read().await;
+    system.permissioner.get_users(user_id)?;
+    let users = system.get_users().await?;
+    let users = mapper::map_users(&users);
+    Ok(Json(users))
 }
 
 async fn create_user(

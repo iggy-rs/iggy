@@ -1,9 +1,12 @@
 use crate::client::UserClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
+use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
+use crate::users::get_user::GetUser;
+use crate::users::get_users::GetUsers;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
@@ -14,6 +17,18 @@ const PATH: &str = "/users";
 
 #[async_trait]
 impl UserClient for HttpClient {
+    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, Error> {
+        let response = self.get(&format!("{PATH}/{}", command.user_id)).await?;
+        let user = response.json().await?;
+        Ok(user)
+    }
+
+    async fn get_users(&self, _command: &GetUsers) -> Result<Vec<UserInfo>, Error> {
+        let response = self.get(PATH).await?;
+        let users = response.json().await?;
+        Ok(users)
+    }
+
     async fn create_user(&self, command: &CreateUser) -> Result<(), Error> {
         self.post(PATH, &command).await?;
         Ok(())

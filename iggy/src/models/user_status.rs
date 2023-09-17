@@ -4,6 +4,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
 pub enum UserStatus {
     #[default]
     Active,

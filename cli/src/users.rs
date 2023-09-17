@@ -3,10 +3,30 @@ use iggy::client_error::ClientError;
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
 use iggy::users::delete_user::DeleteUser;
+use iggy::users::get_user::GetUser;
+use iggy::users::get_users::GetUsers;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
+use tracing::info;
+
+pub async fn get_user(command: &GetUser, client: &dyn Client) -> Result<(), ClientError> {
+    let user = client.get_user(command).await?;
+    info!("User: {:#?}", user);
+    Ok(())
+}
+
+pub async fn get_users(command: &GetUsers, client: &dyn Client) -> Result<(), ClientError> {
+    let users = client.get_users(command).await?;
+    if users.is_empty() {
+        info!("No users found");
+        return Ok(());
+    }
+
+    info!("Users: {:#?}", users);
+    Ok(())
+}
 
 pub async fn create_user(command: &CreateUser, client: &dyn Client) -> Result<(), ClientError> {
     client.create_user(command).await?;

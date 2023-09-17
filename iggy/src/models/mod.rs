@@ -8,4 +8,5 @@ pub mod permissions;
 pub mod stats;
 pub mod stream;
 pub mod topic;
+pub mod user_info;
 pub mod user_status;

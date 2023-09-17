@@ -9,8 +9,9 @@ use crate::binary::handlers::streams::*;
 use crate::binary::handlers::system::*;
 use crate::binary::handlers::topics::*;
 use crate::binary::handlers::users::{
-    change_password_handler, create_user_handler, delete_user_handler, login_user_handler,
-    logout_user_handler, update_permissions_handler, update_user_handler,
+    change_password_handler, create_user_handler, delete_user_handler, get_user_handler,
+    get_users_handler, login_user_handler, logout_user_handler, update_permissions_handler,
+    update_user_handler,
 };
 use crate::binary::sender::Sender;
 use crate::streaming::systems::system::System;
@@ -70,6 +71,12 @@ async fn try_handle(
         }
         Command::GetClients(command) => {
             get_clients_handler::handle(command, sender, user_context, system).await
+        }
+        Command::GetUser(command) => {
+            get_user_handler::handle(command, sender, user_context, system).await
+        }
+        Command::GetUsers(command) => {
+            get_users_handler::handle(command, sender, user_context, system).await
         }
         Command::CreateUser(command) => {
             create_user_handler::handle(command, sender, user_context, system).await

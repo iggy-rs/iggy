@@ -2,6 +2,14 @@ use crate::streaming::users::permissioner::Permissioner;
 use iggy::error::Error;
 
 impl Permissioner {
+    pub fn get_user(&self, user_id: u32) -> Result<(), Error> {
+        self.read_users(user_id)
+    }
+
+    pub fn get_users(&self, user_id: u32) -> Result<(), Error> {
+        self.read_users(user_id)
+    }
+
     pub fn create_user(&self, user_id: u32) -> Result<(), Error> {
         self.manager_users(user_id)
     }
@@ -29,6 +37,20 @@ impl Permissioner {
 
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_users {
+                return Ok(());
+            }
+        }
+
+        Err(Error::Unauthorized)
+    }
+
+    fn read_users(&self, user_id: u32) -> Result<(), Error> {
+        if !self.enabled {
+            return Ok(());
+        }
+
+        if let Some(global_permissions) = self.users_permissions.get(&user_id) {
+            if global_permissions.read_users {
                 return Ok(());
             }
         }

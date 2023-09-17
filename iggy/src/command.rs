@@ -30,6 +30,8 @@ use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
+use crate::users::get_user::GetUser;
+use crate::users::get_users::GetUsers;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
@@ -48,20 +50,24 @@ pub const GET_CLIENT: &str = "client.get";
 pub const GET_CLIENT_CODE: u32 = 21;
 pub const GET_CLIENTS: &str = "client.list";
 pub const GET_CLIENTS_CODE: u32 = 22;
+pub const GET_USER: &str = "user.get";
+pub const GET_USER_CODE: u32 = 31;
+pub const GET_USERS: &str = "user.list";
+pub const GET_USERS_CODE: u32 = 32;
 pub const CREATE_USER: &str = "user.create";
-pub const CREATE_USER_CODE: u32 = 32;
+pub const CREATE_USER_CODE: u32 = 33;
 pub const DELETE_USER: &str = "user.delete";
-pub const DELETE_USER_CODE: u32 = 33;
+pub const DELETE_USER_CODE: u32 = 34;
 pub const UPDATE_USER: &str = "user.update";
-pub const UPDATE_USER_CODE: u32 = 34;
+pub const UPDATE_USER_CODE: u32 = 35;
 pub const UPDATE_PERMISSIONS: &str = "user.permissions";
-pub const UPDATE_PERMISSIONS_CODE: u32 = 35;
+pub const UPDATE_PERMISSIONS_CODE: u32 = 36;
 pub const CHANGE_PASSWORD: &str = "user.password";
-pub const CHANGE_PASSWORD_CODE: u32 = 36;
+pub const CHANGE_PASSWORD_CODE: u32 = 37;
 pub const LOGIN_USER: &str = "user.login";
-pub const LOGIN_USER_CODE: u32 = 37;
+pub const LOGIN_USER_CODE: u32 = 38;
 pub const LOGOUT_USER: &str = "user.logout";
-pub const LOGOUT_USER_CODE: u32 = 38;
+pub const LOGOUT_USER_CODE: u32 = 39;
 pub const POLL_MESSAGES: &str = "message.poll";
 pub const POLL_MESSAGES_CODE: u32 = 100;
 pub const SEND_MESSAGES: &str = "message.send";
@@ -114,6 +120,8 @@ pub enum Command {
     GetMe(GetMe),
     GetClient(GetClient),
     GetClients(GetClients),
+    GetUser(GetUser),
+    GetUsers(GetUsers),
     CreateUser(CreateUser),
     DeleteUser(DeleteUser),
     UpdateUser(UpdateUser),
@@ -155,6 +163,8 @@ impl BytesSerializable for Command {
             Command::GetMe(payload) => as_bytes(GET_ME_CODE, &payload.as_bytes()),
             Command::GetClient(payload) => as_bytes(GET_CLIENT_CODE, &payload.as_bytes()),
             Command::GetClients(payload) => as_bytes(GET_CLIENTS_CODE, &payload.as_bytes()),
+            Command::GetUser(payload) => as_bytes(GET_USER_CODE, &payload.as_bytes()),
+            Command::GetUsers(payload) => as_bytes(GET_USERS_CODE, &payload.as_bytes()),
             Command::CreateUser(payload) => as_bytes(CREATE_USER_CODE, &payload.as_bytes()),
             Command::DeleteUser(payload) => as_bytes(DELETE_USER_CODE, &payload.as_bytes()),
             Command::UpdateUser(payload) => as_bytes(UPDATE_USER_CODE, &payload.as_bytes()),
@@ -218,6 +228,8 @@ impl BytesSerializable for Command {
             GET_ME_CODE => Ok(Command::GetMe(GetMe::from_bytes(payload)?)),
             GET_CLIENT_CODE => Ok(Command::GetClient(GetClient::from_bytes(payload)?)),
             GET_CLIENTS_CODE => Ok(Command::GetClients(GetClients::from_bytes(payload)?)),
+            GET_USER_CODE => Ok(Command::GetUser(GetUser::from_bytes(payload)?)),
+            GET_USERS_CODE => Ok(Command::GetUsers(GetUsers::from_bytes(payload)?)),
             CREATE_USER_CODE => Ok(Command::CreateUser(CreateUser::from_bytes(payload)?)),
             DELETE_USER_CODE => Ok(Command::DeleteUser(DeleteUser::from_bytes(payload)?)),
             UPDATE_USER_CODE => Ok(Command::UpdateUser(UpdateUser::from_bytes(payload)?)),
@@ -293,6 +305,8 @@ impl FromStr for Command {
             GET_ME => Ok(Command::GetMe(GetMe::from_str(payload)?)),
             GET_CLIENT => Ok(Command::GetClient(GetClient::from_str(payload)?)),
             GET_CLIENTS => Ok(Command::GetClients(GetClients::from_str(payload)?)),
+            GET_USER => Ok(Command::GetUser(GetUser::from_str(payload)?)),
+            GET_USERS => Ok(Command::GetUsers(GetUsers::from_str(payload)?)),
             CREATE_USER => Ok(Command::CreateUser(CreateUser::from_str(payload)?)),
             DELETE_USER => Ok(Command::DeleteUser(DeleteUser::from_str(payload)?)),
             UPDATE_USER => Ok(Command::UpdateUser(UpdateUser::from_str(payload)?)),
@@ -357,6 +371,8 @@ impl Display for Command {
             Command::GetMe(_) => write!(formatter, "{GET_ME}"),
             Command::GetClient(payload) => write!(formatter, "{GET_CLIENT}|{payload}"),
             Command::GetClients(_) => write!(formatter, "{GET_CLIENTS}"),
+            Command::GetUser(payload) => write!(formatter, "{GET_USER}|{payload}"),
+            Command::GetUsers(_) => write!(formatter, "{GET_USERS}"),
             Command::CreateUser(payload) => write!(formatter, "{CREATE_USER}|{payload}"),
             Command::DeleteUser(payload) => write!(formatter, "{DELETE_USER}|{payload}"),
             Command::UpdateUser(payload) => write!(formatter, "{UPDATE_USER}|{payload}"),
@@ -444,6 +460,16 @@ mod tests {
             &Command::GetClients(GetClients::default()),
             GET_CLIENTS_CODE,
             &GetClients::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetUser(GetUser::default()),
+            GET_USER_CODE,
+            &GetUser::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::GetUsers(GetUsers::default()),
+            GET_USERS_CODE,
+            &GetUsers::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::CreateUser(CreateUser::default()),
@@ -610,6 +636,16 @@ mod tests {
             &Command::GetClients(GetClients::default()),
             GET_CLIENTS,
             &GetClients::default(),
+        );
+        assert_read_from_string(
+            &Command::GetUser(GetUser::default()),
+            GET_USER,
+            &GetUser::default(),
+        );
+        assert_read_from_string(
+            &Command::GetUsers(GetUsers::default()),
+            GET_USERS,
+            &GetUsers::default(),
         );
         assert_read_from_string(
             &Command::CreateUser(CreateUser::default()),

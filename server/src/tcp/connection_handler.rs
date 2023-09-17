@@ -24,7 +24,15 @@ pub(crate) async fn handle_connection(
         .await
         .add_client(address, Transport::Tcp)
         .await;
+
     let mut user_context = UserContext::from_client_id(client_id);
+    {
+        let system = system.read().await;
+        if !system.config.user.authentication_enabled {
+            user_context.disable_authentication();
+        }
+    }
+
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
 
     loop {

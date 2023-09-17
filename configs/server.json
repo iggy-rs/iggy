@@ -79,6 +79,7 @@
       "key": ""
     },
     "user": {
+      "authentication_enabled": false,
       "authorization_enabled": false
     },
     "stream": {

@@ -1,5 +1,6 @@
 use crate::cli::CliCommand;
 
+use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::identifier::Identifier;
@@ -23,23 +24,22 @@ impl CliCommand for StreamUpdate {
         format!("update stream with id: {} and name: {}", self.id, self.name)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) {
-        match client
+    async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
+        client
             .update_stream(&UpdateStream {
                 stream_id: Identifier::numeric(self.id).expect("Expected numeric identifier"),
                 name: self.name.clone(),
             })
             .await
-        {
-            Ok(_) => {
-                println!("Stream with id: {} name: {} updated", self.id, self.name);
-            }
-            Err(err) => {
-                eprintln!(
-                    "Problem creating stream (id: {} and name: {}): {err}",
+            .with_context(|| {
+                format!(
+                    "Problem updating stream (id: {} with name: {})",
                     self.id, self.name
-                );
-            }
-        }
+                )
+            })?;
+
+        println!("Stream with id: {} name: {} updated", self.id, self.name);
+
+        Ok(())
     }
 }

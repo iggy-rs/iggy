@@ -11,6 +11,8 @@ clap = { version = "4.1.11", features = ["derive"] }
 tokio = { version = "1.28.2", features = ["full"] }
 async-trait = "0.1.68"
 comfy-table = "7.0.1"
+anyhow = "1.0.75"
+thiserror = "1.0.48"
 
 [[bin]]
 name = "iggy"

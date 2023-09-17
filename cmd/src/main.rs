@@ -1,8 +1,10 @@
 mod args;
 mod cli;
+mod error;
 mod stream;
 
 use crate::args::{IggyConsoleArgs, StreamAction};
+use crate::error::IggyConsoleError;
 use crate::stream::{
     create::StreamCreate, delete::StreamDelete, get::StreamGet, list::StreamList,
     update::StreamUpdate,
@@ -10,7 +12,6 @@ use crate::stream::{
 use args::Command;
 use clap::Parser;
 use cli::CliCommand;
-use iggy::client_error::ClientError;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
@@ -31,7 +32,7 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), ClientError> {
+async fn main() -> Result<(), IggyConsoleError> {
     let args = IggyConsoleArgs::parse();
 
     let encryptor: Option<Box<dyn Encryptor>> = match args.iggy.encryption_key.is_empty() {
@@ -47,7 +48,7 @@ async fn main() -> Result<(), ClientError> {
     let mut command = get_command(&args.command);
 
     println!("Executing {}", command.explain());
-    command.execute_cmd(&client).await;
+    command.execute_cmd(&client).await?;
 
     Ok(())
 }

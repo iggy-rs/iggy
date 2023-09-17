@@ -1,5 +1,6 @@
 use crate::cli::CliCommand;
 
+use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::identifier::Identifier;
@@ -22,19 +23,16 @@ impl CliCommand for StreamDelete {
         format!("delete stream {}", self.id)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) {
-        match client
+    async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
+        client
             .delete_stream(&DeleteStream {
                 stream_id: Identifier::numeric(self.id).expect("Expected numeric identifier"),
             })
             .await
-        {
-            Ok(_) => {
-                println!("Stream with id: {} deleted", self.id);
-            }
-            Err(err) => {
-                eprintln!("Problem creating stream (id: {}): {err}", self.id);
-            }
-        }
+            .with_context(|| format!("Problem deleting stream (id: {})", self.id))?;
+
+        println!("Stream with id: {} deleted", self.id);
+
+        Ok(())
     }
 }

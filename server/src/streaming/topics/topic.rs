@@ -3,7 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use iggy::error::Error;
-use iggy::utils::timestamp;
+use iggy::utils::timestamp::TimeStamp;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
@@ -67,7 +67,7 @@ impl Topic {
                 },
             },
             config,
-            created_at: timestamp::get(),
+            created_at: TimeStamp::now().to_micros(),
         };
         topic.add_partitions(partitions_count)?;
         Ok(topic)

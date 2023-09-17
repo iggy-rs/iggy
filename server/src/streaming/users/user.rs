@@ -1,7 +1,7 @@
 use crate::streaming::utils::crypto;
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
-use iggy::utils::timestamp;
+use iggy::utils::timestamp::TimeStamp;
 use serde::{Deserialize, Serialize};
 
 const ROOT_USER_ID: u32 = 1;
@@ -25,7 +25,7 @@ impl Default for User {
             status: UserStatus::Active,
             username: "user".to_string(),
             password: "secret".to_string(),
-            created_at: timestamp::get(),
+            created_at: TimeStamp::now().to_micros(),
             permissions: None,
         }
     }
@@ -44,7 +44,7 @@ impl User {
             id,
             username: username.to_string(),
             password: crypto::hash_password(password),
-            created_at: timestamp::get(),
+            created_at: TimeStamp::now().to_micros(),
             status: UserStatus::Active,
             permissions,
         }

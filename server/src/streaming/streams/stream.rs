@@ -1,7 +1,7 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::topic::Topic;
-use iggy::utils::timestamp;
+use iggy::utils::timestamp::TimeStamp;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -41,7 +41,7 @@ impl Stream {
             topics: HashMap::new(),
             topics_ids: HashMap::new(),
             storage,
-            created_at: timestamp::get(),
+            created_at: TimeStamp::now().to_micros(),
         }
     }
 

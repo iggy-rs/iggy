@@ -2,7 +2,7 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use iggy::models::messages::Message;
-use iggy::utils::timestamp;
+use iggy::utils::timestamp::TimeStamp;
 use ringbuffer::AllocRingBuffer;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -86,7 +86,7 @@ impl Partition {
             }),
             config,
             storage,
-            created_at: timestamp::get(),
+            created_at: TimeStamp::now().to_micros(),
         };
 
         if with_segment {

@@ -37,3 +37,4 @@ tracing-subscriber = { version = "0.3.16" }
 quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 openssl = { version = "0.10.*", features = ["vendored"] }
+chrono = { version = "0.4.31" }

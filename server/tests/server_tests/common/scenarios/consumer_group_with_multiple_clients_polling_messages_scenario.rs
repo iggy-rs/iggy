@@ -216,7 +216,7 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
     let consumer_group_member = consumer_group
         .members
         .iter()
-        .find(|m| m.id == client_info.id)
+        .find(|m| m.id == client_info.client_id)
         .unwrap();
     let partition_id = consumer_group_member.partitions[0];
     let mut start_entity_id = partition_id % PARTITIONS_COUNT;

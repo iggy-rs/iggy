@@ -67,7 +67,6 @@ impl System {
             error!("User: {username} already exists.");
             return Err(Error::UserAlreadyExists);
         }
-        // TODO: What if reach the max value and there are some deleted accounts (not used IDs)?
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
         let user = User::new(user_id, &username, password, permissions);
@@ -172,7 +171,12 @@ impl System {
         Ok(())
     }
 
-    pub async fn login_user(&self, username: &str, password: &str) -> Result<User, Error> {
+    pub async fn login_user(
+        &self,
+        username: &str,
+        password: &str,
+        client_id: Option<u32>,
+    ) -> Result<User, Error> {
         info!("Logging in user: {username}...");
         let user = match self.storage.user.load_by_username(username).await {
             Ok(user) => user,
@@ -188,17 +192,24 @@ impl System {
         if !crypto::verify_password(password, &user.password) {
             return Err(Error::InvalidCredentials);
         }
-        // TODO: Store the currently authenticated users in memory. Keep in mind that the single user account might be used by multiple clients.
+        if let Some(client_id) = client_id {
+            let mut client_manager = self.client_manager.write().await;
+            client_manager.set_user_id(client_id, user.id).await?;
+        }
+
         info!("Logged in user: {username}.");
         Ok(user)
     }
 
-    pub async fn logout_user(&self, user_id: u32) -> Result<(), Error> {
+    pub async fn logout_user(&self, user_id: u32, client_id: Option<u32>) -> Result<(), Error> {
         if user_id == 0 {
             return Err(Error::InvalidCredentials);
         }
         info!("Logging out user: {user_id}...");
-        // TODO: Implement user logout on the system level
+        if let Some(client_id) = client_id {
+            let mut client_manager = self.client_manager.write().await;
+            client_manager.clear_user_id(client_id).await?;
+        }
         info!("Logged out user: {user_id}.");
         Ok(())
     }

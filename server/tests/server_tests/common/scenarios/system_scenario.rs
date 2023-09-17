@@ -640,7 +640,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             assert_eq!(member.partitions_count, PARTITIONS_COUNT);
 
             let me = client.get_me(&GetMe {}).await.unwrap();
-            assert!(me.id > 0);
+            assert!(me.client_id > 0);
             assert_eq!(me.consumer_groups_count, 1);
             assert_eq!(me.consumer_groups.len(), 1);
             let consumer_group = &me.consumer_groups[0];

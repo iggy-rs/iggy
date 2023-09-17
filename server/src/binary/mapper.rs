@@ -213,7 +213,8 @@ fn extend_consumer_group(consumer_group: &ConsumerGroup, bytes: &mut Vec<u8>) {
 }
 
 fn extend_client(client: &Client, bytes: &mut Vec<u8>) {
-    bytes.put_u32_le(client.id);
+    bytes.put_u32_le(client.client_id);
+    bytes.put_u32_le(client.user_id.unwrap_or(0));
     let transport: u8 = match client.transport {
         Transport::Tcp => 1,
         Transport::Quic => 2,

@@ -148,7 +148,7 @@ async fn login_user(
     command.validate()?;
     let system = system.read().await;
     system
-        .login_user(&command.username, &command.password)
+        .login_user(&command.username, &command.password, None)
         .await?;
     // TODO: Return JWT
     Ok(StatusCode::OK)
@@ -161,7 +161,7 @@ async fn logout_user(
     command.validate()?;
     let user_id = auth::resolve_user_id();
     let system = system.read().await;
-    system.logout_user(user_id).await?;
+    system.logout_user(user_id, None).await?;
     // TODO: Clear JWT
     Ok(StatusCode::NO_CONTENT)
 }

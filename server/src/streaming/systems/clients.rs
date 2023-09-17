@@ -28,7 +28,7 @@ impl System {
 
             let client = client.unwrap();
             let client = client.read().await;
-            client_id = client.id;
+            client_id = client.client_id;
 
             consumer_groups = client
                 .consumer_groups
@@ -66,7 +66,7 @@ impl System {
 
             info!(
                 "Deleted {} client with ID: {} for address: {}",
-                client.transport, client.id, client.address
+                client.transport, client.client_id, client.address
             );
         }
     }

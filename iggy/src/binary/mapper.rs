@@ -161,7 +161,8 @@ pub fn map_client(payload: &[u8]) -> Result<ClientInfoDetails, Error> {
 
     consumer_groups.sort_by(|x, y| x.consumer_group_id.cmp(&y.consumer_group_id));
     let client = ClientInfoDetails {
-        id: client.id,
+        client_id: client.client_id,
+        user_id: client.user_id,
         address: client.address,
         transport: client.transport,
         consumer_groups_count: client.consumer_groups_count,
@@ -183,7 +184,7 @@ pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, Error> {
         clients.push(client);
         position += read_bytes;
     }
-    clients.sort_by(|x, y| x.id.cmp(&y.id));
+    clients.sort_by(|x, y| x.client_id.cmp(&y.client_id));
     Ok(clients)
 }
 
@@ -483,24 +484,32 @@ fn map_to_consumer_group_member(
 
 fn map_to_client_info(payload: &[u8], mut position: usize) -> Result<(ClientInfo, usize), Error> {
     let mut read_bytes;
-    let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let transport = payload[position + 4];
+    let client_id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
+    let user_id = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
+    let user_id = match user_id {
+        0 => None,
+        _ => Some(user_id),
+    };
+
+    let transport = payload[position + 8];
     let transport = match transport {
         1 => "TCP",
         2 => "QUIC",
         _ => "Unknown",
     }
     .to_string();
+
     let address_length =
-        u32::from_le_bytes(payload[position + 5..position + 9].try_into()?) as usize;
-    let address = from_utf8(&payload[position + 9..position + 9 + address_length])?.to_string();
-    read_bytes = 4 + 1 + 4 + address_length;
+        u32::from_le_bytes(payload[position + 9..position + 13].try_into()?) as usize;
+    let address = from_utf8(&payload[position + 13..position + 13 + address_length])?.to_string();
+    read_bytes = 4 + 4 + 1 + 4 + address_length;
     position += read_bytes;
     let consumer_groups_count = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     read_bytes += 4;
     Ok((
         ClientInfo {
-            id,
+            client_id,
+            user_id,
             address,
             transport,
             consumer_groups_count,

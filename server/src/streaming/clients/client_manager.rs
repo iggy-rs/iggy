@@ -6,14 +6,15 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ClientManager {
     clients: HashMap<u32, Arc<RwLock<Client>>>,
 }
 
 #[derive(Debug)]
 pub struct Client {
-    pub id: u32,
+    pub client_id: u32,
+    pub user_id: Option<u32>,
     pub address: SocketAddr,
     pub transport: Transport,
     pub consumer_groups: Vec<ConsumerGroup>,
@@ -41,30 +42,41 @@ impl Display for Transport {
     }
 }
 
-impl Default for ClientManager {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl ClientManager {
-    pub fn new() -> ClientManager {
-        ClientManager {
-            clients: HashMap::new(),
-        }
-    }
-
     pub fn add_client(&mut self, address: &SocketAddr, transport: Transport) -> u32 {
         let id = checksum::calculate(address.to_string().as_bytes());
         let client = Client {
-            id,
+            client_id: id,
+            user_id: None,
             address: *address,
             transport,
             consumer_groups: Vec::new(),
         };
         self.clients
-            .insert(client.id, Arc::new(RwLock::new(client)));
+            .insert(client.client_id, Arc::new(RwLock::new(client)));
         id
+    }
+
+    pub async fn set_user_id(&mut self, client_id: u32, user_id: u32) -> Result<(), Error> {
+        let client = self.clients.get(&client_id);
+        if client.is_none() {
+            return Err(Error::ClientNotFound(client_id));
+        }
+
+        let mut client = client.unwrap().write().await;
+        client.user_id = Some(user_id);
+        Ok(())
+    }
+
+    pub async fn clear_user_id(&mut self, client_id: u32) -> Result<(), Error> {
+        let client = self.clients.get(&client_id);
+        if client.is_none() {
+            return Err(Error::ClientNotFound(client_id));
+        }
+
+        let mut client = client.unwrap().write().await;
+        client.user_id = None;
+        Ok(())
     }
 
     pub fn get_client_by_address(

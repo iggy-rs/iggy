@@ -90,7 +90,7 @@ async fn init_system(client: &IggyClient) {
     assert_eq!(consumer_group_info.members_count, 1);
     assert_eq!(consumer_group_info.members.len(), 1);
     let member = &consumer_group_info.members[0];
-    assert_eq!(member.id, client_info.id);
+    assert_eq!(member.id, client_info.client_id);
     assert_eq!(member.partitions.len() as u32, PARTITIONS_COUNT);
     assert_eq!(member.partitions_count, PARTITIONS_COUNT);
 }

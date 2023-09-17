@@ -100,6 +100,11 @@ impl System {
         permissions: Option<Permissions>,
     ) -> Result<(), Error> {
         let mut user = self.get_user(user_id).await?;
+        if user.is_root() {
+            error!("Cannot change the root user permissions.");
+            return Err(Error::CannotChangePermissions(user.id));
+        }
+
         user.permissions = permissions;
         let username = user.username.clone();
         info!(
@@ -111,6 +116,34 @@ impl System {
         info!(
             "Updated permissions for user: {} with ID: {user_id}.",
             username
+        );
+        Ok(())
+    }
+
+    pub async fn change_password(
+        &self,
+        user_id: &Identifier,
+        current_password: &str,
+        new_password: &str,
+    ) -> Result<(), Error> {
+        let mut user = self.get_user(user_id).await?;
+        if !crypto::verify_password(current_password, &user.password) {
+            error!(
+                "Invalid current password for user: {} with ID: {user_id}.",
+                user.username
+            );
+            return Err(Error::InvalidCredentials);
+        }
+
+        info!(
+            "Changing password for user: {} with ID: {user_id}...",
+            user.username
+        );
+        user.password = crypto::hash_password(new_password);
+        self.storage.user.save(&user).await?;
+        info!(
+            "Changed password for user: {} with ID: {user_id}.",
+            user.username
         );
         Ok(())
     }

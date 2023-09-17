@@ -15,6 +15,10 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{command}");
+    if !user_context.is_authenticated() {
+        return Err(Error::Unauthenticated);
+    }
+
     let mut system = system.write().await;
     let stream = system.get_stream(&command.stream_id)?;
     system

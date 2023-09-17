@@ -16,6 +16,10 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{command}");
+    if !user_context.is_authenticated() {
+        return Err(Error::Unauthenticated);
+    }
+
     let consumer = PollingConsumer::from_consumer(
         &command.consumer,
         user_context.client_id,

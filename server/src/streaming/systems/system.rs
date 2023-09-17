@@ -72,7 +72,7 @@ impl System {
             streams: HashMap::new(),
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),
-            client_manager: Arc::new(RwLock::new(ClientManager::new())),
+            client_manager: Arc::new(RwLock::new(ClientManager::default())),
             permissioner: Permissioner::default(),
         }
     }

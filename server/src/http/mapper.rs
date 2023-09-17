@@ -117,7 +117,8 @@ pub fn map_users(users: &[User]) -> Vec<UserInfo> {
 
 pub async fn map_client(client: &Client) -> iggy::models::client_info::ClientInfoDetails {
     let client = iggy::models::client_info::ClientInfoDetails {
-        id: client.id,
+        client_id: client.client_id,
+        user_id: client.user_id,
         transport: client.transport.to_string(),
         address: client.address.to_string(),
         consumer_groups_count: client.consumer_groups.len() as u32,
@@ -141,7 +142,8 @@ pub async fn map_clients(
     for client in clients {
         let client = client.read().await;
         let client = iggy::models::client_info::ClientInfo {
-            id: client.id,
+            client_id: client.client_id,
+            user_id: client.user_id,
             transport: client.transport.to_string(),
             address: client.address.to_string(),
             consumer_groups_count: client.consumer_groups.len() as u32,
@@ -149,7 +151,7 @@ pub async fn map_clients(
         all_clients.push(client);
     }
 
-    all_clients.sort_by(|a, b| a.id.cmp(&b.id));
+    all_clients.sort_by(|a, b| a.client_id.cmp(&b.client_id));
     all_clients
 }
 

@@ -17,7 +17,11 @@ pub async fn handle(
     trace!("{command}");
     let system = system.read().await;
     let user = system
-        .login_user(&command.username, &command.password)
+        .login_user(
+            &command.username,
+            &command.password,
+            Some(user_context.client_id),
+        )
         .await?;
     user_context.set_user_id(user.id);
     info!("Set user ID: {}", user.id);

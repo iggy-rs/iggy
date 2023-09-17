@@ -15,9 +15,15 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     trace!("{command}");
+    if !user_context.is_authenticated() {
+        return Err(Error::Unauthenticated);
+    }
+
     let user_id = user_context.user_id;
     let system = system.read().await;
-    system.logout_user(user_id).await?;
+    system
+        .logout_user(user_id, Some(user_context.client_id))
+        .await?;
     user_context.clear_user_id();
     info!("Cleared user ID: {}", user_id);
     sender.send_empty_ok_response().await?;

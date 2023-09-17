@@ -63,7 +63,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 6. Validate that the consumer group has 1 member and this member has all partitions assigned
     let consumer_group = get_consumer_group_and_validate_members(&system_client, 1).await;
     let member = &consumer_group.members[0];
-    assert_eq!(member.id, client1_info.id);
+    assert_eq!(member.id, client1_info.client_id);
     assert_eq!(member.partitions_count, PARTITIONS_COUNT);
     assert_eq!(member.partitions.len() as u32, PARTITIONS_COUNT);
 
@@ -118,7 +118,7 @@ async fn get_me_and_validate_consumer_groups(client: &IggyClient) -> ClientInfoD
     let get_me = GetMe {};
     let client_info = client.get_me(&get_me).await.unwrap();
 
-    assert!(client_info.id > 0);
+    assert!(client_info.client_id > 0);
     assert_eq!(client_info.consumer_groups_count, 1);
     assert_eq!(client_info.consumer_groups.len(), 1);
 

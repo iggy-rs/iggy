@@ -16,6 +16,7 @@ use crate::models::messages::PolledMessages;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
+use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 use crate::streams::create_stream::CreateStream;
@@ -36,6 +37,8 @@ use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
+use crate::users::get_user::GetUser;
+use crate::users::get_users::GetUsers;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
@@ -72,6 +75,8 @@ pub trait SystemClient {
 
 #[async_trait]
 pub trait UserClient {
+    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, Error>;
+    async fn get_users(&self, command: &GetUsers) -> Result<Vec<UserInfo>, Error>;
     async fn create_user(&self, command: &CreateUser) -> Result<(), Error>;
     async fn delete_user(&self, command: &DeleteUser) -> Result<(), Error>;
     async fn update_user(&self, command: &UpdateUser) -> Result<(), Error>;

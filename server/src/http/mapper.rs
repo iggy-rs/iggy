@@ -2,10 +2,12 @@ use crate::streaming::clients::client_manager::Client;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::users::user::User;
 use iggy::models::client_info::ConsumerGroupInfo;
 use iggy::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
+use iggy::models::user_info::{UserInfo, UserInfoDetails};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -86,6 +88,31 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
     }
     topic_details.partitions.sort_by(|a, b| a.id.cmp(&b.id));
     topic_details
+}
+
+pub fn map_user(user: &User) -> UserInfoDetails {
+    UserInfoDetails {
+        id: user.id,
+        username: user.username.clone(),
+        created_at: user.created_at,
+        status: user.status,
+        permissions: user.permissions.clone(),
+    }
+}
+
+pub fn map_users(users: &[User]) -> Vec<UserInfo> {
+    let mut users_data = Vec::with_capacity(users.len());
+    for user in users {
+        let user = UserInfo {
+            id: user.id,
+            username: user.username.clone(),
+            created_at: user.created_at,
+            status: user.status,
+        };
+        users_data.push(user);
+    }
+    users_data.sort_by(|a, b| a.id.cmp(&b.id));
+    users_data
 }
 
 pub async fn map_client(client: &Client) -> iggy::models::client_info::ClientInfoDetails {

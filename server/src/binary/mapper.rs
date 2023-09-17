@@ -7,6 +7,8 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::users::user::User;
+use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::stats::Stats;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -65,6 +67,29 @@ pub async fn map_clients(clients: &[Arc<RwLock<Client>>]) -> Vec<u8> {
     for client in clients {
         let client = client.read().await;
         extend_client(&client, &mut bytes);
+    }
+    bytes
+}
+
+pub fn map_user(user: &User) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    extend_user(user, &mut bytes);
+    if let Some(permissions) = &user.permissions {
+        bytes.put_u8(1);
+        let permissions = permissions.as_bytes();
+        #[allow(clippy::cast_possible_truncation)]
+        bytes.put_u32_le(permissions.len() as u32);
+        bytes.extend(permissions);
+    } else {
+        bytes.put_u32_le(0);
+    }
+    bytes
+}
+
+pub fn map_users(users: &[User]) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    for user in users {
+        extend_user(user, &mut bytes);
     }
     bytes
 }
@@ -198,4 +223,12 @@ fn extend_client(client: &Client, bytes: &mut Vec<u8>) {
     bytes.put_u32_le(address.len() as u32);
     bytes.extend(address.as_bytes());
     bytes.put_u32_le(client.consumer_groups.len() as u32);
+}
+
+fn extend_user(user: &User, bytes: &mut Vec<u8>) {
+    bytes.put_u32_le(user.id);
+    bytes.put_u64(user.created_at);
+    bytes.put_u8(user.status.as_code());
+    bytes.put_u8(user.username.len() as u8);
+    bytes.extend(user.username.as_bytes());
 }

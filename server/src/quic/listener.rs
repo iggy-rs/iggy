@@ -50,6 +50,13 @@ async fn handle_connection(
             .add_client(&address, Transport::Quic)
             .await;
         let mut user_context = UserContext::from_client_id(client_id);
+        {
+            let system = system.read().await;
+            if !system.config.user.authentication_enabled {
+                user_context.disable_authentication();
+            }
+        }
+
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {

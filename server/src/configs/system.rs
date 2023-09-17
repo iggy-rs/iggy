@@ -41,6 +41,7 @@ pub struct EncryptionConfig {
 
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct UserConfig {
+    pub authentication_enabled: bool,
     pub authorization_enabled: bool,
 }
 

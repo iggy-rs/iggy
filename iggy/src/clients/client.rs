@@ -23,6 +23,7 @@ use crate::models::messages::{Message, PolledMessages};
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
+use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::partitioner::Partitioner;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
@@ -45,6 +46,8 @@ use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
+use crate::users::get_user::GetUser;
+use crate::users::get_users::GetUsers;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
@@ -451,6 +454,14 @@ impl IggyClient {
 
 #[async_trait]
 impl UserClient for IggyClient {
+    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, Error> {
+        self.client.read().await.get_user(command).await
+    }
+
+    async fn get_users(&self, command: &GetUsers) -> Result<Vec<UserInfo>, Error> {
+        self.client.read().await.get_users(command).await
+    }
+
     async fn create_user(&self, command: &CreateUser) -> Result<(), Error> {
         self.client.read().await.create_user(command).await
     }

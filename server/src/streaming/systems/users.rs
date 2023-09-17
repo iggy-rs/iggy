@@ -5,6 +5,7 @@ use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
+use iggy::utils::text;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::log::error;
 use tracing::{info, warn};
@@ -34,20 +35,42 @@ impl System {
         Ok(())
     }
 
+    pub async fn get_user(&self, user_id: &Identifier) -> Result<User, Error> {
+        Ok(match user_id.kind {
+            IdKind::Numeric => {
+                self.storage
+                    .user
+                    .load_by_id(user_id.get_u32_value()?)
+                    .await?
+            }
+            IdKind::String => {
+                self.storage
+                    .user
+                    .load_by_username(&user_id.get_string_value()?)
+                    .await?
+            }
+        })
+    }
+
+    pub async fn get_users(&self) -> Result<Vec<User>, Error> {
+        self.storage.user.load_all().await
+    }
+
     pub async fn create_user(
         &self,
         username: &str,
         password: &str,
         permissions: Option<Permissions>,
     ) -> Result<User, Error> {
-        if self.storage.user.load_by_username(username).await.is_ok() {
+        let username = text::to_lowercase_non_whitespace(username);
+        if self.storage.user.load_by_username(&username).await.is_ok() {
             error!("User: {username} already exists.");
             return Err(Error::UserAlreadyExists);
         }
         // TODO: What if reach the max value and there are some deleted accounts (not used IDs)?
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
-        let user = User::new(user_id, username, password, permissions);
+        let user = User::new(user_id, &username, password, permissions);
         self.storage.user.save(&user).await?;
         info!("Created user: {username} with ID: {user_id}.");
         Ok(user)
@@ -75,6 +98,7 @@ impl System {
     ) -> Result<User, Error> {
         let mut user = self.get_user(user_id).await?;
         if let Some(username) = username {
+            let username = text::to_lowercase_non_whitespace(&username);
             let existing_user = self.storage.user.load_by_username(&username).await;
             if existing_user.is_ok() && existing_user.unwrap().id != user.id {
                 error!("User: {username} already exists.");
@@ -146,23 +170,6 @@ impl System {
             user.username
         );
         Ok(())
-    }
-
-    pub async fn get_user(&self, user_id: &Identifier) -> Result<User, Error> {
-        Ok(match user_id.kind {
-            IdKind::Numeric => {
-                self.storage
-                    .user
-                    .load_by_id(user_id.get_u32_value()?)
-                    .await?
-            }
-            IdKind::String => {
-                self.storage
-                    .user
-                    .load_by_username(&user_id.get_string_value()?)
-                    .await?
-            }
-        })
     }
 
     pub async fn login_user(&self, username: &str, password: &str) -> Result<User, Error> {

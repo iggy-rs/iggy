@@ -2,7 +2,7 @@ use crate::configs::server::MessageCleanerConfig;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::Error;
-use iggy::utils::timestamp;
+use iggy::utils::timestamp::TimeStamp;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -30,7 +30,7 @@ pub fn start(config: MessageCleanerConfig, system: Arc<RwLock<System>>) {
         loop {
             interval.tick().await;
             let system = system.read().await;
-            let now = timestamp::get();
+            let now = TimeStamp::now().to_micros();
             let streams = system.get_streams();
             for stream in streams {
                 let topics = stream.get_topics();

@@ -5,7 +5,7 @@ use comfy_table::Table;
 use iggy::client::Client;
 use iggy::identifier::Identifier;
 use iggy::streams::get_stream::GetStream;
-use iggy::utils::timestamp;
+use iggy::utils::timestamp::TimeStamp;
 
 #[derive(Debug)]
 pub(crate) struct StreamGet {
@@ -38,7 +38,9 @@ impl CliCommand for StreamGet {
                 table.add_row(vec!["Stream id", format!("{}", stream.id).as_str()]);
                 table.add_row(vec![
                     "Created",
-                    timestamp::to_string(stream.created_at, "%Y-%m-%d %H:%M:%S").as_str(),
+                    TimeStamp::from(stream.created_at)
+                        .to_string("%Y-%m-%d %H:%M:%S")
+                        .as_str(),
                 ]);
                 table.add_row(vec!["Stream name", stream.name.as_str()]);
                 table.add_row(vec![
@@ -57,7 +59,7 @@ impl CliCommand for StreamGet {
                 println!("{table}");
             }
             Err(err) => {
-                println!("Problem creating stream (id: {}): {err}", self.id);
+                eprintln!("Problem creating stream (id: {}): {err}", self.id);
             }
         }
     }

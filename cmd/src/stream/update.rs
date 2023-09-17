@@ -35,7 +35,7 @@ impl CliCommand for StreamUpdate {
                 println!("Stream with id: {} name: {} updated", self.id, self.name);
             }
             Err(err) => {
-                println!(
+                eprintln!(
                     "Problem creating stream (id: {} and name: {}): {err}",
                     self.id, self.name
                 );

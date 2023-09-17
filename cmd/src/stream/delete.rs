@@ -33,7 +33,7 @@ impl CliCommand for StreamDelete {
                 println!("Stream with id: {} deleted", self.id);
             }
             Err(err) => {
-                println!("Problem creating stream (id: {}): {err}", self.id);
+                eprintln!("Problem creating stream (id: {}): {err}", self.id);
             }
         }
     }

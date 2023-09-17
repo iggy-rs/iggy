@@ -3,7 +3,7 @@ use crate::error::Error;
 use crate::messages::send_messages;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::utils::{checksum, timestamp};
+use crate::utils::{checksum, timestamp::TimeStamp};
 use bytes::{BufMut, Bytes};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -90,7 +90,7 @@ impl FromStr for MessageState {
 
 impl Message {
     pub fn from_message(message: &send_messages::Message) -> Self {
-        let timestamp = timestamp::get();
+        let timestamp = TimeStamp::now().to_micros();
         let checksum = checksum::calculate(&message.payload);
         let headers = message.headers.as_ref().cloned();
 

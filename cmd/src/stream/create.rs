@@ -37,7 +37,7 @@ impl CliCommand for StreamCreate {
                 );
             }
             Err(err) => {
-                println!(
+                eprintln!(
                     "Problem creating stream (id: {} and name: {}): {err}",
                     self.id, self.name
                 );

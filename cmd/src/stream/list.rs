@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use comfy_table::Table;
 use iggy::client::Client;
 use iggy::streams::get_streams::GetStreams;
-use iggy::utils::timestamp;
+use iggy::utils::timestamp::TimeStamp;
 
 #[derive(Debug)]
 pub(crate) struct StreamList {
@@ -45,7 +45,8 @@ impl CliCommand for StreamList {
                             streams.iter().for_each(|stream| {
                                 table.add_row(vec![
                                     format!("{}", stream.id),
-                                    timestamp::to_string(stream.created_at, "%Y-%m-%d %H:%M:%S"),
+                                    TimeStamp::from(stream.created_at)
+                                        .to_string("%Y-%m-%d %H:%M:%S"),
                                     stream.name.clone(),
                                     format!("{}", stream.size_bytes),
                                     format!("{}", stream.messages_count),
@@ -60,7 +61,8 @@ impl CliCommand for StreamList {
                                 println!(
                                     "{}|{}|{}|{}|{}|{}",
                                     stream.id,
-                                    timestamp::to_string(stream.created_at, "%Y-%m-%d %H:%M:%S"),
+                                    TimeStamp::from(stream.created_at)
+                                        .to_string("%Y-%m-%d %H:%M:%S"),
                                     stream.name,
                                     stream.size_bytes,
                                     stream.messages_count,
@@ -72,7 +74,7 @@ impl CliCommand for StreamList {
                 }
             }
             Err(err) => {
-                println!("Problem getting streams {err}");
+                eprintln!("Problem getting streams {err}");
             }
         }
     }

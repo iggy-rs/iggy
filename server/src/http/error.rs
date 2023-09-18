@@ -31,6 +31,7 @@ impl IntoResponse for CustomError {
                     Error::ClientNotFound(_) => StatusCode::NOT_FOUND,
                     Error::ConsumerGroupNotFound(_, _) => StatusCode::NOT_FOUND,
                     Error::ConsumerGroupMemberNotFound(_, _, _) => StatusCode::NOT_FOUND,
+                    Error::CannotLoadResource(_) => StatusCode::NOT_FOUND,
                     Error::ResourceNotFound(_) => StatusCode::NOT_FOUND,
                     Error::IoError(_) => StatusCode::INTERNAL_SERVER_ERROR,
                     Error::WriteError(_) => StatusCode::INTERNAL_SERVER_ERROR,

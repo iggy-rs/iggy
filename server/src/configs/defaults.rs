@@ -1,4 +1,4 @@
-use crate::configs::http::{HttpConfig, HttpCorsConfig, HttpTlsConfig};
+use crate::configs::http::{HttpConfig, HttpCorsConfig, HttpTlsConfig, JwtConfig};
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{MessageCleanerConfig, MessageSaverConfig, ServerConfig};
 use crate::configs::system::{
@@ -64,6 +64,7 @@ impl Default for HttpConfig {
             enabled: true,
             address: "127.0.0.1:3000".to_string(),
             cors: HttpCorsConfig::default(),
+            jwt: JwtConfig::default(),
             tls: HttpTlsConfig::default(),
         }
     }

@@ -1,5 +1,5 @@
 use crate::http::error::CustomError;
-use crate::streaming::systems::system::System;
+use crate::http::state::AppState;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::post;
@@ -9,18 +9,17 @@ use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 use super::auth;
 
-pub fn router(system: Arc<RwLock<System>>) -> Router {
+pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", post(create_partitions).delete(delete_partitions))
-        .with_state(system)
+        .with_state(state)
 }
 
 async fn create_partitions(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     Json(mut command): Json<CreatePartitions>,
 ) -> Result<StatusCode, CustomError> {
@@ -29,7 +28,7 @@ async fn create_partitions(
     command.validate()?;
     let user_id = auth::resolve_user_id();
     {
-        let system = system.read().await;
+        let system = state.system.read().await;
         let stream = system.get_stream(&command.stream_id)?;
         let topic = stream.get_topic(&command.topic_id)?;
         system
@@ -37,7 +36,7 @@ async fn create_partitions(
             .create_partitons(user_id, stream.stream_id, topic.topic_id)?;
     }
 
-    let mut system = system.write().await;
+    let mut system = state.system.write().await;
     let topic = system
         .get_stream_mut(&command.stream_id)?
         .get_topic_mut(&command.topic_id)?;
@@ -49,7 +48,7 @@ async fn create_partitions(
 }
 
 async fn delete_partitions(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     mut query: Query<DeletePartitions>,
 ) -> Result<StatusCode, CustomError> {
@@ -58,7 +57,7 @@ async fn delete_partitions(
     query.validate()?;
     let user_id = auth::resolve_user_id();
     {
-        let system = system.read().await;
+        let system = state.system.read().await;
         let stream = system.get_stream(&query.stream_id)?;
         let topic = stream.get_topic(&query.topic_id)?;
         system
@@ -66,7 +65,7 @@ async fn delete_partitions(
             .delete_partitions(user_id, stream.stream_id, topic.topic_id)?;
     }
 
-    let mut system = system.write().await;
+    let mut system = state.system.write().await;
     let topic = system
         .get_stream_mut(&query.stream_id)?
         .get_topic_mut(&query.topic_id)?;

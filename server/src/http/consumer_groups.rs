@@ -1,6 +1,6 @@
 use crate::http::error::CustomError;
 use crate::http::mapper;
-use crate::streaming::systems::system::System;
+use crate::http::state::AppState;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -10,26 +10,25 @@ use iggy::identifier::Identifier;
 use iggy::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 use super::auth;
 
-pub fn router(system: Arc<RwLock<System>>) -> Router {
+pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(get_consumer_groups).post(create_consumer_group))
         .route(
             "/:consumer_group_id",
             get(get_consumer_group).delete(delete_consumer_group),
         )
-        .with_state(system)
+        .with_state(state)
 }
 
 async fn get_consumer_group(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, u32)>,
 ) -> Result<Json<ConsumerGroupDetails>, CustomError> {
     let user_id = auth::resolve_user_id();
-    let system = system.read().await;
+    let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let stream = system.get_stream(&stream_id)?;
@@ -44,11 +43,11 @@ async fn get_consumer_group(
 }
 
 async fn get_consumer_groups(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
 ) -> Result<Json<Vec<ConsumerGroup>>, CustomError> {
     let user_id = auth::resolve_user_id();
-    let system = system.read().await;
+    let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let stream = system.get_stream(&stream_id)?;
@@ -61,7 +60,7 @@ async fn get_consumer_groups(
 }
 
 async fn create_consumer_group(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     Json(mut command): Json<CreateConsumerGroup>,
 ) -> Result<StatusCode, CustomError> {
@@ -70,7 +69,7 @@ async fn create_consumer_group(
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
     {
-        let system = system.read().await;
+        let system = state.system.read().await;
         let stream = system.get_stream(&command.stream_id)?;
         let topic = stream.get_topic(&command.topic_id)?;
         system
@@ -78,7 +77,7 @@ async fn create_consumer_group(
             .create_consumer_group(user_id, stream.stream_id, topic.topic_id)?;
     }
 
-    let mut system = system.write().await;
+    let mut system = state.system.write().await;
     system
         .create_consumer_group(
             &command.stream_id,
@@ -90,14 +89,14 @@ async fn create_consumer_group(
 }
 
 async fn delete_consumer_group(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, u32)>,
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let user_id = auth::resolve_user_id();
     {
-        let system = system.read().await;
+        let system = state.system.read().await;
         let stream = system.get_stream(&stream_id)?;
         let topic = stream.get_topic(&topic_id)?;
         system
@@ -105,7 +104,7 @@ async fn delete_consumer_group(
             .delete_consumer_group(user_id, stream.stream_id, topic.topic_id)?;
     }
 
-    let mut system = system.write().await;
+    let mut system = state.system.write().await;
     system
         .delete_consumer_group(&stream_id, &topic_id, consumer_group_id)
         .await?;

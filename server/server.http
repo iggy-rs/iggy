@@ -9,9 +9,26 @@
 @message_1_payload_base64 = aGVsbG8=
 @message_2_payload_base64 = d29ybGQ=
 @header_1_payload_base_64 = dmFsdWUgMQ==
+@username = iggy
+@password = iggy
+@token = secret
+@user_id = 1
 
 ###
 GET {{url}}
+
+###
+POST {{url}}/users/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+###
+GET {{url}}/users/{{user_id}}
+Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/clients

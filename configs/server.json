@@ -20,6 +20,10 @@
       "allow_credentials": false,
       "allow_private_network": false
     },
+    "jwt": {
+      "secret": "top_secret$iggy.rs$_jwt_HS256_key#!",
+      "expiry": 3600
+    },
     "tls": {
       "enabled": false,
       "cert_file": "certs/iggy_cert.pem",

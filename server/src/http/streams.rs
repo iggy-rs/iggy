@@ -1,6 +1,6 @@
 use crate::http::error::CustomError;
+use crate::http::state::AppState;
 use crate::http::{auth, mapper};
-use crate::streaming::systems::system::System;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -11,24 +11,23 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::update_stream::UpdateStream;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
-pub fn router(system: Arc<RwLock<System>>) -> Router {
+pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(get_streams).post(create_stream))
         .route(
             "/:stream_id",
             get(get_stream).put(update_stream).delete(delete_stream),
         )
-        .with_state(system)
+        .with_state(state)
 }
 
 async fn get_stream(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path(stream_id): Path<String>,
 ) -> Result<Json<StreamDetails>, CustomError> {
     let user_id = auth::resolve_user_id();
-    let system = system.read().await;
+    let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let stream = system.get_stream(&stream_id)?;
     system.permissioner.get_stream(user_id, stream.stream_id)?;
@@ -36,23 +35,21 @@ async fn get_stream(
     Ok(Json(stream))
 }
 
-async fn get_streams(
-    State(system): State<Arc<RwLock<System>>>,
-) -> Result<Json<Vec<Stream>>, CustomError> {
+async fn get_streams(State(state): State<Arc<AppState>>) -> Result<Json<Vec<Stream>>, CustomError> {
     let user_id = auth::resolve_user_id();
-    let system = system.read().await;
+    let system = state.system.read().await;
     system.permissioner.get_streams(user_id)?;
     let streams = mapper::map_streams(&system.get_streams()).await;
     Ok(Json(streams))
 }
 
 async fn create_stream(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Json(command): Json<CreateStream>,
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
     let user_id = auth::resolve_user_id();
-    let mut system = system.write().await;
+    let mut system = state.system.write().await;
     system.permissioner.create_stream(user_id)?;
     system
         .create_stream(user_id, command.stream_id, &command.name)
@@ -61,14 +58,14 @@ async fn create_stream(
 }
 
 async fn update_stream(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path(stream_id): Path<String>,
     Json(mut command): Json<UpdateStream>,
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
     let user_id = auth::resolve_user_id();
-    let mut system = system.write().await;
+    let mut system = state.system.write().await;
     let stream = system.get_stream(&command.stream_id)?;
     system
         .permissioner
@@ -80,12 +77,12 @@ async fn update_stream(
 }
 
 async fn delete_stream(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path(stream_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     let user_id = auth::resolve_user_id();
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let mut system = system.write().await;
+    let mut system = state.system.write().await;
     let stream = system.get_stream(&stream_id)?;
     system
         .permissioner

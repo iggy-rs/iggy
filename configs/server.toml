@@ -11,6 +11,10 @@ exposed_headers = []
 allow_credentials = false
 allow_private_network = false
 
+[http.jwt]
+secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
+expiry = 3600
+
 [http.tls]
 enabled = false
 cert_file = "certs/iggy_cert.pem"

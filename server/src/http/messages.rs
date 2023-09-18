@@ -1,8 +1,8 @@
 use crate::http::auth;
 use crate::http::error::CustomError;
+use crate::http::state::AppState;
 use crate::streaming;
 use crate::streaming::polling_consumer::PollingConsumer;
-use crate::streaming::systems::system::System;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -12,16 +12,15 @@ use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
-pub fn router(system: Arc<RwLock<System>>) -> Router {
+pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", get(poll_messages).post(send_messages))
-        .with_state(system)
+        .with_state(state)
 }
 
 async fn poll_messages(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     mut query: Query<PollMessages>,
 ) -> Result<Json<streaming::models::messages::PolledMessages>, CustomError> {
@@ -32,7 +31,7 @@ async fn poll_messages(
     let user_id = auth::resolve_user_id();
     let partition_id = query.partition_id.unwrap_or(0);
     let consumer = PollingConsumer::Consumer(query.consumer.id, partition_id);
-    let system = system.read().await;
+    let system = state.system.read().await;
     let stream = system.get_stream(&query.stream_id)?;
     let topic = stream.get_topic(&query.topic_id)?;
     system
@@ -53,7 +52,7 @@ async fn poll_messages(
 }
 
 async fn send_messages(
-    State(system): State<Arc<RwLock<System>>>,
+    State(state): State<Arc<AppState>>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     Json(mut command): Json<SendMessages>,
 ) -> Result<StatusCode, CustomError> {
@@ -63,7 +62,7 @@ async fn send_messages(
     command.validate()?;
 
     let user_id = auth::resolve_user_id();
-    let system = system.read().await;
+    let system = state.system.read().await;
     let stream = system.get_stream(&command.stream_id)?;
     let topic = stream.get_topic(&command.topic_id)?;
     system

@@ -1148,6 +1148,9 @@ dependencies = [
  "iggy",
  "thiserror",
  "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
 ]
 
 [[package]]

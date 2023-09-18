@@ -7,6 +7,8 @@ use comfy_table::Table;
 use iggy::client::Client;
 use iggy::streams::get_streams::GetStreams;
 use iggy::utils::timestamp::TimeStamp;
+use tracing::info;
+
 #[derive(Debug)]
 pub(crate) struct StreamList {
     mode: ListMode,
@@ -35,7 +37,7 @@ impl CliCommand for StreamList {
             .with_context(|| String::from("Problem getting list of streams"))?;
 
         if streams.is_empty() {
-            println!("No streams found!");
+            info!("No streams found!");
             return Ok(());
         }
 
@@ -56,11 +58,11 @@ impl CliCommand for StreamList {
                     ]);
                 });
 
-                println!("{table}");
+                info!("{table}");
             }
             ListMode::List => {
                 streams.iter().for_each(|stream| {
-                    println!(
+                    info!(
                         "{}|{}|{}|{}|{}|{}",
                         stream.id,
                         TimeStamp::from(stream.created_at).to_string("%Y-%m-%d %H:%M:%S"),

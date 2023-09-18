@@ -8,6 +8,7 @@ use iggy::client::Client;
 use iggy::identifier::Identifier;
 use iggy::streams::get_stream::GetStream;
 use iggy::utils::timestamp::TimeStamp;
+use tracing::info;
 
 #[derive(Debug)]
 pub(crate) struct StreamGet {
@@ -58,7 +59,7 @@ impl CliCommand for StreamGet {
             format!("{}", stream.topics_count).as_str(),
         ]);
 
-        println!("{table}");
+        info!("{table}");
 
         Ok(())
     }

@@ -1145,7 +1145,7 @@ dependencies = [
 
 [[package]]
 name = "iggy-cmd"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1154,6 +1154,9 @@ dependencies = [
  "iggy",
  "thiserror",
  "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
 ]
 
 [[package]]

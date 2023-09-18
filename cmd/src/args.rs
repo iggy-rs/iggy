@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 use iggy::args::Args as IggyArgs;
@@ -10,6 +12,14 @@ pub(crate) struct IggyConsoleArgs {
 
     #[clap(subcommand)]
     pub(crate) command: Command,
+
+    /// Quiet mode (disabled stdout printing)
+    #[clap(short, long, default_value_t = false)]
+    pub(crate) quiet: bool,
+
+    /// Debug mode (verbose printing to given file)
+    #[clap(short, long)]
+    pub(crate) debug: Option<PathBuf>,
 }
 
 #[derive(Debug, Subcommand)]

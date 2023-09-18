@@ -1,14 +1,16 @@
 mod args;
 mod cli;
+mod cmd;
 mod error;
-mod stream;
+mod logging;
 
 use crate::args::{IggyConsoleArgs, StreamAction};
-use crate::error::IggyConsoleError;
-use crate::stream::{
+use crate::cmd::stream::{
     create::StreamCreate, delete::StreamDelete, get::StreamGet, list::StreamList,
     update::StreamUpdate,
 };
+use crate::error::IggyConsoleError;
+use crate::logging::{Logging, PRINT_TARGET};
 use args::Command;
 use clap::Parser;
 use cli::CliCommand;
@@ -17,6 +19,7 @@ use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::sync::Arc;
+use tracing::{event, Level};
 
 fn get_command(command: &Command) -> Box<dyn CliCommand> {
     #[warn(clippy::let_and_return)]
@@ -35,6 +38,9 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
 async fn main() -> Result<(), IggyConsoleError> {
     let args = IggyConsoleArgs::parse();
 
+    let mut logging = Logging::new();
+    logging.init(args.quiet, args.debug);
+
     let encryptor: Option<Box<dyn Encryptor>> = match args.iggy.encryption_key.is_empty() {
         true => None,
         false => Some(Box::new(
@@ -47,7 +53,7 @@ async fn main() -> Result<(), IggyConsoleError> {
 
     let mut command = get_command(&args.command);
 
-    println!("Executing {}", command.explain());
+    event!(target: PRINT_TARGET, Level::INFO, "Executing {}", command.explain());
     command.execute_cmd(&client).await?;
 
     Ok(())

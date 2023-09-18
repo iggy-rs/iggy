@@ -14,6 +14,7 @@ use std::sync::Arc;
 const AUDIENCE: &str = "iggy.rs";
 const AUTHORIZATION: &str = "authorization";
 const BEARER: &str = "Bearer ";
+const UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
 
 #[derive(Debug, Clone)]
 pub struct Identity {
@@ -25,37 +26,27 @@ pub async fn jwt_auth<T>(
     mut request: Request<T>,
     next: Next<T>,
 ) -> Result<Response, StatusCode> {
-    match request.uri().path() {
-        "/" => return Ok(next.run(request).await),
-        "/ping" => return Ok(next.run(request).await),
-        "/users/login" => return Ok(next.run(request).await),
-        _ => (),
+    if should_skip_auth(request.uri().path()) {
+        return Ok(next.run(request).await);
     }
 
-    let header = match request.headers().get(AUTHORIZATION) {
-        Some(v) => v,
-        None => return Err(StatusCode::UNAUTHORIZED),
-    };
-
-    let bearer = match header.to_str() {
-        Ok(v) => v,
-        Err(_) => return Err(StatusCode::UNAUTHORIZED),
-    };
+    let bearer = request
+        .headers()
+        .get(AUTHORIZATION)
+        .ok_or(UNAUTHORIZED)?
+        .to_str()
+        .map_err(|_| UNAUTHORIZED)?;
 
     if !bearer.starts_with(BEARER) {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
-    let jwt_token = bearer.trim_start_matches(BEARER);
-    let token_header = match jsonwebtoken::decode_header(jwt_token) {
-        Ok(header) => header,
-        _ => return Err(StatusCode::UNAUTHORIZED),
-    };
-
-    let jwt_claims = match state.jwt_manager.decode(jwt_token, token_header.alg) {
-        Ok(claims) => claims,
-        _ => return Err(StatusCode::UNAUTHORIZED),
-    };
+    let jwt_token = &bearer[BEARER.len()..];
+    let token_header = jsonwebtoken::decode_header(jwt_token).map_err(|_| UNAUTHORIZED)?;
+    let jwt_claims = state
+        .jwt_manager
+        .decode(jwt_token, token_header.alg)
+        .map_err(|_| UNAUTHORIZED)?;
 
     let identity = Identity {
         user_id: jwt_claims.claims.sub,
@@ -111,4 +102,8 @@ impl JwtManager {
             _ => Err(Error::Unauthenticated),
         }
     }
+}
+
+fn should_skip_auth(path: &str) -> bool {
+    matches!(path, "/" | "/ping" | "/users/login")
 }

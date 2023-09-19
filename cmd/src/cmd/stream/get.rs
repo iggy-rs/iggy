@@ -24,7 +24,7 @@ impl StreamGet {
 #[async_trait]
 impl CliCommand for StreamGet {
     fn explain(&self) -> String {
-        format!("get stream {}", self.id)
+        format!("get stream with ID: {}", self.id)
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
@@ -33,12 +33,12 @@ impl CliCommand for StreamGet {
                 stream_id: Identifier::numeric(self.id).expect("Expected numeric identifier"),
             })
             .await
-            .with_context(|| format!("Problem getting stream (id: {})", self.id))?;
+            .with_context(|| format!("Problem getting stream with ID: {}", self.id))?;
 
         let mut table = Table::new();
 
         table.set_header(vec!["Property", "Value"]);
-        table.add_row(vec!["Stream id", format!("{}", stream.id).as_str()]);
+        table.add_row(vec!["Stream ID", format!("{}", stream.id).as_str()]);
         table.add_row(vec![
             "Created",
             TimeStamp::from(stream.created_at)

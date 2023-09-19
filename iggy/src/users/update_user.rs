@@ -86,7 +86,8 @@ impl BytesSerializable for UpdateUser {
         bytes.extend(user_id_bytes);
         if let Some(username) = &self.username {
             bytes.put_u8(1);
-            bytes.put_u32_le(username.len() as u32);
+            #[allow(clippy::cast_possible_truncation)]
+            bytes.put_u8(username.len() as u8);
             bytes.extend(username.as_bytes());
         } else {
             bytes.put_u8(0);
@@ -115,8 +116,8 @@ impl BytesSerializable for UpdateUser {
 
         position += 1;
         let username = if has_username == 1 {
-            let username_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
-            position += 4;
+            let username_length = bytes[position];
+            position += 1;
             let username =
                 from_utf8(&bytes[position..position + username_length as usize])?.to_string();
             position += username_length as usize;
@@ -176,8 +177,8 @@ mod tests {
         let mut position = user_id.get_size_bytes() as usize;
         let has_username = bytes[position];
         position += 1;
-        let username_length = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
-        position += 4;
+        let username_length = bytes[position];
+        position += 1;
         let username = from_utf8(&bytes[position..position + username_length as usize]).unwrap();
         position += username_length as usize;
         let has_status = bytes[position];
@@ -200,7 +201,7 @@ mod tests {
         let mut bytes = Vec::new();
         bytes.extend(user_id.as_bytes());
         bytes.put_u8(1);
-        bytes.put_u32_le(username.len() as u32);
+        bytes.put_u8(username.len() as u8);
         bytes.extend(username.as_bytes());
         bytes.put_u8(1);
         bytes.put_u8(status.as_code());

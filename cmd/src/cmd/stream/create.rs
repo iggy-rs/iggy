@@ -21,7 +21,7 @@ impl StreamCreate {
 #[async_trait]
 impl CliCommand for StreamCreate {
     fn explain(&self) -> String {
-        format!("create stream with id: {} and name: {}", self.id, self.name)
+        format!("create stream with ID: {} and name: {}", self.id, self.name)
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
@@ -33,13 +33,13 @@ impl CliCommand for StreamCreate {
             .await
             .with_context(|| {
                 format!(
-                    "Problem creating stream (id: {} and name: {})",
+                    "Problem creating stream (ID: {} and name: {})",
                     self.id, self.name
                 )
             })?;
 
         info!(
-            "Stream with id: {} and name: {} created",
+            "Stream with ID: {} and name: {} created",
             self.id, self.name
         );
 

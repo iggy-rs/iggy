@@ -22,7 +22,7 @@ impl StreamUpdate {
 #[async_trait]
 impl CliCommand for StreamUpdate {
     fn explain(&self) -> String {
-        format!("update stream with id: {} and name: {}", self.id, self.name)
+        format!("update stream with ID: {} and name: {}", self.id, self.name)
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
@@ -34,12 +34,12 @@ impl CliCommand for StreamUpdate {
             .await
             .with_context(|| {
                 format!(
-                    "Problem updating stream with id: {} and name: {}",
+                    "Problem updating stream with ID: {} and name: {}",
                     self.id, self.name
                 )
             })?;
 
-        info!("Stream with id: {} updated name: {} ", self.id, self.name);
+        info!("Stream with ID: {} updated name: {} ", self.id, self.name);
 
         Ok(())
     }

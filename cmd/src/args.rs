@@ -31,13 +31,13 @@ pub(crate) enum Command {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum StreamAction {
-    /// Create stream with given id and name
+    /// Create stream with given ID and name
     Create { id: u32, name: String },
-    /// Delete stream with given id
+    /// Delete stream with given ID
     Delete { id: u32 },
-    /// Update stream name for given stream id
+    /// Update stream name for given stream ID
     Update { id: u32, name: String },
-    /// Get details of a single stream with given id
+    /// Get details of a single stream with given ID
     Get { id: u32 },
     /// List all streams
     List(ListArgs),

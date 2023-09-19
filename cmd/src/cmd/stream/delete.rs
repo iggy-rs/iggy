@@ -21,7 +21,7 @@ impl StreamDelete {
 #[async_trait]
 impl CliCommand for StreamDelete {
     fn explain(&self) -> String {
-        format!("delete stream with id: {}", self.id)
+        format!("delete stream with ID: {}", self.id)
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
@@ -30,9 +30,9 @@ impl CliCommand for StreamDelete {
                 stream_id: Identifier::numeric(self.id).expect("Expected numeric identifier"),
             })
             .await
-            .with_context(|| format!("Problem deleting stream with id: {}", self.id))?;
+            .with_context(|| format!("Problem deleting stream with ID: {}", self.id))?;
 
-        info!("Stream with id: {} deleted", self.id);
+        info!("Stream with ID: {} deleted", self.id);
 
         Ok(())
     }

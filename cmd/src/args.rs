@@ -37,7 +37,7 @@ pub(crate) enum StreamAction {
     Delete { id: u32 },
     /// Update stream name for given stream id
     Update { id: u32, name: String },
-    /// Delete stream with given id
+    /// Get details of a single stream with given id
     Get { id: u32 },
     /// List all streams
     List(ListArgs),
@@ -45,6 +45,7 @@ pub(crate) enum StreamAction {
 
 #[derive(Debug, Args)]
 pub(crate) struct ListArgs {
+    /// List mode (table or list)
     #[clap(short, long, value_enum, default_value_t = ListMode::Table)]
     pub(crate) list_mode: ListMode,
 }

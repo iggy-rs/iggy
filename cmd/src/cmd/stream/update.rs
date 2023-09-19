@@ -34,12 +34,12 @@ impl CliCommand for StreamUpdate {
             .await
             .with_context(|| {
                 format!(
-                    "Problem updating stream (id: {} with name: {})",
+                    "Problem updating stream with id: {} and name: {}",
                     self.id, self.name
                 )
             })?;
 
-        info!("Stream with id: {} name: {} updated", self.id, self.name);
+        info!("Stream with id: {} updated name: {} ", self.id, self.name);
 
         Ok(())
     }

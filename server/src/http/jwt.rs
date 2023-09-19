@@ -1,3 +1,4 @@
+use crate::configs::http::{HttpJwtConfig, JwtSecret};
 use crate::http::state::AppState;
 use axum::{
     extract::State,
@@ -11,7 +12,6 @@ use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenDat
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-const AUDIENCE: &str = "iggy.rs";
 const AUTHORIZATION: &str = "authorization";
 const BEARER: &str = "Bearer ";
 const UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
@@ -72,27 +72,68 @@ pub async fn no_jwt_auth<T>(
 }
 
 pub struct JwtManager {
+    algorithm: Algorithm,
+    audience: String,
     expiry: u64,
     decoding_key: DecodingKey,
     encoding_key: EncodingKey,
 }
 
 impl JwtManager {
-    pub fn new(secret: &str, expiry: u64) -> Self {
-        Self {
+    pub fn new(
+        algorithm: Algorithm,
+        audience: &str,
+        expiry: u64,
+        decoding_secret: JwtSecret,
+        encoding_secret: JwtSecret,
+    ) -> Result<Self, Error> {
+        let decoding_key = match decoding_secret {
+            JwtSecret::Default(ref secret) => DecodingKey::from_secret(secret.as_ref()),
+            JwtSecret::Base64(ref secret) => {
+                DecodingKey::from_base64_secret(secret).map_err(|_| Error::InvalidJwtSecret)?
+            }
+        };
+
+        let encoding_key = match encoding_secret {
+            JwtSecret::Default(ref secret) => EncodingKey::from_secret(secret.as_ref()),
+            JwtSecret::Base64(ref secret) => {
+                EncodingKey::from_base64_secret(secret).map_err(|_| Error::InvalidJwtSecret)?
+            }
+        };
+
+        Ok(Self {
+            algorithm,
+            audience: audience.to_string(),
             expiry,
-            decoding_key: DecodingKey::from_secret(secret.as_ref()),
-            encoding_key: EncodingKey::from_secret(secret.as_ref()),
+            decoding_key,
+            encoding_key,
+        })
+    }
+
+    pub fn from_config(config: &HttpJwtConfig) -> Result<Self, Error> {
+        if config.encoding_secret.is_empty() {
+            return Err(Error::InvalidJwtSecret);
         }
+
+        let algorithm = config.get_algorithm()?;
+        let decoding_secret = config.get_decoding_secret();
+        let encoding_secret = config.get_encoding_secret();
+        JwtManager::new(
+            algorithm,
+            &config.audience,
+            config.expiry,
+            decoding_secret,
+            encoding_secret,
+        )
     }
 
     pub fn generate(&self, user_id: u32) -> String {
-        let header = Header::new(Algorithm::HS256);
+        let header = Header::new(self.algorithm);
         let iat = TimeStamp::now().to_micros();
         let exp = iat + 1_000_000 * self.expiry;
         let claims = JwtClaims {
             sub: user_id,
-            aud: AUDIENCE.to_string(),
+            aud: self.audience.to_string(),
             iat,
             exp,
         };

@@ -12,8 +12,12 @@ allow_credentials = false
 allow_private_network = false
 
 [http.jwt]
-secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
+algorithm = "HS256"
+audience = "iggy.rs"
 expiry = 3600
+encoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
+decoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
+use_base64_secret = false
 
 [http.tls]
 enabled = false

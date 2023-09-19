@@ -21,8 +21,12 @@
       "allow_private_network": false
     },
     "jwt": {
-      "secret": "top_secret$iggy.rs$_jwt_HS256_key#!",
-      "expiry": 3600
+      "algorithm": "HS256",
+      "audience": "iggy.rs",
+      "expiry": 3600,
+      "encoding_secret": "top_secret$iggy.rs$_jwt_HS256_key#!",
+      "decoding_secret": "top_secret$iggy.rs$_jwt_HS256_key#!",
+      "use_base64_secret": false
     },
     "tls": {
       "enabled": false,

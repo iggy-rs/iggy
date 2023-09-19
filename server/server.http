@@ -9,10 +9,13 @@
 @message_1_payload_base64 = aGVsbG8=
 @message_2_payload_base64 = d29ybGQ=
 @header_1_payload_base_64 = dmFsdWUgMQ==
-@username = iggy
-@password = iggy
+@root_username = iggy
+@root_password = iggy
+@user1_username = user1
+@user1_password = secret
 @token = secret
-@user_id = 1
+@root_id = 1
+@user1_id = 2
 
 ###
 GET {{url}}
@@ -22,12 +25,102 @@ POST {{url}}/users/login
 Content-Type: application/json
 
 {
-  "username": "{{username}}",
-  "password": "{{password}}"
+  "username": "{{root_username}}",
+  "password": "{{root_password}}"
 }
 
 ###
-GET {{url}}/users/{{user_id}}
+POST {{url}}/users/logout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+}
+
+###
+POST {{url}}/users
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "{{user1_username}}",
+  "password": "{{user1_password}}",
+  "status": "active",
+  "permissions": null
+}
+
+###
+GET {{url}}/users
+Authorization: Bearer {{token}}
+
+###
+GET {{url}}/users/{{user1_id}}
+Authorization: Bearer {{token}}
+
+###
+PUT {{url}}/users/{{user1_id}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "{{user1_username}}",
+  "status": "active",
+  "permissions": null
+}
+
+###
+PUT {{url}}/users/{{user1_id}}/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "current_password": "{{user1_password}}",
+  "new_password": "secret1"
+}
+
+###
+PUT {{url}}/users/{{user1_id}}/permissions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "permissions": {
+    "global": {
+      "manage_servers": false,
+      "read_servers": true,
+      "manage_users": true,
+      "read_users": true,
+      "manage_streams": false,
+      "read_streams": true,
+      "manage_topics": false,
+      "read_topics": true,
+      "poll_messages": true,
+      "send_messages": true
+    },
+    "streams": {
+      "1": {
+        "manage_stream": false,
+        "read_stream": true,
+        "manage_topics": false,
+        "read_topics": true,
+        "poll_messages": true,
+        "send_messages": true,
+        "topics": {
+          "1": {
+            "manage_topic": false,
+            "read_topic": true,
+            "poll_messages": true,
+            "send_messages": true
+          }
+        }
+      }
+    }
+  }
+}
+
+
+###
+DELETE {{url}}/users/{{user1_id}}
 Authorization: Bearer {{token}}
 
 ###

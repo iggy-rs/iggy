@@ -6,6 +6,7 @@ use crate::command::{
     LOGIN_USER_CODE, LOGOUT_USER_CODE, UPDATE_PERMISSIONS_CODE, UPDATE_USER_CODE,
 };
 use crate::error::Error;
+use crate::models::identity_info::IdentityInfo;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
@@ -78,11 +79,14 @@ pub async fn change_password(
     Ok(())
 }
 
-pub async fn login_user(client: &dyn BinaryClient, command: &LoginUser) -> Result<(), Error> {
-    client
+pub async fn login_user(
+    client: &dyn BinaryClient,
+    command: &LoginUser,
+) -> Result<IdentityInfo, Error> {
+    let response = client
         .send_with_response(LOGIN_USER_CODE, &command.as_bytes())
         .await?;
-    Ok(())
+    mapper::map_identity_info(&response)
 }
 
 pub async fn logout_user(client: &dyn BinaryClient, command: &LogoutUser) -> Result<(), Error> {

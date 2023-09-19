@@ -127,13 +127,7 @@ impl System {
         Ok(stream.unwrap())
     }
 
-    pub async fn create_stream(
-        &mut self,
-        user_id: u32,
-        stream_id: u32,
-        name: &str,
-    ) -> Result<(), Error> {
-        self.permissioner.create_stream(user_id)?;
+    pub async fn create_stream(&mut self, stream_id: u32, name: &str) -> Result<(), Error> {
         if self.streams.contains_key(&stream_id) {
             return Err(Error::StreamIdAlreadyExists(stream_id));
         }
@@ -205,16 +199,12 @@ mod tests {
 
     #[tokio::test]
     async fn should_get_stream_by_id_and_name() {
-        let user_id = 1;
         let stream_id = 1;
         let stream_name = "test";
         let config = Arc::new(SystemConfig::default());
         let storage = get_test_system_storage();
         let mut system = System::create(config, storage);
-        system
-            .create_stream(user_id, stream_id, stream_name)
-            .await
-            .unwrap();
+        system.create_stream(stream_id, stream_name).await.unwrap();
 
         let stream = system.get_stream(&Identifier::numeric(stream_id).unwrap());
         assert!(stream.is_ok());

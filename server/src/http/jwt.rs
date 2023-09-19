@@ -1,4 +1,3 @@
-use crate::http::claims::JwtClaims;
 use crate::http::state::AppState;
 use axum::{
     extract::State,
@@ -9,6 +8,7 @@ use axum::{
 use iggy::error::Error;
 use iggy::utils::timestamp::TimeStamp;
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 const AUDIENCE: &str = "iggy.rs";
@@ -19,6 +19,14 @@ const UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
 #[derive(Debug, Clone)]
 pub struct Identity {
     pub user_id: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JwtClaims {
+    pub sub: u32,
+    pub iat: u64,
+    pub aud: String,
+    pub exp: u64,
 }
 
 pub async fn jwt_auth<T>(

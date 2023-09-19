@@ -88,13 +88,15 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(user.status, UserStatus::Active);
     assert!(user.permissions.is_some());
 
-    client
+    let identity_info = client
         .login_user(&LoginUser {
             username: ROOT_USERNAME.to_string(),
             password: ROOT_PASSWORD.to_string(),
         })
         .await
         .unwrap();
+
+    assert_eq!(identity_info.user_id, 1);
 
     client.logout_user(&LogoutUser {}).await.unwrap();
 
@@ -124,13 +126,15 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    client
+    let identity_info = client
         .login_user(&LoginUser {
             username: test_user.to_string(),
             password: test_password.to_string(),
         })
         .await
         .unwrap();
+
+    assert_eq!(identity_info.user_id, 2);
 
     client.logout_user(&LogoutUser {}).await.unwrap();
 

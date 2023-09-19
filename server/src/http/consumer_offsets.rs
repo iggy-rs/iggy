@@ -1,10 +1,11 @@
 use crate::http::error::CustomError;
+use crate::http::jwt::Identity;
 use crate::http::state::AppState;
 use crate::streaming::polling_consumer::PollingConsumer;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
-use axum::{Json, Router};
+use axum::{Extension, Json, Router};
 use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::identifier::Identifier;
@@ -20,6 +21,7 @@ pub fn router(state: Arc<AppState>) -> Router {
 
 async fn get_consumer_offset(
     State(state): State<Arc<AppState>>,
+    Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     mut query: Query<GetConsumerOffset>,
 ) -> Result<Json<ConsumerOffsetInfo>, CustomError> {
@@ -27,17 +29,21 @@ async fn get_consumer_offset(
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
 
-    let consumer = PollingConsumer::Consumer(query.consumer.id, query.partition_id.unwrap_or(0));
     let system = state.system.read().await;
     let stream = system.get_stream(&query.stream_id)?;
     let topic = stream.get_topic(&query.topic_id)?;
-    let offset = topic.get_consumer_offset(consumer).await?;
+    system
+        .permissioner
+        .get_consumer_offset(identity.user_id, stream.stream_id, topic.topic_id)?;
 
+    let consumer = PollingConsumer::Consumer(query.consumer.id, query.partition_id.unwrap_or(0));
+    let offset = topic.get_consumer_offset(consumer).await?;
     Ok(Json(offset))
 }
 
 async fn store_consumer_offset(
     State(state): State<Arc<AppState>>,
+    Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     mut command: Json<StoreConsumerOffset>,
 ) -> Result<StatusCode, CustomError> {
@@ -45,11 +51,17 @@ async fn store_consumer_offset(
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
 
-    let consumer =
-        PollingConsumer::Consumer(command.consumer.id, command.partition_id.unwrap_or(0));
     let system = state.system.read().await;
     let stream = system.get_stream(&command.stream_id)?;
     let topic = stream.get_topic(&command.topic_id)?;
+    system.permissioner.store_consumer_offset(
+        identity.user_id,
+        stream.stream_id,
+        topic.topic_id,
+    )?;
+
+    let consumer =
+        PollingConsumer::Consumer(command.consumer.id, command.partition_id.unwrap_or(0));
     topic
         .store_consumer_offset(consumer, command.offset)
         .await?;

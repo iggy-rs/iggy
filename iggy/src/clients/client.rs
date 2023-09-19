@@ -19,6 +19,7 @@ use crate::messages::send_messages::{Partitioning, PartitioningKind, SendMessage
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
+use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::{Message, PolledMessages};
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
@@ -482,7 +483,7 @@ impl UserClient for IggyClient {
         self.client.read().await.change_password(command).await
     }
 
-    async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {
+    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error> {
         self.client.read().await.login_user(command).await
     }
 

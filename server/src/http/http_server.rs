@@ -85,8 +85,12 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
 }
 
 fn build_app_state(config: &HttpConfig, system: Arc<RwLock<System>>) -> Arc<AppState> {
+    if config.jwt.secret.is_empty() {
+        panic!("JWT secret is empty");
+    }
+
     Arc::new(AppState {
-        jwt_manager: Arc::new(JwtManager::new(&config.jwt.secret, config.jwt.expiry)),
+        jwt_manager: JwtManager::new(&config.jwt.secret, config.jwt.expiry),
         system,
     })
 }

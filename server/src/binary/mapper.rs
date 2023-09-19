@@ -94,6 +94,12 @@ pub fn map_users(users: &[User]) -> Vec<u8> {
     bytes
 }
 
+pub fn map_identity_info(user_id: u32) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(4);
+    bytes.put_u32_le(user_id);
+    bytes
+}
+
 pub fn map_polled_messages(polled_messages: &PolledMessages) -> Vec<u8> {
     let messages_count = polled_messages.messages.len() as u32;
     let messages_size = polled_messages

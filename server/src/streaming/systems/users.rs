@@ -202,9 +202,6 @@ impl System {
     }
 
     pub async fn logout_user(&self, user_id: u32, client_id: Option<u32>) -> Result<(), Error> {
-        if user_id == 0 {
-            return Err(Error::InvalidCredentials);
-        }
         info!("Logging out user: {user_id}...");
         if let Some(client_id) = client_id {
             let mut client_manager = self.client_manager.write().await;

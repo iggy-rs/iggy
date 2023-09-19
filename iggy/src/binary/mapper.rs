@@ -3,6 +3,7 @@ use crate::error::Error;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails, ConsumerGroupInfo};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
+use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::{Message, MessageState, PolledMessages};
 use crate::models::partition::Partition;
 use crate::models::permissions::Permissions;
@@ -137,6 +138,14 @@ pub fn map_users(payload: &[u8]) -> Result<Vec<UserInfo>, Error> {
     }
     users.sort_by(|x, y| x.id.cmp(&y.id));
     Ok(users)
+}
+
+pub fn map_identity_info(payload: &[u8]) -> Result<IdentityInfo, Error> {
+    let user_id = u32::from_le_bytes(payload[..4].try_into()?);
+    Ok(IdentityInfo {
+        user_id,
+        token: None,
+    })
 }
 
 pub fn map_client(payload: &[u8]) -> Result<ClientInfoDetails, Error> {

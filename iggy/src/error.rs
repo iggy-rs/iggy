@@ -68,6 +68,10 @@ pub enum Error {
     CannotEncryptData,
     #[error("Cannot decrypt data")]
     CannotDecryptData,
+    #[error("Invalid JWT algorithm: {0}")]
+    InvalidJwtAlgorithm(String),
+    #[error("Invalid JWT secret.")]
+    InvalidJwtSecret,
     #[error("Invalid command")]
     InvalidCommand,
     #[error("Invalid format")]
@@ -302,6 +306,8 @@ impl Error {
             Error::InvalidEncryptionKey => 60,
             Error::CannotEncryptData => 61,
             Error::CannotDecryptData => 62,
+            Error::InvalidJwtAlgorithm(_) => 63,
+            Error::InvalidJwtSecret => 64,
             Error::ClientNotFound(_) => 100,
             Error::InvalidClientId => 101,
             Error::IoError(_) => 200,
@@ -433,6 +439,8 @@ impl Error {
             60 => "invalid_encryption_key",
             61 => "cannot_encrypt_data",
             62 => "cannot_decrypt_data",
+            63 => "invalid_jwt_encryption_algorithm",
+            64 => "invalid_jwt_secret",
             100 => "client_not_found",
             101 => "invalid_client_id",
             200 => "io_error",
@@ -561,6 +569,8 @@ impl Error {
             Error::InvalidEncryptionKey => "invalid_encryption_key",
             Error::CannotEncryptData => "cannot_encrypt_data",
             Error::CannotDecryptData => "cannot_decrypt_data",
+            Error::InvalidJwtAlgorithm(_) => "invalid_jwt_algorithm",
+            Error::InvalidJwtSecret => "invalid_jwt_secret",
             Error::CannotCreateBaseDirectory => "cannot_create_base_directory",
             Error::CannotCreateStreamsDirectory => "cannot_create_streams_directory",
             Error::CannotCreateStreamDirectory(_) => "cannot_create_stream_directory",

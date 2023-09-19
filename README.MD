@@ -23,6 +23,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 - **Highly performant**, persistent append-only log for the message streaming
 - **Very high throughput** for both writes and reads
 - **Low latency and predictable resource usage** thanks to the Rust compiled language (no GC)
+- **Users authentication and authorization** with granular permissions
 - Support for multiple streams, topics and partitions
 - Support for **multiple transport protocols** (QUIC, TCP, HTTP)
 - Fully operational RESTful API which can be optionally enabled
@@ -53,7 +54,6 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 
 - Streaming server caching and I/O improvements
 - Low level optimizations (zero-copy etc.)
-- Users & permissions management
 - Clustering & data replication
 - Rich console CLI
 - Advanced Web UI
@@ -72,6 +72,12 @@ For the detailed information about current progress, please refer to the [projec
 - [Node](https://github.com/iggy-rs/iggy-node-client)
 - [Python](https://github.com/iggy-rs/iggy-python-client)
 ---
+
+### CLI
+
+The brand new, rich, interactive CLI is being implemented under the `cmd` project, to provide the best developer experience. This will be a great addition to the Web UI, especially for all the developers who prefer using the console tools.
+
+![CLI](assets/cli.png)
 
 ### Web UI
 

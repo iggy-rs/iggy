@@ -1,6 +1,7 @@
 use crate::binary;
 use crate::client::UserClient;
 use crate::error::Error;
+use crate::models::identity_info::IdentityInfo;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::quic::client::QuicClient;
 use crate::users::change_password::ChangePassword;
@@ -44,7 +45,7 @@ impl UserClient for QuicClient {
         binary::users::change_password(self, command).await
     }
 
-    async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {
+    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error> {
         binary::users::login_user(self, command).await
     }
 

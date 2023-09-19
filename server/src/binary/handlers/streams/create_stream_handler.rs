@@ -22,7 +22,7 @@ pub async fn handle(
     let mut system = system.write().await;
     system.permissioner.create_stream(user_context.user_id)?;
     system
-        .create_stream(user_context.user_id, command.stream_id, &command.name)
+        .create_stream(command.stream_id, &command.name)
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

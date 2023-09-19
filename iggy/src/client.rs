@@ -12,6 +12,7 @@ use crate::messages::send_messages::SendMessages;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
+use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::PolledMessages;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
@@ -82,7 +83,7 @@ pub trait UserClient {
     async fn update_user(&self, command: &UpdateUser) -> Result<(), Error>;
     async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), Error>;
     async fn change_password(&self, command: &ChangePassword) -> Result<(), Error>;
-    async fn login_user(&self, command: &LoginUser) -> Result<(), Error>;
+    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error>;
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error>;
 }
 

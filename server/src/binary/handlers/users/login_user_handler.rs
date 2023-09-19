@@ -1,3 +1,4 @@
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user_context::UserContext;
@@ -25,6 +26,7 @@ pub async fn handle(
         .await?;
     user_context.set_user_id(user.id);
     info!("Set user ID: {}", user.id);
-    sender.send_empty_ok_response().await?;
+    let identity_info = mapper::map_identity_info(user.id);
+    sender.send_ok_response(identity_info.as_slice()).await?;
     Ok(())
 }

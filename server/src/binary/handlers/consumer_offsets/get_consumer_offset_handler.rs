@@ -21,17 +21,21 @@ pub async fn handle(
         return Err(Error::Unauthenticated);
     }
 
+    let system = system.read().await;
+    let stream = system.get_stream(&command.stream_id)?;
+    let topic = stream.get_topic(&command.topic_id)?;
+    system.permissioner.get_consumer_offset(
+        user_context.user_id,
+        stream.stream_id,
+        topic.topic_id,
+    )?;
+
     let consumer = PollingConsumer::from_consumer(
         &command.consumer,
         user_context.client_id,
         command.partition_id,
     );
-    let system = system.read().await;
-    let offset = system
-        .get_stream(&command.stream_id)?
-        .get_topic(&command.topic_id)?
-        .get_consumer_offset(consumer)
-        .await?;
+    let offset = topic.get_consumer_offset(consumer).await?;
     let offset = mapper::map_consumer_offset(&offset);
     sender.send_ok_response(&offset).await?;
     Ok(())

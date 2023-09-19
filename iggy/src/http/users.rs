@@ -1,6 +1,7 @@
 use crate::client::UserClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
+use crate::models::identity_info::IdentityInfo;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
@@ -57,9 +58,10 @@ impl UserClient for HttpClient {
         Ok(())
     }
 
-    async fn login_user(&self, command: &LoginUser) -> Result<(), Error> {
-        self.post(&format!("{PATH}/login"), &command).await?;
-        Ok(())
+    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error> {
+        let response = self.post(&format!("{PATH}/login"), &command).await?;
+        let identity_info = response.json().await?;
+        Ok(identity_info)
     }
 
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {

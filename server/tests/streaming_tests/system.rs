@@ -27,15 +27,11 @@ async fn should_initialize_system_and_base_directories() {
 async fn should_create_and_persist_stream() {
     let setup = TestSetup::init().await;
     let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
-    let user_id = 1;
     let stream_id = 1;
     let stream_name = "test";
     system.init().await.unwrap();
 
-    system
-        .create_stream(user_id, stream_id, stream_name)
-        .await
-        .unwrap();
+    system.create_stream(stream_id, stream_name).await.unwrap();
 
     assert_persisted_stream(&setup.config.get_streams_path(), stream_id).await;
 }
@@ -44,14 +40,10 @@ async fn should_create_and_persist_stream() {
 async fn should_delete_persisted_stream() {
     let setup = TestSetup::init().await;
     let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
-    let user_id = 1;
     let stream_id = 1;
     let stream_name = "test";
     system.init().await.unwrap();
-    system
-        .create_stream(user_id, stream_id, stream_name)
-        .await
-        .unwrap();
+    system.create_stream(stream_id, stream_name).await.unwrap();
     assert_persisted_stream(&setup.config.get_streams_path(), stream_id).await;
     let stream_path = system
         .get_stream(&Identifier::numeric(stream_id).unwrap())

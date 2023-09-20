@@ -1,11 +1,13 @@
 use crate::streaming::systems::system::System;
 use iggy::error::Error;
 use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
 use std::fmt::Display;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use tracing::info;
 
-const VERSION: &str = "0.0.1";
+const VERSION: &str = "0.0.12";
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SystemInfo {
@@ -42,25 +44,68 @@ impl System {
             match err {
                 Error::ResourceNotFound(_) => {
                     info!("System info not found, creating...");
-                    // TODO: Include hash
-                    system_info.version.version = VERSION.to_string();
-                    self.storage.info.save(&system_info).await?;
+                    self.update_system_info(&mut system_info).await?;
                 }
                 _ => return Err(err),
             }
         }
 
+        info!("Loaded {system_info}");
         let current_version = SemanticVersion::from_str(VERSION)?;
         let loaded_version = SemanticVersion::from_str(&system_info.version.version)?;
         if current_version.is_equal_to(&loaded_version) {
             info!("System version {current_version} is up to date.");
         } else if current_version.is_greater_than(&loaded_version) {
             info!("System version {current_version} is greater than {loaded_version}, checking the available migrations...");
+            self.update_system_info(&mut system_info).await?;
         } else {
             info!("System version {current_version} is lower than {loaded_version}, possible downgrade.");
+            self.update_system_info(&mut system_info).await?;
         }
 
         Ok(())
+    }
+
+    async fn update_system_info(&self, system_info: &mut SystemInfo) -> Result<(), Error> {
+        system_info.update_version(VERSION);
+        self.storage.info.save(system_info).await?;
+        Ok(())
+    }
+}
+
+impl SystemInfo {
+    pub fn update_version(&mut self, version: &str) {
+        self.version.version = version.to_string();
+        let mut hasher = DefaultHasher::new();
+        self.version.hash.hash(&mut hasher);
+        self.version.hash = hasher.finish().to_string();
+    }
+}
+
+impl Hash for SystemInfo {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.version.version.hash(state);
+        for migration in &self.migrations {
+            migration.hash(state);
+        }
+    }
+}
+
+impl Hash for Migration {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "version: {}", self.version)
+    }
+}
+
+impl Display for SystemInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "system info, {}", self.version)
     }
 }
 

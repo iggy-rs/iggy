@@ -47,20 +47,17 @@ impl System {
 
     pub fn create(config: Arc<SystemConfig>, storage: SystemStorage) -> System {
         info!(
-            "Server-side encryption is {}.",
-            match config.encryption.enabled {
-                true => "enabled",
-                false => "disabled",
-            }
+            "Authentication is {}.",
+            Self::map_toggle_str(config.user.authentication_enabled)
         );
         info!(
             "Authorization is {}.",
-            match config.user.authorization_enabled {
-                true => "enabled",
-                false => "disabled",
-            }
+            Self::map_toggle_str(config.user.authorization_enabled)
         );
-
+        info!(
+            "Server-side encryption is {}.",
+            Self::map_toggle_str(config.encryption.enabled)
+        );
         System {
             encryptor: match config.encryption.enabled {
                 true => Some(Box::new(
@@ -113,5 +110,12 @@ impl System {
         }
 
         Ok(())
+    }
+
+    fn map_toggle_str<'a>(enabled: bool) -> &'a str {
+        match enabled {
+            true => "enabled",
+            false => "disabled",
+        }
     }
 }

@@ -63,7 +63,7 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
             }
         }
 
-        info!("Saved system info");
+        info!("Saved system info, {}", system_info);
         Ok(())
     }
 

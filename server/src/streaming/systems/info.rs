@@ -44,7 +44,7 @@ impl System {
             match err {
                 Error::ResourceNotFound(_) => {
                     info!("System info not found, creating...");
-                    self.save_system_info(&mut system_info).await?;
+                    self.update_system_info(&mut system_info).await?;
                 }
                 _ => return Err(err),
             }
@@ -57,22 +57,28 @@ impl System {
             info!("System version {current_version} is up to date.");
         } else if current_version.is_greater_than(&loaded_version) {
             info!("System version {current_version} is greater than {loaded_version}, checking the available migrations...");
-            self.save_system_info(&mut system_info).await?;
+            self.update_system_info(&mut system_info).await?;
         } else {
             info!("System version {current_version} is lower than {loaded_version}, possible downgrade.");
-            self.save_system_info(&mut system_info).await?;
+            self.update_system_info(&mut system_info).await?;
         }
 
         Ok(())
     }
 
-    async fn save_system_info(&self, system_info: &mut SystemInfo) -> Result<(), Error> {
-        system_info.version.version = VERSION.to_string();
-        let mut hasher = DefaultHasher::new();
-        system_info.version.hash.hash(&mut hasher);
-        system_info.version.hash = hasher.finish().to_string();
+    async fn update_system_info(&self, system_info: &mut SystemInfo) -> Result<(), Error> {
+        system_info.update_version(VERSION);
         self.storage.info.save(system_info).await?;
         Ok(())
+    }
+}
+
+impl SystemInfo {
+    pub fn update_version(&mut self, version: &str) {
+        self.version.version = version.to_string();
+        let mut hasher = DefaultHasher::new();
+        self.version.hash.hash(&mut hasher);
+        self.version.hash = hasher.finish().to_string();
     }
 }
 

@@ -160,7 +160,7 @@ impl QuicClient {
             error!(
                 "Received an invalid response with status: {} ({}).",
                 status,
-                Error::from_code_as_string(status)
+                Error::from_code_as_str(status)
             );
             return Err(Error::InvalidResponse(status));
         }

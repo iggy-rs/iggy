@@ -53,7 +53,7 @@ impl ErrorResponse {
     pub fn from_error(error: Error) -> Self {
         ErrorResponse {
             id: error.as_code(),
-            code: error.as_string().to_string(),
+            code: error.as_str().to_string(),
             reason: error.to_string(),
             field: match error {
                 Error::StreamIdNotFound(_) => Some("stream_id".to_string()),

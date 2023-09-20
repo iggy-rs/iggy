@@ -4,7 +4,7 @@ mod cmd;
 mod error;
 mod logging;
 
-use crate::args::{topic::TopicAction, Command, IggyConsoleArgs, StreamAction};
+use crate::args::{stream::StreamAction, topic::TopicAction, Command, IggyConsoleArgs};
 use crate::cmd::{
     stream::{
         create::StreamCreate, delete::StreamDelete, get::StreamGet, list::StreamList,
@@ -30,11 +30,15 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
     #[warn(clippy::let_and_return)]
     match command {
         Command::Stream(command) => match command {
+            StreamAction::Create(args) => {
+                Box::new(StreamCreate::new(args.stream_id, args.name.clone()))
+            }
+            StreamAction::Delete(args) => Box::new(StreamDelete::new(args.stream_id)),
+            StreamAction::Update(args) => {
+                Box::new(StreamUpdate::new(args.stream_id, args.name.clone()))
+            }
+            StreamAction::Get(args) => Box::new(StreamGet::new(args.stream_id)),
             StreamAction::List(args) => Box::new(StreamList::new(args.list_mode)),
-            StreamAction::Create { id, name } => Box::new(StreamCreate::new(*id, name.clone())),
-            StreamAction::Delete { id } => Box::new(StreamDelete::new(*id)),
-            StreamAction::Get { id } => Box::new(StreamGet::new(*id)),
-            StreamAction::Update { id, name } => Box::new(StreamUpdate::new(*id, name.clone())),
         },
         Command::Topic(command) => match command {
             TopicAction::Create(args) => Box::new(TopicCreate::new(
@@ -45,13 +49,13 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
                 args.name.clone(),
             )),
             TopicAction::Delete(args) => Box::new(TopicDelete::new(args.stream_id, args.topic_id)),
-            TopicAction::Get(args) => Box::new(TopicGet::new(args.stream_id, args.topic_id)),
             TopicAction::Update(args) => Box::new(TopicUpdate::new(
                 args.stream_id,
                 args.topic_id,
                 args.name.clone(),
                 args.message_expiry,
             )),
+            TopicAction::Get(args) => Box::new(TopicGet::new(args.stream_id, args.topic_id)),
             TopicAction::List(args) => Box::new(TopicList::new(args.stream_id, args.list_mode)),
         },
     }

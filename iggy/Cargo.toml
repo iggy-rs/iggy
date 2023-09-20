@@ -38,3 +38,7 @@ quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 openssl = { version = "0.10.*", features = ["vendored"] }
 chrono = { version = "0.4.31" }
+
+[build-dependencies]
+sqlx = { version = "0.7.1", features = ["runtime-tokio", "sqlite"] }
+tokio = { version = "1.28.2", features = ["full"] }

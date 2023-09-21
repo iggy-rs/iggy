@@ -1,6 +1,3 @@
-mod data_repository;
-mod errors_repository;
-
 extern crate rmp_serde as rmps;
 extern crate serde;
 extern crate serde_derive;
@@ -9,42 +6,13 @@ use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 
+use errors_repository::PreprocessedErrorRepositoryEntry;
+
 use crate::data_repository::{DataRepository, SledDb};
 use crate::errors_repository::get_or_create;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ErrorCode {
-    pub name: String,
-    pub code: u32,
-    pub template: String,
-    pub signature: String,
-    pub converts_from: String,
-}
-
-pub struct PreprocessedErrorCode {
-    pub name: String,
-    pub code: u32,
-    pub template: String,
-    pub signature: String,
-    pub converts_from: String,
-    pub pascal_case_name: String,
-    pub signature_wildcard_pattern: String,
-}
-
-impl From<ErrorCode> for PreprocessedErrorCode {
-    fn from(error_code: ErrorCode) -> Self {
-        PreprocessedErrorCode {
-            name: error_code.name.clone(),
-            code: error_code.code,
-            template: error_code.template.clone(),
-            signature: error_code.signature.clone(),
-            converts_from: error_code.converts_from.clone(),
-            pascal_case_name: snake_to_pascal_case(&error_code.name),
-            signature_wildcard_pattern: { to_wildcard_pattern(&error_code.build_data_value()) },
-        }
-    }
-}
+mod data_repository;
+mod errors_repository;
 
 fn snake_to_pascal_case(s: &str) -> String {
     s.split('_')
@@ -63,135 +31,169 @@ fn get_spaces(num_spaces: usize) -> String {
     " ".repeat(num_spaces).to_string()
 }
 
-fn create_error_enum_variant_item(preprocessed_error_code: &PreprocessedErrorCode) -> String {
-    let mut result = String::new();
-
-    result.push_str(&format!(
-        "    #[error(\"{}\")]\n",
-        preprocessed_error_code.template
-    ));
-    result.push_str(&format!(
-        "    {}",
-        &snake_to_pascal_case(&preprocessed_error_code.name)
-    ));
-    let sig = &preprocessed_error_code.signature;
-    let converts_from = &preprocessed_error_code.converts_from;
-
-    match (converts_from.is_empty(), sig.is_empty()) {
-        (true, true) => (),
-        (true, false) => result.push_str(&format!("({})", sig)),
-        (false, true) => result.push_str(&format!("(#[from] {})", converts_from)),
-        (false, false) => result.push_str(&format!("({}, {})", converts_from, sig)),
-    };
-
-    result
+struct ErrorEnumVariant {
+    name: String,
+    template: String,
+    signature: String,
+    converts_from: String,
 }
 
-enum ArmType {
+struct ErrorEnum {
+    name: String,
+    variants: Vec<ErrorEnumVariant>,
+}
+
+impl From<PreprocessedErrorRepositoryEntry> for ErrorEnumVariant {
+    fn from(value: PreprocessedErrorRepositoryEntry) -> Self {
+        Self {
+            name: value.name,
+            template: value.template,
+            signature: value.signature,
+            converts_from: value.converts_from,
+        }
+    }
+}
+
+impl ErrorEnumVariant {
+    fn to_code_string(&self) -> String {
+        let mut result = String::new();
+
+        result.push_str(&format!(
+            "{indent}#[error(\"{}\")]\n",
+            self.template,
+            indent = get_spaces(4)
+        ));
+        result.push_str(&format!(
+            "{indent}{}",
+            &snake_to_pascal_case(&self.name),
+            indent = get_spaces(4),
+        ));
+        let sig = &self.signature;
+        let converts_from = &self.converts_from;
+
+        match (converts_from.is_empty(), sig.is_empty()) {
+            (true, true) => (),
+            (true, false) => result.push_str(&format!("({})", sig)),
+            (false, true) => result.push_str(&format!("(#[from] {})", converts_from)),
+            (false, false) => result.push_str(&format!("({}, {})", converts_from, sig)),
+        };
+
+        result
+    }
+}
+
+impl ErrorEnum {
+    fn to_code_string(&self) -> String {
+        vec![
+            format!("pub enum {name} {{", name = self.name),
+            self.variants
+                .iter()
+                .map(|enum_variant| format!("{},", &enum_variant.to_code_string()))
+                .collect::<Vec<String>>()
+                .join("\n"),
+            "}".to_string(),
+        ]
+        .join("\n")
+    }
+}
+
+enum ConversionType {
     AsString,
     AsCode,
     FromCodeAsString,
 }
 
-fn create_error_enum_body(preprocessed_error_codes: &Vec<PreprocessedErrorCode>) -> String {
-    let mut result = String::new();
-    let n = preprocessed_error_codes.len();
-
-    for (idx, preprocessed_error_code) in preprocessed_error_codes.iter().enumerate() {
-        result.push_str(&format!(
-            "{},",
-            &create_error_enum_variant_item(preprocessed_error_code)
-        ));
-
-        if idx < n - 1 {
-            result.push('\n');
-        }
-    }
-
-    result
-}
-
-// Create the `String` representing the arms for the given `ArmType`
-// based on the given `PreprocessedErrorCode`.
-fn create_arms(
-    preprocessed_error_codes: &Vec<PreprocessedErrorCode>,
-    arm_type: ArmType,
-    default_value: Option<String>,
-) -> String {
-    let mut result = String::new();
-    let n = preprocessed_error_codes.len();
-
-    for (idx, preprocessed_error_code) in preprocessed_error_codes.iter().enumerate() {
-        let num_spaces = match arm_type {
-            ArmType::AsString => {
-                if idx == 0 { 0 } else { 12 }
-            }
-            ArmType::AsCode => {
-                if idx == 0 { 0 } else { 12 }
-            }
-            ArmType::FromCodeAsString => {
-                if idx == 0 { 4 } else { 12 }
-            }
-        };
-
-        let next = preprocessed_error_code.create_arm(num_spaces, &arm_type);
-        result.push_str(&next);
-
-        if idx < n - 1 {
-            result.push('\n');
-        }
-    }
-
-    if let Some(dv) = default_value {
-        let indent = get_spaces(12);
-        result.push_str(&format!("\n{}_ => \"{}\"", indent, dv));
-    }
-
-    result
-}
-
-impl ErrorCode {
-    fn build_data_value(&self) -> String {
-        match (self.converts_from.is_empty(), self.signature.is_empty()) {
-            (true, true) => String::new(),
-            (true, false) => format!("({})", self.signature),
-            (false, true) => format!("(#[from] {})", self.converts_from),
-            (false, false) => format!("({}, {})", self.converts_from, self.signature),
-        }
-    }
-}
-
-impl PreprocessedErrorCode {
-    fn create_arm(&self, num_spaces: usize, arm_type: &ArmType) -> String {
-        match arm_type {
-            ArmType::AsString => {
+impl ConversionType {
+    fn to_match_arm(&self, entry: &PreprocessedErrorRepositoryEntry, num_spaces: usize) -> String {
+        match self {
+            ConversionType::AsString => {
                 format!(
                     "{indent}Error::{}{} => \"{}\",",
-                    snake_to_pascal_case(&self.name),
-                    self.signature_wildcard_pattern,
-                    self.name,
-                    indent = get_spaces(num_spaces),
+                    crate::snake_to_pascal_case(&entry.name),
+                    entry.signature_wildcard_pattern,
+                    entry.name,
+                    indent = crate::get_spaces(num_spaces),
                 )
             }
-            ArmType::AsCode => {
+            ConversionType::AsCode => {
                 format!(
                     "{indent}Error::{}{} => {},",
-                    snake_to_pascal_case(&self.name),
-                    self.signature_wildcard_pattern,
-                    self.code,
-                    indent = get_spaces(num_spaces),
+                    crate::snake_to_pascal_case(&entry.name),
+                    entry.signature_wildcard_pattern,
+                    entry.code,
+                    indent = crate::get_spaces(num_spaces),
                 )
             }
-            ArmType::FromCodeAsString => {
+            ConversionType::FromCodeAsString => {
                 format!(
                     "{indent}{} => \"{}\",",
-                    self.code,
-                    self.name,
-                    indent = get_spaces(num_spaces),
+                    entry.code,
+                    entry.name,
+                    indent = crate::get_spaces(num_spaces),
                 )
             }
         }
+    }
 
+    fn create_arms(
+        &self,
+        preprocessed_error_codes: &Vec<PreprocessedErrorRepositoryEntry>,
+        default_value: Option<String>,
+    ) -> Vec<String> {
+        let mut result: Vec<String> = vec![];
+
+        for (idx, preprocessed_error_code) in preprocessed_error_codes.iter().enumerate() {
+            let num_spaces = if idx == 0 { 0 } else { 12 };
+
+            let next = self.to_match_arm(&preprocessed_error_code, num_spaces);
+            result.push(next);
+        }
+
+        if let Some(dv) = default_value {
+            let indent = get_spaces(12);
+            result.push(format!("{}_ => \"{}\"", indent, dv));
+        }
+
+        result
+    }
+}
+
+struct MatchConversionFunction {
+    name: String,
+    parameter_list: String,
+    return_type: String,
+    match_arms: Vec<String>,
+    match_on: String,
+}
+
+impl MatchConversionFunction {
+    fn to_code_string(&self) -> String {
+        let lines = vec![
+            format!(
+                "{indent}{signature} {{",
+                indent = get_spaces(4),
+                signature = format!(
+                    "pub fn {name}({parameter_list}) -> {return_type}",
+                    name = self.name,
+                    parameter_list = self.parameter_list,
+                    return_type = self.return_type
+                )
+            ),
+            format!(
+                "{indent}match {match_on} {{",
+                indent = get_spaces(8),
+                match_on = self.match_on
+            ),
+            format!(
+                "{indent}{as_code_arms}",
+                as_code_arms = self.match_arms.join("\n"),
+                indent = get_spaces(12)
+            ),
+            format!("{indent}}}", indent = get_spaces(8)),
+            format!("{indent}}}\n", indent = get_spaces(4)),
+        ];
+
+        lines.join("\n")
     }
 }
 
@@ -209,82 +211,66 @@ const GENERATED_ERRORS_PATH: &'static str = "./src/errors/generated_code/errors.
 fn main() -> Result<(), Box<dyn Error>> {
     let errors_db: SledDb = get_or_create().expect("Could not load errors database");
 
-    let error_codes: Vec<PreprocessedErrorCode> = errors_db
+    let entries: Vec<PreprocessedErrorRepositoryEntry> = errors_db
         .fetch_all()?
         .into_iter()
-        .map(PreprocessedErrorCode::from)
+        .map(PreprocessedErrorRepositoryEntry::from)
         .collect();
 
-    let mut file = File::create(GENERATED_ERRORS_PATH)?;
+    let as_string_conversion = MatchConversionFunction {
+        name: "as_string".to_string(),
+        parameter_list: "&self".to_string(),
+        return_type: "&'static str".to_string(),
+        match_on: "self".to_string(),
+        match_arms: ConversionType::AsString.create_arms(&entries, None),
+    };
 
-    let as_code_arms = create_arms(&error_codes, ArmType::AsCode, None);
-    let from_code_as_string_arms = create_arms(
-        &error_codes,
-        ArmType::FromCodeAsString,
-        Some("error".to_string()),
-    );
-    let as_string_arms = create_arms(&error_codes, ArmType::AsString, None);
+    let as_code_conversion = MatchConversionFunction {
+        name: "as_code".to_string(),
+        parameter_list: "&self".to_string(),
+        return_type: "u32".to_string(),
+        match_on: "self".to_string(),
+        match_arms: ConversionType::AsCode.create_arms(&entries, None),
+    };
 
-    let mut result = String::new();
-    // @formatter:off
-    result.push_str("// This file was generated by build.rs. Do not edit by hand.\n");
-    result.push_str("// If you need to add a new Error variant follow the instructions\n");
-    result.push_str("// in the README.md in the errors package to add a new Error variant\n");
-    result.push_str(
-        "// to the provided database and then rebuild the project using `cargo build`.\n",
-    );
-    result.push_str("// For further details see the mentioned README.\n");
-    result.push_str("use quinn::{ConnectionError, ReadError, ReadToEndError, WriteError};\n");
-    result.push_str("use std::array::TryFromSliceError;\n");
-    result.push_str("use std::net::AddrParseError;\n");
-    result.push_str("use std::num::ParseIntError;\n");
-    result.push_str("use std::str::Utf8Error;\n");
-    result.push_str("use thiserror::Error;\n");
-    result.push_str("use tokio::io;\n\n");
-    result.push_str("#[derive(Debug, Error)]\n");
-    result.push_str("pub enum Error {\n");
-    result.push_str(&create_error_enum_body(&error_codes));
-    result.push_str("}\n\n");
-    result.push_str("impl Error {\n");
-    result.push_str(&format!(
-        "{indent}pub fn as_code(&self) -> u32 {{\n",
-        indent = get_spaces(4)
-    ));
-    result.push_str(&format!("{indent}match self {{\n", indent = get_spaces(8)));
-    result.push_str(&format!(
-        "{indent}{as_code_arms}\n",
-        as_code_arms = as_code_arms,
-        indent = get_spaces(12)
-    ));
-    result.push_str(&format!("{indent}}}\n", indent = get_spaces(8)));
-    result.push_str(&format!("{indent}}}\n\n", indent = get_spaces(4)));
-    result.push_str(&format!(
-        "{indent}pub fn from_code_as_string(code: u32) -> &'static str {{\n",
-        indent = get_spaces(4)
-    ));
-    result.push_str(&format!("{indent}match code {{\n", indent = get_spaces(8)));
-    result.push_str(&format!(
-        "{indent}{from_code_as_string_arms}\n",
-        indent = get_spaces(8),
-        from_code_as_string_arms = from_code_as_string_arms
-    ));
-    result.push_str(&format!("{indent}}}\n", indent = get_spaces(8)));
-    result.push_str(&format!("{indent}}}\n\n", indent = get_spaces(4)));
-    result.push_str(&format!(
-        "{indent}pub fn as_string(&self) -> &'static str {{\n",
-        indent = get_spaces(4)
-    ));
-    result.push_str(&format!("{indent}match self {{\n", indent = get_spaces(8)));
-    result.push_str(&format!(
-        "{indent}{as_string_arms}\n",
-        as_string_arms = as_string_arms,
-        indent = get_spaces(12)
-    ));
-    result.push_str(&format!("{indent}}}\n", indent = get_spaces(8))); // 8
-    result.push_str(&format!("{indent}}}\n", indent = get_spaces(4))); // 4
-    result.push('}');
-    // @formatter:on
-    writeln!(file, "{}", result)?;
+    let from_code_as_string_conversion = MatchConversionFunction {
+        name: "from_code_as_string".to_string(),
+        parameter_list: "code: u32".to_string(),
+        return_type: "&'static str".to_string(),
+        match_on: "code".to_string(),
+        match_arms: ConversionType::FromCodeAsString
+            .create_arms(&entries, Some("error".to_string())),
+    };
+
+    let lines = vec![
+        "// This file was generated by build.rs. Do not edit by hand.".to_string(),
+        "// If you need to add a new Error variant follow the instructions".to_string(),
+        "// in the README.md in the errors package to add a new Error variant".to_string(),
+        "// to the provided database and then rebuild the project using `cargo build`.".to_string(),
+        "// For further details see the mentioned README.".to_string(),
+        "use quinn::{ConnectionError, ReadError, ReadToEndError, WriteError};".to_string(),
+        "use std::array::TryFromSliceError;".to_string(),
+        "use std::net::AddrParseError;".to_string(),
+        "use std::num::ParseIntError;".to_string(),
+        "use std::str::Utf8Error;".to_string(),
+        "use thiserror::Error;".to_string(),
+        "use tokio::io;\n".to_string(),
+        "#[derive(Debug, Error)]".to_string(),
+        ErrorEnum {
+            name: "Error".to_string(),
+            variants: entries.into_iter().map(ErrorEnumVariant::from).collect(),
+        }
+        .to_code_string(),
+        "impl Error {".to_string(),
+        as_code_conversion.to_code_string(),
+        from_code_as_string_conversion.to_code_string(),
+        as_string_conversion.to_code_string(),
+        "}".to_string(),
+    ];
+
+    let output = lines.join("\n");
+    let mut generated_code_file = File::create(GENERATED_ERRORS_PATH)?;
+    writeln!(generated_code_file, "{}", output)?;
 
     Ok(())
 }

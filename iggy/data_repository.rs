@@ -1,14 +1,14 @@
 use std::error::Error;
 
-use crate::ErrorCode;
+use crate::errors_repository::ErrorRepositoryEntry;
 
 pub trait DataRepository<DataType> {
     fn insert(&self, value: DataType) -> Result<(), Box<dyn Error>>;
-    fn fetch_all(&self) -> Result<Vec<ErrorCode>, Box<dyn Error>>;
+    fn fetch_all(&self) -> Result<Vec<ErrorRepositoryEntry>, Box<dyn Error>>;
 }
 
-impl DataRepository<ErrorCode> for SledDb {
-    fn insert(&self, value: ErrorCode) -> Result<(), Box<dyn Error>> {
+impl DataRepository<ErrorRepositoryEntry> for SledDb {
+    fn insert(&self, value: ErrorRepositoryEntry) -> Result<(), Box<dyn Error>> {
         let serialized_value = rmp_serde::to_vec(&value).unwrap();
         let key = self.connection.generate_id()?.to_be_bytes();
 
@@ -17,13 +17,13 @@ impl DataRepository<ErrorCode> for SledDb {
         Ok(())
     }
 
-    fn fetch_all(&self) -> Result<Vec<ErrorCode>, Box<dyn Error>> {
-        let mut result: Vec<ErrorCode> = vec![];
+    fn fetch_all(&self) -> Result<Vec<ErrorRepositoryEntry>, Box<dyn Error>> {
+        let mut result: Vec<ErrorRepositoryEntry> = vec![];
 
         for key in self.connection.iter().keys() {
             let data = self.connection.get(key.unwrap())?;
-            result.push(rmp_serde::from_slice::<ErrorCode>(
-                &data.clone().unwrap()).unwrap()
+            result.push(
+                rmp_serde::from_slice::<ErrorRepositoryEntry>(&data.clone().unwrap()).unwrap(),
             );
         }
 

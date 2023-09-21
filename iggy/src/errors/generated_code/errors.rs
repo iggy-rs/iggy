@@ -264,8 +264,8 @@ pub enum Error {
     #[error("Failed to create consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.")]
     CannotCreateConsumerGroupInfo(u32, u32, u32),
     #[error("Failed to delete consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.")]
-    CannotDeleteConsumerGroupInfo(u32, u32, u32),}
-
+    CannotDeleteConsumerGroupInfo(u32, u32, u32),
+}
 impl Error {
     pub fn as_code(&self) -> u32 {
         match self {
@@ -660,4 +660,5 @@ impl Error {
             Error::CannotDeleteConsumerGroupInfo(_, _, _) => "cannot_delete_consumer_group_info",
         }
     }
+
 }

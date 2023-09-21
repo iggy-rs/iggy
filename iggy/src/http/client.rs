@@ -7,11 +7,13 @@ use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::Serialize;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct HttpClient {
     pub api_url: Url,
     client: ClientWithMiddleware,
+    token: RwLock<String>,
 }
 
 #[async_trait]
@@ -52,12 +54,17 @@ impl HttpClient {
             .with(RetryTransientMiddleware::new_with_policy(retry_policy))
             .build();
 
-        Ok(Self { api_url, client })
+        Ok(Self {
+            api_url,
+            client,
+            token: RwLock::new("".to_string()),
+        })
     }
 
     pub async fn get(&self, path: &str) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let response = self.client.get(url).send().await?;
+        let token = self.token.read().await;
+        let response = self.client.get(url).bearer_auth(token).send().await?;
         Self::handle_response(response).await
     }
 
@@ -67,7 +74,14 @@ impl HttpClient {
         query: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let response = self.client.get(url).query(query).send().await?;
+        let token = self.token.read().await;
+        let response = self
+            .client
+            .get(url)
+            .bearer_auth(token)
+            .query(query)
+            .send()
+            .await?;
         Self::handle_response(response).await
     }
 
@@ -77,7 +91,14 @@ impl HttpClient {
         payload: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let response = self.client.post(url).json(payload).send().await?;
+        let token = self.token.read().await;
+        let response = self
+            .client
+            .post(url)
+            .bearer_auth(token)
+            .json(payload)
+            .send()
+            .await?;
         Self::handle_response(response).await
     }
 
@@ -87,13 +108,21 @@ impl HttpClient {
         payload: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let response = self.client.put(url).json(payload).send().await?;
+        let token = self.token.read().await;
+        let response = self
+            .client
+            .put(url)
+            .bearer_auth(token)
+            .json(payload)
+            .send()
+            .await?;
         Self::handle_response(response).await
     }
 
     pub async fn delete(&self, path: &str) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let response = self.client.delete(url).send().await?;
+        let token = self.token.read().await;
+        let response = self.client.delete(url).bearer_auth(token).send().await?;
         Self::handle_response(response).await
     }
 
@@ -103,7 +132,14 @@ impl HttpClient {
         query: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let response = self.client.delete(url).query(query).send().await?;
+        let token = self.token.read().await;
+        let response = self
+            .client
+            .delete(url)
+            .bearer_auth(token)
+            .query(query)
+            .send()
+            .await?;
         Self::handle_response(response).await
     }
 
@@ -111,12 +147,21 @@ impl HttpClient {
         self.api_url.join(path).map_err(|_| Error::CannotParseUrl)
     }
 
+    pub async fn set_token(&self, token: Option<String>) {
+        let mut current_token = self.token.write().await;
+        if let Some(token) = token {
+            *current_token = token;
+        } else {
+            *current_token = "".to_string();
+        }
+    }
+
     async fn handle_response(response: Response) -> Result<Response, Error> {
         match response.status().is_success() {
             true => Ok(response),
             false => Err(Error::HttpResponseError(
                 response.status().as_u16(),
-                response.text().await?,
+                response.text().await.unwrap_or("error".to_string()),
             )),
         }
     }

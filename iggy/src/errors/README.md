@@ -7,6 +7,7 @@ root.
 Workflow:
 
 1. Add your `Error` variant by updating `insert_errors` in `iggy/errors_repository.rs`
-2. Delete the directory `iggy/errors_table` to ensure the database is rebuild in the next step.
+2. Delete the directory `iggy/errors_table` to ensure the database is rebuild in the next step (for this 
+   behaviour confer the function `get_or_create` in `iggy/errors_repository.rs`)
 3. Run `cargo build`.
 4. You can use your new `Error` variant as usual.

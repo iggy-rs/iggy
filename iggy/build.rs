@@ -32,21 +32,21 @@ fn get_spaces(num_spaces: usize) -> String {
 }
 
 struct ErrorEnumVariant {
-    name: String,
+    snake_case_name: String,
     template: String,
     signature: String,
     converts_from: String,
 }
 
 struct ErrorEnum {
-    name: String,
+    pascal_case_name: String,
     variants: Vec<ErrorEnumVariant>,
 }
 
 impl From<PreprocessedErrorRepositoryEntry> for ErrorEnumVariant {
     fn from(value: PreprocessedErrorRepositoryEntry) -> Self {
         Self {
-            name: value.name,
+            snake_case_name: value.snake_case_name,
             template: value.template,
             signature: value.signature,
             converts_from: value.converts_from,
@@ -65,7 +65,7 @@ impl ErrorEnumVariant {
         ));
         result.push_str(&format!(
             "{indent}{}",
-            &snake_to_pascal_case(&self.name),
+            &snake_to_pascal_case(&self.snake_case_name),
             indent = get_spaces(4),
         ));
         let sig = &self.signature;
@@ -85,7 +85,7 @@ impl ErrorEnumVariant {
 impl ErrorEnum {
     fn to_code_string(&self) -> String {
         vec![
-            format!("pub enum {name} {{", name = self.name),
+            format!("pub enum {name} {{", name = self.pascal_case_name),
             self.variants
                 .iter()
                 .map(|enum_variant| format!("{},", &enum_variant.to_code_string()))
@@ -109,16 +109,16 @@ impl ConversionType {
             ConversionType::AsString => {
                 format!(
                     "{indent}Error::{}{} => \"{}\",",
-                    crate::snake_to_pascal_case(&entry.name),
+                    crate::snake_to_pascal_case(&entry.snake_case_name),
                     entry.signature_wildcard_pattern,
-                    entry.name,
+                    entry.snake_case_name,
                     indent = crate::get_spaces(num_spaces),
                 )
             }
             ConversionType::AsCode => {
                 format!(
                     "{indent}Error::{}{} => {},",
-                    crate::snake_to_pascal_case(&entry.name),
+                    crate::snake_to_pascal_case(&entry.snake_case_name),
                     entry.signature_wildcard_pattern,
                     entry.code,
                     indent = crate::get_spaces(num_spaces),
@@ -128,7 +128,7 @@ impl ConversionType {
                 format!(
                     "{indent}{} => \"{}\",",
                     entry.code,
-                    entry.name,
+                    entry.snake_case_name,
                     indent = crate::get_spaces(num_spaces),
                 )
             }
@@ -257,7 +257,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         "use tokio::io;\n".to_string(),
         "#[derive(Debug, Error)]".to_string(),
         ErrorEnum {
-            name: "Error".to_string(),
+            pascal_case_name: "Error".to_string(),
             variants: entries.into_iter().map(ErrorEnumVariant::from).collect(),
         }
         .to_code_string(),

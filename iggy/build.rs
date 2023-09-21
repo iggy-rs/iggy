@@ -68,14 +68,14 @@ impl ErrorEnumVariant {
             &snake_to_pascal_case(&self.snake_case_name),
             indent = get_spaces(4),
         ));
-        let sig = &self.signature;
+        let signature = &self.signature;
         let converts_from = &self.converts_from;
 
-        match (converts_from.is_empty(), sig.is_empty()) {
+        match (converts_from.is_empty(), signature.is_empty()) {
             (true, true) => (),
-            (true, false) => result.push_str(&format!("({})", sig)),
+            (true, false) => result.push_str(&format!("({})", signature)),
             (false, true) => result.push_str(&format!("(#[from] {})", converts_from)),
-            (false, false) => result.push_str(&format!("({}, {})", converts_from, sig)),
+            (false, false) => result.push_str(&format!("({}, {})", converts_from, signature)),
         };
 
         result

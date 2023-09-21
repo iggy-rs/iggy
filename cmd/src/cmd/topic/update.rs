@@ -1,3 +1,4 @@
+use crate::args::topic::MessageExpiry;
 use crate::cli::CliCommand;
 
 use anyhow::{Context, Error, Result};
@@ -12,7 +13,7 @@ pub(crate) struct TopicUpdate {
     stream_id: u32,
     topic_id: u32,
     name: String,
-    message_expiry: Option<u32>,
+    message_expiry: Option<MessageExpiry>,
 }
 
 impl TopicUpdate {
@@ -20,7 +21,7 @@ impl TopicUpdate {
         stream_id: u32,
         topic_id: u32,
         name: String,
-        message_expiry: Option<u32>,
+        message_expiry: Option<MessageExpiry>,
     ) -> Self {
         Self {
             stream_id,
@@ -34,7 +35,7 @@ impl TopicUpdate {
 #[async_trait]
 impl CliCommand for TopicUpdate {
     fn explain(&self) -> String {
-        let expiry_text = match self.message_expiry {
+        let expiry_text = match &self.message_expiry {
             Some(value) => format!(" and message expire time: {}", value),
             None => String::from(""),
         };
@@ -51,7 +52,10 @@ impl CliCommand for TopicUpdate {
                     .expect("Expected numeric identifier for stream ID"),
                 topic_id: Identifier::numeric(self.topic_id)
                     .expect("Expected numeric identifier for topic ID"),
-                message_expiry: self.message_expiry,
+                message_expiry: match &self.message_expiry {
+                    None => None,
+                    Some(value) => value.into(),
+                },
                 name: self.name.clone(),
             })
             .await
@@ -60,7 +64,7 @@ impl CliCommand for TopicUpdate {
                     "Problem updating topic (ID: {}, name: {}{}) in stream with ID: {}",
                     self.topic_id,
                     self.name,
-                    match self.message_expiry {
+                    match &self.message_expiry {
                         Some(value) => format!(" and message expire time: {}", value),
                         None => String::from(""),
                     },
@@ -72,7 +76,7 @@ impl CliCommand for TopicUpdate {
             "Topic with ID: {} updated name: {}{} in stream with ID: {}",
             self.topic_id,
             self.name,
-            match self.message_expiry {
+            match &self.message_expiry {
                 Some(value) => format!(" and message expire time: {}", value),
                 None => String::from(""),
             },

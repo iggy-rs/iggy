@@ -1,3 +1,4 @@
+use crate::args::topic::MessageExpiry;
 use crate::cli::CliCommand;
 
 use anyhow::{Context, Error, Result};
@@ -12,8 +13,8 @@ pub(crate) struct TopicCreate {
     stream_id: u32,
     topic_id: u32,
     partitions_count: u32,
-    message_expiry: Option<u32>,
     name: String,
+    message_expiry: Option<MessageExpiry>,
 }
 
 impl TopicCreate {
@@ -21,15 +22,15 @@ impl TopicCreate {
         stream_id: u32,
         topic_id: u32,
         partitions_count: u32,
-        message_expiry: Option<u32>,
         name: String,
+        message_expiry: Option<MessageExpiry>,
     ) -> Self {
         Self {
             stream_id,
             topic_id,
             partitions_count,
-            message_expiry,
             name,
+            message_expiry,
         }
     }
 }
@@ -37,7 +38,7 @@ impl TopicCreate {
 #[async_trait]
 impl CliCommand for TopicCreate {
     fn explain(&self) -> String {
-        let expiry_text = match self.message_expiry {
+        let expiry_text = match &self.message_expiry {
             Some(value) => format!("message expire time: {}", value),
             None => String::from("without message expire time"),
         };
@@ -54,7 +55,10 @@ impl CliCommand for TopicCreate {
                     .expect("Expected numeric identifier"),
                 topic_id: self.topic_id,
                 partitions_count: self.partitions_count,
-                message_expiry: self.message_expiry,
+                message_expiry: match &self.message_expiry {
+                    None => None,
+                    Some(value) => value.into(),
+                },
                 name: self.name.clone(),
             })
             .await
@@ -70,7 +74,7 @@ impl CliCommand for TopicCreate {
             self.topic_id,
             self.name,
             self.partitions_count,
-            match self.message_expiry {
+            match &self.message_expiry {
                 Some(value) => format!("message expire time: {}", value),
                 None => String::from("without message expire time"),
             },

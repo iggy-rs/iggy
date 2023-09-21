@@ -17,6 +17,7 @@ use crate::cmd::{
 };
 use crate::error::IggyConsoleError;
 use crate::logging::{Logging, PRINT_TARGET};
+use args::topic::MessageExpiry;
 use clap::Parser;
 use cli::CliCommand;
 use iggy::client_provider;
@@ -45,15 +46,15 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
                 args.stream_id,
                 args.topic_id,
                 args.partitions_count,
-                args.message_expiry,
                 args.name.clone(),
+                MessageExpiry::new(args.message_expiry.clone()),
             )),
             TopicAction::Delete(args) => Box::new(TopicDelete::new(args.stream_id, args.topic_id)),
             TopicAction::Update(args) => Box::new(TopicUpdate::new(
                 args.stream_id,
                 args.topic_id,
                 args.name.clone(),
-                args.message_expiry,
+                MessageExpiry::new(args.message_expiry.clone()),
             )),
             TopicAction::Get(args) => Box::new(TopicGet::new(args.stream_id, args.topic_id)),
             TopicAction::List(args) => Box::new(TopicList::new(args.stream_id, args.list_mode)),

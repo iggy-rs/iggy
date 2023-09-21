@@ -48,8 +48,8 @@ impl CliCommand for TopicList {
                     "ID",
                     "Created",
                     "Name",
-                    "Size",
-                    "Message Expiry",
+                    "Size (B)",
+                    "Message Expiry (s)",
                     "Messages Count",
                     "Partitions Count",
                 ]);

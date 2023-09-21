@@ -45,7 +45,9 @@ impl CliCommand for StreamList {
             ListMode::Table => {
                 let mut table = Table::new();
 
-                table.set_header(vec!["ID", "Created", "Name", "Size", "Messages", "Topics"]);
+                table.set_header(vec![
+                    "ID", "Created", "Name", "Size (B)", "Messages", "Topics",
+                ]);
 
                 streams.iter().for_each(|stream| {
                     table.add_row(vec![

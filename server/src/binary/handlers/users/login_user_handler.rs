@@ -24,8 +24,17 @@ pub async fn handle(
             Some(user_context.client_id),
         )
         .await?;
+    if user_context.is_authenticated() {
+        info!(
+            "User with ID: {} was already authenticated, removing the previous session...",
+            user_context.user_id
+        );
+        system
+            .logout_user(user_context.user_id, Some(user_context.client_id))
+            .await?;
+    }
+
     user_context.set_user_id(user.id);
-    info!("Set user ID: {}", user.id);
     let identity_info = mapper::map_identity_info(user.id);
     sender.send_ok_response(identity_info.as_slice()).await?;
     Ok(())

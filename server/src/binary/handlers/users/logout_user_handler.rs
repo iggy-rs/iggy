@@ -6,7 +6,7 @@ use iggy::error::Error;
 use iggy::users::logout_user::LogoutUser;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, trace};
+use tracing::trace;
 
 pub async fn handle(
     command: &LogoutUser,
@@ -25,7 +25,6 @@ pub async fn handle(
         .logout_user(user_id, Some(user_context.client_id))
         .await?;
     user_context.clear_user_id();
-    info!("Cleared user ID: {}", user_id);
     sender.send_empty_ok_response().await?;
     Ok(())
 }

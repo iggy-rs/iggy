@@ -1,4 +1,4 @@
-use crate::args::ListMode;
+use crate::args::common::ListMode;
 use crate::cli::CliCommand;
 
 use anyhow::{Context, Error, Result};
@@ -45,7 +45,9 @@ impl CliCommand for StreamList {
             ListMode::Table => {
                 let mut table = Table::new();
 
-                table.set_header(vec!["ID", "Created", "Name", "Size", "Messages", "Topics"]);
+                table.set_header(vec![
+                    "ID", "Created", "Name", "Size (B)", "Messages", "Topics",
+                ]);
 
                 streams.iter().for_each(|stream| {
                     table.add_row(vec![

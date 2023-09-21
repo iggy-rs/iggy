@@ -197,15 +197,6 @@ impl MatchConversionFunction {
     }
 }
 
-fn to_wildcard_pattern(s: &str) -> String {
-    if s.is_empty() {
-        String::new()
-    } else {
-        let n = s.chars().filter(|&c| c == ',').count();
-        format!("({})", vec!["_"; n + 1].join(", "))
-    }
-}
-
 const GENERATED_ERRORS_PATH: &'static str = "./src/errors/generated_code/errors.rs";
 
 fn main() -> Result<(), Box<dyn Error>> {

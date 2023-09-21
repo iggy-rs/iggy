@@ -14,6 +14,7 @@ pub struct ErrorRepositoryEntry {
     pub converts_from: String,
 }
 
+// Adds computed fields to avoid re-computation in later usage
 pub struct PreprocessedErrorRepositoryEntry {
     pub snake_case_name: String,
     pub code: u32,
@@ -24,12 +25,21 @@ pub struct PreprocessedErrorRepositoryEntry {
     pub signature_wildcard_pattern: String,
 }
 
-fn build_data_value(entry: &ErrorRepositoryEntry) -> String {
+fn get_full_signature_string(entry: &ErrorRepositoryEntry) -> String {
     match (entry.converts_from.is_empty(), entry.signature.is_empty()) {
         (true, true) => String::new(),
         (true, false) => format!("({})", entry.signature),
         (false, true) => format!("(#[from] {})", entry.converts_from),
         (false, false) => format!("({}, {})", entry.converts_from, entry.signature),
+    }
+}
+
+fn to_wildcard_pattern(s: &str) -> String {
+    if s.is_empty() {
+        String::new()
+    } else {
+        let n = s.chars().filter(|&c| c == ',').count();
+        format!("({})", vec!["_"; n + 1].join(", "))
     }
 }
 
@@ -43,7 +53,7 @@ impl From<ErrorRepositoryEntry> for PreprocessedErrorRepositoryEntry {
             converts_from: error_code.converts_from.clone(),
             pascal_case_name: crate::snake_to_pascal_case(&error_code.snake_case_name),
             signature_wildcard_pattern: {
-                crate::to_wildcard_pattern(&build_data_value(&error_code))
+                to_wildcard_pattern(&get_full_signature_string(&error_code))
             },
         }
     }
@@ -958,3 +968,5 @@ fn insert_errors(errors_db: &SledDb) -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
+
+

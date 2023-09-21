@@ -400,7 +400,7 @@ impl Error {
 
     pub fn from_code_as_string(code: u32) -> &'static str {
         match code {
-        1 => "error",
+            1 => "error",
             2 => "invalid_configuration",
             3 => "invalid_command",
             4 => "invalid_format",

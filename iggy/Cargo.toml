@@ -40,5 +40,7 @@ openssl = { version = "0.10.*", features = ["vendored"] }
 chrono = { version = "0.4.31" }
 
 [build-dependencies]
-sqlx = { version = "0.7.1", features = ["runtime-tokio", "sqlite"] }
-tokio = { version = "1.28.2", features = ["full"] }
+rmp-serde = "1.1.2"
+serde = { version = "1.0.188", features = ["derive", "rc"] }
+serde_derive = "1.0.188"
+sled = "0.34.7"

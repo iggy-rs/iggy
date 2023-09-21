@@ -11,8 +11,8 @@ pub enum ServerError {
     ConnectionError(#[from] ConnectionError),
     #[error("Invalid configuration provider: {0}")]
     InvalidConfigurationProvider(String),
-    #[error("Cannot load configuration")]
-    CannotLoadConfiguration,
+    #[error("Cannot load configuration: {0}")]
+    CannotLoadConfiguration(String),
     #[error("Invalid configuration")]
     InvalidConfiguration,
     #[error("SDK error")]

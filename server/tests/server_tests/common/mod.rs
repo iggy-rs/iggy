@@ -32,7 +32,7 @@ impl TestServer {
 
     pub fn start(&mut self) {
         // Sleep before starting server - it takes some time for the OS to release the port
-        sleep(Duration::from_secs(3));
+        sleep(Duration::from_secs(1));
 
         self.cleanup();
         let files_path = self.files_path.clone();
@@ -56,7 +56,7 @@ impl TestServer {
         )) {
             Duration::from_secs(40)
         } else {
-            Duration::from_secs(3)
+            Duration::from_secs(1)
         };
         sleep(sleep_duration);
     }

@@ -72,7 +72,7 @@ impl ErrorEnumVariant {
 
 impl ErrorEnum {
     fn to_code_string(&self) -> String {
-        vec![
+        [
             format!("pub enum {name} {{", name = self.pascal_case_name),
             self.variants
                 .iter()
@@ -125,7 +125,7 @@ impl ConversionType {
 
     fn create_arms(
         &self,
-        preprocessed_error_codes: &Vec<PreprocessedErrorRepositoryEntry>,
+        preprocessed_error_codes: &[PreprocessedErrorRepositoryEntry],
         default_value: Option<String>,
     ) -> Vec<String> {
         let mut result: Vec<String> = vec![];
@@ -133,7 +133,7 @@ impl ConversionType {
         for (idx, preprocessed_error_code) in preprocessed_error_codes.iter().enumerate() {
             let num_spaces = if idx == 0 { 0 } else { 12 };
 
-            let next = self.to_match_arm(&preprocessed_error_code, num_spaces);
+            let next = self.to_match_arm(preprocessed_error_code, num_spaces);
             result.push(next);
         }
 
@@ -185,7 +185,7 @@ impl MatchConversionFunction {
     }
 }
 
-const GENERATED_ERRORS_PATH: &'static str = "./src/errors/generated_code/errors.rs";
+const GENERATED_ERRORS_PATH: &str = "./src/errors/generated_code/errors.rs";
 
 fn main() -> Result<(), Box<dyn Error>> {
     let errors_db: SledDb = get_or_create()?;

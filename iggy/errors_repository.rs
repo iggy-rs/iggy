@@ -6,7 +6,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use crate::data_repository::{DataRepository, SledDb};
 
-const SLED_ERRORS_TABLE_PATH: &'static str = "errors_table";
+const SLED_ERRORS_TABLE_PATH: &str = "errors_table";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorRepositoryEntry {

@@ -129,9 +129,22 @@ jobs:
           args: "--verbose"
         if: ${{ !matrix.platform.skip_tests }}
 
+      - name: Check if PR is from a fork
+        id: check_fork
+        run: |
+          if [ "${{ github.event.pull_request.head.repo.fork }}" = "true" ]; then
+            echo "::set-output name=is_forked::true"
+          else
+            echo "::set-output name=is_forked::false"
+          fi
+    outputs:
+      check_fork_is_forked: ${{ steps.check_fork.outputs.is_forked }}
+
   if_merged:
     needs: build_and_test
-    if: github.event.pull_request.merged == true
+    if: |
+      steps.check_fork.outputs.is_forked == 'false' &&
+      github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - run: |
@@ -141,7 +154,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: if_merged
     if: |
-      ${{ github.ref }} == 'refs/heads/master' || ${{ github.ref }} == 'refs/heads/test_release_branch'
+      needs.build_and_test.outputs.check_fork_is_forked == 'false' &&
+      (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/test_release_branch')
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -198,6 +212,9 @@ jobs:
   release_and_publish:
     name: build release ${{ matrix.platform.os_name }}
     needs: tag
+    if: |
+      needs.build_and_test.outputs.check_fork_is_forked == 'false' &&
+      needs.tag.outputs.tag_created == 'true'
     runs-on: ${{ matrix.platform.os }}
     strategy:
       matrix:
@@ -360,6 +377,8 @@ jobs:
     needs:
       - release_and_publish
       - tag
+    if: |
+      needs.build_and_test.outputs.check_fork_is_forked == 'false'
     steps:
       - name: Download digests
         uses: actions/download-artifact@v3

@@ -5,6 +5,7 @@ extern crate serde_derive;
 use std::error::Error;
 use std::fs::File;
 use std::io::Write;
+use convert_case::{Case, Casing};
 
 use errors_repository::PreprocessedErrorRepositoryEntry;
 
@@ -13,19 +14,6 @@ use crate::errors_repository::get_or_create;
 
 mod data_repository;
 mod errors_repository;
-
-fn snake_to_pascal_case(s: &str) -> String {
-    s.split('_')
-        .map(|word| {
-            let mut chars = word.chars();
-            match chars.next() {
-                None => String::new(),
-                Some(first_char) => first_char.to_uppercase().collect::<String>() + chars.as_str(),
-            }
-        })
-        .collect::<Vec<String>>()
-        .join("")
-}
 
 fn get_spaces(num_spaces: usize) -> String {
     " ".repeat(num_spaces).to_string()
@@ -65,7 +53,7 @@ impl ErrorEnumVariant {
         ));
         result.push_str(&format!(
             "{indent}{}",
-            &snake_to_pascal_case(&self.snake_case_name),
+            self.snake_case_name.to_case(Case::Pascal),
             indent = get_spaces(4),
         ));
         let signature = &self.signature;
@@ -109,7 +97,7 @@ impl ConversionType {
             ConversionType::AsString => {
                 format!(
                     "{indent}Error::{}{} => \"{}\",",
-                    crate::snake_to_pascal_case(&entry.snake_case_name),
+                    entry.snake_case_name.to_case(Case::Pascal),
                     entry.signature_wildcard_pattern,
                     entry.snake_case_name,
                     indent = crate::get_spaces(num_spaces),
@@ -118,7 +106,7 @@ impl ConversionType {
             ConversionType::AsCode => {
                 format!(
                     "{indent}Error::{}{} => {},",
-                    crate::snake_to_pascal_case(&entry.snake_case_name),
+                    entry.snake_case_name.to_case(Case::Pascal),
                     entry.signature_wildcard_pattern,
                     entry.code,
                     indent = crate::get_spaces(num_spaces),

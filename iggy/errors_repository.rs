@@ -1,7 +1,10 @@
-use crate::data_repository::{DataRepository, SledDb};
-use serde_derive::{Deserialize, Serialize};
 use std::error::Error;
 use std::path::Path;
+
+use convert_case::{Case, Casing};
+use serde_derive::{Deserialize, Serialize};
+
+use crate::data_repository::{DataRepository, SledDb};
 
 const SLED_ERRORS_TABLE_PATH: &'static str = "errors_table";
 
@@ -51,7 +54,7 @@ impl From<ErrorRepositoryEntry> for PreprocessedErrorRepositoryEntry {
             template: error_code.template.clone(),
             signature: error_code.signature.clone(),
             converts_from: error_code.converts_from.clone(),
-            pascal_case_name: crate::snake_to_pascal_case(&error_code.snake_case_name),
+            pascal_case_name: error_code.snake_case_name.to_case(Case::Pascal),
             signature_wildcard_pattern: {
                 to_wildcard_pattern(&get_full_signature_string(&error_code))
             },

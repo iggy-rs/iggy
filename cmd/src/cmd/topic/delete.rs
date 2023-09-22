@@ -9,12 +9,12 @@ use tracing::info;
 
 #[derive(Debug)]
 pub(crate) struct TopicDelete {
-    stream_id: u32,
-    topic_id: u32,
+    stream_id: Identifier,
+    topic_id: Identifier,
 }
 
 impl TopicDelete {
-    pub(crate) fn new(stream_id: u32, topic_id: u32) -> Self {
+    pub(crate) fn new(stream_id: Identifier, topic_id: Identifier) -> Self {
         Self {
             stream_id,
             topic_id,
@@ -34,10 +34,8 @@ impl CliCommand for TopicDelete {
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
         client
             .delete_topic(&DeleteTopic {
-                stream_id: Identifier::numeric(self.stream_id)
-                    .expect("Expected numeric identifier for stream_id"),
-                topic_id: Identifier::numeric(self.topic_id)
-                    .expect("Expected numeric identifier for topic_id"),
+                stream_id: self.stream_id.clone(),
+                topic_id: self.topic_id.clone(),
             })
             .await
             .with_context(|| {

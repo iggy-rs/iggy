@@ -10,7 +10,7 @@ use tracing::info;
 
 #[derive(Debug)]
 pub(crate) struct TopicCreate {
-    stream_id: u32,
+    stream_id: Identifier,
     topic_id: u32,
     partitions_count: u32,
     name: String,
@@ -19,7 +19,7 @@ pub(crate) struct TopicCreate {
 
 impl TopicCreate {
     pub(crate) fn new(
-        stream_id: u32,
+        stream_id: Identifier,
         topic_id: u32,
         partitions_count: u32,
         name: String,
@@ -51,8 +51,7 @@ impl CliCommand for TopicCreate {
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
         client
             .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(self.stream_id)
-                    .expect("Expected numeric identifier"),
+                stream_id: self.stream_id.clone(),
                 topic_id: self.topic_id,
                 partitions_count: self.partitions_count,
                 message_expiry: match &self.message_expiry {

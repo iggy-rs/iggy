@@ -1,5 +1,4 @@
 use crate::cli::CliCommand;
-// use crate::error::IggyConsoleError;
 
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
@@ -12,28 +11,28 @@ use tracing::info;
 
 #[derive(Debug)]
 pub(crate) struct StreamGet {
-    id: u32,
+    stream_id: Identifier,
 }
 
 impl StreamGet {
-    pub(crate) fn new(id: u32) -> Self {
-        Self { id }
+    pub(crate) fn new(stream_id: Identifier) -> Self {
+        Self { stream_id }
     }
 }
 
 #[async_trait]
 impl CliCommand for StreamGet {
     fn explain(&self) -> String {
-        format!("get stream with ID: {}", self.id)
+        format!("get stream with ID: {}", self.stream_id)
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
         let stream = client
             .get_stream(&GetStream {
-                stream_id: Identifier::numeric(self.id).expect("Expected numeric identifier"),
+                stream_id: self.stream_id.clone(),
             })
             .await
-            .with_context(|| format!("Problem getting stream with ID: {}", self.id))?;
+            .with_context(|| format!("Problem getting stream with ID: {}", self.stream_id))?;
 
         let mut table = Table::new();
 

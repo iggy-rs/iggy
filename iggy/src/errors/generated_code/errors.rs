@@ -171,19 +171,27 @@ pub enum Error {
     CannotReadTopics(u32),
     #[error("Cannot create partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
     CannotCreatePartition(u32, u32, u32),
-    #[error("Failed to create directory for partitions for stream with ID: {0} and topic with ID: {1}")]
+    #[error(
+        "Failed to create directory for partitions for stream with ID: {0} and topic with ID: {1}"
+    )]
     CannotCreatePartitionsDirectory(u32, u32),
     #[error("Failed to create directory for partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
     CannotCreatePartitionDirectory(u32, u32, u32),
     #[error("Cannot open partition log file")]
     CannotOpenPartitionLogFile,
-    #[error("Failed to read partitions directories for topic with ID: {0} and stream with ID: {1}")]
+    #[error(
+        "Failed to read partitions directories for topic with ID: {0} and stream with ID: {1}"
+    )]
     CannotReadPartitions(u32, u32),
-    #[error("Failed to delete partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
+    #[error(
+        "Failed to delete partition with ID: {0} for stream with ID: {1} and topic with ID: {2}"
+    )]
     CannotDeletePartition(u32, u32, u32),
     #[error("Failed to delete partition directory with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
     CannotDeletePartitionDirectory(u32, u32, u32),
-    #[error("Partition with ID: {0} for topic with ID: {1} for stream with ID: {2} was not found.")]
+    #[error(
+        "Partition with ID: {0} for topic with ID: {1} for stream with ID: {2} was not found."
+    )]
     PartitionNotFound(u32, u32, u32),
     #[error("Topic with ID: {0} for stream with ID: {1} has no partitions.")]
     NoPartitions(u32, u32),
@@ -526,7 +534,7 @@ impl Error {
             5005 => "cannot_read_consumer_groups",
             5006 => "cannot_create_consumer_group_info",
             5007 => "cannot_delete_consumer_group_info",
-            _ => "error"
+            _ => "error",
         }
     }
 
@@ -654,11 +662,12 @@ impl Error {
             Error::ConsumerGroupAlreadyExists(_, _) => "consumer_group_already_exists",
             Error::ConsumerGroupMemberNotFound(_, _, _) => "consumer_group_member_not_found",
             Error::InvalidConsumerGroupId => "invalid_consumer_group_id",
-            Error::CannotCreateConsumerGroupsDirectory(_, _) => "cannot_create_consumer_groups_directory",
+            Error::CannotCreateConsumerGroupsDirectory(_, _) => {
+                "cannot_create_consumer_groups_directory"
+            }
             Error::CannotReadConsumerGroups(_, _) => "cannot_read_consumer_groups",
             Error::CannotCreateConsumerGroupInfo(_, _, _) => "cannot_create_consumer_group_info",
             Error::CannotDeleteConsumerGroupInfo(_, _, _) => "cannot_delete_consumer_group_info",
         }
     }
-
 }

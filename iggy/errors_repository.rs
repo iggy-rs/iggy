@@ -985,5 +985,3 @@ fn insert_errors(errors_db: &SledDb) -> Result<(), Box<dyn Error>> {
 
     Ok(())
 }
-
-

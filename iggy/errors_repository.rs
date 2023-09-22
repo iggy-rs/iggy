@@ -62,6 +62,10 @@ impl From<ErrorRepositoryEntry> for PreprocessedErrorRepositoryEntry {
     }
 }
 
+pub fn db_exists() -> bool {
+    Path::new(SLED_ERRORS_TABLE_PATH).exists()
+}
+
 pub fn get_or_create() -> Result<SledDb, Box<dyn Error>> {
     if Path::new(SLED_ERRORS_TABLE_PATH).try_exists()? {
         Ok(SledDb {

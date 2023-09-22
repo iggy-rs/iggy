@@ -1,21 +1,21 @@
 use crate::binary::sender::Sender;
+use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use crate::streaming::users::user_context::UserContext;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::topics::delete_topic::DeleteTopic;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::trace;
+use tracing::debug;
 
 pub async fn handle(
     command: &DeleteTopic,
     sender: &mut dyn Sender,
-    user_context: &UserContext,
+    session: &Session,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("{command}");
-    if !user_context.is_authenticated() {
+    debug!("session: {session}, command: {command}");
+    if !session.is_authenticated() {
         return Err(Error::Unauthenticated);
     }
 
@@ -25,7 +25,7 @@ pub async fn handle(
         let topic = stream.get_topic(&command.topic_id)?;
         system
             .permissioner
-            .delete_topic(user_context.user_id, stream.stream_id, topic.topic_id)?;
+            .delete_topic(session.user_id, stream.stream_id, topic.topic_id)?;
     }
 
     let mut system = system.write().await;

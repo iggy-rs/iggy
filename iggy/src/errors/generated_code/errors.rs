@@ -67,6 +67,10 @@ pub enum Error {
     CannotEncryptData,
     #[error("Cannot decrypt data")]
     CannotDecryptData,
+    #[error("Invalid JWT algorithm: {0}")]
+    InvalidJwtAlgorithm(String),
+    #[error("Invalid JWT secret")]
+    InvalidJwtSecret,
     #[error("Client with ID: {0} was not found.")]
     ClientNotFound(u32),
     #[error("Invalid client ID")]
@@ -304,6 +308,8 @@ impl Error {
             Error::InvalidEncryptionKey => 60,
             Error::CannotEncryptData => 61,
             Error::CannotDecryptData => 62,
+            Error::InvalidJwtAlgorithm(_) => 63,
+            Error::InvalidJwtSecret => 64,
             Error::ClientNotFound(_) => 100,
             Error::InvalidClientId => 101,
             Error::IoError(_) => 200,
@@ -435,6 +441,8 @@ impl Error {
             60 => "invalid_encryption_key",
             61 => "cannot_encrypt_data",
             62 => "cannot_decrypt_data",
+            63 => "invalid_jwt_algorithm",
+            64 => "invalid_jwt_secret",
             100 => "client_not_found",
             101 => "invalid_client_id",
             200 => "io_error",
@@ -567,6 +575,8 @@ impl Error {
             Error::InvalidEncryptionKey => "invalid_encryption_key",
             Error::CannotEncryptData => "cannot_encrypt_data",
             Error::CannotDecryptData => "cannot_decrypt_data",
+            Error::InvalidJwtAlgorithm(_) => "invalid_jwt_algorithm",
+            Error::InvalidJwtSecret => "invalid_jwt_secret",
             Error::ClientNotFound(_) => "client_not_found",
             Error::InvalidClientId => "invalid_client_id",
             Error::IoError(_) => "io_error",

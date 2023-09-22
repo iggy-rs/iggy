@@ -1,37 +1,34 @@
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use crate::streaming::users::user_context::UserContext;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::messages::poll_messages::PollMessages;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::trace;
+use tracing::debug;
 
 pub async fn handle(
     command: &PollMessages,
     sender: &mut dyn Sender,
-    user_context: &UserContext,
+    session: &Session,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("{command}");
-    if !user_context.is_authenticated() {
+    debug!("session: {session}, command: {command}");
+    if !session.is_authenticated() {
         return Err(Error::Unauthenticated);
     }
 
-    let consumer = PollingConsumer::from_consumer(
-        &command.consumer,
-        user_context.client_id,
-        command.partition_id,
-    );
+    let consumer =
+        PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
     let system = system.read().await;
     let stream = system.get_stream(&command.stream_id)?;
     let topic = stream.get_topic(&command.topic_id)?;
     system
         .permissioner
-        .poll_messages(user_context.user_id, stream.stream_id, topic.topic_id)?;
+        .poll_messages(session.user_id, stream.stream_id, topic.topic_id)?;
 
     let messages = system
         .poll_messages(

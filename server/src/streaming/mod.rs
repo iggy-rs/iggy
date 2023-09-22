@@ -4,6 +4,7 @@ pub mod partitions;
 pub mod persistence;
 pub mod polling_consumer;
 pub mod segments;
+pub mod session;
 pub mod storage;
 pub mod streams;
 pub mod systems;

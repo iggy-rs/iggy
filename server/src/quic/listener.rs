@@ -2,15 +2,14 @@ use crate::binary::command;
 use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
+use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use crate::streaming::users::user_context::UserContext;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use quinn::Endpoint;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::log::trace;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 const LISTENERS_COUNT: u32 = 10;
 const INITIAL_BYTES_LENGTH: usize = 4;
@@ -49,11 +48,11 @@ async fn handle_connection(
             .await
             .add_client(&address, Transport::Quic)
             .await;
-        let mut user_context = UserContext::from_client_id(client_id);
+        let mut session = Session::from_client_id(client_id);
         {
             let system = system.read().await;
             if !system.config.user.authentication_enabled {
-                user_context.disable_authentication();
+                session.disable_authentication();
             }
         }
 
@@ -88,7 +87,7 @@ async fn handle_connection(
                 continue;
             }
 
-            trace!("Trying to read command...");
+            debug!("Trying to read command...");
             let length = &request[..INITIAL_BYTES_LENGTH];
             let length = u32::from_le_bytes(length.try_into().unwrap_or([0; 4]));
             let command = Command::from_bytes(&request[INITIAL_BYTES_LENGTH..]);
@@ -101,10 +100,9 @@ async fn handle_connection(
             }
 
             let command = command.unwrap();
-            trace!(
+            debug!(
                 "Received a QUIC command: {}, payload size: {}",
-                command,
-                length
+                command, length
             );
 
             let result = command::handle(
@@ -113,7 +111,7 @@ async fn handle_connection(
                     send: stream.0,
                     recv: stream.1,
                 },
-                &mut user_context,
+                &mut session,
                 system.clone(),
             )
             .await;

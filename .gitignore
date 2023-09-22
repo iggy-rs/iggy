@@ -3,4 +3,4 @@
 .vscode/
 .DS_Store
 local_data*
-iggy/errors_table
+/iggy/errors_table/

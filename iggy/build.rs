@@ -188,7 +188,7 @@ impl MatchConversionFunction {
 const GENERATED_ERRORS_PATH: &'static str = "./src/errors/generated_code/errors.rs";
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let errors_db: SledDb = get_or_create().expect("Could not load errors database");
+    let errors_db: SledDb = get_or_create()?;
 
     let entries: Vec<PreprocessedErrorRepositoryEntry> = errors_db
         .fetch_all()?

@@ -5,14 +5,46 @@ use iggy::identifier::Identifier;
 #[derive(Debug, Subcommand)]
 pub(crate) enum StreamAction {
     /// Create stream with given ID and name
+    ///
+    /// Examples:
+    ///  iggy stream create 1 prod
+    ///  iggy stream create 2 test
+    #[clap(verbatim_doc_comment)]
     Create(StreamCreateArgs),
     /// Delete stream with given ID
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    ///
+    /// Examples:
+    ///  iggy stream delete 1
+    ///  iggy stream delete test
+    #[clap(verbatim_doc_comment)]
     Delete(StreamDeleteArgs),
     /// Update stream name for given stream ID
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    ///
+    /// Examples:
+    ///  iggy stream update 1 production
+    ///  iggy stream update test development
+    #[clap(verbatim_doc_comment)]
     Update(StreamUpdateArgs),
     /// Get details of a single stream with given ID
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    ///
+    /// Examples:
+    ///  iggy stream get 1
+    ///  iggy stream get test
+    #[clap(verbatim_doc_comment)]
     Get(StreamGetArgs),
     /// List all streams
+    ///
+    /// Examples:
+    ///  iggy stream list
+    ///  iggy stream list --list-mode table
+    ///  iggy stream list -l table
+    #[clap(verbatim_doc_comment)]
     List(StreamListArgs),
 }
 

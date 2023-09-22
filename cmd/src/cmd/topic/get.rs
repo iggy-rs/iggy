@@ -78,8 +78,6 @@ impl CliCommand for TopicGet {
 
         info!("{table}");
 
-        info!("{:?}", topic);
-
         Ok(())
     }
 }

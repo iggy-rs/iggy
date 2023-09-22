@@ -4,7 +4,7 @@ use crate::errors_repository::ErrorRepositoryEntry;
 
 pub trait DataRepository<DataType> {
     fn insert(&self, value: DataType) -> Result<(), Box<dyn Error>>;
-    fn fetch_all(&self) -> Result<Vec<ErrorRepositoryEntry>, Box<dyn Error>>;
+    fn fetch_all(&self) -> Result<Vec<DataType>, Box<dyn Error>>;
 }
 
 impl DataRepository<ErrorRepositoryEntry> for SledDb {

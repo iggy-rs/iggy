@@ -1,13 +1,3 @@
-# TODO:
-# - generate shasum for each published zip, include it in metadata.yaml and in the release description
-# - consider stripping debug symbols from binaries
-# - optimize workflow to avoid having almost same matrix twice
-# - avoid building with debug and release after - it should be better to build release only and test it
-# - generate RELEASE.md changelog
-# - change ubuntu to alpine in Dockerfile.ci and Dockerfile
-# - merge Docker meta into one step
-# - implement cargo-semver-checks
-
 name: Rust
 on:
   pull_request:

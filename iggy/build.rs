@@ -2,10 +2,11 @@ extern crate rmp_serde as rmps;
 extern crate serde;
 extern crate serde_derive;
 
+use convert_case::{Case, Casing};
 use std::error::Error;
 use std::fs::File;
 use std::io::Write;
-use convert_case::{Case, Casing};
+use std::process::Command;
 
 use errors_repository::PreprocessedErrorRepositoryEntry;
 
@@ -250,6 +251,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let output = lines.join("\n");
     let mut generated_code_file = File::create(GENERATED_ERRORS_PATH)?;
     writeln!(generated_code_file, "{}", output)?;
+
+    Command::new("cargo")
+        .arg("fmt")
+        .arg("--")
+        .arg(GENERATED_ERRORS_PATH)
+        .output()?;
 
     Ok(())
 }

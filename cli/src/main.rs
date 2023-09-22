@@ -71,7 +71,15 @@ async fn main() -> Result<(), ClientError> {
                     error!("Connection error: {}. Client will be reconnected.", error);
                     client.connect().await?;
                 }
-                _ => {}
+                ClientError::SdkError(Error::InvalidResponse(error)) => {
+                    error!("Invalid response, error code: {error}.");
+                }
+                ClientError::SdkError(Error::HttpResponseError(status, body)) => {
+                    error!("Invalid HTTP response, status code: {status}, body: {body}.");
+                }
+                _ => {
+                    error!("Error: {}", error);
+                }
             }
 
             continue;

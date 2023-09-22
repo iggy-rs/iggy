@@ -85,6 +85,8 @@ impl System {
         info!("Deleting user: {} with ID: {user_id}...", user.username);
         self.storage.user.delete(&user).await?;
         self.permissioner.delete_permissions_for_user(user.id);
+        let mut client_manager = self.client_manager.write().await;
+        client_manager.delete_clients_for_user(user.id).await?;
         info!("Deleted user: {} with ID: {user_id}.", user.username);
         Ok(user)
     }
@@ -177,37 +179,50 @@ impl System {
         password: &str,
         client_id: Option<u32>,
     ) -> Result<User, Error> {
-        info!("Logging in user: {username}...");
         let user = match self.storage.user.load_by_username(username).await {
             Ok(user) => user,
             Err(_) => {
-                error!("Cannot login user: {username}.");
+                error!("Cannot login user: {username} (not found).");
                 return Err(Error::InvalidCredentials);
             }
         };
+        info!("Logging in user: {username} with ID: {}...", user.id);
         if !user.is_active() {
-            warn!("User: {username} is inactive.");
+            warn!("User: {username} with ID: {} is inactive.", user.id);
             return Err(Error::UserInactive);
         }
         if !crypto::verify_password(password, &user.password) {
+            warn!(
+                "Invalid password for user: {username} with ID: {}.",
+                user.id
+            );
             return Err(Error::InvalidCredentials);
         }
         if let Some(client_id) = client_id {
             let mut client_manager = self.client_manager.write().await;
             client_manager.set_user_id(client_id, user.id).await?;
         }
-
-        info!("Logged in user: {username}.");
+        info!("Logged in user: {username} with ID: {}.", user.id);
         Ok(user)
     }
 
     pub async fn logout_user(&self, user_id: u32, client_id: Option<u32>) -> Result<(), Error> {
-        info!("Logging out user: {user_id}...");
+        if user_id == 0 {
+            warn!("Cannot logout the unauthenticated user (you're probably running the server without enabled authentication).");
+            return Ok(());
+        }
+
+        let user = self.get_user(&Identifier::numeric(user_id)?).await?;
+        info!(
+            "Logging out user: {} with ID: {}...",
+            user.username, user.id
+        );
         if let Some(client_id) = client_id {
             let mut client_manager = self.client_manager.write().await;
             client_manager.clear_user_id(client_id).await?;
+            info!("Cleared user ID: {} for client: {}.", user.id, client_id);
         }
-        info!("Logged out user: {user_id}.");
+        info!("Logged out user: {} with ID: {}.", user.username, user.id);
         Ok(())
     }
 }

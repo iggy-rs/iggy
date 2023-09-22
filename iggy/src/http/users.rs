@@ -60,12 +60,14 @@ impl UserClient for HttpClient {
 
     async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error> {
         let response = self.post(&format!("{PATH}/login"), &command).await?;
-        let identity_info = response.json().await?;
+        let identity_info: IdentityInfo = response.json().await?;
+        self.set_token(identity_info.token.clone()).await;
         Ok(identity_info)
     }
 
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
         self.post(&format!("{PATH}/logout"), &command).await?;
+        self.set_token(None).await;
         Ok(())
     }
 }

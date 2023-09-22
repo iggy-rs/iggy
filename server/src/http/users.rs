@@ -121,8 +121,6 @@ async fn change_password(
     if user.id != identity.user_id {
         system.permissioner.change_password(identity.user_id)?;
     }
-
-    system.permissioner.change_password(identity.user_id)?;
     system
         .change_password(
             &command.user_id,

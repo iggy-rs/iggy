@@ -100,6 +100,24 @@ impl ClientManager {
         self.clients.values().cloned().collect()
     }
 
+    pub async fn delete_clients_for_user(&mut self, user_id: u32) -> Result<(), Error> {
+        let mut clients_to_remove = Vec::new();
+        for client in self.clients.values() {
+            let client = client.read().await;
+            if let Some(client_user_id) = client.user_id {
+                if client_user_id == user_id {
+                    clients_to_remove.push(client.client_id);
+                }
+            }
+        }
+
+        for client_id in clients_to_remove {
+            self.clients.remove(&client_id);
+        }
+
+        Ok(())
+    }
+
     pub fn delete_client(&mut self, address: &SocketAddr) -> Option<Arc<RwLock<Client>>> {
         let id = checksum::calculate(address.to_string().as_bytes());
         self.clients.remove(&id)

@@ -6,11 +6,16 @@ pub mod tcp;
 use assert_cmd::prelude::CommandCargoExt;
 use async_trait::async_trait;
 use iggy::client::Client;
+use std::collections::HashMap;
 use std::fs;
 use std::process::{Child, Command};
 use std::thread::sleep;
 use std::time::Duration;
 use uuid::Uuid;
+
+const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
+const AUTHENTICATION_ENABLED_ENV_VAR: &str = "IGGY_SYSTEM_USER_AUTHENTICATION_ENABLED";
+const AUTHORIZATION_ENABLED_ENV_VAR: &str = "IGGY_SYSTEM_USER_AUTHORIZATION_ENABLED";
 
 #[async_trait]
 pub trait ClientFactory: Sync + Send {
@@ -19,13 +24,19 @@ pub trait ClientFactory: Sync + Send {
 
 pub struct TestServer {
     files_path: String,
+    envs: Option<HashMap<String, String>>,
     child_handle: Option<Child>,
 }
 
 impl TestServer {
-    pub fn new(files_path: String) -> Self {
+    pub fn new(envs: Option<HashMap<String, String>>) -> Self {
+        Self::create(TestServer::get_random_path(), envs)
+    }
+
+    pub fn create(files_path: String, envs: Option<HashMap<String, String>>) -> Self {
         Self {
             files_path,
+            envs,
             child_handle: None,
         }
     }
@@ -37,14 +48,20 @@ impl TestServer {
         self.cleanup();
         let files_path = self.files_path.clone();
         let mut command = Command::cargo_bin("iggy-server").unwrap();
-        command.env("IGGY_SYSTEM_PATH", files_path.clone());
+        command.env(SYSTEM_PATH_ENV_VAR, files_path.clone());
+        if let Some(env) = &self.envs {
+            command.envs(env);
+        }
 
         // When running action from github CI, binary needs to be started via QEMU.
         if let Ok(runner) = std::env::var("QEMU_RUNNER") {
             let mut runner_command = Command::new(runner);
             runner_command
                 .arg(command.get_program().to_str().unwrap())
-                .env("IGGY_SYSTEM_PATH", files_path);
+                .env(SYSTEM_PATH_ENV_VAR, files_path);
+            if let Some(env) = &self.envs {
+                runner_command.envs(env);
+            }
             command = runner_command;
         };
         self.child_handle = Some(command.spawn().unwrap());
@@ -83,6 +100,28 @@ impl TestServer {
             fs::remove_dir_all(&self.files_path).unwrap();
         }
     }
+
+    pub fn enable_authentication(&mut self) {
+        self.set_env_var(AUTHENTICATION_ENABLED_ENV_VAR, "true")
+    }
+
+    pub fn enable_authorization(&mut self) {
+        self.set_env_var(AUTHORIZATION_ENABLED_ENV_VAR, "true")
+    }
+
+    fn set_env_var(&mut self, key: &str, value: &str) {
+        if let Some(env) = &mut self.envs {
+            env.insert(key.to_string(), value.to_string());
+        } else {
+            let mut env = HashMap::new();
+            env.insert(key.to_string(), value.to_string());
+            self.envs = Some(env);
+        }
+    }
+
+    pub fn get_random_path() -> String {
+        format!("local_data_{}", Uuid::new_v4().to_u128_le())
+    }
 }
 
 impl Drop for TestServer {
@@ -93,6 +132,6 @@ impl Drop for TestServer {
 
 impl Default for TestServer {
     fn default() -> Self {
-        TestServer::new(format!("local_data_{}", Uuid::new_v4().to_u128_le()))
+        TestServer::new(None)
     }
 }

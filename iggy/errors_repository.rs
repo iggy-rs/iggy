@@ -268,6 +268,20 @@ fn insert_errors(errors_db: &SledDb) -> Result<(), Box<dyn Error>> {
             template: "Cannot decrypt data".to_string(),
         },
         ErrorRepositoryEntry {
+            snake_case_name: "invalid_jwt_algorithm".to_string(),
+            code: 63,
+            signature: "String".to_string(),
+            converts_from: "".to_string(),
+            template: "Invalid JWT algorithm: {0}".to_string(),
+        },
+        ErrorRepositoryEntry {
+            snake_case_name: "invalid_jwt_secret".to_string(),
+            code: 64,
+            signature: "".to_string(),
+            converts_from: "".to_string(),
+            template: "Invalid JWT secret".to_string(),
+        },
+        ErrorRepositoryEntry {
             snake_case_name: "client_not_found".to_string(),
             code: 100,
             signature: "u32".to_string(),
@@ -959,7 +973,7 @@ fn insert_errors(errors_db: &SledDb) -> Result<(), Box<dyn Error>> {
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
             template: "Failed to delete consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.".to_string(),
-        }
+        },
     ];
 
     for error_code in error_codes {

@@ -11,7 +11,7 @@ use std::process::Command;
 use errors_repository::PreprocessedErrorRepositoryEntry;
 
 use crate::data_repository::{DataRepository, SledDb};
-use crate::errors_repository::get_or_create;
+use crate::errors_repository::{db_exists, get_or_create};
 
 mod data_repository;
 mod errors_repository;
@@ -189,6 +189,10 @@ impl MatchConversionFunction {
 const GENERATED_ERRORS_PATH: &str = "./src/errors/generated_code/errors.rs";
 
 fn main() -> Result<(), Box<dyn Error>> {
+    if db_exists() {
+        return Ok(());
+    }
+
     let errors_db: SledDb = get_or_create()?;
 
     let entries: Vec<PreprocessedErrorRepositoryEntry> = errors_db

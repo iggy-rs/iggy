@@ -2,23 +2,23 @@ use std::fmt::Display;
 
 // This might be extended with more fields in the future e.g. custom name, permissions etc.
 #[derive(Debug)]
-pub struct UserContext {
+pub struct Session {
     pub user_id: u32,
     pub client_id: u32,
     authentication_enabled: bool,
 }
 
-impl UserContext {
-    pub fn new(user_id: u32, client_id: u32) -> Self {
+impl Session {
+    pub fn new(client_id: u32, user_id: u32) -> Self {
         Self {
-            user_id,
             client_id,
+            user_id,
             authentication_enabled: true,
         }
     }
 
     pub fn from_client_id(client_id: u32) -> Self {
-        Self::new(0, client_id)
+        Self::new(client_id, 0)
     }
 
     // In order to avoid the breaking changes for now, this is controlled by the server configuration.
@@ -39,12 +39,16 @@ impl UserContext {
     }
 }
 
-impl Display for UserContext {
+impl Display for Session {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "User ID: {}, Client ID: {}",
-            self.user_id, self.client_id
-        )
+        if self.user_id > 0 {
+            return write!(
+                f,
+                "client ID: {}, user ID: {}",
+                self.client_id, self.user_id
+            );
+        }
+
+        write!(f, "client ID: {}", self.client_id)
     }
 }

@@ -1,21 +1,21 @@
 use crate::binary::sender::Sender;
+use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use crate::streaming::users::user_context::UserContext;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::streams::delete_stream::DeleteStream;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::trace;
+use tracing::debug;
 
 pub async fn handle(
     command: &DeleteStream,
     sender: &mut dyn Sender,
-    user_context: &UserContext,
+    session: &Session,
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
-    trace!("{command}");
-    if !user_context.is_authenticated() {
+    debug!("session: {session}, command: {command}");
+    if !session.is_authenticated() {
         return Err(Error::Unauthenticated);
     }
 
@@ -23,7 +23,7 @@ pub async fn handle(
     let stream = system.get_stream(&command.stream_id)?;
     system
         .permissioner
-        .delete_stream(user_context.user_id, stream.stream_id)?;
+        .delete_stream(session.user_id, stream.stream_id)?;
     system.delete_stream(&command.stream_id).await?;
     sender.send_empty_ok_response().await?;
     Ok(())

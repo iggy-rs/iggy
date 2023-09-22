@@ -1,6 +1,6 @@
 use iggy::error::Error;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
-use tracing::trace;
+use tracing::debug;
 
 const STATUS_OK: &[u8] = &[0; 4];
 
@@ -45,11 +45,11 @@ pub(crate) async fn send_response<T>(
 where
     T: AsyncRead + AsyncWrite + Unpin,
 {
-    trace!("Sending response with status: {:?}...", status);
+    debug!("Sending response with status: {:?}...", status);
     let length = (payload.len() as u32).to_le_bytes();
     stream
         .write_all(&[status, &length, payload].as_slice().concat())
         .await?;
-    trace!("Sent response with status: {:?}", status);
+    debug!("Sent response with status: {:?}", status);
     Ok(())
 }

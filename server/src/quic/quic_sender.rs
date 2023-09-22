@@ -2,7 +2,7 @@ use crate::binary::sender::Sender;
 use async_trait::async_trait;
 use iggy::error::Error;
 use quinn::{RecvStream, SendStream};
-use tracing::trace;
+use tracing::debug;
 
 const STATUS_OK: &[u8] = &[0; 4];
 
@@ -42,13 +42,13 @@ impl Sender for QuicSender {
 
 impl QuicSender {
     async fn send_response(&mut self, status: &[u8], payload: &[u8]) -> Result<(), Error> {
-        trace!("Sending response with status: {:?}...", status);
+        debug!("Sending response with status: {:?}...", status);
         let length = (payload.len() as u32).to_le_bytes();
         self.send
             .write_all(&[status, &length, payload].as_slice().concat())
             .await?;
         self.send.finish().await?;
-        trace!("Sent response with status: {:?}", status);
+        debug!("Sent response with status: {:?}", status);
         Ok(())
     }
 }

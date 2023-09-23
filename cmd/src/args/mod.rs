@@ -1,4 +1,5 @@
 pub(crate) mod common;
+pub(crate) mod message_expire;
 pub(crate) mod stream;
 pub(crate) mod topic;
 

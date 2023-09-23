@@ -1,4 +1,4 @@
-use crate::args::topic::MessageExpiry;
+use crate::args::message_expire::MessageExpiry;
 use crate::cli::CliCommand;
 
 use anyhow::{Context, Error, Result};

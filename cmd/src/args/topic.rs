@@ -1,13 +1,7 @@
-use crate::args::common::ListMode;
+use crate::args::{common::ListMode, message_expire::MessageExpiry};
 use clap::{Args, Subcommand};
-use humantime::format_duration;
-use humantime::Duration as HumanDuration;
 use iggy::identifier::Identifier;
-use std::fmt::Display;
-use std::iter::Sum;
-use std::ops::Add;
-use std::time::Duration;
-use std::{convert::From, str::FromStr};
+use std::convert::From;
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum TopicAction {
@@ -121,85 +115,6 @@ pub(crate) struct TopicUpdateArgs {
     /// ("none" or skipping parameter causes removal of expiry parameter in topic)
     #[arg(value_parser = clap::value_parser!(MessageExpiry))]
     pub(crate) message_expiry: Option<Vec<MessageExpiry>>,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) enum MessageExpiry {
-    /// Set message expiry time to given value
-    ExpireDuration(Duration),
-    /// Never expire messages
-    NeverExpire,
-}
-
-impl MessageExpiry {
-    pub(crate) fn new(values: Option<Vec<MessageExpiry>>) -> Option<Self> {
-        values.map(|items| items.iter().cloned().sum())
-    }
-}
-
-impl From<&MessageExpiry> for Option<u32> {
-    fn from(value: &MessageExpiry) -> Self {
-        match value {
-            MessageExpiry::ExpireDuration(value) => Some(value.as_secs() as u32),
-            MessageExpiry::NeverExpire => None,
-        }
-    }
-}
-
-impl Display for MessageExpiry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::NeverExpire => write!(f, "none"),
-            Self::ExpireDuration(value) => write!(f, "{}", format_duration(*value)),
-        }
-    }
-}
-
-impl Sum for MessageExpiry {
-    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.into_iter()
-            .fold(MessageExpiry::NeverExpire, |acc, x| acc + x)
-    }
-}
-
-impl Add for MessageExpiry {
-    type Output = MessageExpiry;
-
-    fn add(self, rhs: Self) -> Self::Output {
-        match (self, rhs) {
-            (MessageExpiry::NeverExpire, MessageExpiry::NeverExpire) => MessageExpiry::NeverExpire,
-            (MessageExpiry::NeverExpire, message_expiry) => message_expiry,
-            (message_expiry, MessageExpiry::NeverExpire) => message_expiry,
-            (
-                MessageExpiry::ExpireDuration(lhs_duration),
-                MessageExpiry::ExpireDuration(rhs_duration),
-            ) => MessageExpiry::ExpireDuration(lhs_duration + rhs_duration),
-        }
-    }
-}
-
-impl FromStr for MessageExpiry {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let result = match s {
-            "none" => MessageExpiry::NeverExpire,
-            value => {
-                let duration = value.parse::<HumanDuration>().map_err(|e| format!("{e}"))?;
-
-                if duration.as_secs() > u32::MAX as u64 {
-                    return Err(format!(
-                        "Value too big for message expiry time, maximum value is {}",
-                        format_duration(Duration::from_secs(u32::MAX as u64))
-                    ));
-                }
-
-                MessageExpiry::ExpireDuration(Duration::from_secs(duration.as_secs()))
-            }
-        };
-
-        Ok(result)
-    }
 }
 
 #[derive(Debug, Args)]

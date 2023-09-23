@@ -19,6 +19,10 @@ encoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
 decoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
 use_base64_secret = false
 
+[http.metrics]
+enabled = true
+endpoint = "/metrics"
+
 [http.tls]
 enabled = false
 cert_file = "certs/iggy_cert.pem"

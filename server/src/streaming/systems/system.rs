@@ -1,5 +1,6 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::clients::client_manager::ClientManager;
+use crate::streaming::diagnostics::metrics::Metrics;
 use crate::streaming::persistence::persister::*;
 use crate::streaming::storage::{SegmentStorage, SystemStorage};
 use crate::streaming::streams::stream::Stream;
@@ -24,6 +25,7 @@ pub struct System {
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: Arc<RwLock<ClientManager>>,
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
+    pub(crate) metrics: Metrics,
 }
 
 impl System {
@@ -71,6 +73,7 @@ impl System {
             storage: Arc::new(storage),
             client_manager: Arc::new(RwLock::new(ClientManager::default())),
             permissioner: Permissioner::default(),
+            metrics: Metrics::init(),
         }
     }
 

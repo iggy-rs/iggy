@@ -28,6 +28,10 @@
       "decoding_secret": "top_secret$iggy.rs$_jwt_HS256_key#!",
       "use_base64_secret": false
     },
+    "metrics": {
+      "enabled": true,
+      "endpoint": "/metrics"
+    },
     "tls": {
       "enabled": false,
       "cert_file": "certs/iggy_cert.pem",

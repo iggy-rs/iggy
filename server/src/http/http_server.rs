@@ -1,5 +1,6 @@
 use crate::configs::http::{HttpConfig, HttpCorsConfig};
 use crate::http::jwt::{jwt_auth, no_jwt_auth, JwtManager};
+use crate::http::metrics::metrics;
 use crate::http::state::AppState;
 use crate::http::{
     consumer_groups, consumer_offsets, messages, partitions, streams, system, topics, users,
@@ -24,7 +25,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
     let app_state = build_app_state(&config, system);
     let mut app = Router::new().nest(
         "/",
-        system::router(app_state.clone())
+        system::router(app_state.clone(), &config.metrics)
             .nest("/users", users::router(app_state.clone()))
             .nest(
                 "/streams",
@@ -47,6 +48,10 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
                 ),
             ),
     );
+
+    if config.metrics.enabled {
+        app = app.layer(middleware::from_fn_with_state(app_state.clone(), metrics));
+    }
 
     if config.cors.enabled {
         app = app.layer(configure_cors(config.cors));

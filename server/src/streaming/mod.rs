@@ -1,4 +1,5 @@
 pub mod clients;
+pub mod diagnostics;
 pub mod models;
 pub mod partitions;
 pub mod persistence;

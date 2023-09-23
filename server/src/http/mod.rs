@@ -5,6 +5,7 @@ pub mod http_server;
 pub mod jwt;
 mod mapper;
 pub mod messages;
+pub mod metrics;
 pub mod partitions;
 pub mod state;
 pub mod streams;

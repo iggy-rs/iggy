@@ -21,6 +21,25 @@
 GET {{url}}
 
 ###
+GET {{url}}/ping
+
+###
+GET {{url}}/metrics
+
+###
+GET {{url}}/stats
+Authorization: Bearer {{token}}
+
+###
+GET {{url}}/clients
+Authorization: Bearer {{token}}
+
+###
+GET {{url}}/clients/{{client_id}}
+Authorization: Bearer {{token}}
+
+
+###
 POST {{url}}/users/login
 Content-Type: application/json
 
@@ -123,17 +142,6 @@ Content-Type: application/json
 DELETE {{url}}/users/{{user1_id}}
 Authorization: Bearer {{token}}
 
-###
-GET {{url}}/clients
-
-###
-GET {{url}}/clients/{{client_id}}
-
-###
-GET {{url}}/ping
-
-###
-GET {{url}}/stats
 
 ###
 GET {{url}}/streams

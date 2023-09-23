@@ -8,6 +8,7 @@ pub struct HttpConfig {
     pub address: String,
     pub cors: HttpCorsConfig,
     pub jwt: HttpJwtConfig,
+    pub metrics: HttpMetricsConfig,
     pub tls: HttpTlsConfig,
 }
 
@@ -30,6 +31,12 @@ pub struct HttpJwtConfig {
     pub encoding_secret: String,
     pub decoding_secret: String,
     pub use_base64_secret: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize, Default)]
+pub struct HttpMetricsConfig {
+    pub enabled: bool,
+    pub endpoint: String,
 }
 
 #[derive(Debug)]

@@ -1,3 +1,4 @@
+use crate::configs::http::HttpMetricsConfig;
 use crate::http::error::CustomError;
 use crate::http::jwt::Identity;
 use crate::http::mapper;
@@ -12,14 +13,23 @@ use std::sync::Arc;
 const NAME: &str = "Iggy HTTP";
 const PONG: &str = "pong";
 
-pub fn router(state: Arc<AppState>) -> Router {
-    Router::new()
+pub fn router(state: Arc<AppState>, metrics_config: &HttpMetricsConfig) -> Router {
+    let mut router = Router::new()
         .route("/", get(|| async { NAME }))
         .route("/ping", get(|| async { PONG }))
         .route("/stats", get(get_stats))
         .route("/clients", get(get_clients))
-        .route("/clients/:client_id", get(get_client))
-        .with_state(state)
+        .route("/clients/:client_id", get(get_client));
+    if metrics_config.enabled {
+        router = router.route(&metrics_config.endpoint, get(get_metrics));
+    }
+
+    router.with_state(state)
+}
+
+async fn get_metrics(State(state): State<Arc<AppState>>) -> Result<String, CustomError> {
+    let system = state.system.read().await;
+    Ok(system.metrics.get_formatted_output())
 }
 
 async fn get_stats(

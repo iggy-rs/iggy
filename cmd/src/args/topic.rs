@@ -13,14 +13,60 @@ use std::{convert::From, str::FromStr};
 pub(crate) enum TopicAction {
     /// Create topic with given ID, name, number of partitions
     /// and expiry time for given stream ID
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    ///
+    /// Examples
+    ///  iggy topic create 1 1 2 sensor1 15days
+    ///  iggy topic create prod 2 2 sensor2
+    ///  iggy topic create test 3 2 debugs 1day 1hour 1min 1sec
+    #[clap(verbatim_doc_comment)]
     Create(TopicCreateArgs),
     /// Delete topic with given ID in given stream ID
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    /// Topic ID can be specified as a topic name or ID
+    ///
+    /// Examples
+    ///  iggy topic delete 1 1
+    ///  iggy topic delete prod 2
+    ///  iggy topic delete test debugs
+    ///  iggy topic delete 2 debugs
+    #[clap(verbatim_doc_comment)]
     Delete(TopicDeleteArgs),
     /// Update topic name an message expiry time for given topic ID in given stream ID
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    /// Topic ID can be specified as a topic name or ID
+    ///
+    /// Examples
+    ///  iggy update 1 1 sensor3
+    ///  iggy update prod sensor3 old-sensor
+    ///  iggy update test debugs ready 15days
+    ///  iggy update 1 1 new-name
+    ///  iggy update 1 2 new-name 1day 1hour 1min 1sec
+    #[clap(verbatim_doc_comment)]
     Update(TopicUpdateArgs),
     /// Get topic detail for given topic ID and stream ID
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    /// Topic ID can be specified as a topic name or ID
+    ///
+    /// Examples
+    ///  iggy topic get 1 1
+    ///  iggy topic get prod 2
+    ///  iggy topic get test debugs
+    ///  iggy topic get 2 debugs
+    #[clap(verbatim_doc_comment)]
     Get(TopicGetArgs),
     /// List all topics in given stream ID
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    ///
+    /// Examples
+    ///  iggy topic list 1
+    ///  iggy topic list prod
+    #[clap(verbatim_doc_comment)]
     List(TopicListArgs),
 }
 

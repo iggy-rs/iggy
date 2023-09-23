@@ -9,7 +9,7 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Identifier {
     pub kind: IdKind,
     #[serde(skip)]

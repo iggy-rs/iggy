@@ -1,5 +1,6 @@
 use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
+use iggy::identifier::Identifier;
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum StreamAction {
@@ -26,13 +27,17 @@ pub(crate) struct StreamCreateArgs {
 #[derive(Debug, Args)]
 pub(crate) struct StreamDeleteArgs {
     /// Stream ID to delete
-    pub(crate) stream_id: u32,
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    pub(crate) stream_id: Identifier,
 }
 
 #[derive(Debug, Args)]
 pub(crate) struct StreamUpdateArgs {
     /// Stream ID to update
-    pub(crate) stream_id: u32,
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    pub(crate) stream_id: Identifier,
     /// New name for the stream
     pub(crate) name: String,
 }
@@ -40,7 +45,9 @@ pub(crate) struct StreamUpdateArgs {
 #[derive(Debug, Args)]
 pub(crate) struct StreamGetArgs {
     /// Stream ID to get
-    pub(crate) stream_id: u32,
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    pub(crate) stream_id: Identifier,
 }
 
 #[derive(Debug, Args)]

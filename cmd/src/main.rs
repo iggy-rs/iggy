@@ -34,30 +34,37 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
             StreamAction::Create(args) => {
                 Box::new(StreamCreate::new(args.stream_id, args.name.clone()))
             }
-            StreamAction::Delete(args) => Box::new(StreamDelete::new(args.stream_id)),
+            StreamAction::Delete(args) => Box::new(StreamDelete::new(args.stream_id.clone())),
             StreamAction::Update(args) => {
-                Box::new(StreamUpdate::new(args.stream_id, args.name.clone()))
+                Box::new(StreamUpdate::new(args.stream_id.clone(), args.name.clone()))
             }
-            StreamAction::Get(args) => Box::new(StreamGet::new(args.stream_id)),
+            StreamAction::Get(args) => Box::new(StreamGet::new(args.stream_id.clone())),
             StreamAction::List(args) => Box::new(StreamList::new(args.list_mode)),
         },
         Command::Topic(command) => match command {
             TopicAction::Create(args) => Box::new(TopicCreate::new(
-                args.stream_id,
+                args.stream_id.clone(),
                 args.topic_id,
                 args.partitions_count,
                 args.name.clone(),
                 MessageExpiry::new(args.message_expiry.clone()),
             )),
-            TopicAction::Delete(args) => Box::new(TopicDelete::new(args.stream_id, args.topic_id)),
+            TopicAction::Delete(args) => Box::new(TopicDelete::new(
+                args.stream_id.clone(),
+                args.topic_id.clone(),
+            )),
             TopicAction::Update(args) => Box::new(TopicUpdate::new(
-                args.stream_id,
-                args.topic_id,
+                args.stream_id.clone(),
+                args.topic_id.clone(),
                 args.name.clone(),
                 MessageExpiry::new(args.message_expiry.clone()),
             )),
-            TopicAction::Get(args) => Box::new(TopicGet::new(args.stream_id, args.topic_id)),
-            TopicAction::List(args) => Box::new(TopicList::new(args.stream_id, args.list_mode)),
+            TopicAction::Get(args) => {
+                Box::new(TopicGet::new(args.stream_id.clone(), args.topic_id.clone()))
+            }
+            TopicAction::List(args) => {
+                Box::new(TopicList::new(args.stream_id.clone(), args.list_mode))
+            }
         },
     }
 }

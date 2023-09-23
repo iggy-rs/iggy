@@ -2,6 +2,7 @@ use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
 use humantime::format_duration;
 use humantime::Duration as HumanDuration;
+use iggy::identifier::Identifier;
 use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::Add;
@@ -26,7 +27,10 @@ pub(crate) enum TopicAction {
 #[derive(Debug, Args)]
 pub(crate) struct TopicCreateArgs {
     /// Stream ID to create topic
-    pub(crate) stream_id: u32,
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) stream_id: Identifier,
     /// Topic ID to create
     pub(crate) topic_id: u32,
     /// Number of partitions inside the topic
@@ -42,17 +46,29 @@ pub(crate) struct TopicCreateArgs {
 #[derive(Debug, Args)]
 pub(crate) struct TopicDeleteArgs {
     /// Stream ID to delete topic
-    pub(crate) stream_id: u32,
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) stream_id: Identifier,
     /// Topic ID to delete
-    pub(crate) topic_id: u32,
+    ///
+    /// Topic ID can be specified as a topic name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) topic_id: Identifier,
 }
 
 #[derive(Debug, Args)]
 pub(crate) struct TopicUpdateArgs {
     /// Stream ID to update topic
-    pub(crate) stream_id: u32,
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) stream_id: Identifier,
     /// Topic ID to update
-    pub(crate) topic_id: u32,
+    ///
+    /// Topic ID can be specified as a topic name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) topic_id: Identifier,
     /// New name for the topic
     pub(crate) name: String,
     /// New message expiry time in human readable format like 15days 2min 2s
@@ -143,15 +159,24 @@ impl FromStr for MessageExpiry {
 #[derive(Debug, Args)]
 pub(crate) struct TopicGetArgs {
     /// Stream ID to get topic
-    pub(crate) stream_id: u32,
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) stream_id: Identifier,
     /// Topic ID to get
-    pub(crate) topic_id: u32,
+    ///
+    /// Topic ID can be specified as a topic name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) topic_id: Identifier,
 }
 
 #[derive(Debug, Args)]
 pub(crate) struct TopicListArgs {
     /// Stream ID to list topics
-    pub(crate) stream_id: u32,
+    ///
+    /// Stream ID can be specified as a stream name or ID
+    #[arg(value_parser = clap::value_parser!(Identifier))]
+    pub(crate) stream_id: Identifier,
 
     /// List mode (table or list)
     #[clap(short, long, value_enum, default_value_t = ListMode::Table)]

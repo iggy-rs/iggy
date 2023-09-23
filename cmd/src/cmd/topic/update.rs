@@ -10,16 +10,16 @@ use tracing::info;
 
 #[derive(Debug)]
 pub(crate) struct TopicUpdate {
-    stream_id: u32,
-    topic_id: u32,
+    stream_id: Identifier,
+    topic_id: Identifier,
     name: String,
     message_expiry: Option<MessageExpiry>,
 }
 
 impl TopicUpdate {
     pub(crate) fn new(
-        stream_id: u32,
-        topic_id: u32,
+        stream_id: Identifier,
+        topic_id: Identifier,
         name: String,
         message_expiry: Option<MessageExpiry>,
     ) -> Self {
@@ -48,10 +48,8 @@ impl CliCommand for TopicUpdate {
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
         client
             .update_topic(&UpdateTopic {
-                stream_id: Identifier::numeric(self.stream_id)
-                    .expect("Expected numeric identifier for stream ID"),
-                topic_id: Identifier::numeric(self.topic_id)
-                    .expect("Expected numeric identifier for topic ID"),
+                stream_id: self.stream_id.clone(),
+                topic_id: self.topic_id.clone(),
                 message_expiry: match &self.message_expiry {
                     None => None,
                     Some(value) => value.into(),

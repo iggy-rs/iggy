@@ -12,12 +12,12 @@ use tracing::info;
 
 #[derive(Debug)]
 pub(crate) struct TopicList {
-    stream_id: u32,
+    stream_id: Identifier,
     list_mode: ListMode,
 }
 
 impl TopicList {
-    pub(crate) fn new(stream_id: u32, list_mode: ListMode) -> Self {
+    pub(crate) fn new(stream_id: Identifier, list_mode: ListMode) -> Self {
         Self {
             stream_id,
             list_mode,
@@ -34,8 +34,7 @@ impl CliCommand for TopicList {
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error> {
         let topics = client
             .get_topics(&GetTopics {
-                stream_id: Identifier::numeric(self.stream_id)
-                    .expect("Expected numeric identifier for stream_id"),
+                stream_id: self.stream_id.clone(),
             })
             .await
             .with_context(|| format!("Problem getting topics from stream {}", self.stream_id))?;

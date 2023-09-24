@@ -18,12 +18,12 @@ impl Partition {
         }
 
         let first_segment = first_segment.unwrap();
-        let last_segment = self.segments.last().unwrap();
-        if first_segment.start_offset == last_segment.start_offset {
-            return first_segment.get_messages_count();
+        if first_segment.current_size_bytes == 0 {
+            return 0;
         }
 
-        first_segment.get_messages_count() + last_segment.get_messages_count()
+        let last_segment = self.segments.last().unwrap();
+        last_segment.current_offset - first_segment.start_offset + 1
     }
 
     pub async fn get_messages_by_timestamp(

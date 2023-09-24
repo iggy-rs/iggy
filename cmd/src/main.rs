@@ -6,6 +6,7 @@ mod logging;
 
 use crate::args::{stream::StreamAction, topic::TopicAction, Command, IggyConsoleArgs};
 use crate::cmd::{
+    partition::{create::PartitionCreate, delete::PartitionDelete},
     stream::{
         create::StreamCreate, delete::StreamDelete, get::StreamGet, list::StreamList,
         update::StreamUpdate,
@@ -18,6 +19,7 @@ use crate::cmd::{
 use crate::error::IggyConsoleError;
 use crate::logging::{Logging, PRINT_TARGET};
 use args::message_expire::MessageExpiry;
+use args::partition::PartitionAction;
 use clap::Parser;
 use cli::CliCommand;
 use iggy::client_provider;
@@ -65,6 +67,18 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
             TopicAction::List(args) => {
                 Box::new(TopicList::new(args.stream_id.clone(), args.list_mode))
             }
+        },
+        Command::Partition(command) => match command {
+            PartitionAction::Create(args) => Box::new(PartitionCreate::new(
+                args.stream_id.clone(),
+                args.topic_id.clone(),
+                args.partitions_count,
+            )),
+            PartitionAction::Delete(args) => Box::new(PartitionDelete::new(
+                args.stream_id.clone(),
+                args.topic_id.clone(),
+                args.partitions_count,
+            )),
         },
     }
 }

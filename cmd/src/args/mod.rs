@@ -1,9 +1,10 @@
 pub(crate) mod common;
 pub(crate) mod message_expire;
+pub(crate) mod partition;
 pub(crate) mod stream;
 pub(crate) mod topic;
 
-use crate::args::{stream::StreamAction, topic::TopicAction};
+use crate::args::{partition::PartitionAction, stream::StreamAction, topic::TopicAction};
 use clap::{Parser, Subcommand};
 use iggy::args::Args as IggyArgs;
 use std::path::PathBuf;
@@ -34,4 +35,7 @@ pub(crate) enum Command {
     /// topic operations
     #[clap(subcommand)]
     Topic(TopicAction),
+    /// partition operations
+    #[clap(subcommand)]
+    Partition(PartitionAction),
 }

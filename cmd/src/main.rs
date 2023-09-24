@@ -17,7 +17,7 @@ use crate::cmd::{
 };
 use crate::error::IggyConsoleError;
 use crate::logging::{Logging, PRINT_TARGET};
-use args::topic::MessageExpiry;
+use args::message_expire::MessageExpiry;
 use clap::Parser;
 use cli::CliCommand;
 use iggy::client_provider;

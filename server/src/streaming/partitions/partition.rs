@@ -112,36 +112,6 @@ impl Partition {
             .sum()
     }
 
-    pub fn get_messages_count(&self) -> u64 {
-        let last_segment = self.segments.last();
-        if let Some(last_segment) = last_segment {
-            if last_segment.current_size_bytes > 0 {
-                return last_segment.current_offset + 1;
-            }
-        }
-        0
-    }
-
-    pub fn get_segments(&self) -> &Vec<Segment> {
-        &self.segments
-    }
-
-    pub fn get_segments_mut(&mut self) -> &mut Vec<Segment> {
-        &mut self.segments
-    }
-
-    pub async fn get_expired_segments_start_offsets(&self, now: u64) -> Vec<u64> {
-        let mut expired_segments = Vec::new();
-        for segment in &self.segments {
-            if segment.is_expired(now).await {
-                expired_segments.push(segment.start_offset);
-            }
-        }
-
-        expired_segments.sort();
-        expired_segments
-    }
-
     fn get_offsets_path(path: &str) -> String {
         format!("{}/offsets", path)
     }

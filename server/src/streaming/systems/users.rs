@@ -72,6 +72,7 @@ impl System {
         let user = User::new(user_id, &username, password, permissions);
         self.storage.user.save(&user).await?;
         info!("Created user: {username} with ID: {user_id}.");
+        self.metrics.increment_users(1);
         Ok(user)
     }
 
@@ -88,6 +89,7 @@ impl System {
         let mut client_manager = self.client_manager.write().await;
         client_manager.delete_clients_for_user(user.id).await?;
         info!("Deleted user: {} with ID: {user_id}.", user.username);
+        self.metrics.decrement_users(1);
         Ok(user)
     }
 

@@ -36,13 +36,13 @@ async fn create_partitions(
     }
 
     let mut system = state.system.write().await;
-    let topic = system
-        .get_stream_mut(&command.stream_id)?
-        .get_topic_mut(&command.topic_id)?;
-    topic
-        .add_persisted_partitions(command.partitions_count)
+    system
+        .create_partitions(
+            &command.stream_id,
+            &command.topic_id,
+            command.partitions_count,
+        )
         .await?;
-    topic.reassign_consumer_groups().await;
     Ok(StatusCode::CREATED)
 }
 
@@ -67,12 +67,8 @@ async fn delete_partitions(
     }
 
     let mut system = state.system.write().await;
-    let topic = system
-        .get_stream_mut(&query.stream_id)?
-        .get_topic_mut(&query.topic_id)?;
-    topic
-        .delete_persisted_partitions(query.partitions_count)
+    system
+        .delete_partitions(&query.stream_id, &query.topic_id, query.partitions_count)
         .await?;
-    topic.reassign_consumer_groups().await;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -4,5 +4,6 @@ pub mod consumer_offsets;
 pub mod messages;
 pub mod partitions;
 pub mod persistence;
+pub mod segments;
 pub mod storage;
 pub mod topic;

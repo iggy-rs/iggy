@@ -10,6 +10,14 @@ use tracing::trace;
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
 impl Segment {
+    pub fn get_messages_count(&self) -> u64 {
+        if self.current_size_bytes == 0 {
+            return 0;
+        }
+
+        self.current_offset - self.start_offset + 1
+    }
+
     pub async fn get_messages(
         &self,
         mut offset: u64,

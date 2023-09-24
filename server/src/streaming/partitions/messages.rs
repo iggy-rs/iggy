@@ -11,6 +11,21 @@ use tracing::{error, trace, warn};
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
 impl Partition {
+    pub fn get_messages_count(&self) -> u64 {
+        let first_segment = self.segments.first();
+        if first_segment.is_none() {
+            return 0;
+        }
+
+        let first_segment = first_segment.unwrap();
+        let last_segment = self.segments.last().unwrap();
+        if first_segment.start_offset == last_segment.start_offset {
+            return first_segment.get_messages_count();
+        }
+
+        first_segment.get_messages_count() + last_segment.get_messages_count()
+    }
+
     pub async fn get_messages_by_timestamp(
         &self,
         timestamp: u64,

@@ -2,6 +2,7 @@ pub mod clients;
 pub mod consumer_groups;
 pub mod info;
 pub mod messages;
+pub mod partitions;
 pub mod stats;
 pub mod storage;
 pub mod streams;

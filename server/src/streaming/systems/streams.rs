@@ -59,6 +59,15 @@ impl System {
                 continue;
             }
 
+            self.metrics.increment_streams(1);
+            self.metrics.increment_topics(stream.get_topics_count());
+            self.metrics
+                .increment_partitions(stream.get_partitions_count());
+            self.metrics
+                .increment_segments(stream.get_segments_count().await);
+            self.metrics
+                .increment_messages(stream.get_messages_count().await);
+
             self.streams_ids
                 .insert(stream.name.clone(), stream.stream_id);
             self.streams.insert(stream.stream_id, stream);
@@ -142,6 +151,7 @@ impl System {
         info!("Created stream with ID: {}, name: '{}'.", stream_id, name);
         self.streams_ids.insert(name, stream.stream_id);
         self.streams.insert(stream.stream_id, stream);
+        self.metrics.increment_streams(1);
         Ok(())
     }
 
@@ -181,6 +191,16 @@ impl System {
         if stream.delete().await.is_err() {
             return Err(Error::CannotDeleteStream(stream_id));
         }
+
+        self.metrics.decrement_streams(1);
+        self.metrics.decrement_topics(stream.get_topics_count());
+        self.metrics
+            .decrement_partitions(stream.get_partitions_count());
+        self.metrics
+            .decrement_messages(stream.get_messages_count().await);
+        self.metrics
+            .decrement_segments(stream.get_segments_count().await);
+
         self.streams.remove(&stream_id);
         self.streams_ids.remove(&stream_name);
         let client_manager = self.client_manager.read().await;

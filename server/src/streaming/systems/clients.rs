@@ -12,6 +12,7 @@ impl System {
         let mut client_manager = self.client_manager.write().await;
         let client_id = client_manager.add_client(address, transport);
         info!("Added {transport} client with ID: {client_id} for address: {address}");
+        self.metrics.increment_clients(1);
         client_id
     }
 
@@ -61,6 +62,7 @@ impl System {
                 return;
             }
 
+            self.metrics.decrement_clients(1);
             let client = client.unwrap();
             let client = client.read().await;
 

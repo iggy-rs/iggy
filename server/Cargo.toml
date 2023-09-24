@@ -41,7 +41,7 @@ tokio-graceful-shutdown = "0.13.0"
 rcgen = "0.11.1"
 quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
-aes-gcm = "0.10.2"
+aes-gcm = "0.10.3"
 bcrypt = "0.15.0"
 futures = "0.3.28"
 ringbuffer = "0.14.2"

@@ -1165,11 +1165,13 @@ name = "iggy"
 version = "0.0.85"
 dependencies = [
  "aes-gcm",
+ "anyhow",
  "async-trait",
  "base64 0.21.3",
  "bytes",
  "chrono",
  "clap",
+ "comfy-table",
  "convert_case",
  "crc32fast",
  "flume",

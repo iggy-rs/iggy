@@ -1,6 +1,7 @@
 pub mod args;
 pub mod binary;
 pub mod bytes_serializable;
+pub mod cli_command;
 pub mod client;
 pub mod client_error;
 pub mod client_provider;

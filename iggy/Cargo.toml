@@ -38,6 +38,9 @@ quinn = "0.10.0"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 openssl = { version = "0.10.*", features = ["vendored"] }
 chrono = { version = "0.4.31" }
+anyhow = "1.0.75"
+comfy-table = "7.0.1"
+
 
 [build-dependencies]
 rmp-serde = "1.1.2"

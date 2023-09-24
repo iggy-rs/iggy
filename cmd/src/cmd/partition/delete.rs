@@ -1,4 +1,4 @@
-use crate::cli::CliCommand;
+use iggy::cli_command::CliCommand;
 
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;

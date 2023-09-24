@@ -12,6 +12,15 @@ use std::sync::atomic::Ordering;
 use tracing::trace;
 
 impl Topic {
+    pub async fn get_messages_count(&self) -> u64 {
+        let mut messages_count = 0;
+        for partition in self.get_partitions() {
+            let partition = partition.read().await;
+            messages_count += partition.get_messages_count();
+        }
+        messages_count
+    }
+
     pub async fn get_messages(
         &self,
         consumer: PollingConsumer,

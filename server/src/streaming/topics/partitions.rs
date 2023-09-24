@@ -6,6 +6,31 @@ use tokio::sync::RwLock;
 const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
 impl Topic {
+    pub fn has_partitions(&self) -> bool {
+        !self.partitions.is_empty()
+    }
+
+    pub fn get_partitions(&self) -> Vec<&RwLock<Partition>> {
+        self.partitions.values().collect()
+    }
+
+    pub fn get_partitions_count(&self) -> u32 {
+        self.partitions.len() as u32
+    }
+
+    pub fn get_partition(&self, partition_id: u32) -> Result<&RwLock<Partition>, Error> {
+        let partition = self.partitions.get(&partition_id);
+        if partition.is_none() {
+            return Err(Error::PartitionNotFound(
+                partition_id,
+                self.topic_id,
+                self.stream_id,
+            ));
+        }
+
+        Ok(partition.unwrap())
+    }
+
     pub fn add_partitions(&mut self, count: u32) -> Result<Vec<u32>, Error> {
         if count == 0 {
             return Ok(vec![]);
@@ -44,9 +69,12 @@ impl Topic {
         Ok(partition_ids)
     }
 
-    pub async fn delete_persisted_partitions(&mut self, mut count: u32) -> Result<Vec<u32>, Error> {
+    pub async fn delete_persisted_partitions(
+        &mut self,
+        mut count: u32,
+    ) -> Result<Option<DeletedPartitions>, Error> {
         if count == 0 {
-            return Ok(vec![]);
+            return Ok(None);
         }
 
         let current_partitions_count = self.partitions.len() as u32;
@@ -54,13 +82,23 @@ impl Topic {
             count = current_partitions_count;
         }
 
-        let mut partition_ids = Vec::with_capacity(count as usize);
+        let mut segments_count = 0;
+        let mut messages_count = 0;
         for partition_id in current_partitions_count - count + 1..=current_partitions_count {
             let partition = self.partitions.remove(&partition_id).unwrap();
             let partition = partition.read().await;
             partition.delete().await?;
-            partition_ids.push(partition_id)
+            segments_count += partition.get_segments_count();
+            messages_count += partition.get_messages_count();
         }
-        Ok(partition_ids)
+        Ok(Some(DeletedPartitions {
+            segments_count,
+            messages_count,
+        }))
     }
+}
+
+pub struct DeletedPartitions {
+    pub segments_count: u32,
+    pub messages_count: u64,
 }

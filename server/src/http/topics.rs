@@ -74,8 +74,8 @@ async fn create_topic(
 
     let mut system = state.system.write().await;
     system
-        .get_stream_mut(&command.stream_id)?
         .create_topic(
+            &command.stream_id,
             command.topic_id,
             &command.name,
             command.partitions_count,

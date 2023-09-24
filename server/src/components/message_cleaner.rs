@@ -35,19 +35,44 @@ pub fn start(config: MessageCleanerConfig, system: Arc<RwLock<System>>) {
             for stream in streams {
                 let topics = stream.get_topics();
                 for topic in topics {
-                    if delete_expired_segments(topic, now).await.is_err() {
+                    let deleted_segments = delete_expired_segments(topic, now).await;
+                    if deleted_segments.is_err() {
                         error!(
                             "Failed to delete expired segments for stream ID: {}, topic ID: {}",
                             topic.stream_id, topic.topic_id
                         );
+                        continue;
                     }
+                    let deleted_segments = deleted_segments.unwrap();
+                    if deleted_segments.is_none() {
+                        continue;
+                    }
+
+                    let deleted_segments = deleted_segments.unwrap();
+                    info!(
+                        "Deleted {} segments and {} messages for stream ID: {}, topic ID: {}",
+                        deleted_segments.segments_count,
+                        deleted_segments.messages_count,
+                        topic.stream_id,
+                        topic.topic_id
+                    );
+
+                    system
+                        .metrics
+                        .decrement_segments(deleted_segments.segments_count);
+                    system
+                        .metrics
+                        .decrement_messages(deleted_segments.messages_count);
                 }
             }
         }
     });
 }
 
-async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
+async fn delete_expired_segments(
+    topic: &Topic,
+    now: u64,
+) -> Result<Option<DeletedSegments>, Error> {
     let expired_segments = topic
         .get_expired_segments_start_offsets_per_partition(now)
         .await;
@@ -56,7 +81,7 @@ async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
             "No expired segments found for stream ID: {}, topic ID: {}",
             topic.stream_id, topic.topic_id
         );
-        return Ok(());
+        return Ok(None);
     }
 
     info!(
@@ -66,6 +91,8 @@ async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
         topic.topic_id
     );
 
+    let mut segments_count = 0;
+    let mut messages_count = 0;
     for (partition_id, start_offsets) in &expired_segments {
         let partition = topic.get_partition(*partition_id);
         if partition.is_err() {
@@ -81,6 +108,8 @@ async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
         for start_offset in start_offsets {
             let deleted_segment = partition.delete_segment(*start_offset).await?;
             last_end_offset = deleted_segment.end_offset;
+            segments_count += 1;
+            messages_count += deleted_segment.get_messages_count();
         }
 
         if partition.get_segments().is_empty() {
@@ -89,5 +118,13 @@ async fn delete_expired_segments(topic: &Topic, now: u64) -> Result<(), Error> {
         }
     }
 
-    Ok(())
+    Ok(Some(DeletedSegments {
+        segments_count,
+        messages_count,
+    }))
+}
+
+struct DeletedSegments {
+    pub segments_count: u32,
+    pub messages_count: u64,
 }

@@ -6,6 +6,10 @@ use iggy::utils::text;
 use tracing::info;
 
 impl Stream {
+    pub fn get_topics_count(&self) -> u32 {
+        self.topics.len() as u32
+    }
+
     pub async fn create_topic(
         &mut self,
         id: u32,
@@ -142,17 +146,22 @@ impl Stream {
         self.topics.values().collect()
     }
 
-    pub async fn delete_topic(&mut self, id: &Identifier) -> Result<u32, Error> {
-        let topic = self.get_topic(id)?;
-        let topic_id = topic.topic_id;
-        let topic_name = topic.name.clone();
-        if topic.delete().await.is_err() {
-            return Err(Error::CannotDeleteTopic(topic.topic_id, self.stream_id));
+    pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, Error> {
+        let topic_id;
+        let topic_name;
+        {
+            let topic = self.get_topic(id)?;
+            topic_id = topic.topic_id;
+            topic_name = topic.name.clone();
+            if topic.delete().await.is_err() {
+                return Err(Error::CannotDeleteTopic(topic.topic_id, self.stream_id));
+            }
         }
 
-        self.topics.remove(&topic_id);
+        let topic = self.topics.remove(&topic_id).unwrap();
         self.topics_ids.remove(&topic_name);
-        Ok(topic_id)
+
+        Ok(topic)
     }
 }
 

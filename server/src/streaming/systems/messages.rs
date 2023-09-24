@@ -111,6 +111,10 @@ impl System {
             received_messages.push(Message::from_message(message));
         }
 
-        topic.append_messages(partitioning, received_messages).await
+        topic
+            .append_messages(partitioning, received_messages)
+            .await?;
+        self.metrics.increment_messages(messages.len() as u64);
+        Ok(())
     }
 }

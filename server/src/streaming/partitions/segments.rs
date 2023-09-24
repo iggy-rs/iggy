@@ -4,6 +4,30 @@ use iggy::error::Error;
 use tracing::info;
 
 impl Partition {
+    pub fn get_segments_count(&self) -> u32 {
+        self.segments.len() as u32
+    }
+
+    pub fn get_segments(&self) -> &Vec<Segment> {
+        &self.segments
+    }
+
+    pub fn get_segments_mut(&mut self) -> &mut Vec<Segment> {
+        &mut self.segments
+    }
+
+    pub async fn get_expired_segments_start_offsets(&self, now: u64) -> Vec<u64> {
+        let mut expired_segments = Vec::new();
+        for segment in &self.segments {
+            if segment.is_expired(now).await {
+                expired_segments.push(segment.start_offset);
+            }
+        }
+
+        expired_segments.sort();
+        expired_segments
+    }
+
     pub async fn add_persisted_segment(&mut self, start_offset: u64) -> Result<(), Error> {
         info!(
             "Creating the new segment for partition with ID: {}, stream with ID: {}, topic with ID: {}...",

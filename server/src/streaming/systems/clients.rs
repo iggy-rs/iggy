@@ -1,4 +1,5 @@
 use crate::streaming::clients::client_manager::{Client, Transport};
+use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
@@ -40,11 +41,11 @@ impl System {
 
         for (stream_id, topic_id, consumer_group_id) in consumer_groups.iter() {
             if let Err(error) = self
-                .leave_consumer_group(
-                    client_id,
+                .leave_consumer_group_by_client(
                     &Identifier::numeric(*stream_id).unwrap(),
                     &Identifier::numeric(*topic_id).unwrap(),
                     *consumer_group_id,
+                    client_id,
                 )
                 .await
             {
@@ -73,13 +74,27 @@ impl System {
         }
     }
 
-    pub async fn get_client(&self, client_id: u32) -> Result<Arc<RwLock<Client>>, Error> {
+    pub async fn get_client(
+        &self,
+        session: &Session,
+        client_id: u32,
+    ) -> Result<Arc<RwLock<Client>>, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.get_client(session.user_id)?;
         let client_manager = self.client_manager.read().await;
         client_manager.get_client_by_id(client_id)
     }
 
-    pub async fn get_clients(&self) -> Vec<Arc<RwLock<Client>>> {
+    pub async fn get_clients(&self, session: &Session) -> Result<Vec<Arc<RwLock<Client>>>, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.get_clients(session.user_id)?;
         let client_manager = self.client_manager.read().await;
-        client_manager.get_clients()
+        Ok(client_manager.get_clients())
     }
 }

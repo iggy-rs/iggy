@@ -1,5 +1,6 @@
 use crate::streaming_tests::common::test_setup::TestSetup;
 use iggy::identifier::Identifier;
+use server::streaming::session::Session;
 use server::streaming::systems::system::System;
 use tokio::fs;
 
@@ -29,9 +30,13 @@ async fn should_create_and_persist_stream() {
     let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
     let stream_id = 1;
     let stream_name = "test";
+    let session = Session::new(1, 1);
     system.init().await.unwrap();
 
-    system.create_stream(stream_id, stream_name).await.unwrap();
+    system
+        .create_stream(&session, stream_id, stream_name)
+        .await
+        .unwrap();
 
     assert_persisted_stream(&setup.config.get_streams_path(), stream_id).await;
 }
@@ -42,8 +47,12 @@ async fn should_delete_persisted_stream() {
     let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
     let stream_id = 1;
     let stream_name = "test";
+    let session = Session::new(1, 1);
     system.init().await.unwrap();
-    system.create_stream(stream_id, stream_name).await.unwrap();
+    system
+        .create_stream(&session, stream_id, stream_name)
+        .await
+        .unwrap();
     assert_persisted_stream(&setup.config.get_streams_path(), stream_id).await;
     let stream_path = system
         .get_stream(&Identifier::numeric(stream_id).unwrap())
@@ -52,7 +61,7 @@ async fn should_delete_persisted_stream() {
         .clone();
 
     system
-        .delete_stream(&Identifier::numeric(1).unwrap())
+        .delete_stream(&session, &Identifier::numeric(1).unwrap())
         .await
         .unwrap();
 

@@ -15,13 +15,8 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    if !session.is_authenticated() {
-        return Err(Error::Unauthenticated);
-    }
-
     let mut system = system.write().await;
-    system.permissioner.delete_user(session.user_id)?;
-    system.delete_user(&command.user_id).await?;
+    system.delete_user(session, &command.user_id).await?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

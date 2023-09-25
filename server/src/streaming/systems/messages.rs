@@ -1,5 +1,6 @@
 use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
 use iggy::error::Error;
@@ -14,19 +15,25 @@ use tracing::{error, trace};
 impl System {
     pub async fn poll_messages(
         &self,
+        session: &Session,
         consumer: PollingConsumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        strategy: PollingStrategy,
-        count: u32,
-        auto_commit: bool,
+        args: PollingArgs,
     ) -> Result<PolledMessages, Error> {
-        if count == 0 {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        if args.count == 0 {
             return Err(Error::InvalidMessagesCount);
         }
 
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
+        self.permissioner
+            .poll_messages(session.user_id, stream.stream_id, topic.topic_id)?;
+
         if !topic.has_partitions() {
             return Err(Error::NoPartitions(topic.topic_id, topic.stream_id));
         }
@@ -40,7 +47,7 @@ impl System {
         };
 
         let mut polled_messages = topic
-            .get_messages(consumer, partition_id, strategy, count)
+            .get_messages(consumer, partition_id, args.strategy, args.count)
             .await?;
 
         if polled_messages.messages.is_empty() {
@@ -48,7 +55,7 @@ impl System {
         }
 
         let offset = polled_messages.messages.last().unwrap().offset;
-        if auto_commit {
+        if args.auto_commit {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
             topic.store_consumer_offset(consumer, offset).await?;
         }
@@ -85,13 +92,21 @@ impl System {
 
     pub async fn append_messages(
         &self,
+        session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitioning: &Partitioning,
         messages: &Vec<send_messages::Message>,
     ) -> Result<(), Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
+        self.permissioner
+            .append_messages(session.user_id, stream.stream_id, topic.topic_id)?;
+
         let mut received_messages = Vec::with_capacity(messages.len());
         for message in messages {
             let encrypted_message;
@@ -116,5 +131,22 @@ impl System {
             .await?;
         self.metrics.increment_messages(messages.len() as u64);
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct PollingArgs {
+    pub strategy: PollingStrategy,
+    pub count: u32,
+    pub auto_commit: bool,
+}
+
+impl PollingArgs {
+    pub fn new(strategy: PollingStrategy, count: u32, auto_commit: bool) -> Self {
+        Self {
+            strategy,
+            count,
+            auto_commit,
+        }
     }
 }

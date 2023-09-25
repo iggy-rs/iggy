@@ -1,3 +1,4 @@
+use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
 use crate::streaming::utils::crypto;
@@ -35,6 +36,19 @@ impl System {
         Ok(())
     }
 
+    pub async fn find_user(&self, session: &Session, user_id: &Identifier) -> Result<User, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        let user = self.get_user(user_id).await?;
+        if user.id != session.user_id {
+            self.permissioner.get_user(session.user_id)?;
+        }
+
+        Ok(user)
+    }
+
     pub async fn get_user(&self, user_id: &Identifier) -> Result<User, Error> {
         Ok(match user_id.kind {
             IdKind::Numeric => {
@@ -52,16 +66,27 @@ impl System {
         })
     }
 
-    pub async fn get_users(&self) -> Result<Vec<User>, Error> {
+    pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.get_users(session.user_id)?;
         self.storage.user.load_all().await
     }
 
     pub async fn create_user(
         &self,
+        session: &Session,
         username: &str,
         password: &str,
         permissions: Option<Permissions>,
     ) -> Result<User, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.create_user(session.user_id)?;
         let username = text::to_lowercase_non_whitespace(username);
         if self.storage.user.load_by_username(&username).await.is_ok() {
             error!("User: {username} already exists.");
@@ -76,7 +101,16 @@ impl System {
         Ok(user)
     }
 
-    pub async fn delete_user(&mut self, user_id: &Identifier) -> Result<User, Error> {
+    pub async fn delete_user(
+        &mut self,
+        session: &Session,
+        user_id: &Identifier,
+    ) -> Result<User, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.delete_user(session.user_id)?;
         let user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot delete the root user.");
@@ -95,10 +129,16 @@ impl System {
 
     pub async fn update_user(
         &self,
+        session: &Session,
         user_id: &Identifier,
         username: Option<String>,
         status: Option<UserStatus>,
     ) -> Result<User, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.update_user(session.user_id)?;
         let mut user = self.get_user(user_id).await?;
         if let Some(username) = username {
             let username = text::to_lowercase_non_whitespace(&username);
@@ -123,9 +163,15 @@ impl System {
 
     pub async fn update_permissions(
         &mut self,
+        session: &Session,
         user_id: &Identifier,
         permissions: Option<Permissions>,
     ) -> Result<(), Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.update_permissions(session.user_id)?;
         let mut user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot change the root user permissions.");
@@ -149,11 +195,20 @@ impl System {
 
     pub async fn change_password(
         &self,
+        session: &Session,
         user_id: &Identifier,
         current_password: &str,
         new_password: &str,
     ) -> Result<(), Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
         let mut user = self.get_user(user_id).await?;
+        if user.id != session.user_id {
+            self.permissioner.change_password(session.user_id)?;
+        }
+
         if !crypto::verify_password(current_password, &user.password) {
             error!(
                 "Invalid current password for user: {} with ID: {user_id}.",
@@ -179,7 +234,7 @@ impl System {
         &self,
         username: &str,
         password: &str,
-        client_id: Option<u32>,
+        session: Option<&mut Session>,
     ) -> Result<User, Error> {
         let user = match self.storage.user.load_by_username(username).await {
             Ok(user) => user,
@@ -188,6 +243,7 @@ impl System {
                 return Err(Error::InvalidCredentials);
             }
         };
+
         info!("Logging in user: {username} with ID: {}...", user.id);
         if !user.is_active() {
             warn!("User: {username} with ID: {} is inactive.", user.id);
@@ -200,29 +256,49 @@ impl System {
             );
             return Err(Error::InvalidCredentials);
         }
-        if let Some(client_id) = client_id {
-            let mut client_manager = self.client_manager.write().await;
-            client_manager.set_user_id(client_id, user.id).await?;
-        }
+
         info!("Logged in user: {username} with ID: {}.", user.id);
+        if session.is_none() {
+            return Ok(user);
+        }
+
+        let session = session.unwrap();
+        if session.is_authenticated() {
+            warn!(
+                "User with ID: {} was already authenticated, removing the previous session...",
+                session.user_id
+            );
+            self.logout_user(session).await?;
+        }
+
+        session.set_user_id(user.id);
+        let mut client_manager = self.client_manager.write().await;
+        client_manager
+            .set_user_id(session.client_id, user.id)
+            .await?;
         Ok(user)
     }
 
-    pub async fn logout_user(&self, user_id: u32, client_id: Option<u32>) -> Result<(), Error> {
-        if user_id == 0 {
+    pub async fn logout_user(&self, session: &Session) -> Result<(), Error> {
+        if !session.is_authenticated() || session.user_id == 0 {
             warn!("Cannot logout the unauthenticated user (you're probably running the server without enabled authentication).");
             return Ok(());
         }
 
-        let user = self.get_user(&Identifier::numeric(user_id)?).await?;
+        let user = self
+            .get_user(&Identifier::numeric(session.user_id)?)
+            .await?;
         info!(
             "Logging out user: {} with ID: {}...",
             user.username, user.id
         );
-        if let Some(client_id) = client_id {
+        if session.client_id > 0 {
             let mut client_manager = self.client_manager.write().await;
-            client_manager.clear_user_id(client_id).await?;
-            info!("Cleared user ID: {} for client: {}.", user.id, client_id);
+            client_manager.clear_user_id(session.client_id).await?;
+            info!(
+                "Cleared user ID: {} for client: {}.",
+                user.id, session.client_id
+            );
         }
         info!("Logged out user: {} with ID: {}.", user.username, user.id);
         Ok(())

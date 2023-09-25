@@ -67,7 +67,8 @@ pub async fn no_jwt_auth<T>(
     mut request: Request<T>,
     next: Next<T>,
 ) -> Result<Response, StatusCode> {
-    request.extensions_mut().insert(Identity { user_id: 0 });
+    // If the authentication is disabled, you can do anything - thus the root ID.
+    request.extensions_mut().insert(Identity { user_id: 1 });
     Ok(next.run(request).await)
 }
 

@@ -15,13 +15,8 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    if !session.is_authenticated() {
-        return Err(Error::Unauthenticated);
-    }
-
     let system = system.read().await;
-    system.permissioner.get_clients(session.user_id)?;
-    let clients = system.get_clients().await;
+    let clients = system.get_clients(session).await?;
     let clients = mapper::map_clients(&clients).await;
     sender.send_ok_response(clients.as_slice()).await?;
     Ok(())

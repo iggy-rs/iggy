@@ -2,6 +2,7 @@ use crate::http::error::CustomError;
 use crate::http::jwt::Identity;
 use crate::http::mapper;
 use crate::http::state::AppState;
+use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -30,10 +31,7 @@ async fn get_stream(
 ) -> Result<Json<StreamDetails>, CustomError> {
     let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let stream = system.get_stream(&stream_id)?;
-    system
-        .permissioner
-        .get_stream(identity.user_id, stream.stream_id)?;
+    let stream = system.find_stream(&Session::stateless(identity.user_id), &stream_id)?;
     let stream = mapper::map_stream(stream).await;
     Ok(Json(stream))
 }
@@ -43,8 +41,8 @@ async fn get_streams(
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<Stream>>, CustomError> {
     let system = state.system.read().await;
-    system.permissioner.get_streams(identity.user_id)?;
-    let streams = mapper::map_streams(&system.get_streams()).await;
+    let streams = system.find_streams(&Session::stateless(identity.user_id))?;
+    let streams = mapper::map_streams(&streams).await;
     Ok(Json(streams))
 }
 
@@ -55,9 +53,12 @@ async fn create_stream(
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
     let mut system = state.system.write().await;
-    system.permissioner.create_stream(identity.user_id)?;
     system
-        .create_stream(command.stream_id, &command.name)
+        .create_stream(
+            &Session::stateless(identity.user_id),
+            command.stream_id,
+            &command.name,
+        )
         .await?;
     Ok(StatusCode::CREATED)
 }
@@ -71,12 +72,12 @@ async fn update_stream(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
     let mut system = state.system.write().await;
-    let stream = system.get_stream(&command.stream_id)?;
     system
-        .permissioner
-        .update_stream(identity.user_id, stream.stream_id)?;
-    system
-        .update_stream(&command.stream_id, &command.name)
+        .update_stream(
+            &Session::stateless(identity.user_id),
+            &command.stream_id,
+            &command.name,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -88,10 +89,8 @@ async fn delete_stream(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let mut system = state.system.write().await;
-    let stream = system.get_stream(&stream_id)?;
     system
-        .permissioner
-        .delete_stream(identity.user_id, stream.stream_id)?;
-    system.delete_stream(&stream_id).await?;
+        .delete_stream(&Session::stateless(identity.user_id), &stream_id)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }

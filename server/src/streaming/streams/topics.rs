@@ -92,6 +92,10 @@ impl Stream {
         Ok(())
     }
 
+    pub fn get_topics(&self) -> Vec<&Topic> {
+        self.topics.values().collect()
+    }
+
     pub fn get_topic(&self, identifier: &Identifier) -> Result<&Topic, Error> {
         match identifier.kind {
             IdKind::Numeric => self.get_topic_by_id(identifier.get_u32_value().unwrap()),
@@ -140,10 +144,6 @@ impl Stream {
         }
 
         Ok(self.topics.get_mut(topic_id.unwrap()).unwrap())
-    }
-
-    pub fn get_topics(&self) -> Vec<&Topic> {
-        self.topics.values().collect()
     }
 
     pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, Error> {

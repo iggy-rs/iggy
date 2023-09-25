@@ -1,3 +1,4 @@
+use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::system::System;
 use futures::future::join_all;
@@ -81,6 +82,30 @@ impl System {
         self.streams.values().collect()
     }
 
+    pub fn find_streams(&self, session: &Session) -> Result<Vec<&Stream>, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.get_streams(session.user_id)?;
+        Ok(self.get_streams())
+    }
+
+    pub fn find_stream(
+        &self,
+        session: &Session,
+        identifier: &Identifier,
+    ) -> Result<&Stream, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        let stream = self.get_stream(identifier)?;
+        self.permissioner
+            .get_stream(session.user_id, stream.stream_id)?;
+        Ok(stream)
+    }
+
     pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, Error> {
         match identifier.kind {
             IdKind::Numeric => self.get_stream_by_id(identifier.get_u32_value().unwrap()),
@@ -136,7 +161,17 @@ impl System {
         Ok(stream.unwrap())
     }
 
-    pub async fn create_stream(&mut self, stream_id: u32, name: &str) -> Result<(), Error> {
+    pub async fn create_stream(
+        &mut self,
+        session: &Session,
+        stream_id: u32,
+        name: &str,
+    ) -> Result<(), Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
+        self.permissioner.create_stream(session.user_id)?;
         if self.streams.contains_key(&stream_id) {
             return Err(Error::StreamIdAlreadyExists(stream_id));
         }
@@ -155,13 +190,24 @@ impl System {
         Ok(())
     }
 
-    pub async fn update_stream(&mut self, id: &Identifier, name: &str) -> Result<(), Error> {
+    pub async fn update_stream(
+        &mut self,
+        session: &Session,
+        id: &Identifier,
+        name: &str,
+    ) -> Result<(), Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
         let stream_id;
         {
             let stream = self.get_stream(id)?;
             stream_id = stream.stream_id;
         }
 
+        self.permissioner
+            .update_stream(session.user_id, stream_id)?;
         let updated_name = text::to_lowercase_non_whitespace(name);
 
         {
@@ -184,9 +230,19 @@ impl System {
         Ok(())
     }
 
-    pub async fn delete_stream(&mut self, id: &Identifier) -> Result<u32, Error> {
+    pub async fn delete_stream(
+        &mut self,
+        session: &Session,
+        id: &Identifier,
+    ) -> Result<u32, Error> {
+        if !session.is_authenticated() {
+            return Err(Error::Unauthenticated);
+        }
+
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
+        self.permissioner
+            .delete_stream(session.user_id, stream_id)?;
         let stream_name = stream.name.clone();
         if stream.delete().await.is_err() {
             return Err(Error::CannotDeleteStream(stream_id));
@@ -224,7 +280,11 @@ mod tests {
         let config = Arc::new(SystemConfig::default());
         let storage = get_test_system_storage();
         let mut system = System::create(config, storage);
-        system.create_stream(stream_id, stream_name).await.unwrap();
+        let session = Session::new(1, 1);
+        system
+            .create_stream(&session, stream_id, stream_name)
+            .await
+            .unwrap();
 
         let stream = system.get_stream(&Identifier::numeric(stream_id).unwrap());
         assert!(stream.is_ok());

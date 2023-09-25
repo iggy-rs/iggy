@@ -17,6 +17,10 @@ impl Session {
         }
     }
 
+    pub fn stateless(user_id: u32) -> Self {
+        Self::new(0, user_id)
+    }
+
     pub fn from_client_id(client_id: u32) -> Self {
         Self::new(client_id, 0)
     }

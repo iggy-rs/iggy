@@ -147,7 +147,7 @@ impl System {
                 error!("User: {username} already exists.");
                 return Err(Error::UserAlreadyExists);
             }
-
+            self.storage.user.delete(&user).await?;
             user.username = username;
         }
 
@@ -155,9 +155,9 @@ impl System {
             user.status = status;
         }
 
-        info!("Updating user: {} with ID: {user_id}...", user.username);
+        info!("Updating user: {} with ID: {}...", user.username, user.id);
         self.storage.user.save(&user).await?;
-        info!("Updated user: {} with ID: {user_id}.", user.username);
+        info!("Updated user: {} with ID: {}.", user.username, user.id);
         Ok(user)
     }
 

@@ -48,7 +48,12 @@ impl TestServer {
 
     pub fn start(&mut self) {
         // Sleep before starting server - it takes some time for the OS to release the port
-        sleep(Duration::from_secs(1));
+        let duration = if std::env::var("IGGY_CI_BUILD").is_ok() {
+            Duration::from_secs(5)
+        } else {
+            Duration::from_secs(1)
+        };
+        sleep(duration);
 
         self.cleanup();
         let files_path = self.files_path.clone();
@@ -72,15 +77,17 @@ impl TestServer {
         self.child_handle = Some(command.spawn().unwrap());
 
         // Sleep after starting server - it needs some time to bind to given port and start listening
-        let sleep_duration = if cfg!(any(
+        let duration = if cfg!(any(
             target = "aarch64-unknown-linux-musl",
             target = "arm-unknown-linux-musleabi"
         )) {
             Duration::from_secs(40)
+        } else if std::env::var("IGGY_CI_BUILD").is_ok() {
+            Duration::from_secs(5)
         } else {
             Duration::from_secs(1)
         };
-        sleep(sleep_duration);
+        sleep(duration);
     }
 
     pub fn stop(&mut self) {
@@ -110,7 +117,6 @@ impl TestServer {
         format!("local_data_{}", Uuid::new_v4().to_u128_le())
     }
 }
-
 impl Drop for TestServer {
     fn drop(&mut self) {
         self.stop();

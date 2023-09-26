@@ -127,6 +127,10 @@ Start the CLI (transports: `quic`, `tcp`, `http`):
 
 `cargo r --bin iggy-cli -r -- --transport tcp`
 
+Authenticate yourself with the default credentials:
+
+`user.login|iggy|iggy`
+
 Create a stream with ID 1 named `dev`:
 
 `stream.create|1|dev`

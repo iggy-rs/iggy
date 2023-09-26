@@ -11,6 +11,7 @@ use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus::Active;
 use iggy::users::create_user::CreateUser;
 use iggy::users::login_user::LoginUser;
+use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use std::collections::HashMap;
 use std::fs;
 use std::process::{Child, Command};
@@ -19,8 +20,6 @@ use std::time::Duration;
 use uuid::Uuid;
 
 const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
-const ROOT_USERNAME: &str = "iggy";
-const ROOT_PASSWORD: &str = "iggy";
 const USER_PASSWORD: &str = "secret";
 
 #[async_trait]
@@ -153,8 +152,8 @@ async fn create_user(client: &IggyClient, username: &str) {
 async fn login_root(client: &IggyClient) {
     client
         .login_user(&LoginUser {
-            username: ROOT_USERNAME.to_string(),
-            password: ROOT_PASSWORD.to_string(),
+            username: DEFAULT_ROOT_USERNAME.to_string(),
+            password: DEFAULT_ROOT_PASSWORD.to_string(),
         })
         .await
         .unwrap();

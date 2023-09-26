@@ -2,11 +2,8 @@ use crate::streaming::utils::crypto;
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
 use iggy::utils::timestamp::TimeStamp;
+use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_USER_ID};
 use serde::{Deserialize, Serialize};
-
-const ROOT_USER_ID: u32 = 1;
-const ROOT_USERNAME: &str = "iggy";
-const ROOT_PASSWORD: &str = "iggy";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
@@ -52,15 +49,15 @@ impl User {
 
     pub fn root() -> Self {
         Self::new(
-            ROOT_USER_ID,
-            ROOT_USERNAME,
-            ROOT_PASSWORD,
+            DEFAULT_ROOT_USER_ID,
+            DEFAULT_ROOT_USERNAME,
+            DEFAULT_ROOT_PASSWORD,
             Some(Permissions::root()),
         )
     }
 
     pub fn is_root(&self) -> bool {
-        self.id == ROOT_USER_ID
+        self.id == DEFAULT_ROOT_USER_ID
     }
 
     pub fn is_active(&self) -> bool {
@@ -75,10 +72,13 @@ mod tests {
     #[test]
     fn given_root_user_data_and_credentials_should_be_valid() {
         let user = User::root();
-        assert_eq!(user.id, ROOT_USER_ID);
-        assert_eq!(user.username, ROOT_USERNAME);
-        assert_ne!(user.password, ROOT_PASSWORD);
-        assert!(crypto::verify_password(ROOT_PASSWORD, &user.password));
+        assert_eq!(user.id, DEFAULT_ROOT_USER_ID);
+        assert_eq!(user.username, DEFAULT_ROOT_USERNAME);
+        assert_ne!(user.password, DEFAULT_ROOT_PASSWORD);
+        assert!(crypto::verify_password(
+            DEFAULT_ROOT_PASSWORD,
+            &user.password
+        ));
         assert_eq!(user.status, UserStatus::Active);
         assert!(user.created_at > 0);
     }

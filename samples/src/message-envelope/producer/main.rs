@@ -25,6 +25,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_raw_client(client_provider_config).await?;
     let client = IggyClient::builder(client).build();
+    system::login_root(&client).await;
     system::init_by_producer(&args, &client).await?;
     produce_messages(&args, &client).await
 }

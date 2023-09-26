@@ -1,4 +1,4 @@
-use crate::server_tests::common::{ClientFactory, TestServer, ROOT_PASSWORD, ROOT_USERNAME};
+use crate::server_tests::common::{ClientFactory, TestServer};
 use bytes::Bytes;
 use iggy::client::{
     ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient, StreamClient,
@@ -35,6 +35,7 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::users::login_user::LoginUser;
+use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -60,8 +61,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 1. Login as root user
     client
         .login_user(&LoginUser {
-            username: ROOT_USERNAME.to_string(),
-            password: ROOT_PASSWORD.to_string(),
+            username: DEFAULT_ROOT_USERNAME.to_string(),
+            password: DEFAULT_ROOT_PASSWORD.to_string(),
         })
         .await
         .unwrap();

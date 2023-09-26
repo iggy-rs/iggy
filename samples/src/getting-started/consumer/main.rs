@@ -1,9 +1,11 @@
-use iggy::client::Client;
+use iggy::client::{Client, UserClient};
 use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
+use iggy::users::login_user::LoginUser;
+use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -18,6 +20,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
     let mut client = IggyClient::default();
     client.connect().await?;
+    client
+        .login_user(&LoginUser {
+            username: DEFAULT_ROOT_USERNAME.to_string(),
+            password: DEFAULT_ROOT_PASSWORD.to_string(),
+        })
+        .await?;
     consume_messages(&client).await
 }
 

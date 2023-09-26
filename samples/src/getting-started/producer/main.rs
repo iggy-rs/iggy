@@ -1,9 +1,11 @@
-use iggy::client::{Client, StreamClient, TopicClient};
+use iggy::client::{Client, StreamClient, TopicClient, UserClient};
 use iggy::clients::client::IggyClient;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
+use iggy::users::login_user::LoginUser;
+use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use std::error::Error;
 use std::str::FromStr;
 use std::time::Duration;
@@ -19,6 +21,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
     let mut client = IggyClient::default();
     client.connect().await?;
+    client
+        .login_user(&LoginUser {
+            username: DEFAULT_ROOT_USERNAME.to_string(),
+            password: DEFAULT_ROOT_PASSWORD.to_string(),
+        })
+        .await?;
     init_system(&client).await;
     produce_messages(&client).await
 }

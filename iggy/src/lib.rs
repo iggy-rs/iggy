@@ -26,3 +26,7 @@ pub mod topics;
 pub mod users;
 pub mod utils;
 pub mod validatable;
+
+pub const DEFAULT_ROOT_USER_ID: u32 = 1;
+pub const DEFAULT_ROOT_USERNAME: &str = "iggy";
+pub const DEFAULT_ROOT_PASSWORD: &str = "iggy";

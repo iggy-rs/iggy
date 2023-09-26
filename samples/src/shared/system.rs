@@ -6,7 +6,19 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topic::GetTopic;
+use iggy::users::login_user::LoginUser;
+use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use tracing::info;
+
+pub async fn login_root(client: &dyn Client) {
+    client
+        .login_user(&LoginUser {
+            username: DEFAULT_ROOT_USERNAME.to_string(),
+            password: DEFAULT_ROOT_PASSWORD.to_string(),
+        })
+        .await
+        .unwrap();
+}
 
 pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
     let (stream_id, topic_id, partition_id) = (args.stream_id, args.topic_id, args.partition_id);

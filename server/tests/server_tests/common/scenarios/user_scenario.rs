@@ -14,14 +14,10 @@ use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
-
-const ROOT_USERNAME: &str = "iggy";
-const ROOT_PASSWORD: &str = "iggy";
+use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();
-    test_server.enable_authentication();
-    test_server.enable_authorization();
     test_server.start();
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
@@ -36,8 +32,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 3. Login as root user
     let identity_info = client
         .login_user(&LoginUser {
-            username: ROOT_USERNAME.to_string(),
-            password: ROOT_PASSWORD.to_string(),
+            username: DEFAULT_ROOT_USERNAME.to_string(),
+            password: DEFAULT_ROOT_PASSWORD.to_string(),
         })
         .await
         .unwrap();
@@ -54,19 +50,19 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let user = users.get(0).unwrap();
     assert_eq!(user.id, 1);
     assert!(user.created_at > 0);
-    assert_eq!(user.username, ROOT_USERNAME);
+    assert_eq!(user.username, DEFAULT_ROOT_USERNAME);
     assert_eq!(user.status, UserStatus::Active);
 
     let user = client
         .get_user(&GetUser {
-            user_id: Identifier::named(ROOT_USERNAME).unwrap(),
+            user_id: Identifier::named(DEFAULT_ROOT_USERNAME).unwrap(),
         })
         .await
         .unwrap();
 
     assert_eq!(user.id, 1);
     assert!(user.created_at > 0);
-    assert_eq!(user.username, ROOT_USERNAME);
+    assert_eq!(user.username, DEFAULT_ROOT_USERNAME);
     assert_eq!(user.status, UserStatus::Active);
     assert!(user.permissions.is_some());
 
@@ -174,8 +170,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     client
         .login_user(&LoginUser {
-            username: ROOT_USERNAME.to_string(),
-            password: ROOT_PASSWORD.to_string(),
+            username: DEFAULT_ROOT_USERNAME.to_string(),
+            password: DEFAULT_ROOT_PASSWORD.to_string(),
         })
         .await
         .unwrap();
@@ -243,7 +239,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     let delete_root_user = client
         .delete_user(&DeleteUser {
-            user_id: Identifier::named(ROOT_USERNAME).unwrap(),
+            user_id: Identifier::named(DEFAULT_ROOT_USERNAME).unwrap(),
         })
         .await;
 

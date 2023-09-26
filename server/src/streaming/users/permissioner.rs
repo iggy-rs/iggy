@@ -5,7 +5,6 @@ use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct Permissioner {
-    pub(super) enabled: bool,
     pub(super) users_permissions: HashMap<u32, GlobalPermissions>,
     pub(super) users_streams_permissions: HashMap<(u32, u32), StreamPermissions>,
     pub(super) users_that_can_poll_messages_from_all_streams: HashSet<u32>,
@@ -15,10 +14,6 @@ pub struct Permissioner {
 }
 
 impl Permissioner {
-    pub fn enable(&mut self) {
-        self.enabled = true;
-    }
-
     pub fn init(&mut self, users: Vec<User>) {
         for user in users {
             self.init_permissions_for_user(user);

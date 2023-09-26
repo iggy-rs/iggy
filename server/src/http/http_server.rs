@@ -1,5 +1,5 @@
 use crate::configs::http::{HttpConfig, HttpCorsConfig};
-use crate::http::jwt::{jwt_auth, no_jwt_auth, JwtManager};
+use crate::http::jwt::{jwt_auth, JwtManager};
 use crate::http::metrics::metrics;
 use crate::http::state::AppState;
 use crate::http::{
@@ -57,15 +57,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         app = app.layer(configure_cors(config.cors));
     }
 
-    {
-        let system = app_state.system.read().await;
-        if system.config.user.authentication_enabled {
-            app = app.layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
-        } else {
-            app = app.layer(middleware::from_fn(no_jwt_auth));
-        }
-    }
-
+    app = app.layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
     info!("Started {api_name} on: {:?}", config.address);
 
     if !config.tls.enabled {

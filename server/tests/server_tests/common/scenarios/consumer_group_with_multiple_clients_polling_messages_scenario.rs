@@ -1,4 +1,4 @@
-use crate::server_tests::common::{ClientFactory, TestServer};
+use crate::server_tests::common::{create_user, login_root, login_user, ClientFactory, TestServer};
 use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer;
@@ -31,7 +31,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client2 = create_client(client_factory).await;
     let client3 = create_client(client_factory).await;
 
-    init_system(&system_client, &client1, &client2, &client3).await;
+    login_root(&system_client).await;
+    init_system(&system_client, &client1, &client2, &client3, true).await;
     execute_using_messages_key_key(&system_client, &client1, &client2, &client3).await;
     system_client
         .delete_stream(&DeleteStream {
@@ -39,7 +40,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         })
         .await
         .unwrap();
-    init_system(&system_client, &client1, &client2, &client3).await;
+    init_system(&system_client, &client1, &client2, &client3, false).await;
     execute_using_none_key(&system_client, &client1, &client2, &client3).await;
     test_server.stop();
 }
@@ -54,6 +55,7 @@ async fn init_system(
     client1: &IggyClient,
     client2: &IggyClient,
     client3: &IggyClient,
+    create_users: bool,
 ) {
     // 1. Create the stream
     let create_stream = CreateStream {
@@ -82,6 +84,18 @@ async fn init_system(
         .create_consumer_group(&create_group)
         .await
         .unwrap();
+
+    if create_users {
+        // Create the users for all clients
+        create_user(system_client, "user1").await;
+        create_user(system_client, "user2").await;
+        create_user(system_client, "user3").await;
+
+        // Login all the clients
+        login_user(client1, "user1").await;
+        login_user(client2, "user2").await;
+        login_user(client3, "user3").await;
+    }
 
     let join_group = JoinConsumerGroup {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),

@@ -12,7 +12,6 @@ pub struct SystemConfig {
     pub partition: PartitionConfig,
     pub segment: SegmentConfig,
     pub encryption: EncryptionConfig,
-    pub user: UserConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -37,12 +36,6 @@ pub struct CacheConfig {
 pub struct EncryptionConfig {
     pub enabled: bool,
     pub key: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, Default)]
-pub struct UserConfig {
-    pub authentication_enabled: bool,
-    pub authorization_enabled: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

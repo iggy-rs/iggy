@@ -3,10 +3,6 @@ use iggy::error::Error;
 
 impl Permissioner {
     pub fn get_topic(&self, user_id: u32, stream_id: u32, topic_id: u32) -> Result<(), Error> {
-        if !self.enabled {
-            return Ok(());
-        }
-
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.read_streams
                 || global_permissions.manage_streams
@@ -36,10 +32,6 @@ impl Permissioner {
     }
 
     pub fn get_topics(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
-        if !self.enabled {
-            return Ok(());
-        }
-
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.read_streams
                 || global_permissions.manage_streams
@@ -69,10 +61,6 @@ impl Permissioner {
     }
 
     pub fn create_topic(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
-        if !self.enabled {
-            return Ok(());
-        }
-
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_streams || global_permissions.manage_topics {
                 return Ok(());
@@ -98,10 +86,6 @@ impl Permissioner {
     }
 
     fn manage_topic(&self, user_id: u32, stream_id: u32, topic_id: u32) -> Result<(), Error> {
-        if !self.enabled {
-            return Ok(());
-        }
-
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_streams || global_permissions.manage_topics {
                 return Ok(());

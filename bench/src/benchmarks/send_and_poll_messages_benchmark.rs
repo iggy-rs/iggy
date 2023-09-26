@@ -1,5 +1,6 @@
 use crate::args::Args;
 use crate::benchmark::{display_results, BenchmarkKind};
+use crate::benchmark_result::BenchmarkResult;
 use crate::benchmarks::{poll_messages_benchmark, send_messages_benchmark};
 use crate::client_factory::ClientFactory;
 use futures::future::join_all;
@@ -55,17 +56,8 @@ pub async fn run(client_factory: Arc<dyn ClientFactory>, args: Arc<Args>) -> Res
     );
 
     let results = results.into_iter().flatten().flatten().collect::<Vec<_>>();
-    let send_messages_results = results
-        .iter()
-        .map(|r| r.as_ref().unwrap().clone())
-        .filter(|r| r.kind == BenchmarkKind::SendMessages)
-        .collect::<Vec<_>>();
-
-    let poll_messages_results = results
-        .iter()
-        .map(|r| r.as_ref().unwrap().clone())
-        .filter(|r| r.kind == BenchmarkKind::PollMessages)
-        .collect::<Vec<_>>();
+    let send_messages_results = collect_results(&results, BenchmarkKind::SendMessages);
+    let poll_messages_results = collect_results(&results, BenchmarkKind::PollMessages);
 
     display_results(
         send_messages_results,
@@ -79,4 +71,15 @@ pub async fn run(client_factory: Arc<dyn ClientFactory>, args: Arc<Args>) -> Res
     );
 
     Ok(())
+}
+
+fn collect_results(
+    results: &[Result<BenchmarkResult, Error>],
+    kind: BenchmarkKind,
+) -> Vec<BenchmarkResult> {
+    results
+        .iter()
+        .map(|r| r.as_ref().unwrap().clone())
+        .filter(|r| r.kind == kind)
+        .collect::<Vec<_>>()
 }

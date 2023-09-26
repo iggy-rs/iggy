@@ -3,10 +3,6 @@ use iggy::error::Error;
 
 impl Permissioner {
     pub fn poll_messages(&self, user_id: u32, stream_id: u32, topic_id: u32) -> Result<(), Error> {
-        if !self.enabled {
-            return Ok(());
-        }
-
         if self
             .users_that_can_poll_messages_from_all_streams
             .contains(&user_id)
@@ -52,10 +48,6 @@ impl Permissioner {
         stream_id: u32,
         topic_id: u32,
     ) -> Result<(), Error> {
-        if !self.enabled {
-            return Ok(());
-        }
-
         if self
             .users_that_can_send_messages_to_all_streams
             .contains(&user_id)

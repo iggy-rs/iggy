@@ -1,4 +1,4 @@
-use crate::server_tests::common::{ClientFactory, TestServer};
+use crate::server_tests::common::{login_root, ClientFactory, TestServer};
 use bytes::Bytes;
 use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
@@ -25,6 +25,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     test_server.start();
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+
+    login_root(&client).await;
     init_system(&client).await;
 
     // 1. Send messages with the included headers

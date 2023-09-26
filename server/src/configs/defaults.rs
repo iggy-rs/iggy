@@ -5,7 +5,7 @@ use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{MessageCleanerConfig, MessageSaverConfig, ServerConfig};
 use crate::configs::system::{
     CacheConfig, DatabaseConfig, EncryptionConfig, LoggingConfig, PartitionConfig, SegmentConfig,
-    StreamConfig, SystemConfig, TopicConfig, UserConfig,
+    StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -104,7 +104,6 @@ impl Default for SystemConfig {
             topic: TopicConfig::default(),
             partition: PartitionConfig::default(),
             segment: SegmentConfig::default(),
-            user: UserConfig::default(),
         }
     }
 }

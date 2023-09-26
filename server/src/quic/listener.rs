@@ -49,13 +49,6 @@ async fn handle_connection(
             .add_client(&address, Transport::Quic)
             .await;
         let mut session = Session::from_client_id(client_id);
-        {
-            let system = system.read().await;
-            if !system.config.user.authentication_enabled {
-                session.disable_authentication();
-            }
-        }
-
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {

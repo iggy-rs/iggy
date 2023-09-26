@@ -81,10 +81,6 @@ messages_amount = 1_048_576
 enabled = false
 key = ""
 
-[system.user]
-authentication_enabled = false
-authorization_enabled = false
-
 [system.stream]
 path = "streams"
 

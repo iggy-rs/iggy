@@ -12,7 +12,6 @@ impl System {
         partitions_count: u32,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
@@ -39,7 +38,6 @@ impl System {
         partitions_count: u32,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;

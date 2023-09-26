@@ -65,7 +65,7 @@ async fn create_user(
     Json(command): Json<CreateUser>,
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
-    let system = state.system.read().await;
+    let mut system = state.system.write().await;
     system
         .create_user(
             &Session::stateless(identity.user_id),

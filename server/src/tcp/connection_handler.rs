@@ -26,15 +26,7 @@ pub(crate) async fn handle_connection(
         .await;
 
     let mut session = Session::from_client_id(client_id);
-    {
-        let system = system.read().await;
-        if !system.config.user.authentication_enabled {
-            session.disable_authentication();
-        }
-    }
-
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
-
     loop {
         let read_length = sender.read(&mut initial_buffer).await?;
         if read_length != INITIAL_BYTES_LENGTH {

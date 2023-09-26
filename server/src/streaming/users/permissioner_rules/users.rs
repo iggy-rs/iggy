@@ -31,10 +31,6 @@ impl Permissioner {
     }
 
     fn manager_users(&self, user_id: u32) -> Result<(), Error> {
-        if !self.enabled {
-            return Ok(());
-        }
-
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_users {
                 return Ok(());
@@ -45,10 +41,6 @@ impl Permissioner {
     }
 
     fn read_users(&self, user_id: u32) -> Result<(), Error> {
-        if !self.enabled {
-            return Ok(());
-        }
-
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.read_users {
                 return Ok(());

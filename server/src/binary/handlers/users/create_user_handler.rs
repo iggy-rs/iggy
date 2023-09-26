@@ -15,7 +15,7 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let system = system.read().await;
+    let mut system = system.write().await;
     system
         .create_user(
             session,

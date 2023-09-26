@@ -1,10 +1,10 @@
 use async_trait::async_trait;
 use figment::{
     providers::{Format, Json, Toml},
-    value::{Dict, Map as FigmentMap, Value as FigmentValue},
+    value::{Dict, Map as FigmentMap, Tag, Value as FigmentValue},
     Error, Figment, Metadata, Profile, Provider,
 };
-use std::env;
+use std::{env, path::Path};
 use toml::{map::Map, Value as TomlValue};
 use tracing::info;
 
@@ -61,22 +61,45 @@ impl CustomEnvProvider {
         }
     }
 
-    fn find_and_insert_nested_key(dict: &mut Dict, keys: Vec<String>, value: FigmentValue) {
-        let mut current_dict = dict;
+    fn insert_overridden_values_from_env(
+        source: &Dict,
+        target: &mut Dict,
+        keys: Vec<String>,
+        value: FigmentValue,
+    ) {
+        if keys.is_empty() {
+            return;
+        }
+
+        let mut current_source = source;
+        let mut current_target = target;
+
         for i in 0..keys.len() {
             let combined_keys = keys[i..].join("_");
-            if let std::collections::btree_map::Entry::Occupied(mut e) =
-                current_dict.entry(combined_keys)
-            {
-                e.insert(value);
+
+            if current_source.contains_key(&combined_keys) {
+                current_target.insert(combined_keys, value.clone());
                 return;
             }
 
             let key = &keys[i];
-            if let Some(FigmentValue::Dict(_, ref mut next_dict)) = current_dict.get_mut(key) {
-                current_dict = next_dict;
-            } else {
-                return;
+            match current_source.get(key) {
+                Some(FigmentValue::Dict(_, inner_source_dict)) => {
+                    if !current_target.contains_key(key) {
+                        current_target
+                            .insert(key.clone(), FigmentValue::Dict(Tag::Default, Dict::new()));
+                    }
+
+                    if let Some(FigmentValue::Dict(_, ref mut actual_inner_target_dict)) =
+                        current_target.get_mut(key)
+                    {
+                        current_source = inner_source_dict;
+                        current_target = actual_inner_target_dict;
+                    } else {
+                        return;
+                    }
+                }
+                _ => return,
             }
         }
     }
@@ -102,7 +125,7 @@ impl CustomEnvProvider {
         }
     }
 
-    fn try_parse_value(value: String) -> FigmentValue {
+    fn try_parse_value(value: &str) -> FigmentValue {
         if value == "true" {
             return FigmentValue::from(true);
         }
@@ -118,18 +141,22 @@ impl CustomEnvProvider {
         FigmentValue::from(value)
     }
 }
+
 impl Provider for CustomEnvProvider {
     fn metadata(&self) -> Metadata {
         Metadata::named("iggy-server config")
     }
 
     fn data(&self) -> Result<FigmentMap<Profile, Dict>, Error> {
-        let toml_value: TomlValue =
-            toml::from_str(include_str!("../../../configs/server.toml")).unwrap();
-        let mut toml_as_dict = Dict::new();
+        let default_config = toml::to_string(&ServerConfig::default())
+            .expect("Cannot serialize default ServerConfig. Something's terribly wrong.");
+        let toml_value: TomlValue = toml::from_str(&default_config).unwrap();
+        let mut source_dict = Dict::new();
         if let TomlValue::Table(table) = toml_value {
-            Self::walk_toml_table_to_dict("", table, &mut toml_as_dict);
+            Self::walk_toml_table_to_dict("", table, &mut source_dict);
         }
+
+        let mut new_dict = Dict::new();
         for (key, value) in env::vars() {
             let env_key = key.to_uppercase();
             if !env_key.starts_with(self.prefix.as_str()) {
@@ -139,15 +166,20 @@ impl Provider for CustomEnvProvider {
                 .split('_')
                 .map(|k| k.to_lowercase())
                 .collect();
-            let env_var_value = Self::try_parse_value(value);
+            let env_var_value = Self::try_parse_value(&value);
             info!(
                 "{} value changed to: {:?} from environment variable",
-                env_key, env_var_value
+                env_key, value
             );
-            Self::find_and_insert_nested_key(&mut toml_as_dict, keys, env_var_value);
+            Self::insert_overridden_values_from_env(
+                &source_dict,
+                &mut new_dict,
+                keys.clone(),
+                env_var_value.clone(),
+            );
         }
         let mut data = FigmentMap::new();
-        data.insert(Profile::default(), toml_as_dict);
+        data.insert(Profile::default(), new_dict);
 
         Ok(data)
     }
@@ -166,10 +198,45 @@ pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, Se
     }
 }
 
+/// This does exactly the same as Figment does internally.
+fn file_exists<P: AsRef<Path>>(path: P) -> bool {
+    let path = path.as_ref();
+
+    if path.is_absolute() {
+        return path.is_file();
+    }
+
+    let cwd = match std::env::current_dir() {
+        Ok(dir) => dir,
+        Err(_) => return false,
+    };
+
+    let mut current_dir = cwd.as_path();
+    loop {
+        let file_path = current_dir.join(path);
+        if file_path.is_file() {
+            return true;
+        }
+
+        current_dir = match current_dir.parent() {
+            Some(parent) => parent,
+            None => return false,
+        };
+    }
+}
+
 #[async_trait]
 impl ConfigProvider for FileConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ServerError> {
         info!("Loading config from path: '{}'...", self.path);
+
+        if !file_exists(&self.path) {
+            return Err(ServerError::CannotLoadConfiguration(format!(
+                "Cannot find configuration file at path: '{}'.",
+                self.path,
+            )));
+        }
+
         let config_builder = Figment::new();
         let extension = self.path.split('.').last().unwrap_or("");
         let config_builder = match extension {

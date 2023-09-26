@@ -14,9 +14,7 @@ impl System {
         topic_id: &Identifier,
         offset: u64,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -36,9 +34,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<ConsumerOffsetInfo, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;

@@ -37,9 +37,7 @@ impl System {
     }
 
     pub async fn find_user(&self, session: &Session, user_id: &Identifier) -> Result<User, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let user = self.get_user(user_id).await?;
         if user.id != session.user_id {
@@ -67,9 +65,7 @@ impl System {
     }
 
     pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.get_users(session.user_id)?;
         self.storage.user.load_all().await
@@ -82,9 +78,7 @@ impl System {
         password: &str,
         permissions: Option<Permissions>,
     ) -> Result<User, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.create_user(session.user_id)?;
         let username = text::to_lowercase_non_whitespace(username);
@@ -106,9 +100,7 @@ impl System {
         session: &Session,
         user_id: &Identifier,
     ) -> Result<User, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.delete_user(session.user_id)?;
         let user = self.get_user(user_id).await?;
@@ -134,9 +126,7 @@ impl System {
         username: Option<String>,
         status: Option<UserStatus>,
     ) -> Result<User, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.update_user(session.user_id)?;
         let mut user = self.get_user(user_id).await?;
@@ -167,9 +157,7 @@ impl System {
         user_id: &Identifier,
         permissions: Option<Permissions>,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.update_permissions(session.user_id)?;
         let mut user = self.get_user(user_id).await?;
@@ -200,9 +188,7 @@ impl System {
         current_password: &str,
         new_password: &str,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let mut user = self.get_user(user_id).await?;
         if user.id != session.user_id {
@@ -281,7 +267,7 @@ impl System {
 
     pub async fn logout_user(&self, session: &Session) -> Result<(), Error> {
         if !session.is_authenticated() || session.user_id == 0 {
-            warn!("Cannot logout the unauthenticated user (you're probably running the server without enabled authentication).");
+            warn!("Cannot logout the unauthenticated user (server is presumably running without the authentication).");
             return Ok(());
         }
 

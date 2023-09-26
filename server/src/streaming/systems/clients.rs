@@ -79,9 +79,7 @@ impl System {
         session: &Session,
         client_id: u32,
     ) -> Result<Arc<RwLock<Client>>, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.get_client(session.user_id)?;
         let client_manager = self.client_manager.read().await;
@@ -89,9 +87,7 @@ impl System {
     }
 
     pub async fn get_clients(&self, session: &Session) -> Result<Vec<Arc<RwLock<Client>>>, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.get_clients(session.user_id)?;
         let client_manager = self.client_manager.read().await;

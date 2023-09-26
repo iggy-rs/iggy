@@ -2,6 +2,7 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::clients::client_manager::ClientManager;
 use crate::streaming::diagnostics::metrics::Metrics;
 use crate::streaming::persistence::persister::*;
+use crate::streaming::session::Session;
 use crate::streaming::storage::{SegmentStorage, SystemStorage};
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::permissioner::Permissioner;
@@ -113,6 +114,13 @@ impl System {
         }
 
         Ok(())
+    }
+
+    pub fn ensure_authenticated(&self, session: &Session) -> Result<(), Error> {
+        match session.is_authenticated() {
+            true => Ok(()),
+            false => Err(Error::Unauthenticated),
+        }
     }
 
     fn map_toggle_str<'a>(enabled: bool) -> &'a str {

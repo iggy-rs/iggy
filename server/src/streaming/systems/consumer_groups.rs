@@ -13,9 +13,7 @@ impl System {
         topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<&RwLock<ConsumerGroup>, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -31,9 +29,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<Vec<&RwLock<ConsumerGroup>>, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -50,9 +46,7 @@ impl System {
         topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         {
             let stream = self.get_stream(stream_id)?;
@@ -76,9 +70,7 @@ impl System {
         topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream_id_value;
         let topic_id_value;
@@ -125,9 +117,7 @@ impl System {
         topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream_id_value;
         let topic_id_value;
@@ -170,9 +160,7 @@ impl System {
         topic_id: &Identifier,
         consumer_group_id: u32,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         {
             let stream = self.get_stream(stream_id)?;

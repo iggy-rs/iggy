@@ -11,9 +11,7 @@ impl System {
         topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         {
             let stream = self.get_stream(stream_id)?;
@@ -40,9 +38,7 @@ impl System {
         topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         {
             let stream = self.get_stream(stream_id)?;

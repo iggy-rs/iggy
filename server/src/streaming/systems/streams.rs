@@ -83,9 +83,7 @@ impl System {
     }
 
     pub fn find_streams(&self, session: &Session) -> Result<Vec<&Stream>, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.get_streams(session.user_id)?;
         Ok(self.get_streams())
@@ -96,9 +94,7 @@ impl System {
         session: &Session,
         identifier: &Identifier,
     ) -> Result<&Stream, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(identifier)?;
         self.permissioner
@@ -167,9 +163,7 @@ impl System {
         stream_id: u32,
         name: &str,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         self.permissioner.create_stream(session.user_id)?;
         if self.streams.contains_key(&stream_id) {
@@ -196,9 +190,7 @@ impl System {
         id: &Identifier,
         name: &str,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream_id;
         {
@@ -235,9 +227,7 @@ impl System {
         session: &Session,
         id: &Identifier,
     ) -> Result<u32, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;

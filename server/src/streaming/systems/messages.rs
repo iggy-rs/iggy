@@ -21,9 +21,7 @@ impl System {
         topic_id: &Identifier,
         args: PollingArgs,
     ) -> Result<PolledMessages, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         if args.count == 0 {
             return Err(Error::InvalidMessagesCount);
@@ -98,9 +96,7 @@ impl System {
         partitioning: &Partitioning,
         messages: &Vec<send_messages::Message>,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;

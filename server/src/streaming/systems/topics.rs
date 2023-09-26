@@ -11,9 +11,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<&Topic, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -27,9 +25,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
     ) -> Result<Vec<&Topic>, Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream = self.get_stream(stream_id)?;
         self.permissioner
@@ -46,9 +42,7 @@ impl System {
         partitions_count: u32,
         message_expiry: Option<u32>,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         {
             let stream = self.get_stream(stream_id)?;
@@ -73,9 +67,7 @@ impl System {
         name: &str,
         message_expiry: Option<u32>,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         {
             let stream = self.get_stream(stream_id)?;
@@ -96,9 +88,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<(), Error> {
-        if !session.is_authenticated() {
-            return Err(Error::Unauthenticated);
-        }
+        self.ensure_authenticated(session)?;
 
         let stream_id_value;
         {

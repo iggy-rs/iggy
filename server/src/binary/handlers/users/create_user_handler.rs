@@ -15,14 +15,10 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    if !session.is_authenticated() {
-        return Err(Error::Unauthenticated);
-    }
-
     let system = system.read().await;
-    system.permissioner.create_user(session.user_id)?;
     system
         .create_user(
+            session,
             &command.username,
             &command.password,
             command.permissions.clone(),

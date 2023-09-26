@@ -15,13 +15,8 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    if !session.is_authenticated() {
-        return Err(Error::Unauthenticated);
-    }
-
-    let user_id = session.user_id;
     let system = system.read().await;
-    system.logout_user(user_id, Some(session.client_id)).await?;
+    system.logout_user(session).await?;
     session.clear_user_id();
     sender.send_empty_ok_response().await?;
     Ok(())

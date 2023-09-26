@@ -2,6 +2,7 @@ use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
+use crate::streaming::systems::messages::PollingArgs;
 use crate::streaming::systems::system::System;
 use anyhow::Result;
 use iggy::error::Error;
@@ -17,27 +18,16 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    if !session.is_authenticated() {
-        return Err(Error::Unauthenticated);
-    }
-
     let consumer =
         PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
     let system = system.read().await;
-    let stream = system.get_stream(&command.stream_id)?;
-    let topic = stream.get_topic(&command.topic_id)?;
-    system
-        .permissioner
-        .poll_messages(session.user_id, stream.stream_id, topic.topic_id)?;
-
     let messages = system
         .poll_messages(
+            session,
             consumer,
             &command.stream_id,
             &command.topic_id,
-            command.strategy,
-            command.count,
-            command.auto_commit,
+            PollingArgs::new(command.strategy, command.count, command.auto_commit),
         )
         .await?;
     let messages = mapper::map_polled_messages(&messages);

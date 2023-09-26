@@ -3,6 +3,8 @@ use crate::http::jwt::Identity;
 use crate::http::state::AppState;
 use crate::streaming;
 use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::session::Session;
+use crate::streaming::systems::messages::PollingArgs;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -32,20 +34,13 @@ async fn poll_messages(
     let partition_id = query.partition_id.unwrap_or(0);
     let consumer = PollingConsumer::Consumer(query.consumer.id, partition_id);
     let system = state.system.read().await;
-    let stream = system.get_stream(&query.stream_id)?;
-    let topic = stream.get_topic(&query.topic_id)?;
-    system
-        .permissioner
-        .poll_messages(identity.user_id, stream.stream_id, topic.topic_id)?;
-
     let polled_messages = system
         .poll_messages(
+            &Session::stateless(identity.user_id),
             consumer,
             &query.stream_id,
             &query.topic_id,
-            query.strategy,
-            query.count,
-            query.auto_commit,
+            PollingArgs::new(query.strategy, query.count, query.auto_commit),
         )
         .await?;
     Ok(Json(polled_messages))
@@ -63,13 +58,9 @@ async fn send_messages(
     command.validate()?;
 
     let system = state.system.read().await;
-    let stream = system.get_stream(&command.stream_id)?;
-    let topic = stream.get_topic(&command.topic_id)?;
-    system
-        .permissioner
-        .append_messages(identity.user_id, stream.stream_id, topic.topic_id)?;
     system
         .append_messages(
+            &Session::stateless(identity.user_id),
             &command.stream_id,
             &command.topic_id,
             &command.partitioning,

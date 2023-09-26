@@ -2,6 +2,7 @@ use crate::http::error::CustomError;
 use crate::http::jwt::Identity;
 use crate::http::mapper;
 use crate::http::state::AppState;
+use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -31,11 +32,7 @@ async fn get_topic(
     let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let stream = system.get_stream(&stream_id)?;
-    let topic = stream.get_topic(&topic_id)?;
-    system
-        .permissioner
-        .get_topic(identity.user_id, stream.stream_id, topic.topic_id)?;
+    let topic = system.find_topic(&Session::stateless(identity.user_id), &stream_id, &topic_id)?;
     let topic = mapper::map_topic(topic).await;
     Ok(Json(topic))
 }
@@ -45,13 +42,9 @@ async fn get_topics(
     Extension(identity): Extension<Identity>,
     Path(stream_id): Path<String>,
 ) -> Result<Json<Vec<Topic>>, CustomError> {
-    let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let stream = system.get_stream(&stream_id)?;
-    system
-        .permissioner
-        .get_topics(identity.user_id, stream.stream_id)?;
-    let topics = stream.get_topics();
+    let system = state.system.read().await;
+    let topics = system.find_topics(&Session::stateless(identity.user_id), &stream_id)?;
     let topics = mapper::map_topics(&topics).await;
     Ok(Json(topics))
 }
@@ -64,17 +57,10 @@ async fn create_topic(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
-    {
-        let system = state.system.read().await;
-        let stream = system.get_stream(&command.stream_id)?;
-        system
-            .permissioner
-            .create_topic(identity.user_id, stream.stream_id)?;
-    }
-
     let mut system = state.system.write().await;
     system
         .create_topic(
+            &Session::stateless(identity.user_id),
             &command.stream_id,
             command.topic_id,
             &command.name,
@@ -94,19 +80,15 @@ async fn update_topic(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    {
-        let system = state.system.read().await;
-        let stream = system.get_stream(&command.stream_id)?;
-        let topic = stream.get_topic(&command.topic_id)?;
-        system
-            .permissioner
-            .update_topic(identity.user_id, stream.stream_id, topic.topic_id)?;
-    }
-
     let mut system = state.system.write().await;
     system
-        .get_stream_mut(&command.stream_id)?
-        .update_topic(&command.topic_id, &command.name, command.message_expiry)
+        .update_topic(
+            &Session::stateless(identity.user_id),
+            &command.stream_id,
+            &command.topic_id,
+            &command.name,
+            command.message_expiry,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -118,16 +100,9 @@ async fn delete_topic(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    {
-        let system = state.system.read().await;
-        let stream = system.get_stream(&stream_id)?;
-        let topic = stream.get_topic(&topic_id)?;
-        system
-            .permissioner
-            .delete_topic(identity.user_id, stream.stream_id, topic.topic_id)?;
-    }
-
     let mut system = state.system.write().await;
-    system.delete_topic(&stream_id, &topic_id).await?;
+    system
+        .delete_topic(&Session::stateless(identity.user_id), &stream_id, &topic_id)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }

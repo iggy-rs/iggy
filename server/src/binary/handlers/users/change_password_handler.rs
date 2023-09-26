@@ -15,17 +15,10 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    if !session.is_authenticated() {
-        return Err(Error::Unauthenticated);
-    }
-
     let system = system.read().await;
-    let user = system.get_user(&command.user_id).await?;
-    if user.id != session.user_id {
-        system.permissioner.change_password(session.user_id)?;
-    }
     system
         .change_password(
+            session,
             &command.user_id,
             &command.current_password,
             &command.new_password,

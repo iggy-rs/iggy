@@ -15,22 +15,9 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    if !session.is_authenticated() {
-        return Err(Error::Unauthenticated);
-    }
-
-    {
-        let system = system.read().await;
-        let stream = system.get_stream(&command.stream_id)?;
-        let topic = stream.get_topic(&command.topic_id)?;
-        system
-            .permissioner
-            .delete_topic(session.user_id, stream.stream_id, topic.topic_id)?;
-    }
-
     let mut system = system.write().await;
     system
-        .delete_topic(&command.stream_id, &command.topic_id)
+        .delete_topic(session, &command.stream_id, &command.topic_id)
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

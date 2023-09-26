@@ -2,6 +2,7 @@ use crate::http::error::CustomError;
 use crate::http::jwt::Identity;
 use crate::http::mapper;
 use crate::http::state::AppState;
+use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{get, post, put};
@@ -39,10 +40,9 @@ async fn get_user(
 ) -> Result<Json<UserInfoDetails>, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
     let system = state.system.read().await;
-    let user = system.get_user(&user_id).await?;
-    if user.id != identity.user_id {
-        system.permissioner.get_user(identity.user_id)?;
-    }
+    let user = system
+        .find_user(&Session::stateless(identity.user_id), &user_id)
+        .await?;
     let user = mapper::map_user(&user);
     Ok(Json(user))
 }
@@ -52,8 +52,9 @@ async fn get_users(
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<UserInfo>>, CustomError> {
     let system = state.system.read().await;
-    system.permissioner.get_users(identity.user_id)?;
-    let users = system.get_users().await?;
+    let users = system
+        .get_users(&Session::stateless(identity.user_id))
+        .await?;
     let users = mapper::map_users(&users);
     Ok(Json(users))
 }
@@ -65,9 +66,9 @@ async fn create_user(
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
     let system = state.system.read().await;
-    system.permissioner.create_user(identity.user_id)?;
     system
         .create_user(
+            &Session::stateless(identity.user_id),
             &command.username,
             &command.password,
             command.permissions.clone(),
@@ -85,9 +86,13 @@ async fn update_user(
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
     let system = state.system.read().await;
-    system.permissioner.update_user(identity.user_id)?;
     system
-        .update_user(&command.user_id, command.username, command.status)
+        .update_user(
+            &Session::stateless(identity.user_id),
+            &command.user_id,
+            command.username,
+            command.status,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -101,9 +106,12 @@ async fn update_permissions(
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
     let mut system = state.system.write().await;
-    system.permissioner.update_permissions(identity.user_id)?;
     system
-        .update_permissions(&command.user_id, command.permissions)
+        .update_permissions(
+            &Session::stateless(identity.user_id),
+            &command.user_id,
+            command.permissions,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -117,12 +125,9 @@ async fn change_password(
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
     let system = state.system.read().await;
-    let user = system.get_user(&command.user_id).await?;
-    if user.id != identity.user_id {
-        system.permissioner.change_password(identity.user_id)?;
-    }
     system
         .change_password(
+            &Session::stateless(identity.user_id),
             &command.user_id,
             &command.current_password,
             &command.new_password,
@@ -138,8 +143,9 @@ async fn delete_user(
 ) -> Result<StatusCode, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
     let mut system = state.system.write().await;
-    system.permissioner.delete_user(identity.user_id)?;
-    system.delete_user(&user_id).await?;
+    system
+        .delete_user(&Session::stateless(identity.user_id), &user_id)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -165,6 +171,8 @@ async fn logout_user(
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
     let system = state.system.read().await;
-    system.logout_user(identity.user_id, None).await?;
+    system
+        .logout_user(&Session::stateless(identity.user_id))
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }

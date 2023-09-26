@@ -15,21 +15,10 @@ pub async fn handle(
     system: Arc<RwLock<System>>,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    if !session.is_authenticated() {
-        return Err(Error::Unauthenticated);
-    }
-
-    {
-        let system = system.read().await;
-        let stream = system.get_stream(&command.stream_id)?;
-        system
-            .permissioner
-            .create_topic(session.user_id, stream.stream_id)?;
-    }
-
     let mut system = system.write().await;
     system
         .create_topic(
+            session,
             &command.stream_id,
             command.topic_id,
             &command.name,

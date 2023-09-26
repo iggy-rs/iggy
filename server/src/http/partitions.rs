@@ -1,6 +1,7 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::Identity;
 use crate::http::state::AppState;
+use crate::streaming::session::Session;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::post;
@@ -26,18 +27,10 @@ async fn create_partitions(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    {
-        let system = state.system.read().await;
-        let stream = system.get_stream(&command.stream_id)?;
-        let topic = stream.get_topic(&command.topic_id)?;
-        system
-            .permissioner
-            .create_partitons(identity.user_id, stream.stream_id, topic.topic_id)?;
-    }
-
     let mut system = state.system.write().await;
     system
         .create_partitions(
+            &Session::stateless(identity.user_id),
             &command.stream_id,
             &command.topic_id,
             command.partitions_count,
@@ -55,20 +48,14 @@ async fn delete_partitions(
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
-    {
-        let system = state.system.read().await;
-        let stream = system.get_stream(&query.stream_id)?;
-        let topic = stream.get_topic(&query.topic_id)?;
-        system.permissioner.delete_partitions(
-            identity.user_id,
-            stream.stream_id,
-            topic.topic_id,
-        )?;
-    }
-
     let mut system = state.system.write().await;
     system
-        .delete_partitions(&query.stream_id, &query.topic_id, query.partitions_count)
+        .delete_partitions(
+            &Session::stateless(identity.user_id),
+            &query.stream_id,
+            &query.topic_id,
+            query.partitions_count,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

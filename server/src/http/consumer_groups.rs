@@ -2,6 +2,7 @@ use crate::http::error::CustomError;
 use crate::http::jwt::Identity;
 use crate::http::mapper;
 use crate::http::state::AppState;
+use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -27,15 +28,15 @@ async fn get_consumer_group(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, u32)>,
 ) -> Result<Json<ConsumerGroupDetails>, CustomError> {
-    let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let stream = system.get_stream(&stream_id)?;
-    let topic = stream.get_topic(&topic_id)?;
-    system
-        .permissioner
-        .get_consumer_group(identity.user_id, stream.stream_id, topic.topic_id)?;
-    let consumer_group = topic.get_consumer_group(consumer_group_id)?;
+    let system = state.system.read().await;
+    let consumer_group = system.get_consumer_group(
+        &Session::stateless(identity.user_id),
+        &stream_id,
+        &topic_id,
+        consumer_group_id,
+    )?;
     let consumer_group = consumer_group.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;
     Ok(Json(consumer_group))
@@ -46,15 +47,12 @@ async fn get_consumer_groups(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
 ) -> Result<Json<Vec<ConsumerGroup>>, CustomError> {
-    let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let stream = system.get_stream(&stream_id)?;
-    let topic = stream.get_topic(&topic_id)?;
-    system
-        .permissioner
-        .get_consumer_groups(identity.user_id, stream.stream_id, topic.topic_id)?;
-    let consumer_groups = mapper::map_consumer_groups(&topic.get_consumer_groups()).await;
+    let system = state.system.read().await;
+    let consumer_groups =
+        system.get_consumer_groups(&Session::stateless(identity.user_id), &stream_id, &topic_id)?;
+    let consumer_groups = mapper::map_consumer_groups(&consumer_groups).await;
     Ok(Json(consumer_groups))
 }
 
@@ -67,20 +65,10 @@ async fn create_consumer_group(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    {
-        let system = state.system.read().await;
-        let stream = system.get_stream(&command.stream_id)?;
-        let topic = stream.get_topic(&command.topic_id)?;
-        system.permissioner.create_consumer_group(
-            identity.user_id,
-            stream.stream_id,
-            topic.topic_id,
-        )?;
-    }
-
     let mut system = state.system.write().await;
     system
         .create_consumer_group(
+            &Session::stateless(identity.user_id),
             &command.stream_id,
             &command.topic_id,
             command.consumer_group_id,
@@ -96,20 +84,14 @@ async fn delete_consumer_group(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    {
-        let system = state.system.read().await;
-        let stream = system.get_stream(&stream_id)?;
-        let topic = stream.get_topic(&topic_id)?;
-        system.permissioner.delete_consumer_group(
-            identity.user_id,
-            stream.stream_id,
-            topic.topic_id,
-        )?;
-    }
-
     let mut system = state.system.write().await;
     system
-        .delete_consumer_group(&stream_id, &topic_id, consumer_group_id)
+        .delete_consumer_group(
+            &Session::stateless(identity.user_id),
+            &stream_id,
+            &topic_id,
+            consumer_group_id,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -75,7 +75,8 @@ max_size_megabytes = 512
 retention_days = 7
 
 [system.cache]
-messages_amount = 1_048_576
+enabled = true
+size = "4 GB"
 
 [system.encryption]
 enabled = false

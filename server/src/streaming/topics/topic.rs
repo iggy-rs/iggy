@@ -17,7 +17,7 @@ pub struct Topic {
     pub path: String,
     pub partitions_path: String,
     pub(crate) config: Arc<SystemConfig>,
-    pub(crate) partitions: HashMap<u32, RwLock<Partition>>,
+    pub(crate) partitions: HashMap<u32, Arc<RwLock<Partition>>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
     pub(crate) current_partition_id: AtomicU32,
@@ -80,6 +80,21 @@ impl Topic {
             size_bytes += partition.get_size_bytes();
         }
         size_bytes
+    }
+
+    pub fn get_partitions(&self) -> Vec<Arc<RwLock<Partition>>> {
+        self.partitions.values().map(Arc::clone).collect()
+    }
+
+    pub fn get_partition(&self, partition_id: u32) -> Result<Arc<RwLock<Partition>>, Error> {
+        match self.partitions.get(&partition_id) {
+            Some(partition_arc) => Ok(partition_arc.clone()),
+            None => Err(Error::PartitionNotFound(
+                partition_id,
+                self.topic_id,
+                self.stream_id,
+            )),
+        }
     }
 
     pub fn get_consumer_group_path(&self, id: u32) -> String {

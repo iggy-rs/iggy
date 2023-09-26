@@ -6,7 +6,6 @@ use iggy::error::Error;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
 use iggy::models::messages::Message;
-use ringbuffer::RingBuffer;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use tracing::trace;
@@ -135,8 +134,7 @@ impl Topic {
     }
 
     pub(crate) async fn load_messages_to_cache(&mut self) -> Result<(), Error> {
-        let messages_buffer_size = self.config.cache.messages_amount as u64;
-        if messages_buffer_size == 0 {
+        if !self.config.cache.enabled {
             return Ok(());
         }
 
@@ -151,11 +149,7 @@ impl Topic {
             }
 
             let end_offset = partition.segments.last().unwrap().current_offset;
-            let start_offset = if end_offset + 1 >= messages_buffer_size {
-                end_offset + 1 - messages_buffer_size
-            } else {
-                0
-            };
+            let start_offset = 0;
 
             let messages_count = (end_offset - start_offset + 1) as u32;
             trace!(
@@ -172,10 +166,9 @@ impl Topic {
                 .get_messages_by_offset(start_offset, messages_count)
                 .await?;
 
-            if partition.messages.is_some() {
-                let partition_messages = partition.messages.as_mut().unwrap();
+            if let Some(cache) = &mut partition.cache {
                 for message in messages {
-                    partition_messages.push(message);
+                    cache.push_safe(message);
                 }
             }
 
@@ -251,7 +244,7 @@ mod tests {
         assert_eq!(partitions.len(), partitions_count as usize);
         for partition in partitions {
             let partition = partition.read().await;
-            let messages = partition.messages.as_ref().unwrap().to_vec();
+            let messages = partition.cache.as_ref().unwrap().to_vec();
             if partition.partition_id == partition_id {
                 assert_eq!(messages.len() as u32, messages_count);
             } else {
@@ -288,7 +281,7 @@ mod tests {
         assert_eq!(partitions.len(), partitions_count as usize);
         for partition in partitions {
             let partition = partition.read().await;
-            let messages = partition.messages.as_ref().unwrap().to_vec();
+            let messages = partition.cache.as_ref().unwrap().to_vec();
             read_messages_count += messages.len();
             assert!(messages.len() < messages_count as usize);
         }

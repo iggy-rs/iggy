@@ -127,7 +127,7 @@ async fn should_persist_and_load_segment_with_messages() {
     let messages_count = 10;
     for i in 0..messages_count {
         let message = create_message(i, "test", TimeStamp::now().to_micros());
-        segment.append_message(Arc::new(message)).await.unwrap();
+        segment.append_messages(&[Arc::new(message)]).await.unwrap();
     }
 
     segment
@@ -188,7 +188,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
         expired_timestamp += 1;
-        segment.append_message(Arc::new(message)).await.unwrap();
+        segment.append_messages(&[Arc::new(message)]).await.unwrap();
     }
 
     segment
@@ -237,11 +237,11 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let not_expired_message = create_message(1, "test", not_expired_timestamp);
 
     segment
-        .append_message(Arc::new(expired_message))
+        .append_messages(&[Arc::new(expired_message)])
         .await
         .unwrap();
     segment
-        .append_message(Arc::new(not_expired_message))
+        .append_messages(&[Arc::new(not_expired_message)])
         .await
         .unwrap();
     segment

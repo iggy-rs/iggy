@@ -6,5 +6,5 @@ pub mod quic;
 pub mod tcp;
 
 pub mod defaults;
-pub mod utils;
+pub mod resource_quota;
 pub mod validators;

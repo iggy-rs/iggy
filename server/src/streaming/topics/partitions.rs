@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::Error;
@@ -10,25 +12,8 @@ impl Topic {
         !self.partitions.is_empty()
     }
 
-    pub fn get_partitions(&self) -> Vec<&RwLock<Partition>> {
-        self.partitions.values().collect()
-    }
-
     pub fn get_partitions_count(&self) -> u32 {
         self.partitions.len() as u32
-    }
-
-    pub fn get_partition(&self, partition_id: u32) -> Result<&RwLock<Partition>, Error> {
-        let partition = self.partitions.get(&partition_id);
-        if partition.is_none() {
-            return Err(Error::PartitionNotFound(
-                partition_id,
-                self.topic_id,
-                self.stream_id,
-            ));
-        }
-
-        Ok(partition.unwrap())
     }
 
     pub fn add_partitions(&mut self, count: u32) -> Result<Vec<u32>, Error> {
@@ -52,7 +37,8 @@ impl Topic {
                 self.storage.clone(),
                 self.message_expiry,
             );
-            self.partitions.insert(partition_id, RwLock::new(partition));
+            self.partitions
+                .insert(partition_id, Arc::new(RwLock::new(partition)));
             partition_ids.push(partition_id)
         }
 

@@ -130,7 +130,8 @@ impl Default for LoggingConfig {
 impl Default for CacheConfig {
     fn default() -> CacheConfig {
         CacheConfig {
-            messages_amount: 1024,
+            enabled: true,
+            size: "2 GB".parse().unwrap(),
         }
     }
 }

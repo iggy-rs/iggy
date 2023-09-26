@@ -268,7 +268,7 @@ impl Storage<Topic> for FileTopicStorage {
         for partition in loaded_partitions.lock().await.drain(..) {
             topic
                 .partitions
-                .insert(partition.partition_id, RwLock::new(partition));
+                .insert(partition.partition_id, Arc::new(RwLock::new(partition)));
         }
 
         self.load_consumer_groups(topic).await?;

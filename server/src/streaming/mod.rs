@@ -1,3 +1,4 @@
+pub mod cache;
 pub mod clients;
 pub mod diagnostics;
 pub mod models;

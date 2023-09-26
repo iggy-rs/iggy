@@ -84,7 +84,8 @@
       "retention_days": 7
     },
     "cache": {
-      "messages_amount": 1048576
+      "enabled": true,
+      "size": "4 GB"
     },
     "encryption": {
       "enabled": false,

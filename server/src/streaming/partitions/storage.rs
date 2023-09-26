@@ -139,7 +139,7 @@ impl Storage<Partition> for FilePartitionStorage {
                 let partition_message_ids = partition.message_ids.as_mut().unwrap();
                 let message_ids = segment.storage.segment.load_message_ids(&segment).await?;
                 for message_id in message_ids {
-                    partition_message_ids.insert(message_id, true);
+                    partition_message_ids.insert(message_id);
                 }
                 info!("Loaded: {} unique message IDs for partition with ID: {} and segment with start offset: {}...", partition_message_ids.len(), partition.partition_id, segment.start_offset);
             }

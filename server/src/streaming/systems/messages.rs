@@ -1,3 +1,4 @@
+use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
@@ -102,6 +103,9 @@ impl System {
             .append_messages(session.user_id, stream.stream_id, topic.topic_id)?;
 
         let mut received_messages = Vec::with_capacity(messages.len());
+        let mut batch_size_bytes = 0u64;
+
+        // For large batches it would be better to use par_iter() from rayon.
         for message in messages {
             let encrypted_message;
             let message = match self.encryptor {
@@ -117,9 +121,17 @@ impl System {
                 }
                 None => message,
             };
+            batch_size_bytes += message.get_size_bytes() as u64;
             received_messages.push(Message::from_message(message));
         }
 
+        // If there's enough space in cache, do nothing.
+        // Otherwise, clean the cache.
+        if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
+            if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
+                self.clean_cache(batch_size_bytes).await;
+            }
+        }
         topic
             .append_messages(partitioning, received_messages)
             .await?;

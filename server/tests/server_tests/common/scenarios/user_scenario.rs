@@ -1,4 +1,4 @@
-use crate::server_tests::common::{ClientFactory, TestServer};
+use crate::server_tests::common::{ClientFactory, TestServer, ROOT_PASSWORD, ROOT_USERNAME};
 use iggy::client::{SystemClient, UserClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::identifier::Identifier;
@@ -15,13 +15,8 @@ use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 
-const ROOT_USERNAME: &str = "iggy";
-const ROOT_PASSWORD: &str = "iggy";
-
 pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();
-    test_server.enable_authentication();
-    test_server.enable_authorization();
     test_server.start();
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);

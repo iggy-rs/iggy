@@ -50,14 +50,6 @@ impl System {
 
     pub fn create(config: Arc<SystemConfig>, storage: SystemStorage) -> System {
         info!(
-            "Authentication is {}.",
-            Self::map_toggle_str(config.user.authentication_enabled)
-        );
-        info!(
-            "Authorization is {}.",
-            Self::map_toggle_str(config.user.authorization_enabled)
-        );
-        info!(
             "Server-side encryption is {}.",
             Self::map_toggle_str(config.encryption.enabled)
         );

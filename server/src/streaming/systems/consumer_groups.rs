@@ -14,7 +14,6 @@ impl System {
         consumer_group_id: u32,
     ) -> Result<&RwLock<ConsumerGroup>, Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
@@ -30,7 +29,6 @@ impl System {
         topic_id: &Identifier,
     ) -> Result<Vec<&RwLock<ConsumerGroup>>, Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
@@ -47,7 +45,6 @@ impl System {
         consumer_group_id: u32,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
@@ -71,7 +68,6 @@ impl System {
         consumer_group_id: u32,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         let stream_id_value;
         let topic_id_value;
         {
@@ -118,7 +114,6 @@ impl System {
         consumer_group_id: u32,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         let stream_id_value;
         let topic_id_value;
         {
@@ -161,7 +156,6 @@ impl System {
         consumer_group_id: u32,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;

@@ -5,7 +5,12 @@ pub mod tcp;
 
 use assert_cmd::prelude::CommandCargoExt;
 use async_trait::async_trait;
-use iggy::client::Client;
+use iggy::client::{Client, UserClient};
+use iggy::clients::client::IggyClient;
+use iggy::models::permissions::{GlobalPermissions, Permissions};
+use iggy::models::user_status::UserStatus::Active;
+use iggy::users::create_user::CreateUser;
+use iggy::users::login_user::LoginUser;
 use std::collections::HashMap;
 use std::fs;
 use std::process::{Child, Command};
@@ -14,8 +19,9 @@ use std::time::Duration;
 use uuid::Uuid;
 
 const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
-const AUTHENTICATION_ENABLED_ENV_VAR: &str = "IGGY_SYSTEM_USER_AUTHENTICATION_ENABLED";
-const AUTHORIZATION_ENABLED_ENV_VAR: &str = "IGGY_SYSTEM_USER_AUTHORIZATION_ENABLED";
+const ROOT_USERNAME: &str = "iggy";
+const ROOT_PASSWORD: &str = "iggy";
+const USER_PASSWORD: &str = "secret";
 
 #[async_trait]
 pub trait ClientFactory: Sync + Send {
@@ -101,24 +107,6 @@ impl TestServer {
         }
     }
 
-    pub fn enable_authentication(&mut self) {
-        self.set_env_var(AUTHENTICATION_ENABLED_ENV_VAR, "true")
-    }
-
-    pub fn enable_authorization(&mut self) {
-        self.set_env_var(AUTHORIZATION_ENABLED_ENV_VAR, "true")
-    }
-
-    fn set_env_var(&mut self, key: &str, value: &str) {
-        if let Some(env) = &mut self.envs {
-            env.insert(key.to_string(), value.to_string());
-        } else {
-            let mut env = HashMap::new();
-            env.insert(key.to_string(), value.to_string());
-            self.envs = Some(env);
-        }
-    }
-
     pub fn get_random_path() -> String {
         format!("local_data_{}", Uuid::new_v4().to_u128_le())
     }
@@ -134,4 +122,50 @@ impl Default for TestServer {
     fn default() -> Self {
         TestServer::new(None)
     }
+}
+
+async fn create_user(client: &IggyClient, username: &str) {
+    client
+        .create_user(&CreateUser {
+            username: username.to_string(),
+            password: USER_PASSWORD.to_string(),
+            status: Active,
+            permissions: Some(Permissions {
+                global: GlobalPermissions {
+                    manage_servers: true,
+                    read_servers: true,
+                    manage_users: true,
+                    read_users: true,
+                    manage_streams: true,
+                    read_streams: true,
+                    manage_topics: true,
+                    read_topics: true,
+                    poll_messages: true,
+                    send_messages: true,
+                },
+                streams: None,
+            }),
+        })
+        .await
+        .unwrap();
+}
+
+async fn login_root(client: &IggyClient) {
+    client
+        .login_user(&LoginUser {
+            username: ROOT_USERNAME.to_string(),
+            password: ROOT_PASSWORD.to_string(),
+        })
+        .await
+        .unwrap();
+}
+
+async fn login_user(client: &IggyClient, username: &str) {
+    client
+        .login_user(&LoginUser {
+            username: username.to_string(),
+            password: USER_PASSWORD.to_string(),
+        })
+        .await
+        .unwrap();
 }

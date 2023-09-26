@@ -12,7 +12,6 @@ impl System {
         topic_id: &Identifier,
     ) -> Result<&Topic, Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
@@ -26,7 +25,6 @@ impl System {
         stream_id: &Identifier,
     ) -> Result<Vec<&Topic>, Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(stream_id)?;
         self.permissioner
             .get_topics(session.user_id, stream.stream_id)?;
@@ -43,7 +41,6 @@ impl System {
         message_expiry: Option<u32>,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         {
             let stream = self.get_stream(stream_id)?;
             self.permissioner
@@ -68,7 +65,6 @@ impl System {
         message_expiry: Option<u32>,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
@@ -89,7 +85,6 @@ impl System {
         topic_id: &Identifier,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         let stream_id_value;
         {
             let stream = self.get_stream(stream_id)?;

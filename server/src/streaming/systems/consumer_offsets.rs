@@ -15,7 +15,6 @@ impl System {
         offset: u64,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner.store_consumer_offset(
@@ -35,7 +34,6 @@ impl System {
         topic_id: &Identifier,
     ) -> Result<ConsumerOffsetInfo, Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner

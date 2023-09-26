@@ -1,8 +1,8 @@
-use crate::server_tests::common::{ClientFactory, TestServer};
+use crate::server_tests::common::{ClientFactory, TestServer, ROOT_PASSWORD, ROOT_USERNAME};
 use bytes::Bytes;
 use iggy::client::{
     ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient, StreamClient,
-    SystemClient, TopicClient,
+    SystemClient, TopicClient, UserClient,
 };
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::{Consumer, ConsumerKind};
@@ -34,6 +34,7 @@ use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
+use iggy::users::login_user::LoginUser;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -52,9 +53,18 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
-    // 1. Ping server
+    // 0. Ping server
     let ping = Ping {};
     client.ping(&ping).await.unwrap();
+
+    // 1. Login as root user
+    client
+        .login_user(&LoginUser {
+            username: ROOT_USERNAME.to_string(),
+            password: ROOT_PASSWORD.to_string(),
+        })
+        .await
+        .unwrap();
 
     // 2. Ensure that streams do not exist
     let streams = client.get_streams(&GetStreams {}).await.unwrap();

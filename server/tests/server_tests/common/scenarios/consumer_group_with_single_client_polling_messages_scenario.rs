@@ -1,4 +1,4 @@
-use crate::server_tests::common::{ClientFactory, TestServer};
+use crate::server_tests::common::{login_root, ClientFactory, TestServer};
 use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer;
@@ -27,6 +27,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     test_server.start();
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+    login_root(&client).await;
     init_system(&client).await;
     execute_using_messages_key_key(&client).await;
     client

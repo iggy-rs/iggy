@@ -90,10 +90,6 @@
       "enabled": false,
       "key": ""
     },
-    "user": {
-      "authentication_enabled": false,
-      "authorization_enabled": false
-    },
     "stream": {
       "path": "streams"
     },

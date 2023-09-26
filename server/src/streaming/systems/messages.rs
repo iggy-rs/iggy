@@ -22,7 +22,6 @@ impl System {
         args: PollingArgs,
     ) -> Result<PolledMessages, Error> {
         self.ensure_authenticated(session)?;
-
         if args.count == 0 {
             return Err(Error::InvalidMessagesCount);
         }
@@ -97,7 +96,6 @@ impl System {
         messages: &Vec<send_messages::Message>,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner

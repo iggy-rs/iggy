@@ -84,7 +84,6 @@ impl System {
 
     pub fn find_streams(&self, session: &Session) -> Result<Vec<&Stream>, Error> {
         self.ensure_authenticated(session)?;
-
         self.permissioner.get_streams(session.user_id)?;
         Ok(self.get_streams())
     }
@@ -95,7 +94,6 @@ impl System {
         identifier: &Identifier,
     ) -> Result<&Stream, Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(identifier)?;
         self.permissioner
             .get_stream(session.user_id, stream.stream_id)?;
@@ -164,7 +162,6 @@ impl System {
         name: &str,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         self.permissioner.create_stream(session.user_id)?;
         if self.streams.contains_key(&stream_id) {
             return Err(Error::StreamIdAlreadyExists(stream_id));
@@ -191,7 +188,6 @@ impl System {
         name: &str,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         let stream_id;
         {
             let stream = self.get_stream(id)?;
@@ -228,7 +224,6 @@ impl System {
         id: &Identifier,
     ) -> Result<u32, Error> {
         self.ensure_authenticated(session)?;
-
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
         self.permissioner
@@ -262,6 +257,7 @@ mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
+    use crate::streaming::users::user::User;
 
     #[tokio::test]
     async fn should_get_stream_by_id_and_name() {
@@ -270,7 +266,9 @@ mod tests {
         let config = Arc::new(SystemConfig::default());
         let storage = get_test_system_storage();
         let mut system = System::create(config, storage);
-        let session = Session::new(1, 1);
+        let root = User::root();
+        let session = Session::new(1, root.id);
+        system.permissioner.init_permissions_for_user(root);
         system
             .create_stream(&session, stream_id, stream_name)
             .await

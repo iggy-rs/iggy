@@ -1,4 +1,4 @@
-use crate::server_tests::common::{ClientFactory, TestServer};
+use crate::server_tests::common::{create_user, login_root, login_user, ClientFactory, TestServer};
 use iggy::client::{ConsumerGroupClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
@@ -25,6 +25,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let client1 = create_client(client_factory).await;
     let client2 = create_client(client_factory).await;
     let client3 = create_client(client_factory).await;
+
+    login_root(&system_client).await;
 
     // 1. Create the stream
     let create_stream = CreateStream {
@@ -54,7 +56,17 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 4. Join the consumer group by client 1
+    // 4. Create the users for all clients
+    create_user(&system_client, "user1").await;
+    create_user(&system_client, "user2").await;
+    create_user(&system_client, "user3").await;
+
+    // 5. Login all the clients
+    login_user(&client1, "user1").await;
+    login_user(&client2, "user2").await;
+    login_user(&client3, "user3").await;
+
+    // 5. Join the consumer group by client 1
     join_consumer_group(&client1).await;
 
     // 5. Get client1 info and validate that it contains the single consumer group

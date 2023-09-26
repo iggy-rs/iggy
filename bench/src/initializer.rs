@@ -1,5 +1,8 @@
 use crate::args::Args;
+use crate::benchmarks::login_root;
 use crate::client_factory::ClientFactory;
+use iggy::client::{StreamClient, TopicClient};
+use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::error::Error;
 use iggy::identifier::Identifier;
 use iggy::streams::create_stream::CreateStream;
@@ -16,6 +19,8 @@ pub async fn init_streams(
     let topic_id: u32 = 1;
     let partitions_count: u32 = 1;
     let client = client_factory.create_client(args.clone()).await;
+    let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+    login_root(&client).await;
     let streams = client.get_streams(&GetStreams {}).await?;
     for i in 1..=args.streams {
         let stream_id = start_stream_id + i;

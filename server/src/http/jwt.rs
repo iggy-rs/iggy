@@ -63,15 +63,6 @@ pub async fn jwt_auth<T>(
     Ok(next.run(request).await)
 }
 
-pub async fn no_jwt_auth<T>(
-    mut request: Request<T>,
-    next: Next<T>,
-) -> Result<Response, StatusCode> {
-    // If the authentication is disabled, you can do anything - thus the root ID.
-    request.extensions_mut().insert(Identity { user_id: 1 });
-    Ok(next.run(request).await)
-}
-
 pub struct JwtManager {
     algorithm: Algorithm,
     audience: String,

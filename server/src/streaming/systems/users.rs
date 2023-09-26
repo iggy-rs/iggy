@@ -29,16 +29,12 @@ impl System {
         let current_user_id = users.iter().map(|user| user.id).max().unwrap_or(1);
         USER_ID.store(current_user_id + 1, Ordering::SeqCst);
         self.permissioner.init(users);
-        if self.config.user.authorization_enabled {
-            self.permissioner.enable()
-        }
         info!("Initialized {} user(s).", users_count);
         Ok(())
     }
 
     pub async fn find_user(&self, session: &Session, user_id: &Identifier) -> Result<User, Error> {
         self.ensure_authenticated(session)?;
-
         let user = self.get_user(user_id).await?;
         if user.id != session.user_id {
             self.permissioner.get_user(session.user_id)?;
@@ -66,20 +62,18 @@ impl System {
 
     pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, Error> {
         self.ensure_authenticated(session)?;
-
         self.permissioner.get_users(session.user_id)?;
         self.storage.user.load_all().await
     }
 
     pub async fn create_user(
-        &self,
+        &mut self,
         session: &Session,
         username: &str,
         password: &str,
         permissions: Option<Permissions>,
-    ) -> Result<User, Error> {
+    ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         self.permissioner.create_user(session.user_id)?;
         let username = text::to_lowercase_non_whitespace(username);
         if self.storage.user.load_by_username(&username).await.is_ok() {
@@ -90,9 +84,10 @@ impl System {
         info!("Creating user: {username} with ID: {user_id}...");
         let user = User::new(user_id, &username, password, permissions);
         self.storage.user.save(&user).await?;
+        self.permissioner.init_permissions_for_user(user);
         info!("Created user: {username} with ID: {user_id}.");
         self.metrics.increment_users(1);
-        Ok(user)
+        Ok(())
     }
 
     pub async fn delete_user(
@@ -101,7 +96,6 @@ impl System {
         user_id: &Identifier,
     ) -> Result<User, Error> {
         self.ensure_authenticated(session)?;
-
         self.permissioner.delete_user(session.user_id)?;
         let user = self.get_user(user_id).await?;
         if user.is_root() {
@@ -127,7 +121,6 @@ impl System {
         status: Option<UserStatus>,
     ) -> Result<User, Error> {
         self.ensure_authenticated(session)?;
-
         self.permissioner.update_user(session.user_id)?;
         let mut user = self.get_user(user_id).await?;
         if let Some(username) = username {
@@ -158,7 +151,6 @@ impl System {
         permissions: Option<Permissions>,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         self.permissioner.update_permissions(session.user_id)?;
         let mut user = self.get_user(user_id).await?;
         if user.is_root() {
@@ -189,7 +181,6 @@ impl System {
         new_password: &str,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-
         let mut user = self.get_user(user_id).await?;
         if user.id != session.user_id {
             self.permissioner.change_password(session.user_id)?;
@@ -251,8 +242,8 @@ impl System {
         let session = session.unwrap();
         if session.is_authenticated() {
             warn!(
-                "User with ID: {} was already authenticated, removing the previous session...",
-                session.user_id
+                "User: {} with ID: {} was already authenticated, removing the previous session...",
+                user.username, session.user_id
             );
             self.logout_user(session).await?;
         }
@@ -266,11 +257,7 @@ impl System {
     }
 
     pub async fn logout_user(&self, session: &Session) -> Result<(), Error> {
-        if !session.is_authenticated() || session.user_id == 0 {
-            warn!("Cannot logout the unauthenticated user (server is presumably running without the authentication).");
-            return Ok(());
-        }
-
+        self.ensure_authenticated(session)?;
         let user = self
             .get_user(&Identifier::numeric(session.user_id)?)
             .await?;

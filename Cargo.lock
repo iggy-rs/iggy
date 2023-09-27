@@ -1198,7 +1198,7 @@ dependencies = [
 
 [[package]]
 name = "iggy-cmd"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1206,6 +1206,7 @@ dependencies = [
  "comfy-table",
  "humantime",
  "iggy",
+ "passterm",
  "thiserror",
  "tokio",
  "tracing",
@@ -1649,6 +1650,16 @@ dependencies = [
  "redox_syscall 0.3.5",
  "smallvec",
  "windows-targets",
+]
+
+[[package]]
+name = "passterm"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6421520445baa36401ded73e4820ad3a3e04316a0eb1bdb13b94987739de5fa2"
+dependencies = [
+ "libc",
+ "windows-sys",
 ]
 
 [[package]]

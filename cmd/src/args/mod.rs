@@ -25,6 +25,14 @@ pub(crate) struct IggyConsoleArgs {
     /// Debug mode (verbose printing to given file)
     #[clap(short, long)]
     pub(crate) debug: Option<PathBuf>,
+
+    /// Iggy server username
+    #[clap(short, long)]
+    pub(crate) username: String,
+
+    /// Iggy server password
+    #[clap(short, long)]
+    pub(crate) password: Option<String>,
 }
 
 #[derive(Debug, Subcommand)]

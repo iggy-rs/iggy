@@ -71,6 +71,7 @@ For the detailed information about current progress, please refer to the [projec
 - [Go](https://github.com/iggy-rs/iggy-go-client)
 - [Node](https://github.com/iggy-rs/iggy-node-client)
 - [Python](https://github.com/iggy-rs/iggy-python-client)
+- [Java](https://github.com/iggy-rs/iggy-java-client)
 ---
 
 ### CLI
@@ -113,7 +114,7 @@ For the detailed documentation of the configuration file, please refer to the [c
 
 Build the project (the longer compilation time is due to [LTO](https://doc.rust-lang.org/rustc/linker-plugin-lto.html) enabled in release [profile](https://github.com/spetz/iggy/blob/master/Cargo.toml#L2)):
 
-`cargo build -r`
+`cargo build`
 
 Run the tests:
 
@@ -121,11 +122,11 @@ Run the tests:
 
 Start the server:
 
-`cargo r --bin iggy-server -r`
+`cargo r --bin iggy-server`
 
 Start the CLI (transports: `quic`, `tcp`, `http`):
 
-`cargo r --bin iggy-cli -r -- --transport tcp`
+`cargo r --bin iggy-cli -- --transport tcp`
 
 Authenticate yourself with the default credentials:
 
@@ -193,15 +194,15 @@ To see the detailed logs from the CLI/server, run it with `RUST_LOG=trace` envir
 
 ---
 
-### Samples
+### Examples
 
-You can find the sample consumer & producer applications under `samples` directory. The purpose of these apps is to showcase the usage of the client SDK. To find out more about building the applications, please refer to the [getting started](https://docs.iggy.rs/introduction/getting-started) guide.
+You can find the sample consumer & producer applications under `examples` directory. The purpose of these apps is to showcase the usage of the client SDK. To find out more about building the applications, please refer to the [getting started](https://docs.iggy.rs/introduction/getting-started) guide.
 
-To run the sample, first start the server with `cargo r --bin iggy-server` and then run the producer and consumer apps with `cargo r --bin message-envelope-producer-sample` and `cargo r --bin message-envelope-consumer-sample` respectively.
+To run the example, first start the server with `cargo r --bin iggy-server` and then run the producer and consumer apps with `cargo r --example message-envelope-producer` and `cargo r --example message-envelope-consumer` respectively.
 
-You might start multiple producers and consumers at the same time to see how the messages are being handled across multiple clients. Check the [Args](https://github.com/spetz/iggy/blob/master/samples/src/shared/args.rs) struct to see the available options, such as the transport protocol, stream, topic, partition, consumer ID, message size etc.
+You might start multiple producers and consumers at the same time to see how the messages are being handled across multiple clients. Check the [Args](https://github.com/spetz/iggy/blob/master/examples/src/shared/args.rs) struct to see the available options, such as the transport protocol, stream, topic, partition, consumer ID, message size etc.
 
-By default, the consumer will poll the messages using the `next` available offset with auto commit enabled, to store its offset on the server. With this approach, you can easily achieve at-most-once delivery.
+By default, the consumer will poll the messages using the `next` available offset with auto commit enabled, to store its offset on the server. With this approach, you can easily achieve *at-most-once* delivery.
 
 ![sample](assets/sample.png)
 
@@ -209,7 +210,7 @@ By default, the consumer will poll the messages using the `next` available offse
 
 ### Benchmarks
 
-To benchmark the project, first start the server and then run the benchmarking app:
+To benchmark the project, first start the server in release mode: `cargo r --bin iggy-server -r` and then run the benchmarking app:
 
 `cargo r --bin iggy-bench -r -- --tcp --test-send-messages --streams 10 --producers 10 --parallel-producer-streams --messages-per-batch 1000 --message-batches 1000 --message-size 1000`
 

@@ -1,4 +1,6 @@
 use clap::Parser;
+use examples::shared::args::Args;
+use examples::shared::system;
 use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
@@ -6,8 +8,6 @@ use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
-use samples::shared::args::Args;
-use samples::shared::system;
 use std::error::Error;
 use std::sync::Arc;
 use tracing::info;

@@ -1,14 +1,11 @@
-use anyhow::Result;
 use clap::Parser;
-use iggy::client::MessageClient;
+use examples::shared::args::Args;
+use examples::shared::system;
+use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::client::IggyClient;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
-use samples::shared::args::Args;
-use samples::shared::messages_generator::MessagesGenerator;
-use samples::shared::system;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -19,35 +16,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     info!(
-        "Message envelope producer has started, selected transport: {}",
+        "Basic producer has started, selected transport: {}",
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_raw_client(client_provider_config).await?;
-    let client = IggyClient::builder(client).build();
-    system::login_root(&client).await;
-    system::init_by_producer(&args, &client).await?;
-    produce_messages(&args, &client).await
+    let client = client.as_ref();
+    system::login_root(client).await;
+    system::init_by_producer(&args, client).await?;
+    produce_messages(&args, client).await
 }
 
-async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
+async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {
     info!(
         "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.stream_id, args.topic_id, args.partition_id, args.interval
     );
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
-    let mut message_generator = MessagesGenerator::new();
+    let mut current_id = 0u64;
     loop {
         let mut messages = Vec::new();
-        let mut serializable_messages = Vec::new();
+        let mut sent_messages = Vec::new();
         for _ in 0..args.messages_per_batch {
-            let serializable_message = message_generator.generate();
-            // You can send the different message types to the same partition, or stick to the single type.
-            let json_envelope = serializable_message.to_json_envelope();
-            let message = Message::from_str(&json_envelope)?;
+            current_id += 1;
+            let payload = format!("message-{current_id}");
+            let message = Message::from_str(&payload)?;
             messages.push(message);
-            // This is used for the logging purposes only.
-            serializable_messages.push(serializable_message);
+            sent_messages.push(payload);
         }
         client
             .send_messages(&mut SendMessages {
@@ -57,7 +52,7 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
                 messages,
             })
             .await?;
-        info!("Sent messages: {:#?}", serializable_messages);
+        info!("Sent messages: {:#?}", sent_messages);
         interval.tick().await;
     }
 }

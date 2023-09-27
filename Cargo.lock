@@ -1162,7 +1162,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.0.85"
+version = "0.0.86"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1206,8 +1206,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
- "comfy-table",
- "humantime",
  "iggy",
  "passterm",
  "thiserror",

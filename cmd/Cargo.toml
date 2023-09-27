@@ -10,13 +10,11 @@ iggy = { path = "../iggy" }
 clap = { version = "4.1.11", features = ["derive"] }
 tokio = { version = "1.28.2", features = ["full"] }
 async-trait = "0.1.68"
-comfy-table = "7.0.1"
 anyhow = "1.0.75"
 thiserror = "1.0.48"
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.17" }
 tracing-appender = "0.2.2"
-humantime = "2.1.0"
 passterm = "2.0.1"
 
 [[bin]]

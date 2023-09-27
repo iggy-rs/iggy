@@ -1,11 +1,9 @@
 mod args;
-mod cmd;
 mod error;
 mod logging;
 mod login;
 
 use crate::args::{stream::StreamAction, topic::TopicAction, Command, IggyConsoleArgs};
-use crate::cmd::partition::{create::PartitionCreate, delete::PartitionDelete};
 use crate::error::ConsoleError;
 use crate::logging::Logging;
 use crate::login::{get_password, login_user, logout_user};
@@ -18,6 +16,7 @@ use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use iggy::utils::message_expire::MessageExpiry;
 use iggy::{
+    partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
     streams::{
         create_stream::CreateStreamCmd, delete_stream::DeleteStreamCmd, get_stream::GetStreamCmd,
         get_streams::GetStreamsCmd, update_stream::UpdateStreamCmd,
@@ -73,12 +72,12 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
             )),
         },
         Command::Partition(command) => match command {
-            PartitionAction::Create(args) => Box::new(PartitionCreate::new(
+            PartitionAction::Create(args) => Box::new(CreatePartitionsCmd::new(
                 args.stream_id.clone(),
                 args.topic_id.clone(),
                 args.partitions_count,
             )),
-            PartitionAction::Delete(args) => Box::new(PartitionDelete::new(
+            PartitionAction::Delete(args) => Box::new(DeletePartitionsCmd::new(
                 args.stream_id.clone(),
                 args.topic_id.clone(),
                 args.partitions_count,

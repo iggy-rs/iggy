@@ -1,1 +1,1 @@
-pub use crate::errors::*;
+include!(concat!(env!("OUT_DIR"), "/error.rs"));

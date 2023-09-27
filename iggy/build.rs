@@ -2,18 +2,17 @@ extern crate rmp_serde as rmps;
 extern crate serde;
 extern crate serde_derive;
 
-use convert_case::{Case, Casing};
 use std::error::Error;
-use std::fs::File;
-use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::{env, fs};
+
+use convert_case::{Case, Casing};
 
 use errors_repository::PreprocessedErrorRepositoryEntry;
 
-use crate::data_repository::{DataRepository, SledDb};
-use crate::errors_repository::{db_exists, get_or_create};
+use crate::errors_repository::load_errors;
 
-mod data_repository;
 mod errors_repository;
 
 fn get_spaces(num_spaces: usize) -> String {
@@ -186,17 +185,8 @@ impl MatchConversionFunction {
     }
 }
 
-const GENERATED_ERRORS_PATH: &str = "./src/errors/generated_code/errors.rs";
-
 fn main() -> Result<(), Box<dyn Error>> {
-    if db_exists() {
-        return Ok(());
-    }
-
-    let errors_db: SledDb = get_or_create()?;
-
-    let entries: Vec<PreprocessedErrorRepositoryEntry> = errors_db
-        .fetch_all()?
+    let entries: Vec<PreprocessedErrorRepositoryEntry> = load_errors()
         .into_iter()
         .map(PreprocessedErrorRepositoryEntry::from)
         .collect();
@@ -253,13 +243,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     ];
 
     let output = lines.join("\n");
-    let mut generated_code_file = File::create(GENERATED_ERRORS_PATH)?;
-    writeln!(generated_code_file, "{}", output)?;
+
+    let out_dir = env::var_os("OUT_DIR").unwrap();
+    let generated_errors_path: PathBuf = Path::new(&out_dir).join("error.rs");
+    fs::write(&generated_errors_path, output)?;
 
     Command::new("cargo")
         .arg("fmt")
         .arg("--")
-        .arg(GENERATED_ERRORS_PATH)
+        .arg(generated_errors_path)
         .output()?;
 
     Ok(())

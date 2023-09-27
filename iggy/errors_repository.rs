@@ -1,12 +1,5 @@
-use std::error::Error;
-use std::path::Path;
-
 use convert_case::{Case, Casing};
 use serde_derive::{Deserialize, Serialize};
-
-use crate::data_repository::{DataRepository, SledDb};
-
-const SLED_ERRORS_TABLE_PATH: &str = "errors_table";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ErrorRepositoryEntry {
@@ -62,28 +55,7 @@ impl From<ErrorRepositoryEntry> for PreprocessedErrorRepositoryEntry {
     }
 }
 
-pub fn db_exists() -> bool {
-    Path::new(SLED_ERRORS_TABLE_PATH).exists()
-}
-
-pub fn get_or_create() -> Result<SledDb, Box<dyn Error>> {
-    if Path::new(SLED_ERRORS_TABLE_PATH).try_exists()? {
-        Ok(SledDb {
-            connection: sled::open(SLED_ERRORS_TABLE_PATH)?,
-        })
-    } else {
-        let db = SledDb {
-            connection: sled::open(SLED_ERRORS_TABLE_PATH)
-                .expect("Could not create error database."),
-        };
-
-        insert_errors(&db)?;
-
-        Ok(db)
-    }
-}
-
-fn insert_errors(errors_db: &SledDb) -> Result<(), Box<dyn Error>> {
+pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
     let error_codes: Vec<ErrorRepositoryEntry> = vec![
         ErrorRepositoryEntry {
             snake_case_name: "error".to_string(),
@@ -983,9 +955,5 @@ fn insert_errors(errors_db: &SledDb) -> Result<(), Box<dyn Error>> {
         },
     ];
 
-    for error_code in error_codes {
-        errors_db.insert(error_code)?;
-    }
-
-    Ok(())
+    error_codes
 }

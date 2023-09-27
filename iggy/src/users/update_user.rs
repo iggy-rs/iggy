@@ -3,7 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::models::user_status::UserStatus;
-use crate::users::{MAX_USERNAME_LENGTH, MIN_USERNAME_LENGTH};
+use crate::users::defaults::*;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::BufMut;

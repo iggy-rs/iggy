@@ -2,7 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
-use crate::users::{MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH};
+use crate::users::defaults::*;
 use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};

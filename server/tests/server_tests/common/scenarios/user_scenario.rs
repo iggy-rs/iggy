@@ -14,7 +14,7 @@ use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
-use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
+use iggy::users::defaults::*;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();

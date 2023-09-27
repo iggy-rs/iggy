@@ -16,7 +16,7 @@ use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::Error;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::{PollingStrategy, PollMessages};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
@@ -35,7 +35,7 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::users::login_user::LoginUser;
-use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
+use iggy::users::defaults::*;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;

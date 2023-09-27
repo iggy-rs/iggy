@@ -11,13 +11,13 @@ use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus::Active;
 use iggy::users::create_user::CreateUser;
 use iggy::users::login_user::LoginUser;
-use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use std::collections::HashMap;
 use std::fs;
 use std::process::{Child, Command};
 use std::thread::sleep;
 use std::time::Duration;
 use uuid::Uuid;
+use iggy::users::defaults::*;
 
 const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
 const USER_PASSWORD: &str = "secret";

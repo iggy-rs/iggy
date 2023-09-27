@@ -7,8 +7,8 @@ use iggy::streams::get_stream::GetStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::users::login_user::LoginUser;
-use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use tracing::info;
+use iggy::users::defaults::*;
 
 pub async fn login_root(client: &dyn Client) {
     client

@@ -1,7 +1,7 @@
 use iggy::client::UserClient;
 use iggy::clients::client::IggyClient;
 use iggy::users::login_user::LoginUser;
-use iggy::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
+use iggy::users::defaults::*;
 
 pub mod poll_messages_benchmark;
 pub mod send_and_poll_messages_benchmark;

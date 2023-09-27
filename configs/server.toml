@@ -76,7 +76,7 @@ retention_days = 7
 
 [system.cache]
 enabled = true
-size = "4 GB"
+size = "4GB"
 
 [system.encryption]
 enabled = false

@@ -1,16 +1,15 @@
 use anyhow::Result;
 use clap::Parser;
+use examples::shared::args::Args;
+use examples::shared::messages::*;
+use examples::shared::system;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::models::header::HeaderKey;
 use iggy::models::messages::Message;
-use samples::shared::args::Args;
-use samples::shared::messages::*;
-use samples::shared::system;
 use std::error::Error;
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -20,7 +19,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     info!(
-        "Message headers consumer has started, selected transport: {}",
+        "Message envelope consumer has started, selected transport: {}",
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
@@ -70,35 +69,28 @@ async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
 
 fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
     // The payload can be of any type as it is a raw byte array. In this case it's a JSON string.
-    let payload = std::str::from_utf8(&message.payload)?;
-    // The message type is stored in the custom message header.
-    let header_key = HeaderKey::new("message_type").unwrap();
-    let message_type = message
-        .headers
-        .as_ref()
-        .unwrap()
-        .get(&header_key)
-        .unwrap()
-        .as_str()?;
+    let json = std::str::from_utf8(&message.payload)?;
+    // The message envelope can be used to send the different types of messages to the same topic.
+    let envelope = serde_json::from_str::<Envelope>(json)?;
     info!(
         "Handling message type: {} at offset: {}...",
-        message_type, message.offset
+        envelope.message_type, message.offset
     );
-    match message_type {
+    match envelope.message_type.as_str() {
         ORDER_CREATED_TYPE => {
-            let order_created = serde_json::from_str::<OrderCreated>(payload)?;
+            let order_created = serde_json::from_str::<OrderCreated>(&envelope.payload)?;
             info!("{:#?}", order_created);
         }
         ORDER_CONFIRMED_TYPE => {
-            let order_confirmed = serde_json::from_str::<OrderConfirmed>(payload)?;
+            let order_confirmed = serde_json::from_str::<OrderConfirmed>(&envelope.payload)?;
             info!("{:#?}", order_confirmed);
         }
         ORDER_REJECTED_TYPE => {
-            let order_rejected = serde_json::from_str::<OrderRejected>(payload)?;
+            let order_rejected = serde_json::from_str::<OrderRejected>(&envelope.payload)?;
             info!("{:#?}", order_rejected);
         }
         _ => {
-            warn!("Received unknown message type: {}", message_type);
+            warn!("Received unknown message type: {}", envelope.message_type);
         }
     }
     Ok(())

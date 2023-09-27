@@ -1,38 +1,38 @@
 [package]
-name = "samples"
+name = "examples"
 version = "0.0.1"
 edition = "2021"
 
-[[bin]]
-name = "getting-started-consumer-sample"
+[[example]]
+name = "getting-started-consumer"
 path = "src/getting-started/consumer/main.rs"
 
-[[bin]]
-name = "getting-started-producer-sample"
+[[example]]
+name = "getting-started-producer"
 path = "src/getting-started/producer/main.rs"
 
-[[bin]]
-name = "basic-consumer-sample"
+[[example]]
+name = "basic-consumer"
 path = "src/basic/consumer/main.rs"
 
-[[bin]]
-name = "basic-producer-sample"
+[[example]]
+name = "basic-producer"
 path = "src/basic/producer/main.rs"
 
-[[bin]]
-name = "message-envelope-consumer-sample"
+[[example]]
+name = "message-envelope-consumer"
 path = "src/message-envelope/consumer/main.rs"
 
-[[bin]]
-name = "message-envelope-producer-sample"
+[[example]]
+name = "message-envelope-producer"
 path = "src/message-envelope/producer/main.rs"
 
-[[bin]]
-name = "message-headers-consumer-sample"
+[[example]]
+name = "message-headers-consumer"
 path = "src/message-headers/consumer/main.rs"
 
-[[bin]]
-name = "message-headers-producer-sample"
+[[example]]
+name = "message-headers-producer"
 path = "src/message-headers/producer/main.rs"
 
 

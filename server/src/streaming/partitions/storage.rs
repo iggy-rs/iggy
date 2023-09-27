@@ -1,5 +1,4 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
-use crate::streaming::persistence::persister::Persister;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::Error;
@@ -17,12 +16,11 @@ use crate::streaming::storage::{PartitionStorage, Storage};
 #[derive(Debug)]
 pub struct FilePartitionStorage {
     db: Arc<Db>,
-    persister: Arc<dyn Persister>,
 }
 
 impl FilePartitionStorage {
-    pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
-        Self { db, persister }
+    pub fn new(db: Arc<Db>) -> Self {
+        Self { db }
     }
 }
 
@@ -31,16 +29,62 @@ unsafe impl Sync for FilePartitionStorage {}
 
 #[async_trait]
 impl PartitionStorage for FilePartitionStorage {
-    async fn save_offset(&self, offset: &ConsumerOffset) -> Result<(), Error> {
-        self.persister
-            .overwrite(&offset.path, &offset.offset.to_le_bytes())
-            .await?;
+    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), Error> {
+        // The stored value is just the offset, so we don't need to serialize the whole struct.
+        // It should be as fast and lightweight as possible.
+        // As described in the docs, sled works better with big-endian byte order.
+        if self
+            .db
+            .insert(&offset.key, &offset.offset.to_be_bytes())
+            .is_err()
+        {
+            return Err(Error::CannotSaveResource(offset.key.to_string()));
+        }
+
         trace!(
-            "Stored offset: {} for {}",
+            "Stored consumer offset value: {} for {} with ID: {}",
             offset.offset,
-            offset.consumer_id,
+            offset.kind,
+            offset.consumer_id
         );
         Ok(())
+    }
+
+    async fn load_consumer_offsets(
+        &self,
+        kind: ConsumerKind,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> Result<Vec<ConsumerOffset>, Error> {
+        let mut consumer_offsets = Vec::new();
+        let key_prefix = format!(
+            "{}:",
+            ConsumerOffset::get_key_prefix(kind, stream_id, topic_id, partition_id)
+        );
+        for data in self.db.scan_prefix(&key_prefix) {
+            let consumer_offset = match data {
+                Ok((key, value)) => {
+                    let key = String::from_utf8(key.to_vec()).unwrap();
+                    let offset = u64::from_be_bytes(value.as_ref().try_into().unwrap());
+                    let consumer_id = key.split(':').last().unwrap().parse::<u32>().unwrap();
+                    ConsumerOffset {
+                        key,
+                        kind,
+                        consumer_id,
+                        offset,
+                    }
+                }
+                Err(err) => {
+                    error!("Cannot load consumer offset. Error: {}", err);
+                    return Err(Error::CannotLoadResource(key_prefix.to_string()));
+                }
+            };
+            consumer_offsets.push(consumer_offset);
+        }
+
+        consumer_offsets.sort_by(|a, b| a.consumer_id.cmp(&b.consumer_id));
+        Ok(consumer_offsets)
     }
 }
 
@@ -64,7 +108,7 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        let key = get_key(
+        let key = get_partition_key(
             partition.stream_id,
             partition.topic_id,
             partition.partition_id,
@@ -176,8 +220,7 @@ impl Storage<Partition> for FilePartitionStorage {
             partition.current_offset = last_segment.current_offset;
         }
 
-        partition.load_offsets(ConsumerKind::Consumer).await?;
-        partition.load_offsets(ConsumerKind::ConsumerGroup).await?;
+        partition.load_consumer_offsets().await?;
         info!(
             "Loaded partition with ID: {} for stream with ID: {} and topic with ID: {}, current offset: {}.",
             partition.partition_id, partition.stream_id, partition.topic_id, partition.current_offset
@@ -199,51 +242,7 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        if !Path::new(&partition.offsets_path).exists()
-            && create_dir(&partition.offsets_path).await.is_err()
-        {
-            error!(
-                "Failed to create offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-                partition.partition_id, partition.stream_id, partition.topic_id
-            );
-            return Err(Error::CannotCreatePartition(
-                partition.partition_id,
-                partition.stream_id,
-                partition.topic_id,
-            ));
-        }
-
-        if !Path::new(&partition.consumer_offsets_path).exists()
-            && create_dir(&partition.consumer_offsets_path).await.is_err()
-        {
-            error!(
-                "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-                partition.partition_id, partition.stream_id, partition.topic_id
-            );
-            return Err(Error::CannotCreatePartition(
-                partition.partition_id,
-                partition.stream_id,
-                partition.topic_id,
-            ));
-        }
-
-        if !Path::new(&partition.consumer_group_offsets_path).exists()
-            && create_dir(&partition.consumer_group_offsets_path)
-                .await
-                .is_err()
-        {
-            error!(
-                "Failed to create consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-                partition.partition_id, partition.stream_id, partition.topic_id
-            );
-            return Err(Error::CannotCreatePartition(
-                partition.partition_id,
-                partition.stream_id,
-                partition.topic_id,
-            ));
-        }
-
-        let key = get_key(
+        let key = get_partition_key(
             partition.stream_id,
             partition.topic_id,
             partition.partition_id,
@@ -293,7 +292,7 @@ impl Storage<Partition> for FilePartitionStorage {
         );
         if self
             .db
-            .remove(get_key(
+            .remove(get_partition_key(
                 partition.stream_id,
                 partition.topic_id,
                 partition.partition_id,
@@ -322,7 +321,7 @@ impl Storage<Partition> for FilePartitionStorage {
     }
 }
 
-fn get_key(stream_id: u32, topic_id: u32, partition_id: u32) -> String {
+fn get_partition_key(stream_id: u32, topic_id: u32, partition_id: u32) -> String {
     format!(
         "streams:{}:topics:{}:partitions:{}",
         stream_id, topic_id, partition_id

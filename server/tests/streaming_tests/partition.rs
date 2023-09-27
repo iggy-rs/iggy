@@ -63,7 +63,6 @@ async fn should_load_existing_partition_from_disk() {
         assert_eq!(loaded_partition.stream_id, partition.stream_id);
         assert_eq!(loaded_partition.partition_id, partition.partition_id);
         assert_eq!(loaded_partition.path, partition.path);
-        assert_eq!(loaded_partition.offsets_path, partition.offsets_path);
         assert_eq!(loaded_partition.current_offset, partition.current_offset);
         assert_eq!(
             loaded_partition.unsaved_messages_count,
@@ -113,12 +112,7 @@ async fn should_delete_existing_partition_from_disk() {
 }
 
 async fn assert_persisted_partition(partition_path: &str, with_segment: bool) {
-    let offsets_path = format!("{}/offsets", partition_path);
-    let consumer_offsets_path = format!("{}/consumers", offsets_path);
-
     assert!(fs::metadata(&partition_path).await.is_ok());
-    assert!(fs::metadata(&offsets_path).await.is_ok());
-    assert!(fs::metadata(&consumer_offsets_path).await.is_ok());
 
     if with_segment {
         let start_offset = 0u64;

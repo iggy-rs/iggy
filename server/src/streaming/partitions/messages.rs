@@ -143,7 +143,7 @@ impl Partition {
             }
         };
 
-        let consumer_offset = consumer_offsets.offsets.get(&consumer_id);
+        let consumer_offset = consumer_offsets.get(&consumer_id);
         if consumer_offset.is_none() {
             trace!(
                 "Consumer: {} hasn't stored offset for partition: {}, returning the first messages...",
@@ -153,7 +153,7 @@ impl Partition {
             return self.get_first_messages(count).await;
         }
 
-        let consumer_offset = consumer_offset.unwrap().read().await;
+        let consumer_offset = consumer_offset.unwrap();
         if consumer_offset.offset == self.current_offset {
             trace!(
                 "Consumer: {} has the latest offset: {} for partition: {}, returning empty messages...",

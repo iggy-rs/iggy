@@ -3,6 +3,7 @@ use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
+use iggy::consumer::ConsumerKind;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::TimeStamp;
 use std::collections::{HashMap, HashSet};
@@ -15,9 +16,6 @@ pub struct Partition {
     pub topic_id: u32,
     pub partition_id: u32,
     pub path: String,
-    pub offsets_path: String,
-    pub consumer_offsets_path: String,
-    pub consumer_group_offsets_path: String,
     pub current_offset: u64,
     pub cache: Option<SmartCache<Arc<Message>>>,
     pub cached_memory_tracker: Option<Arc<CacheMemoryTracker>>,
@@ -26,23 +24,49 @@ pub struct Partition {
     pub should_increment_offset: bool,
     pub created_at: u64,
     pub(crate) message_expiry: Option<u32>,
-    pub(crate) consumer_offsets: RwLock<ConsumerOffsets>,
-    pub(crate) consumer_group_offsets: RwLock<ConsumerOffsets>,
+    pub(crate) consumer_offsets: RwLock<HashMap<u32, ConsumerOffset>>,
+    pub(crate) consumer_group_offsets: RwLock<HashMap<u32, ConsumerOffset>>,
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
 }
 
-#[derive(Debug)]
-pub struct ConsumerOffsets {
-    pub(crate) offsets: HashMap<u32, RwLock<ConsumerOffset>>,
+#[derive(Debug, PartialEq)]
+pub struct ConsumerOffset {
+    pub kind: ConsumerKind,
+    pub consumer_id: u32,
+    pub offset: u64,
+    pub key: String,
 }
 
-#[derive(Debug)]
-pub struct ConsumerOffset {
-    pub(crate) consumer_id: u32,
-    pub(crate) offset: u64,
-    pub(crate) path: String,
+impl ConsumerOffset {
+    pub fn new(
+        kind: ConsumerKind,
+        consumer_id: u32,
+        offset: u64,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> ConsumerOffset {
+        ConsumerOffset {
+            key: format!(
+                "{}:{consumer_id}",
+                Self::get_key_prefix(kind, stream_id, topic_id, partition_id)
+            ),
+            kind,
+            consumer_id,
+            offset,
+        }
+    }
+
+    pub fn get_key_prefix(
+        kind: ConsumerKind,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> String {
+        format!("{kind}_offsets:{stream_id}:{topic_id}:{partition_id}").to_string()
+    }
 }
 
 impl Partition {
@@ -56,9 +80,6 @@ impl Partition {
         message_expiry: Option<u32>,
     ) -> Partition {
         let path = config.get_partition_path(stream_id, topic_id, partition_id);
-        let offsets_path = Self::get_offsets_path(&path);
-        let consumer_offsets_path = Self::get_consumer_offsets_path(&offsets_path);
-        let consumer_group_offsets_path = Self::get_consumer_group_offsets_path(&offsets_path);
         let (cached_memory_tracker, messages) = match config.cache.enabled {
             false => (None, None),
             true => (
@@ -72,9 +93,6 @@ impl Partition {
             topic_id,
             partition_id,
             path,
-            offsets_path,
-            consumer_offsets_path,
-            consumer_group_offsets_path,
             message_expiry,
             cache: messages,
             cached_memory_tracker,
@@ -86,12 +104,8 @@ impl Partition {
             current_offset: 0,
             unsaved_messages_count: 0,
             should_increment_offset: false,
-            consumer_offsets: RwLock::new(ConsumerOffsets {
-                offsets: HashMap::new(),
-            }),
-            consumer_group_offsets: RwLock::new(ConsumerOffsets {
-                offsets: HashMap::new(),
-            }),
+            consumer_offsets: RwLock::new(HashMap::new()),
+            consumer_group_offsets: RwLock::new(HashMap::new()),
             config,
             storage,
             created_at: TimeStamp::now().to_micros(),
@@ -119,18 +133,6 @@ impl Partition {
             .map(|segment| segment.current_size_bytes as u64)
             .sum()
     }
-
-    fn get_offsets_path(path: &str) -> String {
-        format!("{}/offsets", path)
-    }
-
-    fn get_consumer_offsets_path(offsets_path: &str) -> String {
-        format!("{}/consumers", offsets_path)
-    }
-
-    fn get_consumer_group_offsets_path(offsets_path: &str) -> String {
-        format!("{}/groups", offsets_path)
-    }
 }
 
 #[cfg(test)]
@@ -149,9 +151,6 @@ mod tests {
         let with_segment = true;
         let config = Arc::new(SystemConfig::default());
         let path = config.get_partition_path(stream_id, topic_id, partition_id);
-        let offsets_path = Partition::get_offsets_path(&path);
-        let consumer_offsets_path = Partition::get_consumer_offsets_path(&offsets_path);
-        let consumer_group_offsets_path = Partition::get_consumer_group_offsets_path(&offsets_path);
         let message_expiry = Some(10);
         let partition = Partition::create(
             stream_id,
@@ -167,12 +166,6 @@ mod tests {
         assert_eq!(partition.topic_id, topic_id);
         assert_eq!(partition.partition_id, partition_id);
         assert_eq!(partition.path, path);
-        assert_eq!(partition.offsets_path, offsets_path);
-        assert_eq!(partition.consumer_offsets_path, consumer_offsets_path);
-        assert_eq!(
-            partition.consumer_group_offsets_path,
-            consumer_group_offsets_path
-        );
         assert_eq!(partition.current_offset, 0);
         assert_eq!(partition.unsaved_messages_count, 0);
         assert_eq!(partition.segments.len(), 1);
@@ -180,8 +173,8 @@ mod tests {
         assert!(!partition.should_increment_offset);
         assert!(partition.cache.as_ref().unwrap().is_empty());
         let consumer_offsets = partition.consumer_offsets.blocking_read();
-        assert!(consumer_offsets.offsets.is_empty());
         assert_eq!(partition.message_expiry, message_expiry);
+        assert!(consumer_offsets.is_empty());
     }
 
     #[test]

@@ -3,6 +3,12 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    #[arg(long, default_value = "iggy")]
+    pub username: String,
+
+    #[arg(long, default_value = "iggy")]
+    pub password: String,
+
     #[arg(long, default_value = "1000")]
     pub interval: u64,
 
@@ -101,6 +107,8 @@ impl Args {
     pub fn to_sdk_args(&self) -> iggy::args::Args {
         iggy::args::Args {
             transport: self.transport.clone(),
+            username: self.username.clone(),
+            password: self.password.clone(),
             encryption_key: self.encryption_key.clone(),
             http_api_url: self.http_api_url.clone(),
             http_retries: self.http_retries,

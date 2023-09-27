@@ -1,13 +1,19 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
+use crate::utils::message_expire::MessageExpiry;
 use crate::utils::text;
 use crate::validatable::Validatable;
+use anyhow::Context;
+use async_trait::async_trait;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
+use tracing::{event, Level};
 
 const MAX_NAME_LENGTH: usize = 255;
 const MAX_PARTITIONS_COUNT: u32 = 100_000;
@@ -37,7 +43,7 @@ impl Default for CreateTopic {
 }
 
 impl Validatable<Error> for CreateTopic {
-    fn validate(&self) -> Result<(), Error> {
+    fn validate(&self) -> std::result::Result<(), Error> {
         if self.topic_id == 0 {
             return Err(Error::InvalidTopicId);
         }
@@ -60,7 +66,7 @@ impl Validatable<Error> for CreateTopic {
 
 impl FromStr for CreateTopic {
     type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
+    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
         if parts.len() != 5 {
             return Err(Error::InvalidCommand);
@@ -107,7 +113,7 @@ impl BytesSerializable for CreateTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreateTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<CreateTopic, Error> {
         if bytes.len() < 17 {
             return Err(Error::InvalidCommand);
         }
@@ -151,6 +157,79 @@ impl Display for CreateTopic {
             self.message_expiry.unwrap_or(0),
             self.name
         )
+    }
+}
+
+pub struct CreateTopicCmd {
+    create_topic: CreateTopic,
+    message_expiry: Option<MessageExpiry>,
+}
+
+impl CreateTopicCmd {
+    pub fn new(
+        stream_id: Identifier,
+        topic_id: u32,
+        partitions_count: u32,
+        name: String,
+        message_expiry: Option<MessageExpiry>,
+    ) -> Self {
+        Self {
+            create_topic: CreateTopic {
+                stream_id,
+                topic_id,
+                partitions_count,
+                name,
+                message_expiry: match &message_expiry {
+                    None => None,
+                    Some(value) => value.into(),
+                },
+            },
+            message_expiry,
+        }
+    }
+}
+
+#[async_trait]
+impl CliCommand for CreateTopicCmd {
+    fn explain(&self) -> String {
+        let expiry_text = match &self.message_expiry {
+            Some(value) => format!("message expire time: {}", value),
+            None => String::from("without message expire time"),
+        };
+        format!(
+            "create topic with ID: {}, name: {}, partitions count: {} and {} in stream with ID: {}",
+            self.create_topic.topic_id,
+            self.create_topic.name,
+            self.create_topic.partitions_count,
+            expiry_text,
+            self.create_topic.stream_id
+        )
+    }
+
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+        client
+            .create_topic(&self.create_topic)
+            .await
+            .with_context(|| {
+                format!(
+                    "Problem creating topic (ID: {}, name: {}, partitions count: {}) in stream with ID: {}",
+                    self.create_topic.topic_id, self.create_topic.name, self.create_topic.partitions_count, self.create_topic.stream_id
+                )
+            })?;
+
+        event!(target: PRINT_TARGET, Level::INFO,
+            "Topic with ID: {}, name: {}, partitions count: {} and {} created in stream with ID: {}",
+            self.create_topic.topic_id,
+            self.create_topic.name,
+            self.create_topic.partitions_count,
+            match &self.message_expiry {
+                Some(value) => format!("message expire time: {}", value),
+                None => String::from("without message expire time"),
+            },
+            self.create_topic.stream_id,
+        );
+
+        Ok(())
     }
 }
 

@@ -7,7 +7,7 @@ use std::time::Duration;
 use std::{convert::From, str::FromStr};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub(crate) enum MessageExpiry {
+pub enum MessageExpiry {
     /// Set message expiry time to given value
     ExpireDuration(Duration),
     /// Never expire messages
@@ -15,7 +15,7 @@ pub(crate) enum MessageExpiry {
 }
 
 impl MessageExpiry {
-    pub(crate) fn new(values: Option<Vec<MessageExpiry>>) -> Option<Self> {
+    pub fn new(values: Option<Vec<MessageExpiry>>) -> Option<Self> {
         values.map(|items| items.iter().cloned().sum())
     }
 }

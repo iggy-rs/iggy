@@ -40,6 +40,7 @@ openssl = { version = "0.10.*", features = ["vendored"] }
 chrono = { version = "0.4.31" }
 anyhow = "1.0.75"
 comfy-table = "7.0.1"
+humantime = "2.1.0"
 
 
 [build-dependencies]

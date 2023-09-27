@@ -5,28 +5,28 @@ mod logging;
 mod login;
 
 use crate::args::{stream::StreamAction, topic::TopicAction, Command, IggyConsoleArgs};
-use crate::cmd::{
-    partition::{create::PartitionCreate, delete::PartitionDelete},
-    topic::{
-        create::TopicCreate, delete::TopicDelete, get::TopicGet, list::TopicList,
-        update::TopicUpdate,
-    },
-};
+use crate::cmd::partition::{create::PartitionCreate, delete::PartitionDelete};
 use crate::error::ConsoleError;
 use crate::logging::Logging;
 use crate::login::{get_password, login_user, logout_user};
-use args::message_expire::MessageExpiry;
 use args::partition::PartitionAction;
 use clap::Parser;
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
-use iggy::streams::{
-    create_stream::CreateStreamCmd, delete_stream::DeleteStreamCmd, get_stream::GetStreamCmd,
-    get_streams::GetStreamsCmd, update_stream::UpdateStreamCmd,
-};
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use iggy::utils::message_expire::MessageExpiry;
+use iggy::{
+    streams::{
+        create_stream::CreateStreamCmd, delete_stream::DeleteStreamCmd, get_stream::GetStreamCmd,
+        get_streams::GetStreamsCmd, update_stream::UpdateStreamCmd,
+    },
+    topics::{
+        create_topic::CreateTopicCmd, delete_topic::DeleteTopicCmd, get_topic::GetTopicCmd,
+        get_topics::GetTopicsCmd, update_topic::UpdateTopicCmd,
+    },
+};
 use std::sync::Arc;
 use tracing::{event, Level};
 
@@ -46,29 +46,31 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
             StreamAction::List(args) => Box::new(GetStreamsCmd::new(args.list_mode.into())),
         },
         Command::Topic(command) => match command {
-            TopicAction::Create(args) => Box::new(TopicCreate::new(
+            TopicAction::Create(args) => Box::new(CreateTopicCmd::new(
                 args.stream_id.clone(),
                 args.topic_id,
                 args.partitions_count,
                 args.name.clone(),
                 MessageExpiry::new(args.message_expiry.clone()),
             )),
-            TopicAction::Delete(args) => Box::new(TopicDelete::new(
+            TopicAction::Delete(args) => Box::new(DeleteTopicCmd::new(
                 args.stream_id.clone(),
                 args.topic_id.clone(),
             )),
-            TopicAction::Update(args) => Box::new(TopicUpdate::new(
+            TopicAction::Update(args) => Box::new(UpdateTopicCmd::new(
                 args.stream_id.clone(),
                 args.topic_id.clone(),
                 args.name.clone(),
                 MessageExpiry::new(args.message_expiry.clone()),
             )),
-            TopicAction::Get(args) => {
-                Box::new(TopicGet::new(args.stream_id.clone(), args.topic_id.clone()))
-            }
-            TopicAction::List(args) => {
-                Box::new(TopicList::new(args.stream_id.clone(), args.list_mode))
-            }
+            TopicAction::Get(args) => Box::new(GetTopicCmd::new(
+                args.stream_id.clone(),
+                args.topic_id.clone(),
+            )),
+            TopicAction::List(args) => Box::new(GetTopicsCmd::new(
+                args.stream_id.clone(),
+                args.list_mode.into(),
+            )),
         },
         Command::Partition(command) => match command {
             PartitionAction::Create(args) => Box::new(PartitionCreate::new(

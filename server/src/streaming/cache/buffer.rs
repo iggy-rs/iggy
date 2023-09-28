@@ -59,7 +59,7 @@ where
     pub fn evict_by_size(&mut self, size_to_remove: u64) {
         let mut removed_size = 0;
 
-        while let Some(element) = self.buffer.pop_back() {
+        while let Some(element) = self.buffer.pop_front() {
             if removed_size >= size_to_remove {
                 break;
             }
@@ -88,6 +88,10 @@ where
             element
         });
         self.buffer.extend(elements);
+    }
+
+    pub fn len(&self) -> usize {
+        self.buffer.len()
     }
 }
 

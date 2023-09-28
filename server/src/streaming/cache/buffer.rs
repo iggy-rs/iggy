@@ -52,7 +52,6 @@ where
 
         self.memory_tracker.increment_used_memory(element_size);
         self.current_size += element_size;
-        println!("current_size: {}", self.current_size);
         self.buffer.push_back(element);
     }
 
@@ -82,8 +81,6 @@ where
     /// Extends the buffer with the given elements, and always adding the elements,
     /// even if it exceeds the memory limit.
     pub fn extend(&mut self, elements: impl IntoIterator<Item = T>) {
-        println!("current_size: {}", self.current_size);
-
         let elements = elements.into_iter().map(|element| {
             let element_size = element.get_size_bytes() as u64;
             self.memory_tracker.increment_used_memory(element_size);

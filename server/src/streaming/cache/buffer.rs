@@ -1,5 +1,3 @@
-use crate::streaming::systems::info;
-
 use super::memory_tracker::CacheMemoryTracker;
 use iggy::sizeable::Sizeable;
 use std::collections::VecDeque;

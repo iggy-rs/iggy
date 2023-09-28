@@ -1,8 +1,8 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
+use crate::cmd::utils::message_expiry::MessageExpiry;
 use crate::identifier::Identifier;
 use crate::topics::create_topic::CreateTopic;
-use crate::utils::message_expire::MessageExpiry;
 use anyhow::Context;
 use async_trait::async_trait;
 use tracing::{event, Level};

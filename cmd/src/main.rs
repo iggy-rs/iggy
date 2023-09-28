@@ -23,9 +23,9 @@ use iggy::cmd::{
         create_topic::CreateTopicCmd, delete_topic::DeleteTopicCmd, get_topic::GetTopicCmd,
         get_topics::GetTopicsCmd, update_topic::UpdateTopicCmd,
     },
+    utils::message_expiry::MessageExpiry,
 };
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
-use iggy::utils::message_expire::MessageExpiry;
 use std::sync::Arc;
 use tracing::{event, Level};
 

@@ -7,6 +7,7 @@ use iggy::models::user_status::UserStatus;
 use iggy::system::ping::Ping;
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
+use iggy::users::defaults::*;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::get_user::GetUser;
 use iggy::users::get_users::GetUsers;
@@ -14,7 +15,6 @@ use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
-use iggy::users::defaults::*;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();

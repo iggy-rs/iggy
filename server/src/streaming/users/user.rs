@@ -1,9 +1,9 @@
 use crate::streaming::utils::crypto;
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
+use iggy::users::defaults::*;
 use iggy::utils::timestamp::TimeStamp;
 use serde::{Deserialize, Serialize};
-use iggy::users::defaults::*;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {

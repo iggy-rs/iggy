@@ -4,13 +4,13 @@ use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
+use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use std::error::Error;
 use std::str::FromStr;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn};
-use iggy::users::defaults::*;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;

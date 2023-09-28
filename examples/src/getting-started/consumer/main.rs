@@ -2,14 +2,14 @@ use iggy::client::{Client, UserClient};
 use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{PollingStrategy, PollMessages};
+use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
+use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use std::error::Error;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
-use iggy::users::defaults::*;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;

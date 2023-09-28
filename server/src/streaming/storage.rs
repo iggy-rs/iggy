@@ -15,6 +15,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::storage::FileUserStorage;
 use crate::streaming::users::user::User;
 use async_trait::async_trait;
+use iggy::consumer::ConsumerKind;
 use iggy::error::Error;
 use iggy::models::messages::Message;
 use sled::Db;
@@ -64,7 +65,14 @@ pub trait TopicStorage: Storage<Topic> {
 
 #[async_trait]
 pub trait PartitionStorage: Storage<Partition> {
-    async fn save_offset(&self, offset: &ConsumerOffset) -> Result<(), Error>;
+    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), Error>;
+    async fn load_consumer_offsets(
+        &self,
+        kind: ConsumerKind,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> Result<Vec<ConsumerOffset>, Error>;
 }
 
 #[async_trait]
@@ -121,7 +129,7 @@ impl SystemStorage {
             user: Arc::new(FileUserStorage::new(db.clone())),
             stream: Arc::new(FileStreamStorage::new(db.clone())),
             topic: Arc::new(FileTopicStorage::new(db.clone(), persister.clone())),
-            partition: Arc::new(FilePartitionStorage::new(db.clone(), persister.clone())),
+            partition: Arc::new(FilePartitionStorage::new(db.clone())),
             segment: Arc::new(FileSegmentStorage::new(persister.clone())),
         }
     }
@@ -319,8 +327,18 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl PartitionStorage for TestPartitionStorage {
-        async fn save_offset(&self, _offset: &ConsumerOffset) -> Result<(), Error> {
+        async fn save_consumer_offset(&self, _offset: &ConsumerOffset) -> Result<(), Error> {
             Ok(())
+        }
+
+        async fn load_consumer_offsets(
+            &self,
+            _kind: ConsumerKind,
+            _stream_id: u32,
+            _topic_id: u32,
+            _partition_id: u32,
+        ) -> Result<Vec<ConsumerOffset>, Error> {
+            Ok(vec![])
         }
     }
 

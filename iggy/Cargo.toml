@@ -51,6 +51,5 @@ sled = "0.34.7"
 convert_case = "0.6.0"
 
 [features]
-default = ["username-in-args", "password-in-args"]
-username-in-args = []
-password-in-args = []
+default = ["credentials-in-args"]
+credentials-in-args = []

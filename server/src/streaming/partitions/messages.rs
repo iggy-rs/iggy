@@ -253,21 +253,21 @@ impl Partition {
             return EMPTY_MESSAGES;
         }
 
-        let messages_count = (1 + end_offset - start_offset) as usize;
         let first_offset = cache[0].offset;
-        let start_index = start_offset - first_offset;
+        let start_index = (start_offset - first_offset) as usize;
+        let end_index = usize::min(cache.len(), (end_offset - first_offset + 1) as usize);
+        let expected_messages_count = end_index - start_index;
 
-        let mut messages = Vec::with_capacity(messages_count);
-        for i in start_index..start_index + messages_count as u64 {
-            let message = cache[i as usize].clone();
-            messages.push(message);
+        let mut messages = Vec::with_capacity(expected_messages_count);
+        for i in start_index..end_index {
+            messages.push(cache[i].clone());
         }
 
-        if messages.len() != messages_count {
+        if messages.len() != expected_messages_count {
             error!(
                 "Loaded {} messages from cache, expected {}.",
                 messages.len(),
-                messages_count
+                expected_messages_count
             );
         }
 

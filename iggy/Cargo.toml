@@ -1,6 +1,6 @@
 [package]
 name = "iggy"
-version = "0.0.86"
+version = "0.0.87"
 description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
 license = "MIT"
@@ -39,9 +39,8 @@ rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 openssl = { version = "0.10.*", features = ["vendored"] }
 chrono = { version = "0.4.31" }
 anyhow = "1.0.75"
-comfy-table = "7.0.1"
-humantime = "2.1.0"
-
+comfy-table = { version = "7.0.1", optional = true }
+humantime = { version = "2.1.0", optional = true }
 
 [build-dependencies]
 rmp-serde = "1.1.2"
@@ -53,3 +52,4 @@ convert_case = "0.6.0"
 [features]
 default = ["credentials-in-args"]
 credentials-in-args = []
+iggy-cmd = ["dep:comfy-table", "dep:humantime"]

@@ -1162,7 +1162,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.0.86"
+version = "0.0.87"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1201,7 +1201,7 @@ dependencies = [
 
 [[package]]
 name = "iggy-cmd"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "async-trait",

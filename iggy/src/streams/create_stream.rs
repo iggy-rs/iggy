@@ -1,17 +1,12 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use anyhow::Context;
-use async_trait::async_trait;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
-use tracing::{event, Level};
 
 const MAX_NAME_LENGTH: usize = 255;
 
@@ -97,47 +92,6 @@ impl BytesSerializable for CreateStream {
 impl Display for CreateStream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}|{}", self.stream_id, self.name)
-    }
-}
-
-pub struct CreateStreamCmd {
-    create_stream: CreateStream,
-}
-
-impl CreateStreamCmd {
-    pub fn new(stream_id: u32, name: String) -> Self {
-        Self {
-            create_stream: CreateStream { stream_id, name },
-        }
-    }
-}
-
-#[async_trait]
-impl CliCommand for CreateStreamCmd {
-    fn explain(&self) -> String {
-        format!(
-            "create stream with ID: {} and name: {}",
-            self.create_stream.stream_id, self.create_stream.name
-        )
-    }
-
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        client
-            .create_stream(&self.create_stream)
-            .await
-            .with_context(|| {
-                format!(
-                    "Problem creating stream (ID: {} and name: {})",
-                    self.create_stream.stream_id, self.create_stream.name
-                )
-            })?;
-
-        event!(target: PRINT_TARGET, Level::INFO,
-            "Stream with ID: {} and name: {} created",
-            self.create_stream.stream_id, self.create_stream.name
-        );
-
-        Ok(())
     }
 }
 

@@ -1,6 +1,6 @@
 use clap::ValueEnum;
-use iggy::streams::get_streams::GetStreamsOutput;
-use iggy::topics::get_topics::GetTopicsOutput;
+use iggy::cmd::streams::get_streams::GetStreamsOutput;
+use iggy::cmd::topics::get_topics::GetTopicsOutput;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub(crate) enum ListMode {

@@ -1,7 +1,7 @@
 use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
+use iggy::cmd::utils::message_expiry::MessageExpiry;
 use iggy::identifier::Identifier;
-use iggy::utils::message_expire::MessageExpiry;
 use std::convert::From;
 
 #[derive(Debug, Subcommand)]

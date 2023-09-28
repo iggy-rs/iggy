@@ -6,6 +6,8 @@ pub mod client;
 pub mod client_error;
 pub mod client_provider;
 pub mod clients;
+#[cfg(feature = "iggy-cmd")]
+pub mod cmd;
 pub mod command;
 pub mod consumer;
 pub mod consumer_groups;

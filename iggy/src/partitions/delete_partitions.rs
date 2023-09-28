@@ -1,17 +1,12 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use anyhow::Context;
-use async_trait::async_trait;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
-use tracing::{event, Level};
 
 const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
@@ -106,57 +101,6 @@ impl Display for DeletePartitions {
             "{}|{}|{}",
             self.stream_id, self.topic_id, self.partitions_count
         )
-    }
-}
-
-pub struct DeletePartitionsCmd {
-    delete_partitions: DeletePartitions,
-}
-
-impl DeletePartitionsCmd {
-    pub fn new(stream_id: Identifier, topic_id: Identifier, partitions_count: u32) -> Self {
-        Self {
-            delete_partitions: DeletePartitions {
-                stream_id,
-                topic_id,
-                partitions_count,
-            },
-        }
-    }
-}
-
-#[async_trait]
-impl CliCommand for DeletePartitionsCmd {
-    fn explain(&self) -> String {
-        format!(
-            "delete {} partitions for topic with ID: {} and stream with ID: {}",
-            self.delete_partitions.partitions_count,
-            self.delete_partitions.topic_id,
-            self.delete_partitions.stream_id
-        )
-    }
-
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        client
-            .delete_partitions(&self.delete_partitions)
-            .await
-            .with_context(|| {
-                format!(
-                    "Problem deleting {} partitions for topic with ID: {} and stream with ID: {}",
-                    self.delete_partitions.partitions_count,
-                    self.delete_partitions.topic_id,
-                    self.delete_partitions.stream_id
-                )
-            })?;
-
-        event!(target: PRINT_TARGET, Level::INFO,
-            "Deleted {} partitions for topic with ID: {} and stream with ID: {}",
-            self.delete_partitions.partitions_count,
-            self.delete_partitions.topic_id,
-            self.delete_partitions.stream_id,
-        );
-
-        Ok(())
     }
 }
 

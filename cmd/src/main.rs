@@ -13,9 +13,7 @@ use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
-use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
-use iggy::utils::message_expire::MessageExpiry;
-use iggy::{
+use iggy::cmd::{
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
     streams::{
         create_stream::CreateStreamCmd, delete_stream::DeleteStreamCmd, get_stream::GetStreamCmd,
@@ -26,6 +24,8 @@ use iggy::{
         get_topics::GetTopicsCmd, update_topic::UpdateTopicCmd,
     },
 };
+use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use iggy::utils::message_expire::MessageExpiry;
 use std::sync::Arc;
 use tracing::{event, Level};
 

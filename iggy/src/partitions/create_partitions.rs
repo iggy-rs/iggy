@@ -1,17 +1,12 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use anyhow::Context;
-use async_trait::async_trait;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
-use tracing::{event, Level};
 
 const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
@@ -106,57 +101,6 @@ impl Display for CreatePartitions {
             "{}|{}|{}",
             self.stream_id, self.topic_id, self.partitions_count
         )
-    }
-}
-
-pub struct CreatePartitionsCmd {
-    create_partition: CreatePartitions,
-}
-
-impl CreatePartitionsCmd {
-    pub fn new(stream_id: Identifier, topic_id: Identifier, partitions_count: u32) -> Self {
-        Self {
-            create_partition: CreatePartitions {
-                stream_id,
-                topic_id,
-                partitions_count,
-            },
-        }
-    }
-}
-
-#[async_trait]
-impl CliCommand for CreatePartitionsCmd {
-    fn explain(&self) -> String {
-        format!(
-            "create {} partitions for topic with ID: {} and stream with ID: {}",
-            self.create_partition.partitions_count,
-            self.create_partition.topic_id,
-            self.create_partition.stream_id
-        )
-    }
-
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        client
-            .create_partitions(&self.create_partition)
-            .await
-            .with_context(|| {
-                format!(
-                    "Problem creating {} partitions for topic with ID: {} and stream with ID: {}",
-                    self.create_partition.partitions_count,
-                    self.create_partition.topic_id,
-                    self.create_partition.stream_id
-                )
-            })?;
-
-        event!(target: PRINT_TARGET, Level::INFO,
-            "Created {} partitions for topic with ID: {} and stream with ID: {}",
-            self.create_partition.partitions_count,
-            self.create_partition.topic_id,
-            self.create_partition.stream_id,
-        );
-
-        Ok(())
     }
 }
 

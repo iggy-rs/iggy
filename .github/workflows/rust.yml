@@ -14,6 +14,7 @@ on:
     branches:
       - master
     types: [opened, synchronize, reopened, closed]
+
 env:
   CRATE_NAME: iggy
   GITHUB_TOKEN: ${{ github.token }}
@@ -27,7 +28,10 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  sanity:
+    uses: ./.github/workflows/sanity.yml
   build_and_test:
+    needs: sanity
     name: ${{ matrix.platform.skip_tests == true && 'build' || 'build and test' }} ${{ matrix.platform.os_name }}
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 30
@@ -129,6 +133,10 @@ jobs:
           args: "--verbose"
         if: ${{ !matrix.platform.skip_tests }}
 
+      - name: Check if workspace is clean
+        run: git status | grep "working tree clean" || { git status ; exit 1; }
+        if: runner.os != 'Windows'
+
   if_merged:
     needs: build_and_test
     if: github.event.pull_request.merged == true
@@ -149,7 +157,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check if Cargo.toml and Cargo.lock are changed
-        uses: tj-actions/changed-files@v37
+        uses: tj-actions/changed-files@v39
         id: all_changed_files
         with:
           files: |

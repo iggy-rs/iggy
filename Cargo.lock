@@ -1162,17 +1162,20 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.0.85"
+version = "0.0.86"
 dependencies = [
  "aes-gcm",
+ "anyhow",
  "async-trait",
  "base64 0.21.3",
  "bytes",
  "chrono",
  "clap",
+ "comfy-table",
  "convert_case",
  "crc32fast",
  "flume",
+ "humantime",
  "lazy_static",
  "openssl",
  "quinn",
@@ -1203,8 +1206,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "clap",
- "comfy-table",
- "humantime",
  "iggy",
  "passterm",
  "thiserror",

@@ -1,11 +1,16 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use anyhow::Context;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
+use tracing::{event, Level};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct DeleteTopic {
@@ -18,14 +23,14 @@ pub struct DeleteTopic {
 impl CommandPayload for DeleteTopic {}
 
 impl Validatable<Error> for DeleteTopic {
-    fn validate(&self) -> Result<(), Error> {
+    fn validate(&self) -> std::result::Result<(), Error> {
         Ok(())
     }
 }
 
 impl FromStr for DeleteTopic {
     type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
+    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
         if parts.len() != 2 {
             return Err(Error::InvalidCommand);
@@ -52,7 +57,7 @@ impl BytesSerializable for DeleteTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<DeleteTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<DeleteTopic, Error> {
         if bytes.len() < 10 {
             return Err(Error::InvalidCommand);
         }
@@ -73,6 +78,50 @@ impl BytesSerializable for DeleteTopic {
 impl Display for DeleteTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}|{}", self.stream_id, self.topic_id)
+    }
+}
+
+pub struct DeleteTopicCmd {
+    delete_topic: DeleteTopic,
+}
+
+impl DeleteTopicCmd {
+    pub fn new(stream_id: Identifier, topic_id: Identifier) -> Self {
+        Self {
+            delete_topic: DeleteTopic {
+                stream_id,
+                topic_id,
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl CliCommand for DeleteTopicCmd {
+    fn explain(&self) -> String {
+        format!(
+            "delete topic with ID: {} in stream with ID: {}",
+            self.delete_topic.topic_id, self.delete_topic.stream_id
+        )
+    }
+
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+        client
+            .delete_topic(&self.delete_topic)
+            .await
+            .with_context(|| {
+                format!(
+                    "Problem deleting topic with ID: {} in stream {}",
+                    self.delete_topic.topic_id, self.delete_topic.stream_id
+                )
+            })?;
+
+        event!(target: PRINT_TARGET, Level::INFO,
+            "Topic with ID: {} in stream with ID: {} deleted",
+            self.delete_topic.topic_id, self.delete_topic.stream_id
+        );
+
+        Ok(())
     }
 }
 

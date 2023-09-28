@@ -1,13 +1,12 @@
 use std::path::PathBuf;
 
+use iggy::cli_command::PRINT_TARGET;
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
     filter::{self, LevelFilter},
     fmt::{self},
     layer::{Layer, SubscriberExt},
 };
-
-pub(crate) static PRINT_TARGET: &str = "iggy::cmd";
 
 pub(crate) struct Logging {
     file_guard: Option<WorkerGuard>,

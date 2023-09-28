@@ -1,11 +1,18 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
+use crate::utils::timestamp::TimeStamp;
 use crate::validatable::Validatable;
+use anyhow::Context;
+use async_trait::async_trait;
+use comfy_table::Table;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
+use tracing::{event, Level};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct GetTopic {
@@ -18,14 +25,14 @@ pub struct GetTopic {
 impl CommandPayload for GetTopic {}
 
 impl Validatable<Error> for GetTopic {
-    fn validate(&self) -> Result<(), Error> {
+    fn validate(&self) -> std::result::Result<(), Error> {
         Ok(())
     }
 }
 
 impl FromStr for GetTopic {
     type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
+    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
         if parts.len() != 2 {
             return Err(Error::InvalidCommand);
@@ -52,7 +59,7 @@ impl BytesSerializable for GetTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<GetTopic, Error> {
         if bytes.len() < 6 {
             return Err(Error::InvalidCommand);
         }
@@ -73,6 +80,73 @@ impl BytesSerializable for GetTopic {
 impl Display for GetTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}|{}", self.stream_id, self.topic_id)
+    }
+}
+
+pub struct GetTopicCmd {
+    get_topic: GetTopic,
+}
+
+impl GetTopicCmd {
+    pub fn new(stream_id: Identifier, topic_id: Identifier) -> Self {
+        Self {
+            get_topic: GetTopic {
+                stream_id,
+                topic_id,
+            },
+        }
+    }
+}
+
+#[async_trait]
+impl CliCommand for GetTopicCmd {
+    fn explain(&self) -> String {
+        format!(
+            "get topic with ID: {} from stream with ID: {}",
+            self.get_topic.topic_id, self.get_topic.stream_id
+        )
+    }
+
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+        let topic = client.get_topic(&self.get_topic).await.with_context(|| {
+            format!(
+                "Problem getting topic with ID: {} in stream {}",
+                self.get_topic.topic_id, self.get_topic.stream_id
+            )
+        })?;
+
+        let mut table = Table::new();
+
+        table.set_header(vec!["Property", "Value"]);
+        table.add_row(vec!["Topic id", format!("{}", topic.id).as_str()]);
+        table.add_row(vec![
+            "Created",
+            TimeStamp::from(topic.created_at)
+                .to_string("%Y-%m-%d %H:%M:%S")
+                .as_str(),
+        ]);
+        table.add_row(vec!["Topic name", topic.name.as_str()]);
+        table.add_row(vec!["Topic size", format!("{}", topic.size_bytes).as_str()]);
+        table.add_row(vec![
+            "Message expiry",
+            match topic.message_expiry {
+                Some(value) => format!("{}", value),
+                None => String::from("None"),
+            }
+            .as_str(),
+        ]);
+        table.add_row(vec![
+            "Topic message count",
+            format!("{}", topic.messages_count).as_str(),
+        ]);
+        table.add_row(vec![
+            "Partitions count",
+            format!("{}", topic.partitions_count).as_str(),
+        ]);
+
+        event!(target: PRINT_TARGET, Level::INFO,"{table}");
+
+        Ok(())
     }
 }
 

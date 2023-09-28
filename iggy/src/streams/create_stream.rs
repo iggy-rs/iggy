@@ -1,12 +1,17 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::utils::text;
 use crate::validatable::Validatable;
+use anyhow::Context;
+use async_trait::async_trait;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
+use tracing::{event, Level};
 
 const MAX_NAME_LENGTH: usize = 255;
 
@@ -28,7 +33,7 @@ impl Default for CreateStream {
 }
 
 impl Validatable<Error> for CreateStream {
-    fn validate(&self) -> Result<(), Error> {
+    fn validate(&self) -> std::result::Result<(), Error> {
         if self.stream_id == 0 {
             return Err(Error::InvalidStreamId);
         }
@@ -47,7 +52,7 @@ impl Validatable<Error> for CreateStream {
 
 impl FromStr for CreateStream {
     type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
+    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
         if parts.len() != 2 {
             return Err(Error::InvalidCommand);
@@ -71,7 +76,7 @@ impl BytesSerializable for CreateStream {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreateStream, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<CreateStream, Error> {
         if bytes.len() < 6 {
             return Err(Error::InvalidCommand);
         }
@@ -92,6 +97,47 @@ impl BytesSerializable for CreateStream {
 impl Display for CreateStream {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}|{}", self.stream_id, self.name)
+    }
+}
+
+pub struct CreateStreamCmd {
+    create_stream: CreateStream,
+}
+
+impl CreateStreamCmd {
+    pub fn new(stream_id: u32, name: String) -> Self {
+        Self {
+            create_stream: CreateStream { stream_id, name },
+        }
+    }
+}
+
+#[async_trait]
+impl CliCommand for CreateStreamCmd {
+    fn explain(&self) -> String {
+        format!(
+            "create stream with ID: {} and name: {}",
+            self.create_stream.stream_id, self.create_stream.name
+        )
+    }
+
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+        client
+            .create_stream(&self.create_stream)
+            .await
+            .with_context(|| {
+                format!(
+                    "Problem creating stream (ID: {} and name: {})",
+                    self.create_stream.stream_id, self.create_stream.name
+                )
+            })?;
+
+        event!(target: PRINT_TARGET, Level::INFO,
+            "Stream with ID: {} and name: {} created",
+            self.create_stream.stream_id, self.create_stream.name
+        );
+
+        Ok(())
     }
 }
 

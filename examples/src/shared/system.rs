@@ -6,9 +6,9 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topic::GetTopic;
+use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use tracing::info;
-use iggy::users::defaults::*;
 
 pub async fn login_root(client: &dyn Client) {
     client

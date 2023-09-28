@@ -65,7 +65,7 @@ impl ConsumerOffset {
         topic_id: u32,
         partition_id: u32,
     ) -> String {
-        format!("{kind}_offsets:{stream_id}:{topic_id}:{partition_id}").to_string()
+        format!("{kind}_offsets:{stream_id}:{topic_id}:{partition_id}")
     }
 }
 

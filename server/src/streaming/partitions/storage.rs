@@ -253,7 +253,7 @@ impl Storage<Partition> for FilePartitionStorage {
             Ok(data) => {
                 if let Err(err) = self.db.insert(&key, data) {
                     error!("Cannot save partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                    return Err(Error::CannotSaveResource(key));
                 }
             }
             Err(err) => {

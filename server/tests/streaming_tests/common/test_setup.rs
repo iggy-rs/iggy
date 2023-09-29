@@ -17,12 +17,13 @@ pub struct TestSetup {
 
 impl TestSetup {
     pub async fn init() -> TestSetup {
+        Self::init_with_config(SystemConfig::default()).await
+    }
+
+    pub async fn init_with_config(mut config: SystemConfig) -> TestSetup {
         let directory_id = DIRECTORY_ID.fetch_add(1, SeqCst);
-        let path = format!("test_local_data_{}", directory_id);
-        let config = Arc::new(SystemConfig {
-            path,
-            ..Default::default()
-        });
+        config.path = format!("test_local_data_{}", directory_id);
+        let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();
         let persister = FilePersister {};
         let db = Arc::new(sled::open(config.get_database_path()).unwrap());

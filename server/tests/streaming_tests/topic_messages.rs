@@ -1,13 +1,103 @@
 use crate::streaming_tests::common::test_setup::TestSetup;
+use byte_unit::Byte;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::Message;
+use server::configs::resource_quota::MemoryResourceQuota;
+use server::configs::system::{CacheConfig, SystemConfig};
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
 use server::streaming::utils::hash;
 use std::collections::HashMap;
-use std::str::FromStr;
+use std::str::{from_utf8, FromStr};
+
+#[tokio::test]
+async fn given_disabled_cache_all_messages_should_be_polled() {
+    assert_polling_messages(
+        CacheConfig {
+            enabled: false,
+            ..Default::default()
+        },
+        false,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn given_enabled_cache_with_enough_capacity_all_messages_should_be_polled() {
+    assert_polling_messages(
+        CacheConfig {
+            enabled: true,
+            size: MemoryResourceQuota::Bytes(Byte::from(100_000_000u32)),
+        },
+        true,
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn given_enabled_cache_without_enough_capacity_all_messages_should_be_polled() {
+    assert_polling_messages(
+        CacheConfig {
+            enabled: true,
+            size: MemoryResourceQuota::Bytes(Byte::from(100_000u32)),
+        },
+        true,
+    )
+    .await;
+}
+
+async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool) {
+    let messages_count = 1000;
+    let payload_size_bytes = 1000;
+    let config = SystemConfig {
+        cache,
+        ..Default::default()
+    };
+    let setup = TestSetup::init_with_config(config).await;
+    let topic = init_topic(&setup, 1).await;
+    let partition_id = 1;
+    let partitioning = Partitioning::partition_id(partition_id);
+    let messages = (0..messages_count)
+        .map(|id| {
+            get_message(format!("{}:{}", id + 1, create_payload(payload_size_bytes)).as_str())
+        })
+        .collect::<Vec<_>>();
+    let mut sent_messages = Vec::new();
+    for message in &messages {
+        sent_messages.push(get_message(from_utf8(&message.payload).unwrap()))
+    }
+    topic
+        .append_messages(&partitioning, messages)
+        .await
+        .unwrap();
+
+    let consumer = PollingConsumer::Consumer(1, partition_id);
+    let polled_messages = topic
+        .get_messages(
+            consumer,
+            partition_id,
+            PollingStrategy::offset(0),
+            messages_count,
+        )
+        .await
+        .unwrap();
+
+    assert_eq!(polled_messages.messages.len(), messages_count as usize);
+    let partition = topic.get_partition(partition_id).unwrap();
+    let partition = partition.read().await;
+    assert_eq!(partition.cache.is_some(), expect_enabled_cache);
+    if expect_enabled_cache {
+        assert!(partition.cache.as_ref().unwrap().current_size() > 0);
+    }
+    for (index, polled_message) in polled_messages.messages.iter().enumerate() {
+        let sent_message = sent_messages.get(index).unwrap();
+        assert_eq!(sent_message.payload, polled_message.payload);
+        let polled_payload_str = from_utf8(&polled_message.payload).unwrap();
+        assert!(polled_payload_str.starts_with(&format!("{}:", index + 1)));
+    }
+}
 
 #[tokio::test]
 async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_round_robin() {
@@ -122,4 +212,14 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
 
 fn get_message(payload: &str) -> Message {
     Message::from_message(&send_messages::Message::from_str(payload).unwrap())
+}
+
+fn create_payload(size: u32) -> String {
+    let mut payload = String::with_capacity(size as usize);
+    for i in 0..size {
+        let char = (i % 26 + 97) as u8 as char;
+        payload.push(char);
+    }
+
+    payload
 }

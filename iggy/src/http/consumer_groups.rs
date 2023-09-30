@@ -23,7 +23,7 @@ impl ConsumerGroupClient for HttpClient {
                     &command.stream_id.as_string(),
                     &command.topic_id.as_string()
                 ),
-                command.stream_id
+                command.consumer_group_id
             ))
             .await?;
         let consumer_group = response.json().await?;

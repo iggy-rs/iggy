@@ -6,7 +6,8 @@ use tracing::trace;
 #[derive(Debug)]
 pub struct ConsumerGroup {
     pub topic_id: u32,
-    pub id: u32,
+    pub consumer_group_id: u32,
+    pub name: String,
     pub partitions_count: u32,
     members: HashMap<u32, RwLock<ConsumerGroupMember>>,
 }
@@ -20,10 +21,16 @@ pub struct ConsumerGroupMember {
 }
 
 impl ConsumerGroup {
-    pub fn new(topic_id: u32, id: u32, partitions_count: u32) -> ConsumerGroup {
+    pub fn new(
+        topic_id: u32,
+        consumer_group_id: u32,
+        name: &str,
+        partitions_count: u32,
+    ) -> ConsumerGroup {
         ConsumerGroup {
             topic_id,
-            id,
+            consumer_group_id,
+            name: name.to_string(),
             partitions_count,
             members: HashMap::new(),
         }
@@ -45,7 +52,7 @@ impl ConsumerGroup {
         }
         Err(Error::ConsumerGroupMemberNotFound(
             member_id,
-            self.id,
+            self.consumer_group_id,
             self.topic_id,
         ))
     }
@@ -57,7 +64,7 @@ impl ConsumerGroup {
         }
         Err(Error::ConsumerGroupMemberNotFound(
             member_id,
-            self.id,
+            self.consumer_group_id,
             self.topic_id,
         ))
     }
@@ -75,7 +82,7 @@ impl ConsumerGroup {
         trace!(
             "Added member with ID: {} to consumer group: {} for topic with ID: {}",
             member_id,
-            self.id,
+            self.consumer_group_id,
             self.topic_id
         );
         self.assign_partitions().await;
@@ -86,7 +93,7 @@ impl ConsumerGroup {
             trace!(
                 "Deleted member with ID: {} in consumer group: {} for topic with ID: {}",
                 member_id,
-                self.id,
+                self.consumer_group_id,
                 self.topic_id
             );
             self.assign_partitions().await;
@@ -117,7 +124,7 @@ impl ConsumerGroup {
                 .partitions
                 .insert(member_partition_index, partition_id);
             trace!("Assigned partition ID: {} to member with ID: {} for topic with ID: {} in consumer group: {}",
-                partition_id, member.id, self.topic_id, self.id)
+                partition_id, member.id, self.topic_id, self.consumer_group_id)
         }
     }
 }
@@ -154,7 +161,8 @@ mod tests {
         let member_id = 123;
         let mut consumer_group = ConsumerGroup {
             topic_id: 1,
-            id: 1,
+            consumer_group_id: 1,
+            name: "test".to_string(),
             partitions_count: 3,
             members: HashMap::new(),
         };
@@ -174,7 +182,8 @@ mod tests {
         let member_id = 123;
         let mut consumer_group = ConsumerGroup {
             topic_id: 1,
-            id: 1,
+            consumer_group_id: 1,
+            name: "test".to_string(),
             partitions_count: 3,
             members: HashMap::new(),
         };
@@ -198,7 +207,8 @@ mod tests {
         let member2_id = 456;
         let mut consumer_group = ConsumerGroup {
             topic_id: 1,
-            id: 1,
+            consumer_group_id: 1,
+            name: "test".to_string(),
             partitions_count: 3,
             members: HashMap::new(),
         };
@@ -234,7 +244,8 @@ mod tests {
         let member2_id = 456;
         let mut consumer_group = ConsumerGroup {
             topic_id: 1,
-            id: 1,
+            consumer_group_id: 1,
+            name: "test".to_string(),
             partitions_count: 1,
             members: HashMap::new(),
         };

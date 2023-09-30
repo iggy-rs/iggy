@@ -1,5 +1,4 @@
 use crate::streaming::partitions::partition::Partition;
-use crate::streaming::persistence::persister::Persister;
 use crate::streaming::storage::{Storage, TopicStorage};
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
@@ -18,17 +17,22 @@ use tracing::{error, info};
 #[derive(Debug)]
 pub struct FileTopicStorage {
     db: Arc<Db>,
-    persister: Arc<dyn Persister>,
 }
 
 impl FileTopicStorage {
-    pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
-        Self { db, persister }
+    pub fn new(db: Arc<Db>) -> Self {
+        Self { db }
     }
 }
 
 unsafe impl Send for FileTopicStorage {}
 unsafe impl Sync for FileTopicStorage {}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ConsumerGroupData {
+    id: u32,
+    name: String,
+}
 
 #[async_trait]
 impl TopicStorage for FileTopicStorage {
@@ -81,70 +85,76 @@ impl TopicStorage for FileTopicStorage {
         topic: &Topic,
         consumer_group: &ConsumerGroup,
     ) -> Result<(), Error> {
-        if self
-            .persister
-            .overwrite(
-                &topic.get_consumer_group_path(consumer_group.id),
-                &consumer_group.id.to_le_bytes(),
-            )
-            .await
-            .is_err()
-        {
-            return Err(Error::CannotCreateConsumerGroupInfo(
-                consumer_group.id,
-                topic.topic_id,
-                topic.stream_id,
-            ));
-        }
-
-        info!(
-            "Consumer group with ID: {} for topic with ID: {} and stream with ID: {} was saved.",
-            consumer_group.id, topic.topic_id, topic.stream_id
+        let key = get_consumer_group_key(
+            topic.stream_id,
+            topic.topic_id,
+            consumer_group.consumer_group_id,
         );
+        match rmp_serde::to_vec(&ConsumerGroupData {
+            id: consumer_group.consumer_group_id,
+            name: consumer_group.name.clone(),
+        }) {
+            Ok(data) => {
+                if let Err(err) = self.db.insert(key, data) {
+                    error!(
+                        "Cannot save consumer group with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}",
+                        consumer_group.consumer_group_id, topic.topic_id, topic.stream_id, err
+                    );
+                    return Err(Error::CannotCreateConsumerGroupInfo(
+                        consumer_group.consumer_group_id,
+                        topic.topic_id,
+                        topic.stream_id,
+                    ));
+                }
+            }
+            Err(err) => {
+                error!(
+                    "Cannot serialize consumer group with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}",
+                    consumer_group.consumer_group_id, topic.topic_id, topic.stream_id, err
+                );
+                return Err(Error::CannotCreateConsumerGroupInfo(
+                    consumer_group.consumer_group_id,
+                    topic.topic_id,
+                    topic.stream_id,
+                ));
+            }
+        }
 
         Ok(())
     }
 
-    async fn load_consumer_groups(&self, topic: &mut Topic) -> Result<(), Error> {
+    async fn load_consumer_groups(&self, topic: &mut Topic) -> Result<Vec<ConsumerGroup>, Error> {
         info!(
             "Loading consumer groups for topic with ID: {} for stream with ID: {} from disk...",
             topic.topic_id, topic.stream_id
         );
 
-        let dir_entries = fs::read_dir(&topic.get_consumer_groups_path()).await;
-        if dir_entries.is_err() {
-            return Err(Error::CannotReadConsumerGroups(
+        let key_prefix = get_consumer_groups_key_prefix(topic.stream_id, topic.topic_id);
+        let mut consumer_groups = Vec::new();
+        for data in self.db.scan_prefix(format!("{}:", key_prefix)) {
+            let consumer_group = match data {
+                Ok((_, value)) => match rmp_serde::from_slice::<ConsumerGroupData>(&value) {
+                    Ok(user) => user,
+                    Err(err) => {
+                        error!("Cannot deserialize consumer group. Error: {}", err);
+                        return Err(Error::CannotDeserializeResource(key_prefix));
+                    }
+                },
+                Err(err) => {
+                    error!("Cannot load consumer group. Error: {}", err);
+                    return Err(Error::CannotLoadResource(key_prefix));
+                }
+            };
+            let consumer_group = ConsumerGroup::new(
                 topic.topic_id,
-                topic.stream_id,
-            ));
-        }
-
-        let mut dir_entries = dir_entries.unwrap();
-        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
-            let metadata = dir_entry.metadata().await;
-            if metadata.is_err() || metadata.unwrap().is_dir() {
-                continue;
-            }
-
-            let name = dir_entry.file_name().into_string().unwrap();
-            let consumer_group_id = name.parse::<u32>();
-            if consumer_group_id.is_err() {
-                error!("Invalid consumer group ID file with name: '{}'.", name);
-                continue;
-            }
-
-            let consumer_group_id = consumer_group_id.unwrap();
-            topic.consumer_groups.insert(
-                consumer_group_id,
-                RwLock::new(ConsumerGroup::new(
-                    topic.topic_id,
-                    consumer_group_id,
-                    topic.partitions.len() as u32,
-                )),
+                consumer_group.id,
+                &consumer_group.name,
+                topic.get_partitions_count(),
             );
+            consumer_groups.push(consumer_group);
         }
 
-        Ok(())
+        Ok(consumer_groups)
     }
 
     async fn delete_consumer_group(
@@ -152,22 +162,18 @@ impl TopicStorage for FileTopicStorage {
         topic: &Topic,
         consumer_group: &ConsumerGroup,
     ) -> Result<(), Error> {
-        if self
-            .persister
-            .delete(&topic.get_consumer_group_path(consumer_group.id))
-            .await
-            .is_err()
-        {
-            return Err(Error::CannotDeleteConsumerGroupInfo(
-                consumer_group.id,
-                topic.topic_id,
-                topic.stream_id,
-            ));
+        let key = get_consumer_group_key(
+            topic.stream_id,
+            topic.topic_id,
+            consumer_group.consumer_group_id,
+        );
+        if self.db.remove(&key).is_err() {
+            return Err(Error::CannotDeleteResource(key));
         }
 
         info!(
             "Consumer group with ID: {} for topic with ID: {} and stream with ID: {} was deleted.",
-            consumer_group.id, topic.topic_id, topic.stream_id
+            consumer_group.consumer_group_id, topic.topic_id, topic.stream_id
         );
 
         Ok(())
@@ -192,7 +198,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::TopicIdNotFound(topic.topic_id, topic.stream_id));
         }
 
-        let key = get_key(topic.stream_id, topic.topic_id);
+        let key = get_topic_key(topic.stream_id, topic.topic_id);
         let topic_data = self.db.get(&key);
         if topic_data.is_err() {
             return Err(Error::CannotLoadResource(key));
@@ -299,16 +305,7 @@ impl Storage<Topic> for FileTopicStorage {
             ));
         }
 
-        if !Path::new(&topic.get_consumer_groups_path()).exists()
-            && create_dir(&topic.get_consumer_groups_path()).await.is_err()
-        {
-            return Err(Error::CannotCreateConsumerGroupsDirectory(
-                topic.stream_id,
-                topic.topic_id,
-            ));
-        }
-
-        let key = get_key(topic.stream_id, topic.topic_id);
+        let key = get_topic_key(topic.stream_id, topic.topic_id);
         match rmp_serde::to_vec(&TopicData {
             name: topic.name.clone(),
             created_at: topic.created_at,
@@ -356,9 +353,13 @@ impl Storage<Topic> for FileTopicStorage {
             "Deleting topic with ID: {} for stream with ID: {}...",
             topic.topic_id, topic.stream_id
         );
-        let key = get_key(topic.stream_id, topic.topic_id);
+        let key = get_topic_key(topic.stream_id, topic.topic_id);
         if self.db.remove(&key).is_err() {
             return Err(Error::CannotDeleteResource(key));
+        }
+        for consumer_group in topic.consumer_groups.values() {
+            let consumer_group = consumer_group.read().await;
+            self.delete_consumer_group(topic, &consumer_group).await?;
         }
         if fs::remove_dir_all(&topic.path).await.is_err() {
             return Err(Error::CannotDeleteTopicDirectory(
@@ -376,6 +377,18 @@ impl Storage<Topic> for FileTopicStorage {
     }
 }
 
-fn get_key(stream_id: u32, topic_id: u32) -> String {
+fn get_topic_key(stream_id: u32, topic_id: u32) -> String {
     format!("streams:{}:topics:{}", stream_id, topic_id)
+}
+
+fn get_consumer_group_key(stream_id: u32, topic_id: u32, consumer_group_id: u32) -> String {
+    format!(
+        "{}:{}",
+        get_consumer_groups_key_prefix(stream_id, topic_id),
+        consumer_group_id
+    )
+}
+
+fn get_consumer_groups_key_prefix(stream_id: u32, topic_id: u32) -> String {
+    format!("streams:{}:topics:{}:consumer_groups", stream_id, topic_id)
 }

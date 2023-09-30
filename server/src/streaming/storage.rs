@@ -55,7 +55,7 @@ pub trait TopicStorage: Storage<Topic> {
         topic: &Topic,
         consumer_group: &ConsumerGroup,
     ) -> Result<(), Error>;
-    async fn load_consumer_groups(&self, topic: &mut Topic) -> Result<(), Error>;
+    async fn load_consumer_groups(&self, topic: &mut Topic) -> Result<Vec<ConsumerGroup>, Error>;
     async fn delete_consumer_group(
         &self,
         topic: &Topic,
@@ -73,6 +73,13 @@ pub trait PartitionStorage: Storage<Partition> {
         topic_id: u32,
         partition_id: u32,
     ) -> Result<Vec<ConsumerOffset>, Error>;
+    async fn delete_consumer_offsets(
+        &self,
+        kind: ConsumerKind,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -128,7 +135,7 @@ impl SystemStorage {
             info: Arc::new(FileSystemInfoStorage::new(db.clone())),
             user: Arc::new(FileUserStorage::new(db.clone())),
             stream: Arc::new(FileStreamStorage::new(db.clone())),
-            topic: Arc::new(FileTopicStorage::new(db.clone(), persister.clone())),
+            topic: Arc::new(FileTopicStorage::new(db.clone())),
             partition: Arc::new(FilePartitionStorage::new(db.clone())),
             segment: Arc::new(FileSegmentStorage::new(persister.clone())),
         }
@@ -297,8 +304,11 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn load_consumer_groups(&self, _topic: &mut Topic) -> Result<(), Error> {
-            Ok(())
+        async fn load_consumer_groups(
+            &self,
+            _topic: &mut Topic,
+        ) -> Result<Vec<ConsumerGroup>, Error> {
+            Ok(vec![])
         }
 
         async fn delete_consumer_group(
@@ -339,6 +349,16 @@ pub(crate) mod tests {
             _partition_id: u32,
         ) -> Result<Vec<ConsumerOffset>, Error> {
             Ok(vec![])
+        }
+
+        async fn delete_consumer_offsets(
+            &self,
+            _kind: ConsumerKind,
+            _stream_id: u32,
+            _topic_id: u32,
+            _partition_id: u32,
+        ) -> Result<(), Error> {
+            Ok(())
         }
     }
 

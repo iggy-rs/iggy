@@ -213,7 +213,7 @@ fn extend_partition(partition: &Partition, bytes: &mut Vec<u8>) {
 }
 
 fn extend_consumer_group(consumer_group: &ConsumerGroup, bytes: &mut Vec<u8>) {
-    bytes.put_u32_le(consumer_group.id);
+    bytes.put_u32_le(consumer_group.consumer_group_id);
     bytes.put_u32_le(consumer_group.partitions_count);
     bytes.put_u32_le(consumer_group.get_members().len() as u32);
 }

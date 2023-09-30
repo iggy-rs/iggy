@@ -96,14 +96,6 @@ impl Topic {
             )),
         }
     }
-
-    pub fn get_consumer_group_path(&self, id: u32) -> String {
-        format!("{}/{}", self.get_consumer_groups_path(), id)
-    }
-
-    pub fn get_consumer_groups_path(&self) -> String {
-        format!("{}/groups", self.path)
-    }
 }
 
 #[cfg(test)]

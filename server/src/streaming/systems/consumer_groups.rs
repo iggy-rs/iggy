@@ -43,6 +43,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         consumer_group_id: u32,
+        name: &str,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
         {
@@ -56,7 +57,7 @@ impl System {
         }
 
         let topic = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id)?;
-        topic.create_consumer_group(consumer_group_id).await?;
+        topic.create_consumer_group(consumer_group_id, name).await?;
         Ok(())
     }
 

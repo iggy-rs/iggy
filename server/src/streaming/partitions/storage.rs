@@ -86,6 +86,45 @@ impl PartitionStorage for FilePartitionStorage {
         consumer_offsets.sort_by(|a, b| a.consumer_id.cmp(&b.consumer_id));
         Ok(consumer_offsets)
     }
+
+    async fn delete_consumer_offsets(
+        &self,
+        kind: ConsumerKind,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> Result<(), Error> {
+        let consumer_offset_key_prefix = format!(
+            "{}:",
+            ConsumerOffset::get_key_prefix(kind, stream_id, topic_id, partition_id)
+        );
+
+        for data in self.db.scan_prefix(&consumer_offset_key_prefix) {
+            if data.is_err() {
+                error!(
+                    "Cannot delete consumer offsets for kind {}. Error: {}",
+                    kind,
+                    data.err().unwrap()
+                );
+                return Err(Error::CannotLoadResource(
+                    consumer_offset_key_prefix.to_string(),
+                ));
+            }
+
+            let (key, _) = data.unwrap();
+            if let Err(error) = self.db.remove(&key) {
+                error!(
+                    "Cannot delete consumer offset for kind {}. Error: {}",
+                    kind, error
+                );
+                return Err(Error::CannotLoadResource(
+                    consumer_offset_key_prefix.to_string(),
+                ));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -306,7 +345,42 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
+        if let Err(err) = self
+            .delete_consumer_offsets(
+                ConsumerKind::Consumer,
+                partition.stream_id,
+                partition.topic_id,
+                partition.partition_id,
+            )
+            .await
+        {
+            error!("Cannot delete consumer offsets for partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
+            return Err(Error::CannotDeletePartition(
+                partition.partition_id,
+                partition.topic_id,
+                partition.stream_id,
+            ));
+        }
+
+        if let Err(err) = self
+            .delete_consumer_offsets(
+                ConsumerKind::ConsumerGroup,
+                partition.stream_id,
+                partition.topic_id,
+                partition.partition_id,
+            )
+            .await
+        {
+            error!("Cannot delete consumer group offsets for partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
+            return Err(Error::CannotDeletePartition(
+                partition.partition_id,
+                partition.topic_id,
+                partition.stream_id,
+            ));
+        }
+
         if fs::remove_dir_all(&partition.path).await.is_err() {
+            error!("Cannot delete partition directory: {} for partition with ID: {} for topic with ID: {} for stream with ID: {}.", partition.path, partition.partition_id, partition.topic_id, partition.stream_id);
             return Err(Error::CannotDeletePartitionDirectory(
                 partition.partition_id,
                 partition.stream_id,

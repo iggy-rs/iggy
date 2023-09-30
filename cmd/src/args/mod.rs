@@ -1,9 +1,12 @@
 pub(crate) mod common;
 pub(crate) mod partition;
 pub(crate) mod stream;
+pub(crate) mod system;
 pub(crate) mod topic;
 
-use crate::args::{partition::PartitionAction, stream::StreamAction, topic::TopicAction};
+use crate::args::{
+    partition::PartitionAction, stream::StreamAction, system::PingArgs, topic::TopicAction,
+};
 use clap::{Parser, Subcommand};
 use iggy::args::Args as IggyArgs;
 use std::path::PathBuf;
@@ -45,4 +48,18 @@ pub(crate) enum Command {
     /// partition operations
     #[clap(subcommand)]
     Partition(PartitionAction),
+    /// ping iggy server
+    ///
+    /// Check if iggy server is up and running and what's the response ping response time
+    Ping(PingArgs),
+    /// get current client info
+    ///
+    /// Command connects to Iggy server and collects client info like client ID, user ID
+    /// server address and protocol type.
+    Me,
+    /// get iggy server statistics
+    ///
+    /// Collect basic Iggy server statistics like number of streams, topics, partitions, etc.
+    /// Server OS name, version, etc. are also collected.
+    Stats,
 }

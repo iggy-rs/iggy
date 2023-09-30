@@ -16,12 +16,15 @@ pub async fn handle(
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
     let mut system = system.write().await;
+    // TODO: Provide a name for the consumer group from the command.
+    let name = format!("cg-{}", command.consumer_group_id);
     system
         .create_consumer_group(
             session,
             &command.stream_id,
             &command.topic_id,
             command.consumer_group_id,
+            &name,
         )
         .await?;
     sender.send_empty_ok_response().await?;

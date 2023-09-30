@@ -34,8 +34,9 @@ impl Topic {
         Ok(consumer_group.unwrap())
     }
 
-    pub async fn create_consumer_group(&mut self, id: u32) -> Result<(), Error> {
-        let consumer_group = ConsumerGroup::new(self.topic_id, id, self.partitions.len() as u32);
+    pub async fn create_consumer_group(&mut self, id: u32, name: &str) -> Result<(), Error> {
+        let consumer_group =
+            ConsumerGroup::new(self.topic_id, id, name, self.partitions.len() as u32);
         if self
             .consumer_groups
             .insert(id, RwLock::new(consumer_group))
@@ -118,19 +119,31 @@ mod tests {
     #[tokio::test]
     async fn should_be_created_given_valid_parameters() {
         let consumer_group_id = 1;
+        let name = "test";
         let mut topic = get_topic();
-        let result = topic.create_consumer_group(consumer_group_id).await;
+        let result = topic.create_consumer_group(consumer_group_id, name).await;
         assert!(result.is_ok());
+        assert_eq!(topic.consumer_groups.len(), 1);
+        let consumer_group = topic.get_consumer_group(consumer_group_id).unwrap();
+        let consumer_group = consumer_group.read().await;
+        assert_eq!(consumer_group.consumer_group_id, consumer_group_id);
+        assert_eq!(consumer_group.name, name);
+        assert_eq!(consumer_group.topic_id, topic.topic_id);
+        assert_eq!(
+            consumer_group.partitions_count,
+            topic.partitions.len() as u32
+        );
     }
 
     #[tokio::test]
     async fn should_not_be_created_given_already_existing_group_with_same_id() {
         let consumer_group_id = 1;
+        let name = "test";
         let mut topic = get_topic();
-        let result = topic.create_consumer_group(consumer_group_id).await;
+        let result = topic.create_consumer_group(consumer_group_id, name).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
-        let result = topic.create_consumer_group(consumer_group_id).await;
+        let result = topic.create_consumer_group(consumer_group_id, name).await;
         assert!(result.is_err());
         assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
@@ -140,8 +153,9 @@ mod tests {
     #[tokio::test]
     async fn should_be_deleted_given_already_existing_group_with_same_id() {
         let consumer_group_id = 1;
+        let name = "test";
         let mut topic = get_topic();
-        let result = topic.create_consumer_group(consumer_group_id).await;
+        let result = topic.create_consumer_group(consumer_group_id, name).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
         let result = topic.delete_consumer_group(consumer_group_id).await;
@@ -152,8 +166,9 @@ mod tests {
     #[tokio::test]
     async fn should_not_be_deleted_given_non_existing_group_with_same_id() {
         let consumer_group_id = 1;
+        let name = "test";
         let mut topic = get_topic();
-        let result = topic.create_consumer_group(consumer_group_id).await;
+        let result = topic.create_consumer_group(consumer_group_id, name).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
         let result = topic.delete_consumer_group(consumer_group_id + 1).await;
@@ -164,10 +179,11 @@ mod tests {
     #[tokio::test]
     async fn should_be_joined_by_new_member() {
         let consumer_group_id = 1;
+        let name = "test";
         let member_id = 1;
         let mut topic = get_topic();
         topic
-            .create_consumer_group(consumer_group_id)
+            .create_consumer_group(consumer_group_id, name)
             .await
             .unwrap();
         let result = topic
@@ -186,10 +202,11 @@ mod tests {
     #[tokio::test]
     async fn should_be_left_by_existing_member() {
         let consumer_group_id = 1;
+        let name = "test";
         let member_id = 1;
         let mut topic = get_topic();
         topic
-            .create_consumer_group(consumer_group_id)
+            .create_consumer_group(consumer_group_id, name)
             .await
             .unwrap();
         topic

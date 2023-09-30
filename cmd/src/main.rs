@@ -19,6 +19,7 @@ use iggy::cmd::{
         create_stream::CreateStreamCmd, delete_stream::DeleteStreamCmd, get_stream::GetStreamCmd,
         get_streams::GetStreamsCmd, update_stream::UpdateStreamCmd,
     },
+    system::{me::GetMeCmd, ping::PingCmd, stats::GetStatsCmd},
     topics::{
         create_topic::CreateTopicCmd, delete_topic::DeleteTopicCmd, get_topic::GetTopicCmd,
         get_topics::GetTopicsCmd, update_topic::UpdateTopicCmd,
@@ -83,6 +84,9 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
                 args.partitions_count,
             )),
         },
+        Command::Ping(args) => Box::new(PingCmd::new(args.count)),
+        Command::Me => Box::new(GetMeCmd::new()),
+        Command::Stats => Box::new(GetStatsCmd::new()),
     }
 }
 

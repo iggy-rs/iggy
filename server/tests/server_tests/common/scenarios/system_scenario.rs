@@ -45,7 +45,8 @@ const CONSUMER_ID: u32 = 1;
 const CONSUMER_KIND: ConsumerKind = ConsumerKind::Consumer;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
-const CONSUMER_GROUP_ID: u32 = 1;
+const CONSUMER_GROUP_ID: u32 = 10;
+const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
 const MESSAGES_COUNT: u32 = 1000;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
@@ -428,6 +429,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             consumer_group_id: CONSUMER_GROUP_ID,
+            name: CONSUMER_GROUP_NAME.to_string(),
         })
         .await
         .unwrap();
@@ -483,6 +485,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
                 .unwrap();
             assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
             assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
+            assert_eq!(consumer_group.name, CONSUMER_GROUP_NAME);
             assert_eq!(consumer_group.members_count, 1);
             assert_eq!(consumer_group.members.len(), 1);
             let member = &consumer_group.members[0];
@@ -493,9 +496,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             assert_eq!(me.consumer_groups_count, 1);
             assert_eq!(me.consumer_groups.len(), 1);
             let consumer_group = &me.consumer_groups[0];
-            assert_eq!(consumer_group.consumer_group_id, CONSUMER_GROUP_ID);
+            assert_eq!(consumer_group.stream_id, STREAM_ID);
             assert_eq!(consumer_group.topic_id, TOPIC_ID);
-            assert_eq!(consumer_group.consumer_group_id, STREAM_ID);
+            assert_eq!(consumer_group.consumer_group_id, CONSUMER_GROUP_ID);
 
             client
                 .leave_consumer_group(&LeaveConsumerGroup {

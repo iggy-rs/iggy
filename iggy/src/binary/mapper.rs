@@ -444,6 +444,7 @@ pub fn map_consumer_group(payload: &[u8]) -> Result<ConsumerGroupDetails, Error>
     members.sort_by(|x, y| x.id.cmp(&y.id));
     let consumer_group_details = ConsumerGroupDetails {
         id: consumer_group.id,
+        name: consumer_group.name,
         partitions_count: consumer_group.partitions_count,
         members_count: consumer_group.members_count,
         members,
@@ -455,13 +456,18 @@ fn map_to_consumer_group(payload: &[u8], position: usize) -> Result<(ConsumerGro
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let partitions_count = u32::from_le_bytes(payload[position + 4..position + 8].try_into()?);
     let members_count = u32::from_le_bytes(payload[position + 8..position + 12].try_into()?);
+    let name_length = payload[position + 12];
+    let name =
+        from_utf8(&payload[position + 13..position + 13 + name_length as usize])?.to_string();
+    let read_bytes = 13 + name_length as usize;
     Ok((
         ConsumerGroup {
             id,
             partitions_count,
             members_count,
+            name,
         },
-        12,
+        read_bytes,
     ))
 }
 

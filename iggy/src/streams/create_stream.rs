@@ -28,7 +28,7 @@ impl Default for CreateStream {
 }
 
 impl Validatable<Error> for CreateStream {
-    fn validate(&self) -> std::result::Result<(), Error> {
+    fn validate(&self) -> Result<(), Error> {
         if self.stream_id == 0 {
             return Err(Error::InvalidStreamId);
         }
@@ -47,7 +47,7 @@ impl Validatable<Error> for CreateStream {
 
 impl FromStr for CreateStream {
     type Err = Error;
-    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
+    fn from_str(input: &str) -> Result<Self, Self::Err> {
         let parts = input.split('|').collect::<Vec<&str>>();
         if parts.len() != 2 {
             return Err(Error::InvalidCommand);
@@ -71,7 +71,7 @@ impl BytesSerializable for CreateStream {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> std::result::Result<CreateStream, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<CreateStream, Error> {
         if bytes.len() < 6 {
             return Err(Error::InvalidCommand);
         }

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConsumerGroup {
     pub id: u32,
+    pub name: String,
     pub partitions_count: u32,
     pub members_count: u32,
 }
@@ -10,6 +11,7 @@ pub struct ConsumerGroup {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ConsumerGroupDetails {
     pub id: u32,
+    pub name: String,
     pub partitions_count: u32,
     pub members_count: u32,
     pub members: Vec<ConsumerGroupMember>,

@@ -20,6 +20,7 @@ pub struct Topic {
     pub(crate) partitions: HashMap<u32, Arc<RwLock<Partition>>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
+    pub(crate) consumer_groups_ids: HashMap<String, u32>,
     pub(crate) current_partition_id: AtomicU32,
     pub message_expiry: Option<u32>,
     pub created_at: u64,
@@ -55,6 +56,7 @@ impl Topic {
             partitions_path,
             storage,
             consumer_groups: HashMap::new(),
+            consumer_groups_ids: HashMap::new(),
             current_partition_id: AtomicU32::new(1),
             message_expiry: match message_expiry {
                 Some(expiry) => match expiry {

@@ -19,7 +19,8 @@ const TOPIC_ID: u32 = 1;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const PARTITIONS_COUNT: u32 = 3;
-const CONSUMER_GROUP_ID: u32 = 1;
+const CONSUMER_GROUP_ID: u32 = 10;
+const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
 const MESSAGES_COUNT: u32 = 1000;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
@@ -64,6 +65,7 @@ async fn init_system(client: &IggyClient) {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
+        name: CONSUMER_GROUP_NAME.to_string(),
     };
     client.create_consumer_group(&create_group).await.unwrap();
 

@@ -16,7 +16,8 @@ const TOPIC_ID: u32 = 1;
 const STREAM_NAME: &str = "test-stream";
 const TOPIC_NAME: &str = "test-topic";
 const PARTITIONS_COUNT: u32 = 3;
-const CONSUMER_GROUP_ID: u32 = 1;
+const CONSUMER_GROUP_ID: u32 = 10;
+const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let mut test_server = TestServer::default();
@@ -50,6 +51,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         consumer_group_id: CONSUMER_GROUP_ID,
+        name: CONSUMER_GROUP_NAME.to_string(),
     };
     system_client
         .create_consumer_group(&create_group)
@@ -154,6 +156,7 @@ async fn get_consumer_group_and_validate_members(
     let consumer_group = client.get_consumer_group(&get_group).await.unwrap();
 
     assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
+    assert_eq!(consumer_group.name, CONSUMER_GROUP_NAME);
     assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
     assert_eq!(consumer_group.members_count, members_count);
     assert_eq!(consumer_group.members.len() as u32, members_count);

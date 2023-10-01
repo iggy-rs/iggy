@@ -16,7 +16,7 @@ pub struct DeleteStream {
 impl CommandPayload for DeleteStream {}
 
 impl Validatable<Error> for DeleteStream {
-    fn validate(&self) -> std::result::Result<(), Error> {
+    fn validate(&self) -> Result<(), Error> {
         Ok(())
     }
 }

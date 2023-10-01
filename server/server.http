@@ -260,7 +260,8 @@ POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups
 Content-Type: application/json
 
 {
-  "consumer_group_id": {{consumer_group_id}}
+  "consumer_group_id": {{consumer_group_id}},
+  "name": "consumer_group_1",
 }
 
 ###

@@ -1,6 +1,7 @@
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::Error;
+use iggy::utils::text;
 use tokio::sync::RwLock;
 use tracing::info;
 
@@ -35,27 +36,30 @@ impl Topic {
     }
 
     pub async fn create_consumer_group(&mut self, id: u32, name: &str) -> Result<(), Error> {
-        let consumer_group =
-            ConsumerGroup::new(self.topic_id, id, name, self.partitions.len() as u32);
-        if self
-            .consumer_groups
-            .insert(id, RwLock::new(consumer_group))
-            .is_none()
-        {
-            let consumer_group = self.get_consumer_group(id)?;
-            let consumer_group = consumer_group.read().await;
-            self.storage
-                .topic
-                .save_consumer_group(self, &consumer_group)
-                .await?;
-            info!(
-                "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
-                id, self.topic_id, self.stream_id
-            );
-            return Ok(());
+        if self.consumer_groups.contains_key(&id) {
+            return Err(Error::ConsumerGroupAlreadyExists(id, self.topic_id));
         }
 
-        Err(Error::ConsumerGroupAlreadyExists(id, self.topic_id))
+        let name = text::to_lowercase_non_whitespace(name);
+        if self.consumer_groups_ids.contains_key(&name) {
+            return Err(Error::ConsumerGroupNameAlreadyExists(name));
+        }
+
+        let consumer_group =
+            ConsumerGroup::new(self.topic_id, id, &name, self.partitions.len() as u32);
+        self.consumer_groups.insert(id, RwLock::new(consumer_group));
+        self.consumer_groups_ids.insert(name, id);
+        let consumer_group = self.get_consumer_group(id)?;
+        let consumer_group = consumer_group.read().await;
+        self.storage
+            .topic
+            .save_consumer_group(self, &consumer_group)
+            .await?;
+        info!(
+            "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
+            id, self.topic_id, self.stream_id
+        );
+        Ok(())
     }
 
     pub async fn delete_consumer_group(&mut self, id: u32) -> Result<RwLock<ConsumerGroup>, Error> {
@@ -63,6 +67,7 @@ impl Topic {
         if let Some(consumer_group) = consumer_group {
             {
                 let consumer_group = consumer_group.read().await;
+                self.consumer_groups_ids.remove(&consumer_group.name);
                 self.storage
                     .topic
                     .delete_consumer_group(self, &consumer_group)
@@ -148,6 +153,22 @@ mod tests {
         assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
         assert!(matches!(err, Error::ConsumerGroupAlreadyExists(_, _)));
+    }
+
+    #[tokio::test]
+    async fn should_not_be_created_given_already_existing_group_with_same_name() {
+        let consumer_group_id = 1;
+        let name = "test";
+        let mut topic = get_topic();
+        let result = topic.create_consumer_group(consumer_group_id, name).await;
+        assert!(result.is_ok());
+        assert_eq!(topic.consumer_groups.len(), 1);
+        let consumer_group_id = consumer_group_id + 1;
+        let result = topic.create_consumer_group(consumer_group_id, name).await;
+        assert!(result.is_err());
+        assert_eq!(topic.consumer_groups.len(), 1);
+        let err = result.unwrap_err();
+        assert!(matches!(err, Error::ConsumerGroupNameAlreadyExists(_)));
     }
 
     #[tokio::test]

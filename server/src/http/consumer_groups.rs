@@ -66,15 +66,13 @@ async fn create_consumer_group(
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
     let mut system = state.system.write().await;
-    // TODO: Provide a name for the consumer group from the command.
-    let name = format!("cg-{}", command.consumer_group_id);
     system
         .create_consumer_group(
             &Session::stateless(identity.user_id),
             &command.stream_id,
             &command.topic_id,
             command.consumer_group_id,
-            &name,
+            &command.name,
         )
         .await?;
     Ok(StatusCode::CREATED)

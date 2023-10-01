@@ -16,7 +16,7 @@ pub struct GetStream {
 impl CommandPayload for GetStream {}
 
 impl Validatable<Error> for GetStream {
-    fn validate(&self) -> std::result::Result<(), Error> {
+    fn validate(&self) -> Result<(), Error> {
         Ok(())
     }
 }

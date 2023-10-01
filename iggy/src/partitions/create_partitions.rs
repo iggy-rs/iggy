@@ -32,7 +32,7 @@ impl Default for CreatePartitions {
 }
 
 impl Validatable<Error> for CreatePartitions {
-    fn validate(&self) -> std::result::Result<(), Error> {
+    fn validate(&self) -> Result<(), Error> {
         if !(1..=MAX_PARTITIONS_COUNT).contains(&self.partitions_count) {
             return Err(Error::TooManyPartitions);
         }

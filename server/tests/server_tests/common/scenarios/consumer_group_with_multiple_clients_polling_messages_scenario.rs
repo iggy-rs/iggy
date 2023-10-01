@@ -102,7 +102,7 @@ async fn init_system(
     let join_group = JoinConsumerGroup {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        consumer_group_id: CONSUMER_GROUP_ID,
+        consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
     };
 
     // 4. Join the consumer group by each client
@@ -115,7 +115,7 @@ async fn init_system(
         .get_consumer_group(&GetConsumerGroup {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            consumer_group_id: CONSUMER_GROUP_ID,
+            consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -212,7 +212,7 @@ async fn execute_using_none_key(
         .get_consumer_group(&GetConsumerGroup {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            consumer_group_id: CONSUMER_GROUP_ID,
+            consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
         })
         .await
         .unwrap();

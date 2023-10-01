@@ -3,38 +3,24 @@ use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct DeleteConsumerGroup {
     #[serde(skip)]
     pub stream_id: Identifier,
     #[serde(skip)]
     pub topic_id: Identifier,
-    pub consumer_group_id: u32,
+    #[serde(skip)]
+    pub consumer_group_id: Identifier,
 }
 
 impl CommandPayload for DeleteConsumerGroup {}
 
-impl Default for DeleteConsumerGroup {
-    fn default() -> Self {
-        DeleteConsumerGroup {
-            stream_id: Identifier::default(),
-            topic_id: Identifier::default(),
-            consumer_group_id: 1,
-        }
-    }
-}
-
 impl Validatable<Error> for DeleteConsumerGroup {
     fn validate(&self) -> Result<(), Error> {
-        if self.consumer_group_id == 0 {
-            return Err(Error::InvalidConsumerGroupId);
-        }
-
         Ok(())
     }
 }
@@ -49,7 +35,7 @@ impl FromStr for DeleteConsumerGroup {
 
         let stream_id = parts[0].parse::<Identifier>()?;
         let topic_id = parts[1].parse::<Identifier>()?;
-        let consumer_group_id = parts[2].parse::<u32>()?;
+        let consumer_group_id = parts[2].parse::<Identifier>()?;
         let command = DeleteConsumerGroup {
             stream_id,
             topic_id,
@@ -64,15 +50,18 @@ impl BytesSerializable for DeleteConsumerGroup {
     fn as_bytes(&self) -> Vec<u8> {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
-        let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
+        let consumer_group_id_bytes = self.consumer_group_id.as_bytes();
+        let mut bytes = Vec::with_capacity(
+            stream_id_bytes.len() + topic_id_bytes.len() + consumer_group_id_bytes.len(),
+        );
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.put_u32_le(self.consumer_group_id);
+        bytes.extend(consumer_group_id_bytes);
         bytes
     }
 
     fn from_bytes(bytes: &[u8]) -> Result<DeleteConsumerGroup, Error> {
-        if bytes.len() < 10 {
+        if bytes.len() < 9 {
             return Err(Error::InvalidCommand);
         }
 
@@ -81,7 +70,7 @@ impl BytesSerializable for DeleteConsumerGroup {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(&bytes[position..])?;
         position += topic_id.get_size_bytes() as usize;
-        let consumer_group_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let consumer_group_id = Identifier::from_bytes(&bytes[position..])?;
         let command = DeleteConsumerGroup {
             stream_id,
             topic_id,
@@ -111,7 +100,7 @@ mod tests {
         let command = DeleteConsumerGroup {
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(2).unwrap(),
-            consumer_group_id: 3,
+            consumer_group_id: Identifier::numeric(3).unwrap(),
         };
 
         let bytes = command.as_bytes();
@@ -120,8 +109,7 @@ mod tests {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
         position += topic_id.get_size_bytes() as usize;
-        let consumer_group_id =
-            u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
+        let consumer_group_id = Identifier::from_bytes(&bytes[position..]).unwrap();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -133,13 +121,16 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
-        let consumer_group_id = 3u32;
+        let consumer_group_id = Identifier::numeric(3).unwrap();
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
-        let mut bytes = Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
+        let consumer_group_id_bytes = consumer_group_id.as_bytes();
+        let mut bytes = Vec::with_capacity(
+            stream_id_bytes.len() + topic_id_bytes.len() + consumer_group_id_bytes.len(),
+        );
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
-        bytes.put_u32_le(consumer_group_id);
+        bytes.extend(consumer_group_id_bytes);
         let command = DeleteConsumerGroup::from_bytes(&bytes);
         assert!(command.is_ok());
 
@@ -153,7 +144,7 @@ mod tests {
     fn should_be_read_from_string() {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
-        let consumer_group_id = 3u32;
+        let consumer_group_id = Identifier::numeric(3).unwrap();
         let input = format!("{stream_id}|{topic_id}|{consumer_group_id}");
         let command = DeleteConsumerGroup::from_str(&input);
         assert!(command.is_ok());

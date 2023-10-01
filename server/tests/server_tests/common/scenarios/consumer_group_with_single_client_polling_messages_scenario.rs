@@ -72,7 +72,7 @@ async fn init_system(client: &IggyClient) {
     let join_group = JoinConsumerGroup {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        consumer_group_id: CONSUMER_GROUP_ID,
+        consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
     };
 
     // 4. Join the consumer group by client
@@ -83,7 +83,7 @@ async fn init_system(client: &IggyClient) {
         .get_consumer_group(&GetConsumerGroup {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            consumer_group_id: CONSUMER_GROUP_ID,
+            consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
         })
         .await
         .unwrap();

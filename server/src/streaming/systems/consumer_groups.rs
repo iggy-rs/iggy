@@ -11,7 +11,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        consumer_group_id: u32,
+        consumer_group_id: &Identifier,
     ) -> Result<&RwLock<ConsumerGroup>, Error> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
@@ -66,7 +66,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        consumer_group_id: u32,
+        consumer_group_id: &Identifier,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
         let stream_id_value;
@@ -99,7 +99,7 @@ impl System {
                     member.id,
                     stream_id_value,
                     topic_id_value,
-                    consumer_group_id,
+                    consumer_group.consumer_group_id,
                 )
                 .await?;
         }
@@ -112,7 +112,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        consumer_group_id: u32,
+        consumer_group_id: &Identifier,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
         let stream_id_value;
@@ -129,9 +129,17 @@ impl System {
             topic_id_value = topic.topic_id;
         }
 
+        let group_id;
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
+
+            {
+                let consumer_group = topic.get_consumer_group(consumer_group_id)?;
+                let consumer_group = consumer_group.read().await;
+                group_id = consumer_group.consumer_group_id;
+            }
+
             topic
                 .join_consumer_group(consumer_group_id, session.client_id)
                 .await?;
@@ -139,12 +147,7 @@ impl System {
 
         let client_manager = self.client_manager.read().await;
         client_manager
-            .join_consumer_group(
-                session.client_id,
-                stream_id_value,
-                topic_id_value,
-                consumer_group_id,
-            )
+            .join_consumer_group(session.client_id, stream_id_value, topic_id_value, group_id)
             .await?;
         Ok(())
     }
@@ -154,7 +157,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        consumer_group_id: u32,
+        consumer_group_id: &Identifier,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
         {
@@ -180,14 +183,22 @@ impl System {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        consumer_group_id: u32,
+        consumer_group_id: &Identifier,
         client_id: u32,
     ) -> Result<(), Error> {
         let stream_id_value;
         let topic_id_value;
+        let group_id;
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
+
+            {
+                let consumer_group = topic.get_consumer_group(consumer_group_id)?;
+                let consumer_group = consumer_group.read().await;
+                group_id = consumer_group.consumer_group_id;
+            }
+
             stream_id_value = stream.stream_id;
             topic_id_value = topic.topic_id;
             topic
@@ -197,12 +208,7 @@ impl System {
 
         let client_manager = self.client_manager.read().await;
         client_manager
-            .leave_consumer_group(
-                client_id,
-                stream_id_value,
-                topic_id_value,
-                consumer_group_id,
-            )
+            .leave_consumer_group(client_id, stream_id_value, topic_id_value, group_id)
             .await
     }
 }

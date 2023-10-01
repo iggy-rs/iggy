@@ -26,16 +26,17 @@ pub fn router(state: Arc<AppState>) -> Router {
 async fn get_consumer_group(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
-    Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, u32)>,
+    Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, String)>,
 ) -> Result<Json<ConsumerGroupDetails>, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
+    let consumer_group_id = Identifier::from_str_value(&consumer_group_id)?;
     let system = state.system.read().await;
     let consumer_group = system.get_consumer_group(
         &Session::stateless(identity.user_id),
         &stream_id,
         &topic_id,
-        consumer_group_id,
+        &consumer_group_id,
     )?;
     let consumer_group = consumer_group.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;
@@ -81,17 +82,18 @@ async fn create_consumer_group(
 async fn delete_consumer_group(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
-    Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, u32)>,
+    Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, String)>,
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
+    let consumer_group_id = Identifier::from_str_value(&consumer_group_id)?;
     let mut system = state.system.write().await;
     system
         .delete_consumer_group(
             &Session::stateless(identity.user_id),
             &stream_id,
             &topic_id,
-            consumer_group_id,
+            &consumer_group_id,
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

@@ -44,7 +44,7 @@ impl System {
                 .leave_consumer_group_by_client(
                     &Identifier::numeric(*stream_id).unwrap(),
                     &Identifier::numeric(*topic_id).unwrap(),
-                    *consumer_group_id,
+                    &Identifier::numeric(*consumer_group_id).unwrap(),
                     client_id,
                 )
                 .await

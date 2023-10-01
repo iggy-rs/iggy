@@ -454,7 +454,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .get_consumer_group(&GetConsumerGroup {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            consumer_group_id: CONSUMER_GROUP_ID,
+            consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
         })
         .await
         .unwrap();
@@ -469,7 +469,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .join_consumer_group(&JoinConsumerGroup {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            consumer_group_id: CONSUMER_GROUP_ID,
+            consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
         })
         .await;
 
@@ -479,7 +479,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
                 .get_consumer_group(&GetConsumerGroup {
                     stream_id: Identifier::numeric(STREAM_ID).unwrap(),
                     topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-                    consumer_group_id: CONSUMER_GROUP_ID,
+                    consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
                 })
                 .await
                 .unwrap();
@@ -504,7 +504,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
                 .leave_consumer_group(&LeaveConsumerGroup {
                     stream_id: Identifier::numeric(STREAM_ID).unwrap(),
                     topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-                    consumer_group_id: CONSUMER_GROUP_ID,
+                    consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
                 })
                 .await
                 .unwrap();
@@ -513,7 +513,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
                 .get_consumer_group(&GetConsumerGroup {
                     stream_id: Identifier::numeric(STREAM_ID).unwrap(),
                     topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-                    consumer_group_id: CONSUMER_GROUP_ID,
+                    consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
                 })
                 .await
                 .unwrap();
@@ -544,7 +544,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .delete_consumer_group(&DeleteConsumerGroup {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            consumer_group_id: CONSUMER_GROUP_ID,
+            consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
         })
         .await
         .unwrap();

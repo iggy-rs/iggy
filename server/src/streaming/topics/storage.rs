@@ -278,7 +278,7 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         self.load_consumer_groups(topic).await?;
-        topic.load_messages_to_cache().await?;
+        topic.load_messages_from_disk_to_cache().await?;
 
         info!(
             "Loaded topic: '{}' with ID: {} for stream with ID: {} from disk. Message expiry: {:?}",

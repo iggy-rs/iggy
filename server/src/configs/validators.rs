@@ -9,6 +9,8 @@ use iggy::validatable::Validatable;
 use sysinfo::SystemExt;
 use tracing::{error, info, warn};
 
+use super::server::{MessageCleanerConfig, MessageSaverConfig};
+
 impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {
         self.system.segment.validate()?;
@@ -66,6 +68,27 @@ impl Validatable<ServerError> for SegmentConfig {
                 segment::MAX_SIZE_BYTES
             );
             return Err(ServerError::InvalidConfiguration);
+        }
+
+        Ok(())
+    }
+}
+
+impl Validatable<ServerError> for MessageSaverConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        if self.interval == 0 {
+            // TODO: use a custom error
+            panic!("Message saver interval must be greater than 0.")
+        }
+
+        Ok(())
+    }
+}
+
+impl Validatable<ServerError> for MessageCleanerConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        if self.interval == 0 {
+            panic!("Message cleaner interval must be greater than 0.")
         }
 
         Ok(())

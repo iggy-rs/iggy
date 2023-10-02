@@ -1,4 +1,4 @@
-use server::components::config_provider::{ConfigProvider, FileConfigProvider};
+use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
 use std::env;
 use std::path::{Path, PathBuf};
 

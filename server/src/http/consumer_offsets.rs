@@ -29,7 +29,8 @@ async fn get_consumer_offset(
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
-    let consumer = PollingConsumer::Consumer(query.consumer.id, query.partition_id.unwrap_or(0));
+    let consumer_id = PollingConsumer::resolve_consumer_id(&query.consumer.id);
+    let consumer = PollingConsumer::Consumer(consumer_id, query.partition_id.unwrap_or(0));
     let system = state.system.read().await;
     let offset = system
         .get_consumer_offset(
@@ -51,8 +52,8 @@ async fn store_consumer_offset(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    let consumer =
-        PollingConsumer::Consumer(command.consumer.id, command.partition_id.unwrap_or(0));
+    let consumer_id = PollingConsumer::resolve_consumer_id(&command.consumer.id);
+    let consumer = PollingConsumer::Consumer(consumer_id, command.partition_id.unwrap_or(0));
     let system = state.system.read().await;
     system
         .store_consumer_offset(

@@ -114,7 +114,7 @@ async fn execute_using_messages_key_key(client: &IggyClient) {
 
     // 2. Poll the messages for the single client which has assigned all partitions in the consumer group
     let poll_messages = PollMessages {
-        consumer: Consumer::group(CONSUMER_GROUP_ID),
+        consumer: Consumer::group(Identifier::numeric(CONSUMER_GROUP_ID).unwrap()),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: None,
@@ -158,7 +158,7 @@ async fn execute_using_none_key(client: &IggyClient) {
 
     // 2. Poll the messages for the single client which has assigned all partitions in the consumer group
     let poll_messages = PollMessages {
-        consumer: Consumer::group(CONSUMER_GROUP_ID),
+        consumer: Consumer::group(Identifier::numeric(CONSUMER_GROUP_ID).unwrap()),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: None,

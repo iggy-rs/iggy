@@ -33,7 +33,7 @@ pub async fn run(
     );
 
     let mut poll_messages = PollMessages {
-        consumer: Consumer::new(consumer_id),
+        consumer: Consumer::new(Identifier::numeric(consumer_id).unwrap()),
         stream_id: Identifier::numeric(stream_id).unwrap(),
         topic_id: Identifier::numeric(topic_id).unwrap(),
         partition_id: Some(partition_id),

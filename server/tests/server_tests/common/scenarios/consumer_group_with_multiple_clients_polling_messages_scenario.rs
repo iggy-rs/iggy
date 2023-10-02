@@ -158,7 +158,7 @@ async fn execute_using_messages_key_key(
 
 async fn poll_messages(client: &IggyClient) -> u32 {
     let poll_messages = PollMessages {
-        consumer: Consumer::group(CONSUMER_GROUP_ID),
+        consumer: Consumer::group(Identifier::numeric(CONSUMER_GROUP_ID).unwrap()),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: None,
@@ -241,7 +241,7 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
     }
 
     let poll_messages = PollMessages {
-        consumer: Consumer::group(CONSUMER_GROUP_ID),
+        consumer: Consumer::group(Identifier::numeric(CONSUMER_GROUP_ID).unwrap()),
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partition_id: None,

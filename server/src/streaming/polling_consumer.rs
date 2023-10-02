@@ -1,4 +1,6 @@
+use crate::streaming::utils::hash;
 use iggy::consumer::{Consumer, ConsumerKind};
+use iggy::identifier::{IdKind, Identifier};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
@@ -9,11 +11,19 @@ pub enum PollingConsumer {
 
 impl PollingConsumer {
     pub fn from_consumer(consumer: &Consumer, client_id: u32, partition_id: Option<u32>) -> Self {
+        let consumer_id = Self::resolve_consumer_id(&consumer.id);
         match consumer.kind {
             ConsumerKind::Consumer => {
-                PollingConsumer::Consumer(consumer.id, partition_id.unwrap_or(0))
+                PollingConsumer::Consumer(consumer_id, partition_id.unwrap_or(0))
             }
-            ConsumerKind::ConsumerGroup => PollingConsumer::ConsumerGroup(consumer.id, client_id),
+            ConsumerKind::ConsumerGroup => PollingConsumer::ConsumerGroup(consumer_id, client_id),
+        }
+    }
+
+    pub fn resolve_consumer_id(identifier: &Identifier) -> u32 {
+        match identifier.kind {
+            IdKind::Numeric => identifier.get_u32_value().unwrap(),
+            IdKind::String => hash::calculate(&identifier.value),
         }
     }
 }

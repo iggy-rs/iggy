@@ -37,7 +37,7 @@ async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
             .poll_messages(&PollMessages {
                 consumer: Consumer {
                     kind: ConsumerKind::from_code(args.consumer_kind)?,
-                    id: args.consumer_id,
+                    id: Identifier::numeric(args.consumer_id).unwrap(),
                 },
                 stream_id: Identifier::numeric(args.stream_id)?,
                 topic_id: Identifier::numeric(args.topic_id)?,

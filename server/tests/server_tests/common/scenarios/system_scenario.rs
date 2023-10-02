@@ -240,7 +240,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let poll_messages = PollMessages {
         consumer: Consumer {
             kind: CONSUMER_KIND,
-            id: CONSUMER_ID,
+            id: Identifier::numeric(CONSUMER_ID).unwrap(),
         },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
@@ -266,7 +266,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         let poll_messages = PollMessages {
             consumer: Consumer {
                 kind: CONSUMER_KIND,
-                id: CONSUMER_ID,
+                id: Identifier::numeric(CONSUMER_ID).unwrap(),
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
@@ -310,7 +310,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let poll_messages = PollMessages {
         consumer: Consumer {
             kind: CONSUMER_KIND,
-            id: CONSUMER_ID,
+            id: Identifier::numeric(CONSUMER_ID).unwrap(),
         },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
@@ -327,7 +327,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .get_consumer_offset(&GetConsumerOffset {
             consumer: Consumer {
                 kind: CONSUMER_KIND,
-                id: CONSUMER_ID,
+                id: Identifier::numeric(CONSUMER_ID).unwrap(),
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
@@ -345,7 +345,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .store_consumer_offset(&StoreConsumerOffset {
             consumer: Consumer {
                 kind: CONSUMER_KIND,
-                id: CONSUMER_ID,
+                id: Identifier::numeric(CONSUMER_ID).unwrap(),
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
@@ -360,7 +360,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .get_consumer_offset(&GetConsumerOffset {
             consumer: Consumer {
                 kind: CONSUMER_KIND,
-                id: CONSUMER_ID,
+                id: Identifier::numeric(CONSUMER_ID).unwrap(),
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
@@ -377,7 +377,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let poll_messages = PollMessages {
         consumer: Consumer {
             kind: CONSUMER_KIND,
-            id: CONSUMER_ID,
+            id: Identifier::numeric(CONSUMER_ID).unwrap(),
         },
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
@@ -400,7 +400,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .get_consumer_offset(&GetConsumerOffset {
             consumer: Consumer {
                 kind: CONSUMER_KIND,
-                id: CONSUMER_ID,
+                id: Identifier::numeric(CONSUMER_ID).unwrap(),
             },
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),

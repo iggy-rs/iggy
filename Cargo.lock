@@ -759,12 +759,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "fastmurmur3"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d7e9bc68be4cdabbb8938140b01a8b5bc1191937f2c7e7ecc2fcebbe2d749df"
-
-[[package]]
 name = "fastrand"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2412,7 +2406,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.0.31"
+version = "0.0.32"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -2425,7 +2419,6 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
- "fastmurmur3",
  "figlet-rs",
  "figment",
  "flume",
@@ -2462,6 +2455,7 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "vergen",
+ "xxhash-rust",
 ]
 
 [[package]]
@@ -3435,6 +3429,12 @@ dependencies = [
  "cfg-if",
  "windows-sys",
 ]
+
+[[package]]
+name = "xxhash-rust"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9828b178da53440fa9c766a3d2f73f7cf5d0ac1fe3980c1e5018d899fd19e07b"
 
 [[package]]
 name = "yansi"

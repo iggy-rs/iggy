@@ -1,5 +1,5 @@
+use crate::streaming::utils::hash;
 use iggy::error::Error;
-use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
@@ -44,7 +44,7 @@ impl Display for Transport {
 
 impl ClientManager {
     pub fn add_client(&mut self, address: &SocketAddr, transport: Transport) -> u32 {
-        let id = checksum::calculate(address.to_string().as_bytes());
+        let id = hash::calculate(address.to_string().as_bytes());
         let client = Client {
             client_id: id,
             user_id: None,
@@ -83,7 +83,7 @@ impl ClientManager {
         &self,
         address: &SocketAddr,
     ) -> Result<Arc<RwLock<Client>>, Error> {
-        let id = checksum::calculate(address.to_string().as_bytes());
+        let id = hash::calculate(address.to_string().as_bytes());
         self.get_client_by_id(id)
     }
 
@@ -119,7 +119,7 @@ impl ClientManager {
     }
 
     pub fn delete_client(&mut self, address: &SocketAddr) -> Option<Arc<RwLock<Client>>> {
-        let id = checksum::calculate(address.to_string().as_bytes());
+        let id = hash::calculate(address.to_string().as_bytes());
         self.clients.remove(&id)
     }
 

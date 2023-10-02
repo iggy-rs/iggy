@@ -188,7 +188,7 @@ impl Display for LoggingConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "path: {}, level: {}, max_size_megabytes: {}, retention_days: {}",
+            "{{ path: {}, level: {}, max_size_megabytes: {}, retention_days: {} }}",
             self.path, self.level, self.max_size_megabytes, self.retention_days
         )
     }

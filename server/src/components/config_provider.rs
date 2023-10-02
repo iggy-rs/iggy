@@ -254,6 +254,7 @@ impl ConfigProvider for FileConfigProvider {
         match config_result {
             Ok(config) => {
                 info!("Config loaded from path: '{}'", self.path);
+                info!("Using Config: {}", config);
                 Ok(config)
             }
             Err(figment_error) => Err(ServerError::CannotLoadConfiguration(format!(

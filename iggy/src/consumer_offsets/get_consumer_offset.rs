@@ -53,7 +53,7 @@ impl FromStr for GetConsumerOffset {
         }
 
         let consumer_kind = ConsumerKind::from_str(parts[0])?;
-        let consumer_id = parts[1].parse::<u32>()?;
+        let consumer_id = parts[1].parse::<Identifier>()?;
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
@@ -98,12 +98,12 @@ impl BytesSerializable for GetConsumerOffset {
 
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0])?;
-        let consumer_id = u32::from_le_bytes(bytes[1..5].try_into()?);
+        let consumer_id = Identifier::from_bytes(&bytes[1..])?;
+        position += 1 + consumer_id.get_size_bytes() as usize;
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
-        position += 5;
         let stream_id = Identifier::from_bytes(&bytes[position..])?;
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(&bytes[position..])?;
@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn should_be_serialized_as_bytes() {
         let command = GetConsumerOffset {
-            consumer: Consumer::new(1),
+            consumer: Consumer::new(Identifier::numeric(1).unwrap()),
             stream_id: Identifier::numeric(2).unwrap(),
             topic_id: Identifier::numeric(3).unwrap(),
             partition_id: Some(4),
@@ -154,12 +154,12 @@ mod tests {
         let bytes = command.as_bytes();
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
-        let consumer_id = u32::from_le_bytes(bytes[1..5].try_into().unwrap());
+        let consumer_id = Identifier::from_bytes(&bytes[1..]).unwrap();
+        position += 1 + consumer_id.get_size_bytes() as usize;
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
-        position += 5;
         let stream_id = Identifier::from_bytes(&bytes[position..]).unwrap();
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
@@ -175,7 +175,7 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_bytes() {
-        let consumer = Consumer::new(1);
+        let consumer = Consumer::new(Identifier::numeric(1).unwrap());
         let stream_id = Identifier::numeric(2).unwrap();
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn should_be_read_from_string() {
-        let consumer = Consumer::new(1);
+        let consumer = Consumer::new(Identifier::numeric(1).unwrap());
         let stream_id = Identifier::numeric(2).unwrap();
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;

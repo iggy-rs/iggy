@@ -1,5 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::Error;
+use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
@@ -14,7 +15,7 @@ pub struct Consumer {
     pub kind: ConsumerKind,
     #[serde_as(as = "DisplayFromStr")]
     #[serde(default = "default_id")]
-    pub id: u32,
+    pub id: Identifier,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
@@ -25,8 +26,8 @@ pub enum ConsumerKind {
     ConsumerGroup,
 }
 
-fn default_id() -> u32 {
-    0
+fn default_id() -> Identifier {
+    Identifier::numeric(1).unwrap()
 }
 
 impl Validatable<Error> for Consumer {
@@ -39,18 +40,18 @@ impl Consumer {
     pub fn from_consumer(consumer: &Consumer) -> Self {
         Self {
             kind: consumer.kind,
-            id: consumer.id,
+            id: consumer.id.clone(),
         }
     }
 
-    pub fn new(id: u32) -> Self {
+    pub fn new(id: Identifier) -> Self {
         Self {
             kind: ConsumerKind::Consumer,
             id,
         }
     }
 
-    pub fn group(id: u32) -> Self {
+    pub fn group(id: Identifier) -> Self {
         Self {
             kind: ConsumerKind::ConsumerGroup,
             id,
@@ -60,9 +61,10 @@ impl Consumer {
 
 impl BytesSerializable for Consumer {
     fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(5);
+        let id_bytes = self.id.as_bytes();
+        let mut bytes = Vec::with_capacity(1 + id_bytes.len());
         bytes.put_u8(self.kind.as_code());
-        bytes.put_u32_le(self.id);
+        bytes.extend(id_bytes);
         bytes
     }
 
@@ -70,12 +72,12 @@ impl BytesSerializable for Consumer {
     where
         Self: Sized,
     {
-        if bytes.len() != 5 {
+        if bytes.len() < 4 {
             return Err(Error::InvalidCommand);
         }
 
         let kind = ConsumerKind::from_code(bytes[0])?;
-        let id = u32::from_le_bytes(bytes[1..5].try_into()?);
+        let id = Identifier::from_bytes(&bytes[1..])?;
         let consumer = Consumer { kind, id };
         consumer.validate()?;
         Ok(consumer)
@@ -108,7 +110,7 @@ impl FromStr for Consumer {
         }
 
         let kind = parts[0].parse::<ConsumerKind>()?;
-        let id = parts[1].parse::<u32>()?;
+        let id = parts[1].parse::<Identifier>()?;
         let consumer = Consumer { kind, id };
         consumer.validate()?;
         Ok(consumer)

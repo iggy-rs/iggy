@@ -32,7 +32,8 @@ async fn poll_messages(
     query.validate()?;
 
     let partition_id = query.partition_id.unwrap_or(0);
-    let consumer = PollingConsumer::Consumer(query.consumer.id, partition_id);
+    let consumer_id = PollingConsumer::resolve_consumer_id(&query.consumer.id);
+    let consumer = PollingConsumer::Consumer(consumer_id, partition_id);
     let system = state.system.read().await;
     let polled_messages = system
         .poll_messages(

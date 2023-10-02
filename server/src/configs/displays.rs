@@ -7,7 +7,7 @@ use crate::configs::{
     server::{MessageCleanerConfig, MessageSaverConfig, ServerConfig},
     system::{
         CacheConfig, DatabaseConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
-        SegmentConfig, StreamConfig, TopicConfig, SystemConfig
+        SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
     },
     tcp::{TcpConfig, TcpTlsConfig},
 };
@@ -214,10 +214,9 @@ impl Display for TcpTlsConfig {
     }
 }
 
-
 impl Display for SystemConfig {
-  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-      write!(
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
           f,
           "{{ path: {}, database: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
           self.path,
@@ -230,5 +229,5 @@ impl Display for SystemConfig {
           self.segment,
           self.encryption
       )
-  }
+    }
 }

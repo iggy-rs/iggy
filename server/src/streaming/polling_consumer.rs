@@ -46,3 +46,84 @@ impl Display for PollingConsumer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn given_consumer_with_numeric_id_polling_consumer_should_be_created() {
+        let consumer_id = 1;
+        let client_id = 2;
+        let partition_id = 3;
+        let consumer = Consumer::new(Identifier::numeric(consumer_id).unwrap());
+        let polling_consumer =
+            PollingConsumer::from_consumer(&consumer, client_id, Some(partition_id));
+
+        assert_eq!(
+            polling_consumer,
+            PollingConsumer::Consumer(consumer_id, partition_id)
+        );
+
+        assert_eq!(
+            consumer_id,
+            PollingConsumer::resolve_consumer_id(&consumer.id)
+        );
+    }
+
+    #[test]
+    fn given_consumer_with_named_id_polling_consumer_should_be_created() {
+        let consumer_name = "consumer";
+        let client_id = 2;
+        let partition_id = 3;
+        let consumer = Consumer::new(Identifier::named(consumer_name).unwrap());
+        let polling_consumer =
+            PollingConsumer::from_consumer(&consumer, client_id, Some(partition_id));
+
+        let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
+        assert_eq!(
+            polling_consumer,
+            PollingConsumer::Consumer(consumer_id, partition_id)
+        );
+    }
+
+    #[test]
+    fn given_consumer_group_with_numeric_id_polling_consumer_group_should_be_created() {
+        let consumer_group_id = 1;
+        let client_id = 2;
+        let consumer = Consumer::group(Identifier::numeric(consumer_group_id).unwrap());
+        let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
+
+        assert_eq!(
+            polling_consumer,
+            PollingConsumer::ConsumerGroup(consumer_group_id, client_id)
+        );
+        assert_eq!(
+            consumer_group_id,
+            PollingConsumer::resolve_consumer_id(&consumer.id)
+        );
+    }
+
+    #[test]
+    fn given_consumer_group_with_named_id_polling_consumer_group_should_be_created() {
+        let consumer_group_name = "consumer_group";
+        let client_id = 2;
+        let consumer = Consumer::group(Identifier::named(consumer_group_name).unwrap());
+        let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
+
+        let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
+        assert_eq!(
+            polling_consumer,
+            PollingConsumer::ConsumerGroup(consumer_id, client_id)
+        );
+    }
+
+    #[test]
+    fn given_distinct_named_ids_unique_polling_consumer_ids_should_be_created() {
+        let name1 = Identifier::named("consumer1").unwrap();
+        let name2 = Identifier::named("consumer2").unwrap();
+        let id1 = PollingConsumer::resolve_consumer_id(&name1);
+        let id2 = PollingConsumer::resolve_consumer_id(&name2);
+        assert_ne!(id1, id2);
+    }
+}

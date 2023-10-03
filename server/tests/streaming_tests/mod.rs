@@ -1,4 +1,5 @@
 mod common;
+mod consumer_group;
 mod consumer_offset;
 mod messages;
 mod partition;

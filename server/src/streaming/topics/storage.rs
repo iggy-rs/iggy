@@ -123,7 +123,7 @@ impl TopicStorage for FileTopicStorage {
         Ok(())
     }
 
-    async fn load_consumer_groups(&self, topic: &mut Topic) -> Result<Vec<ConsumerGroup>, Error> {
+    async fn load_consumer_groups(&self, topic: &Topic) -> Result<Vec<ConsumerGroup>, Error> {
         info!(
             "Loading consumer groups for topic with ID: {} for stream with ID: {} from disk...",
             topic.topic_id, topic.stream_id

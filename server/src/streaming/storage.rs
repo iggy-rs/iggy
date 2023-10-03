@@ -55,7 +55,7 @@ pub trait TopicStorage: Storage<Topic> {
         topic: &Topic,
         consumer_group: &ConsumerGroup,
     ) -> Result<(), Error>;
-    async fn load_consumer_groups(&self, topic: &mut Topic) -> Result<Vec<ConsumerGroup>, Error>;
+    async fn load_consumer_groups(&self, topic: &Topic) -> Result<Vec<ConsumerGroup>, Error>;
     async fn delete_consumer_group(
         &self,
         topic: &Topic,
@@ -304,10 +304,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn load_consumer_groups(
-            &self,
-            _topic: &mut Topic,
-        ) -> Result<Vec<ConsumerGroup>, Error> {
+        async fn load_consumer_groups(&self, _topic: &Topic) -> Result<Vec<ConsumerGroup>, Error> {
             Ok(vec![])
         }
 

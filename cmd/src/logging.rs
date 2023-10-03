@@ -21,7 +21,7 @@ impl Logging {
         }
     }
 
-    pub(crate) fn init(&mut self, quiet: bool, debug: Option<PathBuf>) -> &mut Self {
+    pub(crate) fn init(&mut self, quiet: bool, debug: &Option<PathBuf>) -> &mut Self {
         let mut layers = vec![];
 
         let stdout_filter = filter::filter_fn(|metadata| metadata.target().contains(PRINT_TARGET));
@@ -44,7 +44,7 @@ impl Logging {
         layers.push(stdout_layer.with_filter(stdout_filter).boxed());
 
         if let Some(file_path) = debug {
-            let _ = std::fs::remove_file(&file_path); // Remove file if it exists
+            let _ = std::fs::remove_file(file_path); // Remove file if it exists
             let file_appender = tracing_appender::rolling::never("", file_path);
             let (non_blocking_file, file_guard) = tracing_appender::non_blocking(file_appender);
 

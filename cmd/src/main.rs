@@ -1,12 +1,12 @@
 mod args;
+mod credentials;
 mod error;
 mod logging;
-mod login;
 
 use crate::args::{stream::StreamAction, topic::TopicAction, Command, IggyConsoleArgs};
-use crate::error::ConsoleError;
+use crate::credentials::IggyCredentials;
+use crate::error::IggyCmdError;
 use crate::logging::Logging;
-use crate::login::{get_password, login_user, logout_user};
 use args::partition::PartitionAction;
 use clap::Parser;
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
@@ -91,13 +91,13 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), ConsoleError> {
+async fn main() -> Result<(), IggyCmdError> {
     let args = IggyConsoleArgs::parse();
 
     let mut logging = Logging::new();
-    logging.init(args.quiet, args.debug);
+    logging.init(args.quiet, &args.debug);
 
-    let password = get_password(args.password)?;
+    let credentials = IggyCredentials::new(&args)?;
 
     let encryptor: Option<Box<dyn Encryptor>> = match args.iggy.encryption_key.is_empty() {
         true => None,
@@ -109,14 +109,14 @@ async fn main() -> Result<(), ConsoleError> {
     let client = client_provider::get_raw_client(client_provider_config).await?;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, encryptor);
 
-    login_user(&client, args.username, password).await?;
+    credentials.login_user(&client).await?;
 
     let mut command = get_command(&args.command);
 
     event!(target: PRINT_TARGET, Level::INFO, "Executing {}", command.explain());
     command.execute_cmd(&client).await?;
 
-    logout_user(&client).await?;
+    credentials.logout_user(&client).await?;
 
     Ok(())
 }

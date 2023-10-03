@@ -30,7 +30,7 @@ pub(crate) struct IggyConsoleArgs {
 
     /// Iggy server username
     #[clap(short, long)]
-    pub(crate) username: String,
+    pub(crate) username: Option<String>,
 
     /// Iggy server password
     #[clap(short, long)]

@@ -16,6 +16,8 @@ pub struct CacheMemoryTracker {
     limit_bytes: u64,
 }
 
+type MessageSize = u64;
+
 impl CacheMemoryTracker {
     pub fn initialize(config: &CacheConfig) -> Option<Arc<CacheMemoryTracker>> {
         unsafe {
@@ -58,7 +60,7 @@ impl CacheMemoryTracker {
         }
     }
 
-    pub fn increment_used_memory(&self, message_size: u64) {
+    pub fn increment_used_memory(&self, message_size: MessageSize) {
         let mut current_cache_size_bytes = self.used_memory_bytes.load(Ordering::SeqCst);
         loop {
             let new_size = current_cache_size_bytes + message_size;
@@ -74,7 +76,7 @@ impl CacheMemoryTracker {
         }
     }
 
-    pub fn decrement_used_memory(&self, message_size: u64) {
+    pub fn decrement_used_memory(&self, message_size: MessageSize) {
         let mut current_cache_size_bytes = self.used_memory_bytes.load(Ordering::SeqCst);
         loop {
             let new_size = current_cache_size_bytes - message_size;

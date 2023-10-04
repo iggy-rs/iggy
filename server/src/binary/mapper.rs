@@ -1,5 +1,6 @@
 use bytes::BufMut;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
+use iggy::models::user_info::UserId;
 
 use crate::streaming::clients::client_manager::{Client, Transport};
 use crate::streaming::models::messages::PolledMessages;
@@ -94,7 +95,7 @@ pub fn map_users(users: &[User]) -> Vec<u8> {
     bytes
 }
 
-pub fn map_identity_info(user_id: u32) -> Vec<u8> {
+pub fn map_identity_info(user_id: UserId) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(4);
     bytes.put_u32_le(user_id);
     bytes

@@ -1,5 +1,6 @@
 use crate::streaming::utils::hash;
 use iggy::error::Error;
+use iggy::models::user_info::UserId;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
@@ -57,7 +58,7 @@ impl ClientManager {
         id
     }
 
-    pub async fn set_user_id(&mut self, client_id: u32, user_id: u32) -> Result<(), Error> {
+    pub async fn set_user_id(&mut self, client_id: u32, user_id: UserId) -> Result<(), Error> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
             return Err(Error::ClientNotFound(client_id));
@@ -100,7 +101,7 @@ impl ClientManager {
         self.clients.values().cloned().collect()
     }
 
-    pub async fn delete_clients_for_user(&mut self, user_id: u32) -> Result<(), Error> {
+    pub async fn delete_clients_for_user(&mut self, user_id: UserId) -> Result<(), Error> {
         let mut clients_to_remove = Vec::new();
         for client in self.clients.values() {
             let client = client.read().await;

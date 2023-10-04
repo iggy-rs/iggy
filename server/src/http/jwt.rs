@@ -7,6 +7,7 @@ use axum::{
     response::Response,
 };
 use iggy::error::Error;
+use iggy::models::user_info::UserId;
 use iggy::utils::timestamp::TimeStamp;
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use serde::{Deserialize, Serialize};
@@ -18,7 +19,7 @@ const UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
 
 #[derive(Debug, Clone)]
 pub struct Identity {
-    pub user_id: u32,
+    pub user_id: UserId,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -119,7 +120,7 @@ impl JwtManager {
         )
     }
 
-    pub fn generate(&self, user_id: u32) -> String {
+    pub fn generate(&self, user_id: UserId) -> String {
         let header = Header::new(self.algorithm);
         let iat = TimeStamp::now().to_micros();
         let exp = iat + 1_000_000 * self.expiry;

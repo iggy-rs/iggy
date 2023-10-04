@@ -2,6 +2,7 @@ use crate::streaming::storage::{Storage, UserStorage};
 use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::error::Error;
+use iggy::models::user_info::UserId;
 use sled::Db;
 use std::sync::Arc;
 use tracing::{error, info};
@@ -24,7 +25,7 @@ unsafe impl Sync for FileUserStorage {}
 
 #[async_trait]
 impl UserStorage for FileUserStorage {
-    async fn load_by_id(&self, id: u32) -> Result<User, Error> {
+    async fn load_by_id(&self, id: UserId) -> Result<User, Error> {
         let mut user = User::empty(id);
         self.load(&mut user).await?;
         Ok(user)
@@ -145,7 +146,7 @@ impl Storage<User> for FileUserStorage {
     }
 }
 
-fn get_key(user_id: u32) -> String {
+fn get_key(user_id: UserId) -> String {
     format!("{}:{}", KEY_PREFIX, user_id)
 }
 

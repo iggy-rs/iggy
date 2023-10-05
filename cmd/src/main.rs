@@ -97,7 +97,11 @@ async fn main() -> Result<(), IggyCmdError> {
     let mut logging = Logging::new();
     logging.init(args.quiet, &args.debug);
 
-    let credentials = IggyCredentials::new(&args)?;
+    // Get command based on command line arguments
+    let mut command = get_command(&args.command);
+
+    // Create credentials based on command line arguments and command
+    let mut credentials = IggyCredentials::new(&args, command.login_required())?;
 
     let encryptor: Option<Box<dyn Encryptor>> = match args.iggy.encryption_key.is_empty() {
         true => None,
@@ -109,14 +113,13 @@ async fn main() -> Result<(), IggyCmdError> {
     let client = client_provider::get_raw_client(client_provider_config).await?;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, encryptor);
 
-    credentials.login_user(&client).await?;
-
-    let mut command = get_command(&args.command);
+    credentials.set_iggy_client(&client);
+    credentials.login_user().await?;
 
     event!(target: PRINT_TARGET, Level::INFO, "Executing {}", command.explain());
     command.execute_cmd(&client).await?;
 
-    credentials.logout_user(&client).await?;
+    credentials.logout_user().await?;
 
     Ok(())
 }

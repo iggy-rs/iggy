@@ -94,6 +94,10 @@ impl CliCommand for PingCmd {
         "ping command".to_owned()
     }
 
+    fn login_required(&self) -> bool {
+        false
+    }
+
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let print_width = (self.count.ilog10() + 1) as usize;
         let mut ping_stats = PingStats::new();

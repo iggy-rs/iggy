@@ -1,13 +1,13 @@
 use crate::streaming::utils::crypto;
-use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
+use iggy::models::{permissions::Permissions, user_info::UserId};
 use iggy::users::defaults::*;
 use iggy::utils::timestamp::TimeStamp;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
-    pub id: u32,
+    pub id: UserId,
     pub status: UserStatus,
     pub username: String,
     pub password: String,
@@ -29,7 +29,7 @@ impl Default for User {
 }
 
 impl User {
-    pub fn empty(id: u32) -> Self {
+    pub fn empty(id: UserId) -> Self {
         Self {
             id,
             ..Default::default()

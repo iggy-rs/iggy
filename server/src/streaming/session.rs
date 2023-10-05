@@ -1,18 +1,20 @@
 use std::fmt::Display;
 
+use iggy::models::user_info::UserId;
+
 // This might be extended with more fields in the future e.g. custom name, permissions etc.
 #[derive(Debug)]
 pub struct Session {
-    pub user_id: u32,
+    pub user_id: UserId,
     pub client_id: u32,
 }
 
 impl Session {
-    pub fn new(client_id: u32, user_id: u32) -> Self {
+    pub fn new(client_id: u32, user_id: UserId) -> Self {
         Self { client_id, user_id }
     }
 
-    pub fn stateless(user_id: u32) -> Self {
+    pub fn stateless(user_id: UserId) -> Self {
         Self::new(0, user_id)
     }
 
@@ -20,7 +22,7 @@ impl Session {
         Self::new(client_id, 0)
     }
 
-    pub fn set_user_id(&mut self, user_id: u32) {
+    pub fn set_user_id(&mut self, user_id: UserId) {
         self.user_id = user_id;
     }
 

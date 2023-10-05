@@ -28,3 +28,7 @@ pub fn from_base64_as_bytes(value: &str) -> Result<Vec<u8>, Error> {
 
     Ok(result.unwrap())
 }
+
+pub fn as_base64(value: &[u8]) -> String {
+    general_purpose::STANDARD.encode(value)
+}

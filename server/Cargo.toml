@@ -54,6 +54,9 @@ prometheus-client = "0.21.2"
 byte-unit = "4.0.19"
 xxhash-rust = { version = "0.8.2", features = ["xxh32"] }
 
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.5.4"
+
 [dev-dependencies]
 assert_cmd = "2.0.12"
 predicates = "3.0.3"

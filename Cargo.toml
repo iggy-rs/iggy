@@ -1,5 +1,5 @@
 [profile.release]
-lto = true
+lto = "fat"
 
 [workspace]
 resolver = "2"

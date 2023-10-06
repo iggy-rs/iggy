@@ -12,12 +12,14 @@ use crate::streaming::systems::storage::FileSystemInfoStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::users::pat::PersonalAccessToken;
 use crate::streaming::users::storage::FileUserStorage;
 use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::Error;
 use iggy::models::messages::Message;
+use iggy::models::user_info::UserId;
 use sled::Db;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
@@ -34,9 +36,17 @@ pub trait SystemInfoStorage: Storage<SystemInfo> {}
 
 #[async_trait]
 pub trait UserStorage: Storage<User> {
-    async fn load_by_id(&self, id: u32) -> Result<User, Error>;
+    async fn load_by_id(&self, id: UserId) -> Result<User, Error>;
     async fn load_by_username(&self, username: &str) -> Result<User, Error>;
     async fn load_all(&self) -> Result<Vec<User>, Error>;
+    async fn load_pat(&self, user_id: UserId, token: &str) -> Result<PersonalAccessToken, Error>;
+    async fn save_pat(
+        &self,
+        user_id: UserId,
+        token: &str,
+        pat: &PersonalAccessToken,
+    ) -> Result<(), Error>;
+    async fn delete_pat(&self, user_id: UserId, token: &str) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -233,7 +243,7 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl UserStorage for TestUserStorage {
-        async fn load_by_id(&self, _id: u32) -> Result<User, Error> {
+        async fn load_by_id(&self, _id: UserId) -> Result<User, Error> {
             Ok(User::default())
         }
 
@@ -243,6 +253,27 @@ pub(crate) mod tests {
 
         async fn load_all(&self) -> Result<Vec<User>, Error> {
             Ok(vec![])
+        }
+
+        async fn load_pat(
+            &self,
+            _user_id: UserId,
+            _token: &str,
+        ) -> Result<PersonalAccessToken, Error> {
+            Ok(PersonalAccessToken::default())
+        }
+
+        async fn save_pat(
+            &self,
+            _user_id: UserId,
+            _token: &str,
+            _pat: &PersonalAccessToken,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn delete_pat(&self, _user_id: UserId, _token: &str) -> Result<(), Error> {
+            Ok(())
         }
     }
 

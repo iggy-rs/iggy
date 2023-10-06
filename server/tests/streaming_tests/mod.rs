@@ -3,6 +3,7 @@ mod consumer_group;
 mod consumer_offset;
 mod messages;
 mod partition;
+mod pat;
 mod segment;
 mod stream;
 mod system;

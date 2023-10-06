@@ -6,14 +6,6 @@ pub struct Args {
     #[arg(long, default_value = "tcp")]
     pub transport: String,
 
-    #[cfg(feature = "credentials-in-args")]
-    #[arg(long, default_value = "iggy")]
-    pub username: String,
-
-    #[cfg(feature = "credentials-in-args")]
-    #[arg(long, default_value = "iggy")]
-    pub password: String,
-
     #[arg(long, default_value = "")]
     pub encryption_key: String,
 

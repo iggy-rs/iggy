@@ -51,6 +51,5 @@ sled = "0.34.7"
 convert_case = "0.6.0"
 
 [features]
-default = ["credentials-in-args"]
-credentials-in-args = []
+default = []
 iggy-cmd = ["dep:comfy-table", "dep:humantime", "dep:byte-unit"]

@@ -13,20 +13,33 @@ use std::error::Error;
 use std::sync::Arc;
 use tracing::info;
 
+#[derive(Parser, Debug, Clone)]
+#[command(author, version, about, long_about = None)]
+pub struct DataSeederArgs {
+    #[clap(flatten)]
+    pub(crate) iggy: Args,
+
+    #[arg(long, default_value = "iggy")]
+    pub username: String,
+
+    #[arg(long, default_value = "iggy")]
+    pub password: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let args = Args::parse();
+    let args = DataSeederArgs::parse();
     tracing_subscriber::fmt::init();
-    let encryptor: Option<Box<dyn Encryptor>> = match args.encryption_key.is_empty() {
+    let encryptor: Option<Box<dyn Encryptor>> = match args.iggy.encryption_key.is_empty() {
         true => None,
         false => Some(Box::new(
-            Aes256GcmEncryptor::from_base64_key(&args.encryption_key).unwrap(),
+            Aes256GcmEncryptor::from_base64_key(&args.iggy.encryption_key).unwrap(),
         )),
     };
-    info!("Selected transport: {}", args.transport);
+    info!("Selected transport: {}", args.iggy.transport);
     let username = args.username.clone();
     let password = args.password.clone();
-    let client_provider_config = Arc::new(ClientProviderConfig::from_args(args)?);
+    let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.iggy)?);
     let client = client_provider::get_raw_client(client_provider_config).await?;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, encryptor);
     client

@@ -6,7 +6,7 @@ authors = ["bartosz.ciesla@gmail.com"]
 repository = "https://github.com/iggy-rs/iggy"
 
 [dependencies]
-iggy = { path = "../iggy", default-features = false, features = ["iggy-cmd"] }
+iggy = { path = "../iggy", features = ["iggy-cmd"] }
 clap = { version = "4.1.11", features = ["derive"] }
 tokio = { version = "1.28.2", features = ["full"] }
 async-trait = "0.1.68"

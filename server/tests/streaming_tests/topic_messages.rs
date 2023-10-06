@@ -161,7 +161,7 @@ async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_pa
     let mut messages_count_per_partition = HashMap::new();
     for entity_id in 1..=partitions_count * messages_count {
         let key = Partitioning::messages_key_u32(entity_id);
-        let hash = hash::calculate(&key.value);
+        let hash = hash::calculate_32(&key.value);
         let mut partition_id = hash % partitions_count;
         if partition_id == 0 {
             partition_id = partitions_count;

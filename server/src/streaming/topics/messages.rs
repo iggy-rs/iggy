@@ -118,7 +118,7 @@ impl Topic {
     }
 
     fn calculate_partition_id_by_messages_key_hash(&self, messages_key: &[u8]) -> u32 {
-        let messages_key_hash = hash::calculate(messages_key);
+        let messages_key_hash = hash::calculate_32(messages_key);
         let partitions_count = self.get_partitions_count();
         let mut partition_id = messages_key_hash % partitions_count;
         if partition_id == 0 {
@@ -317,7 +317,7 @@ mod tests {
         for entity_id in 1..=messages_count {
             let key = Partitioning::messages_key_u32(entity_id);
             let partition_id = topic.calculate_partition_id_by_messages_key_hash(&key.value);
-            let entity_id_hash = hash::calculate(&key.value);
+            let entity_id_hash = hash::calculate_32(&key.value);
             let mut expected_partition_id = entity_id_hash % partitions_count;
             if expected_partition_id == 0 {
                 expected_partition_id = partitions_count;

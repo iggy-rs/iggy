@@ -1,7 +1,6 @@
 use crate::streaming::storage::{Storage, UserStorage};
 use crate::streaming::users::pat::PersonalAccessToken;
 use crate::streaming::users::user::User;
-use crate::streaming::utils::hash;
 use async_trait::async_trait;
 use iggy::error::Error;
 use iggy::models::user_info::UserId;
@@ -53,7 +52,7 @@ impl UserStorage for FileUserStorage {
         Ok(user)
     }
 
-    async fn load_all(&self) -> Result<Vec<User>, Error> {
+    async fn load_all_users(&self) -> Result<Vec<User>, Error> {
         let mut users = Vec::new();
         for data in self.db.scan_prefix(format!("{}:", USERS_KEY_PREFIX)) {
             let user = match data {
@@ -77,8 +76,30 @@ impl UserStorage for FileUserStorage {
         Ok(users)
     }
 
-    async fn load_pat(&self, user_id: UserId, token: &str) -> Result<PersonalAccessToken, Error> {
-        let key = get_pat_key(user_id, token);
+    async fn load_all_pats(&self) -> Result<Vec<PersonalAccessToken>, Error> {
+        let mut pats = Vec::new();
+        for data in self.db.scan_prefix(format!("{}:", PAT_KEY_PREFIX)) {
+            let pat = match data {
+                Ok((_, value)) => match rmp_serde::from_slice::<PersonalAccessToken>(&value) {
+                    Ok(pat) => pat,
+                    Err(err) => {
+                        error!("Cannot deserialize PAT. Error: {}", err);
+                        return Err(Error::CannotDeserializeResource(PAT_KEY_PREFIX.to_string()));
+                    }
+                },
+                Err(err) => {
+                    error!("Cannot load PAT. Error: {}", err);
+                    return Err(Error::CannotLoadResource(PAT_KEY_PREFIX.to_string()));
+                }
+            };
+            pats.push(pat);
+        }
+
+        Ok(pats)
+    }
+
+    async fn load_pat(&self, token: &str) -> Result<PersonalAccessToken, Error> {
+        let key = get_pat_key(token);
         let pat = self.db.get(&key);
         if pat.is_err() {
             return Err(Error::CannotLoadResource(key));
@@ -99,19 +120,14 @@ impl UserStorage for FileUserStorage {
         Ok(pat)
     }
 
-    async fn save_pat(
-        &self,
-        user_id: UserId,
-        token: &str,
-        pat: &PersonalAccessToken,
-    ) -> Result<(), Error> {
-        let key = get_pat_key(user_id, token);
+    async fn save_pat(&self, pat: &PersonalAccessToken) -> Result<(), Error> {
+        let key = get_pat_key(&pat.token);
         match rmp_serde::to_vec(&pat) {
             Ok(data) => {
                 if let Err(err) = self.db.insert(&key, data) {
                     error!(
                         "Cannot save PAT for user with ID: {}. Error: {}",
-                        user_id, err
+                        pat.user_id, err
                     );
                     return Err(Error::CannotSaveResource(key.to_string()));
                 }
@@ -119,23 +135,23 @@ impl UserStorage for FileUserStorage {
             Err(err) => {
                 error!(
                     "Cannot serialize PAT for user with ID: {}. Error: {}",
-                    user_id, err
+                    pat.user_id, err
                 );
                 return Err(Error::CannotSerializeResource(key));
             }
         }
 
-        info!("Saved PAT for user with ID: {}.", user_id);
+        info!("Saved PAT for user with ID: {}.", pat.user_id);
         Ok(())
     }
 
-    async fn delete_pat(&self, user_id: UserId, token: &str) -> Result<(), Error> {
-        info!("Deleting PAT for user with ID: {}...", user_id);
-        let key = get_pat_key(user_id, token);
+    async fn delete_pat(&self, token: &str) -> Result<(), Error> {
+        info!("Deleting PAT with hash: {}...", token);
+        let key = get_pat_key(token);
         if self.db.remove(&key).is_err() {
             return Err(Error::CannotDeleteResource(key));
         }
-        info!("Deleted PAT for user with ID: {}.", user_id);
+        info!("Deleted PAT with hash: {}.", token);
         Ok(())
     }
 }
@@ -221,11 +237,6 @@ fn get_user_id_key(username: &str) -> String {
     format!("{}_id:{}", USERS_KEY_PREFIX, username)
 }
 
-fn get_pat_key(user_id: UserId, token: &str) -> String {
-    format!(
-        "{}:{}:{}",
-        PAT_KEY_PREFIX,
-        user_id,
-        hash::calculate(token.as_bytes())
-    )
+fn get_pat_key(token_hash: &str) -> String {
+    format!("{}:{}", PAT_KEY_PREFIX, token_hash)
 }

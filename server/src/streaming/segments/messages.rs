@@ -95,8 +95,8 @@ impl Segment {
             let relative_end_offset = end_offset - self.start_offset;
             let start_index = indexes.get(relative_start_offset as usize);
             let end_index = indexes.get(1 + relative_end_offset as usize);
-            if start_index.is_some() {
-                let start_position = start_index.unwrap().position;
+            if let Some(start_index) = start_index {
+                let start_position = start_index.position;
                 let end_position = match end_index {
                     Some(index) => index.position,
                     None => self.current_size_bytes,

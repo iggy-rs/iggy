@@ -23,7 +23,7 @@ impl PollingConsumer {
     pub fn resolve_consumer_id(identifier: &Identifier) -> u32 {
         match identifier.kind {
             IdKind::Numeric => identifier.get_u32_value().unwrap(),
-            IdKind::String => hash::calculate(&identifier.value),
+            IdKind::String => hash::calculate_32(&identifier.value),
         }
     }
 }

@@ -86,6 +86,7 @@ impl TestServer {
     }
 
     pub fn stop(&mut self) {
+        #[allow(unused_mut)]
         if let Some(mut child_handle) = self.child_handle.take() {
             #[cfg(unix)]
             unsafe {

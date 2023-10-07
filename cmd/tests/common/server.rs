@@ -86,7 +86,7 @@ impl TestServer {
     }
 
     pub fn stop(&mut self) {
-        if let Some(mut child_handle) = self.child_handle.take() {
+        if let Some(child_handle) = self.child_handle.take() {
             #[cfg(unix)]
             unsafe {
                 use libc::kill;

@@ -164,6 +164,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-dropper"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f04ec9ce0e813d22c058bfc87f60d855f30d37c2108df1096c29b3058a9184b"
+dependencies = [
+ "async-dropper-derive",
+ "async-dropper-simple",
+ "async-trait",
+ "futures",
+ "tokio",
+]
+
+[[package]]
+name = "async-dropper-derive"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e2309f4a0c0c9bfe4313eba29f4d0caccc86da995d1430c6cfe3c55bf1fb224"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.29",
+ "tokio",
+]
+
+[[package]]
+name = "async-dropper-simple"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec03cf9c2d591f1b394223edfa657cff3f8f2b163c30ba6ff00645a58c024b95"
+dependencies = [
+ "async-trait",
+ "futures",
+ "rustc_version",
+ "tokio",
+]
+
+[[package]]
 name = "async-recursion"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1230,15 +1267,21 @@ name = "iggy-cmd"
 version = "0.6.1"
 dependencies = [
  "anyhow",
+ "assert_cmd",
+ "async-dropper",
  "async-trait",
  "clap",
  "iggy",
+ "libc",
  "passterm",
+ "predicates",
+ "serial_test",
  "thiserror",
  "tokio",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]
@@ -1298,9 +1341,9 @@ checksum = "28b29a3cd74f0f4598934efe3aeba42bae0eb4680554128851ebbecb02af14e6"
 
 [[package]]
 name = "itertools"
-version = "0.10.5"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
 dependencies = [
  "either",
 ]
@@ -1801,9 +1844,9 @@ checksum = "5b40af805b3121feab8a3c29f04d8ad262fa8e0561883e7653e024ae4479e6de"
 
 [[package]]
 name = "predicates"
-version = "3.0.3"
+version = "3.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09963355b9f467184c04017ced4a2ba2d75cbcb4e7462690d388233253d4b1a9"
+checksum = "6dfc28575c2e3f19cb3c73b93af36460ae898d426eba6fc15b9bd2a5220758a0"
 dependencies = [
  "anstyle",
  "difflib",

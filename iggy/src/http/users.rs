@@ -2,8 +2,10 @@ use crate::client::UserClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
 use crate::models::identity_info::IdentityInfo;
+use crate::models::pat::RawPersonalAccessToken;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::users::change_password::ChangePassword;
+use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::get_user::GetUser;
@@ -69,5 +71,14 @@ impl UserClient for HttpClient {
         self.post(&format!("{PATH}/logout"), &command).await?;
         self.set_token(None).await;
         Ok(())
+    }
+
+    async fn create_personal_access_token(
+        &self,
+        command: &CreatePersonalAccessToken,
+    ) -> Result<RawPersonalAccessToken, Error> {
+        let response = self.post("/pat", &command).await?;
+        let pat: RawPersonalAccessToken = response.json().await?;
+        Ok(pat)
     }
 }

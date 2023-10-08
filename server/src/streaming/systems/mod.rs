@@ -4,6 +4,7 @@ pub mod consumer_offsets;
 pub mod info;
 pub mod messages;
 pub mod partitions;
+pub mod pat;
 pub mod stats;
 pub mod storage;
 pub mod streams;

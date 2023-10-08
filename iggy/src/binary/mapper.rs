@@ -6,6 +6,7 @@ use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::{Message, MessageState, PolledMessages};
 use crate::models::partition::Partition;
+use crate::models::pat::RawPersonalAccessToken;
 use crate::models::permissions::Permissions;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
@@ -146,6 +147,12 @@ pub fn map_identity_info(payload: &[u8]) -> Result<IdentityInfo, Error> {
         user_id,
         token: None,
     })
+}
+
+pub fn map_raw_pat(payload: &[u8]) -> Result<RawPersonalAccessToken, Error> {
+    let token_length = payload[0];
+    let token = from_utf8(&payload[1..1 + token_length as usize])?.to_string();
+    Ok(RawPersonalAccessToken { token })
 }
 
 pub fn map_client(payload: &[u8]) -> Result<ClientInfoDetails, Error> {

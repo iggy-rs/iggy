@@ -14,6 +14,7 @@ use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::PolledMessages;
+use crate::models::pat::RawPersonalAccessToken;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -36,6 +37,7 @@ use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
+use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::get_user::GetUser;
@@ -85,6 +87,10 @@ pub trait UserClient {
     async fn change_password(&self, command: &ChangePassword) -> Result<(), Error>;
     async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error>;
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error>;
+    async fn create_personal_access_token(
+        &self,
+        command: &CreatePersonalAccessToken,
+    ) -> Result<RawPersonalAccessToken, Error>;
 }
 
 #[async_trait]

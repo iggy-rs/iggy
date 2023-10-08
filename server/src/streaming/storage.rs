@@ -40,9 +40,14 @@ pub trait UserStorage: Storage<User> {
     async fn load_by_username(&self, username: &str) -> Result<User, Error>;
     async fn load_all_users(&self) -> Result<Vec<User>, Error>;
     async fn load_all_pats(&self) -> Result<Vec<PersonalAccessToken>, Error>;
-    async fn load_pat(&self, token: &str) -> Result<PersonalAccessToken, Error>;
+    async fn load_pat_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error>;
+    async fn load_pat_by_name(
+        &self,
+        user_id: UserId,
+        name: &str,
+    ) -> Result<PersonalAccessToken, Error>;
     async fn save_pat(&self, pat: &PersonalAccessToken) -> Result<(), Error>;
-    async fn delete_pat(&self, token: &str) -> Result<(), Error>;
+    async fn delete_pat(&self, user_id: UserId, name: &str) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -255,7 +260,15 @@ pub(crate) mod tests {
             Ok(vec![])
         }
 
-        async fn load_pat(&self, _token: &str) -> Result<PersonalAccessToken, Error> {
+        async fn load_pat_by_token(&self, _token: &str) -> Result<PersonalAccessToken, Error> {
+            Ok(PersonalAccessToken::default())
+        }
+
+        async fn load_pat_by_name(
+            &self,
+            _user_id: UserId,
+            _name: &str,
+        ) -> Result<PersonalAccessToken, Error> {
             Ok(PersonalAccessToken::default())
         }
 
@@ -263,7 +276,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn delete_pat(&self, _token: &str) -> Result<(), Error> {
+        async fn delete_pat(&self, _user_id: UserId, _name: &str) -> Result<(), Error> {
             Ok(())
         }
     }

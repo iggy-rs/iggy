@@ -212,6 +212,13 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             template: "Cannot change permissions for user with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
+            snake_case_name: "invalid_pat_name".to_string(),
+            code: 50,
+            signature: "".to_string(),
+            converts_from: "".to_string(),
+            template: "Invalid PAT name".to_string(),
+        },
+        ErrorRepositoryEntry {
             snake_case_name: "not_connected".to_string(),
             code: 51,
             signature: "".to_string(),

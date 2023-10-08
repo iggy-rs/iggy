@@ -11,13 +11,13 @@ pub struct PersonalAccessToken {
     pub user_id: UserId,
     pub name: String,
     pub token: String,
-    pub expiry: Option<u64>,
+    pub expiry: Option<u32>,
 }
 
 #[allow(dead_code)]
 impl PersonalAccessToken {
     // Raw token is generated and returned only once
-    pub fn new(user_id: UserId, name: &str, expiry: Option<u64>) -> (Self, String) {
+    pub fn new(user_id: UserId, name: &str, expiry: Option<u32>) -> (Self, String) {
         let mut buffer: [u8; SIZE] = [0; SIZE];
         let system_random = ring::rand::SystemRandom::new();
         system_random.fill(&mut buffer).unwrap();

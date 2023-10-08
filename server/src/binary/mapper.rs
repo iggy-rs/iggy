@@ -101,6 +101,13 @@ pub fn map_identity_info(user_id: UserId) -> Vec<u8> {
     bytes
 }
 
+pub fn map_raw_pat(token: &str) -> Vec<u8> {
+    let mut bytes = Vec::with_capacity(1 + token.len());
+    bytes.put_u8(token.len() as u8);
+    bytes.extend(token.as_bytes());
+    bytes
+}
+
 pub fn map_polled_messages(polled_messages: &PolledMessages) -> Vec<u8> {
     let messages_count = polled_messages.messages.len() as u32;
     let messages_size = polled_messages

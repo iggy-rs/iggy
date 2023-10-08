@@ -21,6 +21,7 @@ use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::{Message, PolledMessages};
+use crate::models::pat::RawPersonalAccessToken;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -45,6 +46,7 @@ use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
+use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::get_user::GetUser;
@@ -489,6 +491,17 @@ impl UserClient for IggyClient {
 
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
         self.client.read().await.logout_user(command).await
+    }
+
+    async fn create_personal_access_token(
+        &self,
+        command: &CreatePersonalAccessToken,
+    ) -> Result<RawPersonalAccessToken, Error> {
+        self.client
+            .read()
+            .await
+            .create_personal_access_token(command)
+            .await
     }
 }
 

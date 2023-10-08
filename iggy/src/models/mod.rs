@@ -5,6 +5,7 @@ pub mod header;
 pub mod identity_info;
 pub mod messages;
 pub mod partition;
+pub mod pat;
 pub mod permissions;
 pub mod stats;
 pub mod stream;

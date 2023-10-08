@@ -2,9 +2,11 @@ use crate::binary;
 use crate::client::UserClient;
 use crate::error::Error;
 use crate::models::identity_info::IdentityInfo;
+use crate::models::pat::RawPersonalAccessToken;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::tcp::client::TcpClient;
 use crate::users::change_password::ChangePassword;
+use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::get_user::GetUser;
@@ -51,5 +53,12 @@ impl UserClient for TcpClient {
 
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
         binary::users::logout_user(self, command).await
+    }
+
+    async fn create_personal_access_token(
+        &self,
+        command: &CreatePersonalAccessToken,
+    ) -> Result<RawPersonalAccessToken, Error> {
+        binary::users::create_pat(self, command).await
     }
 }

@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use iggy::error::Error;
 use iggy::models::user_info::UserId;
 use sled::Db;
+use std::str::from_utf8;
 use std::sync::Arc;
 use tracing::{error, info};
 
@@ -78,7 +79,7 @@ impl UserStorage for FileUserStorage {
 
     async fn load_all_pats(&self) -> Result<Vec<PersonalAccessToken>, Error> {
         let mut pats = Vec::new();
-        for data in self.db.scan_prefix(format!("{}:", PAT_KEY_PREFIX)) {
+        for data in self.db.scan_prefix(format!("{}:token:", PAT_KEY_PREFIX)) {
             let pat = match data {
                 Ok((_, value)) => match rmp_serde::from_slice::<PersonalAccessToken>(&value) {
                     Ok(pat) => pat,
@@ -98,7 +99,7 @@ impl UserStorage for FileUserStorage {
         Ok(pats)
     }
 
-    async fn load_pat(&self, token: &str) -> Result<PersonalAccessToken, Error> {
+    async fn load_pat_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error> {
         let key = get_pat_key(token);
         let pat = self.db.get(&key);
         if pat.is_err() {
@@ -120,11 +121,47 @@ impl UserStorage for FileUserStorage {
         Ok(pat)
     }
 
+    async fn load_pat_by_name(
+        &self,
+        user_id: UserId,
+        name: &str,
+    ) -> Result<PersonalAccessToken, Error> {
+        let key = get_pat_name_key(user_id, name);
+        let token = self.db.get(&key);
+        if token.is_err() {
+            return Err(Error::CannotLoadResource(key));
+        }
+
+        let token = token.unwrap();
+        if token.is_none() {
+            return Err(Error::CannotLoadResource(key));
+        }
+
+        let token = token.unwrap();
+        let token = from_utf8(&token);
+        if token.is_err() {
+            return Err(Error::CannotDeserializeResource(key));
+        }
+
+        let token = token.unwrap();
+        self.load_pat_by_token(token).await
+    }
+
     async fn save_pat(&self, pat: &PersonalAccessToken) -> Result<(), Error> {
         let key = get_pat_key(&pat.token);
         match rmp_serde::to_vec(&pat) {
             Ok(data) => {
                 if let Err(err) = self.db.insert(&key, data) {
+                    error!(
+                        "Cannot save PAT for user with ID: {}. Error: {}",
+                        pat.user_id, err
+                    );
+                    return Err(Error::CannotSaveResource(key.to_string()));
+                }
+                if let Err(err) = self.db.insert(
+                    get_pat_name_key(pat.user_id, &pat.name),
+                    pat.token.as_bytes(),
+                ) {
                     error!(
                         "Cannot save PAT for user with ID: {}. Error: {}",
                         pat.user_id, err
@@ -145,13 +182,18 @@ impl UserStorage for FileUserStorage {
         Ok(())
     }
 
-    async fn delete_pat(&self, token: &str) -> Result<(), Error> {
-        info!("Deleting PAT with hash: {}...", token);
-        let key = get_pat_key(token);
+    async fn delete_pat(&self, user_id: UserId, name: &str) -> Result<(), Error> {
+        let pat = self.load_pat_by_name(user_id, name).await?;
+        info!("Deleting PAT with name: {name} for user with ID: {user_id}...");
+        let key = get_pat_name_key(user_id, name);
         if self.db.remove(&key).is_err() {
             return Err(Error::CannotDeleteResource(key));
         }
-        info!("Deleted PAT with hash: {}.", token);
+        let key = get_pat_key(&pat.token);
+        if self.db.remove(&key).is_err() {
+            return Err(Error::CannotDeleteResource(key));
+        }
+        info!("Deleted PAT with name: {name} for user with ID: {user_id}.");
         Ok(())
     }
 }
@@ -238,5 +280,9 @@ fn get_user_id_key(username: &str) -> String {
 }
 
 fn get_pat_key(token_hash: &str) -> String {
-    format!("{}:{}", PAT_KEY_PREFIX, token_hash)
+    format!("{}:token:{}", PAT_KEY_PREFIX, token_hash)
+}
+
+fn get_pat_name_key(user_id: UserId, name: &str) -> String {
+    format!("{}:user:{}:{}", PAT_KEY_PREFIX, user_id, name)
 }

@@ -15,9 +15,24 @@ async fn many_personal_access_tokens_should_be_saved_and_loaded() {
     let pats = setup.storage.user.load_all_pats().await.unwrap();
     assert_eq!(pats.len(), 3);
 
-    let loaded_pat1 = setup.storage.user.load_pat(&pat1.token).await.unwrap();
-    let loaded_pat2 = setup.storage.user.load_pat(&pat2.token).await.unwrap();
-    let loaded_pat3 = setup.storage.user.load_pat(&pat3.token).await.unwrap();
+    let loaded_pat1 = setup
+        .storage
+        .user
+        .load_pat_by_token(&pat1.token)
+        .await
+        .unwrap();
+    let loaded_pat2 = setup
+        .storage
+        .user
+        .load_pat_by_token(&pat2.token)
+        .await
+        .unwrap();
+    let loaded_pat3 = setup
+        .storage
+        .user
+        .load_pat_by_token(&pat3.token)
+        .await
+        .unwrap();
 
     assert_pat(&pat1, &loaded_pat1);
     assert_pat(&pat2, &loaded_pat2);
@@ -44,13 +59,38 @@ async fn personal_access_token_should_be_deleted() {
 
     let pats = setup.storage.user.load_all_pats().await.unwrap();
     assert_eq!(pats.len(), 1);
-    let loaded_pat = setup.storage.user.load_pat(&pat.token).await.unwrap();
+    let loaded_pat = setup
+        .storage
+        .user
+        .load_pat_by_token(&pat.token)
+        .await
+        .unwrap();
     assert_pat(&pat, &loaded_pat);
 
-    setup.storage.user.delete_pat(&pat.token).await.unwrap();
+    let loaded_pat_by_name = setup
+        .storage
+        .user
+        .load_pat_by_name(user_id, &pat.name)
+        .await
+        .unwrap();
+    assert_pat(&pat, &loaded_pat_by_name);
 
-    let loaded_pat = setup.storage.user.load_pat(&pat.token).await;
+    setup
+        .storage
+        .user
+        .delete_pat(pat.user_id, &pat.name)
+        .await
+        .unwrap();
+
+    let loaded_pat = setup.storage.user.load_pat_by_token(&pat.token).await;
     assert!(loaded_pat.is_err());
+
+    let loaded_pat_by_name = setup
+        .storage
+        .user
+        .load_pat_by_name(user_id, &pat.name)
+        .await;
+    assert!(loaded_pat_by_name.is_err());
 
     let pats = setup.storage.user.load_all_pats().await.unwrap();
     assert!(pats.is_empty());

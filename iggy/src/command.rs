@@ -28,6 +28,7 @@ use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
+use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
 use crate::users::get_user::GetUser;
@@ -68,6 +69,8 @@ pub const LOGIN_USER: &str = "user.login";
 pub const LOGIN_USER_CODE: u32 = 38;
 pub const LOGOUT_USER: &str = "user.logout";
 pub const LOGOUT_USER_CODE: u32 = 39;
+pub const CREATE_PERSONAL_ACCESS_TOKEN: &str = "pat.create";
+pub const CREATE_PERSONAL_ACCESS_TOKEN_CODE: u32 = 40;
 pub const POLL_MESSAGES: &str = "message.poll";
 pub const POLL_MESSAGES_CODE: u32 = 100;
 pub const SEND_MESSAGES: &str = "message.send";
@@ -129,6 +132,7 @@ pub enum Command {
     ChangePassword(ChangePassword),
     LoginUser(LoginUser),
     LogoutUser(LogoutUser),
+    CreatePersonalAccessToken(CreatePersonalAccessToken),
     SendMessages(SendMessages),
     PollMessages(PollMessages),
     GetConsumerOffset(GetConsumerOffset),
@@ -174,6 +178,9 @@ impl BytesSerializable for Command {
             Command::ChangePassword(payload) => as_bytes(CHANGE_PASSWORD_CODE, &payload.as_bytes()),
             Command::LoginUser(payload) => as_bytes(LOGIN_USER_CODE, &payload.as_bytes()),
             Command::LogoutUser(payload) => as_bytes(LOGOUT_USER_CODE, &payload.as_bytes()),
+            Command::CreatePersonalAccessToken(payload) => {
+                as_bytes(CREATE_PERSONAL_ACCESS_TOKEN_CODE, &payload.as_bytes())
+            }
             Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, &payload.as_bytes()),
             Command::PollMessages(payload) => as_bytes(POLL_MESSAGES_CODE, &payload.as_bytes()),
             Command::StoreConsumerOffset(payload) => {
@@ -241,6 +248,9 @@ impl BytesSerializable for Command {
             )?)),
             LOGIN_USER_CODE => Ok(Command::LoginUser(LoginUser::from_bytes(payload)?)),
             LOGOUT_USER_CODE => Ok(Command::LogoutUser(LogoutUser::from_bytes(payload)?)),
+            CREATE_PERSONAL_ACCESS_TOKEN_CODE => Ok(Command::CreatePersonalAccessToken(
+                CreatePersonalAccessToken::from_bytes(payload)?,
+            )),
             SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
             POLL_MESSAGES_CODE => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
             STORE_CONSUMER_OFFSET_CODE => Ok(Command::StoreConsumerOffset(
@@ -316,6 +326,9 @@ impl FromStr for Command {
             CHANGE_PASSWORD => Ok(Command::ChangePassword(ChangePassword::from_str(payload)?)),
             LOGIN_USER => Ok(Command::LoginUser(LoginUser::from_str(payload)?)),
             LOGOUT_USER => Ok(Command::LogoutUser(LogoutUser::from_str(payload)?)),
+            CREATE_PERSONAL_ACCESS_TOKEN => Ok(Command::CreatePersonalAccessToken(
+                CreatePersonalAccessToken::from_str(payload)?,
+            )),
             SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
             POLL_MESSAGES => Ok(Command::PollMessages(PollMessages::from_str(payload)?)),
             STORE_CONSUMER_OFFSET => Ok(Command::StoreConsumerOffset(
@@ -384,6 +397,9 @@ impl Display for Command {
             }
             Command::LoginUser(payload) => write!(formatter, "{LOGIN_USER}|{payload}"),
             Command::LogoutUser(_) => write!(formatter, "{LOGOUT_USER}"),
+            Command::CreatePersonalAccessToken(payload) => {
+                write!(formatter, "{CREATE_PERSONAL_ACCESS_TOKEN}|{payload}")
+            }
             Command::GetStream(payload) => write!(formatter, "{GET_STREAM}|{payload}"),
             Command::GetStreams(_) => write!(formatter, "{GET_STREAMS}"),
             Command::CreateStream(payload) => write!(formatter, "{CREATE_STREAM}|{payload}"),
@@ -505,6 +521,11 @@ mod tests {
             &Command::LogoutUser(LogoutUser::default()),
             LOGOUT_USER_CODE,
             &LogoutUser::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::CreatePersonalAccessToken(CreatePersonalAccessToken::default()),
+            CREATE_PERSONAL_ACCESS_TOKEN_CODE,
+            &CreatePersonalAccessToken::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::SendMessages(SendMessages::default()),
@@ -681,6 +702,11 @@ mod tests {
             &Command::LogoutUser(LogoutUser::default()),
             LOGOUT_USER,
             &LogoutUser::default(),
+        );
+        assert_read_from_string(
+            &Command::CreatePersonalAccessToken(CreatePersonalAccessToken::default()),
+            CREATE_PERSONAL_ACCESS_TOKEN,
+            &CreatePersonalAccessToken::default(),
         );
         assert_read_from_string(
             &Command::SendMessages(SendMessages::default()),

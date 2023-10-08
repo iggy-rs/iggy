@@ -7,6 +7,7 @@ mod mapper;
 pub mod messages;
 pub mod metrics;
 pub mod partitions;
+pub mod pat;
 pub mod state;
 pub mod streams;
 pub mod system;

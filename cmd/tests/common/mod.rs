@@ -62,6 +62,11 @@ impl IggyCmdTest {
     }
 
     pub(crate) async fn execute_test(&mut self, test_case: impl IggyCmdTestCase) {
+        // Make sure server is started
+        assert!(
+            self.server.is_started(),
+            "Server is not running, make sure it has been started with IggyCmdTest::setup()"
+        );
         // Prepare iggy server state before test
         test_case.prepare_server_state(&self.client).await;
         // Get iggy tool

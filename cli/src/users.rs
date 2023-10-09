@@ -3,6 +3,7 @@ use iggy::client_error::ClientError;
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_pat::CreatePersonalAccessToken;
 use iggy::users::create_user::CreateUser;
+use iggy::users::delete_pat::DeletePersonalAccessToken;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::get_user::GetUser;
 use iggy::users::get_users::GetUsers;
@@ -76,5 +77,13 @@ pub async fn create_pat(
 ) -> Result<(), ClientError> {
     let pat = client.create_personal_access_token(command).await?;
     info!("Personal access token: {}", pat.token);
+    Ok(())
+}
+
+pub async fn delete_pat(
+    command: &DeletePersonalAccessToken,
+    client: &dyn Client,
+) -> Result<(), ClientError> {
+    client.delete_personal_access_token(command).await?;
     Ok(())
 }

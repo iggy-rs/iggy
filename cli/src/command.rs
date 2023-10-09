@@ -27,6 +27,7 @@ pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError>
         Command::LoginUser(payload) => users::login_user(&payload, client).await,
         Command::LogoutUser(payload) => users::logout_user(&payload, client).await,
         Command::CreatePersonalAccessToken(payload) => users::create_pat(&payload, client).await,
+        Command::DeletePersonalAccessToken(payload) => users::delete_pat(&payload, client).await,
         Command::SendMessages(mut payload) => messages::send_messages(&mut payload, client).await,
         Command::PollMessages(payload) => {
             let format = match input.split('|').last() {

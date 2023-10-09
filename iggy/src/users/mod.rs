@@ -2,6 +2,7 @@ pub mod change_password;
 pub mod create_pat;
 pub mod create_user;
 pub mod defaults;
+pub mod delete_pat;
 pub mod delete_user;
 pub mod get_user;
 pub mod get_users;

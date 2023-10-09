@@ -39,6 +39,7 @@ use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
+use crate::users::delete_pat::DeletePersonalAccessToken;
 use crate::users::delete_user::DeleteUser;
 use crate::users::get_user::GetUser;
 use crate::users::get_users::GetUsers;
@@ -91,6 +92,10 @@ pub trait UserClient {
         &self,
         command: &CreatePersonalAccessToken,
     ) -> Result<RawPersonalAccessToken, Error>;
+    async fn delete_personal_access_token(
+        &self,
+        command: &DeletePersonalAccessToken,
+    ) -> Result<(), Error>;
 }
 
 #[async_trait]

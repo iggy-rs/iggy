@@ -9,6 +9,7 @@ use iggy::users::change_password::ChangePassword;
 use iggy::users::create_pat::CreatePersonalAccessToken;
 use iggy::users::create_user::CreateUser;
 use iggy::users::defaults::*;
+use iggy::users::delete_pat::DeletePersonalAccessToken;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::get_user::GetUser;
 use iggy::users::get_users::GetUsers;
@@ -158,10 +159,12 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(change_password.is_err());
 
+    let pat_name = "test_token";
+
     // 13 Create a personal access token
     let pat = client
         .create_personal_access_token(&CreatePersonalAccessToken {
-            name: "test".to_string(),
+            name: pat_name.to_string(),
             expiry: Some(1000),
         })
         .await
@@ -169,7 +172,15 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(!pat.token.is_empty());
 
-    // 14. Login as root user again
+    // 14 Delete a personal access token
+    client
+        .delete_personal_access_token(&DeletePersonalAccessToken {
+            name: pat_name.to_string(),
+        })
+        .await
+        .unwrap();
+
+    // 15. Login as root user again
     client
         .login_user(&LoginUser {
             username: DEFAULT_ROOT_USERNAME.to_string(),
@@ -178,7 +189,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 15. Trying to create a new user with the same username should fail
+    // 16. Trying to create a new user with the same username should fail
     let create_duplicated_user = client
         .create_user(&CreateUser {
             username: test_user.to_string(),
@@ -190,7 +201,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(create_duplicated_user.is_err());
 
-    // 16. Update user details
+    // 17. Update user details
     let updated_test_user = "user2";
 
     client
@@ -202,7 +213,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 17. Update user permissions
+    // 18. Update user permissions
     client
         .update_permissions(&UpdatePermissions {
             user_id: Identifier::named(updated_test_user).unwrap(),
@@ -225,7 +236,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 18. Deleting another user should be allowed
+    // 19. Deleting another user should be allowed
     client
         .delete_user(&DeleteUser {
             user_id: Identifier::named(updated_test_user).unwrap(),
@@ -233,7 +244,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 19. Trying to delete the root user should fail
+    // 20. Trying to delete the root user should fail
     let delete_root_user = client
         .delete_user(&DeleteUser {
             user_id: Identifier::named(DEFAULT_ROOT_USERNAME).unwrap(),
@@ -242,10 +253,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(delete_root_user.is_err());
 
-    // 20. Logout
+    // 21. Logout
     client.logout_user(&LogoutUser {}).await.unwrap();
 
-    // 21. Trying to perform any secured operation after logout should fail
+    // 22. Trying to perform any secured operation after logout should fail
     let get_users = client.get_users(&GetUsers {}).await;
     assert!(get_users.is_err());
 

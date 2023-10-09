@@ -36,6 +36,16 @@ impl IggyCmdCommand {
         self
     }
 
+    pub(crate) fn args(mut self, args: Vec<impl Into<String>>) -> Self {
+        self.args.append(
+            args.into_iter()
+                .map(|a| a.into())
+                .collect::<Vec<_>>()
+                .as_mut(),
+        );
+        self
+    }
+
     pub(crate) fn env(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.env.insert(key.into(), value.into());
         self

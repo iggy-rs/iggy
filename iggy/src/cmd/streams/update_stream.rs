@@ -39,7 +39,7 @@ impl CliCommand for UpdateStreamCmd {
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
-            "Stream with ID: {} updated name: {} ",
+            "Stream with ID: {} updated name: {}",
             self.update_stream.stream_id, self.update_stream.name
         );
 

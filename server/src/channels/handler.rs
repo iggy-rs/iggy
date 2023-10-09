@@ -1,32 +1,29 @@
-use super::executor::ExecutableServerCommand;
-use crate::streaming::systems::system::System;
+use super::server_command::ServerCommand;
+use crate::{configs::server::ServerConfig, streaming::systems::system::System};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::warn;
 
-pub struct ServerCommandHandler {
+pub struct ServerCommandHandler<'a> {
     system: Arc<RwLock<System>>,
+    config: &'a ServerConfig,
 }
 
-impl ServerCommandHandler {
-    pub fn new(system: Arc<RwLock<System>>) -> Self {
-        Self { system }
+impl<'a> ServerCommandHandler<'a> {
+    pub fn new(system: Arc<RwLock<System>>, config: &'a ServerConfig) -> Self {
+        Self { system, config }
     }
 
-    pub fn install_handler<E>(&self, mut executor: E) -> flume::Sender<E::Command>
+    pub fn install_handler<C, E>(&mut self, mut executor: E) -> Self
     where
-        E: ExecutableServerCommand + Send + Sync + 'static,
+        E: ServerCommand<C> + Send + Sync + 'static,
     {
         let (sender, receiver) = flume::unbounded();
-
         let system = self.system.clone();
-        tokio::spawn(async move {
-            let system = system.clone();
-            while let Ok(command) = receiver.recv_async().await {
-                executor.execute(system.clone(), command).await
-            }
-            warn!("Server command handler stopped receiving commands.");
-        });
-        sender
+        executor.start_command_sender(system.clone(), self.config, sender);
+        executor.start_command_consumer(system.clone(), self.config, receiver);
+        Self {
+            system,
+            config: self.config,
+        }
     }
 }

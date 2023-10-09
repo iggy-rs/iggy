@@ -1,24 +1,69 @@
-use crate::channels::executor::ExecutableServerCommand;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
+use crate::{channels::server_command::ServerCommand, configs::server::MessageCleanerConfig};
 use async_trait::async_trait;
+use flume::Sender;
 use iggy::error::Error;
 use iggy::utils::timestamp::TimeStamp;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock;
+use tokio::time;
 use tracing::{error, info};
+
+struct DeletedSegments {
+    pub segments_count: u32,
+    pub messages_count: u64,
+}
+
+pub struct MessagesCleaner {
+    enabled: bool,
+    interval: Duration,
+    sender: Sender<CleanMessagesCommand>,
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct CleanMessagesCommand;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct CleanMessagesExecutor;
 
-#[async_trait]
-impl ExecutableServerCommand for CleanMessagesExecutor {
-    type Command = CleanMessagesCommand;
+impl MessagesCleaner {
+    pub fn new(config: &MessageCleanerConfig, sender: Sender<CleanMessagesCommand>) -> Self {
+        Self {
+            enabled: config.enabled,
+            interval: Duration::from_secs(config.interval),
+            sender,
+        }
+    }
 
-    async fn execute(&mut self, system: Arc<RwLock<System>>, _command: CleanMessagesCommand) {
+    pub fn start(&self) {
+        if !self.enabled {
+            info!("Message cleaner is disabled.");
+            return;
+        }
+
+        let interval = self.interval;
+        let sender = self.sender.clone();
+        info!(
+            "Message cleaner is enabled, expired messages will be deleted every: {:?}.",
+            interval
+        );
+
+        tokio::spawn(async move {
+            let mut interval_timer = time::interval(interval);
+            loop {
+                interval_timer.tick().await;
+                if sender.send(CleanMessagesCommand).is_err() {
+                    error!("Failed to send CleanMessagesCommand");
+                }
+            }
+        });
+    }
+}
+
+#[async_trait]
+impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
+    async fn execute(&mut self, system: &Arc<RwLock<System>>, _command: CleanMessagesCommand) {
         let now = TimeStamp::now().to_micros();
         let system_read = system.read().await;
         let streams = system_read.get_streams();
@@ -48,6 +93,31 @@ impl ExecutableServerCommand for CleanMessagesExecutor {
                 }
             }
         }
+    }
+
+    fn start_command_sender(
+        &mut self,
+        _system: Arc<RwLock<System>>,
+        config: &crate::configs::server::ServerConfig,
+        sender: flume::Sender<CleanMessagesCommand>,
+    ) {
+        let messages_saver = MessagesCleaner::new(&config.message_cleaner, sender);
+        messages_saver.start();
+    }
+
+    fn start_command_consumer(
+        mut self,
+        system: Arc<RwLock<System>>,
+        _config: &crate::configs::server::ServerConfig,
+        receiver: flume::Receiver<CleanMessagesCommand>,
+    ) {
+        tokio::spawn(async move {
+            let system = system.clone();
+            while let Ok(command) = receiver.recv_async().await {
+                self.execute(&system, command).await;
+            }
+            info!("Messages cleaner receiver stopped.");
+        });
     }
 }
 
@@ -104,9 +174,4 @@ async fn delete_expired_segments(
         segments_count,
         messages_count,
     }))
-}
-
-struct DeletedSegments {
-    pub segments_count: u32,
-    pub messages_count: u64,
 }

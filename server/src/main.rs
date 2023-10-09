@@ -12,8 +12,6 @@ mod tcp;
 use crate::args::Args;
 use crate::channels::commands::clean_messages::CleanMessagesExecutor;
 use crate::channels::commands::save_messages::SaveMessagesExecutor;
-use crate::channels::components::messages_cleaner::MessagesCleaner;
-use crate::channels::components::messages_saver::MessagesSaver;
 use crate::channels::handler::ServerCommandHandler;
 use crate::configs::config_provider;
 use crate::configs::server::ServerConfig;
@@ -56,19 +54,9 @@ async fn main() -> Result<(), ServerError> {
 
     system.init().await?;
     let system = Arc::new(RwLock::new(system));
-
-    let command_handler = ServerCommandHandler::new(system.clone());
-
-    let save_messages_sender = command_handler.install_handler(SaveMessagesExecutor);
-    let clean_messages_sender = command_handler.install_handler(CleanMessagesExecutor);
-
-    let messages_saver = MessagesSaver::new(&config.message_saver, save_messages_sender);
-    let messages_cleaner = MessagesCleaner::new(&config.message_cleaner, clean_messages_sender);
-
-    messages_saver.start();
-    messages_cleaner.start();
-
-    // TODO: try to merge MessageSaver and DiskUsageCalculator to Vec<E> in ServerCommandHandler
+    let mut _command_handler = ServerCommandHandler::new(system.clone(), &config)
+        .install_handler(SaveMessagesExecutor)
+        .install_handler(CleanMessagesExecutor);
 
     #[cfg(unix)]
     let (mut ctrl_c, mut sigterm) = {

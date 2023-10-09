@@ -100,6 +100,11 @@ pub trait SegmentStorage: Storage<Segment> {
         segment: &Segment,
         index_range: &IndexRange,
     ) -> Result<Vec<Arc<Message>>, Error>;
+    async fn load_newest_messages_by_size(
+        &self,
+        segment: &Segment,
+        size_bytes: u64,
+    ) -> Result<Vec<Arc<Message>>, Error>;
     async fn save_messages(
         &self,
         segment: &Segment,
@@ -415,6 +420,14 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _index_range: &IndexRange,
+        ) -> Result<Vec<Arc<Message>>, Error> {
+            Ok(vec![])
+        }
+
+        async fn load_newest_messages_by_size(
+            &self,
+            _segment: &Segment,
+            _size: u64,
         ) -> Result<Vec<Arc<Message>>, Error> {
             Ok(vec![])
         }

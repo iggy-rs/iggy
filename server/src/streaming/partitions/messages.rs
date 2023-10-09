@@ -5,7 +5,7 @@ use crate::streaming::utils::random_id;
 use iggy::error::Error;
 use iggy::models::messages::Message;
 use std::sync::Arc;
-use tracing::{error, trace, warn};
+use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
@@ -237,6 +237,43 @@ impl Partition {
         None
     }
 
+    pub async fn get_newest_messages_by_size(
+        &self,
+        size_bytes: u32,
+    ) -> Result<Vec<Arc<Message>>, Error> {
+        trace!(
+            "Getting messages for size: {} bytes for partition: {}...",
+            size_bytes,
+            self.partition_id
+        );
+
+        if self.segments.is_empty() {
+            return Ok(EMPTY_MESSAGES);
+        }
+
+        let mut remaining_size = size_bytes as u64;
+        let mut messages = Vec::new();
+        for segment in self.segments.iter().rev() {
+            let segment_size_bytes = segment.current_size_bytes as u64;
+            if segment_size_bytes > remaining_size {
+                // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
+                let partial_messages = segment.get_newest_messages_by_size(remaining_size).await?;
+                messages.splice(..0, partial_messages);
+                break;
+            }
+
+            // Current segment is smaller than the remaining size, so we need to get all messages from it.
+            let segment_messages = segment.get_all_messages().await?;
+            messages.splice(..0, segment_messages);
+            remaining_size = remaining_size.saturating_sub(segment_size_bytes);
+            if remaining_size == 0 {
+                break;
+            }
+        }
+
+        Ok(messages)
+    }
+
     fn load_messages_from_cache(&self, start_offset: u64, end_offset: u64) -> Vec<Arc<Message>> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
@@ -264,11 +301,12 @@ impl Partition {
         }
 
         if messages.len() != expected_messages_count {
-            error!(
+            warn!(
                 "Loaded {} messages from cache, expected {}.",
                 messages.len(),
                 expected_messages_count
             );
+            return EMPTY_MESSAGES;
         }
 
         trace!(

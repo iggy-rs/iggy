@@ -134,12 +134,12 @@ impl System {
                     tokio::task::spawn(async move {
                         let memory_tracker = CacheMemoryTracker::get_instance().unwrap();
                         let mut partition_guard = partition.write().await;
-                        let messages = &mut partition_guard.cache.as_mut().unwrap();
-                        let size_to_remove = (messages.current_size() as f64
+                        let cache = &mut partition_guard.cache.as_mut().unwrap();
+                        let size_to_remove = (cache.current_size() as f64
                             / memory_tracker.usage_bytes() as f64
                             * size_to_clean as f64)
                             .ceil() as u64;
-                        messages.evict_by_size(size_to_remove * CACHE_OVER_EVICTION_FACTOR);
+                        cache.evict_by_size(size_to_remove * CACHE_OVER_EVICTION_FACTOR);
                     });
                 }
             }

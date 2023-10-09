@@ -23,6 +23,10 @@ impl Segment {
         mut offset: u64,
         count: u32,
     ) -> Result<Vec<Arc<Message>>, Error> {
+        if count == 0 {
+            return Ok(EMPTY_MESSAGES);
+        }
+
         if offset < self.start_offset {
             offset = self.start_offset;
         }
@@ -55,6 +59,24 @@ impl Segment {
         let mut messages = self.load_messages_from_disk(offset, end_offset).await?;
         let mut buffered_messages = self.load_messages_from_unsaved_buffer(offset, end_offset);
         messages.append(&mut buffered_messages);
+
+        Ok(messages)
+    }
+
+    pub async fn get_all_messages(&self) -> Result<Vec<Arc<Message>>, Error> {
+        self.get_messages(self.start_offset, self.get_messages_count() as u32)
+            .await
+    }
+
+    pub async fn get_newest_messages_by_size(
+        &self,
+        size_bytes: u64,
+    ) -> Result<Vec<Arc<Message>>, Error> {
+        let messages = self
+            .storage
+            .segment
+            .load_newest_messages_by_size(self, size_bytes)
+            .await?;
 
         Ok(messages)
     }

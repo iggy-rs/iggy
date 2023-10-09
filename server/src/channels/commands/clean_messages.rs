@@ -1,54 +1,32 @@
-use crate::configs::server::MessageCleanerConfig;
+use crate::channels::executor::ExecutableServerCommand;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
+use async_trait::async_trait;
 use iggy::error::Error;
 use iggy::utils::timestamp::TimeStamp;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::RwLock;
-use tokio::{task, time};
 use tracing::{error, info};
 
-pub fn start(config: MessageCleanerConfig, system: Arc<RwLock<System>>) {
-    if !config.enabled {
-        info!("Message cleaner is disabled.");
-        return;
-    }
+#[derive(Debug, Default, Clone)]
+pub struct CleanMessagesCommand;
 
-    if config.interval == 0 {
-        panic!("Message cleaner interval must be greater than 0.")
-    }
+#[derive(Debug, Default)]
+pub struct CleanMessagesExecutor;
 
-    let duration = Duration::from_secs(config.interval);
-    task::spawn(async move {
-        let mut interval = time::interval(duration);
-        info!(
-            "Message cleaner is enabled, expired messages will be deleted every: {:?}.",
-            duration
-        );
-        interval.tick().await;
-        loop {
-            interval.tick().await;
-            let system = system.read().await;
-            let now = TimeStamp::now().to_micros();
-            let streams = system.get_streams();
-            for stream in streams {
-                let topics = stream.get_topics();
-                for topic in topics {
-                    let deleted_segments = delete_expired_segments(topic, now).await;
-                    if deleted_segments.is_err() {
-                        error!(
-                            "Failed to delete expired segments for stream ID: {}, topic ID: {}",
-                            topic.stream_id, topic.topic_id
-                        );
-                        continue;
-                    }
-                    let deleted_segments = deleted_segments.unwrap();
-                    if deleted_segments.is_none() {
-                        continue;
-                    }
+#[async_trait]
+impl ExecutableServerCommand for CleanMessagesExecutor {
+    type Command = CleanMessagesCommand;
 
-                    let deleted_segments = deleted_segments.unwrap();
+    async fn execute(&mut self, system: Arc<RwLock<System>>, _command: CleanMessagesCommand) {
+        let now = TimeStamp::now().to_micros();
+        let system_read = system.read().await;
+        let streams = system_read.get_streams();
+        for stream in streams {
+            let topics = stream.get_topics();
+            for topic in topics {
+                let deleted_segments = delete_expired_segments(topic, now).await;
+                if let Ok(Some(deleted_segments)) = deleted_segments {
                     info!(
                         "Deleted {} segments and {} messages for stream ID: {}, topic ID: {}",
                         deleted_segments.segments_count,
@@ -58,15 +36,19 @@ pub fn start(config: MessageCleanerConfig, system: Arc<RwLock<System>>) {
                     );
 
                     system
+                        .write()
+                        .await
                         .metrics
                         .decrement_segments(deleted_segments.segments_count);
                     system
+                        .write()
+                        .await
                         .metrics
                         .decrement_messages(deleted_segments.messages_count);
                 }
             }
         }
-    });
+    }
 }
 
 async fn delete_expired_segments(

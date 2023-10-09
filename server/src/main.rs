@@ -1,21 +1,25 @@
 mod args;
 mod binary;
-mod components;
+mod channels;
 mod configs;
 mod http;
+mod logging;
 mod quic;
-mod server_command;
 mod server_error;
 mod streaming;
 mod tcp;
 
 use crate::args::Args;
-use crate::components::logging::Logging;
-use crate::components::{channel, config_provider, message_cleaner, message_saver};
+use crate::channels::commands::clean_messages::CleanMessagesExecutor;
+use crate::channels::commands::save_messages::SaveMessagesExecutor;
+use crate::channels::components::messages_cleaner::MessagesCleaner;
+use crate::channels::components::messages_saver::MessagesSaver;
+use crate::channels::handler::ServerCommandHandler;
+use crate::configs::config_provider;
 use crate::configs::server::ServerConfig;
 use crate::http::http_server;
+use crate::logging::Logging;
 use crate::quic::quic_server;
-use crate::server_command::ServerCommand;
 use crate::server_error::ServerError;
 use crate::streaming::persistence::persister::FileWithSyncPersister;
 use crate::streaming::segments::storage::FileSegmentStorage;
@@ -49,12 +53,22 @@ async fn main() -> Result<(), ServerError> {
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
     let mut system = System::new(config.system.clone(), None);
+
     system.init().await?;
     let system = Arc::new(RwLock::new(system));
-    let (sender, receiver) = flume::unbounded::<ServerCommand>();
-    message_cleaner::start(config.message_cleaner, system.clone());
-    message_saver::start(config.message_saver, sender.clone());
-    channel::start(system.clone(), receiver);
+
+    let command_handler = ServerCommandHandler::new(system.clone());
+
+    let save_messages_sender = command_handler.install_handler(SaveMessagesExecutor);
+    let clean_messages_sender = command_handler.install_handler(CleanMessagesExecutor);
+
+    let messages_saver = MessagesSaver::new(&config.message_saver, save_messages_sender);
+    let messages_cleaner = MessagesCleaner::new(&config.message_cleaner, clean_messages_sender);
+
+    messages_saver.start();
+    messages_cleaner.start();
+
+    // TODO: try to merge MessageSaver and DiskUsageCalculator to Vec<E> in ServerCommandHandler
 
     #[cfg(unix)]
     let (mut ctrl_c, mut sigterm) = {

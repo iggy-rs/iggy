@@ -22,6 +22,7 @@ use crate::streaming::utils::file;
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
 const INDEX_SIZE: u32 = 4;
+const BUF_READER_CAPACITY_BYTES: usize = 512 * 1024;
 
 #[derive(Debug)]
 pub struct FileSegmentStorage {
@@ -181,6 +182,27 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(messages)
     }
 
+    async fn load_newest_messages_by_size(
+        &self,
+        segment: &Segment,
+        size_bytes: u64,
+    ) -> Result<Vec<Arc<Message>>, Error> {
+        let mut messages = Vec::new();
+        let mut total_size_bytes = 0;
+        load_messages_by_size(segment, size_bytes, |message: Message| {
+            total_size_bytes += message.get_size_bytes() as u64;
+            messages.push(Arc::new(message));
+            Ok(())
+        })
+        .await?;
+        trace!(
+            "Loaded {} newest messages of total size {} bytes from disk.",
+            messages.len(),
+            total_size_bytes
+        );
+        Ok(messages)
+    }
+
     async fn save_messages(
         &self,
         segment: &Segment,
@@ -248,7 +270,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         let indexes_count = file_size / 4;
         let mut indexes = Vec::with_capacity(indexes_count);
-        let mut reader = BufReader::new(file);
+        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for offset in 0..indexes_count {
             let position = reader.read_u32_le().await;
             if position.is_err() {
@@ -401,7 +423,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         let indexes_count = file_size / 8;
         let mut indexes = Vec::with_capacity(indexes_count);
-        let mut reader = BufReader::new(file);
+        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for offset in 0..indexes_count {
             let timestamp = reader.read_u64_le().await;
             if timestamp.is_err() {
@@ -492,7 +514,7 @@ async fn load_messages_by_range(
         return Ok(());
     }
 
-    let mut reader = BufReader::new(file);
+    let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     reader
         .seek(SeekFrom::Start(index_range.start.position as u64))
         .await?;
@@ -574,5 +596,106 @@ async fn load_messages_by_range(
         read_messages += 1;
         on_message(message)?;
     }
+    Ok(())
+}
+
+async fn load_messages_by_size(
+    segment: &Segment,
+    size_bytes: u64,
+    mut on_message: impl FnMut(Message) -> Result<(), Error>,
+) -> Result<(), Error> {
+    let file = file::open(&segment.log_path).await?;
+    let file_size = file.metadata().await?.len();
+    if file_size == 0 {
+        return Ok(());
+    }
+    let threshold = file_size.saturating_sub(size_bytes);
+
+    let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+    let mut accumulated_size: u64 = 0;
+
+    loop {
+        let offset = reader.read_u64_le().await;
+        if offset.is_err() {
+            break;
+        }
+
+        let state = reader.read_u8().await;
+        if state.is_err() {
+            return Err(Error::CannotReadMessageState);
+        }
+
+        let state = MessageState::from_code(state.unwrap())?;
+        let timestamp = reader.read_u64_le().await;
+        if timestamp.is_err() {
+            return Err(Error::CannotReadMessageTimestamp);
+        }
+
+        let id = reader.read_u128_le().await;
+        if id.is_err() {
+            return Err(Error::CannotReadMessageId);
+        }
+
+        let checksum = reader.read_u32_le().await;
+        if checksum.is_err() {
+            return Err(Error::CannotReadMessageChecksum);
+        }
+
+        let headers_length = reader.read_u32_le().await;
+        if headers_length.is_err() {
+            return Err(Error::CannotReadHeadersLength);
+        }
+
+        let headers_length = headers_length.unwrap();
+        let headers = match headers_length {
+            0 => None,
+            _ => {
+                let mut headers_payload = vec![0; headers_length as usize];
+                if reader.read_exact(&mut headers_payload).await.is_err() {
+                    return Err(Error::CannotReadHeadersPayload);
+                }
+
+                let headers = HashMap::from_bytes(&headers_payload)?;
+                Some(headers)
+            }
+        };
+
+        let payload_length = reader.read_u32_le().await;
+        if payload_length.is_err() {
+            return Err(Error::CannotReadMessageLength);
+        }
+
+        let mut payload = vec![0; payload_length.unwrap() as usize];
+        if reader.read_exact(&mut payload).await.is_err() {
+            return Err(Error::CannotReadMessagePayload);
+        }
+
+        let offset = offset.unwrap();
+        let timestamp = timestamp.unwrap();
+        let id = id.unwrap();
+        let checksum = checksum.unwrap();
+
+        let message = Message::create(
+            offset,
+            state,
+            timestamp,
+            id,
+            Bytes::from(payload),
+            checksum,
+            headers,
+        );
+        let message_size = message.get_size_bytes() as u64;
+
+        if accumulated_size >= threshold {
+            on_message(message)?;
+        }
+
+        accumulated_size += message_size;
+
+        if accumulated_size >= file_size {
+            break;
+        }
+    }
+
     Ok(())
 }

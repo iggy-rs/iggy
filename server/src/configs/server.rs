@@ -1,4 +1,4 @@
-use crate::components::config_provider::ConfigProvider;
+use crate::configs::config_provider::ConfigProvider;
 use crate::configs::http::HttpConfig;
 use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;

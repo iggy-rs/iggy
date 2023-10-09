@@ -1,10 +1,10 @@
 pub mod args;
 pub mod binary;
-pub mod components;
+pub mod channels;
 pub mod configs;
 pub mod http;
+pub mod logging;
 pub mod quic;
-pub mod server_command;
 pub mod server_error;
 pub mod streaming;
 pub mod tcp;

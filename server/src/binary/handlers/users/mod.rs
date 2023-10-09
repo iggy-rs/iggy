@@ -1,6 +1,7 @@
 pub mod change_password_handler;
 pub mod create_pat_handler;
 pub mod create_user_handler;
+pub mod delete_pat_handler;
 pub mod delete_user_handler;
 pub mod get_user_handler;
 pub mod get_users_handler;

@@ -48,6 +48,7 @@ use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
+use crate::users::delete_pat::DeletePersonalAccessToken;
 use crate::users::delete_user::DeleteUser;
 use crate::users::get_user::GetUser;
 use crate::users::get_users::GetUsers;
@@ -501,6 +502,17 @@ impl UserClient for IggyClient {
             .read()
             .await
             .create_personal_access_token(command)
+            .await
+    }
+
+    async fn delete_personal_access_token(
+        &self,
+        command: &DeletePersonalAccessToken,
+    ) -> Result<(), Error> {
+        self.client
+            .read()
+            .await
+            .delete_personal_access_token(command)
             .await
     }
 }

@@ -28,7 +28,7 @@ impl IggyCmdTestCase for TestNoCredentialsCmd {
 
 #[tokio::test]
 #[serial]
-pub async fn test_missing_credentials() {
+pub async fn should_fail_with_error_message() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;

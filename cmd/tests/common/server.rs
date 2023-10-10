@@ -108,6 +108,10 @@ impl TestServer {
         self.cleanup();
     }
 
+    pub(crate) fn is_started(&self) -> bool {
+        self.child_handle.is_some()
+    }
+
     fn cleanup(&self) {
         if fs::metadata(&self.files_path).is_ok() {
             fs::remove_dir_all(&self.files_path).unwrap();

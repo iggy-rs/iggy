@@ -19,6 +19,11 @@ use iggy::users::logout_user::LogoutUser;
 use std::process::Command;
 use std::sync::Arc;
 
+pub(crate) enum TestStreamId {
+    Numeric,
+    Named,
+}
+
 #[async_trait]
 pub(crate) trait IggyCmdTestCase {
     async fn prepare_server_state(&self, client: &dyn Client);
@@ -62,6 +67,11 @@ impl IggyCmdTest {
     }
 
     pub(crate) async fn execute_test(&mut self, test_case: impl IggyCmdTestCase) {
+        // Make sure server is started
+        assert!(
+            self.server.is_started(),
+            "Server is not running, make sure it has been started with IggyCmdTest::setup()"
+        );
         // Prepare iggy server state before test
         test_case.prepare_server_state(&self.client).await;
         // Get iggy tool
@@ -78,7 +88,6 @@ impl IggyCmdTest {
             runner_command.envs(command_args.get_env());
             command = runner_command;
         };
-
         // Execute test command
         let assert = command.args(command_args.get_opts_and_args()).assert();
         // Verify command output, exit code, etc in the test (if needed)

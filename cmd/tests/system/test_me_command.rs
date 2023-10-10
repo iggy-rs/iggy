@@ -73,7 +73,7 @@ impl IggyCmdTestCase for TestMeCmd {
 
 #[tokio::test]
 #[serial]
-pub async fn test_me_command() {
+pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;
@@ -82,7 +82,7 @@ pub async fn test_me_command() {
 
 #[tokio::test]
 #[serial]
-pub async fn test_me_command_transport_tcp() {
+pub async fn should_be_successful_using_transport_tcp() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;
@@ -93,7 +93,7 @@ pub async fn test_me_command_transport_tcp() {
 
 #[tokio::test]
 #[serial]
-pub async fn test_me_command_transport_quic() {
+pub async fn should_be_successful_using_transport_quic() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;

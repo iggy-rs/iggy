@@ -78,7 +78,7 @@ impl Validatable<ServerError> for MessageSaverConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.interval == 0 {
             error!("Message saver interval size cannot be zero, it must be greater than 0.");
-            return Err(ServerError::InvalidConfiguration); 
+            return Err(ServerError::InvalidConfiguration);
         }
 
         Ok(())
@@ -89,7 +89,7 @@ impl Validatable<ServerError> for MessageCleanerConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.interval == 0 {
             error!("Message cleaner interval size cannot be zero, it must be greater than 0.");
-            return Err(ServerError::InvalidConfiguration); 
+            return Err(ServerError::InvalidConfiguration);
         }
 
         Ok(())

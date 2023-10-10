@@ -14,8 +14,8 @@ use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use std::collections::HashMap;
 use std::fs;
-use std::process::{Child, Command};
-use std::thread::sleep;
+use std::process::{Child, Command, Stdio};
+use std::thread::{panicking, sleep};
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -31,6 +31,8 @@ pub struct TestServer {
     files_path: String,
     envs: Option<HashMap<String, String>>,
     child_handle: Option<Child>,
+    stdout: String,
+    stderr: String,
 }
 
 impl TestServer {
@@ -43,6 +45,8 @@ impl TestServer {
             files_path,
             envs,
             child_handle: None,
+            stdout: String::new(),
+            stderr: String::new(),
         }
     }
 
@@ -74,6 +78,15 @@ impl TestServer {
             }
             command = runner_command;
         };
+
+        // By default, server all logs are redirected to local variable
+        // and dumped to stderr when test fails. With IGGY_TEST_VERBOSE=1
+        // logs are dumped to stdout during test execution.
+        if std::env::var("IGGY_TEST_VERBOSE").is_err() {
+            command.stdout(Stdio::piped());
+            command.stderr(Stdio::piped());
+        }
+
         self.child_handle = Some(command.spawn().unwrap());
 
         // Sleep after starting server - it needs some time to bind to given port and start listening
@@ -91,6 +104,7 @@ impl TestServer {
     }
 
     pub fn stop(&mut self) {
+        #[allow(unused_mut)]
         if let Some(mut child_handle) = self.child_handle.take() {
             #[cfg(unix)]
             unsafe {
@@ -102,7 +116,12 @@ impl TestServer {
             #[cfg(not(unix))]
             child_handle.kill().unwrap();
 
-            child_handle.wait().unwrap();
+            if let Ok(output) = child_handle.wait_with_output() {
+                self.stdout
+                    .push_str(String::from_utf8_lossy(&output.stdout).to_string().as_str());
+                self.stderr
+                    .push_str(String::from_utf8_lossy(&output.stderr).to_string().as_str());
+            }
         }
         self.cleanup();
     }
@@ -120,6 +139,14 @@ impl TestServer {
 impl Drop for TestServer {
     fn drop(&mut self) {
         self.stop();
+        if panicking() {
+            if !self.stdout.is_empty() {
+                eprintln!("Iggy server stdout:\n{}", self.stdout);
+            }
+            if !self.stderr.is_empty() {
+                eprintln!("Iggy server stderr:\n{}", self.stderr);
+            }
+        }
     }
 }
 

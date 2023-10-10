@@ -24,7 +24,7 @@ impl IggyCmdTestCase for TestQuietModCmd {
 
 #[tokio::test]
 #[serial]
-pub async fn test_quiet_mode() {
+pub async fn should_be_no_output() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;

@@ -55,7 +55,7 @@ impl IggyCmdTestCase for TestStatsCmd {
 
 #[tokio::test]
 #[serial]
-pub async fn test_stats_command() {
+pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;

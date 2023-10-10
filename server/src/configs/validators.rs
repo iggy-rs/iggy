@@ -77,7 +77,7 @@ impl Validatable<ServerError> for SegmentConfig {
 impl Validatable<ServerError> for MessageSaverConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.interval == 0 {
-            // would be great if we can somehow add error message saying non-zero saver interval needs to be specified
+            error!("Saver Interval size cannot be zero");
             return Err(ServerError::InvalidConfiguration); 
         }
 
@@ -88,7 +88,7 @@ impl Validatable<ServerError> for MessageSaverConfig {
 impl Validatable<ServerError> for MessageCleanerConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.interval == 0 {
-            // would be great if we can somehow add error message saying non-zero cleaner interval needs to be specified
+            error!("Cleaner Interval size cannot be zero");
             return Err(ServerError::InvalidConfiguration); 
         }
 

@@ -6,7 +6,7 @@ use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::{Message, MessageState, PolledMessages};
 use crate::models::partition::Partition;
-use crate::models::pat::RawPersonalAccessToken;
+use crate::models::pat::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::permissions::Permissions;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
@@ -22,6 +22,7 @@ const EMPTY_TOPICS: Vec<Topic> = vec![];
 const EMPTY_STREAMS: Vec<Stream> = vec![];
 const EMPTY_CLIENTS: Vec<ClientInfo> = vec![];
 const EMPTY_USERS: Vec<UserInfo> = vec![];
+const EMPTY_PERSONAL_ACCESS_TOKENS: Vec<PersonalAccessTokenInfo> = vec![];
 const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
 
 pub fn map_stats(payload: &[u8]) -> Result<Stats, Error> {
@@ -139,6 +140,23 @@ pub fn map_users(payload: &[u8]) -> Result<Vec<UserInfo>, Error> {
     }
     users.sort_by(|x, y| x.id.cmp(&y.id));
     Ok(users)
+}
+
+pub fn map_pats(payload: &[u8]) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
+    if payload.is_empty() {
+        return Ok(EMPTY_PERSONAL_ACCESS_TOKENS);
+    }
+
+    let mut pats = Vec::new();
+    let length = payload.len();
+    let mut position = 0;
+    while position < length {
+        let (pat, read_bytes) = map_to_pat_info(payload, position)?;
+        pats.push(pat);
+        position += read_bytes;
+    }
+    pats.sort_by(|x, y| x.name.cmp(&y.name));
+    Ok(pats)
 }
 
 pub fn map_identity_info(payload: &[u8]) -> Result<IdentityInfo, Error> {
@@ -559,4 +577,23 @@ fn map_to_user_info(payload: &[u8], position: usize) -> Result<(UserInfo, usize)
         },
         read_bytes,
     ))
+}
+
+fn map_to_pat_info(
+    payload: &[u8],
+    position: usize,
+) -> Result<(PersonalAccessTokenInfo, usize), Error> {
+    let name_length = payload[position];
+    let name = from_utf8(&payload[position + 1..position + 1 + name_length as usize])?.to_string();
+    let expiry = u32::from_le_bytes(
+        payload[position + 1 + name_length as usize..position + 5 + name_length as usize]
+            .try_into()?,
+    );
+    let expiry = match expiry {
+        0 => None,
+        _ => Some(expiry),
+    };
+    let read_bytes = 1 + name_length as usize + 4;
+
+    Ok((PersonalAccessTokenInfo { name, expiry }, read_bytes))
 }

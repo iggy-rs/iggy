@@ -2,7 +2,7 @@ use crate::binary;
 use crate::client::UserClient;
 use crate::error::Error;
 use crate::models::identity_info::IdentityInfo;
-use crate::models::pat::RawPersonalAccessToken;
+use crate::models::pat::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::tcp::client::TcpClient;
 use crate::users::change_password::ChangePassword;
@@ -10,6 +10,7 @@ use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_pat::DeletePersonalAccessToken;
 use crate::users::delete_user::DeleteUser;
+use crate::users::get_pats::GetPersonalAccessTokens;
 use crate::users::get_user::GetUser;
 use crate::users::get_users::GetUsers;
 use crate::users::login_user::LoginUser;
@@ -54,6 +55,13 @@ impl UserClient for TcpClient {
 
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
         binary::users::logout_user(self, command).await
+    }
+
+    async fn get_personal_access_tokens(
+        &self,
+        command: &GetPersonalAccessTokens,
+    ) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
+        binary::users::get_pats(self, command).await
     }
 
     async fn create_personal_access_token(

@@ -226,6 +226,13 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             template: "PAT: {0} for user with ID: {1} already exists".to_string(),
         },
         ErrorRepositoryEntry {
+            snake_case_name: "pat_limit_reached".to_string(),
+            code: 52,
+            signature: "u32, u32".to_string(),
+            converts_from: "".to_string(),
+            template: "User with ID: {0} has reached the maximum number of PATs: {1}".to_string(),
+        },
+        ErrorRepositoryEntry {
             snake_case_name: "not_connected".to_string(),
             code: 61,
             signature: "".to_string(),

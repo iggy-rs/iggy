@@ -2,13 +2,14 @@ use crate::client::UserClient;
 use crate::error::Error;
 use crate::http::client::HttpClient;
 use crate::models::identity_info::IdentityInfo;
-use crate::models::pat::RawPersonalAccessToken;
+use crate::models::pat::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::users::change_password::ChangePassword;
 use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_pat::DeletePersonalAccessToken;
 use crate::users::delete_user::DeleteUser;
+use crate::users::get_pats::GetPersonalAccessTokens;
 use crate::users::get_user::GetUser;
 use crate::users::get_users::GetUsers;
 use crate::users::login_user::LoginUser;
@@ -82,6 +83,15 @@ impl UserClient for HttpClient {
         self.post(&format!("{USERS_PATH}/logout"), &command).await?;
         self.set_token(None).await;
         Ok(())
+    }
+
+    async fn get_personal_access_tokens(
+        &self,
+        _command: &GetPersonalAccessTokens,
+    ) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
+        let response = self.get(PAT_PATH).await?;
+        let pats = response.json().await?;
+        Ok(pats)
     }
 
     async fn create_personal_access_token(

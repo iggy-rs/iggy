@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 const SIZE: usize = 50;
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
 pub struct PersonalAccessToken {
     pub user_id: UserId,
     pub name: String,

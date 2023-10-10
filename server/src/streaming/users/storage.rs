@@ -99,6 +99,26 @@ impl UserStorage for FileUserStorage {
         Ok(pats)
     }
 
+    async fn load_pats_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, Error> {
+        let mut pats = Vec::new();
+        let key = format!("{}:user:{}:", PAT_KEY_PREFIX, user_id);
+        for data in self.db.scan_prefix(&key) {
+            match data {
+                Ok((_, value)) => {
+                    let token = from_utf8(&value)?;
+                    let pat = self.load_pat_by_token(token).await?;
+                    pats.push(pat);
+                }
+                Err(err) => {
+                    error!("Cannot load PAT. Error: {}", err);
+                    return Err(Error::CannotLoadResource(key));
+                }
+            };
+        }
+
+        Ok(pats)
+    }
+
     async fn load_pat_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error> {
         let key = get_pat_key(token);
         let pat = self.db.get(&key);

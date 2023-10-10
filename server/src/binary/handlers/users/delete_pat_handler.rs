@@ -16,7 +16,9 @@ pub async fn handle(
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    system.delete_pat(session, &command.name).await?;
+    system
+        .delete_personal_access_token(session, &command.name)
+        .await?;
     sender.send_empty_ok_response().await?;
     Ok(())
 }

@@ -2,9 +2,11 @@ use crate::streaming::clients::client_manager::Client;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::users::pat::PersonalAccessToken;
 use crate::streaming::users::user::User;
 use iggy::models::client_info::ConsumerGroupInfo;
 use iggy::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
+use iggy::models::pat::PersonalAccessTokenInfo;
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
@@ -113,6 +115,19 @@ pub fn map_users(users: &[User]) -> Vec<UserInfo> {
     }
     users_data.sort_by(|a, b| a.id.cmp(&b.id));
     users_data
+}
+
+pub fn map_pats(pats: &[PersonalAccessToken]) -> Vec<PersonalAccessTokenInfo> {
+    let mut pats_data = Vec::with_capacity(pats.len());
+    for pat in pats {
+        let pat = PersonalAccessTokenInfo {
+            name: pat.name.clone(),
+            expiry: pat.expiry,
+        };
+        pats_data.push(pat);
+    }
+    pats_data.sort_by(|a, b| a.name.cmp(&b.name));
+    pats_data
 }
 
 pub async fn map_client(client: &Client) -> iggy::models::client_info::ClientInfoDetails {

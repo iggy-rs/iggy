@@ -262,5 +262,5 @@ fn extend_user(user: &User, bytes: &mut Vec<u8>) {
 fn extend_pat(pat: &PersonalAccessToken, bytes: &mut Vec<u8>) {
     bytes.put_u8(pat.name.len() as u8);
     bytes.extend(pat.name.as_bytes());
-    bytes.put_u32_le(pat.expiry.unwrap_or(0));
+    bytes.put_u64_le(pat.expiry.unwrap_or(0));
 }

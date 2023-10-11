@@ -11,7 +11,7 @@ use crate::binary::handlers::topics::*;
 use crate::binary::handlers::users::{
     change_password_handler, create_pat_handler, create_user_handler, delete_pat_handler,
     delete_user_handler, get_pats_handler, get_user_handler, get_users_handler, login_user_handler,
-    logout_user_handler, update_permissions_handler, update_user_handler,
+    login_with_pat_handler, logout_user_handler, update_permissions_handler, update_user_handler,
 };
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
@@ -94,6 +94,9 @@ async fn try_handle(
         }
         Command::DeletePersonalAccessToken(command) => {
             delete_pat_handler::handle(command, sender, session, system).await
+        }
+        Command::LoginWithPersonalAccessToken(command) => {
+            login_with_pat_handler::handle(command, sender, session, system).await
         }
         Command::SendMessages(command) => {
             send_messages_handler::handle(command, sender, session, system).await

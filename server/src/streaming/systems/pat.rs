@@ -1,6 +1,7 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::pat::PersonalAccessToken;
+use crate::streaming::users::user::User;
 use iggy::error::Error;
 use iggy::utils::text;
 use tracing::{error, info};
@@ -65,5 +66,25 @@ impl System {
         self.storage.user.delete_pat(user_id, &name).await?;
         info!("Deleted PAT: {name} for user with ID: {user_id}.");
         Ok(())
+    }
+
+    pub async fn login_with_personal_access_token(
+        &self,
+        token: &str,
+        session: Option<&mut Session>,
+    ) -> Result<User, Error> {
+        let token_hash = PersonalAccessToken::hash_token(token);
+        let pat = self.storage.user.load_pat_by_token(&token_hash).await?;
+        if pat.is_expired() {
+            error!(
+                "PAT: {} for user with ID: {} has expired.",
+                pat.name, pat.user_id
+            );
+            return Err(Error::ExpiredPat(pat.name, pat.user_id));
+        }
+
+        let user = self.storage.user.load_by_id(pat.user_id).await?;
+        self.login_user_with_credentials(&user.username, None, session)
+            .await
     }
 }

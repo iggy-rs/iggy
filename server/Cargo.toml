@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.0.33"
+version = "0.0.40"
 edition = "2021"
 build = "src/build.rs"
 

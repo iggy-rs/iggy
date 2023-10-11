@@ -12,6 +12,7 @@ use crate::users::delete_user::DeleteUser;
 use crate::users::get_pats::GetPersonalAccessTokens;
 use crate::users::get_user::GetUser;
 use crate::users::get_users::GetUsers;
+use crate::users::login_pat::LoginWithPersonalAccessToken;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
@@ -109,5 +110,15 @@ impl UserClient for HttpClient {
     ) -> Result<(), Error> {
         self.delete(&format!("{PAT_PATH}/{}", command.name)).await?;
         Ok(())
+    }
+
+    async fn login_with_personal_access_token(
+        &self,
+        command: &LoginWithPersonalAccessToken,
+    ) -> Result<IdentityInfo, Error> {
+        let response = self.post(&format!("{PAT_PATH}/login"), &command).await?;
+        let identity_info: IdentityInfo = response.json().await?;
+        self.set_token(identity_info.token.clone()).await;
+        Ok(identity_info)
     }
 }

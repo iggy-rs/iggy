@@ -1,0 +1,6 @@
+mod test_topic_create_command;
+mod test_topic_delete_command;
+mod test_topic_get_command;
+mod test_topic_help_command;
+mod test_topic_list_command;
+mod test_topic_update_command;

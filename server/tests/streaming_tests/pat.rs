@@ -15,6 +15,31 @@ async fn many_personal_access_tokens_should_be_saved_and_loaded() {
     let pats = setup.storage.user.load_all_pats().await.unwrap();
     assert_eq!(pats.len(), 3);
 
+    let user1_pats = setup
+        .storage
+        .user
+        .load_pats_for_user(pat1.user_id)
+        .await
+        .unwrap();
+    assert_eq!(user1_pats.len(), 1);
+    assert_eq!(user1_pats[0], pat1);
+    let user2_pats = setup
+        .storage
+        .user
+        .load_pats_for_user(pat2.user_id)
+        .await
+        .unwrap();
+    assert_eq!(user2_pats.len(), 1);
+    assert_eq!(user2_pats[0], pat2);
+    let user3_pats = setup
+        .storage
+        .user
+        .load_pats_for_user(pat3.user_id)
+        .await
+        .unwrap();
+    assert_eq!(user3_pats.len(), 1);
+    assert_eq!(user3_pats[0], pat3);
+
     let loaded_pat1 = setup
         .storage
         .user
@@ -94,4 +119,12 @@ async fn personal_access_token_should_be_deleted() {
 
     let pats = setup.storage.user.load_all_pats().await.unwrap();
     assert!(pats.is_empty());
+
+    let user_pats = setup
+        .storage
+        .user
+        .load_pats_for_user(user_id)
+        .await
+        .unwrap();
+    assert!(user_pats.is_empty());
 }

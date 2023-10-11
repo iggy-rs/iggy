@@ -40,6 +40,7 @@ pub trait UserStorage: Storage<User> {
     async fn load_by_username(&self, username: &str) -> Result<User, Error>;
     async fn load_all_users(&self) -> Result<Vec<User>, Error>;
     async fn load_all_pats(&self) -> Result<Vec<PersonalAccessToken>, Error>;
+    async fn load_pats_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, Error>;
     async fn load_pat_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error>;
     async fn load_pat_by_name(
         &self,
@@ -262,6 +263,13 @@ pub(crate) mod tests {
         }
 
         async fn load_all_pats(&self) -> Result<Vec<PersonalAccessToken>, Error> {
+            Ok(vec![])
+        }
+
+        async fn load_pats_for_user(
+            &self,
+            _user_id: UserId,
+        ) -> Result<Vec<PersonalAccessToken>, Error> {
             Ok(vec![])
         }
 

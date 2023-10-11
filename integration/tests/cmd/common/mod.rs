@@ -121,6 +121,25 @@ impl IggyCmdTest {
             runner_command.envs(command_args.get_env());
             command = runner_command;
         };
+
+        // Print used environment variables and command with all arguments.
+        // By default, it will not be visible but once test is executed with
+        // --nocapture flag, it will be visible.
+        println!(
+            "Running: {} {} {}",
+            command
+                .get_envs()
+                .map(|k| format!(
+                    "{}={}",
+                    k.0.to_str().unwrap(),
+                    k.1.unwrap().to_str().unwrap()
+                ))
+                .collect::<Vec<String>>()
+                .join(" "),
+            command.get_program().to_str().unwrap(),
+            command_args.get_opts_and_args().join(" ")
+        );
+
         // Execute test command
         let assert = command.args(command_args.get_opts_and_args()).assert();
         // Verify command output, exit code, etc in the test (if needed)

@@ -99,10 +99,10 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
         &mut self,
         _system: Arc<RwLock<System>>,
         config: &crate::configs::server::ServerConfig,
-        sender: flume::Sender<CleanMessagesCommand>,
+        sender: Sender<CleanMessagesCommand>,
     ) {
-        let messages_saver = MessagesCleaner::new(&config.message_cleaner, sender);
-        messages_saver.start();
+        let messages_cleaner = MessagesCleaner::new(&config.message_cleaner, sender);
+        messages_cleaner.start();
     }
 
     fn start_command_consumer(

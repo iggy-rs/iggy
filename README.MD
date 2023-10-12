@@ -23,7 +23,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 - **Highly performant**, persistent append-only log for the message streaming
 - **Very high throughput** for both writes and reads
 - **Low latency and predictable resource usage** thanks to the Rust compiled language (no GC)
-- **Users authentication and authorization** with granular permissions
+- **Users authentication and authorization** with granular permissions and PAT (Personal Access Tokens)
 - Support for multiple streams, topics and partitions
 - Support for **multiple transport protocols** (QUIC, TCP, HTTP)
 - Fully operational RESTful API which can be optionally enabled

@@ -74,6 +74,8 @@ impl ErrorResponse {
                 Error::InvalidConsumerGroupId => Some("consumer_group_id".to_string()),
                 Error::ConsumerGroupIdAlreadyExists(_, _) => Some("consumer_group_id".to_string()),
                 Error::ConsumerGroupNameAlreadyExists(_, _) => Some("name".to_string()),
+                Error::UserAlreadyExists => Some("username".to_string()),
+                Error::PatAlreadyExists(_, _) => Some("name".to_string()),
                 _ => None,
             },
         }

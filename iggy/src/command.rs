@@ -35,6 +35,7 @@ use crate::users::delete_user::DeleteUser;
 use crate::users::get_pats::GetPersonalAccessTokens;
 use crate::users::get_user::GetUser;
 use crate::users::get_users::GetUsers;
+use crate::users::login_pat::LoginWithPersonalAccessToken;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
@@ -77,6 +78,8 @@ pub const CREATE_PERSONAL_ACCESS_TOKEN: &str = "pat.create";
 pub const CREATE_PERSONAL_ACCESS_TOKEN_CODE: u32 = 42;
 pub const DELETE_PERSONAL_ACCESS_TOKEN: &str = "pat.delete";
 pub const DELETE_PERSONAL_ACCESS_TOKEN_CODE: u32 = 43;
+pub const LOGIN_WITH_PERSONAL_ACCESS_TOKEN: &str = "pat.login";
+pub const LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE: u32 = 44;
 pub const POLL_MESSAGES: &str = "message.poll";
 pub const POLL_MESSAGES_CODE: u32 = 100;
 pub const SEND_MESSAGES: &str = "message.send";
@@ -141,6 +144,7 @@ pub enum Command {
     GetPersonalAccessTokens(GetPersonalAccessTokens),
     CreatePersonalAccessToken(CreatePersonalAccessToken),
     DeletePersonalAccessToken(DeletePersonalAccessToken),
+    LoginWithPersonalAccessToken(LoginWithPersonalAccessToken),
     SendMessages(SendMessages),
     PollMessages(PollMessages),
     GetConsumerOffset(GetConsumerOffset),
@@ -194,6 +198,9 @@ impl BytesSerializable for Command {
             }
             Command::DeletePersonalAccessToken(payload) => {
                 as_bytes(DELETE_PERSONAL_ACCESS_TOKEN_CODE, &payload.as_bytes())
+            }
+            Command::LoginWithPersonalAccessToken(payload) => {
+                as_bytes(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, &payload.as_bytes())
             }
             Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, &payload.as_bytes()),
             Command::PollMessages(payload) => as_bytes(POLL_MESSAGES_CODE, &payload.as_bytes()),
@@ -270,6 +277,9 @@ impl BytesSerializable for Command {
             )),
             DELETE_PERSONAL_ACCESS_TOKEN_CODE => Ok(Command::DeletePersonalAccessToken(
                 DeletePersonalAccessToken::from_bytes(payload)?,
+            )),
+            LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE => Ok(Command::LoginWithPersonalAccessToken(
+                LoginWithPersonalAccessToken::from_bytes(payload)?,
             )),
             SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
             POLL_MESSAGES_CODE => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
@@ -355,6 +365,9 @@ impl FromStr for Command {
             DELETE_PERSONAL_ACCESS_TOKEN => Ok(Command::DeletePersonalAccessToken(
                 DeletePersonalAccessToken::from_str(payload)?,
             )),
+            LOGIN_WITH_PERSONAL_ACCESS_TOKEN => Ok(Command::LoginWithPersonalAccessToken(
+                LoginWithPersonalAccessToken::from_str(payload)?,
+            )),
             SEND_MESSAGES => Ok(Command::SendMessages(SendMessages::from_str(payload)?)),
             POLL_MESSAGES => Ok(Command::PollMessages(PollMessages::from_str(payload)?)),
             STORE_CONSUMER_OFFSET => Ok(Command::StoreConsumerOffset(
@@ -431,6 +444,9 @@ impl Display for Command {
             }
             Command::DeletePersonalAccessToken(payload) => {
                 write!(formatter, "{DELETE_PERSONAL_ACCESS_TOKEN}|{payload}")
+            }
+            Command::LoginWithPersonalAccessToken(payload) => {
+                write!(formatter, "{LOGIN_WITH_PERSONAL_ACCESS_TOKEN}|{payload}")
             }
             Command::GetStream(payload) => write!(formatter, "{GET_STREAM}|{payload}"),
             Command::GetStreams(_) => write!(formatter, "{GET_STREAMS}"),
@@ -568,6 +584,11 @@ mod tests {
             &Command::DeletePersonalAccessToken(DeletePersonalAccessToken::default()),
             DELETE_PERSONAL_ACCESS_TOKEN_CODE,
             &DeletePersonalAccessToken::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::LoginWithPersonalAccessToken(LoginWithPersonalAccessToken::default()),
+            LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE,
+            &LoginWithPersonalAccessToken::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::SendMessages(SendMessages::default()),
@@ -759,6 +780,11 @@ mod tests {
             &Command::DeletePersonalAccessToken(DeletePersonalAccessToken::default()),
             DELETE_PERSONAL_ACCESS_TOKEN,
             &DeletePersonalAccessToken::default(),
+        );
+        assert_read_from_string(
+            &Command::LoginWithPersonalAccessToken(LoginWithPersonalAccessToken::default()),
+            LOGIN_WITH_PERSONAL_ACCESS_TOKEN,
+            &LoginWithPersonalAccessToken::default(),
         );
         assert_read_from_string(
             &Command::SendMessages(SendMessages::default()),

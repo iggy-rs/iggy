@@ -8,6 +8,7 @@ use iggy::users::delete_user::DeleteUser;
 use iggy::users::get_pats::GetPersonalAccessTokens;
 use iggy::users::get_user::GetUser;
 use iggy::users::get_users::GetUsers;
+use iggy::users::login_pat::LoginWithPersonalAccessToken;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
@@ -95,5 +96,13 @@ pub async fn delete_pat(
     client: &dyn Client,
 ) -> Result<(), ClientError> {
     client.delete_personal_access_token(command).await?;
+    Ok(())
+}
+
+pub async fn login_with_pat(
+    command: &LoginWithPersonalAccessToken,
+    client: &dyn Client,
+) -> Result<(), ClientError> {
+    client.login_with_personal_access_token(command).await?;
     Ok(())
 }

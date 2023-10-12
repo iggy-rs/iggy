@@ -213,6 +213,16 @@ impl System {
         password: &str,
         session: Option<&mut Session>,
     ) -> Result<User, Error> {
+        self.login_user_with_credentials(username, Some(password), session)
+            .await
+    }
+
+    pub async fn login_user_with_credentials(
+        &self,
+        username: &str,
+        password: Option<&str>,
+        session: Option<&mut Session>,
+    ) -> Result<User, Error> {
         let user = match self.storage.user.load_by_username(username).await {
             Ok(user) => user,
             Err(_) => {
@@ -226,12 +236,15 @@ impl System {
             warn!("User: {username} with ID: {} is inactive.", user.id);
             return Err(Error::UserInactive);
         }
-        if !crypto::verify_password(password, &user.password) {
-            warn!(
-                "Invalid password for user: {username} with ID: {}.",
-                user.id
-            );
-            return Err(Error::InvalidCredentials);
+
+        if let Some(password) = password {
+            if !crypto::verify_password(password, &user.password) {
+                warn!(
+                    "Invalid password for user: {username} with ID: {}.",
+                    user.id
+                );
+                return Err(Error::InvalidCredentials);
+            }
         }
 
         info!("Logged in user: {username} with ID: {}.", user.id);

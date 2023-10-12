@@ -1,6 +1,7 @@
 use crate::streaming::utils::hash;
 use iggy::models::user_info::UserId;
 use iggy::utils::text::as_base64;
+use iggy::utils::timestamp::TimeStamp;
 use ring::rand::SecureRandom;
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +12,7 @@ pub struct PersonalAccessToken {
     pub user_id: UserId,
     pub name: String,
     pub token: String,
-    pub expiry: Option<u32>,
+    pub expiry: Option<u64>,
 }
 
 #[allow(dead_code)]
@@ -23,6 +24,7 @@ impl PersonalAccessToken {
         system_random.fill(&mut buffer).unwrap();
         let token = as_base64(&buffer);
         let token_hash = Self::hash_token(&token);
+        let expiry = expiry.map(|e| TimeStamp::now().to_micros() + e as u64 * 1_000_000);
         (
             Self {
                 user_id,
@@ -32,6 +34,13 @@ impl PersonalAccessToken {
             },
             token,
         )
+    }
+
+    pub fn is_expired(&self) -> bool {
+        match self.expiry {
+            Some(expiry) => TimeStamp::now().to_micros() > expiry,
+            None => false,
+        }
     }
 
     pub fn hash_token(token: &str) -> String {

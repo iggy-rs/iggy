@@ -7,6 +7,7 @@ pub mod get_pats_handler;
 pub mod get_user_handler;
 pub mod get_users_handler;
 pub mod login_user_handler;
+pub mod login_with_pat_handler;
 pub mod logout_user_handler;
 pub mod update_permissions_handler;
 pub mod update_user_handler;

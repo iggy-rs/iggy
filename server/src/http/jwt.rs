@@ -147,5 +147,5 @@ impl JwtManager {
 }
 
 fn should_skip_auth(path: &str) -> bool {
-    matches!(path, "/" | "/ping" | "/users/login")
+    matches!(path, "/" | "/ping" | "/users/login" | "/pat/login")
 }

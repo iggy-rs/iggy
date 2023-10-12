@@ -14,6 +14,7 @@ use iggy::users::delete_user::DeleteUser;
 use iggy::users::get_pats::GetPersonalAccessTokens;
 use iggy::users::get_user::GetUser;
 use iggy::users::get_users::GetUsers;
+use iggy::users::login_pat::LoginWithPersonalAccessToken;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
@@ -163,7 +164,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let pat_name = "test_token";
 
     // 13 Create a personal access token
-    let pat = client
+    let raw_pat = client
         .create_personal_access_token(&CreatePersonalAccessToken {
             name: pat_name.to_string(),
             expiry: Some(1000),
@@ -171,7 +172,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    assert!(!pat.token.is_empty());
+    assert!(!raw_pat.token.is_empty());
 
     // 14. Get personal access tokens and verify that the token is there
     let pats = client
@@ -180,7 +181,20 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert_eq!(pats.len(), 1);
 
-    // 15. Delete a personal access token
+    // 15. Logout
+    client.logout_user(&LogoutUser {}).await.unwrap();
+
+    // 16. Login with the personal access token
+    let identity_info = client
+        .login_with_personal_access_token(&LoginWithPersonalAccessToken {
+            token: raw_pat.token,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(identity_info.user_id, 2);
+
+    // 17. Delete a personal access token
     client
         .delete_personal_access_token(&DeletePersonalAccessToken {
             name: pat_name.to_string(),
@@ -188,14 +202,14 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 16. Get personal access tokens and verify that the token is no longer available
+    // 18. Get personal access tokens and verify that the token is no longer available
     let pats = client
         .get_personal_access_tokens(&GetPersonalAccessTokens {})
         .await
         .unwrap();
     assert!(pats.is_empty());
 
-    // 17. Login as root user again
+    // 19. Login as root user again
     client
         .login_user(&LoginUser {
             username: DEFAULT_ROOT_USERNAME.to_string(),
@@ -204,7 +218,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 18. Trying to create a new user with the same username should fail
+    // 20. Trying to create a new user with the same username should fail
     let create_duplicated_user = client
         .create_user(&CreateUser {
             username: test_user.to_string(),
@@ -216,7 +230,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(create_duplicated_user.is_err());
 
-    // 19. Update user details
+    // 21. Update user details
     let updated_test_user = "user2";
 
     client
@@ -228,7 +242,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 20. Update user permissions
+    // 22. Update user permissions
     client
         .update_permissions(&UpdatePermissions {
             user_id: Identifier::named(updated_test_user).unwrap(),
@@ -251,7 +265,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 21. Deleting another user should be allowed
+    // 23. Deleting another user should be allowed
     client
         .delete_user(&DeleteUser {
             user_id: Identifier::named(updated_test_user).unwrap(),
@@ -259,7 +273,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
 
-    // 22. Trying to delete the root user should fail
+    // 24. Trying to delete the root user should fail
     let delete_root_user = client
         .delete_user(&DeleteUser {
             user_id: Identifier::named(DEFAULT_ROOT_USERNAME).unwrap(),
@@ -268,10 +282,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(delete_root_user.is_err());
 
-    // 23. Logout
+    // 25. Logout
     client.logout_user(&LogoutUser {}).await.unwrap();
 
-    // 24. Trying to perform any secured operation after logout should fail
+    // 26. Trying to perform any secured operation after logout should fail
     let get_users = client.get_users(&GetUsers {}).await;
     assert!(get_users.is_err());
 

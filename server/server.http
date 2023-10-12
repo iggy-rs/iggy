@@ -16,6 +16,8 @@
 @token = secret
 @root_id = 1
 @user1_id = 2
+@pat_name = dev_token
+@pat_raw_token = secret
 
 ###
 GET {{url}}
@@ -142,15 +144,43 @@ Content-Type: application/json
 DELETE {{url}}/users/{{user1_id}}
 Authorization: Bearer {{token}}
 
+###
+GET {{url}}/pat
+Authorization: Bearer {{token}}
+
+###
+POST {{url}}/pat
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "{{pat_name}}",
+  "expiry": 1000
+}
+
+###
+POST {{url}}/pat/login
+Content-Type: application/json
+
+{
+  "token": "{{pat_raw_token}}"
+}
+
+###
+DELETE {{url}}/pat/{{pat_name}}
+Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/streams
+Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}
+Authorization: Bearer {{token}}
 
 ###
 POST {{url}}/streams
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -160,6 +190,7 @@ Content-Type: application/json
 
 ###
 PUT {{url}}/streams/{{stream_id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -168,15 +199,19 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}
+Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics
+Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
+Authorization: Bearer {{token}}
 
 ###
 POST {{url}}/streams/{{stream_id}}/topics
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -188,6 +223,7 @@ Content-Type: application/json
 
 ###
 PUT {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -197,9 +233,11 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
+Authorization: Bearer {{token}}
 
 ###
 POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/partitions
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -208,9 +246,11 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/partitions?partitions_count=1
+Authorization: Bearer {{token}}
 
 ###
 POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -235,9 +275,11 @@ Content-Type: application/json
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages?consumer_id={{consumer_id}}&partition_id={{partition_id}}&kind=offset&value=0&count=10&auto_commit=false
+Authorization: Bearer {{token}}
 
 ###
 PUT {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-offsets
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -248,15 +290,19 @@ Content-Type: application/json
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-offsets?consumer_id={{consumer_id}}&partition_id={{partition_id}}
+Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups
+Authorization: Bearer {{token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups/{{consumer_group_id}}
+Authorization: Bearer {{token}}
 
 ###
 POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -266,3 +312,4 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups/{{consumer_group_id}}
+Authorization: Bearer {{token}}

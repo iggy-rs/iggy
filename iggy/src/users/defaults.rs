@@ -2,6 +2,7 @@ pub const MAX_USERNAME_LENGTH: usize = 50;
 pub const MIN_USERNAME_LENGTH: usize = 3;
 pub const MAX_PASSWORD_LENGTH: usize = 100;
 pub const MIN_PASSWORD_LENGTH: usize = 3;
+pub const MAX_PAT_LENGTH: usize = 100;
 pub const MAX_TOKEN_NAME_LENGTH: usize = 30;
 pub const MIN_TOKEN_NAME_LENGTH: usize = 3;
 

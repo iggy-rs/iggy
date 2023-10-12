@@ -585,15 +585,12 @@ fn map_to_pat_info(
 ) -> Result<(PersonalAccessTokenInfo, usize), Error> {
     let name_length = payload[position];
     let name = from_utf8(&payload[position + 1..position + 1 + name_length as usize])?.to_string();
-    let expiry = u32::from_le_bytes(
-        payload[position + 1 + name_length as usize..position + 5 + name_length as usize]
-            .try_into()?,
-    );
+    let expiry = u64::from_le_bytes(payload[position + 1 + name_length as usize..].try_into()?);
     let expiry = match expiry {
         0 => None,
         _ => Some(expiry),
     };
-    let read_bytes = 1 + name_length as usize + 4;
+    let read_bytes = 1 + name_length as usize + 8;
 
     Ok((PersonalAccessTokenInfo { name, expiry }, read_bytes))
 }

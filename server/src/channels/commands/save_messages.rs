@@ -45,7 +45,7 @@ impl MessagesSaver {
         let interval = self.interval;
         let sender = self.sender.clone();
         info!(
-            "Message saver is enabled, buffered messages will be automatically saved every: {:?}, enforce sync: {:?}.",
+            "Message saver is enabled, buffered messages will be automatically saved every: {:?}, enforce fsync: {:?}.",
             interval, enforce_fsync
         );
 

@@ -72,6 +72,10 @@
     "enforce_fsync": true,
     "interval": 30
   },
+  "personal_access_token_cleaner": {
+    "enabled": true,
+    "interval": 60
+  },
   "system": {
     "path": "local_data",
     "database": {

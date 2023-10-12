@@ -7,7 +7,7 @@ use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use tracing::info;
 
-const VERSION: &str = "0.0.30";
+const VERSION: &str = "0.0.41";
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SystemInfo {

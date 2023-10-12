@@ -11,6 +11,7 @@ mod tcp;
 
 use crate::args::Args;
 use crate::channels::commands::clean_messages::CleanMessagesExecutor;
+use crate::channels::commands::clean_personal_access_tokens::CleanPersonalAccessTokensExecutor;
 use crate::channels::commands::save_messages::SaveMessagesExecutor;
 use crate::channels::handler::ServerCommandHandler;
 use crate::configs::config_provider;
@@ -54,9 +55,10 @@ async fn main() -> Result<(), ServerError> {
 
     system.init().await?;
     let system = Arc::new(RwLock::new(system));
-    let mut _command_handler = ServerCommandHandler::new(system.clone(), &config)
+    let _command_handler = ServerCommandHandler::new(system.clone(), &config)
         .install_handler(SaveMessagesExecutor)
-        .install_handler(CleanMessagesExecutor);
+        .install_handler(CleanMessagesExecutor)
+        .install_handler(CleanPersonalAccessTokensExecutor);
 
     #[cfg(unix)]
     let (mut ctrl_c, mut sigterm) = {

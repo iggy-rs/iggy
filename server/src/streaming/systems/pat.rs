@@ -4,6 +4,7 @@ use crate::streaming::users::pat::PersonalAccessToken;
 use crate::streaming::users::user::User;
 use iggy::error::Error;
 use iggy::utils::text;
+use iggy::utils::timestamp::TimeStamp;
 use tracing::{error, info};
 
 const MAX_PERSONAL_ACCESS_TOKENS: u32 = 100;
@@ -48,7 +49,8 @@ impl System {
         }
 
         info!("Creating PAT: {name} for user with ID: {user_id}...");
-        let (pat, token) = PersonalAccessToken::new(user_id, &name, expiry);
+        let (pat, token) =
+            PersonalAccessToken::new(user_id, &name, TimeStamp::now().to_micros(), expiry);
         self.storage.user.save_pat(&pat).await?;
         info!("Created PAT: {name} for user with ID: {user_id}.");
         Ok(token)
@@ -75,7 +77,7 @@ impl System {
     ) -> Result<User, Error> {
         let token_hash = PersonalAccessToken::hash_token(token);
         let pat = self.storage.user.load_pat_by_token(&token_hash).await?;
-        if pat.is_expired() {
+        if pat.is_expired(TimeStamp::now().to_micros()) {
             error!(
                 "PAT: {} for user with ID: {} has expired.",
                 pat.name, pat.user_id

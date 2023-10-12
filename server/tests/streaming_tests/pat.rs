@@ -1,12 +1,14 @@
 use crate::streaming_tests::common::test_setup::TestSetup;
+use iggy::utils::timestamp::TimeStamp;
 use server::streaming::users::pat::PersonalAccessToken;
 
 #[tokio::test]
 async fn many_personal_access_tokens_should_be_saved_and_loaded() {
     let setup = TestSetup::init().await;
-    let (pat1, raw_token1) = PersonalAccessToken::new(1, "test1", None);
-    let (pat2, raw_token2) = PersonalAccessToken::new(2, "test2", Some(1000));
-    let (pat3, raw_token3) = PersonalAccessToken::new(3, "test3", Some(100_000));
+    let now = TimeStamp::now().to_micros();
+    let (pat1, raw_token1) = PersonalAccessToken::new(1, "test1", now, None);
+    let (pat2, raw_token2) = PersonalAccessToken::new(2, "test2", now, Some(1000));
+    let (pat3, raw_token3) = PersonalAccessToken::new(3, "test3", now, Some(100_000));
 
     setup.storage.user.save_pat(&pat1).await.unwrap();
     setup.storage.user.save_pat(&pat2).await.unwrap();
@@ -79,7 +81,8 @@ fn assert_pat(pat: &PersonalAccessToken, loaded_pat: &PersonalAccessToken) {
 async fn personal_access_token_should_be_deleted() {
     let setup = TestSetup::init().await;
     let user_id = 1;
-    let (pat, _) = PersonalAccessToken::new(user_id, "test", None);
+    let now = TimeStamp::now().to_micros();
+    let (pat, _) = PersonalAccessToken::new(user_id, "test", now, None);
     setup.storage.user.save_pat(&pat).await.unwrap();
 
     let pats = setup.storage.user.load_all_pats().await.unwrap();

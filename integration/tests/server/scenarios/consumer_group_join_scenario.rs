@@ -1,4 +1,6 @@
-use crate::utils::test_server::{create_user, login_root, login_user, ClientFactory, TestServer};
+use crate::utils::test_server::{
+    assert_clean_system, create_user, delete_user, login_root, login_user, ClientFactory,
+};
 use iggy::client::{ConsumerGroupClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
@@ -18,11 +20,13 @@ const TOPIC_NAME: &str = "test-topic";
 const PARTITIONS_COUNT: u32 = 3;
 const CONSUMER_GROUP_ID: u32 = 10;
 const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
+const USERNAME_1: &str = "user1";
+const USERNAME_2: &str = "user2";
+const USERNAME_3: &str = "user3";
 
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let mut test_server = TestServer::default();
-    test_server.start();
     let system_client = create_client(client_factory).await;
+
     let client1 = create_client(client_factory).await;
     let client2 = create_client(client_factory).await;
     let client3 = create_client(client_factory).await;
@@ -59,14 +63,14 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
 
     // 4. Create the users for all clients
-    create_user(&system_client, "user1").await;
-    create_user(&system_client, "user2").await;
-    create_user(&system_client, "user3").await;
+    create_user(&system_client, USERNAME_1).await;
+    create_user(&system_client, USERNAME_2).await;
+    create_user(&system_client, USERNAME_3).await;
 
     // 5. Login all the clients
-    login_user(&client1, "user1").await;
-    login_user(&client2, "user2").await;
-    login_user(&client3, "user3").await;
+    login_user(&client1, USERNAME_1).await;
+    login_user(&client2, USERNAME_2).await;
+    login_user(&client3, USERNAME_3).await;
 
     // 5. Join the consumer group by client 1
     join_consumer_group(&client1).await;
@@ -116,7 +120,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_ne!(member1.partitions[0], member3.partitions[0]);
     assert_ne!(member2.partitions[0], member3.partitions[0]);
 
-    test_server.stop();
+    cleanup(&system_client).await;
+    assert_clean_system(&system_client).await;
 }
 
 async fn join_consumer_group(client: &IggyClient) {
@@ -167,4 +172,15 @@ async fn get_consumer_group_and_validate_members(
 async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
     let client = client_factory.create_client().await;
     IggyClient::create(client, IggyClientConfig::default(), None, None, None)
+}
+
+async fn cleanup(system_client: &IggyClient) {
+    delete_user(system_client, USERNAME_1).await;
+    delete_user(system_client, USERNAME_2).await;
+    delete_user(system_client, USERNAME_3).await;
+
+    let delete_stream = iggy::streams::delete_stream::DeleteStream {
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+    };
+    system_client.delete_stream(&delete_stream).await.unwrap();
 }

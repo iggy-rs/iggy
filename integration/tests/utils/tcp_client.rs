@@ -5,13 +5,19 @@ use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use std::sync::Arc;
 
-#[derive(Debug, Copy, Clone)]
-pub struct TcpClientFactory {}
+#[derive(Debug, Clone)]
+pub struct TcpClientFactory {
+    pub server_addr: String,
+}
 
 #[async_trait]
 impl ClientFactory for TcpClientFactory {
     async fn create_client(&self) -> Box<dyn Client> {
-        let mut client = TcpClient::create(Arc::new(TcpClientConfig::default())).unwrap();
+        let config = TcpClientConfig {
+            server_address: self.server_addr.clone(),
+            ..TcpClientConfig::default()
+        };
+        let mut client = TcpClient::create(Arc::new(config)).unwrap();
         client.connect().await.unwrap();
         Box::new(client)
     }

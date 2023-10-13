@@ -1,4 +1,4 @@
-use crate::utils::test_server::{login_root, ClientFactory, TestServer};
+use crate::utils::test_server::{assert_clean_system, login_root, ClientFactory};
 use bytes::Bytes;
 use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
@@ -8,6 +8,7 @@ use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::streams::create_stream::CreateStream;
+use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -21,8 +22,6 @@ const MESSAGES_COUNT: u32 = 1000;
 const PARTITION_ID: u32 = 1;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let mut test_server = TestServer::default();
-    test_server.start();
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
@@ -91,8 +90,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             123456
         );
     }
-
-    test_server.stop();
+    cleanup_system(&client).await;
+    assert_clean_system(&client).await;
 }
 
 async fn init_system(client: &IggyClient) {
@@ -112,6 +111,13 @@ async fn init_system(client: &IggyClient) {
         message_expiry: None,
     };
     client.create_topic(&create_topic).await.unwrap();
+}
+
+async fn cleanup_system(client: &IggyClient) {
+    let delete_stream = DeleteStream {
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+    };
+    client.delete_stream(&delete_stream).await.unwrap();
 }
 
 fn get_message_payload(offset: u64) -> Bytes {

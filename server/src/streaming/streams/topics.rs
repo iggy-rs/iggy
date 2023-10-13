@@ -71,8 +71,13 @@ impl Stream {
             }
         }
 
+        let old_topic_name = {
+            let topic = self.get_topic(id)?;
+            topic.name.clone()
+        };
+
         {
-            self.topics_ids.remove(&updated_name.clone());
+            self.topics_ids.remove(&old_topic_name.clone());
             self.topics_ids.insert(updated_name.clone(), topic_id);
             let topic = self.get_topic_mut(id)?;
             topic.name = updated_name;

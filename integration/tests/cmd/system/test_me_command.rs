@@ -1,14 +1,16 @@
-use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
+use crate::{
+    cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase},
+    utils::test_server::TestServer,
+};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
 use predicates::str::{contains, starts_with};
-use serial_test::serial;
+use serial_test::parallel;
 use std::fmt::Display;
 
 #[derive(Debug)]
 enum Protocol {
-    Default,
     Tcp,
     Quic,
 }
@@ -16,7 +18,6 @@ enum Protocol {
 impl Protocol {
     fn as_arg(&self) -> Vec<&str> {
         match self {
-            Self::Default => vec![],
             Self::Tcp => vec!["--transport", "tcp"],
             Self::Quic => vec!["--transport", "quic"],
         }
@@ -25,14 +26,13 @@ impl Protocol {
 
 impl Default for Protocol {
     fn default() -> Self {
-        Self::Default
+        Self::Tcp
     }
 }
 
 impl Display for Protocol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Default => write!(f, "TCP"),
             Self::Tcp => write!(f, "TCP"),
             Self::Quic => write!(f, "QUIC"),
         }
@@ -69,10 +69,23 @@ impl IggyCmdTestCase for TestMeCmd {
     }
 
     async fn verify_server_state(&self, _client: &dyn Client) {}
+
+    fn protocol(&self, server: &TestServer) -> Vec<String> {
+        match &self.protocol {
+            Protocol::Tcp => vec![
+                "--tcp-server-address".into(),
+                server.get_raw_tcp_addr().unwrap(),
+            ],
+            Protocol::Quic => vec![
+                "--quic-server-address".into(),
+                server.get_quic_udp_addr().unwrap(),
+            ],
+        }
+    }
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
@@ -81,7 +94,7 @@ pub async fn should_be_successful() {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_successful_using_transport_tcp() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
@@ -92,7 +105,7 @@ pub async fn should_be_successful_using_transport_tcp() {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_successful_using_transport_quic() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 

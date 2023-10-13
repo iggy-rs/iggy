@@ -4,16 +4,65 @@ use crate::server::scenarios::{
     system_scenario, user_scenario,
 };
 use crate::utils::quic_client::QuicClientFactory;
-use serial_test::serial;
+use crate::utils::test_server::TestServer;
+use serial_test::parallel;
 
 #[tokio::test]
-#[serial]
-async fn system_and_consumer_group_scenarios_should_be_valid() {
-    let client_factory = QuicClientFactory {};
+#[parallel]
+async fn system_scenario_should_be_valid() {
+    let mut test_server = TestServer::default();
+    test_server.start();
+    let server_addr = test_server.get_quic_udp_addr().unwrap();
+    let client_factory = QuicClientFactory { server_addr };
     system_scenario::run(&client_factory).await;
+}
+
+#[tokio::test]
+#[parallel]
+async fn user_scenario_should_be_valid() {
+    let mut test_server = TestServer::default();
+    test_server.start();
+    let server_addr = test_server.get_quic_udp_addr().unwrap();
+    let client_factory = QuicClientFactory { server_addr };
     user_scenario::run(&client_factory).await;
+}
+
+#[tokio::test]
+#[parallel]
+async fn message_headers_scenario_should_be_valid() {
+    let mut test_server = TestServer::default();
+    test_server.start();
+    let server_addr = test_server.get_quic_udp_addr().unwrap();
+    let client_factory = QuicClientFactory { server_addr };
     message_headers_scenario::run(&client_factory).await;
+}
+
+#[tokio::test]
+#[parallel]
+async fn consumer_group_join_scenario_should_be_valid() {
+    let mut test_server = TestServer::default();
+    test_server.start();
+    let server_addr = test_server.get_quic_udp_addr().unwrap();
+    let client_factory = QuicClientFactory { server_addr };
     consumer_group_join_scenario::run(&client_factory).await;
+}
+
+#[tokio::test]
+#[parallel]
+async fn consumer_group_with_single_client_polling_messages_scenario_should_be_valid() {
+    let mut test_server = TestServer::default();
+    test_server.start();
+    let server_addr = test_server.get_quic_udp_addr().unwrap();
+    let client_factory = QuicClientFactory { server_addr };
     consumer_group_with_single_client_polling_messages_scenario::run(&client_factory).await;
+}
+
+#[tokio::test]
+#[parallel]
+async fn consumer_group_with_multiple_clients_polling_messages_scenario_should_be_valid() {
+    let mut test_server = TestServer::default();
+    test_server.start();
+    let server_addr = test_server.get_quic_udp_addr().unwrap();
+    let client_factory = QuicClientFactory { server_addr };
     consumer_group_with_multiple_clients_polling_messages_scenario::run(&client_factory).await;
 }

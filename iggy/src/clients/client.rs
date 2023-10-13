@@ -59,6 +59,7 @@ use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
 use crate::users::update_user::UpdateUser;
 use crate::utils::crypto::Encryptor;
+use async_dropper::simple::AsyncDrop;
 use async_trait::async_trait;
 use bytes::Bytes;
 use flume::{Receiver, Sender};
@@ -759,5 +760,12 @@ impl ConsumerGroupClient for IggyClient {
 
     async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), Error> {
         self.client.read().await.leave_consumer_group(command).await
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for IggyClient {
+    async fn async_drop(&mut self) {
+        let _ = self.client.read().await.logout_user(&LogoutUser {}).await;
     }
 }

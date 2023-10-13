@@ -3,7 +3,7 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
 use predicates::str::diff;
-use serial_test::serial;
+use serial_test::parallel;
 
 struct TestQuietModCmd {}
 
@@ -23,7 +23,7 @@ impl IggyCmdTestCase for TestQuietModCmd {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_no_output() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 

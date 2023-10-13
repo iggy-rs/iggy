@@ -1244,6 +1244,7 @@ version = "0.0.103"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "async-dropper",
  "async-trait",
  "base64 0.21.3",
  "byte-unit",
@@ -1332,10 +1333,10 @@ name = "integration"
 version = "0.0.1"
 dependencies = [
  "assert_cmd",
- "async-dropper",
  "async-trait",
  "byte-unit",
  "bytes",
+ "futures",
  "humantime",
  "iggy",
  "libc",

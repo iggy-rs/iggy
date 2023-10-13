@@ -5,13 +5,19 @@ use iggy::quic::client::QuicClient;
 use iggy::quic::config::QuicClientConfig;
 use std::sync::Arc;
 
-#[derive(Debug, Copy, Clone)]
-pub struct QuicClientFactory {}
+#[derive(Debug, Clone)]
+pub struct QuicClientFactory {
+    pub server_addr: String,
+}
 
 #[async_trait]
 impl ClientFactory for QuicClientFactory {
     async fn create_client(&self) -> Box<dyn Client> {
-        let mut client = QuicClient::create(Arc::new(QuicClientConfig::default())).unwrap();
+        let config = QuicClientConfig {
+            server_address: self.server_addr.clone(),
+            ..QuicClientConfig::default()
+        };
+        let mut client = QuicClient::create(Arc::new(config)).unwrap();
         client.connect().await.unwrap();
         Box::new(client)
     }

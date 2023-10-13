@@ -6,7 +6,6 @@ pub(crate) use crate::cmd::common::help::{TestHelpCmd, CLAP_INDENT, USAGE_PREFIX
 use crate::utils::test_server::TestServer;
 use assert_cmd::assert::{Assert, OutputAssertExt};
 use assert_cmd::prelude::CommandCargoExt;
-use async_dropper::simple::AsyncDrop;
 use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::client::{SystemClient, UserClient};
@@ -16,7 +15,6 @@ use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
-use iggy::users::logout_user::LogoutUser;
 use std::fmt::{Display, Formatter, Result};
 use std::process::Command;
 use std::sync::Arc;
@@ -63,6 +61,12 @@ pub(crate) trait IggyCmdTestCase {
     fn get_command(&self) -> IggyCmdCommand;
     fn verify_command(&self, command_state: Assert);
     async fn verify_server_state(&self, client: &dyn Client);
+    fn protocol(&self, server: &TestServer) -> Vec<String> {
+        vec![
+            "--tcp-server-address".into(),
+            server.get_raw_tcp_addr().unwrap(),
+        ]
+    }
 }
 
 pub(crate) struct IggyCmdTest {
@@ -73,7 +77,11 @@ pub(crate) struct IggyCmdTest {
 impl IggyCmdTest {
     pub(crate) fn new() -> Self {
         let server = TestServer::default();
-        let client = Box::new(TcpClient::create(Arc::new(TcpClientConfig::default())).unwrap());
+        let tcp_client_config = TcpClientConfig {
+            server_address: server.get_raw_tcp_addr().unwrap(),
+            ..TcpClientConfig::default()
+        };
+        let client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
         let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
         Self { server, client }
@@ -113,12 +121,15 @@ impl IggyCmdTest {
         let command_args = test_case.get_command();
         // Set environment variables for the command
         command.envs(command_args.get_env());
+        // Set server address for the command - it's randomized for each test
+        command.args(test_case.protocol(&self.server));
 
         // When running action from github CI, binary needs to be started via QEMU.
         if let Ok(runner) = std::env::var("QEMU_RUNNER") {
             let mut runner_command = Command::new(runner);
-            runner_command.arg(command.get_program().to_str().unwrap());
             runner_command.envs(command_args.get_env());
+            runner_command.arg(command.get_program().to_str().unwrap());
+            runner_command.args(test_case.protocol(&self.server));
             command = runner_command;
         };
 
@@ -187,21 +198,10 @@ impl IggyCmdTest {
         // Verify command output, exit code, etc in the test (if needed)
         test_case.verify_command(assert);
     }
-
-    pub(crate) async fn teardown(&mut self) {
-        let _ = self.client.logout_user(&LogoutUser {}).await;
-    }
 }
 
 impl Default for IggyCmdTest {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[async_trait]
-impl AsyncDrop for IggyCmdTest {
-    async fn async_drop(&mut self) {
-        self.teardown().await;
     }
 }

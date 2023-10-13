@@ -3,7 +3,7 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
 use predicates::str::diff;
-use serial_test::serial;
+use serial_test::parallel;
 
 struct TestNoCredentialsCmd {}
 
@@ -27,7 +27,7 @@ impl IggyCmdTestCase for TestNoCredentialsCmd {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_fail_with_error_message() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 

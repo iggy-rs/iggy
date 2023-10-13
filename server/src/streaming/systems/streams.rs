@@ -206,15 +206,23 @@ impl System {
             }
         }
 
+        let old_name;
         {
-            self.streams_ids.remove(&updated_name.clone());
-            self.streams_ids.insert(updated_name.clone(), stream_id);
             let stream = self.get_stream_mut(id)?;
-            stream.name = updated_name;
+            old_name = stream.name.clone();
+            stream.name = updated_name.clone();
             stream.persist().await?;
-            info!("Updated stream: {} with ID: {}", stream.name, id);
         }
 
+        {
+            self.streams_ids.remove(&old_name);
+            self.streams_ids.insert(updated_name.clone(), stream_id);
+        }
+
+        info!(
+            "Stream with ID '{}' updated. Old name: '{}' changed to: '{}'.",
+            id, old_name, updated_name
+        );
         Ok(())
     }
 

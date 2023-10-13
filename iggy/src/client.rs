@@ -14,13 +14,17 @@ use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::PolledMessages;
-use crate::models::pat::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
+use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
+use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
+use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
+use crate::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -37,14 +41,10 @@ use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
-use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
-use crate::users::delete_pat::DeletePersonalAccessToken;
 use crate::users::delete_user::DeleteUser;
-use crate::users::get_pats::GetPersonalAccessTokens;
 use crate::users::get_user::GetUser;
 use crate::users::get_users::GetUsers;
-use crate::users::login_pat::LoginWithPersonalAccessToken;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
@@ -56,6 +56,7 @@ use std::fmt::Debug;
 pub trait Client:
     SystemClient
     + UserClient
+    + PersonalAccessTokenClient
     + StreamClient
     + TopicClient
     + PartitionClient
@@ -90,6 +91,10 @@ pub trait UserClient {
     async fn change_password(&self, command: &ChangePassword) -> Result<(), Error>;
     async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error>;
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error>;
+}
+
+#[async_trait]
+pub trait PersonalAccessTokenClient {
     async fn get_personal_access_tokens(
         &self,
         command: &GetPersonalAccessTokens,
@@ -102,7 +107,6 @@ pub trait UserClient {
         &self,
         command: &DeletePersonalAccessToken,
     ) -> Result<(), Error>;
-
     async fn login_with_personal_access_token(
         &self,
         command: &LoginWithPersonalAccessToken,

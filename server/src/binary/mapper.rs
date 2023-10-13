@@ -5,10 +5,10 @@ use iggy::models::user_info::UserId;
 use crate::streaming::clients::client_manager::{Client, Transport};
 use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::partitions::partition::Partition;
+use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
-use crate::streaming::users::pat::PersonalAccessToken;
 use crate::streaming::users::user::User;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::stats::Stats;
@@ -109,10 +109,10 @@ pub fn map_raw_pat(token: &str) -> Vec<u8> {
     bytes
 }
 
-pub fn map_pats(pats: &[PersonalAccessToken]) -> Vec<u8> {
+pub fn map_personal_access_tokens(personal_access_tokens: &[PersonalAccessToken]) -> Vec<u8> {
     let mut bytes = Vec::new();
-    for pat in pats {
-        extend_pat(pat, &mut bytes);
+    for personal_access_token in personal_access_tokens {
+        extend_pat(personal_access_token, &mut bytes);
     }
     bytes
 }
@@ -259,8 +259,8 @@ fn extend_user(user: &User, bytes: &mut Vec<u8>) {
     bytes.extend(user.username.as_bytes());
 }
 
-fn extend_pat(pat: &PersonalAccessToken, bytes: &mut Vec<u8>) {
-    bytes.put_u8(pat.name.len() as u8);
-    bytes.extend(pat.name.as_bytes());
-    bytes.put_u64_le(pat.expiry.unwrap_or(0));
+fn extend_pat(personal_access_token: &PersonalAccessToken, bytes: &mut Vec<u8>) {
+    bytes.put_u8(personal_access_token.name.len() as u8);
+    bytes.extend(personal_access_token.name.as_bytes());
+    bytes.put_u64_le(personal_access_token.expiry.unwrap_or(0));
 }

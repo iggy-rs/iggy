@@ -145,11 +145,11 @@ DELETE {{url}}/users/{{user1_id}}
 Authorization: Bearer {{token}}
 
 ###
-GET {{url}}/pat
+GET {{url}}/personal-access-tokens
 Authorization: Bearer {{token}}
 
 ###
-POST {{url}}/pat
+POST {{url}}/personal-access-tokens
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
@@ -159,7 +159,7 @@ Content-Type: application/json
 }
 
 ###
-POST {{url}}/pat/login
+POST {{url}}/personal-access-tokens/login
 Content-Type: application/json
 
 {
@@ -167,7 +167,7 @@ Content-Type: application/json
 }
 
 ###
-DELETE {{url}}/pat/{{pat_name}}
+DELETE {{url}}/personal-access-tokens/{{pat_name}}
 Authorization: Bearer {{token}}
 
 ###

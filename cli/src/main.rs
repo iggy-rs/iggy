@@ -3,6 +3,7 @@ mod consumer_groups;
 mod consumer_offsets;
 mod messages;
 mod partitions;
+mod personal_access_tokens;
 mod streams;
 mod system;
 mod topics;

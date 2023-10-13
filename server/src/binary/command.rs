@@ -5,13 +5,17 @@ use crate::binary::handlers::consumer_groups::{
 use crate::binary::handlers::consumer_offsets::*;
 use crate::binary::handlers::messages::*;
 use crate::binary::handlers::partitions::*;
+use crate::binary::handlers::personal_access_tokens::{
+    create_personal_access_token_handler, delete_personal_access_token_handler,
+    get_personal_access_tokens_handler, login_with_personal_access_token_handler,
+};
 use crate::binary::handlers::streams::*;
 use crate::binary::handlers::system::*;
 use crate::binary::handlers::topics::*;
 use crate::binary::handlers::users::{
-    change_password_handler, create_pat_handler, create_user_handler, delete_pat_handler,
-    delete_user_handler, get_pats_handler, get_user_handler, get_users_handler, login_user_handler,
-    login_with_pat_handler, logout_user_handler, update_permissions_handler, update_user_handler,
+    change_password_handler, create_user_handler, delete_user_handler, get_user_handler,
+    get_users_handler, login_user_handler, logout_user_handler, update_permissions_handler,
+    update_user_handler,
 };
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
@@ -87,16 +91,16 @@ async fn try_handle(
             logout_user_handler::handle(command, sender, session, system).await
         }
         Command::GetPersonalAccessTokens(command) => {
-            get_pats_handler::handle(command, sender, session, system).await
+            get_personal_access_tokens_handler::handle(command, sender, session, system).await
         }
         Command::CreatePersonalAccessToken(command) => {
-            create_pat_handler::handle(command, sender, session, system).await
+            create_personal_access_token_handler::handle(command, sender, session, system).await
         }
         Command::DeletePersonalAccessToken(command) => {
-            delete_pat_handler::handle(command, sender, session, system).await
+            delete_personal_access_token_handler::handle(command, sender, session, system).await
         }
         Command::LoginWithPersonalAccessToken(command) => {
-            login_with_pat_handler::handle(command, sender, session, system).await
+            login_with_personal_access_token_handler::handle(command, sender, session, system).await
         }
         Command::SendMessages(command) => {
             send_messages_handler::handle(command, sender, session, system).await

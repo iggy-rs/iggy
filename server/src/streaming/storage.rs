@@ -1,6 +1,8 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
 use crate::streaming::persistence::persister::Persister;
+use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
+use crate::streaming::personal_access_tokens::storage::FilePersonalAccessTokenStorage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::storage::FileSegmentStorage;
@@ -12,7 +14,6 @@ use crate::streaming::systems::storage::FileSystemInfoStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
-use crate::streaming::users::pat::PersonalAccessToken;
 use crate::streaming::users::storage::FileUserStorage;
 use crate::streaming::users::user::User;
 use async_trait::async_trait;
@@ -38,17 +39,17 @@ pub trait SystemInfoStorage: Storage<SystemInfo> {}
 pub trait UserStorage: Storage<User> {
     async fn load_by_id(&self, id: UserId) -> Result<User, Error>;
     async fn load_by_username(&self, username: &str) -> Result<User, Error>;
-    async fn load_all_users(&self) -> Result<Vec<User>, Error>;
-    async fn load_all_pats(&self) -> Result<Vec<PersonalAccessToken>, Error>;
-    async fn load_pats_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, Error>;
-    async fn load_pat_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error>;
-    async fn load_pat_by_name(
-        &self,
-        user_id: UserId,
-        name: &str,
-    ) -> Result<PersonalAccessToken, Error>;
-    async fn save_pat(&self, pat: &PersonalAccessToken) -> Result<(), Error>;
-    async fn delete_pat(&self, user_id: UserId, name: &str) -> Result<(), Error>;
+    async fn load_all(&self) -> Result<Vec<User>, Error>;
+}
+
+#[async_trait]
+pub trait PersonalAccessTokenStorage: Storage<PersonalAccessToken> {
+    async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, Error>;
+    async fn load_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, Error>;
+    async fn load_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error>;
+    async fn load_by_name(&self, user_id: UserId, name: &str)
+        -> Result<PersonalAccessToken, Error>;
+    async fn delete_for_user(&self, user_id: UserId, name: &str) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -140,6 +141,7 @@ pub trait SegmentStorage: Storage<Segment> {
 pub struct SystemStorage {
     pub info: Arc<dyn SystemInfoStorage>,
     pub user: Arc<dyn UserStorage>,
+    pub personal_access_token: Arc<dyn PersonalAccessTokenStorage>,
     pub stream: Arc<dyn StreamStorage>,
     pub topic: Arc<dyn TopicStorage>,
     pub partition: Arc<dyn PartitionStorage>,
@@ -151,6 +153,7 @@ impl SystemStorage {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(db.clone())),
             user: Arc::new(FileUserStorage::new(db.clone())),
+            personal_access_token: Arc::new(FilePersonalAccessTokenStorage::new(db.clone())),
             stream: Arc::new(FileStreamStorage::new(db.clone())),
             topic: Arc::new(FileTopicStorage::new(db.clone())),
             partition: Arc::new(FilePartitionStorage::new(db.clone())),
@@ -168,6 +171,12 @@ impl Debug for dyn SystemInfoStorage {
 impl Debug for dyn UserStorage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "UserStorage")
+    }
+}
+
+impl Debug for dyn PersonalAccessTokenStorage {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "PersonalAccessTokenStorage")
     }
 }
 
@@ -210,6 +219,7 @@ pub(crate) mod tests {
 
     struct TestSystemInfoStorage {}
     struct TestUserStorage {}
+    struct TestPersonalAccessTokenStorage {}
     struct TestStreamStorage {}
     struct TestTopicStorage {}
     struct TestPartitionStorage {}
@@ -258,26 +268,44 @@ pub(crate) mod tests {
             Ok(User::default())
         }
 
-        async fn load_all_users(&self) -> Result<Vec<User>, Error> {
+        async fn load_all(&self) -> Result<Vec<User>, Error> {
             Ok(vec![])
         }
+    }
 
-        async fn load_all_pats(&self) -> Result<Vec<PersonalAccessToken>, Error> {
-            Ok(vec![])
-        }
-
-        async fn load_pats_for_user(
+    #[async_trait]
+    impl Storage<PersonalAccessToken> for TestPersonalAccessTokenStorage {
+        async fn load(
             &self,
-            _user_id: UserId,
-        ) -> Result<Vec<PersonalAccessToken>, Error> {
+            _personal_access_token: &mut PersonalAccessToken,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn save(&self, _personal_access_token: &PersonalAccessToken) -> Result<(), Error> {
+            Ok(())
+        }
+
+        async fn delete(&self, _personal_access_token: &PersonalAccessToken) -> Result<(), Error> {
+            Ok(())
+        }
+    }
+
+    #[async_trait]
+    impl PersonalAccessTokenStorage for TestPersonalAccessTokenStorage {
+        async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, Error> {
             Ok(vec![])
         }
 
-        async fn load_pat_by_token(&self, _token: &str) -> Result<PersonalAccessToken, Error> {
+        async fn load_for_user(&self, _user_id: UserId) -> Result<Vec<PersonalAccessToken>, Error> {
+            Ok(vec![])
+        }
+
+        async fn load_by_token(&self, _token: &str) -> Result<PersonalAccessToken, Error> {
             Ok(PersonalAccessToken::default())
         }
 
-        async fn load_pat_by_name(
+        async fn load_by_name(
             &self,
             _user_id: UserId,
             _name: &str,
@@ -285,11 +313,7 @@ pub(crate) mod tests {
             Ok(PersonalAccessToken::default())
         }
 
-        async fn save_pat(&self, _pat: &PersonalAccessToken) -> Result<(), Error> {
-            Ok(())
-        }
-
-        async fn delete_pat(&self, _user_id: UserId, _name: &str) -> Result<(), Error> {
+        async fn delete_for_user(&self, _user_id: UserId, _name: &str) -> Result<(), Error> {
             Ok(())
         }
     }
@@ -503,6 +527,7 @@ pub(crate) mod tests {
         SystemStorage {
             info: Arc::new(TestSystemInfoStorage {}),
             user: Arc::new(TestUserStorage {}),
+            personal_access_token: Arc::new(TestPersonalAccessTokenStorage {}),
             stream: Arc::new(TestStreamStorage {}),
             topic: Arc::new(TestTopicStorage {}),
             partition: Arc::new(TestPartitionStorage {}),

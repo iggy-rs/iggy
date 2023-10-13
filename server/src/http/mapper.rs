@@ -1,12 +1,12 @@
 use crate::streaming::clients::client_manager::Client;
+use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
-use crate::streaming::users::pat::PersonalAccessToken;
 use crate::streaming::users::user::User;
 use iggy::models::client_info::ConsumerGroupInfo;
 use iggy::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
-use iggy::models::pat::PersonalAccessTokenInfo;
+use iggy::models::personal_access_token::PersonalAccessTokenInfo;
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
@@ -117,17 +117,19 @@ pub fn map_users(users: &[User]) -> Vec<UserInfo> {
     users_data
 }
 
-pub fn map_pats(pats: &[PersonalAccessToken]) -> Vec<PersonalAccessTokenInfo> {
-    let mut pats_data = Vec::with_capacity(pats.len());
-    for pat in pats {
-        let pat = PersonalAccessTokenInfo {
-            name: pat.name.clone(),
-            expiry: pat.expiry,
+pub fn map_personal_access_tokens(
+    personal_access_tokens: &[PersonalAccessToken],
+) -> Vec<PersonalAccessTokenInfo> {
+    let mut personal_access_tokens_data = Vec::with_capacity(personal_access_tokens.len());
+    for personal_access_token in personal_access_tokens {
+        let personal_access_token = PersonalAccessTokenInfo {
+            name: personal_access_token.name.clone(),
+            expiry: personal_access_token.expiry,
         };
-        pats_data.push(pat);
+        personal_access_tokens_data.push(personal_access_token);
     }
-    pats_data.sort_by(|a, b| a.name.cmp(&b.name));
-    pats_data
+    personal_access_tokens_data.sort_by(|a, b| a.name.cmp(&b.name));
+    personal_access_tokens_data
 }
 
 pub async fn map_client(client: &Client) -> iggy::models::client_info::ClientInfoDetails {

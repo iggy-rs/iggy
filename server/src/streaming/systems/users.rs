@@ -16,13 +16,13 @@ static USER_ID: AtomicU32 = AtomicU32::new(1);
 impl System {
     pub(crate) async fn load_users(&mut self) -> Result<(), Error> {
         info!("Loading users...");
-        let mut users = self.storage.user.load_all_users().await?;
+        let mut users = self.storage.user.load_all().await?;
         if users.is_empty() {
             info!("No users found, creating the root user...");
             let root = User::root();
             self.storage.user.save(&root).await?;
             info!("Created the root user.");
-            users = self.storage.user.load_all_users().await?;
+            users = self.storage.user.load_all().await?;
         }
 
         let users_count = users.len();
@@ -63,7 +63,7 @@ impl System {
     pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, Error> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_users(session.user_id)?;
-        self.storage.user.load_all_users().await
+        self.storage.user.load_all().await
     }
 
     pub async fn create_user(

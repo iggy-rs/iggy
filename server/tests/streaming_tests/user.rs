@@ -34,7 +34,7 @@ async fn many_users_should_be_saved_and_loaded() {
     setup.storage.user.save(&user2).await.unwrap();
     setup.storage.user.save(&user3).await.unwrap();
 
-    let users = setup.storage.user.load_all_users().await.unwrap();
+    let users = setup.storage.user.load_all().await.unwrap();
     assert_eq!(users.len(), 3);
     let loaded_user1 = users.get(0).unwrap();
     let loaded_user2 = users.get(1).unwrap();
@@ -52,11 +52,11 @@ async fn user_should_be_deleted() {
     setup.storage.user.save(&user1).await.unwrap();
     setup.storage.user.save(&user2).await.unwrap();
 
-    let users = setup.storage.user.load_all_users().await.unwrap();
+    let users = setup.storage.user.load_all().await.unwrap();
     assert_eq!(users.len(), 2);
 
     setup.storage.user.delete(&user1).await.unwrap();
-    let users = setup.storage.user.load_all_users().await.unwrap();
+    let users = setup.storage.user.load_all().await.unwrap();
     assert_eq!(users.len(), 1);
     let loaded_user = users.get(0).unwrap();
     assert_user(&user2, loaded_user);

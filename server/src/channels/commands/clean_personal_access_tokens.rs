@@ -66,7 +66,7 @@ impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessToke
         _command: CleanPersonalAccessTokensCommand,
     ) {
         let system = system.read().await;
-        let tokens = system.storage.user.load_all_pats().await;
+        let tokens = system.storage.personal_access_token.load_all().await;
         if tokens.is_err() {
             error!("Failed to load personal access tokens: {:?}", tokens);
             return;
@@ -95,8 +95,8 @@ impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessToke
         for token in expired_tokens {
             let result = system
                 .storage
-                .user
-                .delete_pat(token.user_id, &token.name)
+                .personal_access_token
+                .delete_for_user(token.user_id, &token.name)
                 .await;
             if result.is_err() {
                 error!(

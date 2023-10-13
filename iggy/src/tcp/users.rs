@@ -2,18 +2,13 @@ use crate::binary;
 use crate::client::UserClient;
 use crate::error::Error;
 use crate::models::identity_info::IdentityInfo;
-use crate::models::pat::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::tcp::client::TcpClient;
 use crate::users::change_password::ChangePassword;
-use crate::users::create_pat::CreatePersonalAccessToken;
 use crate::users::create_user::CreateUser;
-use crate::users::delete_pat::DeletePersonalAccessToken;
 use crate::users::delete_user::DeleteUser;
-use crate::users::get_pats::GetPersonalAccessTokens;
 use crate::users::get_user::GetUser;
 use crate::users::get_users::GetUsers;
-use crate::users::login_pat::LoginWithPersonalAccessToken;
 use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
@@ -56,33 +51,5 @@ impl UserClient for TcpClient {
 
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
         binary::users::logout_user(self, command).await
-    }
-
-    async fn get_personal_access_tokens(
-        &self,
-        command: &GetPersonalAccessTokens,
-    ) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
-        binary::users::get_pats(self, command).await
-    }
-
-    async fn create_personal_access_token(
-        &self,
-        command: &CreatePersonalAccessToken,
-    ) -> Result<RawPersonalAccessToken, Error> {
-        binary::users::create_pat(self, command).await
-    }
-
-    async fn delete_personal_access_token(
-        &self,
-        command: &DeletePersonalAccessToken,
-    ) -> Result<(), Error> {
-        binary::users::delete_pat(self, command).await
-    }
-
-    async fn login_with_personal_access_token(
-        &self,
-        command: &LoginWithPersonalAccessToken,
-    ) -> Result<IdentityInfo, Error> {
-        binary::users::login_with_pat(self, command).await
     }
 }

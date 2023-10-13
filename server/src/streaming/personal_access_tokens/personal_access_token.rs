@@ -56,12 +56,15 @@ mod tests {
         let user_id = 1;
         let now = TimeStamp::now().to_micros();
         let name = "test_token";
-        let (pat, raw_token) = PersonalAccessToken::new(user_id, name, now, None);
-        assert_eq!(pat.name, name);
-        assert!(!pat.token.is_empty());
+        let (personal_access_token, raw_token) = PersonalAccessToken::new(user_id, name, now, None);
+        assert_eq!(personal_access_token.name, name);
+        assert!(!personal_access_token.token.is_empty());
         assert!(!raw_token.is_empty());
-        assert_ne!(pat.token, raw_token);
-        assert_eq!(pat.token, PersonalAccessToken::hash_token(&raw_token));
+        assert_ne!(personal_access_token.token, raw_token);
+        assert_eq!(
+            personal_access_token.token,
+            PersonalAccessToken::hash_token(&raw_token)
+        );
     }
 
     #[test]
@@ -70,7 +73,7 @@ mod tests {
         let now = TimeStamp::now().to_micros();
         let expiry = 1;
         let name = "test_token";
-        let (pat, _) = PersonalAccessToken::new(user_id, name, now, Some(expiry));
-        assert!(pat.is_expired(now + expiry as u64 * 1_000_000 + 1));
+        let (personal_access_token, _) = PersonalAccessToken::new(user_id, name, now, Some(expiry));
+        assert!(personal_access_token.is_expired(now + expiry as u64 * 1_000_000 + 1));
     }
 }

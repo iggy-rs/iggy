@@ -3,7 +3,8 @@ use crate::http::jwt::{jwt_auth, JwtManager};
 use crate::http::metrics::metrics;
 use crate::http::state::AppState;
 use crate::http::{
-    consumer_groups, consumer_offsets, messages, partitions, pat, streams, system, topics, users,
+    consumer_groups, consumer_offsets, messages, partitions, personal_access_tokens, streams,
+    system, topics, users,
 };
 use crate::streaming::systems::system::System;
 use axum::http::Method;
@@ -26,7 +27,10 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
     let mut app = Router::new().nest(
         "/",
         system::router(app_state.clone(), &config.metrics)
-            .nest("/pat", pat::router(app_state.clone()))
+            .nest(
+                "/personal-access-tokens",
+                personal_access_tokens::router(app_state.clone()),
+            )
             .nest("/users", users::router(app_state.clone()))
             .nest(
                 "/streams",

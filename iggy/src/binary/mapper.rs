@@ -6,8 +6,8 @@ use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::messages::{Message, MessageState, PolledMessages};
 use crate::models::partition::Partition;
-use crate::models::pat::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::permissions::Permissions;
+use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -142,21 +142,21 @@ pub fn map_users(payload: &[u8]) -> Result<Vec<UserInfo>, Error> {
     Ok(users)
 }
 
-pub fn map_pats(payload: &[u8]) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
+pub fn map_personal_access_tokens(payload: &[u8]) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
     if payload.is_empty() {
         return Ok(EMPTY_PERSONAL_ACCESS_TOKENS);
     }
 
-    let mut pats = Vec::new();
+    let mut personal_access_tokens = Vec::new();
     let length = payload.len();
     let mut position = 0;
     while position < length {
-        let (pat, read_bytes) = map_to_pat_info(payload, position)?;
-        pats.push(pat);
+        let (personal_access_token, read_bytes) = map_to_pat_info(payload, position)?;
+        personal_access_tokens.push(personal_access_token);
         position += read_bytes;
     }
-    pats.sort_by(|x, y| x.name.cmp(&y.name));
-    Ok(pats)
+    personal_access_tokens.sort_by(|x, y| x.name.cmp(&y.name));
+    Ok(personal_access_tokens)
 }
 
 pub fn map_identity_info(payload: &[u8]) -> Result<IdentityInfo, Error> {

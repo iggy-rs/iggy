@@ -1,20 +1,20 @@
 use crate::server_tests::common::{ClientFactory, TestServer};
-use iggy::client::{SystemClient, UserClient};
+use iggy::client::{PersonalAccessTokenClient, SystemClient, UserClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::identifier::Identifier;
 use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus;
+use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
+use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
+use iggy::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
+use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use iggy::system::ping::Ping;
 use iggy::users::change_password::ChangePassword;
-use iggy::users::create_pat::CreatePersonalAccessToken;
 use iggy::users::create_user::CreateUser;
 use iggy::users::defaults::*;
-use iggy::users::delete_pat::DeletePersonalAccessToken;
 use iggy::users::delete_user::DeleteUser;
-use iggy::users::get_pats::GetPersonalAccessTokens;
 use iggy::users::get_user::GetUser;
 use iggy::users::get_users::GetUsers;
-use iggy::users::login_pat::LoginWithPersonalAccessToken;
 use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
@@ -175,11 +175,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert!(!raw_pat.token.is_empty());
 
     // 14. Get personal access tokens and verify that the token is there
-    let pats = client
+    let personal_access_tokens = client
         .get_personal_access_tokens(&GetPersonalAccessTokens {})
         .await
         .unwrap();
-    assert_eq!(pats.len(), 1);
+    assert_eq!(personal_access_tokens.len(), 1);
 
     // 15. Logout
     client.logout_user(&LogoutUser {}).await.unwrap();
@@ -203,11 +203,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
 
     // 18. Get personal access tokens and verify that the token is no longer available
-    let pats = client
+    let personal_access_tokens = client
         .get_personal_access_tokens(&GetPersonalAccessTokens {})
         .await
         .unwrap();
-    assert!(pats.is_empty());
+    assert!(personal_access_tokens.is_empty());
 
     // 19. Login as root user again
     client

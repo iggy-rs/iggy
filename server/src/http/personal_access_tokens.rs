@@ -8,33 +8,36 @@ use axum::http::StatusCode;
 use axum::routing::{delete, get, post};
 use axum::{Extension, Json, Router};
 use iggy::models::identity_info::IdentityInfo;
-use iggy::models::pat::{PersonalAccessTokenInfo, RawPersonalAccessToken};
-use iggy::users::create_pat::CreatePersonalAccessToken;
-use iggy::users::login_pat::LoginWithPersonalAccessToken;
+use iggy::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
+use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(get_pats).post(create_pat))
-        .route("/:name", delete(delete_pat))
-        .route("/login", post(login_with_pat))
+        .route(
+            "/",
+            get(get_personal_access_tokens).post(create_personal_access_token),
+        )
+        .route("/:name", delete(delete_personal_access_token))
+        .route("/login", post(login_with_personal_access_token))
         .with_state(state)
 }
 
-async fn get_pats(
+async fn get_personal_access_tokens(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<PersonalAccessTokenInfo>>, CustomError> {
     let system = state.system.read().await;
-    let pats = system
+    let personal_access_tokens = system
         .get_personal_access_tokens(&Session::stateless(identity.user_id))
         .await?;
-    let pats = mapper::map_pats(&pats);
-    Ok(Json(pats))
+    let personal_access_tokens = mapper::map_personal_access_tokens(&personal_access_tokens);
+    Ok(Json(personal_access_tokens))
 }
 
-async fn create_pat(
+async fn create_personal_access_token(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
     Json(command): Json<CreatePersonalAccessToken>,
@@ -51,7 +54,7 @@ async fn create_pat(
     Ok(Json(RawPersonalAccessToken { token }))
 }
 
-async fn delete_pat(
+async fn delete_personal_access_token(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
     Path(name): Path<String>,
@@ -63,7 +66,7 @@ async fn delete_pat(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn login_with_pat(
+async fn login_with_personal_access_token(
     State(state): State<Arc<AppState>>,
     Json(command): Json<LoginWithPersonalAccessToken>,
 ) -> Result<Json<IdentityInfo>, CustomError> {

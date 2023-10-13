@@ -26,7 +26,7 @@ impl Default for LoginWithPersonalAccessToken {
 impl Validatable<Error> for LoginWithPersonalAccessToken {
     fn validate(&self) -> Result<(), Error> {
         if self.token.is_empty() || self.token.len() > MAX_PAT_LENGTH {
-            return Err(Error::InvalidPat);
+            return Err(Error::InvalidPersonalAccessToken);
         }
 
         Ok(())

@@ -174,5 +174,9 @@ async fn logout_user(
     system
         .logout_user(&Session::stateless(identity.user_id))
         .await?;
+    state
+        .jwt_manager
+        .revoke_token(&identity.token_id, identity.token_expiry)
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }

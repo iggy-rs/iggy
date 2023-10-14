@@ -13,8 +13,13 @@ allow_private_network = false
 
 [http.jwt]
 algorithm = "HS256"
+issuer = "iggy.rs"
 audience = "iggy.rs"
-expiry = 3600
+valid_issuers = ["iggy.rs"]
+valid_audiences = ["iggy.rs"]
+expiry = 10
+clock_skew = 5
+not_before = 0
 encoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
 decoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
 use_base64_secret = false

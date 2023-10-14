@@ -28,6 +28,7 @@ pub struct System {
     pub(crate) client_manager: Arc<RwLock<ClientManager>>,
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
+    pub(crate) db: Option<Arc<Db>>,
 }
 
 /// For each cache eviction, we want to remove more than the size we need.
@@ -50,10 +51,14 @@ impl System {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };
-        Self::create(config, SystemStorage::new(db, persister))
+        Self::create(config, SystemStorage::new(db.clone(), persister), Some(db))
     }
 
-    pub fn create(config: Arc<SystemConfig>, storage: SystemStorage) -> System {
+    pub fn create(
+        config: Arc<SystemConfig>,
+        storage: SystemStorage,
+        db: Option<Arc<Db>>,
+    ) -> System {
         info!(
             "Server-side encryption is {}.",
             Self::map_toggle_str(config.encryption.enabled)
@@ -72,6 +77,7 @@ impl System {
             client_manager: Arc::new(RwLock::new(ClientManager::default())),
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
+            db,
         }
     }
 

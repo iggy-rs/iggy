@@ -15,6 +15,10 @@ impl TimeStamp {
         TimeStamp::default()
     }
 
+    pub fn to_secs(&self) -> u64 {
+        self.0.duration_since(UNIX_EPOCH).unwrap().as_secs()
+    }
+
     pub fn to_micros(&self) -> u64 {
         self.0.duration_since(UNIX_EPOCH).unwrap().as_micros() as u64
     }

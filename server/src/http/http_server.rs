@@ -10,11 +10,13 @@ use crate::streaming::systems::system::System;
 use axum::http::Method;
 use axum::{middleware, Router};
 use axum_server::tls_rustls::RustlsConfig;
+use iggy::utils::timestamp::TimeStamp;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::RwLock;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::info;
+use tracing::{error, info};
 
 pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
     let api_name = if config.tls.enabled {
@@ -23,7 +25,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         "HTTP API"
     };
 
-    let app_state = build_app_state(&config, system);
+    let app_state = build_app_state(&config, system).await;
     let mut app = Router::new().nest(
         "/",
         system::router(app_state.clone(), &config.metrics)
@@ -62,6 +64,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         app = app.layer(configure_cors(config.cors));
     }
 
+    start_revoked_tokens_cleaner(app_state.clone());
     app = app.layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
     info!("Started {api_name} on: {:?}", config.address);
 
@@ -86,16 +89,50 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         .unwrap();
 }
 
-fn build_app_state(config: &HttpConfig, system: Arc<RwLock<System>>) -> Arc<AppState> {
-    let jwt_manager = JwtManager::from_config(&config.jwt);
+async fn build_app_state(config: &HttpConfig, system: Arc<RwLock<System>>) -> Arc<AppState> {
+    let db;
+    {
+        let system_read = system.read().await;
+        db = system_read
+            .db
+            .as_ref()
+            .expect("Database not initialized")
+            .clone();
+    }
+
+    let jwt_manager = JwtManager::from_config(&config.jwt, db);
     if let Err(error) = jwt_manager {
         panic!("Failed to initialize JWT manager: {}", error);
     }
 
+    let jwt_manager = jwt_manager.unwrap();
+    if jwt_manager.load_revoked_tokens().await.is_err() {
+        panic!("Failed to load revoked access tokens");
+    }
+
     Arc::new(AppState {
-        jwt_manager: jwt_manager.unwrap(),
+        jwt_manager,
         system,
     })
+}
+
+fn start_revoked_tokens_cleaner(app_state: Arc<AppState>) {
+    tokio::spawn(async move {
+        let mut interval_timer = tokio::time::interval(Duration::from_secs(10));
+        loop {
+            interval_timer.tick().await;
+            info!("Deleting expired revoked tokens...");
+            let now = TimeStamp::now().to_secs();
+            if app_state
+                .jwt_manager
+                .delete_expired_revoked_tokens(now)
+                .await
+                .is_err()
+            {
+                error!("Failed to delete expired revoked tokens");
+            }
+        }
+    });
 }
 
 fn configure_cors(config: HttpCorsConfig) -> CorsLayer {

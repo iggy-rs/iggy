@@ -147,7 +147,7 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
             Ok(data) => {
                 if let Err(err) = self.db.insert(&key, data) {
                     error!(
-                        "Cannot save Personal access token for user with ID: {}. Error: {}",
+                        "Cannot save personal access token for user with ID: {}. Error: {}",
                         personal_access_token.user_id, err
                     );
                     return Err(Error::CannotSaveResource(key.to_string()));

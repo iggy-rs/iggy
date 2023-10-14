@@ -1,5 +1,5 @@
 use iggy::error::Error;
-use jsonwebtoken::Algorithm;
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -26,8 +26,13 @@ pub struct HttpCorsConfig {
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct HttpJwtConfig {
     pub algorithm: String,
+    pub issuer: String,
     pub audience: String,
+    pub valid_issuers: Vec<String>,
+    pub valid_audiences: Vec<String>,
     pub expiry: u64,
+    pub clock_skew: u64,
+    pub not_before: u64,
     pub encoding_secret: String,
     pub decoding_secret: String,
     pub use_base64_secret: bool,
@@ -71,6 +76,32 @@ impl HttpJwtConfig {
 
     pub fn get_encoding_secret(&self) -> JwtSecret {
         self.get_secret(&self.encoding_secret)
+    }
+
+    pub fn get_decoding_key(&self) -> Result<DecodingKey, Error> {
+        if self.decoding_secret.is_empty() {
+            return Err(Error::InvalidJwtSecret);
+        }
+
+        Ok(match self.get_decoding_secret() {
+            JwtSecret::Default(ref secret) => DecodingKey::from_secret(secret.as_ref()),
+            JwtSecret::Base64(ref secret) => {
+                DecodingKey::from_base64_secret(secret).map_err(|_| Error::InvalidJwtSecret)?
+            }
+        })
+    }
+
+    pub fn get_encoding_key(&self) -> Result<EncodingKey, Error> {
+        if self.encoding_secret.is_empty() {
+            return Err(Error::InvalidJwtSecret);
+        }
+
+        Ok(match self.get_encoding_secret() {
+            JwtSecret::Default(ref secret) => EncodingKey::from_secret(secret.as_ref()),
+            JwtSecret::Base64(ref secret) => {
+                EncodingKey::from_base64_secret(secret).map_err(|_| Error::InvalidJwtSecret)?
+            }
+        })
     }
 
     fn get_secret(&self, secret: &str) -> JwtSecret {

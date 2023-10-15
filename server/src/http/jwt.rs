@@ -46,6 +46,14 @@ pub struct RevokedAccessToken {
     pub expiry: u64,
 }
 
+#[derive(Debug)]
+pub struct GeneratedTokens {
+    pub user_id: UserId,
+    pub access_token: String,
+    pub refresh_token: String,
+    pub expiry: u64,
+}
+
 pub async fn jwt_auth<T>(
     State(state): State<Arc<AppState>>,
     mut request: Request<T>,
@@ -272,7 +280,7 @@ impl JwtManager {
         Ok(())
     }
 
-    pub fn generate(&self, user_id: UserId) -> String {
+    pub fn generate(&self, user_id: UserId) -> Result<GeneratedTokens, Error> {
         let header = Header::new(self.issuer.algorithm);
         let iat = TimeStamp::now().to_secs();
         let exp = iat + self.issuer.expiry;
@@ -287,7 +295,27 @@ impl JwtManager {
             nbf,
         };
 
-        encode::<JwtClaims>(&header, &claims, &self.issuer.key).unwrap()
+        let token = encode::<JwtClaims>(&header, &claims, &self.issuer.key);
+        if let Err(err) = token {
+            error!("Cannot generate JWT token. Error: {}", err);
+            return Err(Error::CannotGenerateJwt);
+        }
+
+        Ok(GeneratedTokens {
+            user_id,
+            access_token: token.unwrap(),
+            refresh_token: "".to_string(),
+            expiry: exp,
+        })
+    }
+
+    pub fn refresh_token(&self, _refresh_token: &str) -> Result<GeneratedTokens, Error> {
+        if _refresh_token.is_empty() {
+            return Err(Error::InvalidRefreshToken);
+        }
+
+        // TODO: Implement refresh token
+        Err(Error::FeatureUnavailable)
     }
 
     pub fn decode(&self, token: &str, algorithm: Algorithm) -> Result<TokenData<JwtClaims>, Error> {
@@ -338,6 +366,10 @@ impl JwtManager {
 fn should_skip_auth(path: &str) -> bool {
     matches!(
         path,
-        "/" | "/metrics" | "/ping" | "/users/login" | "/personal-access-tokens/login"
+        "/" | "/metrics"
+            | "/ping"
+            | "/users/login"
+            | "/users/refresh-token"
+            | "/personal-access-tokens/login"
     )
 }

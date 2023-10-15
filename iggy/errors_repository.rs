@@ -296,6 +296,28 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             template: "Invalid JWT secret".to_string(),
         },
         ErrorRepositoryEntry {
+            snake_case_name: "jwt_missing".to_string(),
+            code: 75,
+            signature: "".to_string(),
+            converts_from: "".to_string(),
+            template: "JWT is missing".to_string(),
+        },
+
+        ErrorRepositoryEntry {
+            snake_case_name: "cannot_generate_jwt".to_string(),
+            code: 76,
+            signature: "".to_string(),
+            converts_from: "".to_string(),
+            template: "Cannot generate JWT".to_string(),
+        },
+        ErrorRepositoryEntry {
+            snake_case_name: "invalid_refresh_token".to_string(),
+            code: 77,
+            signature: "".to_string(),
+            converts_from: "".to_string(),
+            template: "Invalid refresh token".to_string(),
+        },
+        ErrorRepositoryEntry {
             snake_case_name: "client_not_found".to_string(),
             code: 100,
             signature: "u32".to_string(),

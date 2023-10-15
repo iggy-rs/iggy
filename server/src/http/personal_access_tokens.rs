@@ -7,7 +7,7 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post};
 use axum::{Extension, Json, Router};
-use iggy::models::identity_info::IdentityInfo;
+use iggy::models::identity_info::{IdentityInfo, TokenInfo};
 use iggy::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
@@ -75,8 +75,15 @@ async fn login_with_personal_access_token(
     let user = system
         .login_with_personal_access_token(&command.token, None)
         .await?;
+    let token = state.jwt_manager.generate(user.id)?;
     Ok(Json(IdentityInfo {
         user_id: user.id,
-        token: Some(state.jwt_manager.generate(user.id)),
+        token: Some({
+            TokenInfo {
+                access_token: token.access_token,
+                refresh_token: token.refresh_token,
+                expiry: token.expiry,
+            }
+        }),
     }))
 }

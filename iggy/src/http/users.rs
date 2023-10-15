@@ -13,6 +13,7 @@ use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
 use crate::users::update_user::UpdateUser;
 use async_trait::async_trait;
+use serde::Serialize;
 
 const PATH: &str = "/users";
 
@@ -61,7 +62,7 @@ impl UserClient for HttpClient {
     async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error> {
         let response = self.post(&format!("{PATH}/login"), &command).await?;
         let identity_info: IdentityInfo = response.json().await?;
-        self.set_token(identity_info.token.clone()).await;
+        self.set_token_from_identity(&identity_info).await?;
         Ok(identity_info)
     }
 
@@ -70,4 +71,23 @@ impl UserClient for HttpClient {
         self.set_token(None).await;
         Ok(())
     }
+}
+
+impl HttpClient {
+    pub async fn refresh_access_token(&self, refresh_token: &str) -> Result<(), Error> {
+        let command = RefreshToken {
+            refresh_token: refresh_token.to_string(),
+        };
+        let response = self
+            .post(&format!("{PATH}/refresh-token"), &command)
+            .await?;
+        let identity_info: IdentityInfo = response.json().await?;
+        self.set_token_from_identity(&identity_info).await?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Serialize)]
+struct RefreshToken {
+    refresh_token: String,
 }

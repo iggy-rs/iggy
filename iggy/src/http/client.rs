@@ -1,6 +1,7 @@
 use crate::client::Client;
 use crate::error::Error;
 use crate::http::config::HttpClientConfig;
+use crate::models::identity_info::IdentityInfo;
 use async_trait::async_trait;
 use reqwest::{Response, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -154,6 +155,20 @@ impl HttpClient {
         } else {
             *current_token = "".to_string();
         }
+    }
+
+    pub async fn set_token_from_identity(&self, identity: &IdentityInfo) -> Result<(), Error> {
+        if identity.token.is_none() {
+            return Err(Error::JwtMissing);
+        }
+
+        let token = identity.token.as_ref().unwrap();
+        if token.access_token.is_empty() {
+            return Err(Error::JwtMissing);
+        }
+
+        self.set_token(Some(token.access_token.clone())).await;
+        Ok(())
     }
 
     async fn handle_response(response: Response) -> Result<Response, Error> {

@@ -5,6 +5,7 @@ use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
 use byte_unit::{Byte, ByteUnit};
+use chrono::Duration;
 use iggy::validatable::Validatable;
 use sysinfo::SystemExt;
 use tracing::{error, info, warn};
@@ -87,7 +88,9 @@ impl Validatable<ServerError> for MessageSaverConfig {
 
 impl Validatable<ServerError> for MessageCleanerConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.interval == 0 {
+        let cleaner_duration : std::time::Duration = self.interval.parse::<humantime::Duration>().unwrap().into() ; 
+        if cleaner_duration == std::time::Duration::new(0, 0) {
+            // if self.interval.parse::<humantime::Duration>().unwrap().into() == std::time::Duration::new(0, 0) { this line fails ??
             error!("Message cleaner interval size cannot be zero, it must be greater than 0.");
             return Err(ServerError::InvalidConfiguration);
         }

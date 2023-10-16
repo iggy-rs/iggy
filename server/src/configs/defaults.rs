@@ -80,7 +80,7 @@ impl Default for MessageCleanerConfig {
     fn default() -> MessageCleanerConfig {
         MessageCleanerConfig {
             enabled: true,
-            interval: 60,
+            interval: "60s".to_string(),
         }
     }
 }

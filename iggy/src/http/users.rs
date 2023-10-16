@@ -62,19 +62,24 @@ impl UserClient for HttpClient {
     async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error> {
         let response = self.post(&format!("{PATH}/login"), &command).await?;
         let identity_info: IdentityInfo = response.json().await?;
-        self.set_token_from_identity(&identity_info).await?;
+        self.set_access_token_from_identity(&identity_info).await?;
         Ok(identity_info)
     }
 
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
         self.post(&format!("{PATH}/logout"), &command).await?;
-        self.set_token(None).await;
+        self.set_access_token(None).await;
+        self.set_refresh_token(None).await;
         Ok(())
     }
 }
 
 impl HttpClient {
     pub async fn refresh_access_token(&self, refresh_token: &str) -> Result<(), Error> {
+        if refresh_token.is_empty() {
+            return Err(Error::RefreshTokenMissing);
+        }
+
         let command = RefreshToken {
             refresh_token: refresh_token.to_string(),
         };
@@ -82,7 +87,11 @@ impl HttpClient {
             .post(&format!("{PATH}/refresh-token"), &command)
             .await?;
         let identity_info: IdentityInfo = response.json().await?;
-        self.set_token_from_identity(&identity_info).await?;
+        if identity_info.token.is_none() {
+            return Err(Error::JwtMissing);
+        }
+
+        self.set_access_token_from_identity(&identity_info).await?;
         Ok(())
     }
 }

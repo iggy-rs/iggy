@@ -14,7 +14,8 @@ use tokio::sync::RwLock;
 pub struct HttpClient {
     pub api_url: Url,
     client: ClientWithMiddleware,
-    token: RwLock<String>,
+    access_token: RwLock<String>,
+    refresh_token: RwLock<String>,
 }
 
 #[async_trait]
@@ -58,13 +59,14 @@ impl HttpClient {
         Ok(Self {
             api_url,
             client,
-            token: RwLock::new("".to_string()),
+            access_token: RwLock::new("".to_string()),
+            refresh_token: RwLock::new("".to_string()),
         })
     }
 
     pub async fn get(&self, path: &str) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let token = self.token.read().await;
+        let token = self.access_token.read().await;
         let response = self.client.get(url).bearer_auth(token).send().await?;
         Self::handle_response(response).await
     }
@@ -75,7 +77,7 @@ impl HttpClient {
         query: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let token = self.token.read().await;
+        let token = self.access_token.read().await;
         let response = self
             .client
             .get(url)
@@ -92,7 +94,7 @@ impl HttpClient {
         payload: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let token = self.token.read().await;
+        let token = self.access_token.read().await;
         let response = self
             .client
             .post(url)
@@ -109,7 +111,7 @@ impl HttpClient {
         payload: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let token = self.token.read().await;
+        let token = self.access_token.read().await;
         let response = self
             .client
             .put(url)
@@ -122,7 +124,7 @@ impl HttpClient {
 
     pub async fn delete(&self, path: &str) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let token = self.token.read().await;
+        let token = self.access_token.read().await;
         let response = self.client.delete(url).bearer_auth(token).send().await?;
         Self::handle_response(response).await
     }
@@ -133,7 +135,7 @@ impl HttpClient {
         query: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
-        let token = self.token.read().await;
+        let token = self.access_token.read().await;
         let response = self
             .client
             .delete(url)
@@ -148,8 +150,8 @@ impl HttpClient {
         self.api_url.join(path).map_err(|_| Error::CannotParseUrl)
     }
 
-    pub async fn set_token(&self, token: Option<String>) {
-        let mut current_token = self.token.write().await;
+    pub async fn set_refresh_token(&self, token: Option<String>) {
+        let mut current_token = self.refresh_token.write().await;
         if let Some(token) = token {
             *current_token = token;
         } else {
@@ -157,7 +159,19 @@ impl HttpClient {
         }
     }
 
-    pub async fn set_token_from_identity(&self, identity: &IdentityInfo) -> Result<(), Error> {
+    pub async fn set_access_token(&self, token: Option<String>) {
+        let mut current_token = self.access_token.write().await;
+        if let Some(token) = token {
+            *current_token = token;
+        } else {
+            *current_token = "".to_string();
+        }
+    }
+
+    pub async fn set_access_token_from_identity(
+        &self,
+        identity: &IdentityInfo,
+    ) -> Result<(), Error> {
         if identity.token.is_none() {
             return Err(Error::JwtMissing);
         }
@@ -167,8 +181,16 @@ impl HttpClient {
             return Err(Error::JwtMissing);
         }
 
-        self.set_token(Some(token.access_token.clone())).await;
+        self.set_access_token(Some(token.access_token.clone()))
+            .await;
+        self.set_refresh_token(Some(token.refresh_token.clone()))
+            .await;
         Ok(())
+    }
+
+    pub async fn refresh_access_token_using_current_refresh_token(&self) -> Result<(), Error> {
+        let refresh_token = self.refresh_token.read().await;
+        self.refresh_access_token(&refresh_token).await
     }
 
     async fn handle_response(response: Response) -> Result<Response, Error> {

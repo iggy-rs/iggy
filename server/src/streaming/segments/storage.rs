@@ -125,7 +125,7 @@ impl Storage<Segment> for FileSegmentStorage {
                 .is_err()
         {
             return Err(Error::CannotCreateSegmentTimeIndexFile(
-                segment.log_path.clone(),
+                segment.time_index_path.clone(),
             ));
         }
 
@@ -137,7 +137,7 @@ impl Storage<Segment> for FileSegmentStorage {
                 .is_err()
         {
             return Err(Error::CannotCreateSegmentIndexFile(
-                segment.log_path.clone(),
+                segment.index_path.clone(),
             ));
         }
 

@@ -37,7 +37,7 @@ impl Display for HttpJwtConfig {
         write!(
             f,
             "{{ algorithm: {}, audience: {}, expiry: {}, use_base64_secret: {} }}",
-            self.algorithm, self.audience, self.expiry, self.use_base64_secret
+            self.algorithm, self.audience, self.access_token_expiry, self.use_base64_secret
         )
     }
 }

@@ -22,7 +22,7 @@ pub struct ServerConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct MessageCleanerConfig {
     pub enabled: bool,
-    pub interval: u64,
+    pub interval: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

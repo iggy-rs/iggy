@@ -2525,6 +2525,7 @@ dependencies = [
  "figment",
  "flume",
  "futures",
+ "humantime",
  "iggy",
  "jsonwebtoken",
  "libc",

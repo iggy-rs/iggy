@@ -54,6 +54,7 @@ toml = "0.8.0"
 prometheus-client = "0.21.2"
 byte-unit = "4.0.19"
 xxhash-rust = { version = "0.8.2", features = ["xxh32"] }
+humantime = "2.1.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.12"

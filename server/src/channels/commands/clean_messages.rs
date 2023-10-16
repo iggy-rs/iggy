@@ -31,7 +31,7 @@ impl MessagesCleaner {
     pub fn new(config: &MessageCleanerConfig, sender: Sender<CleanMessagesCommand>) -> Self {
         Self {
             enabled: config.enabled,
-            interval: Duration::from_secs(config.interval),
+            interval: config.interval.parse::<humantime::Duration>().unwrap().into(),
             sender,
         }
     }

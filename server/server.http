@@ -13,7 +13,8 @@
 @root_password = iggy
 @user1_username = user1
 @user1_password = secret
-@token = secret
+@access_token = secret
+@refresh_token = secret
 @root_id = 1
 @user1_id = 2
 @pat_name = dev_token
@@ -30,15 +31,15 @@ GET {{url}}/metrics
 
 ###
 GET {{url}}/stats
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/clients
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/clients/{{client_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 
 ###
@@ -51,8 +52,16 @@ Content-Type: application/json
 }
 
 ###
+POST {{url}}/users/refresh-token
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refresh_token}}"
+}
+
+###
 POST {{url}}/users/logout
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -60,7 +69,7 @@ Content-Type: application/json
 
 ###
 POST {{url}}/users
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -72,15 +81,15 @@ Content-Type: application/json
 
 ###
 GET {{url}}/users
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/users/{{user1_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 PUT {{url}}/users/{{user1_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -91,7 +100,7 @@ Content-Type: application/json
 
 ###
 PUT {{url}}/users/{{user1_id}}/password
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -101,7 +110,7 @@ Content-Type: application/json
 
 ###
 PUT {{url}}/users/{{user1_id}}/permissions
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -142,15 +151,15 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/users/{{user1_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/personal-access-tokens
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 POST {{url}}/personal-access-tokens
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -168,19 +177,19 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/personal-access-tokens/{{pat_name}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/streams
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 POST {{url}}/streams
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -190,7 +199,7 @@ Content-Type: application/json
 
 ###
 PUT {{url}}/streams/{{stream_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -199,19 +208,19 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 POST {{url}}/streams/{{stream_id}}/topics
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -223,7 +232,7 @@ Content-Type: application/json
 
 ###
 PUT {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -233,11 +242,11 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/partitions
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -246,11 +255,11 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/partitions?partitions_count=1
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -275,11 +284,11 @@ Content-Type: application/json
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/messages?consumer_id={{consumer_id}}&partition_id={{partition_id}}&kind=offset&value=0&count=10&auto_commit=false
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 PUT {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-offsets
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -290,19 +299,19 @@ Content-Type: application/json
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-offsets?consumer_id={{consumer_id}}&partition_id={{partition_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 GET {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups/{{consumer_group_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 
 ###
 POST {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
@@ -312,4 +321,4 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/consumer-groups/{{consumer_group_id}}
-Authorization: Bearer {{token}}
+Authorization: Bearer {{access_token}}

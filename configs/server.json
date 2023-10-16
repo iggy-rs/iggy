@@ -30,7 +30,8 @@
       "valid_audiences": [
         "iggy.rs"
       ],
-      "expiry": 3600,
+      "access_token_expiry": 3600,
+      "refresh_token_expiry": 86400,
       "clock_skew": 5,
       "not_before": 0,
       "encoding_secret": "top_secret$iggy.rs$_jwt_HS256_key#!",

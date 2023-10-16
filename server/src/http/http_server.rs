@@ -64,7 +64,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         app = app.layer(configure_cors(config.cors));
     }
 
-    start_revoked_tokens_cleaner(app_state.clone());
+    start_expired_tokens_cleaner(app_state.clone());
     app = app.layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
     info!("Started {api_name} on: {:?}", config.address);
 
@@ -116,12 +116,12 @@ async fn build_app_state(config: &HttpConfig, system: Arc<RwLock<System>>) -> Ar
     })
 }
 
-fn start_revoked_tokens_cleaner(app_state: Arc<AppState>) {
+fn start_expired_tokens_cleaner(app_state: Arc<AppState>) {
     tokio::spawn(async move {
         let mut interval_timer = tokio::time::interval(Duration::from_secs(10));
         loop {
             interval_timer.tick().await;
-            info!("Deleting expired revoked tokens...");
+            info!("Deleting expired tokens...");
             let now = TimeStamp::now().to_secs();
             if app_state
                 .jwt_manager
@@ -129,7 +129,15 @@ fn start_revoked_tokens_cleaner(app_state: Arc<AppState>) {
                 .await
                 .is_err()
             {
-                error!("Failed to delete expired revoked tokens");
+                error!("Failed to delete expired revoked access tokens");
+            }
+            if app_state
+                .jwt_manager
+                .delete_expired_refresh_tokens(now)
+                .await
+                .is_err()
+            {
+                error!("Failed to delete expired refresh tokens");
             }
         }
     });

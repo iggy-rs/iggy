@@ -8,7 +8,7 @@ use axum::http::StatusCode;
 use axum::routing::{get, post, put};
 use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
-use iggy::models::identity_info::IdentityInfo;
+use iggy::models::identity_info::{IdentityInfo, TokenInfo};
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
@@ -17,6 +17,7 @@ use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 use iggy::validatable::Validatable;
+use serde::Deserialize;
 use std::sync::Arc;
 
 pub fn router(state: Arc<AppState>) -> Router {
@@ -30,6 +31,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/:user_id/password", put(change_password))
         .route("/login", post(login_user))
         .route("/logout", post(logout_user))
+        .route("/refresh-token", post(refresh_token))
         .with_state(state)
 }
 
@@ -158,9 +160,16 @@ async fn login_user(
     let user = system
         .login_user(&command.username, &command.password, None)
         .await?;
+    let token = state.jwt_manager.generate(user.id)?;
     Ok(Json(IdentityInfo {
         user_id: user.id,
-        token: Some(state.jwt_manager.generate(user.id)),
+        token: Some({
+            TokenInfo {
+                access_token: token.access_token,
+                refresh_token: token.refresh_token,
+                expiry: token.expiry,
+            }
+        }),
     }))
 }
 
@@ -179,4 +188,26 @@ async fn logout_user(
         .revoke_token(&identity.token_id, identity.token_expiry)
         .await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+async fn refresh_token(
+    State(state): State<Arc<AppState>>,
+    Json(command): Json<RefreshToken>,
+) -> Result<Json<IdentityInfo>, CustomError> {
+    let token = state.jwt_manager.refresh_token(&command.refresh_token)?;
+    Ok(Json(IdentityInfo {
+        user_id: token.user_id,
+        token: Some({
+            TokenInfo {
+                access_token: token.access_token,
+                refresh_token: token.refresh_token,
+                expiry: token.expiry,
+            }
+        }),
+    }))
+}
+
+#[derive(Debug, Deserialize)]
+struct RefreshToken {
+    refresh_token: String,
 }

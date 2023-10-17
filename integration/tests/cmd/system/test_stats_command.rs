@@ -1,4 +1,4 @@
-use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
+use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::streams::create_stream::CreateStream;
@@ -60,4 +60,49 @@ pub async fn should_be_successful() {
 
     iggy_cmd_test.setup().await;
     iggy_cmd_test.execute_test(TestStatsCmd {}).await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["stats", "--help"],
+            format!(
+                r#"get iggy server statistics
+
+Collect basic Iggy server statistics like number of streams, topics, partitions, etc. Server OS name, version, etc. are also collected.
+
+{USAGE_PREFIX} stats
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+"#,
+            ),
+        ))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_short_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["stats", "-h"],
+            format!(
+                r#"get iggy server statistics
+
+{USAGE_PREFIX} stats
+
+Options:
+  -h, --help  Print help (see more with '--help')
+"#,
+            ),
+        ))
+        .await;
 }

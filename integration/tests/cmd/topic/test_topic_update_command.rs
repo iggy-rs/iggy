@@ -13,7 +13,7 @@ use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
-use serial_test::serial;
+use serial_test::parallel;
 use std::time::Duration;
 
 struct TestTopicUpdateCmd {
@@ -190,7 +190,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
@@ -285,7 +285,7 @@ pub async fn should_be_successful() {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_help_match() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
@@ -334,7 +334,7 @@ Options:
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_short_help_match() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 

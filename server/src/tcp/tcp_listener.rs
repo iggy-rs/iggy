@@ -9,9 +9,9 @@ use tracing::{error, info};
 pub fn start(address: &str, system: Arc<RwLock<System>>) {
     let address = address.to_string();
     tokio::spawn(async move {
-        let listener = TcpListener::bind(address).await;
+        let listener = TcpListener::bind(address.clone()).await;
         if listener.is_err() {
-            panic!("Unable to start TCP server.");
+            panic!("Unable to start TCP server on addr {}.", address);
         }
 
         let listener = listener.unwrap();

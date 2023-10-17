@@ -36,50 +36,6 @@ struct ConsumerGroupData {
 
 #[async_trait]
 impl TopicStorage for FileTopicStorage {
-    async fn save_partitions(&self, topic: &Topic, partition_ids: &[u32]) -> Result<(), Error> {
-        for partition_id in partition_ids {
-            if !topic.partitions.contains_key(partition_id) {
-                return Err(Error::PartitionNotFound(
-                    *partition_id,
-                    topic.topic_id,
-                    topic.stream_id,
-                ));
-            }
-        }
-
-        for partition_id in partition_ids {
-            let partition = topic.partitions.get(partition_id).unwrap();
-            let partition = partition.read().await;
-            partition.persist().await?;
-        }
-
-        Ok(())
-    }
-
-    async fn delete_partitions(
-        &self,
-        topic: &mut Topic,
-        partition_ids: &[u32],
-    ) -> Result<(), Error> {
-        for partition_id in partition_ids {
-            if !topic.partitions.contains_key(partition_id) {
-                return Err(Error::PartitionNotFound(
-                    *partition_id,
-                    topic.topic_id,
-                    topic.stream_id,
-                ));
-            }
-        }
-
-        for partition_id in partition_ids {
-            let partition = topic.partitions.get(partition_id).unwrap();
-            let partition = partition.read().await;
-            partition.delete().await?;
-        }
-
-        Ok(())
-    }
-
     async fn save_consumer_group(
         &self,
         topic: &Topic,

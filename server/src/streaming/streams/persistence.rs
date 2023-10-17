@@ -14,6 +14,10 @@ impl Stream {
     }
 
     pub async fn delete(&self) -> Result<(), Error> {
+        for topic in self.get_topics() {
+            topic.delete().await?;
+        }
+
         self.storage.stream.delete(self).await
     }
 

@@ -1,4 +1,6 @@
-use crate::utils::test_server::{create_user, login_root, login_user, ClientFactory, TestServer};
+use crate::utils::test_server::{
+    assert_clean_system, create_user, delete_user, login_root, login_user, ClientFactory,
+};
 use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer;
@@ -23,27 +25,23 @@ const PARTITIONS_COUNT: u32 = 3;
 const CONSUMER_GROUP_ID: u32 = 10;
 const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
 const MESSAGES_COUNT: u32 = 1000;
+const USERNAME_1: &str = "user1";
+const USERNAME_2: &str = "user2";
+const USERNAME_3: &str = "user3";
 
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let mut test_server = TestServer::default();
-    test_server.start();
     let system_client = create_client(client_factory).await;
     let client1 = create_client(client_factory).await;
     let client2 = create_client(client_factory).await;
     let client3 = create_client(client_factory).await;
-
     login_root(&system_client).await;
     init_system(&system_client, &client1, &client2, &client3, true).await;
     execute_using_messages_key_key(&system_client, &client1, &client2, &client3).await;
-    system_client
-        .delete_stream(&DeleteStream {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        })
-        .await
-        .unwrap();
+    cleanup(&system_client, false).await;
     init_system(&system_client, &client1, &client2, &client3, false).await;
     execute_using_none_key(&system_client, &client1, &client2, &client3).await;
-    test_server.stop();
+    cleanup(&system_client, true).await;
+    assert_clean_system(&system_client).await;
 }
 
 async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
@@ -270,4 +268,16 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
 
 fn get_extended_message_payload(partition_id: u32, entity_id: u32) -> String {
     format!("message-{}-{}", partition_id, entity_id)
+}
+
+async fn cleanup(system_client: &IggyClient, delete_users: bool) {
+    if delete_users {
+        delete_user(system_client, USERNAME_1).await;
+        delete_user(system_client, USERNAME_2).await;
+        delete_user(system_client, USERNAME_3).await;
+    }
+    let delete_stream = DeleteStream {
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+    };
+    system_client.delete_stream(&delete_stream).await.unwrap();
 }

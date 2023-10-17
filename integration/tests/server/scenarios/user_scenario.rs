@@ -1,4 +1,4 @@
-use crate::utils::test_server::{ClientFactory, TestServer};
+use crate::utils::test_server::{assert_clean_system, ClientFactory};
 use iggy::client::{PersonalAccessTokenClient, SystemClient, UserClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::identifier::Identifier;
@@ -21,8 +21,6 @@ use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let mut test_server = TestServer::default();
-    test_server.start();
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
@@ -282,12 +280,12 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(delete_root_user.is_err());
 
+    assert_clean_system(&client).await;
+
     // 25. Logout
     client.logout_user(&LogoutUser {}).await.unwrap();
 
     // 26. Trying to perform any secured operation after logout should fail
     let get_users = client.get_users(&GetUsers {}).await;
     assert!(get_users.is_err());
-
-    test_server.stop();
 }

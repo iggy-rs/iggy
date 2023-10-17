@@ -1,4 +1,4 @@
-use crate::utils::test_server::{login_root, ClientFactory, TestServer};
+use crate::utils::test_server::{assert_clean_system, login_root, ClientFactory};
 use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer;
@@ -24,10 +24,9 @@ const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
 const MESSAGES_COUNT: u32 = 1000;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let mut test_server = TestServer::default();
-    test_server.start();
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+
     login_root(&client).await;
     init_system(&client).await;
     execute_using_messages_key_key(&client).await;
@@ -39,7 +38,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     init_system(&client).await;
     execute_using_none_key(&client).await;
-    test_server.stop();
+    cleanup(&client).await;
+    assert_clean_system(&client).await;
 }
 
 async fn init_system(client: &IggyClient) {
@@ -89,6 +89,7 @@ async fn init_system(client: &IggyClient) {
         .unwrap();
 
     let client_info = client.get_me(&GetMe {}).await.unwrap();
+    assert_eq!(consumer_group_info.id, CONSUMER_GROUP_ID);
 
     assert_eq!(consumer_group_info.members_count, 1);
     assert_eq!(consumer_group_info.members.len(), 1);
@@ -196,4 +197,11 @@ async fn execute_using_none_key(client: &IggyClient) {
 
 fn get_extended_message_payload(partition_id: u32, entity_id: u32) -> String {
     format!("message-{}-{}", partition_id, entity_id)
+}
+
+async fn cleanup(system_client: &IggyClient) {
+    let delete_stream = DeleteStream {
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+    };
+    system_client.delete_stream(&delete_stream).await.unwrap();
 }

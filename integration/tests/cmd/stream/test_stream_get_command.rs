@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::streams::create_stream::CreateStream;
 use predicates::str::{contains, starts_with};
-use serial_test::serial;
+use serial_test::parallel;
 
 struct TestStreamGetCmd {
     stream_id: u32,
@@ -72,7 +72,7 @@ impl IggyCmdTestCase for TestStreamGetCmd {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 

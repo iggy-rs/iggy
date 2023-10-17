@@ -1,4 +1,4 @@
-use crate::utils::test_server::{ClientFactory, TestServer};
+use crate::utils::test_server::{assert_clean_system, ClientFactory};
 use bytes::Bytes;
 use iggy::client::{
     ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient, StreamClient,
@@ -50,8 +50,6 @@ const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
 const MESSAGES_COUNT: u32 = 1000;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let mut test_server = TestServer::default();
-    test_server.start();
     let client = client_factory.create_client().await;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
@@ -665,7 +663,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(clients.len() <= 1);
 
-    test_server.stop();
+    assert_clean_system(&client).await;
 }
 
 fn assert_message(message: &iggy::models::messages::Message, offset: u64) {

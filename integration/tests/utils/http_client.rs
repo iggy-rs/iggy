@@ -5,13 +5,19 @@ use iggy::http::client::HttpClient;
 use iggy::http::config::HttpClientConfig;
 use std::sync::Arc;
 
-#[derive(Debug, Copy, Clone)]
-pub struct HttpClientFactory {}
+#[derive(Debug, Clone)]
+pub struct HttpClientFactory {
+    pub server_addr: String,
+}
 
 #[async_trait]
 impl ClientFactory for HttpClientFactory {
     async fn create_client(&self) -> Box<dyn Client> {
-        let client = HttpClient::create(Arc::new(HttpClientConfig::default())).unwrap();
+        let config = HttpClientConfig {
+            api_url: format!("http://{}", self.server_addr.clone()),
+            ..HttpClientConfig::default()
+        };
+        let client = HttpClient::create(Arc::new(config)).unwrap();
         Box::new(client)
     }
 }

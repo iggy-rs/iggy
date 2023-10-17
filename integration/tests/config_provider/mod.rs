@@ -1,15 +1,7 @@
+use crate::utils::file::{file_exists, get_root_path};
+use serial_test::serial;
 use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
 use std::env;
-use std::path::{Path, PathBuf};
-
-fn file_exists(file_path: &str) -> bool {
-    Path::new(file_path).is_file()
-}
-
-fn get_root_path() -> PathBuf {
-    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set!");
-    PathBuf::from(manifest_dir)
-}
 
 async fn scenario_parsing_from_file(extension: &str) {
     let mut config_path = get_root_path().join("../configs/server");
@@ -38,6 +30,9 @@ async fn validate_server_config_json_from_repository() {
     scenario_parsing_from_file("json").await;
 }
 
+// This test needs to be run in serial because it modifies the environment variables
+// which are shared, since all tests run in parallel by default.
+#[serial]
 #[tokio::test]
 async fn validate_custom_env_provider() {
     env::set_var("IGGY_SYSTEM_DATABASE_PATH", "awesome_database_path");

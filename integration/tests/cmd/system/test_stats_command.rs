@@ -5,7 +5,7 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::{contains, starts_with};
-use serial_test::serial;
+use serial_test::parallel;
 
 struct TestStatsCmd {}
 
@@ -54,7 +54,7 @@ impl IggyCmdTestCase for TestStatsCmd {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 

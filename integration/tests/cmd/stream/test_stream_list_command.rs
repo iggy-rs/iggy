@@ -1,38 +1,10 @@
-use std::fmt::{Display, Formatter, Result};
-
-use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
+use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, OutputFormat};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::streams::create_stream::CreateStream;
 use predicates::str::{contains, starts_with};
 use serial_test::serial;
-
-enum OutputFormat {
-    Default,
-    List,
-    Table,
-}
-
-impl Display for OutputFormat {
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        match self {
-            Self::Default => write!(f, "table"),
-            Self::List => write!(f, "list"),
-            Self::Table => write!(f, "table"),
-        }
-    }
-}
-
-impl OutputFormat {
-    fn to_args(&self) -> Vec<&str> {
-        match self {
-            Self::Default => vec![],
-            Self::List => vec!["--list-mode", "list"],
-            Self::Table => vec!["--list-mode", "table"],
-        }
-    }
-}
 
 struct TestStreamListCmd {
     stream_id: u32,

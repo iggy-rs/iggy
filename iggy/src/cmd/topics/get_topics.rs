@@ -1,3 +1,5 @@
+use std::fmt::{self, Display, Formatter};
+
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
@@ -11,6 +13,17 @@ use tracing::{event, Level};
 pub enum GetTopicsOutput {
     Table,
     List,
+}
+
+impl Display for GetTopicsOutput {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            GetTopicsOutput::Table => write!(f, "table"),
+            GetTopicsOutput::List => write!(f, "list"),
+        }?;
+
+        Ok(())
+    }
 }
 
 pub struct GetTopicsCmd {
@@ -31,8 +44,8 @@ impl GetTopicsCmd {
 impl CliCommand for GetTopicsCmd {
     fn explain(&self) -> String {
         format!(
-            "get topics from stream with ID: {}",
-            self.get_topics.stream_id
+            "list topics from stream with ID: {} in {} mode",
+            self.get_topics.stream_id, self.output
         )
     }
 

@@ -9,7 +9,7 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
-use serial_test::serial;
+use serial_test::parallel;
 
 struct TestTopicDeleteCmd {
     stream_id: u32,
@@ -118,7 +118,7 @@ impl IggyCmdTestCase for TestTopicDeleteCmd {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
@@ -166,7 +166,7 @@ pub async fn should_be_successful() {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_help_match() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
@@ -208,7 +208,7 @@ Options:
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_short_help_match() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 

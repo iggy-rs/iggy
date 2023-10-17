@@ -1,5 +1,5 @@
 use crate::{
-    cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase},
+    cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX},
     utils::test_server::TestServer,
 };
 use assert_cmd::assert::Assert;
@@ -112,5 +112,50 @@ pub async fn should_be_successful_using_transport_quic() {
     iggy_cmd_test.setup().await;
     iggy_cmd_test
         .execute_test(TestMeCmd::new(Protocol::Quic))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["me", "--help"],
+            format!(
+                r#"get current client info
+
+Command connects to Iggy server and collects client info like client ID, user ID server address and protocol type.
+
+{USAGE_PREFIX} me
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+"#,
+            ),
+        ))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_short_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["me", "-h"],
+            format!(
+                r#"get current client info
+
+{USAGE_PREFIX} me
+
+Options:
+  -h, --help  Print help (see more with '--help')
+"#,
+            ),
+        ))
         .await;
 }

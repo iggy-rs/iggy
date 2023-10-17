@@ -10,7 +10,7 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::{contains, starts_with};
-use serial_test::serial;
+use serial_test::parallel;
 
 struct TestTopicListCmd {
     stream_id: u32,
@@ -117,7 +117,7 @@ impl IggyCmdTestCase for TestTopicListCmd {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
@@ -155,7 +155,7 @@ pub async fn should_be_successful() {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_help_match() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
@@ -195,7 +195,7 @@ Options:
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 pub async fn should_short_help_match() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 

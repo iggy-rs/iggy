@@ -1,4 +1,7 @@
-use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
+use crate::cmd::common::{
+    IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, TestStreamId, CLAP_INDENT,
+    USAGE_PREFIX,
+};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::streams::create_stream::CreateStream;
@@ -6,11 +9,6 @@ use iggy::streams::get_stream::GetStream;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
-
-enum TestStreamId {
-    Numeric,
-    Named,
-}
 
 struct TestStreamUpdateCmd {
     stream_id: u32,
@@ -100,6 +98,68 @@ pub async fn should_be_successful() {
             String::from("production"),
             String::from("prototype"),
             TestStreamId::Named,
+        ))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["stream", "update", "--help"],
+            format!(
+                r#"Update stream name for given stream ID
+
+Stream ID can be specified as a stream name or ID
+
+Examples:
+ iggy stream update 1 production
+ iggy stream update test development
+
+{USAGE_PREFIX} stream update <STREAM_ID> <NAME>
+
+Arguments:
+  <STREAM_ID>
+          Stream ID to update
+{CLAP_INDENT}
+          Stream ID can be specified as a stream name or ID
+
+  <NAME>
+          New name for the stream
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+"#,
+            ),
+        ))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_short_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["stream", "update", "-h"],
+            format!(
+                r#"Update stream name for given stream ID
+
+{USAGE_PREFIX} stream update <STREAM_ID> <NAME>
+
+Arguments:
+  <STREAM_ID>  Stream ID to update
+  <NAME>       New name for the stream
+
+Options:
+  -h, --help  Print help (see more with '--help')
+"#,
+            ),
         ))
         .await;
 }

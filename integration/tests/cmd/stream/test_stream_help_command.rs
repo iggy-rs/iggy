@@ -8,19 +8,18 @@ pub async fn should_help_match() {
 
     iggy_cmd_test
         .execute_test_for_help_command(TestHelpCmd::new(
-            vec!["topic", "help"],
+            vec!["stream", "help"],
             format!(
-                r#"topic operations
+                r#"stream operations
 
-{USAGE_PREFIX} topic <COMMAND>
+{USAGE_PREFIX} stream <COMMAND>
 
 Commands:
-  create  Create topic with given ID, name, number of partitions
-              and expiry time for given stream ID
-  delete  Delete topic with given ID in given stream ID
-  update  Update topic name an message expiry time for given topic ID in given stream ID
-  get     Get topic detail for given topic ID and stream ID
-  list    List all topics in given stream ID
+  create  Create stream with given ID and name
+  delete  Delete stream with given ID
+  update  Update stream name for given stream ID
+  get     Get details of a single stream with given ID
+  list    List all streams
   help    Print this message or the help of the given subcommand(s)
 
 Options:

@@ -1,4 +1,6 @@
-use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
+use crate::cmd::common::{
+    IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, CLAP_INDENT, USAGE_PREFIX,
+};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
@@ -54,4 +56,55 @@ pub async fn should_be_successful() {
 
     iggy_cmd_test.setup().await;
     iggy_cmd_test.execute_test(TestPingCmd::default()).await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["ping", "--help"],
+            format!(
+                r#"ping iggy server
+
+Check if iggy server is up and running and what's the response ping response time
+
+{USAGE_PREFIX} ping [OPTIONS]
+
+Options:
+  -c, --count <COUNT>
+          Stop after sending count Ping packets
+{CLAP_INDENT}
+          [default: 1]
+
+  -h, --help
+          Print help (see a summary with '-h')
+"#,
+            ),
+        ))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_short_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["ping", "-h"],
+            format!(
+                r#"ping iggy server
+
+{USAGE_PREFIX} ping [OPTIONS]
+
+Options:
+  -c, --count <COUNT>  Stop after sending count Ping packets [default: 1]
+  -h, --help           Print help (see more with '--help')
+"#,
+            ),
+        ))
+        .await;
 }

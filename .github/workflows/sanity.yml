@@ -32,7 +32,7 @@ jobs:
       - uses: clechasseur/rs-cargo@v2
         with:
           command: clippy
-          args: --all-targets --all-features
+          args: --all-targets --all-features -- -D warnings
 
 # Uncomment this when we have a proper release - 1.0.0
 #   semver-checks:

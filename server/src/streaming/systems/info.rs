@@ -169,12 +169,9 @@ impl Display for SemanticVersion {
 
 mod tests{
 
-    use super::*;
-
     #[test]
-    fn test_1(){
+    fn should_load_the_expected_version_from_package_definition(){
         const CARGO_TOML_VERSION: &str = env!("CARGO_PKG_VERSION");
-        assert_eq!(VERSION, "0.0.44"); // will remove this line 
         assert_eq!(VERSION, CARGO_TOML_VERSION);
     }
 }

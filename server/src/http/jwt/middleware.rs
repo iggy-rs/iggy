@@ -12,12 +12,21 @@ const AUTHORIZATION: &str = "authorization";
 const BEARER: &str = "Bearer ";
 const UNAUTHORIZED: StatusCode = StatusCode::UNAUTHORIZED;
 
+const UNAUTHORIZED_PATHS: &[&str] = &[
+    "/",
+    "/metrics",
+    "/ping",
+    "/users/login",
+    "/users/refresh-token",
+    "/personal-access-tokens/login",
+];
+
 pub async fn jwt_auth<T>(
     State(state): State<Arc<AppState>>,
     mut request: Request<T>,
     next: Next<T>,
 ) -> Result<Response, StatusCode> {
-    if should_skip_auth(request.uri().path()) {
+    if UNAUTHORIZED_PATHS.contains(&request.uri().path()) {
         return Ok(next.run(request).await);
     }
 
@@ -53,15 +62,4 @@ pub async fn jwt_auth<T>(
     };
     request.extensions_mut().insert(identity);
     Ok(next.run(request).await)
-}
-
-fn should_skip_auth(path: &str) -> bool {
-    matches!(
-        path,
-        "/" | "/metrics"
-            | "/ping"
-            | "/users/login"
-            | "/users/refresh-token"
-            | "/personal-access-tokens/login"
-    )
 }

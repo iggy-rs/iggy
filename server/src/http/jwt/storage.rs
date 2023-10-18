@@ -43,50 +43,56 @@ impl TokenStorage {
     }
 
     pub fn load_all_refresh_tokens(&self) -> Result<Vec<RefreshToken>, Error> {
-        let mut refresh_tokens = Vec::new();
         let key = format!("{REFRESH_TOKENS_KEY_PREFIX}:");
-        for data in self.db.scan_prefix(&key) {
-            let token = match data {
-                Ok((hash, value)) => match rmp_serde::from_slice::<RefreshToken>(&value) {
-                    Ok(mut token) => {
-                        token.token_hash = from_utf8(&hash)?.to_string();
-                        token
-                    }
-                    Err(err) => {
-                        error!("Cannot deserialize refresh token. Error: {}", err);
-                        return Err(Error::CannotDeserializeResource(key.to_string()));
-                    }
-                },
-                Err(err) => {
+        let refresh_tokens: Result<Vec<RefreshToken>, Error> = self
+            .db
+            .scan_prefix(&key)
+            .map(|data| {
+                let (hash, value) = data.map_err(|err| {
                     error!("Cannot load refresh token. Error: {}", err);
-                    return Err(Error::CannotLoadResource(key.to_string()));
-                }
-            };
-            refresh_tokens.push(token);
-        }
+                    Error::CannotLoadResource(key.clone())
+                })?;
+
+                let mut token = rmp_serde::from_slice::<RefreshToken>(&value).map_err(|err| {
+                    error!("Cannot deserialize refresh token. Error: {}", err);
+                    Error::CannotDeserializeResource(key.clone())
+                })?;
+
+                token.token_hash = from_utf8(&hash)
+                    .map_err(|_| {
+                        error!("Cannot convert hash to UTF-8 string");
+                        Error::CannotDeserializeResource(key.clone())
+                    })?
+                    .to_string();
+                Ok(token)
+            })
+            .collect();
+
+        let refresh_tokens = refresh_tokens?;
         info!("Loaded {} refresh tokens", refresh_tokens.len());
         Ok(refresh_tokens)
     }
 
     pub fn load_all_revoked_access_tokens(&self) -> Result<Vec<RevokedAccessToken>, Error> {
-        let mut revoked_tokens = Vec::new();
         let key = format!("{REVOKED_ACCESS_TOKENS_KEY_PREFIX}:");
-        for data in self.db.scan_prefix(&key) {
-            let token = match data {
-                Ok((_, value)) => match rmp_serde::from_slice::<RevokedAccessToken>(&value) {
-                    Ok(token) => token,
-                    Err(err) => {
-                        error!("Cannot deserialize revoked access token. Error: {}", err);
-                        return Err(Error::CannotDeserializeResource(key.to_string()));
-                    }
-                },
-                Err(err) => {
+        let revoked_tokens: Result<Vec<RevokedAccessToken>, Error> = self
+            .db
+            .scan_prefix(&key)
+            .map(|data| {
+                let (_, value) = data.map_err(|err| {
                     error!("Cannot load revoked access token. Error: {}", err);
-                    return Err(Error::CannotLoadResource(key.to_string()));
-                }
-            };
-            revoked_tokens.push(token);
-        }
+                    Error::CannotLoadResource(key.clone())
+                })?;
+
+                let token = rmp_serde::from_slice::<RevokedAccessToken>(&value).map_err(|err| {
+                    error!("Cannot deserialize revoked access token. Error: {}", err);
+                    Error::CannotDeserializeResource(key.clone())
+                })?;
+                Ok(token)
+            })
+            .collect();
+
+        let revoked_tokens = revoked_tokens?;
         info!("Loaded {} revoked access tokens", revoked_tokens.len());
         Ok(revoked_tokens)
     }

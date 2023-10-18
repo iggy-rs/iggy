@@ -1,5 +1,5 @@
 use crate::http::error::CustomError;
-use crate::http::jwt::Identity;
+use crate::http::jwt::json_web_token::Identity;
 use crate::http::state::AppState;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;

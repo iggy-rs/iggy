@@ -1,5 +1,7 @@
 use crate::configs::http::{HttpConfig, HttpCorsConfig};
-use crate::http::jwt::{jwt_auth, JwtManager};
+use crate::http::jwt::cleaner::start_expired_tokens_cleaner;
+use crate::http::jwt::jwt_manager::JwtManager;
+use crate::http::jwt::middleware::jwt_auth;
 use crate::http::metrics::metrics;
 use crate::http::state::AppState;
 use crate::http::{
@@ -10,13 +12,11 @@ use crate::streaming::systems::system::System;
 use axum::http::Method;
 use axum::{middleware, Router};
 use axum_server::tls_rustls::RustlsConfig;
-use iggy::utils::timestamp::TimeStamp;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::RwLock;
 use tower_http::cors::{AllowOrigin, CorsLayer};
-use tracing::{error, info};
+use tracing::info;
 
 pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
     let api_name = if config.tls.enabled {
@@ -115,34 +115,6 @@ async fn build_app_state(config: &HttpConfig, system: Arc<RwLock<System>>) -> Ar
         system,
     })
 }
-
-fn start_expired_tokens_cleaner(app_state: Arc<AppState>) {
-    tokio::spawn(async move {
-        let mut interval_timer = tokio::time::interval(Duration::from_secs(10));
-        loop {
-            interval_timer.tick().await;
-            info!("Deleting expired tokens...");
-            let now = TimeStamp::now().to_secs();
-            if app_state
-                .jwt_manager
-                .delete_expired_revoked_tokens(now)
-                .await
-                .is_err()
-            {
-                error!("Failed to delete expired revoked access tokens");
-            }
-            if app_state
-                .jwt_manager
-                .delete_expired_refresh_tokens(now)
-                .await
-                .is_err()
-            {
-                error!("Failed to delete expired refresh tokens");
-            }
-        }
-    });
-}
-
 fn configure_cors(config: HttpCorsConfig) -> CorsLayer {
     let allowed_origins = match config.allowed_origins {
         origins if origins.is_empty() => AllowOrigin::default(),

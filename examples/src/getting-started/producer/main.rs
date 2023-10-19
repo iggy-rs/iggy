@@ -19,7 +19,7 @@ const PARTITION_ID: u32 = 1;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let mut client = IggyClient::default();
+    let client = IggyClient::default();
     client.connect().await?;
     client
         .login_user(&LoginUser {

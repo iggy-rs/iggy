@@ -17,7 +17,7 @@ impl ClientFactory for QuicClientFactory {
             server_address: self.server_addr.clone(),
             ..QuicClientConfig::default()
         };
-        let mut client = QuicClient::create(Arc::new(config)).unwrap();
+        let client = QuicClient::create(Arc::new(config)).unwrap();
         client.connect().await.unwrap();
         Box::new(client)
     }

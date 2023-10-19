@@ -11,7 +11,7 @@ pub struct QuicClientFactory {}
 #[async_trait]
 impl ClientFactory for QuicClientFactory {
     async fn create_client(&self, args: Arc<Args>) -> Box<dyn Client> {
-        let mut client = QuicClient::new(
+        let client = QuicClient::new(
             &args.quic_client_address,
             &args.quic_server_address,
             &args.quic_server_name,

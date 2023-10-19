@@ -98,7 +98,7 @@ pub async fn get_raw_client(
     match transport.as_str() {
         QUIC_TRANSPORT => {
             let quic_config = config.quic.as_ref().unwrap();
-            let mut client = QuicClient::create(quic_config.clone())?;
+            let client = QuicClient::create(quic_config.clone())?;
             client.connect().await?;
             Ok(Box::new(client))
         }
@@ -109,7 +109,7 @@ pub async fn get_raw_client(
         }
         TCP_TRANSPORT => {
             let tcp_config = config.tcp.as_ref().unwrap();
-            let mut client = TcpClient::create(tcp_config.clone())?;
+            let client = TcpClient::create(tcp_config.clone())?;
             client.connect().await?;
             Ok(Box::new(client))
         }

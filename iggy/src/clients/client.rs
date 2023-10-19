@@ -547,12 +547,12 @@ impl PersonalAccessTokenClient for IggyClient {
 
 #[async_trait]
 impl Client for IggyClient {
-    async fn connect(&mut self) -> Result<(), Error> {
-        self.client.write().await.connect().await
+    async fn connect(&self) -> Result<(), Error> {
+        self.client.read().await.connect().await
     }
 
-    async fn disconnect(&mut self) -> Result<(), Error> {
-        self.client.write().await.disconnect().await
+    async fn disconnect(&self) -> Result<(), Error> {
+        self.client.read().await.disconnect().await
     }
 }
 

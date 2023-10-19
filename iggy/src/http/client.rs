@@ -20,10 +20,10 @@ pub struct HttpClient {
 
 #[async_trait]
 impl Client for HttpClient {
-    async fn connect(&mut self) -> Result<(), Error> {
+    async fn connect(&self) -> Result<(), Error> {
         Ok(())
     }
-    async fn disconnect(&mut self) -> Result<(), Error> {
+    async fn disconnect(&self) -> Result<(), Error> {
         Ok(())
     }
 }

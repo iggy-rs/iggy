@@ -8,6 +8,7 @@ use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt}
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tracing::{error, info, trace};
 
@@ -19,7 +20,7 @@ const NAME: &str = "Iggy";
 #[derive(Debug)]
 pub struct QuicClient {
     pub(crate) endpoint: Endpoint,
-    pub(crate) connection: Option<Connection>,
+    pub(crate) connection: Mutex<Option<Connection>>,
     pub(crate) config: Arc<QuicClientConfig>,
     pub(crate) server_address: SocketAddr,
 }
@@ -35,7 +36,7 @@ impl Default for QuicClient {
 
 #[async_trait]
 impl Client for QuicClient {
-    async fn connect(&mut self) -> Result<(), Error> {
+    async fn connect(&self) -> Result<(), Error> {
         let mut retry_count = 0;
         let connection;
         loop {
@@ -74,14 +75,14 @@ impl Client for QuicClient {
             break;
         }
 
-        self.connection = Some(connection);
+        self.connection.lock().await.replace(connection);
 
         Ok(())
     }
 
-    async fn disconnect(&mut self) -> Result<(), Error> {
+    async fn disconnect(&self) -> Result<(), Error> {
         info!("{} client is disconnecting from server...", NAME);
-        self.connection = None;
+        self.connection.lock().await.take();
         self.endpoint.wait_idle().await;
         info!("{} client has disconnected from server.", NAME);
         Ok(())
@@ -91,7 +92,8 @@ impl Client for QuicClient {
 #[async_trait]
 impl BinaryClient for QuicClient {
     async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, Error> {
-        if let Some(connection) = &self.connection {
+        let connection = self.connection.lock().await;
+        if let Some(connection) = connection.as_ref() {
             let payload_length = payload.len() + 4;
             let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
             #[allow(clippy::cast_possible_truncation)]
@@ -143,7 +145,7 @@ impl QuicClient {
             config,
             endpoint,
             server_address,
-            connection: None,
+            connection: Mutex::new(None),
         })
     }
 

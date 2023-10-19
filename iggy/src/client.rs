@@ -67,8 +67,8 @@ pub trait Client:
     + Send
     + Debug
 {
-    async fn connect(&mut self) -> Result<(), Error>;
-    async fn disconnect(&mut self) -> Result<(), Error>;
+    async fn connect(&self) -> Result<(), Error>;
+    async fn disconnect(&self) -> Result<(), Error>;
 }
 
 #[async_trait]

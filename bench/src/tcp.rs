@@ -11,7 +11,7 @@ pub struct TcpClientFactory {}
 #[async_trait]
 impl ClientFactory for TcpClientFactory {
     async fn create_client(&self, args: Arc<Args>) -> Box<dyn Client> {
-        let mut client = TcpClient::new(&args.tcp_server_address).unwrap();
+        let client = TcpClient::new(&args.tcp_server_address).unwrap();
         client.connect().await.unwrap();
         Box::new(client)
     }

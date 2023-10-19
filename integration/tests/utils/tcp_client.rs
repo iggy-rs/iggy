@@ -17,7 +17,7 @@ impl ClientFactory for TcpClientFactory {
             server_address: self.server_addr.clone(),
             ..TcpClientConfig::default()
         };
-        let mut client = TcpClient::create(Arc::new(config)).unwrap();
+        let client = TcpClient::create(Arc::new(config)).unwrap();
         client.connect().await.unwrap();
         Box::new(client)
     }

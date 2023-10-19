@@ -25,8 +25,13 @@ impl CreatePartitionsCmd {
 #[async_trait]
 impl CliCommand for CreatePartitionsCmd {
     fn explain(&self) -> String {
+        let mut partitions = String::from("partition");
+        if self.create_partition.partitions_count > 1 {
+            partitions.push('s');
+        };
+
         format!(
-            "create {} partitions for topic with ID: {} and stream with ID: {}",
+            "create {} {partitions} for topic with ID: {} and stream with ID: {}",
             self.create_partition.partitions_count,
             self.create_partition.topic_id,
             self.create_partition.stream_id
@@ -34,12 +39,17 @@ impl CliCommand for CreatePartitionsCmd {
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+        let mut partitions = String::from("partition");
+        if self.create_partition.partitions_count > 1 {
+            partitions.push('s');
+        };
+
         client
             .create_partitions(&self.create_partition)
             .await
             .with_context(|| {
                 format!(
-                    "Problem creating {} partitions for topic with ID: {} and stream with ID: {}",
+                    "Problem creating {} {partitions} for topic with ID: {} and stream with ID: {}",
                     self.create_partition.partitions_count,
                     self.create_partition.topic_id,
                     self.create_partition.stream_id
@@ -47,7 +57,7 @@ impl CliCommand for CreatePartitionsCmd {
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
-            "Created {} partitions for topic with ID: {} and stream with ID: {}",
+            "Created {} {partitions} for topic with ID: {} and stream with ID: {}",
             self.create_partition.partitions_count,
             self.create_partition.topic_id,
             self.create_partition.stream_id,

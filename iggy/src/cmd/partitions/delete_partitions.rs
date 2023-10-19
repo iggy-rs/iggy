@@ -25,8 +25,13 @@ impl DeletePartitionsCmd {
 #[async_trait]
 impl CliCommand for DeletePartitionsCmd {
     fn explain(&self) -> String {
+        let mut partitions = String::from("partition");
+        if self.delete_partitions.partitions_count > 1 {
+            partitions.push('s');
+        };
+
         format!(
-            "delete {} partitions for topic with ID: {} and stream with ID: {}",
+            "delete {} {partitions} for topic with ID: {} and stream with ID: {}",
             self.delete_partitions.partitions_count,
             self.delete_partitions.topic_id,
             self.delete_partitions.stream_id
@@ -34,12 +39,17 @@ impl CliCommand for DeletePartitionsCmd {
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+        let mut partitions = String::from("partition");
+        if self.delete_partitions.partitions_count > 1 {
+            partitions.push('s');
+        };
+
         client
             .delete_partitions(&self.delete_partitions)
             .await
             .with_context(|| {
                 format!(
-                    "Problem deleting {} partitions for topic with ID: {} and stream with ID: {}",
+                    "Problem deleting {} {partitions} for topic with ID: {} and stream with ID: {}",
                     self.delete_partitions.partitions_count,
                     self.delete_partitions.topic_id,
                     self.delete_partitions.stream_id
@@ -47,7 +57,7 @@ impl CliCommand for DeletePartitionsCmd {
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
-            "Deleted {} partitions for topic with ID: {} and stream with ID: {}",
+            "Deleted {} {partitions} for topic with ID: {} and stream with ID: {}",
             self.delete_partitions.partitions_count,
             self.delete_partitions.topic_id,
             self.delete_partitions.stream_id,

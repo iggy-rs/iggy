@@ -1,5 +1,5 @@
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::mapper;
+use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::{POLL_MESSAGES_CODE, SEND_MESSAGES_CODE};
 use crate::error::Error;
@@ -11,6 +11,7 @@ pub async fn poll_messages(
     client: &dyn BinaryClient,
     command: &PollMessages,
 ) -> Result<PolledMessages, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(POLL_MESSAGES_CODE, &command.as_bytes())
         .await?;
@@ -18,6 +19,7 @@ pub async fn poll_messages(
 }
 
 pub async fn send_messages(client: &dyn BinaryClient, command: &SendMessages) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(SEND_MESSAGES_CODE, &command.as_bytes())
         .await?;

@@ -1,5 +1,5 @@
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::mapper;
+use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::{GET_CLIENTS_CODE, GET_CLIENT_CODE, GET_ME_CODE, GET_STATS_CODE, PING_CODE};
 use crate::error::Error;
@@ -12,6 +12,7 @@ use crate::system::get_stats::GetStats;
 use crate::system::ping::Ping;
 
 pub async fn get_stats(client: &dyn BinaryClient, command: &GetStats) -> Result<Stats, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_STATS_CODE, &command.as_bytes())
         .await?;
@@ -22,6 +23,7 @@ pub async fn get_me(
     client: &dyn BinaryClient,
     command: &GetMe,
 ) -> Result<ClientInfoDetails, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_ME_CODE, &command.as_bytes())
         .await?;
@@ -32,6 +34,7 @@ pub async fn get_client(
     client: &dyn BinaryClient,
     command: &GetClient,
 ) -> Result<ClientInfoDetails, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_CLIENT_CODE, &command.as_bytes())
         .await?;
@@ -42,6 +45,7 @@ pub async fn get_clients(
     client: &dyn BinaryClient,
     command: &GetClients,
 ) -> Result<Vec<ClientInfo>, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_CLIENTS_CODE, &command.as_bytes())
         .await?;

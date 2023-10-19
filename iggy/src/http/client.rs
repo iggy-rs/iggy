@@ -10,6 +10,15 @@ use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+const UNAUTHORIZED_PATHS: &[&str] = &[
+    "/",
+    "/metrics",
+    "/ping",
+    "/users/login",
+    "/users/refresh-token",
+    "/personal-access-tokens/login",
+];
+
 #[derive(Debug)]
 pub struct HttpClient {
     pub api_url: Url,
@@ -66,6 +75,7 @@ impl HttpClient {
 
     pub async fn get(&self, path: &str) -> Result<Response, Error> {
         let url = self.get_url(path)?;
+        self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
         let response = self.client.get(url).bearer_auth(token).send().await?;
         Self::handle_response(response).await
@@ -77,6 +87,7 @@ impl HttpClient {
         query: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
+        self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
         let response = self
             .client
@@ -94,6 +105,7 @@ impl HttpClient {
         payload: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
+        self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
         let response = self
             .client
@@ -111,6 +123,7 @@ impl HttpClient {
         payload: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
+        self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
         let response = self
             .client
@@ -124,6 +137,7 @@ impl HttpClient {
 
     pub async fn delete(&self, path: &str) -> Result<Response, Error> {
         let url = self.get_url(path)?;
+        self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
         let response = self.client.delete(url).bearer_auth(token).send().await?;
         Self::handle_response(response).await
@@ -135,6 +149,7 @@ impl HttpClient {
         query: &T,
     ) -> Result<Response, Error> {
         let url = self.get_url(path)?;
+        self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
         let response = self
             .client
@@ -148,6 +163,11 @@ impl HttpClient {
 
     pub fn get_url(&self, path: &str) -> Result<Url, Error> {
         self.api_url.join(path).map_err(|_| Error::CannotParseUrl)
+    }
+
+    pub async fn is_authenticated(&self) -> bool {
+        let token = self.access_token.read().await;
+        !token.is_empty()
     }
 
     pub async fn set_refresh_token(&self, token: Option<String>) {
@@ -201,5 +221,15 @@ impl HttpClient {
                 response.text().await.unwrap_or("error".to_string()),
             )),
         }
+    }
+
+    async fn fail_if_not_authenticated(&self, path: &str) -> Result<(), Error> {
+        if UNAUTHORIZED_PATHS.contains(&path) {
+            return Ok(());
+        }
+        if !self.is_authenticated().await {
+            return Err(Error::Unauthenticated);
+        }
+        Ok(())
     }
 }

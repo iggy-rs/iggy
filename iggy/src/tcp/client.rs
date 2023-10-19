@@ -1,4 +1,4 @@
-use crate::binary::binary_client::BinaryClient;
+use crate::binary::binary_client::{BinaryClient, ClientState};
 use crate::client::Client;
 use crate::error::Error;
 use crate::tcp::config::TcpClientConfig;
@@ -27,6 +27,7 @@ pub struct TcpClient {
     pub(crate) server_address: SocketAddr,
     pub(crate) stream: Mutex<Option<Box<dyn ConnectionStream>>>,
     pub(crate) config: Arc<TcpClientConfig>,
+    pub(crate) state: Mutex<ClientState>,
 }
 
 unsafe impl Send for TcpClient {}
@@ -105,6 +106,10 @@ impl Default for TcpClient {
 #[async_trait]
 impl Client for TcpClient {
     async fn connect(&self) -> Result<(), Error> {
+        if self.get_state().await == ClientState::Connected {
+            return Ok(());
+        }
+
         let tls_enabled = self.config.tls_enabled;
         let mut retry_count = 0;
         let connection_stream: Box<dyn ConnectionStream>;
@@ -159,6 +164,7 @@ impl Client for TcpClient {
         }
 
         self.stream.lock().await.replace(connection_stream);
+        self.set_state(ClientState::Connected).await;
 
         info!(
             "{} client has connected to server: {}",
@@ -169,7 +175,12 @@ impl Client for TcpClient {
     }
 
     async fn disconnect(&self) -> Result<(), Error> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Ok(());
+        }
+
         info!("{} client is disconnecting from server...", NAME);
+        self.set_state(ClientState::Disconnected).await;
         self.stream.lock().await.take();
         info!("{} client has disconnected from server.", NAME);
         Ok(())
@@ -178,7 +189,19 @@ impl Client for TcpClient {
 
 #[async_trait]
 impl BinaryClient for TcpClient {
+    async fn get_state(&self) -> ClientState {
+        *self.state.lock().await
+    }
+
+    async fn set_state(&self, state: ClientState) {
+        *self.state.lock().await = state;
+    }
+
     async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, Error> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Err(Error::NotConnected);
+        }
+
         let mut stream = self.stream.lock().await;
         if let Some(stream) = stream.as_mut() {
             let payload_length = payload.len() + 4;
@@ -233,6 +256,7 @@ impl TcpClient {
             config,
             server_address,
             stream: Mutex::new(None),
+            state: Mutex::new(ClientState::Disconnected),
         })
     }
 

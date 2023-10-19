@@ -1,4 +1,4 @@
-use crate::binary::binary_client::BinaryClient;
+use crate::binary::binary_client::{BinaryClient, ClientState};
 use crate::client::Client;
 use crate::error::Error;
 use crate::quic::config::QuicClientConfig;
@@ -23,6 +23,7 @@ pub struct QuicClient {
     pub(crate) connection: Mutex<Option<Connection>>,
     pub(crate) config: Arc<QuicClientConfig>,
     pub(crate) server_address: SocketAddr,
+    pub(crate) state: Mutex<ClientState>,
 }
 
 unsafe impl Send for QuicClient {}
@@ -37,6 +38,10 @@ impl Default for QuicClient {
 #[async_trait]
 impl Client for QuicClient {
     async fn connect(&self) -> Result<(), Error> {
+        if self.get_state().await == ClientState::Connected {
+            return Ok(());
+        }
+
         let mut retry_count = 0;
         let connection;
         loop {
@@ -75,13 +80,19 @@ impl Client for QuicClient {
             break;
         }
 
+        self.set_state(ClientState::Connected).await;
         self.connection.lock().await.replace(connection);
 
         Ok(())
     }
 
     async fn disconnect(&self) -> Result<(), Error> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Ok(());
+        }
+
         info!("{} client is disconnecting from server...", NAME);
+        self.set_state(ClientState::Disconnected).await;
         self.connection.lock().await.take();
         self.endpoint.wait_idle().await;
         info!("{} client has disconnected from server.", NAME);
@@ -91,7 +102,19 @@ impl Client for QuicClient {
 
 #[async_trait]
 impl BinaryClient for QuicClient {
+    async fn get_state(&self) -> ClientState {
+        *self.state.lock().await
+    }
+
+    async fn set_state(&self, state: ClientState) {
+        *self.state.lock().await = state;
+    }
+
     async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, Error> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Err(Error::NotConnected);
+        }
+
         let connection = self.connection.lock().await;
         if let Some(connection) = connection.as_ref() {
             let payload_length = payload.len() + 4;
@@ -146,6 +169,7 @@ impl QuicClient {
             endpoint,
             server_address,
             connection: Mutex::new(None),
+            state: Mutex::new(ClientState::Disconnected),
         })
     }
 

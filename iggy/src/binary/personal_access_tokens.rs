@@ -1,5 +1,5 @@
-use crate::binary::binary_client::BinaryClient;
-use crate::binary::mapper;
+use crate::binary::binary_client::{BinaryClient, ClientState};
+use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::*;
 use crate::error::Error;
@@ -14,6 +14,7 @@ pub async fn get_personal_access_tokens(
     client: &dyn BinaryClient,
     command: &GetPersonalAccessTokens,
 ) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_PERSONAL_ACCESS_TOKENS_CODE, &command.as_bytes())
         .await?;
@@ -24,6 +25,7 @@ pub async fn create_personal_access_token(
     client: &dyn BinaryClient,
     command: &CreatePersonalAccessToken,
 ) -> Result<RawPersonalAccessToken, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(CREATE_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
         .await?;
@@ -34,6 +36,7 @@ pub async fn delete_personal_access_token(
     client: &dyn BinaryClient,
     command: &DeletePersonalAccessToken,
 ) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(DELETE_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
         .await?;
@@ -47,5 +50,6 @@ pub async fn login_with_personal_access_token(
     let response = client
         .send_with_response(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
         .await?;
+    client.set_state(ClientState::Authenticated).await;
     mapper::map_identity_info(&response)
 }

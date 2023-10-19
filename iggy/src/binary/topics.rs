@@ -1,5 +1,5 @@
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::mapper;
+use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::{
     CREATE_TOPIC_CODE, DELETE_TOPIC_CODE, GET_TOPICS_CODE, GET_TOPIC_CODE, UPDATE_TOPIC_CODE,
@@ -26,6 +26,7 @@ pub async fn get_topics(
     client: &dyn BinaryClient,
     command: &GetTopics,
 ) -> Result<Vec<Topic>, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_TOPICS_CODE, &command.as_bytes())
         .await?;
@@ -33,6 +34,7 @@ pub async fn get_topics(
 }
 
 pub async fn create_topic(client: &dyn BinaryClient, command: &CreateTopic) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(CREATE_TOPIC_CODE, &command.as_bytes())
         .await?;
@@ -40,6 +42,7 @@ pub async fn create_topic(client: &dyn BinaryClient, command: &CreateTopic) -> R
 }
 
 pub async fn delete_topic(client: &dyn BinaryClient, command: &DeleteTopic) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(DELETE_TOPIC_CODE, &command.as_bytes())
         .await?;
@@ -47,6 +50,7 @@ pub async fn delete_topic(client: &dyn BinaryClient, command: &DeleteTopic) -> R
 }
 
 pub async fn update_topic(client: &dyn BinaryClient, command: &UpdateTopic) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(UPDATE_TOPIC_CODE, &command.as_bytes())
         .await?;

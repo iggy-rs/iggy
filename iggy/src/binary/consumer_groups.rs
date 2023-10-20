@@ -1,5 +1,5 @@
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::mapper;
+use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::{
     CREATE_CONSUMER_GROUP_CODE, DELETE_CONSUMER_GROUP_CODE, GET_CONSUMER_GROUPS_CODE,
@@ -18,6 +18,7 @@ pub async fn create_group(
     client: &dyn BinaryClient,
     command: &CreateConsumerGroup,
 ) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(CREATE_CONSUMER_GROUP_CODE, &command.as_bytes())
         .await?;
@@ -28,6 +29,7 @@ pub async fn delete_group(
     client: &dyn BinaryClient,
     command: &DeleteConsumerGroup,
 ) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(DELETE_CONSUMER_GROUP_CODE, &command.as_bytes())
         .await?;
@@ -38,6 +40,7 @@ pub async fn get_group(
     client: &dyn BinaryClient,
     command: &GetConsumerGroup,
 ) -> Result<ConsumerGroupDetails, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_CONSUMER_GROUP_CODE, &command.as_bytes())
         .await?;
@@ -48,6 +51,7 @@ pub async fn get_groups(
     client: &dyn BinaryClient,
     command: &GetConsumerGroups,
 ) -> Result<Vec<ConsumerGroup>, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_CONSUMER_GROUPS_CODE, &command.as_bytes())
         .await?;
@@ -58,6 +62,7 @@ pub async fn join_group(
     client: &dyn BinaryClient,
     command: &JoinConsumerGroup,
 ) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(JOIN_CONSUMER_GROUP_CODE, &command.as_bytes())
         .await?;
@@ -68,6 +73,7 @@ pub async fn leave_group(
     client: &dyn BinaryClient,
     command: &LeaveConsumerGroup,
 ) -> Result<(), Error> {
+    fail_if_not_authenticated(client).await?;
     client
         .send_with_response(LEAVE_CONSUMER_GROUP_CODE, &command.as_bytes())
         .await?;

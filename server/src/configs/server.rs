@@ -12,7 +12,7 @@ use std::sync::Arc;
 pub struct ServerConfig {
     pub message_cleaner: MessageCleanerConfig,
     pub message_saver: MessageSaverConfig,
-    pub personal_access_token_cleaner: PersonalAccessTokenCleanerConfig,
+    pub personal_access_token: PersonalAccessTokenConfig,
     pub system: Arc<SystemConfig>,
     pub quic: QuicConfig,
     pub tcp: TcpConfig,
@@ -32,7 +32,13 @@ pub struct MessageSaverConfig {
     pub interval: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
+pub struct PersonalAccessTokenConfig {
+    pub max_tokens_per_user: u32,
+    pub cleaner: PersonalAccessTokenCleanerConfig,
+}
+
+#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
 pub struct PersonalAccessTokenCleanerConfig {
     pub enabled: bool,
     pub interval: u64,

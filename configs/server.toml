@@ -68,7 +68,10 @@ enabled = true
 enforce_fsync = true
 interval = 30
 
-[personal_access_token_cleaner]
+[personal_access_token]
+max_tokens_per_user = 100
+
+[personal_access_token.cleaner]
 enabled = true
 interval = 60
 

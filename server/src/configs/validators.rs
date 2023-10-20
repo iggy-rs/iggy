@@ -1,6 +1,6 @@
 extern crate sysinfo;
 
-use crate::configs::server::ServerConfig;
+use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
@@ -15,6 +15,7 @@ impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {
         self.system.segment.validate()?;
         self.system.cache.validate()?;
+        self.personal_access_token.validate()?;
 
         Ok(())
     }
@@ -76,7 +77,7 @@ impl Validatable<ServerError> for SegmentConfig {
 
 impl Validatable<ServerError> for MessageSaverConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.interval == 0 {
+        if self.enabled && self.interval == 0 {
             error!("Message saver interval size cannot be zero, it must be greater than 0.");
             return Err(ServerError::InvalidConfiguration);
         }
@@ -87,8 +88,26 @@ impl Validatable<ServerError> for MessageSaverConfig {
 
 impl Validatable<ServerError> for MessageCleanerConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.interval == 0 {
+        if self.enabled && self.interval == 0 {
             error!("Message cleaner interval size cannot be zero, it must be greater than 0.");
+            return Err(ServerError::InvalidConfiguration);
+        }
+
+        Ok(())
+    }
+}
+
+impl Validatable<ServerError> for PersonalAccessTokenConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        if self.max_tokens_per_user == 0 {
+            error!("Max tokens per user cannot be zero, it must be greater than 0.");
+            return Err(ServerError::InvalidConfiguration);
+        }
+
+        if self.cleaner.enabled && self.cleaner.interval == 0 {
+            error!(
+                "Personal access token cleaner interval cannot be zero, it must be greater than 0."
+            );
             return Err(ServerError::InvalidConfiguration);
         }
 

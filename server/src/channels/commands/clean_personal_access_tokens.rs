@@ -125,7 +125,7 @@ impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessToke
         sender: Sender<CleanPersonalAccessTokensCommand>,
     ) {
         let personal_access_token_cleaner =
-            PersonalAccessTokenCleaner::new(&config.personal_access_token_cleaner, sender);
+            PersonalAccessTokenCleaner::new(&config.personal_access_token.cleaner, sender);
         personal_access_token_cleaner.start();
     }
 

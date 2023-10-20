@@ -1,5 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use iggy::identifier::Identifier;
+use server::configs::server::PersonalAccessTokenConfig;
 use server::streaming::session::Session;
 use server::streaming::systems::system::System;
 use tokio::fs;
@@ -7,7 +8,11 @@ use tokio::fs;
 #[tokio::test]
 async fn should_initialize_system_and_base_directories() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
+    let mut system = System::new(
+        setup.config.clone(),
+        Some(setup.db.clone()),
+        PersonalAccessTokenConfig::default(),
+    );
 
     system.init().await.unwrap();
 
@@ -27,7 +32,11 @@ async fn should_initialize_system_and_base_directories() {
 #[tokio::test]
 async fn should_create_and_persist_stream() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
+    let mut system = System::new(
+        setup.config.clone(),
+        Some(setup.db.clone()),
+        PersonalAccessTokenConfig::default(),
+    );
     let stream_id = 1;
     let stream_name = "test";
     let session = Session::new(1, 1);
@@ -44,7 +53,11 @@ async fn should_create_and_persist_stream() {
 #[tokio::test]
 async fn should_delete_persisted_stream() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(setup.config.clone(), Some(setup.db.clone()));
+    let mut system = System::new(
+        setup.config.clone(),
+        Some(setup.db.clone()),
+        PersonalAccessTokenConfig::default(),
+    );
     let stream_id = 1;
     let stream_name = "test";
     let session = Session::new(1, 1);

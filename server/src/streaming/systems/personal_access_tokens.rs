@@ -7,8 +7,6 @@ use iggy::utils::text;
 use iggy::utils::timestamp::TimeStamp;
 use tracing::{error, info};
 
-const MAX_PERSONAL_ACCESS_TOKENS: u32 = 100;
-
 impl System {
     pub async fn get_personal_access_tokens(
         &self,
@@ -37,20 +35,21 @@ impl System {
     ) -> Result<String, Error> {
         self.ensure_authenticated(session)?;
         let user_id = session.user_id;
+        let max_token_per_user = self.personal_access_token.max_tokens_per_user;
         let name = text::to_lowercase_non_whitespace(name);
         let personal_access_tokens = self
             .storage
             .personal_access_token
             .load_for_user(user_id)
             .await?;
-        if personal_access_tokens.len() as u32 >= MAX_PERSONAL_ACCESS_TOKENS {
+        if personal_access_tokens.len() as u32 >= max_token_per_user {
             error!(
                 "User with ID: {} has reached the maximum number of personal access tokens: {}.",
-                user_id, MAX_PERSONAL_ACCESS_TOKENS,
+                user_id, max_token_per_user,
             );
             return Err(Error::PersonalAccessTokensLimitReached(
                 user_id,
-                MAX_PERSONAL_ACCESS_TOKENS,
+                max_token_per_user,
             ));
         }
 

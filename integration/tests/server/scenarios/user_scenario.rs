@@ -159,43 +159,70 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert!(change_password.is_err());
 
-    let pat_name = "test_token";
+    let pat_name1 = "test_token_1";
+    let pat_name2 = "test_token_2";
 
-    // 13 Create a personal access token
-    let raw_pat = client
+    // 13. Create the personal access tokens
+    let raw_pat1 = client
         .create_personal_access_token(&CreatePersonalAccessToken {
-            name: pat_name.to_string(),
+            name: pat_name1.to_string(),
             expiry: Some(1000),
         })
         .await
         .unwrap();
 
-    assert!(!raw_pat.token.is_empty());
+    assert!(!raw_pat1.token.is_empty());
+
+    let raw_pat2 = client
+        .create_personal_access_token(&CreatePersonalAccessToken {
+            name: pat_name2.to_string(),
+            expiry: None,
+        })
+        .await
+        .unwrap();
+
+    assert!(!raw_pat2.token.is_empty());
 
     // 14. Get personal access tokens and verify that the token is there
     let personal_access_tokens = client
         .get_personal_access_tokens(&GetPersonalAccessTokens {})
         .await
         .unwrap();
-    assert_eq!(personal_access_tokens.len(), 1);
+    assert_eq!(personal_access_tokens.len(), 2);
 
     // 15. Logout
     client.logout_user(&LogoutUser {}).await.unwrap();
 
-    // 16. Login with the personal access token
+    // 16. Login with the personal access tokens
     let identity_info = client
         .login_with_personal_access_token(&LoginWithPersonalAccessToken {
-            token: raw_pat.token,
+            token: raw_pat1.token,
         })
         .await
         .unwrap();
 
     assert_eq!(identity_info.user_id, 2);
 
-    // 17. Delete a personal access token
+    let identity_info = client
+        .login_with_personal_access_token(&LoginWithPersonalAccessToken {
+            token: raw_pat2.token,
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(identity_info.user_id, 2);
+
+    // 17. Delete the personal access tokens
     client
         .delete_personal_access_token(&DeletePersonalAccessToken {
-            name: pat_name.to_string(),
+            name: pat_name1.to_string(),
+        })
+        .await
+        .unwrap();
+
+    client
+        .delete_personal_access_token(&DeletePersonalAccessToken {
+            name: pat_name2.to_string(),
         })
         .await
         .unwrap();

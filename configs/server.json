@@ -82,9 +82,12 @@
     "enforce_fsync": true,
     "interval": 30
   },
-  "personal_access_token_cleaner": {
-    "enabled": true,
-    "interval": 60
+  "personal_access_token": {
+    "max_tokens_per_user": 100,
+    "cleaner": {
+      "enabled": true,
+      "interval": 60
+    }
   },
   "system": {
     "path": "local_data",

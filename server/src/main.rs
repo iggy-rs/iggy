@@ -51,7 +51,7 @@ async fn main() -> Result<(), ServerError> {
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
-    let mut system = System::new(config.system.clone(), None);
+    let mut system = System::new(config.system.clone(), None, config.personal_access_token);
 
     system.init().await?;
     let system = Arc::new(RwLock::new(system));

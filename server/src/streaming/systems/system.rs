@@ -1,3 +1,4 @@
+use crate::configs::server::PersonalAccessTokenConfig;
 use crate::configs::system::SystemConfig;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::clients::client_manager::ClientManager;
@@ -29,6 +30,7 @@ pub struct System {
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
     pub(crate) db: Option<Arc<Db>>,
+    pub personal_access_token: PersonalAccessTokenConfig,
 }
 
 /// For each cache eviction, we want to remove more than the size we need.
@@ -36,7 +38,11 @@ pub struct System {
 const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 
 impl System {
-    pub fn new(config: Arc<SystemConfig>, db: Option<Arc<Db>>) -> System {
+    pub fn new(
+        config: Arc<SystemConfig>,
+        db: Option<Arc<Db>>,
+        pat_config: PersonalAccessTokenConfig,
+    ) -> System {
         let db = match db {
             Some(db) => db,
             None => {
@@ -51,13 +57,19 @@ impl System {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };
-        Self::create(config, SystemStorage::new(db.clone(), persister), Some(db))
+        Self::create(
+            config,
+            SystemStorage::new(db.clone(), persister),
+            Some(db),
+            pat_config,
+        )
     }
 
     pub fn create(
         config: Arc<SystemConfig>,
         storage: SystemStorage,
         db: Option<Arc<Db>>,
+        pat_config: PersonalAccessTokenConfig,
     ) -> System {
         info!(
             "Server-side encryption is {}.",
@@ -78,6 +90,7 @@ impl System {
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
             db,
+            personal_access_token: pat_config,
         }
     }
 

@@ -263,6 +263,7 @@ impl System {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::configs::server::PersonalAccessTokenConfig;
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
@@ -273,7 +274,8 @@ mod tests {
         let stream_name = "test";
         let config = Arc::new(SystemConfig::default());
         let storage = get_test_system_storage();
-        let mut system = System::create(config, storage, None);
+        let mut system =
+            System::create(config, storage, None, PersonalAccessTokenConfig::default());
         let root = User::root();
         let session = Session::new(1, root.id);
         system.permissioner.init_permissions_for_user(root);

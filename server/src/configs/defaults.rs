@@ -3,7 +3,8 @@ use crate::configs::http::{
 };
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
-    MessageCleanerConfig, MessageSaverConfig, PersonalAccessTokenCleanerConfig, ServerConfig,
+    MessageCleanerConfig, MessageSaverConfig, PersonalAccessTokenCleanerConfig,
+    PersonalAccessTokenConfig, ServerConfig,
 };
 use crate::configs::system::{
     CacheConfig, DatabaseConfig, EncryptionConfig, LoggingConfig, PartitionConfig, SegmentConfig,
@@ -17,7 +18,7 @@ impl Default for ServerConfig {
         ServerConfig {
             message_cleaner: MessageCleanerConfig::default(),
             message_saver: MessageSaverConfig::default(),
-            personal_access_token_cleaner: PersonalAccessTokenCleanerConfig::default(),
+            personal_access_token: PersonalAccessTokenConfig::default(),
             system: Arc::new(SystemConfig::default()),
             quic: QuicConfig::default(),
             tcp: TcpConfig::default(),
@@ -91,6 +92,15 @@ impl Default for MessageSaverConfig {
             enabled: true,
             enforce_fsync: true,
             interval: 30,
+        }
+    }
+}
+
+impl Default for PersonalAccessTokenConfig {
+    fn default() -> PersonalAccessTokenConfig {
+        PersonalAccessTokenConfig {
+            max_tokens_per_user: 100,
+            cleaner: PersonalAccessTokenCleanerConfig::default(),
         }
     }
 }

@@ -1,11 +1,13 @@
 pub(crate) mod common;
 pub(crate) mod partition;
+pub(crate) mod personal_access_token;
 pub(crate) mod stream;
 pub(crate) mod system;
 pub(crate) mod topic;
 
 use crate::args::{
-    partition::PartitionAction, stream::StreamAction, system::PingArgs, topic::TopicAction,
+    partition::PartitionAction, personal_access_token::PersonalAccessTokenAction,
+    stream::StreamAction, system::PingArgs, topic::TopicAction,
 };
 use clap::{Parser, Subcommand};
 use iggy::args::Args as IggyArgs;
@@ -62,4 +64,7 @@ pub(crate) enum Command {
     /// Collect basic Iggy server statistics like number of streams, topics, partitions, etc.
     /// Server OS name, version, etc. are also collected.
     Stats,
+    /// personal access token operations
+    #[clap(subcommand)]
+    Pat(PersonalAccessTokenAction),
 }

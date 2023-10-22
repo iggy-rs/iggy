@@ -21,6 +21,7 @@ Commands:
   ping       ping iggy server
   me         get current client info
   stats      get iggy server statistics
+  pat        personal access token operations
   help       Print this message or the help of the given subcommand(s)
 
 Options:

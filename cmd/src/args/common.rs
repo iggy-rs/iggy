@@ -1,4 +1,5 @@
 use clap::ValueEnum;
+use iggy::cmd::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokensOutput;
 use iggy::cmd::streams::get_streams::GetStreamsOutput;
 use iggy::cmd::topics::get_topics::GetTopicsOutput;
 
@@ -22,6 +23,15 @@ impl From<ListMode> for GetTopicsOutput {
         match mode {
             ListMode::Table => GetTopicsOutput::Table,
             ListMode::List => GetTopicsOutput::List,
+        }
+    }
+}
+
+impl From<ListMode> for GetPersonalAccessTokensOutput {
+    fn from(mode: ListMode) -> Self {
+        match mode {
+            ListMode::Table => GetPersonalAccessTokensOutput::Table,
+            ListMode::List => GetPersonalAccessTokensOutput::List,
         }
     }
 }

@@ -3,7 +3,10 @@ mod credentials;
 mod error;
 mod logging;
 
-use crate::args::{stream::StreamAction, topic::TopicAction, Command, IggyConsoleArgs};
+use crate::args::{
+    personal_access_token::PersonalAccessTokenAction, stream::StreamAction, topic::TopicAction,
+    Command, IggyConsoleArgs,
+};
 use crate::credentials::IggyCredentials;
 use crate::error::IggyCmdError;
 use crate::logging::Logging;
@@ -15,6 +18,11 @@ use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::cmd::{
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
+    personal_access_tokens::{
+        create_personal_access_token::CreatePersonalAccessTokenCmd,
+        delete_personal_access_tokens::DeletePersonalAccessTokenCmd,
+        get_personal_access_tokens::GetPersonalAccessTokensCmd,
+    },
     streams::{
         create_stream::CreateStreamCmd, delete_stream::DeleteStreamCmd, get_stream::GetStreamCmd,
         get_streams::GetStreamsCmd, update_stream::UpdateStreamCmd,
@@ -24,15 +32,17 @@ use iggy::cmd::{
         create_topic::CreateTopicCmd, delete_topic::DeleteTopicCmd, get_topic::GetTopicCmd,
         get_topics::GetTopicsCmd, update_topic::UpdateTopicCmd,
     },
-    utils::message_expiry::MessageExpiry,
+    utils::{
+        message_expiry::MessageExpiry, personal_access_token_expiry::PersonalAccessTokenExpiry,
+    },
 };
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::sync::Arc;
 use tracing::{event, Level};
 
-fn get_command(command: &Command) -> Box<dyn CliCommand> {
+fn get_command(args: &IggyConsoleArgs) -> Box<dyn CliCommand> {
     #[warn(clippy::let_and_return)]
-    match command {
+    match &args.command {
         Command::Stream(command) => match command {
             StreamAction::Create(args) => {
                 Box::new(CreateStreamCmd::new(args.stream_id, args.name.clone()))
@@ -87,6 +97,21 @@ fn get_command(command: &Command) -> Box<dyn CliCommand> {
         Command::Ping(args) => Box::new(PingCmd::new(args.count)),
         Command::Me => Box::new(GetMeCmd::new()),
         Command::Stats => Box::new(GetStatsCmd::new()),
+        Command::Pat(command) => match command {
+            PersonalAccessTokenAction::Create(pat_create_args) => {
+                Box::new(CreatePersonalAccessTokenCmd::new(
+                    pat_create_args.name.clone(),
+                    PersonalAccessTokenExpiry::new(pat_create_args.expiry.clone()),
+                    args.quiet,
+                ))
+            }
+            PersonalAccessTokenAction::Delete(pat_delete_args) => Box::new(
+                DeletePersonalAccessTokenCmd::new(pat_delete_args.name.clone()),
+            ),
+            PersonalAccessTokenAction::List(pat_list_args) => Box::new(
+                GetPersonalAccessTokensCmd::new(pat_list_args.list_mode.into()),
+            ),
+        },
     }
 }
 
@@ -98,7 +123,7 @@ async fn main() -> Result<(), IggyCmdError> {
     logging.init(args.quiet, &args.debug);
 
     // Get command based on command line arguments
-    let mut command = get_command(&args.command);
+    let mut command = get_command(&args);
 
     // Create credentials based on command line arguments and command
     let mut credentials = IggyCredentials::new(&args, command.login_required())?;

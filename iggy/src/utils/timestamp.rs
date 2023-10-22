@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, Utc};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[derive(Debug)]
@@ -25,6 +25,10 @@ impl TimeStamp {
 
     pub fn to_string(&self, format: &str) -> String {
         DateTime::<Utc>::from(self.0).format(format).to_string()
+    }
+
+    pub fn to_local(&self, format: &str) -> String {
+        DateTime::<Local>::from(self.0).format(format).to_string()
     }
 }
 

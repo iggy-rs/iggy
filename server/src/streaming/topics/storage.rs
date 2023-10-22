@@ -216,12 +216,16 @@ impl Storage<Topic> for FileTopicStorage {
         for mut partition in unloaded_partitions {
             let loaded_partitions = loaded_partitions.clone();
             let load_partition = tokio::spawn(async move {
-                if partition.load().await.is_err() {
-                    error!("Failed to load partition with ID: {} for stream with ID: {} and topic with ID: {}", partition.partition_id, stream_id, topic_id);
-                    return;
+                match partition.load().await {
+                    Ok(_) => {
+                        loaded_partitions.lock().await.push(partition);
+                    }
+                    Err(e) => {
+                        error!(
+                            "Failed to load partition with ID: {} for stream with ID: {} and topic with ID: {}. Error: {}",
+                            partition.partition_id, stream_id, topic_id, e);
+                    }
                 }
-
-                loaded_partitions.lock().await.push(partition);
             });
             load_partitions.push(load_partition);
         }

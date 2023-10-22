@@ -965,7 +965,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4101,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
-            template: "Failed to read consumers offsets  for partition with ID: {0}".to_string(),
+            template: "Failed to read consumers offsets for partition with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "consumer_group_id_not_found".to_string(),

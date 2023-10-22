@@ -93,15 +93,13 @@ impl Storage<Stream> for FileStreamStorage {
         for mut topic in unloaded_topics {
             let loaded_topics = loaded_topics.clone();
             let load_stream = tokio::spawn(async move {
-                if topic.load().await.is_err() {
-                    error!(
-                        "Failed to load topic with ID: {} for stream with ID: {}.",
-                        topic.topic_id, topic.stream_id
-                    );
-                    return;
+                match topic.load().await {
+                    Ok(_) => loaded_topics.lock().await.push(topic),
+                    Err(e) => error!(
+                        "Failed to load topic with ID: {} for stream with ID: {}. Error: {}",
+                        topic.topic_id, topic.stream_id, e
+                    ),
                 }
-
-                loaded_topics.lock().await.push(topic);
             });
             load_topics.push(load_stream);
         }

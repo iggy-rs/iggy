@@ -54,9 +54,9 @@ impl MessagesSaver {
             loop {
                 interval_timer.tick().await;
                 let command = SaveMessagesCommand { enforce_fsync };
-                if sender.send(command).is_err() {
-                    error!("Failed to send SaveMessagesCommand");
-                }
+                sender.send(command).unwrap_or_else(|error| {
+                    error!("Failed to send SaveMessagesCommand. Error: {}", error);
+                });
             }
         });
     }
@@ -72,15 +72,14 @@ impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
         };
 
         let storage = Arc::new(FileSegmentStorage::new(persister));
-        if system
+        system
             .write()
             .await
             .persist_messages(storage)
             .await
-            .is_err()
-        {
-            error!("Couldn't save buffered messages on disk.");
-        }
+            .unwrap_or_else(|error| {
+                error!("Couldn't save buffered messages on disk. Error: {}", error);
+            });
         info!("Buffered messages saved on disk.");
     }
 

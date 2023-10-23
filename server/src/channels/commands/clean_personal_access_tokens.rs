@@ -50,9 +50,14 @@ impl PersonalAccessTokenCleaner {
             let mut interval_timer = time::interval(interval);
             loop {
                 interval_timer.tick().await;
-                if sender.send(CleanPersonalAccessTokensCommand).is_err() {
-                    error!("Failed to send CleanPersonalAccessTokensCommand");
-                }
+                sender
+                    .send(CleanPersonalAccessTokensCommand)
+                    .unwrap_or_else(|error| {
+                        error!(
+                            "Failed to send CleanPersonalAccessTokensCommand. Error: {}",
+                            error
+                        );
+                    });
             }
         });
     }

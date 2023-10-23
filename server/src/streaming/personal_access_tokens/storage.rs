@@ -70,25 +70,26 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
 
     async fn load_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error> {
         let key = get_key(token);
-        let personal_access_token = self.db.get(&key);
-        if personal_access_token.is_err() {
-            return Err(Error::CannotLoadResource(key));
-        }
-
-        let personal_access_token = personal_access_token.unwrap();
-        if personal_access_token.is_none() {
-            return Err(Error::CannotLoadResource(key));
-        }
-
-        let personal_access_token = personal_access_token.unwrap();
-        let personal_access_token =
-            rmp_serde::from_slice::<PersonalAccessToken>(&personal_access_token);
-        if personal_access_token.is_err() {
-            return Err(Error::CannotDeserializeResource(key));
-        }
-
-        let personal_access_token = personal_access_token.unwrap();
-        Ok(personal_access_token)
+        return match self.db.get(&key) {
+            Ok(personal_access_token) => {
+                if let Some(personal_access_token) = personal_access_token {
+                    let personal_access_token =
+                        rmp_serde::from_slice::<PersonalAccessToken>(&personal_access_token);
+                    if let Err(error) = personal_access_token {
+                        error!("Cannot deserialize personal access token. Error: {}", error);
+                        Err(Error::CannotDeserializeResource(key))
+                    } else {
+                        Ok(personal_access_token.unwrap())
+                    }
+                } else {
+                    Err(Error::ResourceNotFound(key))
+                }
+            }
+            Err(error) => {
+                error!("Cannot load personal access token. Error: {}", error);
+                Err(Error::CannotLoadResource(key))
+            }
+        };
     }
 
     async fn load_by_name(
@@ -97,24 +98,25 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
         name: &str,
     ) -> Result<PersonalAccessToken, Error> {
         let key = get_name_key(user_id, name);
-        let token = self.db.get(&key);
-        if token.is_err() {
-            return Err(Error::CannotLoadResource(key));
-        }
-
-        let token = token.unwrap();
-        if token.is_none() {
-            return Err(Error::CannotLoadResource(key));
-        }
-
-        let token = token.unwrap();
-        let token = from_utf8(&token);
-        if token.is_err() {
-            return Err(Error::CannotDeserializeResource(key));
-        }
-
-        let token = token.unwrap();
-        self.load_by_token(token).await
+        return match self.db.get(&key) {
+            Ok(token) => {
+                if let Some(token) = token {
+                    let token = from_utf8(&token);
+                    if let Err(error) = token {
+                        error!("Cannot deserialize personal access token. Error: {}", error);
+                        Err(Error::CannotDeserializeResource(key))
+                    } else {
+                        Ok(self.load_by_token(token.unwrap()).await?)
+                    }
+                } else {
+                    Err(Error::ResourceNotFound(key))
+                }
+            }
+            Err(error) => {
+                error!("Cannot load personal access token. Error: {}", error);
+                Err(Error::CannotLoadResource(key))
+            }
+        };
     }
 
     async fn delete_for_user(&self, user_id: UserId, name: &str) -> Result<(), Error> {

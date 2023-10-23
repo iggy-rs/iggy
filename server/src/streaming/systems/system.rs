@@ -98,6 +98,10 @@ impl System {
         if !Path::new(&self.config.get_system_path()).exists()
             && create_dir(&self.config.get_system_path()).await.is_err()
         {
+            // It might be worth logging the error here.
+            // create_dir returns err when the directory already exists
+            // or when the parent directory doesn't exist
+            // or when the permissions are wrong
             return Err(Error::CannotCreateBaseDirectory);
         }
         if !Path::new(&self.config.get_streams_path()).exists()

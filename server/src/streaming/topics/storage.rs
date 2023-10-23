@@ -123,16 +123,22 @@ impl TopicStorage for FileTopicStorage {
             topic.topic_id,
             consumer_group.consumer_group_id,
         );
-        if self.db.remove(&key).is_err() {
-            return Err(Error::CannotDeleteResource(key));
-        }
-
-        info!(
+        match self.db.remove(&key) {
+            Ok(_) => {
+                info!(
             "Consumer group with ID: {} for topic with ID: {} and stream with ID: {} was deleted.",
             consumer_group.consumer_group_id, topic.topic_id, topic.stream_id
         );
-
-        Ok(())
+                Ok(())
+            }
+            Err(error) => {
+                error!(
+                    "Cannot delete consumer group with ID: {} for topic with ID: {} and stream with ID: {}. Error: {}",
+                    consumer_group.consumer_group_id, topic.topic_id, topic.stream_id, error
+                );
+                return Err(Error::CannotDeleteResource(key));
+            }
+        }
     }
 }
 
@@ -155,23 +161,30 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         let key = get_topic_key(topic.stream_id, topic.topic_id);
-        let topic_data = self.db.get(&key);
-        if topic_data.is_err() {
-            return Err(Error::CannotLoadResource(key));
-        }
+        let topic_data = match self.db.get(&key) {
+            Ok(data) => {
+                if let Some(topic_data) = data {
+                    let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data);
+                    if let Err(error) = topic_data {
+                        error!("Cannot deserialize topic. Error: {}", error);
+                        return Err(Error::CannotDeserializeResource(key));
+                    } else {
+                        topic_data.unwrap()
+                    }
+                } else {
+                    error!("Cannot find topic with ID: {}", topic.topic_id);
+                    return Err(Error::ResourceNotFound(key));
+                }
+            }
+            Err(error) => {
+                error!(
+                    "Cannot load topic with ID: {}. Error: {}",
+                    topic.topic_id, error
+                );
+                return Err(Error::CannotLoadResource(key));
+            }
+        };
 
-        let topic_data = topic_data.unwrap();
-        if topic_data.is_none() {
-            return Err(Error::ResourceNotFound(key));
-        }
-
-        let topic_data = topic_data.unwrap();
-        let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data);
-        if topic_data.is_err() {
-            return Err(Error::CannotDeserializeResource(key));
-        }
-
-        let topic_data = topic_data.unwrap();
         topic.name = topic_data.name;
         topic.created_at = topic_data.created_at;
         topic.message_expiry = topic_data.message_expiry;
@@ -220,10 +233,10 @@ impl Storage<Topic> for FileTopicStorage {
                     Ok(_) => {
                         loaded_partitions.lock().await.push(partition);
                     }
-                    Err(e) => {
+                    Err(error) => {
                         error!(
                             "Failed to load partition with ID: {} for stream with ID: {} and topic with ID: {}. Error: {}",
-                            partition.partition_id, stream_id, topic_id, e);
+                            partition.partition_id, stream_id, topic_id, error);
                     }
                 }
             });
@@ -314,7 +327,12 @@ impl Storage<Topic> for FileTopicStorage {
             topic.topic_id, topic.stream_id
         );
         let key = get_topic_key(topic.stream_id, topic.topic_id);
-        if self.db.remove(&key).is_err() {
+        //I END HERE
+        if let Err(error) = self.db.remove(&key) {
+            error!(
+                "Cannot delete topic with ID: {} for stream with ID: {}. Error: {}",
+                topic.topic_id, topic.stream_id, error
+            );
             return Err(Error::CannotDeleteResource(key));
         }
         for consumer_group in topic.consumer_groups.values() {

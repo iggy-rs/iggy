@@ -272,19 +272,21 @@ impl SegmentStorage for FileSegmentStorage {
         let mut indexes = Vec::with_capacity(indexes_count);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for offset in 0..indexes_count {
-            let position = reader.read_u32_le().await;
-            if position.is_err() {
-                error!(
-                    "Cannot read position from index file for offset: {}.",
-                    offset
-                );
-                break;
+            match reader.read_u32_le().await {
+                Ok(position) => {
+                    indexes.push(Index {
+                        relative_offset: offset as u32,
+                        position,
+                    });
+                }
+                Err(error) => {
+                    error!(
+                        "Cannot read position from index file for offset: {}. Error: {}",
+                        offset, error
+                    );
+                    break;
+                }
             }
-
-            indexes.push(Index {
-                relative_offset: offset as u32,
-                position: position.unwrap(),
-            });
         }
 
         if indexes.len() != indexes_count {
@@ -425,19 +427,21 @@ impl SegmentStorage for FileSegmentStorage {
         let mut indexes = Vec::with_capacity(indexes_count);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for offset in 0..indexes_count {
-            let timestamp = reader.read_u64_le().await;
-            if timestamp.is_err() {
-                error!(
-                    "Cannot read timestamp from time index file for offset: {}.",
-                    offset
-                );
-                break;
+            match reader.read_u64_le().await {
+                Ok(timestamp) => {
+                    indexes.push(TimeIndex {
+                        relative_offset: offset as u32,
+                        timestamp,
+                    });
+                }
+                Err(error) => {
+                    error!(
+                        "Cannot read timestamp from time index file for offset: {}. Error: {}",
+                        offset, error
+                    );
+                    break;
+                }
             }
-
-            indexes.push(TimeIndex {
-                relative_offset: offset as u32,
-                timestamp: timestamp.unwrap(),
-            });
         }
 
         if indexes.len() != indexes_count {

@@ -44,23 +44,32 @@ impl Storage<Stream> for FileStreamStorage {
         }
 
         let key = get_key(stream.stream_id);
-        let stream_data = self.db.get(&key);
-        if stream_data.is_err() {
-            return Err(Error::CannotLoadResource(key));
-        }
+        let stream_data = match self.db.get(&key) {
+            Ok(stream_data) => {
+                if let Some(stream_data) = stream_data {
+                    let stream_data = rmp_serde::from_slice::<StreamData>(&stream_data);
+                    if let Ok(stream_data) = stream_data {
+                        stream_data
+                    } else {
+                        error!(
+                            "Cannot deserialize stream data with ID: {}.",
+                            stream.stream_id
+                        );
+                        return Err(Error::CannotDeserializeResource(key));
+                    }
+                } else {
+                    return Err(Error::ResourceNotFound(key));
+                }
+            }
+            Err(error) => {
+                error!(
+                    "Cannot load stream data with ID: {}. Error: {}",
+                    stream.stream_id, error
+                );
+                return Err(Error::CannotLoadResource(key));
+            }
+        };
 
-        let stream_data = stream_data.unwrap();
-        if stream_data.is_none() {
-            return Err(Error::ResourceNotFound(key));
-        }
-
-        let stream_data = stream_data.unwrap();
-        let stream_data = rmp_serde::from_slice::<StreamData>(&stream_data);
-        if stream_data.is_err() {
-            return Err(Error::CannotDeserializeResource(key));
-        }
-
-        let stream_data = stream_data.unwrap();
         stream.name = stream_data.name;
         stream.created_at = stream_data.created_at;
         let mut unloaded_topics = Vec::new();
@@ -95,9 +104,9 @@ impl Storage<Stream> for FileStreamStorage {
             let load_stream = tokio::spawn(async move {
                 match topic.load().await {
                     Ok(_) => loaded_topics.lock().await.push(topic),
-                    Err(e) => error!(
+                    Err(error) => error!(
                         "Failed to load topic with ID: {} for stream with ID: {}. Error: {}",
-                        topic.topic_id, topic.stream_id, e
+                        topic.topic_id, topic.stream_id, error
                     ),
                 }
             });
@@ -176,7 +185,11 @@ impl Storage<Stream> for FileStreamStorage {
     async fn delete(&self, stream: &Stream) -> Result<(), Error> {
         info!("Deleting stream with ID: {}...", stream.stream_id);
         let key = get_key(stream.stream_id);
-        if self.db.remove(&key).is_err() {
+        if let Err(error) = self.db.remove(&key) {
+            error!(
+                "Cannot delete stream with ID: {}. Error: {}",
+                stream.stream_id, error
+            );
             return Err(Error::CannotDeleteResource(key));
         }
         if fs::remove_dir_all(&stream.path).await.is_err() {

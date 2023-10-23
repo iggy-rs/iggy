@@ -27,23 +27,26 @@ impl SystemInfoStorage for FileSystemInfoStorage {}
 #[async_trait]
 impl Storage<SystemInfo> for FileSystemInfoStorage {
     async fn load(&self, system_info: &mut SystemInfo) -> Result<(), Error> {
-        let data = self.db.get(KEY);
-        if data.is_err() {
-            return Err(Error::CannotLoadResource(KEY.to_string()));
-        }
+        let data = match self.db.get(KEY) {
+            Ok(data) => {
+                if let Some(data) = data {
+                    let data = rmp_serde::from_slice::<SystemInfo>(&data);
+                    if let Err(data) = data {
+                        error!("Cannot deserialize system info. Error: {}", data);
+                        return Err(Error::CannotDeserializeResource(KEY.to_string()));
+                    } else {
+                        data.unwrap()
+                    }
+                } else {
+                    return Err(Error::ResourceNotFound(KEY.to_string()));
+                }
+            }
+            Err(error) => {
+                error!("Cannot load system info. Error: {}", error);
+                return Err(Error::CannotLoadResource(KEY.to_string()));
+            }
+        };
 
-        let data = data.unwrap();
-        if data.is_none() {
-            return Err(Error::ResourceNotFound(KEY.to_string()));
-        }
-
-        let data = data.unwrap();
-        let data = rmp_serde::from_slice::<SystemInfo>(&data);
-        if data.is_err() {
-            return Err(Error::CannotDeserializeResource(KEY.to_string()));
-        }
-
-        let data = data.unwrap();
         system_info.version = data.version;
         system_info.migrations = data.migrations;
         Ok(())

@@ -11,22 +11,23 @@ pub fn start_expired_tokens_cleaner(app_state: Arc<AppState>) {
             interval_timer.tick().await;
             info!("Deleting expired tokens...");
             let now = TimeStamp::now().to_secs();
-            if app_state
+            app_state
                 .jwt_manager
                 .delete_expired_revoked_tokens(now)
                 .await
-                .is_err()
-            {
-                error!("Failed to delete expired revoked access tokens.");
-            }
-            if app_state
+                .unwrap_or_else(|err| {
+                    error!(
+                        "Failed to delete expired revoked access tokens. Error: {}",
+                        err
+                    );
+                });
+            app_state
                 .jwt_manager
                 .delete_expired_refresh_tokens(now)
                 .await
-                .is_err()
-            {
-                error!("Failed to delete expired refresh tokens.");
-            }
+                .unwrap_or_else(|err| {
+                    error!("Failed to delete expired refresh tokens. Error: {}", err);
+                });
         }
     });
 }

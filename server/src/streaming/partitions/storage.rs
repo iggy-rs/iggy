@@ -152,23 +152,26 @@ impl Storage<Partition> for FilePartitionStorage {
             partition.topic_id,
             partition.partition_id,
         );
-        let partition_data = self.db.get(&key);
-        if partition_data.is_err() {
-            return Err(Error::CannotLoadResource(key));
-        }
+        let partition_data = match self.db.get(&key) {
+            Ok(partition_data) => {
+                if let Some(partition_data) = partition_data {
+                    let partition_data = rmp_serde::from_slice::<PartitionData>(&partition_data);
+                    if let Err(error) = partition_data {
+                        error!("Cannot deserialize partition data. Error: {}", error);
+                        return Err(Error::CannotDeserializeResource(key));
+                    } else {
+                        partition_data.unwrap()
+                    }
+                } else {
+                    return Err(Error::ResourceNotFound(key));
+                }
+            }
+            Err(error) => {
+                error!("Cannot load partition data. Error: {}", error);
+                return Err(Error::CannotLoadResource(key));
+            }
+        };
 
-        let partition_data = partition_data.unwrap();
-        if partition_data.is_none() {
-            return Err(Error::ResourceNotFound(key));
-        }
-
-        let partition_data = partition_data.unwrap();
-        let partition_data = rmp_serde::from_slice::<PartitionData>(&partition_data);
-        if partition_data.is_err() {
-            return Err(Error::CannotDeserializeResource(key));
-        }
-
-        let partition_data = partition_data.unwrap();
         partition.created_at = partition_data.created_at;
 
         let mut dir_entries = dir_entries.unwrap();

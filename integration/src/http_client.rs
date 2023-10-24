@@ -1,4 +1,4 @@
-use crate::utils::test_server::ClientFactory;
+use crate::test_server::ClientFactory;
 use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::http::client::HttpClient;

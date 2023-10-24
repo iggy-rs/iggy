@@ -1,4 +1,3 @@
-use crate::utils::test_server::{assert_clean_system, ClientFactory};
 use bytes::Bytes;
 use iggy::client::{
     ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient, StreamClient,
@@ -36,6 +35,7 @@ use iggy::topics::get_topics::GetTopics;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
+use integration::test_server::{assert_clean_system, ClientFactory};
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;

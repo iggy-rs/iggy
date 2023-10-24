@@ -1,4 +1,3 @@
-use crate::utils::test_server::{assert_clean_system, login_root, ClientFactory};
 use bytes::Bytes;
 use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
@@ -10,6 +9,7 @@ use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
+use integration::test_server::{assert_clean_system, login_root, ClientFactory};
 use std::collections::HashMap;
 use std::str::FromStr;
 

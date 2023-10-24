@@ -18,7 +18,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 
 ---
 
-### Features
+## Features
 
 - **Highly performant**, persistent append-only log for the message streaming
 - **Very high throughput** for both writes and reads
@@ -50,7 +50,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 
 ---
 
-### Roadmap
+## Roadmap
 
 - Streaming server caching and I/O improvements
 - Low level optimizations (zero-copy etc.)
@@ -64,7 +64,7 @@ For the detailed information about current progress, please refer to the [projec
 
 ---
 
-### Supported languages SDK (work in progress)
+## Supported languages SDK (work in progress)
 
 - [Rust](https://crates.io/crates/iggy)
 - [C#](https://github.com/iggy-rs/iggy-dotnet-client)
@@ -72,15 +72,16 @@ For the detailed information about current progress, please refer to the [projec
 - [Node](https://github.com/iggy-rs/iggy-node-client)
 - [Python](https://github.com/iggy-rs/iggy-python-client)
 - [Java](https://github.com/iggy-rs/iggy-java-client)
+
 ---
 
-### CLI
+## CLI
 
 The brand new, rich, interactive CLI is being implemented under the `cmd` project, to provide the best developer experience. This will be a great addition to the Web UI, especially for all the developers who prefer using the console tools.
 
 ![CLI](assets/cli.png)
 
-### Web UI
+## Web UI
 
 There's an ongoing effort to build the administrative web UI for the server, which will allow to manage the streams, topics, partitions, messages and so on. Check the [Web UI repository](https://github.com/iggy-rs/iggy-web-ui)
 
@@ -88,7 +89,7 @@ There's an ongoing effort to build the administrative web UI for the server, whi
 
 ---
 
-### Docker
+## Docker
 
 You can find the `Dockerfile` and `docker-compose` in the root of the repository. To build and start the server, run: `docker compose up`.
 
@@ -100,7 +101,7 @@ The official images can be found [here](https://hub.docker.com/r/iggyrs/iggy), s
 
 ---
 
-### Configuration
+## Configuration
 
 The default configuration can be found in `server.toml` (the default one) or `server.json` file in `configs` directory.
 
@@ -110,7 +111,7 @@ For the detailed documentation of the configuration file, please refer to the [c
 
 ---
 
-### Quick start
+## Quick start
 
 Build the project (the longer compilation time is due to [LTO](https://doc.rust-lang.org/rustc/linker-plugin-lto.html) enabled in release [profile](https://github.com/spetz/iggy/blob/master/Cargo.toml#L2)):
 
@@ -172,29 +173,19 @@ Finally, restart the server to see it is able to load the persisted data.
 
 The HTTP API endpoints can be found in [server.http](https://github.com/spetz/iggy/blob/master/server/server.http) file, which can be used with [REST Client](https://marketplace.visualstudio.com/items?itemName=humao.rest-client) extension for VS Code.
 
-To see the detailed logs from the CLI/server, run it with `RUST_LOG=trace` environment variable.
+To see the detailed logs from the CLI/server, run it with `RUST_LOG=trace` environment variable. See images below:
 
-**See the images below**
+![files structure](assets/files_structure.png)*Files structure*
 
-*Files structure*
+![server start](assets/server_start.png)*Server start*
 
-![files structure](assets/files_structure.png)
+![cli_start](assets/cli_start.png)*CLI start*
 
-*Server start*
-
-![server start](assets/server_start.png)
-
-*CLI start*
-
-![cli_start](assets/cli_start.png)
-
-*Server restart*
-
-![server restart](assets/server_restart.png)
+![server restart](assets/server_restart.png)*Server restart*
 
 ---
 
-### Examples
+## Examples
 
 You can find the sample consumer & producer applications under `examples` directory. The purpose of these apps is to showcase the usage of the client SDK. To find out more about building the applications, please refer to the [getting started](https://docs.iggy.rs/introduction/getting-started) guide.
 
@@ -208,22 +199,36 @@ By default, the consumer will poll the messages using the `next` available offse
 
 ---
 
-### Benchmarks
+## Benchmarks
 
-To benchmark the project, first start the server in release mode: `cargo r --bin iggy-server -r` and then run the benchmarking app:
+To benchmark the project, first build the project in release mode:
 
-`cargo r --bin iggy-bench -r -- --tcp --test-send-messages --streams 10 --producers 10 --parallel-producer-streams --messages-per-batch 1000 --message-batches 1000 --message-size 1000`
+```bash
+cargo build --release
+```
 
-`cargo r --bin iggy-bench -r -- --tcp --test-poll-messages --streams 10 --consumers 10 --parallel-consumer-streams --messages-per-batch 1000 --message-batches 1000`
+Then, run the benchmarking app with the desired options:
 
-Depending on the hardware, settings in `configs/server.toml` (the default configuration) or `server.json` file, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. The current results have been achieved on Apple M1 Max with 64 GB RAM.
+1. Polling (reading) benchmark
 
-*Write benchmark*
+   ```bash
+   cargo r --bin iggy-bench -c -v send tcp
+   ```
 
-![write benchmark](assets/write_benchmark.png)
+2. Sending (writing) benchmark
 
-*Read benchmark*
+   ```bash
+   cargo r --bin iggy-bench -c -v poll tcp
+   ```
 
-![read benchmark](assets/read_benchmark.png)
+3. Parallel sending and polling benchmark
+
+   ```bash
+   cargo r --bin iggy-bench -c -v send-and-poll tcp
+   ```
+
+These benchmarks would start the server with the default configuration, create a stream, topic and partition, and then send or poll the messages. The default configuration is optimized for the best performance, so you might want to tweak it for your needs. If you need more options, please refer to `iggy-bench` subcommands `help` and `examples`.
+
+Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. These results have been achieved on Apple M1 Max with 64 GB RAM.
 
 ---

@@ -59,7 +59,7 @@ use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
 use crate::users::update_user::UpdateUser;
 use crate::utils::crypto::Encryptor;
-use async_dropper::simple::AsyncDrop;
+use async_dropper::AsyncDrop;
 use async_trait::async_trait;
 use bytes::Bytes;
 use flume::{Receiver, Sender};

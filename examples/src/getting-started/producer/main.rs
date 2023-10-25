@@ -15,6 +15,7 @@ use tracing::{info, warn};
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
 const PARTITION_ID: u32 = 1;
+const BATCHES_LIMIT: u32 = 10;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -70,7 +71,13 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
 
     let mut current_id = 0;
     let messages_per_batch = 10;
+    let mut sent_batches = 0;
     loop {
+        if sent_batches == BATCHES_LIMIT {
+            info!("Sent {sent_batches} batches of messages, exiting.");
+            return Ok(());
+        }
+
         let mut messages = Vec::new();
         for _ in 0..messages_per_batch {
             current_id += 1;
@@ -86,6 +93,7 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
                 messages,
             })
             .await?;
+        sent_batches += 1;
         info!("Sent {messages_per_batch} message(s).");
         sleep(interval).await;
     }

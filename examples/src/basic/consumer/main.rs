@@ -1,12 +1,8 @@
 use clap::Parser;
 use examples::shared::args::Args;
 use examples::shared::system;
-use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::consumer::{Consumer, ConsumerKind};
-use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
 use std::error::Error;
 use std::sync::Arc;
@@ -25,38 +21,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = client.as_ref();
     system::login_root(client).await;
     system::init_by_consumer(&args, client).await;
-    consume_messages(&args, client).await
-}
-
-async fn consume_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {
-    info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
-        args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
-    let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
-    loop {
-        let polled_messages = client
-            .poll_messages(&PollMessages {
-                consumer: Consumer {
-                    kind: ConsumerKind::from_code(args.consumer_kind)?,
-                    id: Identifier::numeric(args.consumer_id).unwrap(),
-                },
-                stream_id: Identifier::numeric(args.stream_id)?,
-                topic_id: Identifier::numeric(args.topic_id)?,
-                partition_id: Some(args.partition_id),
-                strategy: PollingStrategy::next(),
-                count: args.messages_per_batch,
-                auto_commit: true,
-            })
-            .await?;
-        if polled_messages.messages.is_empty() {
-            info!("No messages found.");
-            interval.tick().await;
-            continue;
-        }
-        for message in polled_messages.messages {
-            handle_message(&message)?;
-        }
-        interval.tick().await;
-    }
+    system::consume_messages(&args, client, &handle_message).await
 }
 
 fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {

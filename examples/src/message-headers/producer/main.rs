@@ -40,7 +40,13 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
     );
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
     let mut message_generator = MessagesGenerator::new();
+    let mut sent_batches = 0;
     loop {
+        if args.message_batches_limit > 0 && sent_batches == args.message_batches_limit {
+            info!("Sent {sent_batches} batches of messages, exiting.");
+            return Ok(());
+        }
+
         let mut messages = Vec::new();
         let mut serializable_messages = Vec::new();
         for _ in 0..args.messages_per_batch {
@@ -69,6 +75,7 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
                 messages,
             })
             .await?;
+        sent_batches += 1;
         info!("Sent messages: {:#?}", serializable_messages);
         interval.tick().await;
     }

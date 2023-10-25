@@ -6,9 +6,6 @@ use examples::shared::system;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
-use iggy::consumer::{Consumer, ConsumerKind};
-use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::header::HeaderKey;
 use iggy::models::messages::Message;
 use std::error::Error;
@@ -36,36 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .build();
     system::login_root(&client).await;
     system::init_by_consumer(&args, &client).await;
-    consume_messages(&args, &client).await
-}
-
-async fn consume_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
-    info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
-        args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
-    client
-        .start_polling_messages(
-            PollMessages {
-                consumer: Consumer {
-                    kind: ConsumerKind::from_code(args.consumer_kind)?,
-                    id: Identifier::numeric(args.consumer_id).unwrap(),
-                },
-                stream_id: Identifier::numeric(args.stream_id)?,
-                topic_id: Identifier::numeric(args.topic_id)?,
-                partition_id: Some(args.partition_id),
-                strategy: PollingStrategy::next(),
-                count: args.messages_per_batch,
-                auto_commit: true,
-            },
-            Some(|message| {
-                let result = handle_message(&message);
-                if let Err(e) = result {
-                    warn!("Error handling message: {}", e);
-                }
-            }),
-            None,
-        )
-        .await?;
-    Ok(())
+    system::consume_messages(&args, &client, &handle_message).await
 }
 
 fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {

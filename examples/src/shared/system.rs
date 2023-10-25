@@ -1,7 +1,10 @@
 use crate::shared::args::Args;
 use iggy::client::Client;
+use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::Error;
 use iggy::identifier::Identifier;
+use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
+use iggy::models::messages::Message;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::topics::create_topic::CreateTopic;
@@ -9,6 +12,7 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use tracing::info;
+type MessageHandler = dyn Fn(&Message) -> Result<(), Box<dyn std::error::Error>>;
 
 pub async fn login_root(client: &dyn Client) {
     client
@@ -89,4 +93,47 @@ pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), Er
         })
         .await?;
     Ok(())
+}
+
+pub async fn consume_messages(
+    args: &Args,
+    client: &dyn Client,
+    handle_message: &MessageHandler,
+) -> Result<(), Box<dyn std::error::Error>> {
+    info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
+        args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
+
+    let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
+    let mut consumed_batches = 0;
+    loop {
+        if args.message_batches_limit > 0 && consumed_batches == args.message_batches_limit {
+            info!("Consumed {consumed_batches} batches of messages, exiting.");
+            return Ok(());
+        }
+
+        let polled_messages = client
+            .poll_messages(&PollMessages {
+                consumer: Consumer {
+                    kind: ConsumerKind::from_code(args.consumer_kind)?,
+                    id: Identifier::numeric(args.consumer_id).unwrap(),
+                },
+                stream_id: Identifier::numeric(args.stream_id)?,
+                topic_id: Identifier::numeric(args.topic_id)?,
+                partition_id: Some(args.partition_id),
+                strategy: PollingStrategy::next(),
+                count: args.messages_per_batch,
+                auto_commit: true,
+            })
+            .await?;
+        if polled_messages.messages.is_empty() {
+            info!("No messages found.");
+            interval.tick().await;
+            continue;
+        }
+        consumed_batches += 1;
+        for message in polled_messages.messages {
+            handle_message(&message)?;
+        }
+        interval.tick().await;
+    }
 }

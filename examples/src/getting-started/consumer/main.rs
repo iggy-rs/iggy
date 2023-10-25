@@ -14,6 +14,7 @@ use tracing::info;
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
 const PARTITION_ID: u32 = 1;
+const BATCHES_LIMIT: u32 = 10;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -41,7 +42,13 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
 
     let mut offset = 0;
     let messages_per_batch = 10;
+    let mut consumed_batches = 0;
     loop {
+        if consumed_batches == BATCHES_LIMIT {
+            info!("Consumed {consumed_batches} batches of messages, exiting.");
+            return Ok(());
+        }
+
         let polled_messages = client
             .poll_messages(&PollMessages {
                 consumer: Consumer::default(),
@@ -63,6 +70,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
         for message in polled_messages.messages {
             handle_message(&message)?;
         }
+        consumed_batches += 1;
         sleep(interval).await;
     }
 }

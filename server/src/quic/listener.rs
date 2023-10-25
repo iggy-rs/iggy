@@ -27,7 +27,7 @@ pub fn start(endpoint: Endpoint, system: Arc<RwLock<System>>) {
                 let system = system.clone();
                 tokio::spawn(async move {
                     if let Err(error) = handle_connection(incoming_connection, system).await {
-                        error!("Connection has failed: {}", error.to_string())
+                        error!("Connection has failed: {error}");
                     }
                 });
             }
@@ -42,7 +42,7 @@ async fn handle_connection(
     let connection = incoming_connection.await?;
     let address = connection.remote_address();
     async {
-        info!("Client has connected: {}", address);
+        info!("Client has connected: {address}");
         let client_id = system
             .read()
             .await
@@ -74,8 +74,8 @@ async fn handle_connection(
             let request = request.unwrap();
             if request.len() < INITIAL_BYTES_LENGTH {
                 error!(
-                "Unable to read the QUIC request length, expected: {} bytes, received: {} bytes.",
-                INITIAL_BYTES_LENGTH, request.len()
+                "Unable to read the QUIC request length, expected: {INITIAL_BYTES_LENGTH} bytes, received: {} bytes.",
+                request.len()
             );
                 continue;
             }
@@ -93,10 +93,7 @@ async fn handle_connection(
             }
 
             let command = command.unwrap();
-            debug!(
-                "Received a QUIC command: {}, payload size: {}",
-                command, length
-            );
+            debug!("Received a QUIC command: {command}, payload size: {length}");
 
             let result = command::handle(
                 &command,

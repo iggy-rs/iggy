@@ -3,16 +3,19 @@ use crate::client::Client;
 use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use anyhow::Context;
 use async_trait::async_trait;
+use keyring::Entry;
 use tracing::{event, Level};
 
 pub struct DeletePersonalAccessTokenCmd {
     delete_token: DeletePersonalAccessToken,
+    server_address: String,
 }
 
 impl DeletePersonalAccessTokenCmd {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, server_address: String) -> Self {
         Self {
             delete_token: DeletePersonalAccessToken { name },
+            server_address,
         }
     }
 }
@@ -36,6 +39,14 @@ impl CliCommand for DeletePersonalAccessTokenCmd {
                     self.delete_token.name
                 )
             })?;
+
+        let server_address = format!("iggy:{}", self.server_address);
+        let entry = Entry::new(&server_address, &self.delete_token.name)?;
+        event!(target: PRINT_TARGET, Level::DEBUG,"Checking token presence under service: {} and name: {}",
+                server_address, self.delete_token.name);
+        if let Err(e) = entry.delete_password() {
+            event!(target: PRINT_TARGET, Level::DEBUG, "{}", e);
+        };
 
         event!(target: PRINT_TARGET, Level::INFO,
             "Personal access token with name: {} deleted", self.delete_token.name

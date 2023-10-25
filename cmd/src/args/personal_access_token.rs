@@ -40,8 +40,17 @@ pub(crate) struct PersonalAccessTokenCreateArgs {
     ///
     /// Expiry time must be expressed in human readable format like 15days 2min 2s
     /// ("none" or skipping parameter disables personal access token expiry)
-    #[arg(value_parser = clap::value_parser!(PersonalAccessTokenExpiry))]
+    #[arg(value_parser = clap::value_parser!(PersonalAccessTokenExpiry), group = "store")]
     pub(crate) expiry: Option<Vec<PersonalAccessTokenExpiry>>,
+    /// Store token in in an underlying platform-specific secure store
+    ///
+    /// Generated token is stored in a platform-specific secure storage without revealing
+    /// its content to the user. It can be used to authenticate on iggy server using
+    /// associated name and -n/--token-name command line option instead of -u/--username
+    /// and -p/--password or -t/--token. In quiet mode only the token name is printed.
+    /// This option can only be used for creating tokens which does not have expiry time set.
+    #[clap(short, long, default_value_t = false, group = "store")]
+    pub(crate) store_token: bool,
 }
 
 #[derive(Debug, Args)]

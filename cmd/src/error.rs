@@ -4,6 +4,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub(crate) enum CmdToolError {
     MissingCredentials,
+    MissingServerAddress,
 }
 
 impl Display for CmdToolError {
@@ -11,6 +12,9 @@ impl Display for CmdToolError {
         match self {
             Self::MissingCredentials => {
                 write!(f, "Missing iggy server credentials")
+            }
+            Self::MissingServerAddress => {
+                write!(f, "Missing iggy server address")
             }
         }
     }

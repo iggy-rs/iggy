@@ -3,6 +3,9 @@ use clap::Parser;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    #[arg(long, default_value = "0")]
+    pub message_batches_limit: u64,
+
     #[arg(long, default_value = "iggy")]
     pub username: String,
 

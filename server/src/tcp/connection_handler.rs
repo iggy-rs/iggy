@@ -31,21 +31,17 @@ pub(crate) async fn handle_connection(
         let read_length = sender.read(&mut initial_buffer).await?;
         if read_length != INITIAL_BYTES_LENGTH {
             error!(
-                "Unable to read the TCP request length, expected: {} bytes, received: {} bytes.",
-                INITIAL_BYTES_LENGTH, read_length
+                "Unable to read the TCP request length, expected: {INITIAL_BYTES_LENGTH} bytes, received: {read_length} bytes.",
             );
             continue;
         }
 
         let length = u32::from_le_bytes(initial_buffer);
-        debug!("Received a TCP request, length: {}", length);
+        debug!("Received a TCP request, length: {length}");
         let mut command_buffer = vec![0u8; length as usize];
         sender.read(&mut command_buffer).await?;
         let command = Command::from_bytes(&command_buffer)?;
-        debug!(
-            "Received a TCP command: {}, payload size: {}",
-            command, length
-        );
+        debug!("Received a TCP command: {command}, payload size: {length}");
         let result = command::handle(&command, sender, &mut session, system.clone()).await;
         if result.is_err() {
             error!("Error when handling the TCP request: {:?}", result.err());
@@ -71,12 +67,12 @@ pub(crate) fn handle_error(error: ServerError) {
                 info!("Connection has been reset.");
             }
             _ => {
-                error!("Connection has failed: {}", error.to_string());
+                error!("Connection has failed: {error}");
             }
         },
         ServerError::SdkError(_) => {}
         _ => {
-            error!("Connection has failed 2: {}", error.to_string());
+            error!("Connection has failed: {error}");
         }
     }
 }

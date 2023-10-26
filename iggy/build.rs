@@ -24,6 +24,7 @@ struct ErrorEnumVariant {
     template: String,
     signature: String,
     converts_from: String,
+    source: String,
 }
 
 struct ErrorEnum {
@@ -37,6 +38,7 @@ impl From<PreprocessedErrorRepositoryEntry> for ErrorEnumVariant {
             snake_case_name: value.snake_case_name,
             template: value.template,
             signature: value.signature,
+            source: value.source,
             converts_from: value.converts_from,
         }
     }
@@ -58,12 +60,24 @@ impl ErrorEnumVariant {
         ));
         let signature = &self.signature;
         let converts_from = &self.converts_from;
+        let source_from = &self.source;
 
-        match (converts_from.is_empty(), signature.is_empty()) {
-            (true, true) => (),
-            (true, false) => result.push_str(&format!("({})", signature)),
-            (false, true) => result.push_str(&format!("(#[from] {})", converts_from)),
-            (false, false) => result.push_str(&format!("({}, {})", converts_from, signature)),
+        match (
+            converts_from.is_empty(),
+            signature.is_empty(),
+            source_from.is_empty(),
+        ) {
+            (true, true, true) => (),
+            (true, false, true) => result.push_str(&format!("({})", signature)),
+            (false, true, true) => result.push_str(&format!("(#[from] {})", converts_from)),
+            (false, false, true) => result.push_str(&format!("({}, {})", converts_from, signature)),
+            (true, true, false) => result.push_str(&format!("(#[source] {})", source_from)),
+            (true, false, false) => {
+                result.push_str(&format!("(#[source] {}, {})", source_from, signature))
+            }
+            _ => {
+                panic!("Only one of [converts_from, signature, source] can be set")
+            }
         };
 
         result

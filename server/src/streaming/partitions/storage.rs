@@ -1,4 +1,5 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
+use anyhow::Context;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::Error;
@@ -33,12 +34,17 @@ impl PartitionStorage for FilePartitionStorage {
         // The stored value is just the offset, so we don't need to serialize the whole struct.
         // It should be as fast and lightweight as possible.
         // As described in the docs, sled works better with big-endian byte order.
-        if self
+        if let Err(err) = self
             .db
             .insert(&offset.key, &offset.offset.to_be_bytes())
-            .is_err()
+            .with_context(|| {
+                format!(
+                    "Failed to save consumer offset: {}, key: {}",
+                    offset.offset, offset.key
+                )
+            })
         {
-            return Err(Error::CannotSaveResource(offset.key.to_string()));
+            return Err(Error::CannotSaveResource(err));
         }
 
         trace!(
@@ -63,7 +69,12 @@ impl PartitionStorage for FilePartitionStorage {
             ConsumerOffset::get_key_prefix(kind, stream_id, topic_id, partition_id)
         );
         for data in self.db.scan_prefix(&key_prefix) {
-            let consumer_offset = match data {
+            let consumer_offset = match data.with_context(|| {
+                format!(
+                    "Failed to load consumer offset, when searching by key: {}",
+                    key_prefix
+                )
+            }) {
                 Ok((key, value)) => {
                     let key = String::from_utf8(key.to_vec()).unwrap();
                     let offset = u64::from_be_bytes(value.as_ref().try_into().unwrap());
@@ -76,8 +87,7 @@ impl PartitionStorage for FilePartitionStorage {
                     }
                 }
                 Err(err) => {
-                    error!("Cannot load consumer offset. Error: {}", err);
-                    return Err(Error::CannotLoadResource(key_prefix.to_string()));
+                    return Err(Error::CannotLoadResource(err));
                 }
             };
             consumer_offsets.push(consumer_offset);
@@ -100,26 +110,22 @@ impl PartitionStorage for FilePartitionStorage {
         );
 
         for data in self.db.scan_prefix(&consumer_offset_key_prefix) {
-            if data.is_err() {
-                error!(
-                    "Cannot delete consumer offsets for kind {}. Error: {}",
-                    kind,
-                    data.err().unwrap()
-                );
-                return Err(Error::CannotLoadResource(
-                    consumer_offset_key_prefix.to_string(),
-                ));
-            }
-
-            let (key, _) = data.unwrap();
-            if let Err(error) = self.db.remove(&key) {
-                error!(
-                    "Cannot delete consumer offset for kind {}. Error: {}",
-                    kind, error
-                );
-                return Err(Error::CannotLoadResource(
-                    consumer_offset_key_prefix.to_string(),
-                ));
+            match data.with_context(|| {
+                format!(
+                    "Failed to delete consumer offset, when searching by key: {}",
+                    consumer_offset_key_prefix
+                )
+            }) {
+                Ok((key, _)) => {
+                    if let Err(err) = self.db.remove(&key).with_context(|| {
+                        format!("Failed to delete consumer offset, key: {:?}", key)
+                    }) {
+                        return Err(Error::CannotLoadResource(err));
+                    }
+                }
+                Err(err) => {
+                    return Err(Error::CannotLoadResource(err));
+                }
             }
         }
 
@@ -152,13 +158,19 @@ impl Storage<Partition> for FilePartitionStorage {
             partition.topic_id,
             partition.partition_id,
         );
-        let partition_data = match self.db.get(&key) {
+        let partition_data = match self
+            .db
+            .get(&key)
+            .with_context(|| format!("Failed to load partition with key: {}", key))
+        {
             Ok(partition_data) => {
                 if let Some(partition_data) = partition_data {
-                    let partition_data = rmp_serde::from_slice::<PartitionData>(&partition_data);
-                    if let Err(error) = partition_data {
-                        error!("Cannot deserialize partition data. Error: {}", error);
-                        return Err(Error::CannotDeserializeResource(key));
+                    let partition_data = rmp_serde::from_slice::<PartitionData>(&partition_data)
+                        .with_context(|| {
+                            format!("Failed to deserialize partition with key: {}", key)
+                        });
+                    if let Err(err) = partition_data {
+                        return Err(Error::CannotDeserializeResource(err));
                     } else {
                         partition_data.unwrap()
                     }
@@ -166,9 +178,8 @@ impl Storage<Partition> for FilePartitionStorage {
                     return Err(Error::ResourceNotFound(key));
                 }
             }
-            Err(error) => {
-                error!("Cannot load partition data. Error: {}", error);
-                return Err(Error::CannotLoadResource(key));
+            Err(err) => {
+                return Err(Error::CannotLoadResource(err));
             }
         };
 
@@ -293,9 +304,12 @@ impl Storage<Partition> for FilePartitionStorage {
             created_at: partition.created_at,
         }) {
             Ok(data) => {
-                if let Err(err) = self.db.insert(&key, data) {
-                    error!("Cannot save partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
-                    return Err(Error::CannotSaveResource(key));
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to insert partition with key: {}", key))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {
@@ -304,7 +318,7 @@ impl Storage<Partition> for FilePartitionStorage {
             }
         }
 
-        if self
+        if let Err(err) = self
             .db
             .insert(
                 &key,
@@ -313,9 +327,9 @@ impl Storage<Partition> for FilePartitionStorage {
                 })
                 .unwrap(),
             )
-            .is_err()
+            .with_context(|| format!("Failed to insert partition with key: {}", key))
         {
-            return Err(Error::CannotSaveResource(key));
+            return Err(Error::CannotSaveResource(err));
         }
 
         for segment in partition.get_segments() {

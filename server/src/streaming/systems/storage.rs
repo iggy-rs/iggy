@@ -1,5 +1,6 @@
 use crate::streaming::storage::{Storage, SystemInfoStorage};
 use crate::streaming::systems::info::SystemInfo;
+use anyhow::Context;
 use async_trait::async_trait;
 use iggy::error::Error;
 use sled::Db;
@@ -27,13 +28,17 @@ impl SystemInfoStorage for FileSystemInfoStorage {}
 #[async_trait]
 impl Storage<SystemInfo> for FileSystemInfoStorage {
     async fn load(&self, system_info: &mut SystemInfo) -> Result<(), Error> {
-        let data = match self.db.get(KEY) {
+        let data = match self
+            .db
+            .get(KEY)
+            .with_context(|| format!("Failed to load system info"))
+        {
             Ok(data) => {
                 if let Some(data) = data {
-                    let data = rmp_serde::from_slice::<SystemInfo>(&data);
-                    if let Err(data) = data {
-                        error!("Cannot deserialize system info. Error: {}", data);
-                        return Err(Error::CannotDeserializeResource(KEY.to_string()));
+                    let data = rmp_serde::from_slice::<SystemInfo>(&data)
+                        .with_context(|| format!("Failed to deserialize system info"));
+                    if let Err(err) = data {
+                        return Err(Error::CannotDeserializeResource(err));
                     } else {
                         data.unwrap()
                     }
@@ -41,9 +46,8 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
                     return Err(Error::ResourceNotFound(KEY.to_string()));
                 }
             }
-            Err(error) => {
-                error!("Cannot load system info. Error: {}", error);
-                return Err(Error::CannotLoadResource(KEY.to_string()));
+            Err(err) => {
+                return Err(Error::CannotLoadResource(err));
             }
         };
 
@@ -55,9 +59,12 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
     async fn save(&self, system_info: &SystemInfo) -> Result<(), Error> {
         match rmp_serde::to_vec(&system_info) {
             Ok(data) => {
-                if let Err(err) = self.db.insert(KEY, data) {
-                    error!("Cannot save system info. Error: {}", err);
-                    return Err(Error::CannotSaveResource(KEY.to_string()));
+                if let Err(err) = self
+                    .db
+                    .insert(KEY, data)
+                    .with_context(|| format!("Failed to save system info"))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {

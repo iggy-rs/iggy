@@ -1,6 +1,7 @@
 use crate::streaming::storage::{Storage, StreamStorage};
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
+use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
@@ -44,29 +45,33 @@ impl Storage<Stream> for FileStreamStorage {
         }
 
         let key = get_key(stream.stream_id);
-        let stream_data = match self.db.get(&key) {
+        let stream_data = match self.db.get(&key).with_context(|| {
+            format!(
+                "Failed to load stream with ID: {}, key: {}",
+                stream.stream_id, key
+            )
+        }) {
             Ok(stream_data) => {
                 if let Some(stream_data) = stream_data {
-                    let stream_data = rmp_serde::from_slice::<StreamData>(&stream_data);
-                    if let Ok(stream_data) = stream_data {
-                        stream_data
-                    } else {
-                        error!(
-                            "Cannot deserialize stream data with ID: {}.",
-                            stream.stream_id
-                        );
-                        return Err(Error::CannotDeserializeResource(key));
+                    let stream_data = rmp_serde::from_slice::<StreamData>(&stream_data)
+                        .with_context(|| {
+                            format!(
+                                "Failed to deserialize stream with ID: {}, key: {}",
+                                stream.stream_id, key
+                            )
+                        });
+                    match stream_data {
+                        Ok(stream_data) => stream_data,
+                        Err(err) => {
+                            return Err(Error::CannotDeserializeResource(err));
+                        }
                     }
                 } else {
                     return Err(Error::ResourceNotFound(key));
                 }
             }
-            Err(error) => {
-                error!(
-                    "Cannot load stream data with ID: {}. Error: {}",
-                    stream.stream_id, error
-                );
-                return Err(Error::CannotLoadResource(key));
+            Err(err) => {
+                return Err(Error::CannotLoadResource(err));
             }
         };
 
@@ -160,12 +165,16 @@ impl Storage<Stream> for FileStreamStorage {
             created_at: stream.created_at,
         }) {
             Ok(data) => {
-                if let Err(err) = self.db.insert(&key, data) {
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to insert stream with key: {}", key))
+                {
                     error!(
                         "Cannot save stream with ID: {}. Error: {}",
                         stream.stream_id, err
                     );
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {

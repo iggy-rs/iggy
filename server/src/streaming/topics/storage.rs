@@ -2,6 +2,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::{Storage, TopicStorage};
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
+use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
@@ -88,17 +89,26 @@ impl TopicStorage for FileTopicStorage {
         let key_prefix = get_consumer_groups_key_prefix(topic.stream_id, topic.topic_id);
         let mut consumer_groups = Vec::new();
         for data in self.db.scan_prefix(format!("{}:", key_prefix)) {
-            let consumer_group = match data {
-                Ok((_, value)) => match rmp_serde::from_slice::<ConsumerGroupData>(&value) {
+            let consumer_group = match data.with_context(|| {
+                format!(
+                    "Failed to load consumer group when searching for key: {}",
+                    key_prefix
+                )
+            }) {
+                Ok((_, value)) => match rmp_serde::from_slice::<ConsumerGroupData>(&value)
+                    .with_context(|| {
+                        format!(
+                            "Failed to deserialize consumer group with key: {}",
+                            key_prefix
+                        )
+                    }) {
                     Ok(user) => user,
                     Err(err) => {
-                        error!("Cannot deserialize consumer group. Error: {}", err);
-                        return Err(Error::CannotDeserializeResource(key_prefix));
+                        return Err(Error::CannotDeserializeResource(err));
                     }
                 },
                 Err(err) => {
-                    error!("Cannot load consumer group. Error: {}", err);
-                    return Err(Error::CannotLoadResource(key_prefix));
+                    return Err(Error::CannotLoadResource(err));
                 }
             };
             let consumer_group = ConsumerGroup::new(
@@ -161,27 +171,26 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         let key = get_topic_key(topic.stream_id, topic.topic_id);
-        let topic_data = match self.db.get(&key) {
+        let topic_data = match self
+            .db
+            .get(&key)
+            .with_context(|| format!("Failed to load topic with key: {}", key))
+        {
             Ok(data) => {
                 if let Some(topic_data) = data {
-                    let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data);
-                    if let Err(error) = topic_data {
-                        error!("Cannot deserialize topic. Error: {}", error);
-                        return Err(Error::CannotDeserializeResource(key));
+                    let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data)
+                        .with_context(|| format!("Failed to deserialize topic with key: {}", key));
+                    if let Err(err) = topic_data {
+                        return Err(Error::CannotDeserializeResource(err));
                     } else {
                         topic_data.unwrap()
                     }
                 } else {
-                    error!("Cannot find topic with ID: {}", topic.topic_id);
                     return Err(Error::ResourceNotFound(key));
                 }
             }
-            Err(error) => {
-                error!(
-                    "Cannot load topic with ID: {}. Error: {}",
-                    topic.topic_id, error
-                );
-                return Err(Error::CannotLoadResource(key));
+            Err(err) => {
+                return Err(Error::CannotLoadResource(err));
             }
         };
 
@@ -285,12 +294,12 @@ impl Storage<Topic> for FileTopicStorage {
             message_expiry: topic.message_expiry,
         }) {
             Ok(data) => {
-                if let Err(err) = self.db.insert(&key, data) {
-                    error!(
-                        "Cannot save topic with ID: {} for stream with ID: {}. Error: {}",
-                        topic.topic_id, topic.stream_id, err
-                    );
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to insert topic with key: {}", key))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {

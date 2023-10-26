@@ -1,5 +1,6 @@
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::storage::{PersonalAccessTokenStorage, Storage};
+use anyhow::Context;
 use async_trait::async_trait;
 use iggy::error::Error;
 use iggy::models::user_info::UserId;
@@ -29,17 +30,17 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
     async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, Error> {
         let mut personal_access_tokens = Vec::new();
         for data in self.db.scan_prefix(format!("{}:token:", KEY_PREFIX)) {
-            let personal_access_token = match data {
-                Ok((_, value)) => match rmp_serde::from_slice::<PersonalAccessToken>(&value) {
+            let personal_access_token = match data
+                .with_context(|| format!("Failed to load personal access token, when searching by key: {}", KEY_PREFIX)){
+                Ok((_, value)) => match rmp_serde::from_slice::<PersonalAccessToken>(&value)
+                    .with_context(|| format!("Failed to deserialize personal access token, when searching by key: {}", KEY_PREFIX)){
                     Ok(personal_access_token) => personal_access_token,
                     Err(err) => {
-                        error!("Cannot deserialize personal access token. Error: {}", err);
-                        return Err(Error::CannotDeserializeResource(KEY_PREFIX.to_string()));
+                        return Err(Error::CannotDeserializeResource(err));
                     }
                 },
                 Err(err) => {
-                    error!("Cannot load personal access token. Error: {}", err);
-                    return Err(Error::CannotLoadResource(KEY_PREFIX.to_string()));
+                    return Err(Error::CannotLoadResource(err));
                 }
             };
             personal_access_tokens.push(personal_access_token);
@@ -52,15 +53,19 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
         let mut personal_access_tokens = Vec::new();
         let key = format!("{}:user:{}:", KEY_PREFIX, user_id);
         for data in self.db.scan_prefix(&key) {
-            match data {
+            match data.with_context(|| {
+                format!(
+                    "Failed to load personal access token, for user ID: {}",
+                    user_id
+                )
+            }) {
                 Ok((_, value)) => {
                     let token = from_utf8(&value)?;
                     let personal_access_token = self.load_by_token(token).await?;
                     personal_access_tokens.push(personal_access_token);
                 }
                 Err(err) => {
-                    error!("Cannot load personal access token. Error: {}", err);
-                    return Err(Error::CannotLoadResource(key));
+                    return Err(Error::CannotLoadResource(err));
                 }
             };
         }
@@ -70,14 +75,20 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
 
     async fn load_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error> {
         let key = get_key(token);
-        return match self.db.get(&key) {
+        return match self
+            .db
+            .get(&key)
+            .with_context(|| format!("Failed to load personal access token, token: {}", token))
+        {
             Ok(personal_access_token) => {
                 if let Some(personal_access_token) = personal_access_token {
                     let personal_access_token =
-                        rmp_serde::from_slice::<PersonalAccessToken>(&personal_access_token);
-                    if let Err(error) = personal_access_token {
-                        error!("Cannot deserialize personal access token. Error: {}", error);
-                        Err(Error::CannotDeserializeResource(key))
+                        rmp_serde::from_slice::<PersonalAccessToken>(&personal_access_token)
+                            .with_context(|| {
+                                format!("Failed to deserialize personal access token")
+                            });
+                    if let Err(err) = personal_access_token {
+                        Err(Error::CannotDeserializeResource(err))
                     } else {
                         Ok(personal_access_token.unwrap())
                     }
@@ -85,10 +96,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
                     Err(Error::ResourceNotFound(key))
                 }
             }
-            Err(error) => {
-                error!("Cannot load personal access token. Error: {}", error);
-                Err(Error::CannotLoadResource(key))
-            }
+            Err(err) => Err(Error::CannotLoadResource(err)),
         };
     }
 
@@ -98,13 +106,18 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
         name: &str,
     ) -> Result<PersonalAccessToken, Error> {
         let key = get_name_key(user_id, name);
-        return match self.db.get(&key) {
+        return match self.db.get(&key).with_context(|| {
+            format!(
+                "Failed to load personal access token, token_name: {}, user_id: {}",
+                name, user_id
+            )
+        }) {
             Ok(token) => {
                 if let Some(token) = token {
-                    let token = from_utf8(&token);
-                    if let Err(error) = token {
-                        error!("Cannot deserialize personal access token. Error: {}", error);
-                        Err(Error::CannotDeserializeResource(key))
+                    let token = from_utf8(&token)
+                        .with_context(|| format!("Failed to deserialize personal access token"));
+                    if let Err(err) = token {
+                        Err(Error::CannotDeserializeResource(err))
                     } else {
                         Ok(self.load_by_token(token.unwrap()).await?)
                     }
@@ -112,10 +125,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
                     Err(Error::ResourceNotFound(key))
                 }
             }
-            Err(error) => {
-                error!("Cannot load personal access token. Error: {}", error);
-                Err(Error::CannotLoadResource(key))
-            }
+            Err(err) => Err(Error::CannotLoadResource(err)),
         };
     }
 
@@ -147,22 +157,22 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
         let key = get_key(&personal_access_token.token);
         match rmp_serde::to_vec(&personal_access_token) {
             Ok(data) => {
-                if let Err(err) = self.db.insert(&key, data) {
-                    error!(
-                        "Cannot save personal access token for user with ID: {}. Error: {}",
-                        personal_access_token.user_id, err
-                    );
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to save personal access token"))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
-                if let Err(err) = self.db.insert(
-                    get_name_key(personal_access_token.user_id, &personal_access_token.name),
-                    personal_access_token.token.as_bytes(),
-                ) {
-                    error!(
-                        "Cannot save personal access token for user with ID: {}. Error: {}",
-                        personal_access_token.user_id, err
-                    );
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                if let Err(err) = self
+                    .db
+                    .insert(
+                        get_name_key(personal_access_token.user_id, &personal_access_token.name),
+                        personal_access_token.token.as_bytes(),
+                    )
+                    .with_context(|| format!("Failed to save personal access token"))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {

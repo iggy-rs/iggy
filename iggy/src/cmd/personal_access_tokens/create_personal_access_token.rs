@@ -4,12 +4,15 @@ use crate::cmd::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use anyhow::Context;
 use async_trait::async_trait;
+use keyring::Entry;
 use tracing::{event, Level};
 
 pub struct CreatePersonalAccessTokenCmd {
     create_token: CreatePersonalAccessToken,
     token_expiry: Option<PersonalAccessTokenExpiry>,
     quiet_mode: bool,
+    store_token: bool,
+    server_address: String,
 }
 
 impl CreatePersonalAccessTokenCmd {
@@ -17,6 +20,8 @@ impl CreatePersonalAccessTokenCmd {
         name: String,
         pat_expiry: Option<PersonalAccessTokenExpiry>,
         quiet_mode: bool,
+        store_token: bool,
+        server_address: String,
     ) -> Self {
         Self {
             create_token: CreatePersonalAccessToken {
@@ -28,6 +33,8 @@ impl CreatePersonalAccessTokenCmd {
             },
             token_expiry: pat_expiry,
             quiet_mode,
+            store_token,
+            server_address,
         }
     }
 }
@@ -56,7 +63,21 @@ impl CliCommand for CreatePersonalAccessTokenCmd {
                 )
             })?;
 
-        if self.quiet_mode {
+        if self.store_token {
+            let server_address = format!("iggy:{}", self.server_address);
+            let entry = Entry::new(&server_address, &self.create_token.name)?;
+            entry.set_password(&token.token)?;
+            event!(target: PRINT_TARGET, Level::DEBUG,"Stored token under service: {} and name: {}", server_address,
+                    self.create_token.name);
+            event!(target: PRINT_TARGET, Level::INFO,
+                "Personal access token with name: {} and {} created",
+                self.create_token.name,
+                match &self.token_expiry {
+                    Some(value) => format!("token expire time: {}", value),
+                    None => String::from("without token expire time"),
+                },
+            );
+        } else if self.quiet_mode {
             println!("{}", token.token);
         } else {
             event!(target: PRINT_TARGET, Level::INFO,

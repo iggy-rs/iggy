@@ -103,11 +103,16 @@ fn get_command(args: &IggyConsoleArgs) -> Box<dyn CliCommand> {
                     pat_create_args.name.clone(),
                     PersonalAccessTokenExpiry::new(pat_create_args.expiry.clone()),
                     args.quiet,
+                    pat_create_args.store_token,
+                    args.get_server_address().unwrap(),
                 ))
             }
-            PersonalAccessTokenAction::Delete(pat_delete_args) => Box::new(
-                DeletePersonalAccessTokenCmd::new(pat_delete_args.name.clone()),
-            ),
+            PersonalAccessTokenAction::Delete(pat_delete_args) => {
+                Box::new(DeletePersonalAccessTokenCmd::new(
+                    pat_delete_args.name.clone(),
+                    args.get_server_address().unwrap(),
+                ))
+            }
             PersonalAccessTokenAction::List(pat_list_args) => Box::new(
                 GetPersonalAccessTokensCmd::new(pat_list_args.list_mode.into()),
             ),
@@ -135,6 +140,7 @@ async fn main() -> Result<(), IggyCmdError> {
         )),
     };
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.iggy.clone())?);
+
     let client = client_provider::get_raw_client(client_provider_config).await?;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, encryptor);
 

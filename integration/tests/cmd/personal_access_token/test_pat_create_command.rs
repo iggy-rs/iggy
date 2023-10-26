@@ -128,7 +128,7 @@ Examples
  iggy pat create client 1day
  iggy pat create sensor 3weeks
 
-{USAGE_PREFIX} pat create <NAME> [EXPIRY]...
+{USAGE_PREFIX} pat create [OPTIONS] <NAME> [EXPIRY]...
 
 Arguments:
   <NAME>
@@ -140,6 +140,11 @@ Arguments:
           Expiry time must be expressed in human readable format like 15days 2min 2s ("none" or skipping parameter disables personal access token expiry)
 
 Options:
+  -s, --store-token
+          Store token in in an underlying platform-specific secure store
+{CLAP_INDENT}
+          Generated token is stored in a platform-specific secure storage without revealing its content to the user. It can be used to authenticate on iggy server using associated name and -n/--token-name command line option instead of -u/--username and -p/--password or -t/--token. In quiet mode only the token name is printed. This option can only be used for creating tokens which does not have expiry time set.
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -159,14 +164,15 @@ pub async fn should_short_help_match() {
             format!(
                 r#"Create personal access token
 
-{USAGE_PREFIX} pat create <NAME> [EXPIRY]...
+{USAGE_PREFIX} pat create [OPTIONS] <NAME> [EXPIRY]...
 
 Arguments:
   <NAME>       Name of the personal access token
   [EXPIRY]...  Personal access token expiry time in human readable format
 
 Options:
-  -h, --help  Print help (see more with '--help')
+  -s, --store-token  Store token in in an underlying platform-specific secure store
+  -h, --help         Print help (see more with '--help')
 "#,
             ),
         ))

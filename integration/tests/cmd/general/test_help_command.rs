@@ -27,60 +27,96 @@ Commands:
 Options:
       --transport <TRANSPORT>
           [default: tcp]
+
       --encryption-key <ENCRYPTION_KEY>
           [default: ]
+
       --http-api-url <HTTP_API_URL>
           [default: http://localhost:3000]
+
       --http-retries <HTTP_RETRIES>
           [default: 3]
+
       --tcp-server-address <TCP_SERVER_ADDRESS>
           [default: 127.0.0.1:8090]
+
       --tcp-reconnection-retries <TCP_RECONNECTION_RETRIES>
           [default: 3]
+
       --tcp-reconnection-interval <TCP_RECONNECTION_INTERVAL>
           [default: 1000]
+
       --tcp-tls-enabled
 {CLAP_INDENT}
+
       --tcp-tls-domain <TCP_TLS_DOMAIN>
           [default: localhost]
+
       --quic-client-address <QUIC_CLIENT_ADDRESS>
           [default: 127.0.0.1:0]
+
       --quic-server-address <QUIC_SERVER_ADDRESS>
           [default: 127.0.0.1:8080]
+
       --quic-server-name <QUIC_SERVER_NAME>
           [default: localhost]
+
       --quic-reconnection-retries <QUIC_RECONNECTION_RETRIES>
           [default: 3]
+
       --quic-reconnection-interval <QUIC_RECONNECTION_INTERVAL>
           [default: 1000]
+
       --quic-max-concurrent-bidi-streams <QUIC_MAX_CONCURRENT_BIDI_STREAMS>
           [default: 10000]
+
       --quic-datagram-send-buffer-size <QUIC_DATAGRAM_SEND_BUFFER_SIZE>
           [default: 100000]
+
       --quic-initial-mtu <QUIC_INITIAL_MTU>
           [default: 1200]
+
       --quic-send-window <QUIC_SEND_WINDOW>
           [default: 100000]
+
       --quic-receive-window <QUIC_RECEIVE_WINDOW>
           [default: 100000]
+
       --quic-response-buffer-size <QUIC_RESPONSE_BUFFER_SIZE>
           [default: 1048576]
+
       --quic-keep-alive-interval <QUIC_KEEP_ALIVE_INTERVAL>
           [default: 5000]
+
       --quic-max-idle-timeout <QUIC_MAX_IDLE_TIMEOUT>
           [default: 10000]
+
       --quic-validate-certificate
 {CLAP_INDENT}
+
   -q, --quiet
           Quiet mode (disabled stdout printing)
+
   -d, --debug <DEBUG>
           Debug mode (verbose printing to given file)
+
   -u, --username <USERNAME>
           Iggy server username
+
   -p, --password <PASSWORD>
           Iggy server password
+
+  -t, --token <TOKEN>
+          Iggy server personal access token
+
+  -n, --token-name <TOKEN_NAME>
+          Iggy server personal access token name
+{CLAP_INDENT}
+          When personal access token is created using command line tool and stored inside platform-specific secure storage its name can be used as an value for this option without revealing token value.
+
   -h, --help
-          Print help
+          Print help (see a summary with '-h')
+
   -V, --version
           Print version
 "#,

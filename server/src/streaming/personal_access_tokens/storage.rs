@@ -7,7 +7,7 @@ use iggy::models::user_info::UserId;
 use sled::Db;
 use std::str::from_utf8;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 const KEY_PREFIX: &str = "personal_access_token";
 
@@ -84,9 +84,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
                 if let Some(personal_access_token) = personal_access_token {
                     let personal_access_token =
                         rmp_serde::from_slice::<PersonalAccessToken>(&personal_access_token)
-                            .with_context(|| {
-                                format!("Failed to deserialize personal access token")
-                            });
+                            .with_context(|| "Failed to deserialize personal access token");
                     if let Err(err) = personal_access_token {
                         Err(Error::CannotDeserializeResource(err))
                     } else {
@@ -115,7 +113,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
             Ok(token) => {
                 if let Some(token) = token {
                     let token = from_utf8(&token)
-                        .with_context(|| format!("Failed to deserialize personal access token"));
+                        .with_context(|| "Failed to deserialize personal access token");
                     if let Err(err) = token {
                         Err(Error::CannotDeserializeResource(err))
                     } else {
@@ -135,16 +133,16 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
         let key = get_name_key(user_id, name);
         if let Err(err) = self
             .db
-            .remove(&key)
-            .with_context(|| format!("Failed to delete personal access token"))
+            .remove(key)
+            .with_context(|| "Failed to delete personal access token")
         {
             return Err(Error::CannotDeleteResource(err));
         }
         let key = get_key(&personal_access_token.token);
         if let Err(err) = self
             .db
-            .remove(&key)
-            .with_context(|| format!("Failed to delete personal access token"))
+            .remove(key)
+            .with_context(|| "Failed to delete personal access token")
         {
             return Err(Error::CannotDeleteResource(err));
         }
@@ -164,13 +162,13 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
     async fn save(&self, personal_access_token: &PersonalAccessToken) -> Result<(), Error> {
         let key = get_key(&personal_access_token.token);
         match rmp_serde::to_vec(&personal_access_token)
-            .with_context(|| format!("Failed to serialize personal access token"))
+            .with_context(|| "Failed to serialize personal access token")
         {
             Ok(data) => {
                 if let Err(err) = self
                     .db
-                    .insert(&key, data)
-                    .with_context(|| format!("Failed to save personal access token"))
+                    .insert(key, data)
+                    .with_context(|| "Failed to save personal access token")
                 {
                     return Err(Error::CannotSaveResource(err));
                 }
@@ -180,7 +178,7 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
                         get_name_key(personal_access_token.user_id, &personal_access_token.name),
                         personal_access_token.token.as_bytes(),
                     )
-                    .with_context(|| format!("Failed to save personal access token"))
+                    .with_context(|| "Failed to save personal access token")
                 {
                     return Err(Error::CannotSaveResource(err));
                 }

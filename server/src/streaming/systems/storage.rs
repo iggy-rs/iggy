@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use iggy::error::Error;
 use sled::Db;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 const KEY: &str = "system";
 
@@ -31,12 +31,12 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
         let data = match self
             .db
             .get(KEY)
-            .with_context(|| format!("Failed to load system info"))
+            .with_context(|| "Failed to load system info")
         {
             Ok(data) => {
                 if let Some(data) = data {
                     let data = rmp_serde::from_slice::<SystemInfo>(&data)
-                        .with_context(|| format!("Failed to deserialize system info"));
+                        .with_context(|| "Failed to deserialize system info");
                     if let Err(err) = data {
                         return Err(Error::CannotDeserializeResource(err));
                     } else {
@@ -57,14 +57,12 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
     }
 
     async fn save(&self, system_info: &SystemInfo) -> Result<(), Error> {
-        match rmp_serde::to_vec(&system_info)
-            .with_context(|| format!("Failed to serialize system info"))
-        {
+        match rmp_serde::to_vec(&system_info).with_context(|| "Failed to serialize system info") {
             Ok(data) => {
                 if let Err(err) = self
                     .db
                     .insert(KEY, data)
-                    .with_context(|| format!("Failed to save system info"))
+                    .with_context(|| "Failed to save system info")
                 {
                     return Err(Error::CannotSaveResource(err));
                 }
@@ -82,7 +80,7 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
         if let Err(err) = self
             .db
             .remove(KEY)
-            .with_context(|| format!("Failed to delete system info"))
+            .with_context(|| "Failed to delete system info")
         {
             return Err(Error::CannotDeleteResource(err));
         }

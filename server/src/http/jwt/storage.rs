@@ -60,7 +60,7 @@ impl TokenStorage {
                             key
                         )
                     })
-                    .map_err(|err| Error::CannotLoadResource(err))?;
+                    .map_err(Error::CannotLoadResource)?;
 
                 let mut token = rmp_serde::from_slice::<RefreshToken>(&value)
                     .with_context(|| {
@@ -69,11 +69,11 @@ impl TokenStorage {
                             key
                         )
                     })
-                    .map_err(|err| Error::CannotDeserializeResource(err))?;
+                    .map_err(Error::CannotDeserializeResource)?;
 
                 token.token_hash = from_utf8(&hash)
-                    .with_context(|| format!("Failed to convert hash to UTF-8 string"))
-                    .map_err(|err| Error::CannotDeserializeResource(err))?
+                    .with_context(|| "Failed to convert hash to UTF-8 string")
+                    .map_err(Error::CannotDeserializeResource)?
                     .to_string();
                 Ok(token)
             })
@@ -97,7 +97,7 @@ impl TokenStorage {
                             key
                         )
                     })
-                    .map_err(|err| Error::CannotLoadResource(err))?;
+                    .map_err(Error::CannotLoadResource)?;
 
                 let token = rmp_serde::from_slice::<RevokedAccessToken>(&value)
                     .with_context(|| {
@@ -106,7 +106,7 @@ impl TokenStorage {
                             key
                         )
                     })
-                    .map_err(|err| Error::CannotDeserializeResource(err))?;
+                    .map_err(Error::CannotDeserializeResource)?;
                 Ok(token)
             })
             .collect();
@@ -125,7 +125,7 @@ impl TokenStorage {
                 if let Err(err) = self
                     .db
                     .insert(&key, data)
-                    .with_context(|| format!("Failed to save revoked access token"))
+                    .with_context(|| "Failed to save revoked access token")
                 {
                     return Err(Error::CannotSaveResource(err));
                 }

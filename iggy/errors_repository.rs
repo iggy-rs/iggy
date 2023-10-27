@@ -35,7 +35,7 @@ fn get_full_signature_string(entry: &ErrorRepositoryEntry) -> String {
         (true, true, false) => format!("(#[source] {})", entry.source),
         (true, false, false) => format!("(#[source] {}, {})", entry.source, entry.signature),
         _ => {
-            panic!("Only one of [converts_from, signature, source] can be set")
+            panic!("Only one of [converts_from, source] can be set")
         }
     }
 }
@@ -114,7 +114,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Cannot create base directory, path: {0}".to_string(),
+            template: "Cannot create base directory, Path: {0}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "resource_not_found".to_string(),
@@ -130,7 +130,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot load resource. Error: {0:?}".to_string(),
+            template: "Cannot load resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_save_resource".to_string(),
@@ -138,7 +138,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot save resource. Error: {0:?}".to_string(),
+            template: "Cannot save resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_delete_resource".to_string(),
@@ -146,7 +146,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot delete resource. Error: {0:?}".to_string(),
+            template: "Cannot delete resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_serialize_resource".to_string(),
@@ -154,7 +154,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot serialize resource. Error: {0:?}".to_string(),
+            template: "Cannot serialize resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_deserialize_resource".to_string(),
@@ -162,7 +162,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot deserialize resource. Error: {0:?}".to_string(),
+            template: "Cannot deserialize resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "unauthenticated".to_string(),
@@ -522,7 +522,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Cannot create streams directory, path: {0}".to_string(),
+            template: "Cannot create streams directory, Path: {0}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_stream_directory".to_string(),
@@ -530,7 +530,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "u32, String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Cannot create stream with ID: {0} directory, path: {1}".to_string(),
+            template: "Cannot create stream with ID: {0} directory, Path: {1}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_stream_info".to_string(),
@@ -650,7 +650,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "u32, String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Cannot create topics directory for stream with ID: {0}, path: {1}".to_string(),
+            template: "Cannot create topics directory for stream with ID: {0}, Path: {1}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_topic_directory".to_string(),
@@ -658,7 +658,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "u32, u32, String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Failed to create directory for topic with ID: {0} for stream with ID: {1}, path: {2}".to_string(),
+            template: "Failed to create directory for topic with ID: {0} for stream with ID: {1}, Path: {2}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_topic_info".to_string(),
@@ -714,7 +714,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "u32, u32, String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Failed to delete topic directory with ID: {0} for stream with ID: {1}, path: {2}".to_string(),
+            template: "Failed to delete topic directory with ID: {0} for stream with ID: {1}, Path: {2}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_poll_topic".to_string(),
@@ -826,7 +826,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot read partitions directories. Error: {0:?}".to_string(),
+            template: "Cannot read partitions directories. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_delete_partition".to_string(),
@@ -890,7 +890,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Failed to create segment log file for path: {0}.".to_string(),
+            template: "Failed to create segment log file for Path: {0}.".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_segment_index_file".to_string(),
@@ -898,7 +898,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Failed to create segment index file for path: {0}.".to_string(),
+            template: "Failed to create segment index file for Path: {0}.".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_segment_time_index_file".to_string(),
@@ -906,7 +906,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "String".to_string(),
             converts_from: "".to_string(),
             source: "".to_string(),
-            template: "Failed to create segment time index file for path: {0}.".to_string(),
+            template: "Failed to create segment time index file for Path: {0}.".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_save_messages_to_segment".to_string(),
@@ -914,7 +914,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot save messages to segment. Error: {0:?}".to_string(),
+            template: "Cannot save messages to segment. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_save_index_to_segment".to_string(),
@@ -922,7 +922,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot save index to segment. Error: {0:?}".to_string(),
+            template: "Cannot save index to segment. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_save_time_index_to_segment".to_string(),
@@ -930,7 +930,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             signature: "".to_string(),
             converts_from: "".to_string(),
             source: "anyhow::Error".to_string(),
-            template: "Cannot save time index to segment. Error: {0:?}".to_string(),
+            template: "Cannot save time index to segment. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "invalid_messages_count".to_string(),

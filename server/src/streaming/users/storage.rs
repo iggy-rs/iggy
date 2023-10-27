@@ -6,7 +6,7 @@ use iggy::error::Error;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 const KEY_PREFIX: &str = "users";
 

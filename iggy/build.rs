@@ -76,7 +76,7 @@ impl ErrorEnumVariant {
                 result.push_str(&format!("(#[source] {}, {})", source_from, signature))
             }
             _ => {
-                panic!("Only one of [converts_from, signature, source] can be set")
+                panic!("Only one of [converts_from, source] can be set")
             }
         };
 

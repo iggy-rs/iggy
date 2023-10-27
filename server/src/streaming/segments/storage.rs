@@ -85,8 +85,8 @@ impl Storage<Segment> for FileSegmentStorage {
                 segment.stream_id
             );
         } else {
-            let last_timeindex = self.load_last_time_index(segment).await?;
-            if let Some(last_index) = last_timeindex {
+            let last_time_index = self.load_last_time_index(segment).await?;
+            if let Some(last_index) = last_time_index {
                 segment.current_offset = segment.start_offset + last_index.relative_offset as u64;
                 info!(
                 "Loaded last time index for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",

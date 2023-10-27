@@ -148,7 +148,7 @@ impl Storage<Partition> for FilePartitionStorage {
         let dir_entries = fs::read_dir(&partition.path).await;
         if let Err(err) = fs::read_dir(&partition.path)
             .await
-            .with_context(|| format!(""))
+            .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}", partition.partition_id, partition.stream_id, partition.topic_id, partition.path))
         {
             return Err(Error::CannotReadPartitions(err));
         }

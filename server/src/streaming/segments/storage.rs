@@ -1,4 +1,5 @@
 use crate::streaming::persistence::persister::Persister;
+use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
 use iggy::bytes_serializable::BytesSerializable;
@@ -218,9 +219,13 @@ impl SegmentStorage for FileSegmentStorage {
             message.extend(&mut bytes);
         }
 
-        if let Err(error) = self.persister.append(&segment.log_path, &bytes).await {
-            error!("Cannot save messages to segment: {}", error);
-            return Err(Error::CannotSaveMessagesToSegment);
+        if let Err(err) = self
+            .persister
+            .append(&segment.log_path, &bytes)
+            .await
+            .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
+        {
+            return Err(Error::CannotSaveMessagesToSegment(err));
         }
 
         Ok(messages_size)
@@ -402,13 +407,13 @@ impl SegmentStorage for FileSegmentStorage {
             current_position += message.get_size_bytes();
         }
 
-        if self
+        if let Err(err) = self
             .persister
             .append(&segment.index_path, &bytes)
             .await
-            .is_err()
+            .with_context(|| format!("Failed to save index to segment: {}", segment.index_path))
         {
-            return Err(Error::CannotSaveIndexToSegment);
+            return Err(Error::CannotSaveIndexToSegment(err));
         }
 
         Ok(())
@@ -490,13 +495,18 @@ impl SegmentStorage for FileSegmentStorage {
             bytes.put_u64_le(message.timestamp);
         }
 
-        if self
+        if let Err(err) = self
             .persister
             .append(&segment.time_index_path, &bytes)
             .await
-            .is_err()
+            .with_context(|| {
+                format!(
+                    "Failed to save TimeIndex to segment: {}",
+                    segment.time_index_path
+                )
+            })
         {
-            return Err(Error::CannotSaveTimeIndexToSegment);
+            return Err(Error::CannotSaveTimeIndexToSegment(err));
         }
 
         Ok(())

@@ -133,12 +133,20 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
         let personal_access_token = self.load_by_name(user_id, name).await?;
         info!("Deleting personal access token with name: {name} for user with ID: {user_id}...");
         let key = get_name_key(user_id, name);
-        if self.db.remove(&key).is_err() {
-            return Err(Error::CannotDeleteResource(key));
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete personal access token"))
+        {
+            return Err(Error::CannotDeleteResource(err));
         }
         let key = get_key(&personal_access_token.token);
-        if self.db.remove(&key).is_err() {
-            return Err(Error::CannotDeleteResource(key));
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete personal access token"))
+        {
+            return Err(Error::CannotDeleteResource(err));
         }
         info!("Deleted personal access token with name: {name} for user with ID: {user_id}.");
         Ok(())
@@ -155,7 +163,9 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
 
     async fn save(&self, personal_access_token: &PersonalAccessToken) -> Result<(), Error> {
         let key = get_key(&personal_access_token.token);
-        match rmp_serde::to_vec(&personal_access_token) {
+        match rmp_serde::to_vec(&personal_access_token)
+            .with_context(|| format!("Failed to serialize personal access token"))
+        {
             Ok(data) => {
                 if let Err(err) = self
                     .db
@@ -176,11 +186,7 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
                 }
             }
             Err(err) => {
-                error!(
-                    "Cannot serialize personal access token for user with ID: {}. Error: {}",
-                    personal_access_token.user_id, err
-                );
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 

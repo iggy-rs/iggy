@@ -127,7 +127,9 @@ impl Storage<User> for FileUserStorage {
 
     async fn save(&self, user: &User) -> Result<(), Error> {
         let key = get_key(user.id);
-        match rmp_serde::to_vec(&user) {
+        match rmp_serde::to_vec(&user)
+            .with_context(|| format!("Failed to serialize user with key: {}", key))
+        {
             Ok(data) => {
                 if let Err(err) = self
                     .db
@@ -151,8 +153,7 @@ impl Storage<User> for FileUserStorage {
                 }
             }
             Err(err) => {
-                error!("Cannot serialize user with ID: {}. Error: {}", user.id, err);
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -163,17 +164,18 @@ impl Storage<User> for FileUserStorage {
     async fn delete(&self, user: &User) -> Result<(), Error> {
         info!("Deleting user with ID: {}...", user.id);
         let key = get_key(user.id);
-        if let Err(error) = self.db.remove(&key) {
-            error!("Cannot delete user with ID: {}. Error: {}", user.id, error);
-            return Err(Error::CannotDeleteResource(key));
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete user with ID: {}, key: {}", user.id, key))
+        {
+            return Err(Error::CannotDeleteResource(err));
         } else {
             let key = get_id_key(&user.username);
-            if let Err(error) = self.db.remove(&key) {
-                error!(
-                    "Cannot delete username for user with ID: {}. Error: {}",
-                    user.id, error
-                );
-                return Err(Error::CannotDeleteResource(key));
+            if let Err(err) = self.db.remove(&key).with_context(|| {
+                format!("Failed to delete user with ID: {}, key : {}", user.id, key)
+            }) {
+                return Err(Error::CannotDeleteResource(err));
             } else {
                 info!("Deleted user with ID: {}.", user.id);
                 Ok(())

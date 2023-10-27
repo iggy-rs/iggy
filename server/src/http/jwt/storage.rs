@@ -118,7 +118,9 @@ impl TokenStorage {
 
     pub fn save_revoked_access_token(&self, token: &RevokedAccessToken) -> Result<(), Error> {
         let key = Self::get_revoked_token_key(&token.id);
-        match rmp_serde::to_vec(&token) {
+        match rmp_serde::to_vec(&token)
+            .with_context(|| format!("Failed to serialize revoked access token, key: {}", key))
+        {
             Ok(data) => {
                 if let Err(err) = self
                     .db
@@ -129,8 +131,7 @@ impl TokenStorage {
                 }
             }
             Err(err) => {
-                error!("Cannot serialize revoked access token. Error: {err}");
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
         Ok(())
@@ -138,7 +139,9 @@ impl TokenStorage {
 
     pub fn save_refresh_token(&self, token: &RefreshToken) -> Result<(), Error> {
         let key = Self::get_refresh_token_key(&token.token_hash);
-        match rmp_serde::to_vec(&token) {
+        match rmp_serde::to_vec(&token)
+            .with_context(|| format!("Failed to serialize refresh token, key: {}", key))
+        {
             Ok(data) => {
                 if let Err(err) = self
                     .db
@@ -149,8 +152,7 @@ impl TokenStorage {
                 }
             }
             Err(err) => {
-                error!("Cannot serialize refresh token. Error: {err}");
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
         Ok(())
@@ -158,18 +160,25 @@ impl TokenStorage {
 
     pub fn delete_revoked_access_token(&self, id: &str) -> Result<(), Error> {
         let key = Self::get_revoked_token_key(id);
-        if let Err(err) = self.db.remove(&key) {
-            error!("Cannot delete revoked access token. Error: {err}");
-            return Err(Error::CannotDeleteResource(key.to_string()));
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete revoked access token, key: {}", key))
+        {
+            return Err(Error::CannotDeleteResource(err));
         }
         Ok(())
     }
 
     pub fn delete_refresh_token(&self, token_hash: &str) -> Result<(), Error> {
         let key = Self::get_refresh_token_key(token_hash);
-        if let Err(err) = self.db.remove(&key) {
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete refresh token, key: {}", key))
+        {
             error!("Cannot delete refresh token. Error: {err}");
-            return Err(Error::CannotDeleteResource(key.to_string()));
+            return Err(Error::CannotDeleteResource(err));
         }
         Ok(())
     }

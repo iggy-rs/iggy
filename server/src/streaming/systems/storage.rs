@@ -57,7 +57,9 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
     }
 
     async fn save(&self, system_info: &SystemInfo) -> Result<(), Error> {
-        match rmp_serde::to_vec(&system_info) {
+        match rmp_serde::to_vec(&system_info)
+            .with_context(|| format!("Failed to serialize system info"))
+        {
             Ok(data) => {
                 if let Err(err) = self
                     .db
@@ -68,8 +70,7 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
                 }
             }
             Err(err) => {
-                error!("Cannot serialize system info. Error: {}", err);
-                return Err(Error::CannotSerializeResource(KEY.to_string()));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -78,8 +79,12 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
     }
 
     async fn delete(&self, _: &SystemInfo) -> Result<(), Error> {
-        if self.db.remove(KEY).is_err() {
-            return Err(Error::CannotDeleteResource(KEY.to_string()));
+        if let Err(err) = self
+            .db
+            .remove(KEY)
+            .with_context(|| format!("Failed to delete system info"))
+        {
+            return Err(Error::CannotDeleteResource(err));
         }
 
         info!("Deleted system info");

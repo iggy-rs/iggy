@@ -146,11 +146,11 @@ impl Storage<Partition> for FilePartitionStorage {
             partition.partition_id, partition.stream_id, partition.topic_id, partition.path
         );
         let dir_entries = fs::read_dir(&partition.path).await;
-        if dir_entries.is_err() {
-            return Err(Error::CannotReadPartitions(
-                partition.partition_id,
-                partition.stream_id,
-            ));
+        if let Err(err) = fs::read_dir(&partition.path)
+            .await
+            .with_context(|| format!(""))
+        {
+            return Err(Error::CannotReadPartitions(err));
         }
 
         let key = get_partition_key(
@@ -302,7 +302,9 @@ impl Storage<Partition> for FilePartitionStorage {
         );
         match rmp_serde::to_vec(&PartitionData {
             created_at: partition.created_at,
-        }) {
+        })
+        .with_context(|| format!("Failed to serialize partition with key: {}", key))
+        {
             Ok(data) => {
                 if let Err(err) = self
                     .db
@@ -313,8 +315,7 @@ impl Storage<Partition> for FilePartitionStorage {
                 }
             }
             Err(err) => {
-                error!("Cannot serialize partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 

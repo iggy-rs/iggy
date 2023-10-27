@@ -150,39 +150,39 @@ impl Storage<Stream> for FileStreamStorage {
 
     async fn save(&self, stream: &Stream) -> Result<(), Error> {
         if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
-            return Err(Error::CannotCreateStreamDirectory(stream.stream_id));
+            return Err(Error::CannotCreateStreamDirectory(
+                stream.stream_id,
+                stream.path.clone(),
+            ));
         }
 
         if !Path::new(&stream.topics_path).exists()
             && create_dir(&stream.topics_path).await.is_err()
         {
-            return Err(Error::CannotCreateTopicsDirectory(stream.stream_id));
+            return Err(Error::CannotCreateTopicsDirectory(
+                stream.stream_id,
+                stream.topics_path.clone(),
+            ));
         }
 
         let key = get_key(stream.stream_id);
         match rmp_serde::to_vec(&StreamData {
             name: stream.name.clone(),
             created_at: stream.created_at,
-        }) {
+        })
+        .with_context(|| format!("Failed to serialize stream with key: {}", key))
+        {
             Ok(data) => {
                 if let Err(err) = self
                     .db
                     .insert(&key, data)
                     .with_context(|| format!("Failed to insert stream with key: {}", key))
                 {
-                    error!(
-                        "Cannot save stream with ID: {}. Error: {}",
-                        stream.stream_id, err
-                    );
                     return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                error!(
-                    "Cannot serialize stream with ID: {}. Error: {}",
-                    stream.stream_id, err
-                );
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -194,12 +194,12 @@ impl Storage<Stream> for FileStreamStorage {
     async fn delete(&self, stream: &Stream) -> Result<(), Error> {
         info!("Deleting stream with ID: {}...", stream.stream_id);
         let key = get_key(stream.stream_id);
-        if let Err(error) = self.db.remove(&key) {
-            error!(
-                "Cannot delete stream with ID: {}. Error: {}",
-                stream.stream_id, error
-            );
-            return Err(Error::CannotDeleteResource(key));
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete stream with key: {}", key))
+        {
+            return Err(Error::CannotDeleteResource(err));
         }
         if fs::remove_dir_all(&stream.path).await.is_err() {
             return Err(Error::CannotDeleteStreamDirectory(stream.stream_id));

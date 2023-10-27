@@ -50,30 +50,20 @@ impl TopicStorage for FileTopicStorage {
         match rmp_serde::to_vec(&ConsumerGroupData {
             id: consumer_group.consumer_group_id,
             name: consumer_group.name.clone(),
-        }) {
+        })
+        .with_context(|| format!("Failed to serialize consumer group with key: {}", key))
+        {
             Ok(data) => {
-                if let Err(err) = self.db.insert(key, data) {
-                    error!(
-                        "Cannot save consumer group with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}",
-                        consumer_group.consumer_group_id, topic.topic_id, topic.stream_id, err
-                    );
-                    return Err(Error::CannotCreateConsumerGroupInfo(
-                        consumer_group.consumer_group_id,
-                        topic.topic_id,
-                        topic.stream_id,
-                    ));
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to insert consumer group with key: {}", key))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                error!(
-                    "Cannot serialize consumer group with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}",
-                    consumer_group.consumer_group_id, topic.topic_id, topic.stream_id, err
-                );
-                return Err(Error::CannotCreateConsumerGroupInfo(
-                    consumer_group.consumer_group_id,
-                    topic.topic_id,
-                    topic.stream_id,
-                ));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -133,7 +123,11 @@ impl TopicStorage for FileTopicStorage {
             topic.topic_id,
             consumer_group.consumer_group_id,
         );
-        match self.db.remove(&key) {
+        match self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete consumer group with key: {}", key))
+        {
             Ok(_) => {
                 info!(
             "Consumer group with ID: {} for topic with ID: {} and stream with ID: {} was deleted.",
@@ -141,12 +135,8 @@ impl TopicStorage for FileTopicStorage {
         );
                 Ok(())
             }
-            Err(error) => {
-                error!(
-                    "Cannot delete consumer group with ID: {} for topic with ID: {} and stream with ID: {}. Error: {}",
-                    consumer_group.consumer_group_id, topic.topic_id, topic.stream_id, error
-                );
-                return Err(Error::CannotDeleteResource(key));
+            Err(err) => {
+                return Err(Error::CannotDeleteResource(err));
             }
         }
     }
@@ -198,9 +188,11 @@ impl Storage<Topic> for FileTopicStorage {
         topic.created_at = topic_data.created_at;
         topic.message_expiry = topic_data.message_expiry;
 
-        let dir_entries = fs::read_dir(&topic.partitions_path).await;
-        if dir_entries.is_err() {
-            return Err(Error::CannotReadPartitions(topic.topic_id, topic.stream_id));
+        let dir_entries = fs::read_dir(&topic.partitions_path).await
+            .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} for topic with ID: {} and path: {}", 
+            topic.topic_id, topic.stream_id, topic.topic_id, &topic.partitions_path));
+        if let Err(err) = dir_entries {
+            return Err(Error::CannotReadPartitions(err));
         }
 
         let mut unloaded_partitions = Vec::new();
@@ -275,6 +267,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::CannotCreateTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
+                topic.path.clone(),
             ));
         }
 
@@ -292,7 +285,9 @@ impl Storage<Topic> for FileTopicStorage {
             name: topic.name.clone(),
             created_at: topic.created_at,
             message_expiry: topic.message_expiry,
-        }) {
+        })
+        .with_context(|| format!("Failed to serialize topic with key: {}", key))
+        {
             Ok(data) => {
                 if let Err(err) = self
                     .db
@@ -303,11 +298,7 @@ impl Storage<Topic> for FileTopicStorage {
                 }
             }
             Err(err) => {
-                error!(
-                    "Cannot serialize topic with ID: {} for stream with ID: {}. Error: {}",
-                    topic.topic_id, topic.stream_id, err
-                );
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -337,12 +328,12 @@ impl Storage<Topic> for FileTopicStorage {
         );
         let key = get_topic_key(topic.stream_id, topic.topic_id);
         //I END HERE
-        if let Err(error) = self.db.remove(&key) {
-            error!(
-                "Cannot delete topic with ID: {} for stream with ID: {}. Error: {}",
-                topic.topic_id, topic.stream_id, error
-            );
-            return Err(Error::CannotDeleteResource(key));
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete topic with key: {}", key))
+        {
+            return Err(Error::CannotDeleteResource(err));
         }
         for consumer_group in topic.consumer_groups.values() {
             let consumer_group = consumer_group.read().await;
@@ -352,6 +343,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::CannotDeleteTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
+                topic.path.clone(),
             ));
         }
 

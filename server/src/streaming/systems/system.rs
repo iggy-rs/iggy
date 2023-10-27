@@ -95,19 +95,14 @@ impl System {
     }
 
     pub async fn init(&mut self) -> Result<(), Error> {
-        if !Path::new(&self.config.get_system_path()).exists()
-            && create_dir(&self.config.get_system_path()).await.is_err()
-        {
-            // It might be worth logging the error here.
-            // create_dir returns err when the directory already exists
-            // or when the parent directory doesn't exist
-            // or when the permissions are wrong
-            return Err(Error::CannotCreateBaseDirectory);
+        let system_path = self.config.get_system_path();
+        if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
+            return Err(Error::CannotCreateBaseDirectory(system_path));
         }
-        if !Path::new(&self.config.get_streams_path()).exists()
-            && create_dir(&self.config.get_streams_path()).await.is_err()
-        {
-            return Err(Error::CannotCreateStreamsDirectory);
+
+        let streams_path = self.config.get_streams_path();
+        if !Path::new(&streams_path).exists() && create_dir(&streams_path).await.is_err() {
+            return Err(Error::CannotCreateStreamsDirectory(streams_path));
         }
 
         info!(

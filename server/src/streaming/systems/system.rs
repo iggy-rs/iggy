@@ -95,15 +95,14 @@ impl System {
     }
 
     pub async fn init(&mut self) -> Result<(), Error> {
-        if !Path::new(&self.config.get_system_path()).exists()
-            && create_dir(&self.config.get_system_path()).await.is_err()
-        {
-            return Err(Error::CannotCreateBaseDirectory);
+        let system_path = self.config.get_system_path();
+        if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
+            return Err(Error::CannotCreateBaseDirectory(system_path));
         }
-        if !Path::new(&self.config.get_streams_path()).exists()
-            && create_dir(&self.config.get_streams_path()).await.is_err()
-        {
-            return Err(Error::CannotCreateStreamsDirectory);
+
+        let streams_path = self.config.get_streams_path();
+        if !Path::new(&streams_path).exists() && create_dir(&streams_path).await.is_err() {
+            return Err(Error::CannotCreateStreamsDirectory(streams_path));
         }
 
         info!(

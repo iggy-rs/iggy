@@ -69,22 +69,25 @@ impl System {
         let mut decrypted_messages = Vec::with_capacity(polled_messages.messages.len());
         for message in polled_messages.messages.iter() {
             let payload = encryptor.decrypt(&message.payload);
-            if payload.is_err() {
-                error!("Cannot decrypt the message.");
-                return Err(Error::CannotDecryptData);
+            match payload {
+                Ok(payload) => {
+                    decrypted_messages.push(Arc::new(Message {
+                        id: message.id,
+                        state: message.state,
+                        offset: message.offset,
+                        timestamp: message.timestamp,
+                        checksum: message.checksum,
+                        length: payload.len() as u32,
+                        payload: Bytes::from(payload),
+                        headers: message.headers.clone(),
+                    }));
+                }
+                Err(error) => {
+                    // Not sure if we should do this
+                    error!("Cannot decrypt the message. Error: {}", error);
+                    return Err(Error::CannotDecryptData);
+                }
             }
-
-            let payload = payload.unwrap();
-            decrypted_messages.push(Arc::new(Message {
-                id: message.id,
-                state: message.state,
-                offset: message.offset,
-                timestamp: message.timestamp,
-                checksum: message.checksum,
-                length: payload.len() as u32,
-                payload: Bytes::from(payload),
-                headers: message.headers.clone(),
-            }));
         }
 
         polled_messages.messages = decrypted_messages;

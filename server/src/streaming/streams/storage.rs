@@ -1,6 +1,7 @@
 use crate::streaming::storage::{Storage, StreamStorage};
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
+use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
@@ -44,23 +45,36 @@ impl Storage<Stream> for FileStreamStorage {
         }
 
         let key = get_key(stream.stream_id);
-        let stream_data = self.db.get(&key);
-        if stream_data.is_err() {
-            return Err(Error::CannotLoadResource(key));
-        }
+        let stream_data = match self.db.get(&key).with_context(|| {
+            format!(
+                "Failed to load stream with ID: {}, key: {}",
+                stream.stream_id, key
+            )
+        }) {
+            Ok(stream_data) => {
+                if let Some(stream_data) = stream_data {
+                    let stream_data = rmp_serde::from_slice::<StreamData>(&stream_data)
+                        .with_context(|| {
+                            format!(
+                                "Failed to deserialize stream with ID: {}, key: {}",
+                                stream.stream_id, key
+                            )
+                        });
+                    match stream_data {
+                        Ok(stream_data) => stream_data,
+                        Err(err) => {
+                            return Err(Error::CannotDeserializeResource(err));
+                        }
+                    }
+                } else {
+                    return Err(Error::ResourceNotFound(key));
+                }
+            }
+            Err(err) => {
+                return Err(Error::CannotLoadResource(err));
+            }
+        };
 
-        let stream_data = stream_data.unwrap();
-        if stream_data.is_none() {
-            return Err(Error::ResourceNotFound(key));
-        }
-
-        let stream_data = stream_data.unwrap();
-        let stream_data = rmp_serde::from_slice::<StreamData>(&stream_data);
-        if stream_data.is_err() {
-            return Err(Error::CannotDeserializeResource(key));
-        }
-
-        let stream_data = stream_data.unwrap();
         stream.name = stream_data.name;
         stream.created_at = stream_data.created_at;
         let mut unloaded_topics = Vec::new();
@@ -93,15 +107,13 @@ impl Storage<Stream> for FileStreamStorage {
         for mut topic in unloaded_topics {
             let loaded_topics = loaded_topics.clone();
             let load_stream = tokio::spawn(async move {
-                if topic.load().await.is_err() {
-                    error!(
-                        "Failed to load topic with ID: {} for stream with ID: {}.",
-                        topic.topic_id, topic.stream_id
-                    );
-                    return;
+                match topic.load().await {
+                    Ok(_) => loaded_topics.lock().await.push(topic),
+                    Err(error) => error!(
+                        "Failed to load topic with ID: {} for stream with ID: {}. Error: {}",
+                        topic.topic_id, topic.stream_id, error
+                    ),
                 }
-
-                loaded_topics.lock().await.push(topic);
             });
             load_topics.push(load_stream);
         }
@@ -138,35 +150,39 @@ impl Storage<Stream> for FileStreamStorage {
 
     async fn save(&self, stream: &Stream) -> Result<(), Error> {
         if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
-            return Err(Error::CannotCreateStreamDirectory(stream.stream_id));
+            return Err(Error::CannotCreateStreamDirectory(
+                stream.stream_id,
+                stream.path.clone(),
+            ));
         }
 
         if !Path::new(&stream.topics_path).exists()
             && create_dir(&stream.topics_path).await.is_err()
         {
-            return Err(Error::CannotCreateTopicsDirectory(stream.stream_id));
+            return Err(Error::CannotCreateTopicsDirectory(
+                stream.stream_id,
+                stream.topics_path.clone(),
+            ));
         }
 
         let key = get_key(stream.stream_id);
         match rmp_serde::to_vec(&StreamData {
             name: stream.name.clone(),
             created_at: stream.created_at,
-        }) {
+        })
+        .with_context(|| format!("Failed to serialize stream with key: {}", key))
+        {
             Ok(data) => {
-                if let Err(err) = self.db.insert(&key, data) {
-                    error!(
-                        "Cannot save stream with ID: {}. Error: {}",
-                        stream.stream_id, err
-                    );
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to insert stream with key: {}", key))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                error!(
-                    "Cannot serialize stream with ID: {}. Error: {}",
-                    stream.stream_id, err
-                );
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -178,8 +194,12 @@ impl Storage<Stream> for FileStreamStorage {
     async fn delete(&self, stream: &Stream) -> Result<(), Error> {
         info!("Deleting stream with ID: {}...", stream.stream_id);
         let key = get_key(stream.stream_id);
-        if self.db.remove(&key).is_err() {
-            return Err(Error::CannotDeleteResource(key));
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete stream with key: {}", key))
+        {
+            return Err(Error::CannotDeleteResource(err));
         }
         if fs::remove_dir_all(&stream.path).await.is_err() {
             return Err(Error::CannotDeleteStreamDirectory(stream.stream_id));

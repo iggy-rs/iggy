@@ -1,11 +1,12 @@
 use crate::streaming::storage::{Storage, UserStorage};
 use crate::streaming::users::user::User;
+use anyhow::Context;
 use async_trait::async_trait;
 use iggy::error::Error;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 const KEY_PREFIX: &str = "users";
 
@@ -33,37 +34,49 @@ impl UserStorage for FileUserStorage {
 
     async fn load_by_username(&self, username: &str) -> Result<User, Error> {
         let user_id_key = get_id_key(username);
-        let user_id = self.db.get(&user_id_key);
-        if user_id.is_err() {
-            return Err(Error::CannotLoadResource(user_id_key));
+        let user_id = self.db.get(&user_id_key).with_context(|| {
+            format!(
+                "Failed to load user with key: {}, username: {}",
+                user_id_key, username
+            )
+        });
+        match user_id {
+            Ok(user_id) => {
+                if let Some(user_id) = user_id {
+                    let user_id = u32::from_le_bytes(user_id.as_ref().try_into()?);
+                    let mut user = User::empty(user_id);
+                    self.load(&mut user).await?;
+                    Ok(user)
+                } else {
+                    Err(Error::ResourceNotFound(user_id_key))
+                }
+            }
+            Err(err) => Err(Error::CannotLoadResource(err)),
         }
-
-        let user_id = user_id.unwrap();
-        if user_id.is_none() {
-            return Err(Error::CannotLoadResource(user_id_key));
-        }
-
-        let user_id = user_id.unwrap();
-        let user_id = u32::from_le_bytes(user_id.as_ref().try_into()?);
-        let mut user = User::empty(user_id);
-        self.load(&mut user).await?;
-        Ok(user)
     }
 
     async fn load_all(&self) -> Result<Vec<User>, Error> {
         let mut users = Vec::new();
         for data in self.db.scan_prefix(format!("{}:", KEY_PREFIX)) {
-            let user = match data {
-                Ok((_, value)) => match rmp_serde::from_slice::<User>(&value) {
+            let user = match data.with_context(|| {
+                format!(
+                    "Failed to load user, when searching for key: {}",
+                    KEY_PREFIX
+                )
+            }) {
+                Ok((_, value)) => match rmp_serde::from_slice::<User>(&value).with_context(|| {
+                    format!(
+                        "Failed to deserialize user, when searching for key: {}",
+                        KEY_PREFIX
+                    )
+                }) {
                     Ok(user) => user,
                     Err(err) => {
-                        error!("Cannot deserialize user. Error: {}", err);
-                        return Err(Error::CannotDeserializeResource(KEY_PREFIX.to_string()));
+                        return Err(Error::CannotDeserializeResource(err));
                     }
                 },
                 Err(err) => {
-                    error!("Cannot load user. Error: {}", err);
-                    return Err(Error::CannotLoadResource(KEY_PREFIX.to_string()));
+                    return Err(Error::CannotLoadResource(err));
                 }
             };
             users.push(user);
@@ -77,53 +90,70 @@ impl UserStorage for FileUserStorage {
 impl Storage<User> for FileUserStorage {
     async fn load(&self, user: &mut User) -> Result<(), Error> {
         let key = get_key(user.id);
-        let user_data = self.db.get(&key);
-        if user_data.is_err() {
-            return Err(Error::CannotLoadResource(key));
-        }
+        let user_data = match self.db.get(&key).with_context(|| {
+            format!(
+                "Failed to load user with key: {}, username: {}",
+                key, user.username
+            )
+        }) {
+            Ok(data) => {
+                if let Some(user_data) = data {
+                    user_data
+                } else {
+                    return Err(Error::ResourceNotFound(key));
+                }
+            }
+            Err(err) => {
+                return Err(Error::CannotLoadResource(err));
+            }
+        };
 
-        let user_data = user_data.unwrap();
-        if user_data.is_none() {
-            return Err(Error::CannotLoadResource(key));
+        let user_data = rmp_serde::from_slice::<User>(&user_data)
+            .with_context(|| format!("Failed to deserialize user with key: {}", key));
+        match user_data {
+            Ok(user_data) => {
+                user.status = user_data.status;
+                user.username = user_data.username;
+                user.password = user_data.password;
+                user.created_at = user_data.created_at;
+                user.permissions = user_data.permissions;
+                Ok(())
+            }
+            Err(err) => {
+                return Err(Error::CannotDeserializeResource(err));
+            }
         }
-
-        let user_data = user_data.unwrap();
-        let user_data = rmp_serde::from_slice::<User>(&user_data);
-        if user_data.is_err() {
-            return Err(Error::CannotDeserializeResource(key));
-        }
-
-        let user_data = user_data.unwrap();
-        user.status = user_data.status;
-        user.username = user_data.username;
-        user.password = user_data.password;
-        user.created_at = user_data.created_at;
-        user.permissions = user_data.permissions;
-        Ok(())
     }
 
     async fn save(&self, user: &User) -> Result<(), Error> {
         let key = get_key(user.id);
-        match rmp_serde::to_vec(&user) {
+        match rmp_serde::to_vec(&user)
+            .with_context(|| format!("Failed to serialize user with key: {}", key))
+        {
             Ok(data) => {
-                if let Err(err) = self.db.insert(&key, data) {
-                    error!("Cannot save user with ID: {}. Error: {}", user.id, err);
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to insert user with key: {}", key))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
                 if let Err(err) = self
                     .db
                     .insert(get_id_key(&user.username), &user.id.to_le_bytes())
+                    .with_context(|| {
+                        format!(
+                            "Failed to insert user with ID: {} key: {}",
+                            &user.id,
+                            get_id_key(&user.username)
+                        )
+                    })
                 {
-                    error!(
-                        "Cannot save username for user with ID: {}. Error: {}",
-                        user.id, err
-                    );
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                error!("Cannot serialize user with ID: {}. Error: {}", user.id, err);
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -134,15 +164,23 @@ impl Storage<User> for FileUserStorage {
     async fn delete(&self, user: &User) -> Result<(), Error> {
         info!("Deleting user with ID: {}...", user.id);
         let key = get_key(user.id);
-        if self.db.remove(&key).is_err() {
-            return Err(Error::CannotDeleteResource(key));
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete user with ID: {}, key: {}", user.id, key))
+        {
+            return Err(Error::CannotDeleteResource(err));
+        } else {
+            let key = get_id_key(&user.username);
+            if let Err(err) = self.db.remove(&key).with_context(|| {
+                format!("Failed to delete user with ID: {}, key : {}", user.id, key)
+            }) {
+                return Err(Error::CannotDeleteResource(err));
+            } else {
+                info!("Deleted user with ID: {}.", user.id);
+                Ok(())
+            }
         }
-        let key = get_id_key(&user.username);
-        if self.db.remove(&key).is_err() {
-            return Err(Error::CannotDeleteResource(key));
-        }
-        info!("Deleted user with ID: {}.", user.id);
-        Ok(())
     }
 }
 

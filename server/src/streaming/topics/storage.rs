@@ -2,6 +2,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::{Storage, TopicStorage};
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
+use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
@@ -49,30 +50,20 @@ impl TopicStorage for FileTopicStorage {
         match rmp_serde::to_vec(&ConsumerGroupData {
             id: consumer_group.consumer_group_id,
             name: consumer_group.name.clone(),
-        }) {
+        })
+        .with_context(|| format!("Failed to serialize consumer group with key: {}", key))
+        {
             Ok(data) => {
-                if let Err(err) = self.db.insert(key, data) {
-                    error!(
-                        "Cannot save consumer group with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}",
-                        consumer_group.consumer_group_id, topic.topic_id, topic.stream_id, err
-                    );
-                    return Err(Error::CannotCreateConsumerGroupInfo(
-                        consumer_group.consumer_group_id,
-                        topic.topic_id,
-                        topic.stream_id,
-                    ));
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to insert consumer group with key: {}", key))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                error!(
-                    "Cannot serialize consumer group with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}",
-                    consumer_group.consumer_group_id, topic.topic_id, topic.stream_id, err
-                );
-                return Err(Error::CannotCreateConsumerGroupInfo(
-                    consumer_group.consumer_group_id,
-                    topic.topic_id,
-                    topic.stream_id,
-                ));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -88,17 +79,26 @@ impl TopicStorage for FileTopicStorage {
         let key_prefix = get_consumer_groups_key_prefix(topic.stream_id, topic.topic_id);
         let mut consumer_groups = Vec::new();
         for data in self.db.scan_prefix(format!("{}:", key_prefix)) {
-            let consumer_group = match data {
-                Ok((_, value)) => match rmp_serde::from_slice::<ConsumerGroupData>(&value) {
+            let consumer_group = match data.with_context(|| {
+                format!(
+                    "Failed to load consumer group when searching for key: {}",
+                    key_prefix
+                )
+            }) {
+                Ok((_, value)) => match rmp_serde::from_slice::<ConsumerGroupData>(&value)
+                    .with_context(|| {
+                        format!(
+                            "Failed to deserialize consumer group with key: {}",
+                            key_prefix
+                        )
+                    }) {
                     Ok(user) => user,
                     Err(err) => {
-                        error!("Cannot deserialize consumer group. Error: {}", err);
-                        return Err(Error::CannotDeserializeResource(key_prefix));
+                        return Err(Error::CannotDeserializeResource(err));
                     }
                 },
                 Err(err) => {
-                    error!("Cannot load consumer group. Error: {}", err);
-                    return Err(Error::CannotLoadResource(key_prefix));
+                    return Err(Error::CannotLoadResource(err));
                 }
             };
             let consumer_group = ConsumerGroup::new(
@@ -123,16 +123,22 @@ impl TopicStorage for FileTopicStorage {
             topic.topic_id,
             consumer_group.consumer_group_id,
         );
-        if self.db.remove(&key).is_err() {
-            return Err(Error::CannotDeleteResource(key));
-        }
-
-        info!(
+        match self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete consumer group with key: {}", key))
+        {
+            Ok(_) => {
+                info!(
             "Consumer group with ID: {} for topic with ID: {} and stream with ID: {} was deleted.",
             consumer_group.consumer_group_id, topic.topic_id, topic.stream_id
         );
-
-        Ok(())
+                Ok(())
+            }
+            Err(err) => {
+                return Err(Error::CannotDeleteResource(err));
+            }
+        }
     }
 }
 
@@ -155,30 +161,38 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         let key = get_topic_key(topic.stream_id, topic.topic_id);
-        let topic_data = self.db.get(&key);
-        if topic_data.is_err() {
-            return Err(Error::CannotLoadResource(key));
-        }
+        let topic_data = match self
+            .db
+            .get(&key)
+            .with_context(|| format!("Failed to load topic with key: {}", key))
+        {
+            Ok(data) => {
+                if let Some(topic_data) = data {
+                    let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data)
+                        .with_context(|| format!("Failed to deserialize topic with key: {}", key));
+                    if let Err(err) = topic_data {
+                        return Err(Error::CannotDeserializeResource(err));
+                    } else {
+                        topic_data.unwrap()
+                    }
+                } else {
+                    return Err(Error::ResourceNotFound(key));
+                }
+            }
+            Err(err) => {
+                return Err(Error::CannotLoadResource(err));
+            }
+        };
 
-        let topic_data = topic_data.unwrap();
-        if topic_data.is_none() {
-            return Err(Error::ResourceNotFound(key));
-        }
-
-        let topic_data = topic_data.unwrap();
-        let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data);
-        if topic_data.is_err() {
-            return Err(Error::CannotDeserializeResource(key));
-        }
-
-        let topic_data = topic_data.unwrap();
         topic.name = topic_data.name;
         topic.created_at = topic_data.created_at;
         topic.message_expiry = topic_data.message_expiry;
 
-        let dir_entries = fs::read_dir(&topic.partitions_path).await;
-        if dir_entries.is_err() {
-            return Err(Error::CannotReadPartitions(topic.topic_id, topic.stream_id));
+        let dir_entries = fs::read_dir(&topic.partitions_path).await
+            .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} for topic with ID: {} and path: {}", 
+            topic.topic_id, topic.stream_id, topic.topic_id, &topic.partitions_path));
+        if let Err(err) = dir_entries {
+            return Err(Error::CannotReadPartitions(err));
         }
 
         let mut unloaded_partitions = Vec::new();
@@ -216,12 +230,16 @@ impl Storage<Topic> for FileTopicStorage {
         for mut partition in unloaded_partitions {
             let loaded_partitions = loaded_partitions.clone();
             let load_partition = tokio::spawn(async move {
-                if partition.load().await.is_err() {
-                    error!("Failed to load partition with ID: {} for stream with ID: {} and topic with ID: {}", partition.partition_id, stream_id, topic_id);
-                    return;
+                match partition.load().await {
+                    Ok(_) => {
+                        loaded_partitions.lock().await.push(partition);
+                    }
+                    Err(error) => {
+                        error!(
+                            "Failed to load partition with ID: {} for stream with ID: {} and topic with ID: {}. Error: {}",
+                            partition.partition_id, stream_id, topic_id, error);
+                    }
                 }
-
-                loaded_partitions.lock().await.push(partition);
             });
             load_partitions.push(load_partition);
         }
@@ -249,6 +267,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::CannotCreateTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
+                topic.path.clone(),
             ));
         }
 
@@ -266,22 +285,20 @@ impl Storage<Topic> for FileTopicStorage {
             name: topic.name.clone(),
             created_at: topic.created_at,
             message_expiry: topic.message_expiry,
-        }) {
+        })
+        .with_context(|| format!("Failed to serialize topic with key: {}", key))
+        {
             Ok(data) => {
-                if let Err(err) = self.db.insert(&key, data) {
-                    error!(
-                        "Cannot save topic with ID: {} for stream with ID: {}. Error: {}",
-                        topic.topic_id, topic.stream_id, err
-                    );
-                    return Err(Error::CannotSaveResource(key.to_string()));
+                if let Err(err) = self
+                    .db
+                    .insert(&key, data)
+                    .with_context(|| format!("Failed to insert topic with key: {}", key))
+                {
+                    return Err(Error::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                error!(
-                    "Cannot serialize topic with ID: {} for stream with ID: {}. Error: {}",
-                    topic.topic_id, topic.stream_id, err
-                );
-                return Err(Error::CannotSerializeResource(key));
+                return Err(Error::CannotSerializeResource(err));
             }
         }
 
@@ -310,8 +327,13 @@ impl Storage<Topic> for FileTopicStorage {
             topic.topic_id, topic.stream_id
         );
         let key = get_topic_key(topic.stream_id, topic.topic_id);
-        if self.db.remove(&key).is_err() {
-            return Err(Error::CannotDeleteResource(key));
+        //I END HERE
+        if let Err(err) = self
+            .db
+            .remove(&key)
+            .with_context(|| format!("Failed to delete topic with key: {}", key))
+        {
+            return Err(Error::CannotDeleteResource(err));
         }
         for consumer_group in topic.consumer_groups.values() {
             let consumer_group = consumer_group.read().await;
@@ -321,6 +343,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(Error::CannotDeleteTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
+                topic.path.clone(),
             ));
         }
 

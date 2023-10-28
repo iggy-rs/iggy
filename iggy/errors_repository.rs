@@ -8,6 +8,7 @@ pub struct ErrorRepositoryEntry {
     pub template: String,
     pub signature: String,
     pub converts_from: String,
+    pub source: String,
 }
 
 // Adds computed fields to avoid re-computation in later usage
@@ -17,16 +18,25 @@ pub struct PreprocessedErrorRepositoryEntry {
     pub template: String,
     pub signature: String,
     pub converts_from: String,
+    pub source: String,
     pub pascal_case_name: String,
     pub signature_wildcard_pattern: String,
 }
 
 fn get_full_signature_string(entry: &ErrorRepositoryEntry) -> String {
-    match (entry.converts_from.is_empty(), entry.signature.is_empty()) {
-        (true, true) => String::new(),
-        (true, false) => format!("({})", entry.signature),
-        (false, true) => format!("(#[from] {})", entry.converts_from),
-        (false, false) => format!("({}, {})", entry.converts_from, entry.signature),
+    match (
+        entry.converts_from.is_empty(),
+        entry.signature.is_empty(),
+        entry.source.is_empty(),
+    ) {
+        (true, true, true) => String::new(),
+        (true, false, true) => format!("({})", entry.signature),
+        (false, true, true) => format!("(#[from] {})", entry.converts_from),
+        (true, true, false) => format!("(#[source] {})", entry.source),
+        (true, false, false) => format!("(#[source] {}, {})", entry.source, entry.signature),
+        _ => {
+            panic!("Only one of [converts_from, source] can be set")
+        }
     }
 }
 
@@ -46,6 +56,7 @@ impl From<ErrorRepositoryEntry> for PreprocessedErrorRepositoryEntry {
             code: error_code.code,
             template: error_code.template.clone(),
             signature: error_code.signature.clone(),
+            source: error_code.source.clone(),
             converts_from: error_code.converts_from.clone(),
             pascal_case_name: error_code.snake_case_name.to_case(Case::Pascal),
             signature_wildcard_pattern: {
@@ -62,6 +73,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Error".to_string(),
         },
         ErrorRepositoryEntry {
@@ -69,6 +81,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid configuration".to_string(),
         },
         ErrorRepositoryEntry {
@@ -76,6 +89,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 3,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid command".to_string(),
         },
         ErrorRepositoryEntry {
@@ -83,6 +97,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid format".to_string(),
         },
         ErrorRepositoryEntry {
@@ -90,62 +105,71 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Feature is unavailable".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_base_directory".to_string(),
             code: 10,
-            signature: "".to_string(),
+            signature: "String".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot create base directory".to_string(),
+            source: "".to_string(),
+            template: "Cannot create base directory, Path: {0}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "resource_not_found".to_string(),
             code: 20,
             signature: "String".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Resource with key: {0} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_load_resource".to_string(),
             code: 21,
-            signature: "String".to_string(),
+            signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot load resource with key: {0}".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot load resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_save_resource".to_string(),
             code: 22,
-            signature: "String".to_string(),
+            signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot save resource with key: {0}".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot save resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_delete_resource".to_string(),
             code: 23,
-            signature: "String".to_string(),
+            signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot delete resource with key: {0}".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot delete resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_serialize_resource".to_string(),
             code: 24,
-            signature: "String".to_string(),
+            signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot serialize resource with key: {0}".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot serialize resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_deserialize_resource".to_string(),
             code: 25,
-            signature: "String".to_string(),
+            signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot deserialize resource with key: {0}".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot deserialize resource. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "unauthenticated".to_string(),
             code: 40,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Unauthenticated".to_string(),
         },
         ErrorRepositoryEntry {
@@ -153,6 +177,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 41,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Unauthorized".to_string(),
         },
         ErrorRepositoryEntry {
@@ -160,6 +185,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 42,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid credentials".to_string(),
         },
         ErrorRepositoryEntry {
@@ -167,6 +193,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 43,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid username".to_string(),
         },
         ErrorRepositoryEntry {
@@ -174,6 +201,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 44,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid password".to_string(),
         },
         ErrorRepositoryEntry {
@@ -181,6 +209,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 45,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid user status".to_string(),
         },
         ErrorRepositoryEntry {
@@ -188,6 +217,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 46,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "User already exists".to_string(),
         },
         ErrorRepositoryEntry {
@@ -195,6 +225,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 47,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "User inactive".to_string(),
         },
         ErrorRepositoryEntry {
@@ -202,6 +233,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 48,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot delete user with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -209,6 +241,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 49,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot change permissions for user with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -216,6 +249,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 50,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid personal access token name".to_string(),
         },
         ErrorRepositoryEntry {
@@ -223,6 +257,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 51,
             signature: "String, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Personal access token: {0} for user with ID: {1} already exists".to_string(),
         },
         ErrorRepositoryEntry {
@@ -230,6 +265,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 52,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "User with ID: {0} has reached the maximum number of personal access tokens: {1}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -237,6 +273,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 53,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid personal access token".to_string(),
         },
         ErrorRepositoryEntry {
@@ -244,6 +281,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 54,
             signature: "String, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Personal access token: {0} for user with ID: {1} has expired.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -251,6 +289,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 61,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Not connected".to_string(),
         },
         ErrorRepositoryEntry {
@@ -258,6 +297,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 62,
             signature: "".to_string(),
             converts_from: "reqwest::Error".to_string(),
+            source: "".to_string(),
             template: "Request error".to_string(),
         },
         ErrorRepositoryEntry {
@@ -265,6 +305,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 70,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid encryption key".to_string(),
         },
         ErrorRepositoryEntry {
@@ -272,6 +313,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 71,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot encrypt data".to_string(),
         },
         ErrorRepositoryEntry {
@@ -279,6 +321,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 72,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot decrypt data".to_string(),
         },
         ErrorRepositoryEntry {
@@ -286,6 +329,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 73,
             signature: "String".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid JWT algorithm: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -293,6 +337,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 74,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid JWT secret".to_string(),
         },
         ErrorRepositoryEntry {
@@ -300,6 +345,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 75,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "JWT is missing".to_string(),
         },
         ErrorRepositoryEntry {
@@ -307,6 +353,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 76,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot generate JWT".to_string(),
         },
         ErrorRepositoryEntry {
@@ -314,6 +361,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 77,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Refresh token is missing".to_string(),
         },
         ErrorRepositoryEntry {
@@ -321,6 +369,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 78,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid refresh token".to_string(),
         },
         ErrorRepositoryEntry {
@@ -328,6 +377,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 79,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Refresh token expired".to_string(),
         },
         ErrorRepositoryEntry {
@@ -335,6 +385,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 100,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Client with ID: {0} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -342,6 +393,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 101,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid client ID".to_string(),
         },
         ErrorRepositoryEntry {
@@ -349,6 +401,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 200,
             signature: "".to_string(),
             converts_from: "io::Error".to_string(),
+            source: "".to_string(),
             template: "IO error".to_string(),
         },
         ErrorRepositoryEntry {
@@ -356,6 +409,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 201,
             signature: "".to_string(),
             converts_from: "WriteError".to_string(),
+            source: "".to_string(),
             template: "Write error".to_string(),
         },
         ErrorRepositoryEntry {
@@ -363,6 +417,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 202,
             signature: "".to_string(),
             converts_from: "Utf8Error".to_string(),
+            source: "".to_string(),
             template: "Cannot parse UTF8".to_string(),
         },
         ErrorRepositoryEntry {
@@ -370,6 +425,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 203,
             signature: "".to_string(),
             converts_from: "ParseIntError".to_string(),
+            source: "".to_string(),
             template: "Cannot parse integer".to_string(),
         },
         ErrorRepositoryEntry {
@@ -377,6 +433,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 204,
             signature: "".to_string(),
             converts_from: "TryFromSliceError".to_string(),
+            source: "".to_string(),
             template: "Cannot parse integer".to_string(),
         },
         ErrorRepositoryEntry {
@@ -384,6 +441,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 300,
             signature: "u16, String".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "HTTP response error, status: {0}, body: {1}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -391,6 +449,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 301,
             signature: "".to_string(),
             converts_from: "reqwest_middleware::Error".to_string(),
+            source: "".to_string(),
             template: "Request middleware error".to_string(),
         },
         ErrorRepositoryEntry {
@@ -398,6 +457,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 302,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot create endpoint".to_string(),
         },
         ErrorRepositoryEntry {
@@ -405,6 +465,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 303,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot parse URL".to_string(),
         },
         ErrorRepositoryEntry {
@@ -412,6 +473,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 304,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid response: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -419,6 +481,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 305,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Empty response".to_string(),
         },
         ErrorRepositoryEntry {
@@ -426,6 +489,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 306,
             signature: "".to_string(),
             converts_from: "AddrParseError".to_string(),
+            source: "".to_string(),
             template: "Cannot parse address".to_string(),
         },
         ErrorRepositoryEntry {
@@ -433,6 +497,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 307,
             signature: "".to_string(),
             converts_from: "ReadError".to_string(),
+            source: "".to_string(),
             template: "Read error".to_string(),
         },
         ErrorRepositoryEntry {
@@ -440,6 +505,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 308,
             signature: "".to_string(),
             converts_from: "ConnectionError".to_string(),
+            source: "".to_string(),
             template: "Connection error".to_string(),
         },
         ErrorRepositoryEntry {
@@ -447,27 +513,31 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 309,
             signature: "".to_string(),
             converts_from: "ReadToEndError".to_string(),
+            source: "".to_string(),
             template: "Read to end error".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_streams_directory".to_string(),
             code: 1000,
-            signature: "".to_string(),
+            signature: "String".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot create streams directory".to_string(),
+            source: "".to_string(),
+            template: "Cannot create streams directory, Path: {0}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_stream_directory".to_string(),
             code: 1001,
-            signature: "u32".to_string(),
+            signature: "u32, String".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot create stream with ID: {0} directory".to_string(),
+            source: "".to_string(),
+            template: "Cannot create stream with ID: {0} directory, Path: {1}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_stream_info".to_string(),
             code: 1002,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to create stream info file for stream with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -475,6 +545,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1003,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to update stream info for stream with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -482,6 +553,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1004,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to open stream info file for stream with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -489,6 +561,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1005,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to read stream info file for stream with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -496,6 +569,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1006,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to create stream with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -503,6 +577,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1007,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to delete stream with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -510,6 +585,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1008,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to delete stream directory with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -517,6 +593,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1009,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Stream with ID: {0} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -524,6 +601,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1010,
             signature: "String".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Stream with name: {0} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -531,6 +609,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1011,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Stream with ID: {0} already exists.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -538,6 +617,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1012,
             signature: "String".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Stream with name: {0} already exists.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -545,6 +625,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1013,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid stream name".to_string(),
         },
         ErrorRepositoryEntry {
@@ -552,6 +633,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1014,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid stream ID".to_string(),
         },
         ErrorRepositoryEntry {
@@ -559,27 +641,31 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 1015,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read streams".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_topics_directory".to_string(),
             code: 2000,
-            signature: "u32".to_string(),
+            signature: "u32, String".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot create topics directory for stream with ID: {0}".to_string(),
+            source: "".to_string(),
+            template: "Cannot create topics directory for stream with ID: {0}, Path: {1}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_topic_directory".to_string(),
             code: 2001,
-            signature: "u32, u32".to_string(),
+            signature: "u32, u32, String".to_string(),
             converts_from: "".to_string(),
-            template: "Failed to create directory for topic with ID: {0} for stream with ID: {1}.".to_string(),
+            source: "".to_string(),
+            template: "Failed to create directory for topic with ID: {0} for stream with ID: {1}, Path: {2}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_topic_info".to_string(),
             code: 2002,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to create topic info file for topic with ID: {0} for stream with ID: {1}.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -587,6 +673,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2003,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to update topic info for topic with ID: {0} for stream with ID: {1}.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -594,6 +681,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2004,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to open topic info file for topic with ID: {0} for stream with ID: {1}.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -601,6 +689,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2005,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to read topic info file for topic with ID: {0} for stream with ID: {1}.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -608,6 +697,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2006,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to create topic with ID: {0} for stream with ID: {1}.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -615,20 +705,23 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2007,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to delete topic with ID: {0} for stream with ID: {1}.".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_delete_topic_directory".to_string(),
             code: 2008,
-            signature: "u32, u32".to_string(),
+            signature: "u32, u32, String".to_string(),
             converts_from: "".to_string(),
-            template: "Failed to delete topic directory with ID: {0} for stream with ID: {1}.".to_string(),
+            source: "".to_string(),
+            template: "Failed to delete topic directory with ID: {0} for stream with ID: {1}, Path: {2}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_poll_topic".to_string(),
             code: 2009,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot poll topic".to_string(),
         },
         ErrorRepositoryEntry {
@@ -636,6 +729,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2010,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Topic with ID: {0} for stream with ID: {1} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -643,6 +737,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2011,
             signature: "String, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Topic with name: {0} for stream with ID: {1} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -650,6 +745,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2012,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Topic with ID: {0} for stream with ID: {1} already exists.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -657,6 +753,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2013,
             signature: "String, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Topic with name: {0} for stream with ID: {1} already exists.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -664,6 +761,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2014,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid topic name".to_string(),
         },
         ErrorRepositoryEntry {
@@ -671,6 +769,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2015,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Too many partitions".to_string(),
         },
         ErrorRepositoryEntry {
@@ -678,6 +777,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2016,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid topic ID".to_string(),
         },
         ErrorRepositoryEntry {
@@ -685,6 +785,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 2017,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read topics for stream with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -692,6 +793,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 3000,
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot create partition with ID: {0} for stream with ID: {1} and topic with ID: {2}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -699,6 +801,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 3001,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to create directory for partitions for stream with ID: {0} and topic with ID: {1}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -706,6 +809,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 3002,
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to create directory for partition with ID: {0} for stream with ID: {1} and topic with ID: {2}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -713,20 +817,23 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 3003,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot open partition log file".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_read_partitions".to_string(),
             code: 3004,
-            signature: "u32, u32".to_string(),
+            signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Failed to read partitions directories for topic with ID: {0} and stream with ID: {1}".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot read partitions directories. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_delete_partition".to_string(),
             code: 3005,
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to delete partition with ID: {0} for stream with ID: {1} and topic with ID: {2}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -734,6 +841,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 3006,
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to delete partition directory with ID: {0} for stream with ID: {1} and topic with ID: {2}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -741,6 +849,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 3007,
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Partition with ID: {0} for topic with ID: {1} for stream with ID: {2} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -748,6 +857,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 3008,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Topic with ID: {0} for stream with ID: {1} has no partitions.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -755,6 +865,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4000,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Segment not found".to_string(),
         },
         ErrorRepositoryEntry {
@@ -762,6 +873,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4001,
             signature: "u64, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Segment with start offset: {0} and partition with ID: {1} is closed".to_string(),
         },
         ErrorRepositoryEntry {
@@ -769,6 +881,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4002,
             signature: "u64".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Segment size is invalid".to_string(),
         },
         ErrorRepositoryEntry {
@@ -776,48 +889,55 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4003,
             signature: "String".to_string(),
             converts_from: "".to_string(),
-            template: "Failed to create segment log file for path: {0}.".to_string(),
+            source: "".to_string(),
+            template: "Failed to create segment log file for Path: {0}.".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_segment_index_file".to_string(),
             code: 4004,
             signature: "String".to_string(),
             converts_from: "".to_string(),
-            template: "Failed to create segment index file for path: {0}.".to_string(),
+            source: "".to_string(),
+            template: "Failed to create segment index file for Path: {0}.".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_create_segment_time_index_file".to_string(),
             code: 4005,
             signature: "String".to_string(),
             converts_from: "".to_string(),
-            template: "Failed to create segment time index file for path: {0}.".to_string(),
+            source: "".to_string(),
+            template: "Failed to create segment time index file for Path: {0}.".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_save_messages_to_segment".to_string(),
             code: 4006,
             signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot save messages to segment".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot save messages to segment. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_save_index_to_segment".to_string(),
             code: 4007,
             signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot save index to segment".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot save index to segment. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "cannot_save_time_index_to_segment".to_string(),
             code: 4008,
             signature: "".to_string(),
             converts_from: "".to_string(),
-            template: "Cannot save time index to segment".to_string(),
+            source: "anyhow::Error".to_string(),
+            template: "Cannot save time index to segment. Reason: {0:#}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "invalid_messages_count".to_string(),
             code: 4009,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid messages count".to_string(),
         },
         ErrorRepositoryEntry {
@@ -825,6 +945,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4010,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot append message".to_string(),
         },
         ErrorRepositoryEntry {
@@ -832,6 +953,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4011,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read message".to_string(),
         },
         ErrorRepositoryEntry {
@@ -839,6 +961,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4012,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read message ID".to_string(),
         },
         ErrorRepositoryEntry {
@@ -846,6 +969,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4013,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read message state".to_string(),
         },
         ErrorRepositoryEntry {
@@ -853,6 +977,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4014,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read message timestamp".to_string(),
         },
         ErrorRepositoryEntry {
@@ -860,6 +985,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4015,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read headers length".to_string(),
         },
         ErrorRepositoryEntry {
@@ -867,6 +993,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4016,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read headers payload".to_string(),
         },
         ErrorRepositoryEntry {
@@ -874,6 +1001,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4017,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Too big headers payload".to_string(),
         },
         ErrorRepositoryEntry {
@@ -881,6 +1009,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4018,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid header key".to_string(),
         },
         ErrorRepositoryEntry {
@@ -888,6 +1017,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4019,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid header value".to_string(),
         },
         ErrorRepositoryEntry {
@@ -895,6 +1025,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4020,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read message length".to_string(),
         },
         ErrorRepositoryEntry {
@@ -902,6 +1033,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4021,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot save messages to segment".to_string(),
         },
         ErrorRepositoryEntry {
@@ -909,6 +1041,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4022,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Too big message payload".to_string(),
         },
         ErrorRepositoryEntry {
@@ -916,6 +1049,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4023,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Too many messages".to_string(),
         },
         ErrorRepositoryEntry {
@@ -923,6 +1057,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4024,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Empty message payload".to_string(),
         },
         ErrorRepositoryEntry {
@@ -930,6 +1065,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4025,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid message payload length".to_string(),
         },
         ErrorRepositoryEntry {
@@ -937,6 +1073,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4026,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Cannot read message checksum".to_string(),
         },
         ErrorRepositoryEntry {
@@ -944,6 +1081,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4027,
             signature: "u32, u32, u64".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid message checksum: {0}, expected: {1}, for offset: {2}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -951,6 +1089,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4028,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid key value length".to_string(),
         },
         ErrorRepositoryEntry {
@@ -958,6 +1097,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4100,
             signature: "u64".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid offset: {0}".to_string(),
         },
         ErrorRepositoryEntry {
@@ -965,13 +1105,15 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 4101,
             signature: "u32".to_string(),
             converts_from: "".to_string(),
-            template: "Failed to read consumers offsets  for partition with ID: {0}".to_string(),
+            source: "".to_string(),
+            template: "Failed to read consumers offsets for partition with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
             snake_case_name: "consumer_group_id_not_found".to_string(),
             code: 5000,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Consumer group with ID: {0} for topic with ID: {1} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -979,6 +1121,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5001,
             signature: "u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Consumer group with ID: {0} for topic with ID: {1} already exists.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -986,6 +1129,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5002,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid consumer group ID".to_string(),
         },
         ErrorRepositoryEntry {
@@ -993,6 +1137,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5003,
             signature: "String, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Consumer group with name: {0} for topic with ID: {1} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -1000,6 +1145,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5004,
             signature: "String, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Consumer group with name: {0} for topic with ID: {1} already exists.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -1007,6 +1153,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5005,
             signature: "".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Invalid consumer group name".to_string(),
         },
         ErrorRepositoryEntry {
@@ -1014,6 +1161,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5006,
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Consumer group member with ID: {0} for group with ID: {1} for topic with ID: {2} was not found.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -1021,6 +1169,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5007,
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to create consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.".to_string(),
         },
         ErrorRepositoryEntry {
@@ -1028,6 +1177,7 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             code: 5008,
             signature: "u32, u32, u32".to_string(),
             converts_from: "".to_string(),
+            source: "".to_string(),
             template: "Failed to delete consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.".to_string(),
         },
     ];

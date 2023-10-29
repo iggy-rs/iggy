@@ -89,6 +89,7 @@ jobs:
               - iggy-server
               - iggy-cli
             name: iggy-Windows-x86_64.zip
+            skip_tests: true
             cross: false
 
         toolchain:

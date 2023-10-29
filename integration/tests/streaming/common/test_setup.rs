@@ -2,12 +2,9 @@ use server::configs::system::SystemConfig;
 use server::streaming::persistence::persister::FilePersister;
 use server::streaming::storage::SystemStorage;
 use sled::Db;
-use std::sync::atomic::AtomicUsize;
-use std::sync::atomic::Ordering::SeqCst;
 use std::sync::Arc;
 use tokio::fs;
-
-static DIRECTORY_ID: AtomicUsize = AtomicUsize::new(1);
+use uuid::Uuid;
 
 pub struct TestSetup {
     pub config: Arc<SystemConfig>,
@@ -21,8 +18,8 @@ impl TestSetup {
     }
 
     pub async fn init_with_config(mut config: SystemConfig) -> TestSetup {
-        let directory_id = DIRECTORY_ID.fetch_add(1, SeqCst);
-        config.path = format!("test_local_data_{}", directory_id);
+        config.path = format!("local_data_{}", Uuid::new_v4().to_u128_le());
+
         let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();
         let persister = FilePersister {};

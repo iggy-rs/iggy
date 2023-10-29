@@ -1,4 +1,3 @@
-use crate::utils::test_server::{assert_clean_system, ClientFactory};
 use iggy::client::{PersonalAccessTokenClient, SystemClient, UserClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::identifier::Identifier;
@@ -19,6 +18,7 @@ use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
+use integration::test_server::{assert_clean_system, ClientFactory};
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;

@@ -3,8 +3,7 @@ use crate::server::scenarios::{
     consumer_group_with_single_client_polling_messages_scenario, message_headers_scenario,
     system_scenario, user_scenario,
 };
-use crate::utils::quic_client::QuicClientFactory;
-use crate::utils::test_server::TestServer;
+use integration::{quic_client::QuicClientFactory, test_server::TestServer};
 use serial_test::parallel;
 
 #[tokio::test]

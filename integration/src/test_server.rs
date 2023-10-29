@@ -1,5 +1,6 @@
 use assert_cmd::prelude::CommandCargoExt;
 use async_trait::async_trait;
+use derive_more::Display;
 use iggy::client::{Client, StreamClient, UserClient};
 use iggy::clients::client::IggyClient;
 use iggy::identifier::Identifier;
@@ -12,54 +13,69 @@ use iggy::users::delete_user::DeleteUser;
 use iggy::users::get_users::GetUsers;
 use iggy::users::login_user::LoginUser;
 use std::collections::HashMap;
-use std::fmt::Display;
+use std::fs;
 use std::fs::{File, OpenOptions};
-use std::io::Write;
+use std::io::{BufRead, BufReader, Write};
 use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream, UdpSocket};
 use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::thread::{panicking, sleep};
 use std::time::Duration;
-use std::{fmt, fs};
 use uuid::Uuid;
 
-const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
+pub const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
+pub const TEST_VERBOSITY_ENV_VAR: &str = "IGGY_TEST_VERBOSE";
 const USER_PASSWORD: &str = "secret";
 const MAX_PORT_WAIT_DURATION_S: u64 = 120;
 const SLEEP_INTERVAL_MS: u64 = 20;
+const LOCAL_DATA_PREFIX: &str = "local_data_";
 
 #[async_trait]
 pub trait ClientFactory: Sync + Send {
     async fn create_client(&self) -> Box<dyn Client>;
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Display)]
+pub enum Transport {
+    #[display(fmt = "http")]
+    Http,
+
+    #[display(fmt = "quic")]
+    Quic,
+
+    #[display(fmt = "tcp")]
+    Tcp,
+}
+
+#[derive(Display)]
 enum ServerProtocolAddr {
+    #[display(fmt = "RAW_TCP:{_0}")]
     RawTcp(SocketAddr),
+
+    #[display(fmt = "HTTP_TCP:{_0}")]
     HttpTcp(SocketAddr),
+
+    #[display(fmt = "QUIC_UDP:{_0}")]
     QuicUdp(SocketAddr),
 }
 
-impl Display for ServerProtocolAddr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            ServerProtocolAddr::RawTcp(addr) => write!(f, "RAW_TCP:{}", addr),
-            ServerProtocolAddr::HttpTcp(addr) => write!(f, "HTTP_TCP:{}", addr),
-            ServerProtocolAddr::QuicUdp(addr) => write!(f, "QUIC_UDP:{}", addr),
-        }
-    }
-}
-
 pub struct TestServer {
-    files_path: String,
-    envs: Option<HashMap<String, String>>,
+    local_data_path: String,
+    envs: HashMap<String, String>,
     child_handle: Option<Child>,
     server_addrs: Vec<ServerProtocolAddr>,
     stdout_file_path: Option<PathBuf>,
     stderr_file_path: Option<PathBuf>,
+    cleanup: bool,
+    server_executable_path: Option<String>,
 }
 
 impl TestServer {
-    pub fn new(extra_envs: Option<HashMap<String, String>>) -> Self {
+    pub fn new(
+        extra_envs: Option<HashMap<String, String>>,
+        cleanup: bool,
+        server_executable_path: Option<String>,
+    ) -> Self {
         let mut envs = HashMap::new();
         if let Some(extra) = extra_envs {
             for (key, value) in extra {
@@ -67,18 +83,49 @@ impl TestServer {
             }
         }
 
-        Self::create(TestServer::get_random_path(), Some(envs))
+        // If IGGY_SYSTEM_PATH is not set, use a random path starting with "local_data_"
+        let local_data_path = if let Some(system_path) = envs.get(SYSTEM_PATH_ENV_VAR) {
+            system_path.to_string()
+        } else {
+            TestServer::get_random_path()
+        };
+
+        Self::create(local_data_path, envs, cleanup, server_executable_path)
     }
 
-    pub fn create(files_path: String, envs: Option<HashMap<String, String>>) -> Self {
-        let server_addrs = Self::get_free_addrs();
+    pub fn create(
+        local_data_path: String,
+        envs: HashMap<String, String>,
+        cleanup: bool,
+        server_executable_path: Option<String>,
+    ) -> Self {
+        let mut server_addrs = Vec::new();
+
+        if let Some(tcp_addr) = envs.get("IGGY_TCP_ADDRESS") {
+            server_addrs.push(ServerProtocolAddr::RawTcp(tcp_addr.parse().unwrap()));
+        }
+
+        if let Some(http_addr) = envs.get("IGGY_HTTP_ADDRESS") {
+            server_addrs.push(ServerProtocolAddr::HttpTcp(http_addr.parse().unwrap()));
+        }
+
+        if let Some(quic_addr) = envs.get("IGGY_QUIC_ADDRESS") {
+            server_addrs.push(ServerProtocolAddr::QuicUdp(quic_addr.parse().unwrap()));
+        }
+
+        if server_addrs.is_empty() {
+            server_addrs = Self::get_free_addrs();
+        }
+
         Self {
-            files_path,
+            local_data_path,
             envs,
             child_handle: None,
             server_addrs,
             stdout_file_path: None,
             stderr_file_path: None,
+            cleanup,
+            server_executable_path,
         }
     }
 
@@ -86,12 +133,14 @@ impl TestServer {
         self.set_server_addrs_from_env();
         self.wait_until_server_freed_ports();
         self.cleanup();
-        let files_path = self.files_path.clone();
-        let mut command = Command::cargo_bin("iggy-server").unwrap();
+        let files_path = self.local_data_path.clone();
+        let mut command = if let Some(server_executable_path) = &self.server_executable_path {
+            std::process::Command::new(server_executable_path)
+        } else {
+            Command::cargo_bin("iggy-server").unwrap()
+        };
         command.env(SYSTEM_PATH_ENV_VAR, files_path.clone());
-        if let Some(env) = &self.envs {
-            command.envs(env);
-        }
+        command.envs(self.envs.clone());
 
         // When running action from github CI, binary needs to be started via QEMU.
         if let Ok(runner) = std::env::var("QEMU_RUNNER") {
@@ -99,23 +148,39 @@ impl TestServer {
             runner_command
                 .arg(command.get_program().to_str().unwrap())
                 .env(SYSTEM_PATH_ENV_VAR, files_path);
-            if let Some(env) = &self.envs {
-                runner_command.envs(env);
-            }
+
+            runner_command.envs(self.envs.clone());
             command = runner_command;
         };
 
         // By default, server all logs are redirected to files,
         // and dumped to stderr when test fails. With IGGY_TEST_VERBOSE=1
         // logs are dumped to stdout during test execution.
-        if std::env::var("IGGY_TEST_VERBOSE").is_err() {
+        if std::env::var(TEST_VERBOSITY_ENV_VAR).is_ok()
+            || self.envs.contains_key(TEST_VERBOSITY_ENV_VAR)
+        {
+            command.stdout(std::process::Stdio::inherit());
+            command.stderr(std::process::Stdio::inherit());
+        } else {
             command.stdout(self.get_stdout_file());
             self.stdout_file_path = Some(fs::canonicalize(self.get_stdout_file_path()).unwrap());
             command.stderr(self.get_stderr_file());
             self.stderr_file_path = Some(fs::canonicalize(self.get_stderr_file_path()).unwrap());
         }
 
-        self.child_handle = Some(command.spawn().unwrap());
+        let child = command.spawn().unwrap();
+        self.child_handle = Some(child);
+
+        if self.child_handle.as_ref().unwrap().stdout.is_some() {
+            let child_stdout = self.child_handle.as_mut().unwrap().stdout.take().unwrap();
+            std::thread::spawn(move || {
+                let reader = BufReader::new(child_stdout);
+                for line in reader.lines() {
+                    println!("{}", line.unwrap());
+                }
+            });
+        }
+
         self.wait_until_server_has_bound();
     }
 
@@ -160,13 +225,21 @@ impl TestServer {
         self.cleanup();
     }
 
-    pub(crate) fn is_started(&self) -> bool {
+    pub fn is_started(&self) -> bool {
         self.child_handle.is_some()
     }
 
+    pub fn pid(&self) -> u32 {
+        self.child_handle.as_ref().unwrap().id()
+    }
+
     fn cleanup(&self) {
-        if fs::metadata(&self.files_path).is_ok() {
-            fs::remove_dir_all(&self.files_path).unwrap();
+        if !self.cleanup {
+            return;
+        }
+
+        if fs::metadata(&self.local_data_path).is_ok() {
+            fs::remove_dir_all(&self.local_data_path).unwrap();
         }
     }
 
@@ -193,26 +266,19 @@ impl TestServer {
 
     fn set_server_addrs_from_env(&mut self) {
         for server_protocol_addr in &self.server_addrs {
-            match server_protocol_addr {
+            let key = match server_protocol_addr {
                 ServerProtocolAddr::RawTcp(addr) => {
-                    self.envs
-                        .as_mut()
-                        .unwrap()
-                        .insert("IGGY_TCP_ADDRESS".to_string(), addr.to_string());
+                    ("IGGY_TCP_ADDRESS".to_string(), addr.to_string())
                 }
                 ServerProtocolAddr::HttpTcp(addr) => {
-                    self.envs
-                        .as_mut()
-                        .unwrap()
-                        .insert("IGGY_HTTP_ADDRESS".to_string(), addr.to_string());
+                    ("IGGY_HTTP_ADDRESS".to_string(), addr.to_string())
                 }
                 ServerProtocolAddr::QuicUdp(addr) => {
-                    self.envs
-                        .as_mut()
-                        .unwrap()
-                        .insert("IGGY_QUIC_ADDRESS".to_string(), addr.to_string());
+                    ("IGGY_QUIC_ADDRESS".to_string(), addr.to_string())
                 }
-            }
+            };
+
+            self.envs.entry(key.0).or_insert(key.1);
         }
     }
 
@@ -299,11 +365,11 @@ impl TestServer {
     }
 
     fn get_stdout_file_path(&self) -> PathBuf {
-        format!("{}_stdout.txt", self.files_path).into()
+        format!("{}_stdout.txt", self.local_data_path).into()
     }
 
     fn get_stderr_file_path(&self) -> PathBuf {
-        format!("{}_stderr.txt", self.files_path).into()
+        format!("{}_stderr.txt", self.local_data_path).into()
     }
 
     fn get_stdout_file(&self) -> File {
@@ -319,7 +385,7 @@ impl TestServer {
     }
 
     pub fn get_random_path() -> String {
-        format!("local_data_{}", Uuid::new_v4().to_u128_le())
+        format!("{}{}", LOCAL_DATA_PREFIX, Uuid::new_v4().to_u128_le())
     }
 
     pub fn get_http_api_addr(&self) -> Option<String> {
@@ -379,7 +445,7 @@ impl Drop for TestServer {
 
 impl Default for TestServer {
     fn default() -> Self {
-        TestServer::new(None)
+        TestServer::new(None, true, None)
     }
 }
 

@@ -1,4 +1,4 @@
-use crate::utils::file::{file_exists, get_root_path};
+use integration::file::{file_exists, get_root_path};
 use serial_test::serial;
 use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
 use std::env;

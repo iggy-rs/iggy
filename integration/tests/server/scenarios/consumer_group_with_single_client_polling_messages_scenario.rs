@@ -1,4 +1,3 @@
-use crate::utils::test_server::{assert_clean_system, login_root, ClientFactory};
 use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer;
@@ -12,6 +11,7 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::system::get_me::GetMe;
 use iggy::topics::create_topic::CreateTopic;
+use integration::test_server::{assert_clean_system, login_root, ClientFactory};
 use std::str::{from_utf8, FromStr};
 
 const STREAM_ID: u32 = 1;

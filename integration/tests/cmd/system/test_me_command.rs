@@ -1,10 +1,8 @@
-use crate::{
-    cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX},
-    utils::test_server::TestServer,
-};
+use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
+use integration::test_server::TestServer;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 use std::fmt::Display;

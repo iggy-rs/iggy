@@ -1,6 +1,5 @@
 use crate::server::scenarios::{message_headers_scenario, system_scenario, user_scenario};
-use crate::utils::http_client::HttpClientFactory;
-use crate::utils::test_server::TestServer;
+use integration::{http_client::HttpClientFactory, test_server::TestServer};
 use serial_test::parallel;
 
 #[tokio::test]

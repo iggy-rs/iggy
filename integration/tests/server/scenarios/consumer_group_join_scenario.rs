@@ -1,6 +1,3 @@
-use crate::utils::test_server::{
-    assert_clean_system, create_user, delete_user, login_root, login_user, ClientFactory,
-};
 use iggy::client::{ConsumerGroupClient, StreamClient, SystemClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
@@ -12,7 +9,9 @@ use iggy::models::consumer_group::ConsumerGroupDetails;
 use iggy::streams::create_stream::CreateStream;
 use iggy::system::get_me::GetMe;
 use iggy::topics::create_topic::CreateTopic;
-
+use integration::test_server::{
+    assert_clean_system, create_user, delete_user, login_root, login_user, ClientFactory,
+};
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
 const STREAM_NAME: &str = "test-stream";

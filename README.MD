@@ -232,3 +232,5 @@ These benchmarks would start the server with the default configuration, create a
 Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. These results have been achieved on Apple M1 Max with 64 GB RAM.
 
 ---
+Iggy Team @ 2023
+

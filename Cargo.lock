@@ -1559,6 +1559,7 @@ dependencies = [
 name = "iggy"
 version = "0.0.113"
 dependencies = [
+ "aes-gcm",
  "anyhow",
  "async-dropper",
  "async-trait",

@@ -4,25 +4,25 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-iggy = { path = "../iggy" }
-integration = { path = "../integration" }
 async-trait = "0.1.68"
+bytes = "1.4.0"
+clap = { version = "4.1.11", features = ["derive"] }
+derive_more = "0.99.17"
+figlet-rs = "0.1.5"
 futures = "0.3.28"
+iggy = { path = "../iggy" }
+inner = "0.1.1"
+integration = { path = "../integration" }
+nonzero_lit = "0.1.2"
+quinn = "0.10.0"
+rcgen = "0.11.1"
+rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
+serde = { version = "1.0.189", features = ["derive"] }
 thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"] }
-clap = { version = "4.1.11", features = ["derive"] }
+toml = "0.8.4"
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.16" }
-bytes = "1.4.0"
-rcgen = "0.11.1"
-quinn = "0.10.0"
-rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
-toml = "0.8.4"
-serde = { version = "1.0.189", features = ["derive"] }
-nonzero_lit = "0.1.2"
-derive_more = "0.99.17"
-inner = "0.1.1"
-figlet-rs = "0.1.5"
 
 [[bin]]
 name = "iggy-bench"

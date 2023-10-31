@@ -11,5 +11,8 @@ members = [
     "server",
     "tools",
     "cmd",
-    "integration",
+    "integration"
+]
+exclude = [
+    "tpc"
 ]

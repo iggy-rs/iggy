@@ -6,13 +6,13 @@ resolver = "2"
 members = [
     "bench",
     "cli",
+    "cmd",
     "examples",
     "iggy",
-    "server",
-    "tools",
-    "cmd",
     "integration"
-]
+,
+    "server",
+    "tools"]
 exclude = [
     "tpc"
 ]

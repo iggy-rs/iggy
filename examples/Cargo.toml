@@ -35,17 +35,16 @@ path = "src/message-headers/consumer/main.rs"
 name = "message-headers-producer"
 path = "src/message-headers/producer/main.rs"
 
-
 [dependencies]
-iggy = { path = "../iggy" }
+anyhow = "1.0.70"
+bytes = "1.4.0"
 clap = { version = "4.1.11", features = ["derive"] }
+iggy = { path = "../iggy" }
 rand = "0.8.5"
+rcgen = "0.11.1"
 serde = { version = "1.0.159", features = ["derive", "rc"] }
 serde_json = "1.0.95"
 thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"] }
-tracing = { version = "0.1.37"}
-tracing-subscriber = {version = "0.3.16"}
-anyhow = "1.0.70"
-bytes = "1.4.0"
-rcgen = "0.11.1"
+tracing = { version = "0.1.37" }
+tracing-subscriber = { version = "0.3.16" }

@@ -34,6 +34,15 @@ jobs:
           command: clippy
           args: --all-targets --all-features -- -D warnings
 
+  sort:
+    name: Sort dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install cargo-sort
+      - run: cargo sort --check --workspace
+
 # Uncomment this when we have a proper release - 1.0.0
 #   semver-checks:
 #     name: SemVer SDK

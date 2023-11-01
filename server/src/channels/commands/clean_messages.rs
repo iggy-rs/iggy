@@ -6,7 +6,6 @@ use flume::Sender;
 use iggy::error::Error;
 use iggy::utils::timestamp::TimeStamp;
 use std::time::Duration;
-
 use tokio::time;
 use tracing::{error, info};
 

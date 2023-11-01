@@ -1,6 +1,4 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
-use std::fmt::{Display, Formatter};
-
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
     resource_quota::MemoryResourceQuota,
@@ -11,6 +9,7 @@ use crate::configs::{
     },
     tcp::{TcpConfig, TcpTlsConfig},
 };
+use std::fmt::{Display, Formatter};
 
 impl Display for HttpConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {

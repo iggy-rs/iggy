@@ -14,7 +14,6 @@ use axum::{middleware, Router};
 use axum_server::tls_rustls::RustlsConfig;
 use std::path::PathBuf;
 use std::sync::Arc;
-
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 

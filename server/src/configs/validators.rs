@@ -1,5 +1,6 @@
 extern crate sysinfo;
 
+use super::server::{MessageCleanerConfig, MessageSaverConfig};
 use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::server_error::ServerError;
@@ -8,8 +9,6 @@ use byte_unit::{Byte, ByteUnit};
 use iggy::validatable::Validatable;
 use sysinfo::SystemExt;
 use tracing::{error, info, warn};
-
-use super::server::{MessageCleanerConfig, MessageSaverConfig};
 
 impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {

@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use crate::args::common::IggyBenchArgs;
 use crate::benchmark_result::BenchmarkResults;
 use crate::benchmarks::benchmark::Benchmarkable;
@@ -7,6 +5,7 @@ use crate::server_starter::start_server_if_needed;
 use futures::future::select_all;
 use iggy::error::Error;
 use integration::test_server::TestServer;
+use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
 

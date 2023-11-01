@@ -5,7 +5,6 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
-
 use tracing::debug;
 
 pub async fn handle(

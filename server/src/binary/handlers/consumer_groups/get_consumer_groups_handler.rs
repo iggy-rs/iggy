@@ -5,7 +5,6 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use iggy::error::Error;
-
 use tracing::debug;
 
 pub async fn handle(

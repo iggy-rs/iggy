@@ -1,3 +1,5 @@
+use crate::configs::server::ServerConfig;
+use crate::server_error::ServerError;
 use async_trait::async_trait;
 use figment::{
     providers::{Format, Json, Toml},
@@ -7,9 +9,6 @@ use figment::{
 use std::{env, path::Path};
 use toml::{map::Map, Value as TomlValue};
 use tracing::info;
-
-use crate::configs::server::ServerConfig;
-use crate::server_error::ServerError;
 
 const DEFAULT_CONFIG_PROVIDER: &str = "file";
 const DEFAULT_CONFIG_PATH: &str = "configs/server.toml";

@@ -1,8 +1,7 @@
-use std::sync::Arc;
-
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::Error;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 const MAX_PARTITIONS_COUNT: u32 = 100_000;

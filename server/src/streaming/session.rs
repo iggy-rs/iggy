@@ -1,6 +1,5 @@
-use std::fmt::Display;
-
 use iggy::models::user_info::UserId;
+use std::fmt::Display;
 
 // This might be extended with more fields in the future e.g. custom name, permissions etc.
 #[derive(Debug)]

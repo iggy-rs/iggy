@@ -5,7 +5,6 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::streams::get_streams::GetStreams;
-
 use tracing::debug;
 
 pub async fn handle(

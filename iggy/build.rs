@@ -2,16 +2,13 @@ extern crate rmp_serde as rmps;
 extern crate serde;
 extern crate serde_derive;
 
+use crate::errors_repository::load_errors;
+use convert_case::{Case, Casing};
+use errors_repository::PreprocessedErrorRepositoryEntry;
 use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::{env, fs};
-
-use convert_case::{Case, Casing};
-
-use errors_repository::PreprocessedErrorRepositoryEntry;
-
-use crate::errors_repository::load_errors;
 
 mod errors_repository;
 

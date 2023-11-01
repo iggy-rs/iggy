@@ -4,7 +4,6 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use iggy::error::Error;
 use iggy::system::get_clients::GetClients;
-
 use tracing::debug;
 
 pub async fn handle(

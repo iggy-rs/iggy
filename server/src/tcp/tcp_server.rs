@@ -1,7 +1,6 @@
 use crate::configs::tcp::TcpConfig;
 use crate::streaming::systems::system::SharedSystem;
 use crate::tcp::{tcp_listener, tcp_tls_listener};
-
 use tracing::info;
 
 pub fn start(config: TcpConfig, system: SharedSystem) {

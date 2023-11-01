@@ -1,3 +1,4 @@
+use crate::channels::server_command::ServerCommand;
 use crate::configs::server::MessageSaverConfig;
 use crate::configs::server::ServerConfig;
 use crate::streaming::persistence::persister::*;
@@ -6,11 +7,8 @@ use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use std::{sync::Arc, time::Duration};
-
 use tokio::time;
 use tracing::{error, info, warn};
-
-use crate::channels::server_command::ServerCommand;
 
 pub struct MessagesSaver {
     enforce_fsync: bool,

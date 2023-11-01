@@ -4,7 +4,6 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::topics::delete_topic::DeleteTopic;
-
 use tracing::debug;
 
 pub async fn handle(

@@ -4,7 +4,6 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use iggy::error::Error;
 use iggy::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
-
 use tracing::log::debug;
 
 pub async fn handle(

@@ -9,10 +9,8 @@ members = [
     "cmd",
     "examples",
     "iggy",
-    "integration"
-,
+    "integration",
     "server",
-    "tools"]
-exclude = [
-    "tpc"
+    "tools",
 ]
+exclude = ["tpc"]

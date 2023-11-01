@@ -1,11 +1,11 @@
 use crate::channels::server_command::ServerCommand;
 use crate::configs::server::PersonalAccessTokenCleanerConfig;
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::Sender;
 use iggy::utils::timestamp::TimeStamp;
-use std::{sync::Arc, time::Duration};
-use tokio::sync::RwLock;
+use std::time::Duration;
+
 use tokio::time;
 use tracing::{debug, error, info};
 
@@ -65,11 +65,7 @@ impl PersonalAccessTokenCleaner {
 
 #[async_trait]
 impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessTokensExecutor {
-    async fn execute(
-        &mut self,
-        system: &Arc<RwLock<System>>,
-        _command: CleanPersonalAccessTokensCommand,
-    ) {
+    async fn execute(&mut self, system: &SharedSystem, _command: CleanPersonalAccessTokensCommand) {
         let system = system.read().await;
         let tokens = system.storage.personal_access_token.load_all().await;
         if tokens.is_err() {
@@ -125,7 +121,7 @@ impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessToke
 
     fn start_command_sender(
         &mut self,
-        _system: Arc<RwLock<System>>,
+        _system: SharedSystem,
         config: &crate::configs::server::ServerConfig,
         sender: Sender<CleanPersonalAccessTokensCommand>,
     ) {
@@ -136,7 +132,7 @@ impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessToke
 
     fn start_command_consumer(
         mut self,
-        system: Arc<RwLock<System>>,
+        system: SharedSystem,
         _config: &crate::configs::server::ServerConfig,
         receiver: flume::Receiver<CleanPersonalAccessTokensCommand>,
     ) {

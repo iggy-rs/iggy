@@ -20,6 +20,35 @@ use tokio::time::Instant;
 use tracing::{info, trace};
 
 #[derive(Debug)]
+pub struct SharedSystem {
+    system: Arc<RwLock<System>>,
+}
+
+impl SharedSystem {
+    pub fn new(system: System) -> SharedSystem {
+        SharedSystem {
+            system: Arc::new(RwLock::new(system)),
+        }
+    }
+
+    pub async fn read(&self) -> tokio::sync::RwLockReadGuard<'_, System> {
+        self.system.read().await
+    }
+
+    pub async fn write(&self) -> tokio::sync::RwLockWriteGuard<'_, System> {
+        self.system.write().await
+    }
+}
+
+impl Clone for SharedSystem {
+    fn clone(&self) -> Self {
+        SharedSystem {
+            system: self.system.clone(),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct System {
     pub permissioner: Permissioner,
     pub(crate) storage: Arc<SystemStorage>,

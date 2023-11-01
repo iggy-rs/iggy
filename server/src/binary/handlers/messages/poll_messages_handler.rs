@@ -3,19 +3,18 @@ use crate::binary::sender::Sender;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::messages::poll_messages::PollMessages;
-use std::sync::Arc;
-use tokio::sync::RwLock;
+
 use tracing::debug;
 
 pub async fn handle(
     command: &PollMessages,
     sender: &mut dyn Sender,
     session: &Session,
-    system: Arc<RwLock<System>>,
+    system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
     let consumer =

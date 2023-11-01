@@ -22,13 +22,12 @@ use crate::quic::quic_server;
 use crate::server_error::ServerError;
 use crate::streaming::persistence::persister::FileWithSyncPersister;
 use crate::streaming::segments::storage::FileSegmentStorage;
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::{SharedSystem, System};
 use crate::tcp::tcp_server;
 use anyhow::Result;
 use clap::Parser;
 use figlet_rs::FIGfont;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tracing::info;
 
@@ -54,7 +53,7 @@ async fn main() -> Result<(), ServerError> {
     let mut system = System::new(config.system.clone(), None, config.personal_access_token);
 
     system.init().await?;
-    let system = Arc::new(RwLock::new(system));
+    let system = SharedSystem::new(system);
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)
         .install_handler(SaveMessagesExecutor)
         .install_handler(CleanMessagesExecutor)

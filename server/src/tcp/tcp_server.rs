@@ -1,11 +1,10 @@
 use crate::configs::tcp::TcpConfig;
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use crate::tcp::{tcp_listener, tcp_tls_listener};
-use std::sync::Arc;
-use tokio::sync::RwLock;
+
 use tracing::info;
 
-pub fn start(config: TcpConfig, system: Arc<RwLock<System>>) {
+pub fn start(config: TcpConfig, system: SharedSystem) {
     let server_name = if config.tls.enabled {
         "Iggy TCP TLS"
     } else {

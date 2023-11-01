@@ -19,20 +19,19 @@ use crate::binary::handlers::users::{
 };
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use iggy::command::Command;
 use iggy::error::Error;
-use std::sync::Arc;
-use tokio::sync::RwLock;
+
 use tracing::debug;
 
 pub async fn handle(
     command: &Command,
     sender: &mut dyn Sender,
     session: &mut Session,
-    system: Arc<RwLock<System>>,
+    system: SharedSystem,
 ) -> Result<(), Error> {
-    let result = try_handle(command, sender, session, system).await;
+    let result = try_handle(command, sender, session, &system).await;
     if result.is_ok() {
         debug!("Command was handled successfully, session: {session}.",);
         return Ok(());
@@ -48,7 +47,7 @@ async fn try_handle(
     command: &Command,
     sender: &mut dyn Sender,
     session: &mut Session,
-    system: Arc<RwLock<System>>,
+    system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("Handling command '{command}', session: {session}...");
     match command {

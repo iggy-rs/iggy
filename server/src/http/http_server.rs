@@ -8,17 +8,17 @@ use crate::http::{
     consumer_groups, consumer_offsets, messages, partitions, personal_access_tokens, streams,
     system, topics, users,
 };
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use axum::http::Method;
 use axum::{middleware, Router};
 use axum_server::tls_rustls::RustlsConfig;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::RwLock;
+
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::info;
 
-pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
+pub async fn start(config: HttpConfig, system: SharedSystem) {
     let api_name = if config.tls.enabled {
         "HTTP API (TLS)"
     } else {
@@ -89,7 +89,7 @@ pub async fn start(config: HttpConfig, system: Arc<RwLock<System>>) {
         .unwrap();
 }
 
-async fn build_app_state(config: &HttpConfig, system: Arc<RwLock<System>>) -> Arc<AppState> {
+async fn build_app_state(config: &HttpConfig, system: SharedSystem) -> Arc<AppState> {
     let db;
     {
         let system_read = system.read().await;

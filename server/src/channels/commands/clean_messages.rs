@@ -1,12 +1,12 @@
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
 use crate::{channels::server_command::ServerCommand, configs::server::MessageCleanerConfig};
 use async_trait::async_trait;
 use flume::Sender;
 use iggy::error::Error;
 use iggy::utils::timestamp::TimeStamp;
-use std::{sync::Arc, time::Duration};
-use tokio::sync::RwLock;
+use std::time::Duration;
+
 use tokio::time;
 use tracing::{error, info};
 
@@ -63,7 +63,7 @@ impl MessagesCleaner {
 
 #[async_trait]
 impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
-    async fn execute(&mut self, system: &Arc<RwLock<System>>, _command: CleanMessagesCommand) {
+    async fn execute(&mut self, system: &SharedSystem, _command: CleanMessagesCommand) {
         let now = TimeStamp::now().to_micros();
         let system_read = system.read().await;
         let streams = system_read.get_streams();
@@ -97,7 +97,7 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
 
     fn start_command_sender(
         &mut self,
-        _system: Arc<RwLock<System>>,
+        _system: SharedSystem,
         config: &crate::configs::server::ServerConfig,
         sender: Sender<CleanMessagesCommand>,
     ) {
@@ -107,7 +107,7 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
 
     fn start_command_consumer(
         mut self,
-        system: Arc<RwLock<System>>,
+        system: SharedSystem,
         _config: &crate::configs::server::ServerConfig,
         receiver: flume::Receiver<CleanMessagesCommand>,
     ) {

@@ -1,15 +1,14 @@
 use super::server_command::ServerCommand;
-use crate::{configs::server::ServerConfig, streaming::systems::system::System};
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use crate::configs::server::ServerConfig;
+use crate::streaming::systems::system::SharedSystem;
 
 pub struct ServerCommandHandler<'a> {
-    system: Arc<RwLock<System>>,
+    system: SharedSystem,
     config: &'a ServerConfig,
 }
 
 impl<'a> ServerCommandHandler<'a> {
-    pub fn new(system: Arc<RwLock<System>>, config: &'a ServerConfig) -> Self {
+    pub fn new(system: SharedSystem, config: &'a ServerConfig) -> Self {
         Self { system, config }
     }
 

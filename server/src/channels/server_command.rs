@@ -1,23 +1,22 @@
-use crate::{configs::server::ServerConfig, streaming::systems::system::System};
+use crate::configs::server::ServerConfig;
+use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[async_trait]
 pub trait ServerCommand<C> {
-    async fn execute(&mut self, system: &Arc<RwLock<System>>, command: C);
+    async fn execute(&mut self, system: &SharedSystem, command: C);
 
     fn start_command_sender(
         &mut self,
-        system: Arc<RwLock<System>>,
+        system: SharedSystem,
         config: &ServerConfig,
         sender: Sender<C>,
     );
 
     fn start_command_consumer(
         self,
-        system: Arc<RwLock<System>>,
+        system: SharedSystem,
         config: &ServerConfig,
         receiver: Receiver<C>,
     );

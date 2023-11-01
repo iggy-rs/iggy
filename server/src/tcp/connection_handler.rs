@@ -3,13 +3,12 @@ use crate::binary::sender::Sender;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio::sync::RwLock;
+
 use tracing::{debug, error, info};
 
 const INITIAL_BYTES_LENGTH: usize = 4;
@@ -17,7 +16,7 @@ const INITIAL_BYTES_LENGTH: usize = 4;
 pub(crate) async fn handle_connection(
     address: &SocketAddr,
     sender: &mut dyn Sender,
-    system: Arc<RwLock<System>>,
+    system: SharedSystem,
 ) -> Result<(), ServerError> {
     let client_id = system
         .read()

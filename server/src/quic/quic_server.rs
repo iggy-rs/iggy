@@ -1,6 +1,6 @@
 use crate::configs::quic::QuicConfig;
 use crate::quic::listener;
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use quinn::{Endpoint, IdleTimeout, VarInt};
 use std::error::Error;
@@ -8,10 +8,10 @@ use std::fs::File;
 use std::io::BufReader;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::RwLock;
+
 use tracing::info;
 
-pub fn start(config: QuicConfig, system: Arc<RwLock<System>>) {
+pub fn start(config: QuicConfig, system: SharedSystem) {
     info!("Initializing Iggy QUIC server...");
     let quic_config = configure_quic(&config);
     if let Err(error) = quic_config {

@@ -211,23 +211,24 @@ Then, run the benchmarking app with the desired options:
 
 1. Polling (reading) benchmark
 
-   ```bash
-   cargo r --bin iggy-bench -c -v send tcp
+   ```bash 
+   cargo r --bin iggy-bench -r -- -c -v send tcp
    ```
 
 2. Sending (writing) benchmark
 
    ```bash
-   cargo r --bin iggy-bench -c -v poll tcp
+   cargo r --bin iggy-bench -r -- -c -v poll tcp
    ```
 
 3. Parallel sending and polling benchmark
 
    ```bash
-   cargo r --bin iggy-bench -c -v send-and-poll tcp
+   cargo r --bin iggy-bench -r -- -c -v send-and-poll tcp
    ```
 
 These benchmarks would start the server with the default configuration, create a stream, topic and partition, and then send or poll the messages. The default configuration is optimized for the best performance, so you might want to tweak it for your needs. If you need more options, please refer to `iggy-bench` subcommands `help` and `examples`.
+For example, to run the benchmark for the already started server, provide the additional argument `--server-address 0.0.0.0:8090`.
 
 Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. These results have been achieved on Apple M1 Max with 64 GB RAM.
 

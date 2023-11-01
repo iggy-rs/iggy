@@ -3,18 +3,17 @@ use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use quinn::Endpoint;
-use std::sync::Arc;
-use tokio::sync::RwLock;
+
 use tracing::{debug, error, info};
 
 const LISTENERS_COUNT: u32 = 10;
 const INITIAL_BYTES_LENGTH: usize = 4;
 
-pub fn start(endpoint: Endpoint, system: Arc<RwLock<System>>) {
+pub fn start(endpoint: Endpoint, system: SharedSystem) {
     for _ in 0..LISTENERS_COUNT {
         let endpoint = endpoint.clone();
         let system = system.clone();
@@ -37,7 +36,7 @@ pub fn start(endpoint: Endpoint, system: Arc<RwLock<System>>) {
 
 async fn handle_connection(
     incoming_connection: quinn::Connecting,
-    system: Arc<RwLock<System>>,
+    system: SharedSystem,
 ) -> Result<(), ServerError> {
     let connection = incoming_connection.await?;
     let address = connection.remote_address();

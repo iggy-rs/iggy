@@ -1,12 +1,12 @@
-use crate::streaming::systems::system::System;
+use crate::streaming::systems::system::SharedSystem;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_sender::TcpSender;
-use std::sync::Arc;
+
 use tokio::net::TcpListener;
-use tokio::sync::RwLock;
+
 use tracing::{error, info};
 
-pub fn start(address: &str, system: Arc<RwLock<System>>) {
+pub fn start(address: &str, system: SharedSystem) {
     let address = address.to_string();
     tokio::spawn(async move {
         let listener = TcpListener::bind(address.clone()).await;

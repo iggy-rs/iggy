@@ -7,7 +7,6 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::messages::poll_messages::PollMessages;
-
 use tracing::debug;
 
 pub async fn handle(

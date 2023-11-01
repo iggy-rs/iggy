@@ -1,4 +1,9 @@
 use crate::streaming::persistence::persister::Persister;
+use crate::streaming::segments::index::{Index, IndexRange};
+use crate::streaming::segments::segment::Segment;
+use crate::streaming::segments::time_index::TimeIndex;
+use crate::streaming::storage::{SegmentStorage, Storage};
+use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
@@ -13,12 +18,6 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::log::{trace, warn};
 use tracing::{error, info};
-
-use crate::streaming::segments::index::{Index, IndexRange};
-use crate::streaming::segments::segment::Segment;
-use crate::streaming::segments::time_index::TimeIndex;
-use crate::streaming::storage::{SegmentStorage, Storage};
-use crate::streaming::utils::file;
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];

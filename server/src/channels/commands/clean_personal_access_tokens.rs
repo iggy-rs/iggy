@@ -5,7 +5,6 @@ use async_trait::async_trait;
 use flume::Sender;
 use iggy::utils::timestamp::TimeStamp;
 use std::time::Duration;
-
 use tokio::time;
 use tracing::{debug, error, info};
 

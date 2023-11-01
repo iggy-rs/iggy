@@ -4,7 +4,6 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::Error;
 use iggy::partitions::delete_partitions::DeletePartitions;
-
 use tracing::debug;
 
 pub async fn handle(

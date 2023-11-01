@@ -8,7 +8,6 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
-
 use tracing::{debug, error, info};
 
 const INITIAL_BYTES_LENGTH: usize = 4;

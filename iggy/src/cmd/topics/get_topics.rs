@@ -1,5 +1,3 @@
-use std::fmt::{self, Display, Formatter};
-
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
@@ -8,6 +6,7 @@ use crate::utils::timestamp::TimeStamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
+use std::fmt::{self, Display, Formatter};
 use tracing::{event, Level};
 
 pub enum GetTopicsOutput {

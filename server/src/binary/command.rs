@@ -22,7 +22,6 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use iggy::command::Command;
 use iggy::error::Error;
-
 use tracing::debug;
 
 pub async fn handle(

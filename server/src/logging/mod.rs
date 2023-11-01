@@ -1,6 +1,5 @@
 use crate::configs::system::LoggingConfig;
 use crate::server_error::ServerError;
-
 use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;

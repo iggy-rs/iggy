@@ -1,6 +1,5 @@
-use serde::{Deserialize, Serialize};
-
 use super::user_info::UserId;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IdentityInfo {

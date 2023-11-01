@@ -7,7 +7,6 @@ use crate::streaming::systems::system::SharedSystem;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use quinn::Endpoint;
-
 use tracing::{debug, error, info};
 
 const LISTENERS_COUNT: u32 = 10;

@@ -1,4 +1,6 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
+use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
+use crate::streaming::storage::{PartitionStorage, Storage};
 use anyhow::Context;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
@@ -10,9 +12,6 @@ use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
 use tracing::{error, info, trace};
-
-use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
-use crate::streaming::storage::{PartitionStorage, Storage};
 
 #[derive(Debug)]
 pub struct FilePartitionStorage {

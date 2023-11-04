@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `GetClient` command is used to get the information about a specific client by unique ID.
+/// It has additional payload:
+/// - `client_id` - unique ID (numeric) of the client.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GetClient {
     pub client_id: u32,

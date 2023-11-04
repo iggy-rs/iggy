@@ -5,42 +5,133 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
 
+/// `Permissions` is used to define the permissions of a user.
+/// It consists of global permissions and stream permissions.
+/// Global permissions are applied to all streams.
+/// Stream permissions are applied to a specific stream.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Permissions {
+    /// Global permissions are applied to all streams.
     pub global: GlobalPermissions,
+
+    /// Stream permissions are applied to a specific stream.
     pub streams: Option<HashMap<u32, StreamPermissions>>,
 }
 
+/// `GlobalPermissions` are applied to all streams without a need to specify them one by one in the `streams` field.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct GlobalPermissions {
+    /// `manage_servers` permission allows to manage the servers and includes all the permissions of `read_servers`.
     pub manage_servers: bool,
+
+    /// `read_servers` permission allows to invoke the following methods:
+    /// - get_stats
+    /// - get_clients
+    /// - get_client
     pub read_servers: bool,
+
+    /// `manage_users` permission allows to manage the users and includes all the permissions of `read_users`.
+    /// Additionally, the following methods can be invoked:
+    /// - create_user
+    /// - update_user
+    /// - delete_user
+    /// - update_permissions
+    /// - change_password
     pub manage_users: bool,
+
+    /// `read_users` permission allows to invoke the following methods:
+    /// - get_user
+    /// - get_users
     pub read_users: bool,
+
+    /// `manage_streams` permission allows to manage the streams and includes all the permissions of `read_streams`.
+    /// Also, it allows to manage all the topics of a stream, thus it has all the permissions of `manage_topics`.
+    /// Additionally, the following methods can be invoked:
+    /// - create_stream
+    /// - update_stream
+    /// - delete_stream
     pub manage_streams: bool,
+
+    /// `read_streams` permission allows to read the streams and includes all the permissions of `read_topics`.
+    /// Additionally, the following methods can be invoked:
+    /// - get_stream
+    /// - get_streams
     pub read_streams: bool,
+
+    /// `manage_topics` permission allows to manage the topics and includes all the permissions of `read_topics`.
+    /// Also, it allows to manage all the partitions of a topic, thus it has all the permissions of `manage_topic`.
+    /// Additionally, the following methods can be invoked:
+    /// - create_topic
+    /// - update_topic
+    /// - delete_topic
     pub manage_topics: bool,
+
+    /// `read_topics` permission allows to read the topics and includes all the permissions of `read_messages`.
+    /// Additionally, the following methods can be invoked:
+    /// - get_topic
+    /// - get_topics
     pub read_topics: bool,
+
+    /// `poll_messages` permission allows to poll messages from all the streams and theirs topics.
     pub poll_messages: bool,
+
+    /// `send_messages` permission allows to send messages to all the streams and theirs topics.
     pub send_messages: bool,
 }
 
+/// `StreamPermissions` are applied to a specific stream and its all topics. If you want to define granular permissions for each topic, use the `topics` field.
+/// These permissions do not override the global permissions, but extend them, and allow more granular control over the streams and the users that can access them.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct StreamPermissions {
+    /// `manage_stream` permission allows to manage the stream and includes all the permissions of `read_stream`.
+    /// Also, it allows to manage all the topics of a stream, thus it has all the permissions of `manage_topics`.
+    /// Additionally, the following methods can be invoked:
+    /// - create_stream
+    /// - update_stream
+    /// - delete_stream
     pub manage_stream: bool,
+
+    /// `read_stream` permission allows to read the stream and includes all the permissions of `read_topics`.
+    /// Also, it allows to read all the messages of a topic, thus it has all the permissions of `read_messages`.
+    /// Additionally, the following methods can be invoked:
+    /// - get_stream
+    /// - get_streams
     pub read_stream: bool,
+
+    /// `manage_topics` permission allows to manage the topics and includes all the permissions of `read_topics`.
+    /// Also, it allows to manage all the partitions of a topic, thus it has all the permissions of `manage_topic`.
+    /// Additionally, the following methods can be invoked:
+    /// - create_topic
+    /// - update_topic
+    /// - delete_topic
     pub manage_topics: bool,
+
+    /// `read_topics` permission allows to read the topics and includes all the permissions of `read_messages`.
     pub read_topics: bool,
+
+    /// `poll_messages` permission allows to poll messages from the stream and its topics.
     pub poll_messages: bool,
+
+    /// `send_messages` permission allows to send messages to the stream and its topics.
     pub send_messages: bool,
+
+    /// The `topics` field allows to define the granular permissions for each topic of a stream.
     pub topics: Option<HashMap<u32, TopicPermissions>>,
 }
 
+/// `TopicPermissions` are applied to a specific topic of a stream. This is the lowest level of permissions.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct TopicPermissions {
+    /// `manage_topic` permission allows to manage the topic and includes all the permissions of `read_topic`.
     pub manage_topic: bool,
+
+    /// `read_topic` permission allows to read the topic and includes all the permissions of `read_messages`.
     pub read_topic: bool,
+
+    /// `poll_messages` permission allows to poll messages from the topic.
     pub poll_messages: bool,
+
+    /// `send_messages` permission allows to send messages to the topic.
     pub send_messages: bool,
 }
 

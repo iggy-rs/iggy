@@ -52,6 +52,9 @@ use crate::users::update_user::UpdateUser;
 use async_trait::async_trait;
 use std::fmt::Debug;
 
+/// The client is the main interface to the Iggy server.
+/// It consists of multiple modules, each of which is responsible for a specific set of commands.
+/// Except the ping, login and get me commands, all the other commands require authentication.
 #[async_trait]
 pub trait Client:
     SystemClient
@@ -67,7 +70,11 @@ pub trait Client:
     + Send
     + Debug
 {
+    /// Connect to the server. Depending on the selected transport and provided configuration it might also perform authentication, retry logic etc.
+    /// If the client is already connected, it will do nothing.
     async fn connect(&self) -> Result<(), Error>;
+
+    /// Disconnect from the server. If the client is not connected, it will do nothing.
     async fn disconnect(&self) -> Result<(), Error>;
 }
 

@@ -9,9 +9,15 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
+/// `LoginUser` command is used to login a user by username and password.
+/// It has additional payload:
+/// - `username` - username, must be between 3 and 50 characters long.
+/// - `password` - password, must be between 3 and 100 characters long.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct LoginUser {
+    /// Username, must be between 3 and 50 characters long.
     pub username: String,
+    /// Password, must be between 3 and 100 characters long.
     pub password: String,
 }
 

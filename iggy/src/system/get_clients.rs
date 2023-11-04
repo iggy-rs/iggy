@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `GetClients` command is used to get the information about all connected clients.
+/// It has no additional payload.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetClients {}
 

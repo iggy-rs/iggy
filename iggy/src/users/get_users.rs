@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `GetUsers` command is used to retrieve the information about all users.
+/// It has no additional payload.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetUsers {}
 

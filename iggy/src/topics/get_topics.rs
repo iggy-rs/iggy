@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-/// `GetTopics` command is used to retrieve the list of topics from a stream.
+/// `GetTopics` command is used to retrieve the collection of topics from a stream.
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric or name).
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]

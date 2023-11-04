@@ -22,6 +22,8 @@ const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
 const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
+/// TCP client for interacting with the Iggy API.
+/// It requires a valid server address.
 #[derive(Debug)]
 pub struct TcpClient {
     pub(crate) server_address: SocketAddr,
@@ -233,6 +235,7 @@ impl BinaryClient for TcpClient {
 }
 
 impl TcpClient {
+    /// Create a new TCP client for the provided server address.
     pub fn new(server_address: &str) -> Result<Self, Error> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
@@ -240,6 +243,7 @@ impl TcpClient {
         }))
     }
 
+    /// Create a new TCP client for the provided server address using TLS.
     pub fn new_tls(server_address: &str, domain: &str) -> Result<Self, Error> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
@@ -249,6 +253,7 @@ impl TcpClient {
         }))
     }
 
+    /// Create a new TCP client based on the provided configuration.
     pub fn create(config: Arc<TcpClientConfig>) -> Result<Self, Error> {
         let server_address = config.server_address.parse::<SocketAddr>()?;
 

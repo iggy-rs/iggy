@@ -26,72 +26,97 @@ Commands:
 
 Options:
       --transport <TRANSPORT>
+          The transport to use. Valid values are `quic`, `http` and `tcp`.
           [default: tcp]
 
       --encryption-key <ENCRYPTION_KEY>
+          Optional encryption key for the message payload used by the client.
           [default: ]
 
       --http-api-url <HTTP_API_URL>
+          The optional API URL for the HTTP transport.
           [default: http://localhost:3000]
 
       --http-retries <HTTP_RETRIES>
+          The optional number of retries for the HTTP transport.
           [default: 3]
 
       --tcp-server-address <TCP_SERVER_ADDRESS>
+          The optional client address for the TCP transport.
           [default: 127.0.0.1:8090]
 
       --tcp-reconnection-retries <TCP_RECONNECTION_RETRIES>
+          The optional number of reconnect retries for the TCP transport.
           [default: 3]
 
       --tcp-reconnection-interval <TCP_RECONNECTION_INTERVAL>
+          The optional reconnect interval for the TCP transport.
           [default: 1000]
 
       --tcp-tls-enabled
+          Flag to enable TLS for the TCP transport.
+          [default: false]
 {CLAP_INDENT}
 
       --tcp-tls-domain <TCP_TLS_DOMAIN>
+          The optional TLS domain for the TCP transport.
           [default: localhost]
 
       --quic-client-address <QUIC_CLIENT_ADDRESS>
+          The optional client address for the QUIC transport.
           [default: 127.0.0.1:0]
 
       --quic-server-address <QUIC_SERVER_ADDRESS>
+          The optional server address for the QUIC transport.
           [default: 127.0.0.1:8080]
 
       --quic-server-name <QUIC_SERVER_NAME>
+          The optional server name for the QUIC transport.
           [default: localhost]
 
       --quic-reconnection-retries <QUIC_RECONNECTION_RETRIES>
+          The optional number of reconnect retries for the QUIC transport.
           [default: 3]
 
       --quic-reconnection-interval <QUIC_RECONNECTION_INTERVAL>
+          The optional reconnect interval for the QUIC transport.
           [default: 1000]
 
       --quic-max-concurrent-bidi-streams <QUIC_MAX_CONCURRENT_BIDI_STREAMS>
+          The optional maximum number of concurrent bidirectional streams for QUIC.
           [default: 10000]
 
       --quic-datagram-send-buffer-size <QUIC_DATAGRAM_SEND_BUFFER_SIZE>
+          The optional datagram send buffer size for QUIC.
           [default: 100000]
 
       --quic-initial-mtu <QUIC_INITIAL_MTU>
+          The optional initial MTU for QUIC.
           [default: 1200]
 
       --quic-send-window <QUIC_SEND_WINDOW>
+          The optional send window for QUIC.
           [default: 100000]
 
       --quic-receive-window <QUIC_RECEIVE_WINDOW>
+          The optional receive window for QUIC.
           [default: 100000]
 
       --quic-response-buffer-size <QUIC_RESPONSE_BUFFER_SIZE>
+          The optional response buffer size for QUIC.
           [default: 1048576]
 
       --quic-keep-alive-interval <QUIC_KEEP_ALIVE_INTERVAL>
+          The optional keep alive interval for QUIC.
           [default: 5000]
 
       --quic-max-idle-timeout <QUIC_MAX_IDLE_TIMEOUT>
+          The optional maximum idle timeout for QUIC.
           [default: 10000]
 
       --quic-validate-certificate
+          Flag to enable certificate validation for QUIC.
+          [default: false]
 {CLAP_INDENT}
 
   -q, --quiet

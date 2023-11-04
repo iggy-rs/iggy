@@ -14,38 +14,70 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::Arc;
 
+/// The wrapper on top of the collection of messages that are polled from the partition.
+/// It consists of the following fields:
+/// - `partition_id`: the identifier of the partition.
+/// - `current_offset`: the current offset of the partition.
+/// - `messages`: the collection of messages.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PolledMessages {
+    /// The identifier of the partition.
     pub partition_id: u32,
+    /// The current offset of the partition.
     pub current_offset: u64,
+    /// The collection of messages.
     pub messages: Vec<Message>,
 }
 
+/// The single message that is polled from the partition.
+/// It consists of the following fields:
+/// - `offset`: the offset of the message.
+/// - `state`: the state of the message.
+/// - `timestamp`: the timestamp of the message.
+/// - `id`: the identifier of the message.
+/// - `checksum`: the checksum of the message, can be used to verify the integrity of the message.
+/// - `headers`: the optional headers of the message.
+/// - `length`: the length of the payload.
+/// - `payload`: the binary payload of the message.
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Message {
+    /// The offset of the message.
     pub offset: u64,
+    /// The state of the message.
     pub state: MessageState,
+    /// The timestamp of the message.
     pub timestamp: u64,
+    /// The identifier of the message.
     pub id: u128,
+    /// The checksum of the message, can be used to verify the integrity of the message.
     pub checksum: u32,
+    /// The optional headers of the message.
     pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
+    /// The length of the payload.
     #[serde(skip)]
     pub length: u32,
+    /// The binary payload of the message.
     #[serde_as(as = "Base64")]
     pub payload: Bytes,
 }
 
+/// The state of the message, currently only the `Available` state is used.
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MessageState {
+    /// The message is available.
     Available,
+    /// The message is unavailable.
     Unavailable,
+    /// The message is poisoned.
     Poisoned,
+    /// The message is marked for deletion.
     MarkedForDeletion,
 }
 
 impl MessageState {
+    /// Returns the code of the message state.
     pub fn as_code(&self) -> u8 {
         match self {
             MessageState::Available => 1,
@@ -55,6 +87,7 @@ impl MessageState {
         }
     }
 
+    /// Returns the message state from the code.
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
             1 => Ok(MessageState::Available),
@@ -97,6 +130,7 @@ impl Sizeable for Arc<Message> {
 }
 
 impl Message {
+    /// Creates a new message from the `Message` struct being part of `SendMessages` command.
     pub fn from_message(message: &send_messages::Message) -> Self {
         let timestamp = TimeStamp::now().to_micros();
         let checksum = checksum::calculate(&message.payload);
@@ -112,6 +146,7 @@ impl Message {
         )
     }
 
+    /// Creates a new message without a specified offset.
     pub fn empty(
         timestamp: u64,
         state: MessageState,
@@ -123,6 +158,7 @@ impl Message {
         Message::create(0, state, timestamp, id, payload, checksum, headers)
     }
 
+    /// Creates a new message with a specified offset.
     pub fn create(
         offset: u64,
         state: MessageState,
@@ -145,11 +181,13 @@ impl Message {
         }
     }
 
+    /// Returns the size of the message in bytes.
     pub fn get_size_bytes(&self) -> u32 {
         // Offset + State + Timestamp + ID + Checksum + Length + Payload + Headers
         8 + 1 + 8 + 16 + 4 + 4 + self.length + header::get_headers_size_bytes(&self.headers)
     }
 
+    /// Extends the provided bytes with the message.
     pub fn extend(&self, bytes: &mut Vec<u8>) {
         bytes.put_u64_le(self.offset);
         bytes.put_u8(self.state.as_code());

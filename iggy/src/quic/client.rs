@@ -17,6 +17,7 @@ const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
 const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
+/// QUIC client for interacting with the Iggy API.
 #[derive(Debug)]
 pub struct QuicClient {
     pub(crate) endpoint: Endpoint,
@@ -136,6 +137,7 @@ impl BinaryClient for QuicClient {
 }
 
 impl QuicClient {
+    /// Creates a new QUIC client for the provided client and server addresses.
     pub fn new(
         client_address: &str,
         server_address: &str,
@@ -151,6 +153,7 @@ impl QuicClient {
         }))
     }
 
+    /// Create a new QUIC client for the provided configuration.
     pub fn create(config: Arc<QuicClientConfig>) -> Result<Self, Error> {
         let client_address = config.client_address.parse::<SocketAddr>()?;
         let server_address = config.server_address.parse::<SocketAddr>()?;

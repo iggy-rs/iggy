@@ -11,7 +11,7 @@ use std::str::FromStr;
 
 const EMPTY_BYTES: Vec<u8> = vec![];
 
-/// Represents a header key with a unique name.
+/// Represents a header key with a unique name. The name is case-insensitive and wraps a string.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HeaderKey(String);
 
@@ -50,14 +50,20 @@ impl TryFrom<&str> for HeaderKey {
 }
 
 /// Represents a header value of a specific kind.
+/// It consists of the following fields:
+/// - `kind`: the kind of the header value.
+/// - `value`: the value of the header.
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HeaderValue {
+    /// The kind of the header value.
     pub kind: HeaderKind,
+    /// The binary value of the header payload.
     #[serde_as(as = "Base64")]
     pub value: Vec<u8>,
 }
 
+/// Represents the kind of a header value.
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderKind {
@@ -79,6 +85,7 @@ pub enum HeaderKind {
 }
 
 impl HeaderKind {
+    /// Returns the code of the header kind.
     pub fn as_code(&self) -> u8 {
         match self {
             HeaderKind::Raw => 1,
@@ -99,6 +106,7 @@ impl HeaderKind {
         }
     }
 
+    /// Returns the header kind from the code.
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
             1 => Ok(HeaderKind::Raw),
@@ -246,10 +254,12 @@ impl FromStr for HeaderValue {
 }
 
 impl HeaderValue {
+    /// Creates a new header value from the specified raw bytes.
     pub fn from_raw(value: &[u8]) -> Result<Self, Error> {
         Self::from(HeaderKind::Raw, value)
     }
 
+    /// Returns the raw bytes of the header value.
     pub fn as_raw(&self) -> Result<&[u8], Error> {
         if self.kind != HeaderKind::Raw {
             return Err(Error::InvalidHeaderValue);
@@ -258,6 +268,7 @@ impl HeaderValue {
         Ok(&self.value)
     }
 
+    /// Returns the string representation of the header value.
     pub fn as_str(&self) -> Result<&str, Error> {
         if self.kind != HeaderKind::String {
             return Err(Error::InvalidHeaderValue);
@@ -266,10 +277,12 @@ impl HeaderValue {
         Ok(std::str::from_utf8(&self.value)?)
     }
 
+    /// Creates a new header value from the specified string.
     pub fn from_bool(value: bool) -> Result<Self, Error> {
         Self::from(HeaderKind::Bool, if value { &[1] } else { &[0] })
     }
 
+    /// Returns the boolean representation of the header value.
     pub fn as_bool(&self) -> Result<bool, Error> {
         if self.kind != HeaderKind::Bool {
             return Err(Error::InvalidHeaderValue);
@@ -282,10 +295,12 @@ impl HeaderValue {
         }
     }
 
+    /// Creates a new header value from the specified boolean.
     pub fn from_int8(value: i8) -> Result<Self, Error> {
         Self::from(HeaderKind::Int8, &value.to_le_bytes())
     }
 
+    /// Returns the i8 representation of the header value.
     pub fn as_int8(&self) -> Result<i8, Error> {
         if self.kind != HeaderKind::Int8 {
             return Err(Error::InvalidHeaderValue);
@@ -299,10 +314,12 @@ impl HeaderValue {
         Ok(i8::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified i8.
     pub fn from_int16(value: i16) -> Result<Self, Error> {
         Self::from(HeaderKind::Int16, &value.to_le_bytes())
     }
 
+    /// Returns the i16 representation of the header value.
     pub fn as_int16(&self) -> Result<i16, Error> {
         if self.kind != HeaderKind::Int16 {
             return Err(Error::InvalidHeaderValue);
@@ -316,10 +333,12 @@ impl HeaderValue {
         Ok(i16::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified i16.
     pub fn from_int32(value: i32) -> Result<Self, Error> {
         Self::from(HeaderKind::Int32, &value.to_le_bytes())
     }
 
+    /// Returns the i32 representation of the header value.
     pub fn as_int32(&self) -> Result<i32, Error> {
         if self.kind != HeaderKind::Int32 {
             return Err(Error::InvalidHeaderValue);
@@ -333,10 +352,12 @@ impl HeaderValue {
         Ok(i32::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified i32.
     pub fn from_int64(value: i64) -> Result<Self, Error> {
         Self::from(HeaderKind::Int64, &value.to_le_bytes())
     }
 
+    /// Returns the i64 representation of the header value.
     pub fn as_int64(&self) -> Result<i64, Error> {
         if self.kind != HeaderKind::Int64 {
             return Err(Error::InvalidHeaderValue);
@@ -350,10 +371,12 @@ impl HeaderValue {
         Ok(i64::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified i128.
     pub fn from_int128(value: i128) -> Result<Self, Error> {
         Self::from(HeaderKind::Int128, &value.to_le_bytes())
     }
 
+    /// Returns the i128 representation of the header value.
     pub fn as_int128(&self) -> Result<i128, Error> {
         if self.kind != HeaderKind::Int128 {
             return Err(Error::InvalidHeaderValue);
@@ -367,10 +390,12 @@ impl HeaderValue {
         Ok(i128::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified u8.
     pub fn from_uint8(value: u8) -> Result<Self, Error> {
         Self::from(HeaderKind::Uint8, &value.to_le_bytes())
     }
 
+    /// Returns the u8 representation of the header value.
     pub fn as_uint8(&self) -> Result<u8, Error> {
         if self.kind != HeaderKind::Uint8 {
             return Err(Error::InvalidHeaderValue);
@@ -379,10 +404,12 @@ impl HeaderValue {
         Ok(self.value[0])
     }
 
+    /// Creates a new header value from the specified u16.
     pub fn from_uint16(value: u16) -> Result<Self, Error> {
         Self::from(HeaderKind::Uint16, &value.to_le_bytes())
     }
 
+    /// Returns the u16 representation of the header value.
     pub fn as_uint16(&self) -> Result<u16, Error> {
         if self.kind != HeaderKind::Uint16 {
             return Err(Error::InvalidHeaderValue);
@@ -396,10 +423,12 @@ impl HeaderValue {
         Ok(u16::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified u32.
     pub fn from_uint32(value: u32) -> Result<Self, Error> {
         Self::from(HeaderKind::Uint32, &value.to_le_bytes())
     }
 
+    /// Returns the u32 representation of the header value.
     pub fn as_uint32(&self) -> Result<u32, Error> {
         if self.kind != HeaderKind::Uint32 {
             return Err(Error::InvalidHeaderValue);
@@ -413,10 +442,12 @@ impl HeaderValue {
         Ok(u32::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified u64.
     pub fn from_uint64(value: u64) -> Result<Self, Error> {
         Self::from(HeaderKind::Uint64, &value.to_le_bytes())
     }
 
+    /// Returns the u64 representation of the header value.
     pub fn as_uint64(&self) -> Result<u64, Error> {
         if self.kind != HeaderKind::Uint64 {
             return Err(Error::InvalidHeaderValue);
@@ -430,10 +461,12 @@ impl HeaderValue {
         Ok(u64::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified u128.
     pub fn from_uint128(value: u128) -> Result<Self, Error> {
         Self::from(HeaderKind::Uint128, &value.to_le_bytes())
     }
 
+    /// Returns the u128 representation of the header value.
     pub fn as_uint128(&self) -> Result<u128, Error> {
         if self.kind != HeaderKind::Uint128 {
             return Err(Error::InvalidHeaderValue);
@@ -447,10 +480,12 @@ impl HeaderValue {
         Ok(u128::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified f32.
     pub fn from_float32(value: f32) -> Result<Self, Error> {
         Self::from(HeaderKind::Float32, &value.to_le_bytes())
     }
 
+    /// Returns the f32 representation of the header value.
     pub fn as_float32(&self) -> Result<f32, Error> {
         if self.kind != HeaderKind::Float32 {
             return Err(Error::InvalidHeaderValue);
@@ -464,10 +499,12 @@ impl HeaderValue {
         Ok(f32::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified f64.
     pub fn from_float64(value: f64) -> Result<Self, Error> {
         Self::from(HeaderKind::Float64, &value.to_le_bytes())
     }
 
+    /// Returns the f64 representation of the header value.
     pub fn as_float64(&self) -> Result<f64, Error> {
         if self.kind != HeaderKind::Float64 {
             return Err(Error::InvalidHeaderValue);
@@ -481,6 +518,7 @@ impl HeaderValue {
         Ok(f64::from_le_bytes(value.unwrap()))
     }
 
+    /// Creates a new header value from the specified kind and value.
     fn from(kind: HeaderKind, value: &[u8]) -> Result<Self, Error> {
         if value.is_empty() || value.len() > 255 {
             return Err(Error::InvalidHeaderValue);
@@ -552,6 +590,7 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
     }
 }
 
+/// Returns the size in bytes of the specified headers.
 pub fn get_headers_size_bytes(headers: &Option<HashMap<HeaderKey, HeaderValue>>) -> u32 {
     // Headers length field
     let mut size = 4;

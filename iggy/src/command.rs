@@ -169,6 +169,7 @@ pub enum Command {
     LeaveConsumerGroup(LeaveConsumerGroup),
 }
 
+/// A trait for all command payloads.
 pub trait CommandPayload: BytesSerializable + Display {}
 
 impl BytesSerializable for Command {

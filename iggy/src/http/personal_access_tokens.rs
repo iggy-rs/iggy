@@ -45,7 +45,7 @@ impl PersonalAccessTokenClient for HttpClient {
     ) -> Result<IdentityInfo, Error> {
         let response = self.post(&format!("{PATH}/login"), &command).await?;
         let identity_info: IdentityInfo = response.json().await?;
-        self.set_access_token_from_identity(&identity_info).await?;
+        self.set_tokens_from_identity(&identity_info).await?;
         Ok(identity_info)
     }
 }

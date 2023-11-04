@@ -1,9 +1,15 @@
+/// Configuration for the TCP client.
 #[derive(Debug, Clone)]
 pub struct TcpClientConfig {
+    /// The address of the Iggy server.
     pub server_address: String,
+    /// The number of retries when connecting to the server.
     pub reconnection_retries: u32,
+    /// The interval between retries when connecting to the server.
     pub reconnection_interval: u64,
+    /// Whether to use TLS when connecting to the server.
     pub tls_enabled: bool,
+    /// The domain to use for TLS when connecting to the server.
     pub tls_domain: String,
 }
 

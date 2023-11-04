@@ -12,6 +12,7 @@ use std::str::FromStr;
 /// - `client_id` - unique ID (numeric) of the client.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GetClient {
+    /// Unique ID (numeric) of the client.
     pub client_id: u32,
 }
 

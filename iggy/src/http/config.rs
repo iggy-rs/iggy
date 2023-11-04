@@ -1,6 +1,9 @@
+/// Configuration for the HTTP client.
 #[derive(Debug, Clone)]
 pub struct HttpClientConfig {
+    /// The URL of the Iggy API.
     pub api_url: String,
+    /// The number of retries to perform on transient errors.
     pub retries: u32,
 }
 

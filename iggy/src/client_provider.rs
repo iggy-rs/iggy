@@ -13,11 +13,21 @@ const QUIC_TRANSPORT: &str = "quic";
 const HTTP_TRANSPORT: &str = "http";
 const TCP_TRANSPORT: &str = "tcp";
 
+/// Configuration for the `ClientProvider`.
+/// It consists of the following fields:
+/// - `transport`: the transport to use. Valid values are `quic`, `http` and `tcp`.
+/// - `http`: the optional configuration for the HTTP transport.
+/// - `quic`: the optional configuration for the QUIC transport.
+/// - `tcp`: the optional configuration for the TCP transport.
 #[derive(Debug)]
 pub struct ClientProviderConfig {
+    /// The transport to use. Valid values are `quic`, `http` and `tcp`.
     pub transport: String,
+    /// The optional configuration for the HTTP transport.
     pub http: Option<Arc<HttpClientConfig>>,
+    /// The optional configuration for the QUIC transport.
     pub quic: Option<Arc<QuicClientConfig>>,
+    /// The optional configuration for the TCP transport.
     pub tcp: Option<Arc<TcpClientConfig>>,
 }
 
@@ -33,6 +43,7 @@ impl Default for ClientProviderConfig {
 }
 
 impl ClientProviderConfig {
+    /// Create a new `ClientProviderConfig` from the provided `Args`.
     pub fn from_args(args: crate::args::Args) -> Result<Self, ClientError> {
         let transport = args.transport;
         let mut config = Self {
@@ -82,15 +93,18 @@ impl ClientProviderConfig {
     }
 }
 
+/// Create a default `IggyClient` with the default configuration.
 pub async fn get_default_client() -> Result<IggyClient, ClientError> {
     get_client(Arc::new(ClientProviderConfig::default())).await
 }
 
+/// Create a `IggyClient` for the specific transport based on the provided configuration.
 pub async fn get_client(config: Arc<ClientProviderConfig>) -> Result<IggyClient, ClientError> {
     let client = get_raw_client(config).await?;
     Ok(IggyClient::builder(client).build())
 }
 
+/// Create a `Client` for the specific transport based on the provided configuration.
 pub async fn get_raw_client(
     config: Arc<ClientProviderConfig>,
 ) -> Result<Box<dyn Client>, ClientError> {

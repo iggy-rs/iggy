@@ -10,43 +10,74 @@ use serde_with::{serde_as, DisplayFromStr};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `PollMessages` command is used to poll messages from a topic in a stream.
+/// It has additional payload:
+/// - `consumer` - consumer which will poll messages. Either regular consumer or consumer group.
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `topic_id` - unique topic ID (numeric or name).
+/// - `partition_id` - partition ID from which messages will be polled. Has to be specified for the regular consumer. For consumer group it is ignored (use `None`).
+/// - `strategy` - polling strategy which specifies from where to start polling messages.
+/// - `count` - number of messages to poll.
+/// - `auto_commit` - whether to commit offset on the server automatically after polling the messages.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct PollMessages {
+    /// Consumer which will poll messages. Either regular consumer or consumer group.
     #[serde(flatten)]
     pub consumer: Consumer,
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
+    /// Partition ID from which messages will be polled. Has to be specified for the regular consumer. For consumer group it is ignored (use `None`).
     #[serde(default = "default_partition_id")]
     pub partition_id: Option<u32>,
+    /// Polling strategy which specifies from where to start polling messages.
     #[serde(default = "default_strategy", flatten)]
     pub strategy: PollingStrategy,
     #[serde(default = "default_count")]
+    /// Number of messages to poll.
     pub count: u32,
     #[serde(default)]
+    /// Whether to commit offset on the server automatically after polling the messages.
     pub auto_commit: bool,
 }
 
+/// `PollingStrategy` specifies from where to start polling messages.
+/// It has the following kinds:
+/// - `Offset` - start polling from the specified offset.
+/// - `Timestamp` - start polling from the specified timestamp.
+/// - `First` - start polling from the first message in the partition.
+/// - `Last` - start polling from the last message in the partition.
+/// - `Next` - start polling from the next message after the last polled message based on the stored consumer offset.
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Copy, Clone)]
 pub struct PollingStrategy {
+    /// Kind of the polling strategy.
     #[serde_as(as = "DisplayFromStr")]
     #[serde(default = "default_kind")]
     pub kind: PollingKind,
+    /// Value of the polling strategy.
     #[serde_as(as = "DisplayFromStr")]
     #[serde(default = "default_value")]
     pub value: u64,
 }
 
+/// `PollingKind` is an enum which specifies from where to start polling messages and is used by `PollingStrategy`.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum PollingKind {
     #[default]
+    /// Start polling from the specified offset.
     Offset,
+    /// Start polling from the specified timestamp.
     Timestamp,
+    /// Start polling from the first message in the partition.
     First,
+    /// Start polling from the last message in the partition.
     Last,
+    /// Start polling from the next message after the last polled message based on the stored consumer offset.
     Next,
 }
 
@@ -102,6 +133,7 @@ impl Validatable<Error> for PollMessages {
 }
 
 impl PollingStrategy {
+    /// Poll messages from the specified offset.
     pub fn offset(value: u64) -> Self {
         Self {
             kind: PollingKind::Offset,
@@ -109,6 +141,7 @@ impl PollingStrategy {
         }
     }
 
+    /// Poll messages from the specified timestamp.
     pub fn timestamp(value: u64) -> Self {
         Self {
             kind: PollingKind::Timestamp,
@@ -116,6 +149,7 @@ impl PollingStrategy {
         }
     }
 
+    /// Poll messages from the first message in the partition.
     pub fn first() -> Self {
         Self {
             kind: PollingKind::First,
@@ -123,6 +157,7 @@ impl PollingStrategy {
         }
     }
 
+    /// Poll messages from the last message in the partition.
     pub fn last() -> Self {
         Self {
             kind: PollingKind::Last,
@@ -130,6 +165,7 @@ impl PollingStrategy {
         }
     }
 
+    /// Poll messages from the next message after the last polled message based on the stored consumer offset.
     pub fn next() -> Self {
         Self {
             kind: PollingKind::Next,
@@ -139,6 +175,7 @@ impl PollingStrategy {
 }
 
 impl PollingKind {
+    /// Returns code of the polling kind.
     pub fn as_code(&self) -> u8 {
         match self {
             PollingKind::Offset => 1,
@@ -149,6 +186,7 @@ impl PollingKind {
         }
     }
 
+    /// Returns polling kind from the specified code.
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
             1 => Ok(PollingKind::Offset),

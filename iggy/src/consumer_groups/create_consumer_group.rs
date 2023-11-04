@@ -1,5 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
+use crate::consumer_groups::MAX_NAME_LENGTH;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::utils::text;
@@ -9,15 +10,23 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
-const MAX_NAME_LENGTH: usize = 255;
-
+/// `CreateConsumerGroup` command creates a new consumer group for the topic.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `topic_id` - unique topic ID (numeric or name).
+/// - `consumer_group_id` - unique consumer group ID.
+/// - `name` - unique consumer group name.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateConsumerGroup {
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
+    /// Unique consumer group ID.
     pub consumer_group_id: u32,
+    /// Unique consumer group name.
     pub name: String,
 }
 

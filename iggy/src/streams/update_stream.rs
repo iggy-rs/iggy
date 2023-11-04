@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
+use crate::streams::MAX_NAME_LENGTH;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -9,12 +10,16 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
-const MAX_NAME_LENGTH: usize = 255;
-
+/// `UpdateStream` command is used to update an existing stream.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `name` - unique stream name (string), max length is 255 characters.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct UpdateStream {
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique stream name (string), max length is 255 characters.
     pub name: String,
 }
 

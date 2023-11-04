@@ -7,8 +7,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `GetStream` command is used to retrieve the information about a stream by unique ID.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric or name).
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct GetStream {
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
 }

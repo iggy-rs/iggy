@@ -9,9 +9,15 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::{from_utf8, FromStr};
 
+/// `CreatePersonalAccessToken` command is used to create a new personal access token for the authenticated user.
+/// It has additional payload:
+/// - `name` - unique name of the token, must be between 3 and 3 characters long.
+/// - `expiry` - expiry in seconds (optional), if provided, must be between 1 and 4294967295. Otherwise, the token will never expire.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreatePersonalAccessToken {
+    /// Unique name of the token, must be between 3 and 3 characters long.
     pub name: String,
+    /// Expiry in seconds (optional), if provided, must be between 1 and 4294967295. Otherwise, the token will never expire.
     pub expiry: Option<u32>,
 }
 

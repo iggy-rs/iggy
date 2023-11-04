@@ -11,6 +11,7 @@ use std::str::FromStr;
 
 const EMPTY_BYTES: Vec<u8> = vec![];
 
+/// Represents a header key with a unique name.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HeaderKey(String);
 
@@ -48,6 +49,7 @@ impl TryFrom<&str> for HeaderKey {
     }
 }
 
+/// Represents a header value of a specific kind.
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
 pub struct HeaderValue {

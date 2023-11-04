@@ -9,14 +9,24 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `GetConsumerOffset` command that retrieves the offset of a consumer for a given partition from the server.
+/// It has additional payload:
+/// - `consumer` - the consumer that is storing the offset, either the regular consumer or the consumer group.
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `topic_id` - unique topic ID (numeric or name).
+/// - `partition_id` - partition ID on which the offset is stored. Has to be specified for the regular consumer. For consumer group it is ignored (use `None`).
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct GetConsumerOffset {
+    /// The consumer that is storing the offset, either the regular consumer or the consumer group.
     #[serde(flatten)]
     pub consumer: Consumer,
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
+    /// Partition ID on which the offset is stored. Has to be specified for the regular consumer. For consumer group it is ignored (use `None`).
     #[serde(default = "default_partition_id")]
     pub partition_id: Option<u32>,
 }

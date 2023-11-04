@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
+use crate::topics::{MAX_NAME_LENGTH, MAX_PARTITIONS_COUNT};
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -9,16 +10,25 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
-const MAX_NAME_LENGTH: usize = 255;
-const MAX_PARTITIONS_COUNT: u32 = 100_000;
-
+/// `CreateTopic` command is used to create a new topic in a stream.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `topic_id` - unique topic ID (numeric).
+/// - `partitions_count` - number of partitions in the topic, max value is 1000.
+/// - `message_expiry` - message expiry in seconds (optional), if `None` then messages will not expire.
+/// - `name` - unique topic name, max length is 255 characters.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateTopic {
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique topic ID (numeric).
     pub topic_id: u32,
+    /// Number of partitions in the topic, max value is 1000.
     pub partitions_count: u32,
+    /// Message expiry in seconds (optional), if `None` then messages will never expire.
     pub message_expiry: Option<u32>,
+    /// Unique topic name, max length is 255 characters.
     pub name: String,
 }
 

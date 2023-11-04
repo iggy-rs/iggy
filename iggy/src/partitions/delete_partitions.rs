@@ -2,20 +2,27 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
+use crate::partitions::MAX_PARTITIONS_COUNT;
 use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
-const MAX_PARTITIONS_COUNT: u32 = 100_000;
-
+/// `DeletePartitions` command is used to delete partitions from a topic.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `topic_id` - unique topic ID (numeric or name).
+/// - `partitions_count` - number of partitions in the topic to delete, max value is 1000.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct DeletePartitions {
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
+    /// Number of partitions in the topic to delete, max value is 1000.
     pub partitions_count: u32,
 }
 

@@ -78,6 +78,7 @@ pub trait Client:
     async fn disconnect(&self) -> Result<(), Error>;
 }
 
+/// This trait defines the methods to interact with the system module.
 #[async_trait]
 pub trait SystemClient {
     /// Get the stats of the system such as PID, memory usage, streams count etc.
@@ -100,6 +101,7 @@ pub trait SystemClient {
     async fn ping(&self, command: &Ping) -> Result<(), Error>;
 }
 
+/// This trait defines the methods to interact with the user module.
 #[async_trait]
 pub trait UserClient {
     /// Get the info about a specific user by unique ID or username.
@@ -136,6 +138,7 @@ pub trait UserClient {
     async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error>;
 }
 
+/// This trait defines the methods to interact with the personal access token module.
 #[async_trait]
 pub trait PersonalAccessTokenClient {
     /// Get the info about all the personal access tokens of the currently authenticated user.
@@ -160,6 +163,7 @@ pub trait PersonalAccessTokenClient {
     ) -> Result<IdentityInfo, Error>;
 }
 
+/// This trait defines the methods to interact with the stream module.
 #[async_trait]
 pub trait StreamClient {
     /// Get the info about a specific stream by unique ID or name.
@@ -184,6 +188,7 @@ pub trait StreamClient {
     async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error>;
 }
 
+/// This trait defines the methods to interact with the topic module.
 #[async_trait]
 pub trait TopicClient {
     /// Get the info about a specific topic by unique ID or name.
@@ -208,6 +213,7 @@ pub trait TopicClient {
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error>;
 }
 
+/// This trait defines the methods to interact with the partition module.
 #[async_trait]
 pub trait PartitionClient {
     /// Create new N partitions for a topic by unique ID or name.
@@ -224,6 +230,7 @@ pub trait PartitionClient {
     async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), Error>;
 }
 
+/// This trait defines the methods to interact with the messaging module.
 #[async_trait]
 pub trait MessageClient {
     /// Poll given amount of messages using the specified consumer and strategy from the specified stream and topic by unique IDs or names.
@@ -236,6 +243,7 @@ pub trait MessageClient {
     async fn send_messages(&self, command: &mut SendMessages) -> Result<(), Error>;
 }
 
+/// This trait defines the methods to interact with the consumer offset module.
 #[async_trait]
 pub trait ConsumerOffsetClient {
     /// Store the consumer offset for a specific consumer or consumer group for the given stream and topic by unique IDs or names.
@@ -251,6 +259,7 @@ pub trait ConsumerOffsetClient {
     ) -> Result<ConsumerOffsetInfo, Error>;
 }
 
+/// This trait defines the methods to interact with the consumer group module.
 #[async_trait]
 pub trait ConsumerGroupClient {
     /// Get the info about a specific consumer group by unique ID or name for the given stream and topic by unique IDs or names.

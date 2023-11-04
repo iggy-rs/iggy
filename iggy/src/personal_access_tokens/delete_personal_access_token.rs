@@ -9,8 +9,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::{from_utf8, FromStr};
 
+/// `DeletePersonalAccessToken` command is used to delete a personal access token for the authenticated user.
+/// It has additional payload:
+/// - `name` - unique name of the token, must be between 3 and 3 characters long.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct DeletePersonalAccessToken {
+    /// Unique name of the token, must be between 3 and 3 characters long.
     pub name: String,
 }
 

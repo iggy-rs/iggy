@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
+use crate::topics::MAX_NAME_LENGTH;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -9,15 +10,23 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
-const MAX_NAME_LENGTH: usize = 255;
-
+/// `UpdateTopic` command is used to update a topic in a stream.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `topic_id` - unique topic ID (numeric or name).
+/// - `message_expiry` - message expiry in seconds (optional), if `None` then messages will never expire.
+/// - `name` - unique topic name, max length is 255 characters.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct UpdateTopic {
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
+    /// Message expiry in seconds (optional), if `None` then messages will never expire.
     pub message_expiry: Option<u32>,
+    /// Unique topic name, max length is 255 characters.
     pub name: String,
 }
 

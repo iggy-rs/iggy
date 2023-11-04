@@ -9,15 +9,27 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `StoreConsumerOffset` command stores the offset of a consumer for a given partition on the server.
+/// It has additional payload:
+/// - `consumer` - the consumer that is storing the offset, either the regular consumer or the consumer group.
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `topic_id` - unique topic ID (numeric or name).
+/// - `partition_id` - partition ID on which the offset is stored. Has to be specified for the regular consumer. For consumer group it is ignored (use `None`).
+/// - `offset` - offset to store.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct StoreConsumerOffset {
+    /// The consumer that is storing the offset, either the regular consumer or the consumer group.
     #[serde(flatten)]
     pub consumer: Consumer,
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
+    /// Partition ID on which the offset is stored. Has to be specified for the regular consumer. For consumer group it is ignored (use `None`).
     pub partition_id: Option<u32>,
+    /// Offset to store.
     pub offset: u64,
 }
 

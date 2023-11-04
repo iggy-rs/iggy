@@ -1,6 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::Error;
+use crate::streams::MAX_NAME_LENGTH;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -8,11 +9,15 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
-const MAX_NAME_LENGTH: usize = 255;
-
+/// `CreateStream` command is used to create a new stream.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric)
+/// - `name` - unique stream name (string), max length is 255 characters.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateStream {
+    /// Unique stream ID (numeric).
     pub stream_id: u32,
+    /// Unique stream name (string), max length is 255 characters.
     pub name: String,
 }
 

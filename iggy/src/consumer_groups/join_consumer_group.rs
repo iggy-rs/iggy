@@ -7,12 +7,20 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `JoinConsumerGroup` command joins the consumer group by currently authenticated user.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric or name).
+/// - `topic_id` - unique topic ID (numeric or name).
+/// - `consumer_group_id` - unique consumer group ID (numeric or name).
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct JoinConsumerGroup {
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
+    /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
+    /// Unique consumer group ID (numeric or name).
     #[serde(skip)]
     pub consumer_group_id: Identifier,
 }

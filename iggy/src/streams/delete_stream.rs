@@ -7,8 +7,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `DeleteStream` command is used to delete an existing stream.
+/// It has additional payload:
+/// - `stream_id` - unique stream ID (numeric or name).
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct DeleteStream {
+    /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
 }

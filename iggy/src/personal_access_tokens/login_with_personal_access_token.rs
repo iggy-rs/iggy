@@ -8,8 +8,12 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::{from_utf8, FromStr};
 
+/// `LoginWithPersonalAccessToken` command is used to login the user with a personal access token, instead of the username and password.
+/// It has additional payload:
+/// - `token` - personal access token
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct LoginWithPersonalAccessToken {
+    /// Personal access token
     pub token: String,
 }
 

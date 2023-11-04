@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.0.113"
+version = "0.0.114"
 dependencies = [
  "aes-gcm",
  "anyhow",

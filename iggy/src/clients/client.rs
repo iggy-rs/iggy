@@ -72,6 +72,8 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
+/// The main client struct which implements all the `Client` traits and wraps the underlying low-level client for the specific transport.
+/// It also provides additional functionality (outside of the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
 #[derive(Debug)]
 pub struct IggyClient {
     client: Arc<RwLock<Box<dyn Client>>>,
@@ -83,12 +85,14 @@ pub struct IggyClient {
     message_channel_sender: Option<Arc<Sender<Message>>>,
 }
 
+/// The builder for the `IggyClient` instance, which allows to configure and provide custom implementations for the partitioner, encryptor or message handler.
 #[derive(Debug)]
 pub struct IggyClientBuilder {
     client: IggyClient,
 }
 
 impl IggyClientBuilder {
+    /// Creates a new `IggyClientBuilder` with the provided client implementation for the specific transport.
     #[must_use]
     pub fn new(client: Box<dyn Client>) -> Self {
         IggyClientBuilder {
@@ -96,26 +100,31 @@ impl IggyClientBuilder {
         }
     }
 
+    /// Apply the provided configuration.
     pub fn with_config(mut self, config: IggyClientConfig) -> Self {
         self.client.config = Some(config);
         self
     }
 
+    /// Use the the custom partitioner implementation.
     pub fn with_partitioner(mut self, partitioner: Box<dyn Partitioner>) -> Self {
         self.client.partitioner = Some(partitioner);
         self
     }
 
+    /// Use the the custom encryptor implementation.
     pub fn with_encryptor(mut self, encryptor: Box<dyn Encryptor>) -> Self {
         self.client.encryptor = Some(encryptor);
         self
     }
 
+    /// Use the the custom message handler implementation. This handler will be used only for `start_polling_messages` method, if neither `subscribe_to_polled_messages` (which returns the receiver for the messages channel) is called nor `on_message` closure is provided.
     pub fn with_message_handler(mut self, message_handler: Box<dyn MessageHandler>) -> Self {
         self.client.message_handler = Some(Arc::new(message_handler));
         self
     }
 
+    /// Build the `IggyClient` instance.
     pub fn build(self) -> IggyClient {
         self.client
     }
@@ -126,30 +135,45 @@ struct SendMessagesBatch {
     pub commands: VecDeque<SendMessages>,
 }
 
+/// The optional configuration for the `IggyClient` instance, consisting of the optional configuration for sending and polling the messages in the background.
 #[derive(Debug, Default)]
 pub struct IggyClientConfig {
+    /// The configuration for sending the messages in the background.
     pub send_messages: SendMessagesConfig,
+    /// The configuration for polling the messages in the background.
     pub poll_messages: PollMessagesConfig,
 }
 
+/// The configuration for sending the messages in the background. It allows to configure the interval between sending the messages as batches in the background and the maximum number of messages in the batch.
 #[derive(Debug)]
 pub struct SendMessagesConfig {
+    /// Whether the sending messages as batches in the background is enabled. Interval must be greater than 0.
     pub enabled: bool,
+    /// The interval in milliseconds between sending the messages as batches in the background.
     pub interval: u64,
+    /// The maximum number of messages in the batch.
     pub max_messages: u32,
 }
 
+/// The configuration for polling the messages in the background. It allows to configure the interval between polling the messages and the offset storing strategy.
 #[derive(Debug, Copy, Clone)]
 pub struct PollMessagesConfig {
+    /// The interval in milliseconds between polling the messages.
     pub interval: u64,
+    /// The offset storing strategy.
     pub store_offset_kind: StoreOffsetKind,
 }
 
+/// The consumer offset storing strategy on the server.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum StoreOffsetKind {
+    /// The offset is never stored on the server.
     Never,
+    /// The offset is stored on the server when the messages are received.
     WhenMessagesAreReceived,
+    /// The offset is stored on the server when the messages are processed.
     WhenMessagesAreProcessed,
+    /// The offset is stored on the server after processing each message.
     AfterProcessingEachMessage,
 }
 
@@ -179,10 +203,12 @@ impl Default for IggyClient {
 }
 
 impl IggyClient {
+    /// Creates a new `IggyClientBuilder` with the provided client implementation for the specific transport.
     pub fn builder(client: Box<dyn Client>) -> IggyClientBuilder {
         IggyClientBuilder::new(client)
     }
 
+    /// Creates a new `IggyClient` with the provided client implementation for the specific transport.
     pub fn new(client: Box<dyn Client>) -> Self {
         IggyClient {
             client: Arc::new(RwLock::new(client)),
@@ -195,6 +221,8 @@ impl IggyClient {
         }
     }
 
+    /// Creates a new `IggyClient` with the provided client implementation for the specific transport and the optional configuration for sending and polling the messages in the background.
+    /// Additionally it allows to provide the custom implementations for the message handler, partitioner and encryptor.
     pub fn create(
         client: Box<dyn Client>,
         config: IggyClientConfig,
@@ -234,12 +262,14 @@ impl IggyClient {
         }
     }
 
+    /// Returns the channel receiver for the messages which are polled in the background. This will only work if the `start_polling_messages` method is called.
     pub fn subscribe_to_polled_messages(&mut self) -> Receiver<Message> {
         let (sender, receiver) = flume::unbounded();
         self.message_channel_sender = Some(Arc::new(sender));
         receiver
     }
 
+    /// Starts polling the messages in the background. It returns the `JoinHandle` which can be used to await for the completion of the task.
     pub fn start_polling_messages<F>(
         &self,
         mut poll_messages: PollMessages,
@@ -328,6 +358,7 @@ impl IggyClient {
         })
     }
 
+    /// Sends the provided messages in the background using the custom partitioner implementation.
     pub async fn send_messages_using_partitioner(
         &self,
         command: &mut SendMessages,

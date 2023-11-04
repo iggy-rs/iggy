@@ -9,10 +9,16 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `UpdatePermissions` command is used to update a user's permissions.
+/// It has additional payload:
+/// - `user_id` - unique user ID (numeric or name).
+/// - `permissions` - new permissions (optional)
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct UpdatePermissions {
+    /// Unique user ID (numeric or name).
     #[serde(skip)]
     pub user_id: Identifier,
+    /// New permissions if `None` is provided, then the existing user's permissions will be removed.
     pub permissions: Option<Permissions>,
 }
 

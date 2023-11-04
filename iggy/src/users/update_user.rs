@@ -11,6 +11,11 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
+/// `UpdateUser` command is used to update a user's username and status.
+/// It has additional payload:
+/// - `user_id` - unique user ID (numeric or name).
+/// - `username` - new username (optional), if provided, must be between 3 and 50 characters long.
+/// - `status` - new status (optional)
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct UpdateUser {
     #[serde(skip)]

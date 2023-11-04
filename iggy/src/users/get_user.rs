@@ -7,9 +7,13 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `GetUser` command is used to retrieve the information about a user by unique ID.
+/// It has additional payload:
+/// - `user_id` - unique user ID (numeric or name).
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct GetUser {
     #[serde(skip)]
+    /// Unique user ID (numeric or name).
     pub user_id: Identifier,
 }
 

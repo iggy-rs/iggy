@@ -42,7 +42,7 @@ impl Permissioner {
 
     fn read_users(&self, user_id: u32) -> Result<(), Error> {
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
-            if global_permissions.read_users {
+            if global_permissions.manage_users || global_permissions.read_users {
                 return Ok(());
             }
         }

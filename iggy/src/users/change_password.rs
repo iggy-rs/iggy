@@ -9,11 +9,19 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::{from_utf8, FromStr};
 
+/// `ChangePassword` command is used to change a user's password.
+/// It has additional payload:
+/// - `user_id` - unique user ID (numeric or name).
+/// - `current_password` - current password, must be between 3 and 100 characters long.
+/// - `new_password` - new password, must be between 3 and 100 characters long.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct ChangePassword {
+    /// Unique user ID (numeric or name).
     #[serde(skip)]
     pub user_id: Identifier,
+    /// Current password, must be between 3 and 50 characters long.
     pub current_password: String,
+    /// New password, must be between 3 and 50 characters long.
     pub new_password: String,
 }
 

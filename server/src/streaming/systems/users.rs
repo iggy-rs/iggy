@@ -71,6 +71,7 @@ impl System {
         session: &Session,
         username: &str,
         password: &str,
+        status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
@@ -82,7 +83,7 @@ impl System {
         }
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
-        let user = User::new(user_id, &username, password, permissions);
+        let user = User::new(user_id, &username, password, status, permissions);
         self.storage.user.save(&user).await?;
         self.permissioner.init_permissions_for_user(user);
         info!("Created user: {username} with ID: {user_id}.");

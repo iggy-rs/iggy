@@ -11,11 +11,9 @@ derive_more = "0.99.17"
 figlet-rs = "0.1.5"
 futures = "0.3.28"
 iggy = { path = "../iggy" }
-inner = "0.1.1"
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
 quinn = "0.10.0"
-rcgen = "0.11.1"
 rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
 serde = { version = "1.0.189", features = ["derive"] }
 thiserror = "1.0.40"

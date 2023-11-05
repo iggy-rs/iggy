@@ -36,21 +36,17 @@ reqwest-retry = "0.3.0"
 rustls = { version = "0.21.*", features = ["dangerous_configuration", "quic"] }
 serde = { version = "1.0.*", features = ["derive", "rc"] }
 serde_json = "1.0.*"
-serde_qs = "0.12.0"
 serde_with = { version = "3.4.0", features = ["base64"] }
 thiserror = "1.0.*"
 tokio = { version = "1.33.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
-tokio-rustls = "0.24.0"
 tracing = { version = "0.1.40" }
-tracing-subscriber = { version = "0.3.16" }
 
 [build-dependencies]
 convert_case = "0.6.0"
 rmp-serde = "1.1.2"
 serde = { version = "1.0.*", features = ["derive", "rc"] }
 serde_derive = "1.0.*"
-sled = "0.34.7"
 
 [features]
 default = []

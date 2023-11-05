@@ -37,7 +37,6 @@ strip-ansi-escapes = "0.2.0"
 sysinfo = "0.29.*"
 thiserror = "1.0.*"
 tokio = { version = "1.33.0", features = ["full"] }
-tokio-graceful-shutdown = "0.14.0"
 tokio-native-tls = "0.3.1"
 tokio-rustls = "0.24.1"
 toml = "0.8.*"
@@ -56,10 +55,7 @@ uuid = { version = "1.5.0", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.*", features = ["xxh32"] }
 
 [dev-dependencies]
-assert_cmd = "2.0.12"
 libc = "0.2.147"
-predicates = "3.0.3"
-serial_test = "2.0.0"
 
 [build-dependencies]
 vergen = { version = "8.2.*", features = [

@@ -359,15 +359,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c59bdb34bc650a32731b31bd8f0829cc15d24a708ee31559e0bb34f2bc320cba"
 
 [[package]]
-name = "atomic"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d818003e740b63afc82337e3160717f4f63078720a810b7b903e70a5d1d2994"
-dependencies = [
- "bytemuck",
-]
-
-[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -493,11 +484,9 @@ dependencies = [
  "figlet-rs",
  "futures",
  "iggy",
- "inner",
  "integration",
  "nonzero_lit",
  "quinn",
- "rcgen",
  "rustls",
  "serde",
  "thiserror",
@@ -611,26 +600,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bytemuck"
-version = "1.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "374d28ec25809ee0e23827c2ab573d729e293f281dfe393500e7ad618baa61c6"
-dependencies = [
- "bytemuck_derive",
-]
-
-[[package]]
-name = "bytemuck_derive"
-version = "1.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "965ab7eb5f8f97d2a083c799f3a1b994fc397b2fe2da5d1da1626ce15a39f2b1"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.38",
-]
-
-[[package]]
 name = "byteorder"
 version = "1.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -741,11 +710,9 @@ dependencies = [
  "figlet-rs",
  "iggy",
  "quinn",
- "rcgen",
  "rustls",
  "thiserror",
  "tokio",
- "tokio-rustls",
  "tracing",
  "tracing-subscriber",
 ]
@@ -1133,7 +1100,6 @@ dependencies = [
  "clap",
  "iggy",
  "rand",
- "rcgen",
  "serde",
  "serde_json",
  "thiserror",
@@ -1169,7 +1135,7 @@ version = "0.10.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4547e226f4c9ab860571e070a9034192b3175580ecea38da34fcdb53a018c9a5"
 dependencies = [
- "atomic 0.5.3",
+ "atomic",
  "pear",
  "serde",
  "serde_json",
@@ -1611,15 +1577,11 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
- "serde_qs",
  "serde_with",
- "sled",
  "thiserror",
  "tokio",
  "tokio-native-tls",
- "tokio-rustls",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1649,12 +1611,6 @@ name = "inlinable_string"
 version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8fae54786f62fb2918dcfae3d568594e50eb9b5c25bf04371af6fe7516452fb"
-
-[[package]]
-name = "inner"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9368e93322f271c5ca078ed2ddcfad3511f1a40f564e522ade34e6e5c8e6680"
 
 [[package]]
 name = "inout"
@@ -1845,29 +1801,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "miette"
-version = "5.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "59bb584eaeeab6bd0226ccf3509a69d7936d148cf3d036ad350abe35e8c6856e"
-dependencies = [
- "miette-derive",
- "once_cell",
- "thiserror",
- "unicode-width",
-]
-
-[[package]]
-name = "miette-derive"
-version = "5.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49e7bc1560b95a3c4a25d03de42fe76ca718ab92d1a22a55b9b4cf67b3ae635c"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.38",
 ]
 
 [[package]]
@@ -2978,17 +2911,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serde_qs"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0431a35568651e363364210c91983c1da5eb29404d9f0928b67d4ebcfa7d330c"
-dependencies = [
- "percent-encoding",
- "serde",
- "thiserror",
-]
-
-[[package]]
 name = "serde_repr"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3080,7 +3002,6 @@ version = "0.0.47"
 dependencies = [
  "aes-gcm",
  "anyhow",
- "assert_cmd",
  "async-trait",
  "axum",
  "axum-server",
@@ -3097,7 +3018,6 @@ dependencies = [
  "iggy",
  "jsonwebtoken",
  "libc",
- "predicates",
  "prometheus-client",
  "quinn",
  "rcgen",
@@ -3108,13 +3028,11 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
- "serial_test",
  "sled",
  "strip-ansi-escapes",
  "sysinfo",
  "thiserror",
  "tokio",
- "tokio-graceful-shutdown",
  "tokio-native-tls",
  "tokio-rustls",
  "toml 0.8.4",
@@ -3460,23 +3378,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-graceful-shutdown"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a04fb0cf262da683272d8c0fc086eda5e6429f0a55e75744799d54bbb5fbcbbc"
-dependencies = [
- "async-trait",
- "atomic 0.6.0",
- "bytemuck",
- "miette",
- "pin-project-lite",
- "thiserror",
- "tokio",
- "tokio-util",
- "tracing",
-]
-
-[[package]]
 name = "tokio-macros"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3589,11 +3490,8 @@ dependencies = [
  "clap",
  "iggy",
  "rand",
- "rcgen",
- "rustls",
  "thiserror",
  "tokio",
- "tokio-rustls",
  "tracing",
  "tracing-subscriber",
 ]

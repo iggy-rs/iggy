@@ -21,7 +21,7 @@ pub struct Identifier {
     /// The length of the identifier payload.
     #[serde(skip)]
     pub length: u8,
-    /// The binary value of the identifier payload.
+    /// The binary value of the identifier payload, max length is 255 bytes.
     #[serde_as(as = "Base64")]
     pub value: Vec<u8>,
 }

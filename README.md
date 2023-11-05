@@ -14,7 +14,7 @@
 
 The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to scale horizontally and handle **millions of messages per second** (actually, **it's already very fast**, see the benchmarks below).
 
-Iggy provides the **very high throughput and performance** while utilizing a low amount of computing resources.
+Iggy provides **exceptionally high throughput and performance** while utilizing minimal computing resources.
 
 This is **not yet another extension** running on top of the existing infrastructure, such as Kafka or SQL database.
 

@@ -19,6 +19,7 @@ pub async fn handle(
             session,
             &command.username,
             &command.password,
+            command.status,
             command.permissions.clone(),
         )
         .await?;

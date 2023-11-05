@@ -73,6 +73,7 @@ async fn create_user(
             &Session::stateless(identity.user_id),
             &command.username,
             &command.password,
+            command.status,
             command.permissions.clone(),
         )
         .await?;

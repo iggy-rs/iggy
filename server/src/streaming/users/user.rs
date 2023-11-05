@@ -36,13 +36,19 @@ impl User {
         }
     }
 
-    pub fn new(id: u32, username: &str, password: &str, permissions: Option<Permissions>) -> Self {
+    pub fn new(
+        id: u32,
+        username: &str,
+        password: &str,
+        status: UserStatus,
+        permissions: Option<Permissions>,
+    ) -> Self {
         Self {
             id,
             username: username.to_string(),
             password: crypto::hash_password(password),
             created_at: TimeStamp::now().to_micros(),
-            status: UserStatus::Active,
+            status,
             permissions,
         }
     }
@@ -52,6 +58,7 @@ impl User {
             DEFAULT_ROOT_USER_ID,
             DEFAULT_ROOT_USERNAME,
             DEFAULT_ROOT_PASSWORD,
+            UserStatus::Active,
             Some(Permissions::root()),
         )
     }
@@ -81,5 +88,12 @@ mod tests {
         ));
         assert_eq!(user.status, UserStatus::Active);
         assert!(user.created_at > 0);
+    }
+
+    #[test]
+    fn should_be_created_given_specific_status() {
+        let status = UserStatus::Inactive;
+        let user = User::new(1, "test", "test", status, None);
+        assert_eq!(user.status, status);
     }
 }

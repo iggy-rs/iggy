@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: dtolnay/rust-toolchain@stable
       - uses: clechasseur/rs-cargo@v2
         with:
@@ -42,6 +43,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo install cargo-sort
       - run: cargo sort --check --workspace
+
+  unused_dependencies:
+    name: Check for unused dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: taiki-e/install-action@cargo-udeps
+      - run: cargo +nightly udeps --all-targets --all-features
 
 # Uncomment this when we have a proper release - 1.0.0
 #   semver-checks:

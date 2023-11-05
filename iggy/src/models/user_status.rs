@@ -3,11 +3,14 @@ use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `UserStatus` represents the status of the user.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum UserStatus {
+    /// The user is active.
     #[default]
     Active,
+    /// The user is inactive.
     Inactive,
 }
 
@@ -32,6 +35,7 @@ impl Display for UserStatus {
 }
 
 impl UserStatus {
+    /// Returns the code of the user status.
     pub fn as_code(&self) -> u8 {
         match self {
             UserStatus::Active => 1,
@@ -39,6 +43,7 @@ impl UserStatus {
         }
     }
 
+    /// Returns the user status from the code.
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
             1 => Ok(UserStatus::Active),

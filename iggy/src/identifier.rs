@@ -8,21 +8,32 @@ use serde_with::serde_as;
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `Identifier` represents the unique identifier of the resources such as stream, topic, partition, user etc.
+/// It consists of the following fields:
+/// - `kind`: the kind of the identifier.
+/// - `length`: the length of the identifier payload.
+/// - `value`: the binary value of the identifier payload.
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Identifier {
+    /// The kind of the identifier.
     pub kind: IdKind,
+    /// The length of the identifier payload.
     #[serde(skip)]
     pub length: u8,
+    /// The binary value of the identifier payload, max length is 255 bytes.
     #[serde_as(as = "Base64")]
     pub value: Vec<u8>,
 }
 
+/// `IdKind` represents the kind of the identifier.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum IdKind {
+    /// The identifier is numeric.
     #[default]
     Numeric,
+    /// The identifier is string.
     String,
 }
 
@@ -60,6 +71,7 @@ impl Validatable<Error> for Identifier {
 }
 
 impl Identifier {
+    /// Returns the numeric value of the identifier.
     pub fn get_u32_value(&self) -> Result<u32, Error> {
         if self.kind != IdKind::Numeric {
             return Err(Error::InvalidCommand);
@@ -72,6 +84,7 @@ impl Identifier {
         Ok(u32::from_le_bytes(self.value.clone().try_into().unwrap()))
     }
 
+    /// Returns the string value of the identifier.
     pub fn get_string_value(&self) -> Result<String, Error> {
         if self.kind != IdKind::String {
             return Err(Error::InvalidCommand);
@@ -80,6 +93,7 @@ impl Identifier {
         Ok(String::from_utf8_lossy(&self.value).to_string())
     }
 
+    /// Returns the string representation of the identifier.
     pub fn as_string(&self) -> String {
         match self.kind {
             IdKind::Numeric => self.get_u32_value().unwrap().to_string(),
@@ -87,10 +101,12 @@ impl Identifier {
         }
     }
 
+    /// Returns the size of the identifier in bytes.
     pub fn get_size_bytes(&self) -> u32 {
         2 + u32::from(self.length)
     }
 
+    /// Creates a new identifier from the given identifier.
     pub fn from_identifier(identifier: &Identifier) -> Self {
         Self {
             kind: identifier.kind,
@@ -99,6 +115,7 @@ impl Identifier {
         }
     }
 
+    /// Creates a new identifier from the given string value, either numeric or string.
     pub fn from_str_value(value: &str) -> Result<Self, Error> {
         let length = value.len();
         if length == 0 || length > 255 {
@@ -111,6 +128,7 @@ impl Identifier {
         }
     }
 
+    /// Creates a new identifier from the given numeric value.
     pub fn numeric(value: u32) -> Result<Self, Error> {
         if value == 0 {
             return Err(Error::InvalidCommand);
@@ -123,6 +141,7 @@ impl Identifier {
         })
     }
 
+    /// Creates a new identifier from the given string value.
     pub fn named(value: &str) -> Result<Self, Error> {
         let length = value.len();
         if length == 0 || length > 255 {
@@ -173,6 +192,7 @@ impl BytesSerializable for Identifier {
 }
 
 impl IdKind {
+    /// Returns the code of the identifier kind.
     pub fn as_code(&self) -> u8 {
         match self {
             IdKind::Numeric => 1,
@@ -180,6 +200,7 @@ impl IdKind {
         }
     }
 
+    /// Returns the identifier kind from the code.
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
             1 => Ok(IdKind::Numeric),

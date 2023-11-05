@@ -19,8 +19,11 @@ const UNAUTHORIZED_PATHS: &[&str] = &[
     "/personal-access-tokens/login",
 ];
 
+/// HTTP client for interacting with the Iggy API.
+/// It requires a valid API URL.
 #[derive(Debug)]
 pub struct HttpClient {
+    /// The URL of the Iggy API.
     pub api_url: Url,
     client: ClientWithMiddleware,
     access_token: RwLock<String>,
@@ -47,6 +50,7 @@ impl Default for HttpClient {
 }
 
 impl HttpClient {
+    /// Create a new HTTP client for interacting with the Iggy API using the provided API URL.
     pub fn new(api_url: &str) -> Result<Self, Error> {
         Self::create(Arc::new(HttpClientConfig {
             api_url: api_url.to_string(),
@@ -54,6 +58,7 @@ impl HttpClient {
         }))
     }
 
+    /// Create a new HTTP client for interacting with the Iggy API using the provided configuration.
     pub fn create(config: Arc<HttpClientConfig>) -> Result<Self, Error> {
         let api_url = Url::parse(&config.api_url);
         if api_url.is_err() {
@@ -73,6 +78,7 @@ impl HttpClient {
         })
     }
 
+    /// Invoke HTTP GET request to the Iggy API.
     pub async fn get(&self, path: &str) -> Result<Response, Error> {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
@@ -81,6 +87,7 @@ impl HttpClient {
         Self::handle_response(response).await
     }
 
+    /// Invoke HTTP GET request to the Iggy API with query parameters.
     pub async fn get_with_query<T: Serialize + ?Sized>(
         &self,
         path: &str,
@@ -99,6 +106,7 @@ impl HttpClient {
         Self::handle_response(response).await
     }
 
+    /// Invoke HTTP POST request to the Iggy API.
     pub async fn post<T: Serialize + ?Sized>(
         &self,
         path: &str,
@@ -117,6 +125,7 @@ impl HttpClient {
         Self::handle_response(response).await
     }
 
+    /// Invoke HTTP PUT request to the Iggy API.
     pub async fn put<T: Serialize + ?Sized>(
         &self,
         path: &str,
@@ -135,6 +144,7 @@ impl HttpClient {
         Self::handle_response(response).await
     }
 
+    /// Invoke HTTP DELETE request to the Iggy API.
     pub async fn delete(&self, path: &str) -> Result<Response, Error> {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
@@ -143,6 +153,7 @@ impl HttpClient {
         Self::handle_response(response).await
     }
 
+    /// Invoke HTTP DELETE request to the Iggy API with query parameters.
     pub async fn delete_with_query<T: Serialize + ?Sized>(
         &self,
         path: &str,
@@ -161,15 +172,18 @@ impl HttpClient {
         Self::handle_response(response).await
     }
 
+    /// Get full URL for the provided path.
     pub fn get_url(&self, path: &str) -> Result<Url, Error> {
         self.api_url.join(path).map_err(|_| Error::CannotParseUrl)
     }
 
+    /// Returns true if the client is authenticated.
     pub async fn is_authenticated(&self) -> bool {
         let token = self.access_token.read().await;
         !token.is_empty()
     }
 
+    /// Set the refresh token.
     pub async fn set_refresh_token(&self, token: Option<String>) {
         let mut current_token = self.refresh_token.write().await;
         if let Some(token) = token {
@@ -179,6 +193,7 @@ impl HttpClient {
         }
     }
 
+    /// Set the access token.
     pub async fn set_access_token(&self, token: Option<String>) {
         let mut current_token = self.access_token.write().await;
         if let Some(token) = token {
@@ -188,10 +203,8 @@ impl HttpClient {
         }
     }
 
-    pub async fn set_access_token_from_identity(
-        &self,
-        identity: &IdentityInfo,
-    ) -> Result<(), Error> {
+    /// Set the access token and refresh token from the provided identity.
+    pub async fn set_tokens_from_identity(&self, identity: &IdentityInfo) -> Result<(), Error> {
         if identity.token.is_none() {
             return Err(Error::JwtMissing);
         }
@@ -208,6 +221,7 @@ impl HttpClient {
         Ok(())
     }
 
+    /// Refresh the access token using the provided refresh token.
     pub async fn refresh_access_token_using_current_refresh_token(&self) -> Result<(), Error> {
         let refresh_token = self.refresh_token.read().await;
         self.refresh_access_token(&refresh_token).await

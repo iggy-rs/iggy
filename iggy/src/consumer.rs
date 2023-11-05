@@ -8,21 +8,31 @@ use serde_with::{serde_as, DisplayFromStr};
 use std::fmt::Display;
 use std::str::FromStr;
 
+/// `Consumer` represents the type of consumer that is consuming a message.
+/// It can be either a `Consumer` or a `ConsumerGroup`.
+/// It consists of the following fields:
+/// - `kind`: the type of consumer. It can be either `Consumer` or `ConsumerGroup`.
+/// - `id`: the unique identifier of the consumer.
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct Consumer {
+    /// The type of consumer. It can be either `Consumer` or `ConsumerGroup`.
     #[serde(skip)]
     pub kind: ConsumerKind,
+    /// The unique identifier of the consumer.
     #[serde_as(as = "DisplayFromStr")]
     #[serde(default = "default_id")]
     pub id: Identifier,
 }
 
+/// `ConsumerKind` is an enum that represents the type of consumer.
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum ConsumerKind {
+    /// `Consumer` represents a regular consumer.
     #[default]
     Consumer,
+    /// `ConsumerGroup` represents a consumer group.
     ConsumerGroup,
 }
 
@@ -37,6 +47,7 @@ impl Validatable<Error> for Consumer {
 }
 
 impl Consumer {
+    /// Creates a new `Consumer` from a `Consumer`.
     pub fn from_consumer(consumer: &Consumer) -> Self {
         Self {
             kind: consumer.kind,
@@ -44,6 +55,7 @@ impl Consumer {
         }
     }
 
+    /// Creates a new `Consumer` from the `Identifier`.
     pub fn new(id: Identifier) -> Self {
         Self {
             kind: ConsumerKind::Consumer,
@@ -51,6 +63,7 @@ impl Consumer {
         }
     }
 
+    // Creates a new `ConsumerGroup` from the `Identifier`.
     pub fn group(id: Identifier) -> Self {
         Self {
             kind: ConsumerKind::ConsumerGroup,
@@ -84,7 +97,9 @@ impl BytesSerializable for Consumer {
     }
 }
 
+/// `ConsumerKind` is an enum that represents the type of consumer.
 impl ConsumerKind {
+    /// Returns the code of the `ConsumerKind`.
     pub fn as_code(&self) -> u8 {
         match self {
             ConsumerKind::Consumer => 1,
@@ -92,6 +107,7 @@ impl ConsumerKind {
         }
     }
 
+    /// Creates a new `ConsumerKind` from the code.
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
             1 => Ok(ConsumerKind::Consumer),

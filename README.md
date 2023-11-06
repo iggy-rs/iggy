@@ -3,6 +3,7 @@
 [Website](https://iggy.rs) | [Getting started](https://docs.iggy.rs/introduction/getting-started/) | [Documentation](https://docs.iggy.rs) | [Discord](https://iggy.rs/discord) | [Crates](https://crates.io/crates/iggy)
 
 ![workflow](https://github.com/iggy-rs/iggy/actions/workflows/rust.yml/badge.svg)
+[![codecov](https://codecov.io/gh/iggy-rs/iggy/graph/badge.svg?token=D9TIWPBWE2)](https://codecov.io/gh/iggy-rs/iggy)
 
 ---
 
@@ -217,7 +218,7 @@ Then, run the benchmarking app with the desired options:
 
 1. Polling (reading) benchmark
 
-   ```bash 
+   ```bash
    cargo r --bin iggy-bench -r -- -c -v send tcp
    ```
 

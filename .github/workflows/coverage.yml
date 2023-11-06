@@ -1,0 +1,35 @@
+name: Coverage
+on:
+  workflow_call:
+
+jobs:
+    coverage:
+      runs-on: ubuntu-latest
+      env:
+        CARGO_TERM_COLOR: always
+      steps:
+        - uses: actions/checkout@v4
+
+        - name: Cache cargo & target directories
+          uses: Swatinem/rust-cache@v2
+          with:
+            key: "v2"
+
+        - name: Install cargo-llvm-cov
+          uses: taiki-e/install-action@cargo-llvm-cov
+
+        - name: Build
+          run: source <(cargo llvm-cov show-env --export-prefix) && cargo build
+
+        - name: Test
+          run: source <(cargo llvm-cov show-env --export-prefix) && cargo test
+
+        - name: Generate code coverage
+          run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --codecov --output-path codecov.json --ignore-filename-regex '(bench\/|cli\/|integration\/|tools\/)'
+
+        - name: Upload coverage to Codecov
+          uses: codecov/codecov-action@v3
+          with:
+            token: ${{ secrets.CODECOV_TOKEN }}
+            files: codecov.json
+            fail_ci_if_error: false

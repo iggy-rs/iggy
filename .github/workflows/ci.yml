@@ -8,7 +8,7 @@
 # - merge Docker meta into one step
 # - implement cargo-semver-checks
 
-name: Rust
+name: CI
 on:
   pull_request:
     branches:
@@ -145,6 +145,10 @@ jobs:
     steps:
       - run: |
           echo The PR was merged
+
+  coverage:
+    needs: if_merged
+    uses: ./.github/workflows/coverage.yml
 
   tag:
     runs-on: ubuntu-latest

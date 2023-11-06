@@ -30,7 +30,7 @@ async fn create_partitions(
     let mut system = state.system.write().await;
     system
         .create_partitions(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.stream_id,
             &command.topic_id,
             command.partitions_count,
@@ -51,7 +51,7 @@ async fn delete_partitions(
     let mut system = state.system.write().await;
     system
         .delete_partitions(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &query.stream_id,
             &query.topic_id,
             query.partitions_count,

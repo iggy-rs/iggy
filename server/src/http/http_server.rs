@@ -12,6 +12,7 @@ use crate::streaming::systems::system::SharedSystem;
 use axum::http::Method;
 use axum::{middleware, Router};
 use axum_server::tls_rustls::RustlsConfig;
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, CorsLayer};
@@ -69,7 +70,7 @@ pub async fn start(config: HttpConfig, system: SharedSystem) {
 
     if !config.tls.enabled {
         axum::Server::bind(&config.address.parse().unwrap())
-            .serve(app.into_make_service())
+            .serve(app.into_make_service_with_connect_info::<SocketAddr>())
             .await
             .unwrap();
         return;
@@ -83,7 +84,7 @@ pub async fn start(config: HttpConfig, system: SharedSystem) {
     .unwrap();
 
     axum_server::bind_rustls(config.address.parse().unwrap(), tls_config)
-        .serve(app.into_make_service())
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
         .await
         .unwrap();
 }

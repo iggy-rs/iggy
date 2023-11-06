@@ -23,7 +23,7 @@ pub(crate) async fn handle_connection(
         .add_client(address, Transport::Tcp)
         .await;
 
-    let mut session = Session::from_client_id(client_id);
+    let mut session = Session::from_client_id(client_id, address.to_string());
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
     loop {
         let read_length = sender.read(&mut initial_buffer).await?;

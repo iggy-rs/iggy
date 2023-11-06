@@ -32,7 +32,11 @@ async fn get_topic(
     let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let topic = system.find_topic(&Session::stateless(identity.user_id), &stream_id, &topic_id)?;
+    let topic = system.find_topic(
+        &Session::stateless(identity.user_id, identity.ip_address),
+        &stream_id,
+        &topic_id,
+    )?;
     let topic = mapper::map_topic(topic).await;
     Ok(Json(topic))
 }
@@ -44,7 +48,10 @@ async fn get_topics(
 ) -> Result<Json<Vec<Topic>>, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let system = state.system.read().await;
-    let topics = system.find_topics(&Session::stateless(identity.user_id), &stream_id)?;
+    let topics = system.find_topics(
+        &Session::stateless(identity.user_id, identity.ip_address),
+        &stream_id,
+    )?;
     let topics = mapper::map_topics(&topics).await;
     Ok(Json(topics))
 }
@@ -60,7 +67,7 @@ async fn create_topic(
     let mut system = state.system.write().await;
     system
         .create_topic(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.stream_id,
             command.topic_id,
             &command.name,
@@ -83,7 +90,7 @@ async fn update_topic(
     let mut system = state.system.write().await;
     system
         .update_topic(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.stream_id,
             &command.topic_id,
             &command.name,
@@ -102,7 +109,11 @@ async fn delete_topic(
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let mut system = state.system.write().await;
     system
-        .delete_topic(&Session::stateless(identity.user_id), &stream_id, &topic_id)
+        .delete_topic(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &stream_id,
+            &topic_id,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

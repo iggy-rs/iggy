@@ -31,7 +31,10 @@ async fn get_stream(
 ) -> Result<Json<StreamDetails>, CustomError> {
     let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let stream = system.find_stream(&Session::stateless(identity.user_id), &stream_id)?;
+    let stream = system.find_stream(
+        &Session::stateless(identity.user_id, identity.ip_address),
+        &stream_id,
+    )?;
     let stream = mapper::map_stream(stream).await;
     Ok(Json(stream))
 }
@@ -41,7 +44,8 @@ async fn get_streams(
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<Stream>>, CustomError> {
     let system = state.system.read().await;
-    let streams = system.find_streams(&Session::stateless(identity.user_id))?;
+    let streams =
+        system.find_streams(&Session::stateless(identity.user_id, identity.ip_address))?;
     let streams = mapper::map_streams(&streams).await;
     Ok(Json(streams))
 }
@@ -55,7 +59,7 @@ async fn create_stream(
     let mut system = state.system.write().await;
     system
         .create_stream(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             command.stream_id,
             &command.name,
         )
@@ -74,7 +78,7 @@ async fn update_stream(
     let mut system = state.system.write().await;
     system
         .update_stream(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.stream_id,
             &command.name,
         )
@@ -90,7 +94,10 @@ async fn delete_stream(
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let mut system = state.system.write().await;
     system
-        .delete_stream(&Session::stateless(identity.user_id), &stream_id)
+        .delete_stream(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &stream_id,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

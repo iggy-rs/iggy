@@ -31,7 +31,7 @@ async fn get_personal_access_tokens(
 ) -> Result<Json<Vec<PersonalAccessTokenInfo>>, CustomError> {
     let system = state.system.read().await;
     let personal_access_tokens = system
-        .get_personal_access_tokens(&Session::stateless(identity.user_id))
+        .get_personal_access_tokens(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
     let personal_access_tokens = mapper::map_personal_access_tokens(&personal_access_tokens);
     Ok(Json(personal_access_tokens))
@@ -46,7 +46,7 @@ async fn create_personal_access_token(
     let system = state.system.read().await;
     let token = system
         .create_personal_access_token(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.name,
             command.expiry,
         )
@@ -61,7 +61,10 @@ async fn delete_personal_access_token(
 ) -> Result<StatusCode, CustomError> {
     let system = state.system.read().await;
     system
-        .delete_personal_access_token(&Session::stateless(identity.user_id), &name)
+        .delete_personal_access_token(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &name,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }

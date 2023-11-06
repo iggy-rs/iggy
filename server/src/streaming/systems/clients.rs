@@ -12,7 +12,7 @@ impl System {
     pub async fn add_client(&self, address: &SocketAddr, transport: Transport) -> u32 {
         let mut client_manager = self.client_manager.write().await;
         let client_id = client_manager.add_client(address, transport);
-        info!("Added {transport} client with ID: {client_id} for address: {address}");
+        info!("Added {transport} client with ID: {client_id} for IP address: {address}");
         self.metrics.increment_clients(1);
         client_id
     }
@@ -68,7 +68,7 @@ impl System {
             let client = client.read().await;
 
             info!(
-                "Deleted {} client with ID: {} for address: {}",
+                "Deleted {} client with ID: {} for IP address: {}",
                 client.transport, client.client_id, client.address
             );
         }

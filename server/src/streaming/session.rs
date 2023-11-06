@@ -6,19 +6,24 @@ use std::fmt::Display;
 pub struct Session {
     pub user_id: UserId,
     pub client_id: u32,
+    pub ip_address: String,
 }
 
 impl Session {
-    pub fn new(client_id: u32, user_id: UserId) -> Self {
-        Self { client_id, user_id }
+    pub fn new(client_id: u32, user_id: UserId, ip_address: String) -> Self {
+        Self {
+            client_id,
+            user_id,
+            ip_address,
+        }
     }
 
-    pub fn stateless(user_id: UserId) -> Self {
-        Self::new(0, user_id)
+    pub fn stateless(user_id: UserId, ip_address: String) -> Self {
+        Self::new(0, user_id, ip_address)
     }
 
-    pub fn from_client_id(client_id: u32) -> Self {
-        Self::new(client_id, 0)
+    pub fn from_client_id(client_id: u32, ip_address: String) -> Self {
+        Self::new(client_id, 0, ip_address)
     }
 
     pub fn set_user_id(&mut self, user_id: UserId) {
@@ -39,11 +44,15 @@ impl Display for Session {
         if self.user_id > 0 {
             return write!(
                 f,
-                "client ID: {}, user ID: {}",
-                self.client_id, self.user_id
+                "client ID: {}, user ID: {}, IP address: {}",
+                self.client_id, self.user_id, self.ip_address
             );
         }
 
-        write!(f, "client ID: {}", self.client_id)
+        write!(
+            f,
+            "client ID: {}, IP address: {}",
+            self.client_id, self.ip_address
+        )
     }
 }

@@ -37,7 +37,7 @@ async fn poll_messages(
     let system = state.system.read().await;
     let polled_messages = system
         .poll_messages(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             consumer,
             &query.stream_id,
             &query.topic_id,
@@ -61,7 +61,7 @@ async fn send_messages(
     let system = state.system.read().await;
     system
         .append_messages(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.stream_id,
             &command.topic_id,
             &command.partitioning,

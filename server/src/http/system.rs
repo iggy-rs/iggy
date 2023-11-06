@@ -39,7 +39,7 @@ async fn get_stats(
 ) -> Result<Json<Stats>, CustomError> {
     let system = state.system.read().await;
     let stats = system
-        .get_stats(&Session::stateless(identity.user_id))
+        .get_stats(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
     Ok(Json(stats))
 }
@@ -51,7 +51,10 @@ async fn get_client(
 ) -> Result<Json<ClientInfoDetails>, CustomError> {
     let system = state.system.read().await;
     let client = system
-        .get_client(&Session::stateless(identity.user_id), client_id)
+        .get_client(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            client_id,
+        )
         .await?;
     let client = client.read().await;
     let client = mapper::map_client(&client).await;
@@ -64,7 +67,7 @@ async fn get_clients(
 ) -> Result<Json<Vec<ClientInfo>>, CustomError> {
     let system = state.system.read().await;
     let clients = system
-        .get_clients(&Session::stateless(identity.user_id))
+        .get_clients(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
     let clients = mapper::map_clients(&clients).await;
     Ok(Json(clients))

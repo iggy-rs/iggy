@@ -43,7 +43,10 @@ async fn get_user(
     let user_id = Identifier::from_str_value(&user_id)?;
     let system = state.system.read().await;
     let user = system
-        .find_user(&Session::stateless(identity.user_id), &user_id)
+        .find_user(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &user_id,
+        )
         .await?;
     let user = mapper::map_user(&user);
     Ok(Json(user))
@@ -55,7 +58,7 @@ async fn get_users(
 ) -> Result<Json<Vec<UserInfo>>, CustomError> {
     let system = state.system.read().await;
     let users = system
-        .get_users(&Session::stateless(identity.user_id))
+        .get_users(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
     let users = mapper::map_users(&users);
     Ok(Json(users))
@@ -70,7 +73,7 @@ async fn create_user(
     let mut system = state.system.write().await;
     system
         .create_user(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.username,
             &command.password,
             command.status,
@@ -91,7 +94,7 @@ async fn update_user(
     let system = state.system.read().await;
     system
         .update_user(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.user_id,
             command.username,
             command.status,
@@ -111,7 +114,7 @@ async fn update_permissions(
     let mut system = state.system.write().await;
     system
         .update_permissions(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.user_id,
             command.permissions,
         )
@@ -130,7 +133,7 @@ async fn change_password(
     let system = state.system.read().await;
     system
         .change_password(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             &command.user_id,
             &command.current_password,
             &command.new_password,
@@ -147,7 +150,10 @@ async fn delete_user(
     let user_id = Identifier::from_str_value(&user_id)?;
     let mut system = state.system.write().await;
     system
-        .delete_user(&Session::stateless(identity.user_id), &user_id)
+        .delete_user(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &user_id,
+        )
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -182,7 +188,7 @@ async fn logout_user(
     command.validate()?;
     let system = state.system.read().await;
     system
-        .logout_user(&Session::stateless(identity.user_id))
+        .logout_user(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
     state
         .jwt_manager

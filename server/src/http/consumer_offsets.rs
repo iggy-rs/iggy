@@ -34,7 +34,7 @@ async fn get_consumer_offset(
     let system = state.system.read().await;
     let offset = system
         .get_consumer_offset(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             consumer,
             &query.stream_id,
             &query.topic_id,
@@ -57,7 +57,7 @@ async fn store_consumer_offset(
     let system = state.system.read().await;
     system
         .store_consumer_offset(
-            &Session::stateless(identity.user_id),
+            &Session::stateless(identity.user_id, identity.ip_address),
             consumer,
             &command.stream_id,
             &command.topic_id,

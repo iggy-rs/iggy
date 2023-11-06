@@ -6,6 +6,7 @@ pub struct Identity {
     pub token_id: String,
     pub token_expiry: u64,
     pub user_id: UserId,
+    pub ip_address: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

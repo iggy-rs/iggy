@@ -39,7 +39,7 @@ async fn should_create_and_persist_stream() {
     );
     let stream_id = 1;
     let stream_name = "test";
-    let session = Session::new(1, 1);
+    let session = Session::new(1, 1, "127.0.0.1".to_string());
     system.init().await.unwrap();
 
     system
@@ -60,7 +60,7 @@ async fn should_delete_persisted_stream() {
     );
     let stream_id = 1;
     let stream_name = "test";
-    let session = Session::new(1, 1);
+    let session = Session::new(1, 1, "127.0.0.1".to_string());
     system.init().await.unwrap();
     system
         .create_stream(&session, stream_id, stream_name)

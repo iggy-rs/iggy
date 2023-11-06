@@ -8,7 +8,6 @@ use std::str::FromStr;
 // we should consider brotli as well.
 #[derive(Debug, PartialEq, Clone)]
 pub enum CompressionAlgorithm {
-    Producer,
     Gzip,
 }
 
@@ -17,7 +16,6 @@ impl FromStr for CompressionAlgorithm {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "Producer" | "producer" => Ok(CompressionAlgorithm::Producer),
             "Gzip" | "gzip" => Ok(CompressionAlgorithm::Gzip),
             _ => Err(format!("Unknown compression type: {}", s)),
         }
@@ -30,8 +28,14 @@ impl Serialize for CompressionAlgorithm {
         S: Serializer,
     {
         match self {
-            CompressionAlgorithm::Producer => serializer.serialize_str("producer"),
             CompressionAlgorithm::Gzip => serializer.serialize_str("gzip"),
+        }
+    }
+}
+impl From<CompressionAlgorithm> for String {
+    fn from(value: CompressionAlgorithm) -> Self {
+        match value {
+            CompressionAlgorithm::Gzip => "gzip".to_string(),
         }
     }
 }
@@ -64,41 +68,23 @@ impl<'de> Deserialize<'de> for CompressionAlgorithm {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde_json::json;
 
     #[test]
-    fn test_serialize() {
-        let producer_alg = CompressionAlgorithm::Producer;
-        let producer_serialized = serde_json::to_string(&producer_alg).unwrap();
+    fn test_from() {
+        let gzip_alg = CompressionAlgorithm::from_str("gzip");
+        assert!(gzip_alg.is_ok());
+        assert_eq!(gzip_alg.unwrap(), CompressionAlgorithm::Gzip);
 
-        let gzip_alg = CompressionAlgorithm::Gzip;
-        let gzip_serialized = serde_json::to_string(&gzip_alg).unwrap();
-        assert_eq!(producer_serialized, json!("producer").to_string());
-        assert_eq!(gzip_serialized, json!("gzip").to_string());
+        let gzip_alg = CompressionAlgorithm::from_str("Gzip");
+        assert!(gzip_alg.is_ok());
+        assert_eq!(gzip_alg.unwrap(), CompressionAlgorithm::Gzip);
     }
 
     #[test]
-    fn test_deserialize() {
-        let json_data = "\"producer\"";
-        let deserialized: Result<CompressionAlgorithm, serde_json::Error> =
-            serde_json::from_str(json_data);
-        assert!(deserialized.is_ok());
+    fn test_into() {
+        let gzip: CompressionAlgorithm = CompressionAlgorithm::Gzip;
+        let gzip_string: String = gzip.into();
 
-        let json_data = "\"Producer\"";
-        let deserialized: Result<CompressionAlgorithm, serde_json::Error> =
-            serde_json::from_str(json_data);
-        assert!(deserialized.is_ok());
-        assert_eq!(deserialized.unwrap(), CompressionAlgorithm::Producer);
-
-        let json_data = "\"Gzip\"";
-        let deserialized: Result<CompressionAlgorithm, serde_json::Error> =
-            serde_json::from_str(json_data);
-        assert!(deserialized.is_ok());
-
-        let json_data = "\"gzip\"";
-        let deserialized: Result<CompressionAlgorithm, serde_json::Error> =
-            serde_json::from_str(json_data);
-        assert!(deserialized.is_ok());
-        assert_eq!(deserialized.unwrap(), CompressionAlgorithm::Gzip);
+        assert_eq!(gzip_string, "gzip".to_string());
     }
 }

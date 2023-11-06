@@ -104,7 +104,6 @@ impl Display for CompressionAlgorithm {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             CompressionAlgorithm::Gzip => write!(f, "gzip"),
-            CompressionAlgorithm::Producer => write!(f, "producer"),
         }
     }
 }

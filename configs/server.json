@@ -109,8 +109,8 @@
       "key": ""
     },
     "compression": {
-      "enabled": true,
-      "algorithm": "producer"
+      "enabled": false,
+      "algorithm": "gzip"
     },
     "stream": {
       "path": "streams"

@@ -1,18 +1,15 @@
+use serde::{
+    de::{self, Deserializer, Visitor},
+    Deserialize, Serialize, Serializer,
+};
 use std::str::FromStr;
-use serde::{Serialize, Serializer, de::{Visitor, self, Deserializer}, Deserialize};
 
-// for now only those, in the future will add snappy, lz4, zstd (same as in kafka) in addition to that
-// we should consider brotli aswell.
+// for now only those, in the future will add snappy, lz4, zstd (same as in confluent kafka) in addition to that
+// we should consider brotli as well.
 #[derive(Debug, PartialEq, Clone)]
 pub enum CompressionAlgorithm {
     Producer,
     Gzip,
-}
-
-impl Default for CompressionAlgorithm {
-    fn default() -> Self {
-        CompressionAlgorithm::Producer
-    }
 }
 
 impl FromStr for CompressionAlgorithm {
@@ -22,15 +19,15 @@ impl FromStr for CompressionAlgorithm {
         match s {
             "Producer" | "producer" => Ok(CompressionAlgorithm::Producer),
             "Gzip" | "gzip" => Ok(CompressionAlgorithm::Gzip),
-            _ => Err(format!("Unknown compression type: {}", s))
+            _ => Err(format!("Unknown compression type: {}", s)),
         }
     }
 }
 
 impl Serialize for CompressionAlgorithm {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         match self {
             CompressionAlgorithm::Producer => serializer.serialize_str("producer"),
@@ -38,9 +35,9 @@ impl Serialize for CompressionAlgorithm {
         }
     }
 }
-struct CompressionAlgVisitor;
+struct CompressionAlgorithmVisitor;
 
-impl<'de> Visitor<'de> for CompressionAlgVisitor {
+impl<'de> Visitor<'de> for CompressionAlgorithmVisitor {
     type Value = CompressionAlgorithm;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -48,22 +45,21 @@ impl<'de> Visitor<'de> for CompressionAlgVisitor {
     }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-        where
-            E: de::Error,
+    where
+        E: de::Error,
     {
-        CompressionAlgorithm::from_str(&value).map_err(de::Error::custom)
+        CompressionAlgorithm::from_str(value).map_err(de::Error::custom)
     }
 }
 
 impl<'de> Deserialize<'de> for CompressionAlgorithm {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
-        deserializer.deserialize_str(CompressionAlgVisitor)
+        deserializer.deserialize_str(CompressionAlgorithmVisitor)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -75,7 +71,6 @@ mod tests {
         let producer_alg = CompressionAlgorithm::Producer;
         let producer_serialized = serde_json::to_string(&producer_alg).unwrap();
 
-        //gzip alg
         let gzip_alg = CompressionAlgorithm::Gzip;
         let gzip_serialized = serde_json::to_string(&gzip_alg).unwrap();
         assert_eq!(producer_serialized, json!("producer").to_string());
@@ -106,3 +101,4 @@ mod tests {
         assert!(deserialized.is_ok());
         assert_eq!(deserialized.unwrap(), CompressionAlgorithm::Gzip);
     }
+}

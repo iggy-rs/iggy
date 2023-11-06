@@ -108,6 +108,10 @@
       "enabled": false,
       "key": ""
     },
+    "compression": {
+      "enabled": true,
+      "algorithm": "producer"
+    },
     "stream": {
       "path": "streams"
     },

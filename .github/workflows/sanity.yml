@@ -45,7 +45,7 @@ jobs:
       - run: cargo sort --check --workspace
 
   unused_dependencies:
-    name: Check for unused dependencies
+    name: Unused dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

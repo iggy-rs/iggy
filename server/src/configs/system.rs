@@ -1,5 +1,5 @@
-use crate::configs::compression_algorithm::CompressionAlgorithm;
 use crate::configs::resource_quota::MemoryResourceQuota;
+use iggy::compression::CompressionKind;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -24,7 +24,7 @@ pub struct DatabaseConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CompressionConfig {
     pub enabled: bool,
-    pub algorithm: CompressionAlgorithm,
+    pub algorithm: CompressionKind,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

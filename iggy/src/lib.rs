@@ -9,6 +9,7 @@ pub mod clients;
 #[cfg(feature = "iggy-cmd")]
 pub mod cmd;
 pub mod command;
+pub mod compression;
 pub mod consumer;
 pub mod consumer_groups;
 pub mod consumer_offsets;

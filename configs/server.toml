@@ -96,8 +96,8 @@ enabled = false
 key = ""
 
 [system.compression]
-enabled = false
-algorithm = "gzip"
+enabled = true
+algorithm = "none"
 
 [system.stream]
 path = "streams"

@@ -1,4 +1,3 @@
-use crate::configs::compression_algorithm::CompressionAlgorithm;
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::system::CompressionConfig;
 use crate::configs::{
@@ -97,13 +96,6 @@ impl Display for MemoryResourceQuota {
         match self {
             MemoryResourceQuota::Bytes(byte) => write!(f, "{}", byte),
             MemoryResourceQuota::Percentage(percentage) => write!(f, "{}%", percentage),
-        }
-    }
-}
-impl Display for CompressionAlgorithm {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CompressionAlgorithm::Gzip => write!(f, "gzip"),
         }
     }
 }

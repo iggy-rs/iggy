@@ -138,11 +138,12 @@ impl Default for DatabaseConfig {
         }
     }
 }
+
 impl Default for CompressionConfig {
     fn default() -> Self {
         CompressionConfig {
-            enabled: false,
-            algorithm: "gzip".parse().unwrap(),
+            enabled: true,
+            algorithm: "none".parse().unwrap(),
         }
     }
 }

@@ -5,7 +5,6 @@ pub mod http;
 pub mod quic;
 pub mod tcp;
 
-pub mod compression_algorithm;
 pub mod config_provider;
 pub mod defaults;
 pub mod displays;

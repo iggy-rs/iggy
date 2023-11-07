@@ -23,8 +23,8 @@ pub struct DatabaseConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CompressionConfig {
-    pub enabled: bool,
-    pub algorithm: CompressionKind,
+    pub allow_override: bool,
+    pub default_algorithm: CompressionKind,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

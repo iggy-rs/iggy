@@ -104,8 +104,8 @@ impl Display for CompressionConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ enabled: {}, algorithm: {} }}",
-            self.enabled, self.algorithm
+            "{{ allowed_override: {}, default_algorithm: {} }}",
+            self.allow_override, self.default_algorithm
         )
     }
 }

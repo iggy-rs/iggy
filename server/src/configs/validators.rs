@@ -1,11 +1,13 @@
 extern crate sysinfo;
 
 use super::server::{MessageCleanerConfig, MessageSaverConfig};
+use super::system::CompressionConfig;
 use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
 use byte_unit::{Byte, ByteUnit};
+use iggy::compression::CompressionKind;
 use iggy::validatable::Validatable;
 use sysinfo::SystemExt;
 use tracing::{error, info, warn};
@@ -14,7 +16,23 @@ impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {
         self.system.segment.validate()?;
         self.system.cache.validate()?;
+        self.system.compression.validate()?;
         self.personal_access_token.validate()?;
+
+        Ok(())
+    }
+}
+
+impl Validatable<ServerError> for CompressionConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        let compression_alg = self.default_algorithm.clone();
+        if compression_alg != CompressionKind::None {
+            // TODO(numinex): Change this message once server side compression is fully developed.
+            warn!(
+                "Server started with server-side compression enabled, using algorithm: {}, this feature is not implemented yet!",
+                compression_alg
+            );
+        }
 
         Ok(())
     }

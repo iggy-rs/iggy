@@ -142,8 +142,8 @@ impl Default for DatabaseConfig {
 impl Default for CompressionConfig {
     fn default() -> Self {
         CompressionConfig {
-            enabled: true,
-            algorithm: "none".parse().unwrap(),
+            allow_override: false,
+            default_algorithm: "none".parse().unwrap(),
         }
     }
 }

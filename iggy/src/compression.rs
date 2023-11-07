@@ -21,9 +21,9 @@ impl FromStr for CompressionKind {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "Gzip" | "gzip" => Ok(CompressionKind::Gzip),
-            "None" | "none" => Ok(CompressionKind::None),
+        match s.to_lowercase().as_str() {
+            "gzip" => Ok(CompressionKind::Gzip),
+            "none" => Ok(CompressionKind::None),
             _ => Err(format!("Unknown compression type: {}", s)),
         }
     }
@@ -125,6 +125,15 @@ mod tests {
     }
 
     #[test]
+    fn test_from_invalid_input() {
+        let invalid_compression_kind = CompressionKind::from_str("invalid");
+        assert!(invalid_compression_kind.is_err());
+
+        let invalid_compression_kind = CompressionKind::from_str("gzipp");
+        assert!(invalid_compression_kind.is_err());
+    }
+
+    #[test]
     fn test_into() {
         let none: CompressionKind = CompressionKind::None;
         let none_string: String = none.into();
@@ -155,5 +164,16 @@ mod tests {
         let gzip = CompressionKind::from_code(2);
         assert!(gzip.is_ok());
         assert_eq!(gzip.unwrap(), CompressionKind::Gzip);
+    }
+    #[test]
+    fn test_from_code_invalid_input() {
+        let invalid_compression_kind = CompressionKind::from_code(0);
+        assert!(invalid_compression_kind.is_err());
+
+        let invalid_compression_kind = CompressionKind::from_code(69);
+        assert!(invalid_compression_kind.is_err());
+
+        let invalid_compression_kind = CompressionKind::from_code(255);
+        assert!(invalid_compression_kind.is_err());
     }
 }

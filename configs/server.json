@@ -96,8 +96,8 @@
       "key": ""
     },
     "compression": {
-      "enabled": true,
-      "algorithm": "none"
+      "allow_override": false,
+      "default_algorithm": "none"
     },
     "stream": {
       "path": "streams"

@@ -3,7 +3,7 @@ use integration::test_server::{TestServer, Transport, SYSTEM_PATH_ENV_VAR};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::{collections::HashMap, time::Instant};
-use tokio::net::{TcpListener, UdpSocket};
+use tokio::net::{TcpStream, UdpSocket};
 use tracing::{info, warn};
 
 #[derive(Debug, Deserialize)]
@@ -123,7 +123,7 @@ pub async fn start_server_if_needed(args: &mut IggyBenchArgs) -> Option<TestServ
 }
 
 async fn is_tcp_addr_in_use(addr: &SocketAddr) -> bool {
-    TcpListener::bind(addr).await.is_err()
+    TcpStream::connect(addr).await.is_ok()
 }
 
 async fn is_udp_addr_in_use(addr: &SocketAddr) -> bool {

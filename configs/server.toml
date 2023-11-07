@@ -95,6 +95,10 @@ size = "4GB"
 enabled = false
 key = ""
 
+[system.compression]
+allow_override = false
+default_algorithm = "none"
+
 [system.stream]
 path = "streams"
 

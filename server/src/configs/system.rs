@@ -1,4 +1,5 @@
 use crate::configs::resource_quota::MemoryResourceQuota;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -12,11 +13,18 @@ pub struct SystemConfig {
     pub partition: PartitionConfig,
     pub segment: SegmentConfig,
     pub encryption: EncryptionConfig,
+    pub compression: CompressionConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DatabaseConfig {
     pub path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct CompressionConfig {
+    pub allow_override: bool,
+    pub default_algorithm: CompressionAlgorithm,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

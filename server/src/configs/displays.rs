@@ -1,4 +1,5 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
+use crate::configs::system::CompressionConfig;
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
     resource_quota::MemoryResourceQuota,
@@ -96,6 +97,16 @@ impl Display for MemoryResourceQuota {
             MemoryResourceQuota::Bytes(byte) => write!(f, "{}", byte),
             MemoryResourceQuota::Percentage(percentage) => write!(f, "{}%", percentage),
         }
+    }
+}
+
+impl Display for CompressionConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ allowed_override: {}, default_algorithm: {} }}",
+            self.allow_override, self.default_algorithm
+        )
     }
 }
 

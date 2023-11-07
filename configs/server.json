@@ -4,18 +4,9 @@
     "address": "0.0.0.0:3000",
     "cors": {
       "enabled": true,
-      "allowed_methods": [
-        "GET",
-        "POST",
-        "PUT",
-        "DELETE"
-      ],
-      "allowed_origins": [
-        "*"
-      ],
-      "allowed_headers": [
-        "content-type"
-      ],
+      "allowed_methods": ["GET", "POST", "PUT", "DELETE"],
+      "allowed_origins": ["*"],
+      "allowed_headers": ["content-type"],
       "exposed_headers": [],
       "allow_credentials": false,
       "allow_private_network": false
@@ -24,12 +15,8 @@
       "algorithm": "HS256",
       "issuer": "iggy.rs",
       "audience": "iggy.rs",
-      "valid_issuers": [
-        "iggy.rs"
-      ],
-      "valid_audiences": [
-        "iggy.rs"
-      ],
+      "valid_issuers": ["iggy.rs"],
+      "valid_audiences": ["iggy.rs"],
       "access_token_expiry": 3600,
       "refresh_token_expiry": 86400,
       "clock_skew": 5,
@@ -107,6 +94,10 @@
     "encryption": {
       "enabled": false,
       "key": ""
+    },
+    "compression": {
+      "allow_override": false,
+      "default_algorithm": "none"
     },
     "stream": {
       "path": "streams"

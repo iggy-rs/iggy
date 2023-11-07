@@ -146,10 +146,6 @@ jobs:
       - run: |
           echo The PR was merged
 
-  coverage:
-    needs: if_merged
-    uses: ./.github/workflows/coverage.yml
-
   tag:
     runs-on: ubuntu-latest
     needs: if_merged

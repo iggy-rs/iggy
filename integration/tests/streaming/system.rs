@@ -3,6 +3,7 @@ use iggy::identifier::Identifier;
 use server::configs::server::PersonalAccessTokenConfig;
 use server::streaming::session::Session;
 use server::streaming::systems::system::System;
+use std::net::{Ipv4Addr, SocketAddr};
 use tokio::fs;
 
 #[tokio::test]
@@ -39,7 +40,7 @@ async fn should_create_and_persist_stream() {
     );
     let stream_id = 1;
     let stream_name = "test";
-    let session = Session::new(1, 1, "127.0.0.1".to_string());
+    let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));
     system.init().await.unwrap();
 
     system
@@ -60,7 +61,7 @@ async fn should_delete_persisted_stream() {
     );
     let stream_id = 1;
     let stream_name = "test";
-    let session = Session::new(1, 1, "127.0.0.1".to_string());
+    let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));
     system.init().await.unwrap();
     system
         .create_stream(&session, stream_id, stream_name)

@@ -1,4 +1,4 @@
-use crate::http::state::AppState;
+use crate::http::shared::AppState;
 use iggy::utils::timestamp::TimeStamp;
 use std::sync::Arc;
 use std::time::Duration;

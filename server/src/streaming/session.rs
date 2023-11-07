@@ -1,16 +1,17 @@
 use iggy::models::user_info::UserId;
 use std::fmt::Display;
+use std::net::SocketAddr;
 
 // This might be extended with more fields in the future e.g. custom name, permissions etc.
 #[derive(Debug)]
 pub struct Session {
     pub user_id: UserId,
     pub client_id: u32,
-    pub ip_address: String,
+    pub ip_address: SocketAddr,
 }
 
 impl Session {
-    pub fn new(client_id: u32, user_id: UserId, ip_address: String) -> Self {
+    pub fn new(client_id: u32, user_id: UserId, ip_address: SocketAddr) -> Self {
         Self {
             client_id,
             user_id,
@@ -18,11 +19,11 @@ impl Session {
         }
     }
 
-    pub fn stateless(user_id: UserId, ip_address: String) -> Self {
+    pub fn stateless(user_id: UserId, ip_address: SocketAddr) -> Self {
         Self::new(0, user_id, ip_address)
     }
 
-    pub fn from_client_id(client_id: u32, ip_address: String) -> Self {
+    pub fn from_client_id(client_id: u32, ip_address: SocketAddr) -> Self {
         Self::new(client_id, 0, ip_address)
     }
 

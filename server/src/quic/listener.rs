@@ -46,7 +46,7 @@ async fn handle_connection(
             .await
             .add_client(&address, Transport::Quic)
             .await;
-        let mut session = Session::from_client_id(client_id, address.to_string());
+        let mut session = Session::from_client_id(client_id, address);
         loop {
             let stream = connection.accept_bi().await;
             let mut stream = match stream {

@@ -44,7 +44,7 @@ impl BenchmarkTransportProps for BenchmarkTransportCommand {
 #[derive(Parser, Debug)]
 pub struct HttpArgs {
     /// Address of the HTTP iggy-server
-    #[arg(long, default_value_t = DEFAULT_HTTP_API_URL.to_owned())]
+    #[arg(long, default_value_t = DEFAULT_HTTP_SERVER_ADDRESS.to_owned())]
     pub server_address: String,
 
     /// Start stream id

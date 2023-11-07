@@ -1,15 +1,12 @@
 use crate::http::jwt::json_web_token::Identity;
-use crate::http::state::AppState;
-use axum::extract::ConnectInfo;
+use crate::http::shared::{AppState, RequestDetails};
 use axum::{
     extract::State,
     http::{Request, StatusCode},
     middleware::Next,
     response::Response,
 };
-use std::net::SocketAddr;
 use std::sync::Arc;
-use tracing::debug;
 
 const AUTHORIZATION: &str = "authorization";
 const BEARER: &str = "Bearer ";
@@ -26,16 +23,9 @@ const UNAUTHORIZED_PATHS: &[&str] = &[
 
 pub async fn jwt_auth<T>(
     State(state): State<Arc<AppState>>,
-    ConnectInfo(ip_address): ConnectInfo<SocketAddr>,
     mut request: Request<T>,
     next: Next<T>,
 ) -> Result<Response, StatusCode> {
-    debug!(
-        "Processing request {} {} from client with IP address: {ip_address}.",
-        request.method(),
-        request.uri().path()
-    );
-
     if UNAUTHORIZED_PATHS.contains(&request.uri().path()) {
         return Ok(next.run(request).await);
     }
@@ -65,11 +55,12 @@ pub async fn jwt_auth<T>(
         return Err(StatusCode::UNAUTHORIZED);
     }
 
+    let request_details = request.extensions().get::<RequestDetails>().unwrap();
     let identity = Identity {
         token_id: jwt_claims.claims.jti,
         token_expiry: jwt_claims.claims.exp,
         user_id: jwt_claims.claims.sub,
-        ip_address: ip_address.to_string(),
+        ip_address: request_details.ip_address,
     };
     request.extensions_mut().insert(identity);
     Ok(next.run(request).await)

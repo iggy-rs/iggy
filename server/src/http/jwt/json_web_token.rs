@@ -1,12 +1,13 @@
 use iggy::models::user_info::UserId;
 use serde::{Deserialize, Serialize};
+use std::net::SocketAddr;
 
 #[derive(Debug, Clone)]
 pub struct Identity {
     pub token_id: String,
     pub token_expiry: u64,
     pub user_id: UserId,
-    pub ip_address: String,
+    pub ip_address: SocketAddr,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

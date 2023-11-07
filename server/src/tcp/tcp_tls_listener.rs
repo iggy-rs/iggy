@@ -42,7 +42,7 @@ pub(crate) fn start(address: &str, config: TcpTlsConfig, system: SharedSystem) {
                     let mut sender = TcpTlsSender { stream };
                     tokio::spawn(async move {
                         if let Err(error) =
-                            handle_connection(&address, &mut sender, system.clone()).await
+                            handle_connection(address, &mut sender, system.clone()).await
                         {
                             handle_error(error);
                             system.read().await.delete_client(&address).await;

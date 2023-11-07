@@ -338,7 +338,7 @@ impl Partition {
                 .into_iter()
                 .filter_map(|mut message| {
                     if message.id == 0 || !message_ids.contains(&message.id) {
-                        message.id = random_id::get();
+                        message.id = random_id::get_uuid();
                         message_ids.insert(message.id);
                         Some(message)
                     } else {

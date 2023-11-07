@@ -1,7 +1,7 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
-use crate::http::state::AppState;
+use crate::http::shared::AppState;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;

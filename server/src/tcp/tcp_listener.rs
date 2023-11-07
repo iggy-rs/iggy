@@ -21,7 +21,7 @@ pub fn start(address: &str, system: SharedSystem) {
                     let mut sender = TcpSender { stream };
                     tokio::spawn(async move {
                         if let Err(error) =
-                            handle_connection(&address, &mut sender, system.clone()).await
+                            handle_connection(address, &mut sender, system.clone()).await
                         {
                             handle_error(error);
                             system.read().await.delete_client(&address).await;

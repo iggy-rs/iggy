@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.0.48"
+version = "0.0.49"
 edition = "2021"
 build = "src/build.rs"
 
@@ -51,6 +51,7 @@ tower-service = "0.3.2"
 tracing = { version = "0.1.*" }
 tracing-appender = "0.2.2"
 tracing-subscriber = { version = "0.3.17", features = ["fmt"] }
+ulid = "1.1.0"
 uuid = { version = "1.5.0", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.*", features = ["xxh32"] }
 

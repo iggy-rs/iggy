@@ -1,9 +1,10 @@
 use crate::configs::http::{HttpConfig, HttpCorsConfig};
+use crate::http::diagnostics::request_diagnostics;
 use crate::http::jwt::cleaner::start_expired_tokens_cleaner;
 use crate::http::jwt::jwt_manager::JwtManager;
 use crate::http::jwt::middleware::jwt_auth;
 use crate::http::metrics::metrics;
-use crate::http::state::AppState;
+use crate::http::shared::AppState;
 use crate::http::{
     consumer_groups, consumer_offsets, messages, partitions, personal_access_tokens, streams,
     system, topics, users,
@@ -26,46 +27,48 @@ pub async fn start(config: HttpConfig, system: SharedSystem) {
     };
 
     let app_state = build_app_state(&config, system).await;
-    let mut app = Router::new().nest(
-        "/",
-        system::router(app_state.clone(), &config.metrics)
-            .nest(
-                "/personal-access-tokens",
-                personal_access_tokens::router(app_state.clone()),
-            )
-            .nest("/users", users::router(app_state.clone()))
-            .nest(
-                "/streams",
-                streams::router(app_state.clone()).nest(
-                    "/:stream_id/topics",
-                    topics::router(app_state.clone())
-                        .nest(
-                            "/:topic_id/consumer-groups",
-                            consumer_groups::router(app_state.clone()),
-                        )
-                        .nest("/:topic_id/messages", messages::router(app_state.clone()))
-                        .nest(
-                            "/:topic_id/consumer-offsets",
-                            consumer_offsets::router(app_state.clone()),
-                        )
-                        .nest(
-                            "/:topic_id/partitions",
-                            partitions::router(app_state.clone()),
-                        ),
+    let mut app = Router::new()
+        .nest(
+            "/",
+            system::router(app_state.clone(), &config.metrics)
+                .nest(
+                    "/personal-access-tokens",
+                    personal_access_tokens::router(app_state.clone()),
+                )
+                .nest("/users", users::router(app_state.clone()))
+                .nest(
+                    "/streams",
+                    streams::router(app_state.clone()).nest(
+                        "/:stream_id/topics",
+                        topics::router(app_state.clone())
+                            .nest(
+                                "/:topic_id/consumer-groups",
+                                consumer_groups::router(app_state.clone()),
+                            )
+                            .nest("/:topic_id/messages", messages::router(app_state.clone()))
+                            .nest(
+                                "/:topic_id/consumer-offsets",
+                                consumer_offsets::router(app_state.clone()),
+                            )
+                            .nest(
+                                "/:topic_id/partitions",
+                                partitions::router(app_state.clone()),
+                            ),
+                    ),
                 ),
-            ),
-    );
-
-    if config.metrics.enabled {
-        app = app.layer(middleware::from_fn_with_state(app_state.clone(), metrics));
-    }
+        )
+        .layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
 
     if config.cors.enabled {
         app = app.layer(configure_cors(config.cors));
     }
 
+    if config.metrics.enabled {
+        app = app.layer(middleware::from_fn_with_state(app_state.clone(), metrics));
+    }
+
     start_expired_tokens_cleaner(app_state.clone());
-    app = app.layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
+    app = app.layer(middleware::from_fn(request_diagnostics));
     info!("Started {api_name} on: {:?}", config.address);
 
     if !config.tls.enabled {

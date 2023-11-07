@@ -13,17 +13,17 @@ use tracing::{debug, error, info};
 const INITIAL_BYTES_LENGTH: usize = 4;
 
 pub(crate) async fn handle_connection(
-    address: &SocketAddr,
+    address: SocketAddr,
     sender: &mut dyn Sender,
     system: SharedSystem,
 ) -> Result<(), ServerError> {
     let client_id = system
         .read()
         .await
-        .add_client(address, Transport::Tcp)
+        .add_client(&address, Transport::Tcp)
         .await;
 
-    let mut session = Session::from_client_id(client_id, address.to_string());
+    let mut session = Session::from_client_id(client_id, address);
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
     loop {
         let read_length = sender.read(&mut initial_buffer).await?;

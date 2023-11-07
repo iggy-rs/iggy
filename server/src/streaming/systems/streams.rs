@@ -273,6 +273,7 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
+    use std::net::{Ipv4Addr, SocketAddr};
 
     #[tokio::test]
     async fn should_get_stream_by_id_and_name() {
@@ -283,7 +284,11 @@ mod tests {
         let mut system =
             System::create(config, storage, None, PersonalAccessTokenConfig::default());
         let root = User::root();
-        let session = Session::new(1, root.id, "127.0.0.1".to_string());
+        let session = Session::new(
+            1,
+            root.id,
+            SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234),
+        );
         system.permissioner.init_permissions_for_user(root);
         system
             .create_stream(&session, stream_id, stream_name)

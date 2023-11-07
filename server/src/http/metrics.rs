@@ -1,4 +1,4 @@
-use crate::http::state::AppState;
+use crate::http::shared::AppState;
 use axum::{
     extract::State,
     http::{Request, StatusCode},

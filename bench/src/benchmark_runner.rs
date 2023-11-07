@@ -49,7 +49,10 @@ impl BenchmarkRunner {
         sleep(Duration::from_millis(10)).await;
         let results: BenchmarkResults = results.into();
         benchmark.display_settings();
-        info!("{}", results);
+        results
+            .to_string()
+            .split('\n')
+            .for_each(|result| info!("{}", result));
         Ok(())
     }
 }

@@ -4,7 +4,11 @@ use crate::args::simple::BenchmarkKind;
 use crate::consumer::Consumer;
 use crate::producer::Producer;
 use async_trait::async_trait;
+use colored::Colorize;
+use human_bytes::human_bytes;
+use human_format::Formatter;
 use integration::test_server::ClientFactory;
+use std::fmt::Display;
 use std::sync::Arc;
 use tracing::info;
 
@@ -19,6 +23,29 @@ impl SendAndPollMessagesBenchmark {
             args,
             client_factory,
         }
+    }
+}
+
+impl Display for SendAndPollMessagesBenchmark {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        let total_messages = self.total_messages();
+        let total_size_bytes = total_messages * self.args().message_size() as u64;
+        let total_messages_human_readable = Formatter::new().format(total_messages as f64);
+        let total_size_human_readable = human_bytes(total_size_bytes as f64);
+        let info = format!("Benchmark: {}, transport: {}, total messages: {}, total size: {} bytes, {} streams, {} messages per batch, {} batches, {} bytes per message, {} producers, {} consumers",
+                self.kind(),
+                self.args().transport(),
+                total_messages_human_readable,
+                total_size_human_readable,
+                self.args().number_of_streams(),
+                self.args().messages_per_batch(),
+                self.args().message_batches(),
+                self.args().message_size(),
+                self.args().producers(),
+                self.args().consumers(),
+            ).green();
+
+        writeln!(f, "{}", info)
     }
 }
 
@@ -89,20 +116,6 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
     }
 
     fn display_settings(&self) {
-        let total_messages = self.total_messages();
-        let total_size_bytes = total_messages * self.args().message_size() as u64;
-        info!(
-                "\x1B[32mBenchmark: {}, transport: {}, total messages: {}, total size: {} bytes, {} streams, {} messages per batch, {} batches, {} bytes per message, {} producers, {} consumers\x1B[0m",
-                self.kind(),
-                self.args().transport(),
-                total_messages,
-                total_size_bytes,
-                self.args().number_of_streams(),
-                self.args().messages_per_batch(),
-                self.args().message_batches(),
-                self.args().message_size(),
-                self.args().producers(),
-                self.args().consumers(),
-            );
+        info!("{}", self.to_string());
     }
 }

@@ -1,6 +1,6 @@
 use derive_more::Display;
 
-#[derive(Debug, Clone, Copy, PartialEq, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Display)]
 pub enum BenchmarkKind {
     #[display(fmt = "send messages")]
     Send,

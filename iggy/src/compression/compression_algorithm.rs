@@ -12,73 +12,72 @@ use crate::error::Error;
 // for now only those, in the future will add snappy, lz4, zstd (same as in confluent kafka) in addition to that
 // we should consider brotli as well.
 #[derive(Debug, PartialEq, Clone)]
-pub enum CompressionKind {
+pub enum CompressionAlgorithm {
     None,
     Gzip,
 }
-
-impl FromStr for CompressionKind {
+impl FromStr for CompressionAlgorithm {
     type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "gzip" => Ok(CompressionKind::Gzip),
-            "none" => Ok(CompressionKind::None),
+            "gzip" => Ok(CompressionAlgorithm::Gzip),
+            "none" => Ok(CompressionAlgorithm::None),
             _ => Err(format!("Unknown compression type: {}", s)),
         }
     }
 }
 
-impl CompressionKind {
+impl CompressionAlgorithm {
     pub fn as_code(&self) -> u8 {
         match self {
-            CompressionKind::None => 1,
-            CompressionKind::Gzip => 2,
+            CompressionAlgorithm::None => 1,
+            CompressionAlgorithm::Gzip => 2,
         }
     }
 
     pub fn from_code(code: u8) -> Result<Self, Error> {
         match code {
-            1 => Ok(CompressionKind::None),
-            2 => Ok(CompressionKind::Gzip),
+            1 => Ok(CompressionAlgorithm::None),
+            2 => Ok(CompressionAlgorithm::Gzip),
             _ => Err(Error::InvalidCommand),
         }
     }
 }
 
-impl Display for CompressionKind {
+impl Display for CompressionAlgorithm {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            CompressionKind::None => write!(f, "none"),
-            CompressionKind::Gzip => write!(f, "gzip"),
+            CompressionAlgorithm::None => write!(f, "none"),
+            CompressionAlgorithm::Gzip => write!(f, "gzip"),
         }
     }
 }
 
-impl Serialize for CompressionKind {
+impl Serialize for CompressionAlgorithm {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         match self {
-            CompressionKind::None => serializer.serialize_str("none"),
-            CompressionKind::Gzip => serializer.serialize_str("gzip"),
+            CompressionAlgorithm::None => serializer.serialize_str("none"),
+            CompressionAlgorithm::Gzip => serializer.serialize_str("gzip"),
         }
     }
 }
 
-impl From<CompressionKind> for String {
-    fn from(value: CompressionKind) -> Self {
+impl From<CompressionAlgorithm> for String {
+    fn from(value: CompressionAlgorithm) -> Self {
         match value {
-            CompressionKind::None => "none".to_string(),
-            CompressionKind::Gzip => "gzip".to_string(),
+            CompressionAlgorithm::None => "none".to_string(),
+            CompressionAlgorithm::Gzip => "gzip".to_string(),
         }
     }
 }
 struct CompressionKindVisitor;
 
 impl<'de> Visitor<'de> for CompressionKindVisitor {
-    type Value = CompressionKind;
+    type Value = CompressionAlgorithm;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         formatter.write_str("a valid compression type, check documentation for more information.")
@@ -88,11 +87,11 @@ impl<'de> Visitor<'de> for CompressionKindVisitor {
     where
         E: de::Error,
     {
-        CompressionKind::from_str(value).map_err(de::Error::custom)
+        CompressionAlgorithm::from_str(value).map_err(de::Error::custom)
     }
 }
 
-impl<'de> Deserialize<'de> for CompressionKind {
+impl<'de> Deserialize<'de> for CompressionAlgorithm {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -107,73 +106,73 @@ mod tests {
 
     #[test]
     fn test_from() {
-        let none_alg = CompressionKind::from_str("none");
+        let none_alg = CompressionAlgorithm::from_str("none");
         assert!(none_alg.is_ok());
-        assert_eq!(none_alg.unwrap(), CompressionKind::None);
+        assert_eq!(none_alg.unwrap(), CompressionAlgorithm::None);
 
-        let none_alg = CompressionKind::from_str("None");
+        let none_alg = CompressionAlgorithm::from_str("None");
         assert!(none_alg.is_ok());
-        assert_eq!(none_alg.unwrap(), CompressionKind::None);
+        assert_eq!(none_alg.unwrap(), CompressionAlgorithm::None);
 
-        let gzip_alg = CompressionKind::from_str("gzip");
+        let gzip_alg = CompressionAlgorithm::from_str("gzip");
         assert!(gzip_alg.is_ok());
-        assert_eq!(gzip_alg.unwrap(), CompressionKind::Gzip);
+        assert_eq!(gzip_alg.unwrap(), CompressionAlgorithm::Gzip);
 
-        let gzip_alg = CompressionKind::from_str("Gzip");
+        let gzip_alg = CompressionAlgorithm::from_str("Gzip");
         assert!(gzip_alg.is_ok());
-        assert_eq!(gzip_alg.unwrap(), CompressionKind::Gzip);
+        assert_eq!(gzip_alg.unwrap(), CompressionAlgorithm::Gzip);
     }
 
     #[test]
     fn test_from_invalid_input() {
-        let invalid_compression_kind = CompressionKind::from_str("invalid");
+        let invalid_compression_kind = CompressionAlgorithm::from_str("invalid");
         assert!(invalid_compression_kind.is_err());
 
-        let invalid_compression_kind = CompressionKind::from_str("gzipp");
+        let invalid_compression_kind = CompressionAlgorithm::from_str("gzipp");
         assert!(invalid_compression_kind.is_err());
     }
 
     #[test]
     fn test_into() {
-        let none: CompressionKind = CompressionKind::None;
+        let none: CompressionAlgorithm = CompressionAlgorithm::None;
         let none_string: String = none.into();
 
         assert_eq!(none_string, "none".to_string());
 
-        let gzip: CompressionKind = CompressionKind::Gzip;
+        let gzip: CompressionAlgorithm = CompressionAlgorithm::Gzip;
         let gzip_string: String = gzip.into();
 
         assert_eq!(gzip_string, "gzip".to_string());
     }
     #[test]
     fn test_as_code() {
-        let none = CompressionKind::None;
+        let none = CompressionAlgorithm::None;
         let none_code = none.as_code();
         assert_eq!(none_code, 1);
 
-        let gzip = CompressionKind::Gzip;
+        let gzip = CompressionAlgorithm::Gzip;
         let gzip_code = gzip.as_code();
         assert_eq!(gzip_code, 2);
     }
     #[test]
     fn test_from_code() {
-        let none = CompressionKind::from_code(1);
+        let none = CompressionAlgorithm::from_code(1);
         assert!(none.is_ok());
-        assert_eq!(none.unwrap(), CompressionKind::None);
+        assert_eq!(none.unwrap(), CompressionAlgorithm::None);
 
-        let gzip = CompressionKind::from_code(2);
+        let gzip = CompressionAlgorithm::from_code(2);
         assert!(gzip.is_ok());
-        assert_eq!(gzip.unwrap(), CompressionKind::Gzip);
+        assert_eq!(gzip.unwrap(), CompressionAlgorithm::Gzip);
     }
     #[test]
     fn test_from_code_invalid_input() {
-        let invalid_compression_kind = CompressionKind::from_code(0);
+        let invalid_compression_kind = CompressionAlgorithm::from_code(0);
         assert!(invalid_compression_kind.is_err());
 
-        let invalid_compression_kind = CompressionKind::from_code(69);
+        let invalid_compression_kind = CompressionAlgorithm::from_code(69);
         assert!(invalid_compression_kind.is_err());
 
-        let invalid_compression_kind = CompressionKind::from_code(255);
+        let invalid_compression_kind = CompressionAlgorithm::from_code(255);
         assert!(invalid_compression_kind.is_err());
     }
 }

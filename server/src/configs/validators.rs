@@ -7,7 +7,7 @@ use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
 use byte_unit::{Byte, ByteUnit};
-use iggy::compression::CompressionKind;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::validatable::Validatable;
 use sysinfo::SystemExt;
 use tracing::{error, info, warn};
@@ -25,8 +25,8 @@ impl Validatable<ServerError> for ServerConfig {
 
 impl Validatable<ServerError> for CompressionConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        let compression_alg = self.default_algorithm.clone();
-        if compression_alg != CompressionKind::None {
+        let compression_alg = &self.default_algorithm;
+        if *compression_alg != CompressionAlgorithm::None {
             // TODO(numinex): Change this message once server side compression is fully developed.
             warn!(
                 "Server started with server-side compression enabled, using algorithm: {}, this feature is not implemented yet!",

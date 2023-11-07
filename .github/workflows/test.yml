@@ -13,7 +13,7 @@ on:
   pull_request:
     branches:
       - master
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
 
 env:
   CRATE_NAME: iggy

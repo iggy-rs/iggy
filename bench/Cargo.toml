@@ -7,9 +7,12 @@ edition = "2021"
 async-trait = "0.1.68"
 bytes = "1.4.0"
 clap = { version = "4.1.11", features = ["derive"] }
+colored = "2.0.4"
 derive_more = "0.99.17"
 figlet-rs = "0.1.5"
 futures = "0.3.28"
+human_bytes = "0.4.3"
+human_format = "1.0.3"
 iggy = { path = "../iggy" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"

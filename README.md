@@ -2,7 +2,7 @@
 
 [Website](https://iggy.rs) | [Getting started](https://docs.iggy.rs/introduction/getting-started/) | [Documentation](https://docs.iggy.rs) | [Discord](https://iggy.rs/discord) | [Crates](https://crates.io/crates/iggy)
 
-![workflow](https://github.com/iggy-rs/iggy/actions/workflows/ci.yml/badge.svg)
+![workflow](https://github.com/iggy-rs/iggy/actions/workflows/test.yml/badge.svg)
 [![codecov](https://codecov.io/gh/iggy-rs/iggy/graph/badge.svg?token=D9TIWPBWE2)](https://codecov.io/gh/iggy-rs/iggy)
 
 ---

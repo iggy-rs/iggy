@@ -18,15 +18,16 @@ use std::fmt::{Display, Formatter, Result};
 use std::process::Command;
 use std::sync::Arc;
 
-pub(crate) enum TestStreamId {
+pub(crate) enum TestIdentifier {
     Numeric,
     Named,
 }
 
-pub(crate) enum TestTopicId {
-    Numeric,
-    Named,
-}
+pub(crate) type TestStreamId = TestIdentifier;
+
+pub(crate) type TestTopicId = TestIdentifier;
+
+pub(crate) type TestUserId = TestIdentifier;
 
 pub(crate) enum OutputFormat {
     Default,

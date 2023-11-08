@@ -3,6 +3,7 @@ mod credentials;
 mod error;
 mod logging;
 
+use crate::args::permissions::PermissionsArgs;
 use crate::args::{
     personal_access_token::PersonalAccessTokenAction, stream::StreamAction, topic::TopicAction,
     Command, IggyConsoleArgs,
@@ -11,6 +12,7 @@ use crate::credentials::IggyCredentials;
 use crate::error::IggyCmdError;
 use crate::logging::Logging;
 use args::partition::PartitionAction;
+use args::user::UserAction;
 use clap::Parser;
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider;
@@ -32,6 +34,7 @@ use iggy::cmd::{
         create_topic::CreateTopicCmd, delete_topic::DeleteTopicCmd, get_topic::GetTopicCmd,
         get_topics::GetTopicsCmd, update_topic::UpdateTopicCmd,
     },
+    users::{create_user::CreateUserCmd, delete_user::DeleteUserCmd},
     utils::{
         message_expiry::MessageExpiry, personal_access_token_expiry::PersonalAccessTokenExpiry,
     },
@@ -116,6 +119,21 @@ fn get_command(args: &IggyConsoleArgs) -> Box<dyn CliCommand> {
             PersonalAccessTokenAction::List(pat_list_args) => Box::new(
                 GetPersonalAccessTokensCmd::new(pat_list_args.list_mode.into()),
             ),
+        },
+        Command::User(command) => match command {
+            UserAction::Create(user_create_args) => Box::new(CreateUserCmd::new(
+                user_create_args.username.clone(),
+                user_create_args.password.clone(),
+                user_create_args.user_status.clone().into(),
+                PermissionsArgs::new(
+                    user_create_args.global_permissions.clone(),
+                    user_create_args.stream_permissions.clone(),
+                )
+                .into(),
+            )),
+            UserAction::Delete(user_delete_args) => {
+                Box::new(DeleteUserCmd::new(user_delete_args.user_id.clone()))
+            }
         },
     }
 }

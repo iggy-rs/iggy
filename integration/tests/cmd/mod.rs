@@ -5,3 +5,4 @@ mod personal_access_token;
 mod stream;
 mod system;
 mod topic;
+mod user;

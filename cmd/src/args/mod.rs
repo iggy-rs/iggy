@@ -1,10 +1,13 @@
 pub(crate) mod common;
 pub(crate) mod partition;
+pub(crate) mod permissions;
 pub(crate) mod personal_access_token;
 pub(crate) mod stream;
 pub(crate) mod system;
 pub(crate) mod topic;
+pub(crate) mod user;
 
+use self::user::UserAction;
 use crate::args::{
     partition::PartitionAction, personal_access_token::PersonalAccessTokenAction,
     stream::StreamAction, system::PingArgs, topic::TopicAction,
@@ -83,6 +86,9 @@ pub(crate) enum Command {
     /// personal access token operations
     #[clap(subcommand)]
     Pat(PersonalAccessTokenAction),
+    /// user operations
+    #[clap(subcommand)]
+    User(UserAction),
 }
 
 impl IggyConsoleArgs {

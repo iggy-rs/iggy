@@ -22,6 +22,7 @@ Commands:
   me         get current client info
   stats      get iggy server statistics
   pat        personal access token operations
+  user       user operations
   help       Print this message or the help of the given subcommand(s)
 
 Options:

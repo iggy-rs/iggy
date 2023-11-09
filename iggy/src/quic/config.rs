@@ -39,7 +39,7 @@ impl Default for QuicClientConfig {
             server_name: "localhost".to_string(),
             reconnection_retries: 3,
             reconnection_interval: 1000,
-            response_buffer_size: 1024 * 1024 * 10,
+            response_buffer_size: 1000 * 1000 * 10,
             max_concurrent_bidi_streams: 10000,
             datagram_send_buffer_size: 100_000,
             initial_mtu: 1200,

@@ -63,7 +63,7 @@ async fn handle_connection(
                 Ok(stream) => stream,
             };
 
-            let request = stream.1.read_to_end(10 * 1024 * 1024).await;
+            let request = stream.1.read_to_end(10 * 1000 * 1000).await;
             if request.is_err() {
                 error!("Error when reading the QUIC request: {:?}", request.err());
                 continue;

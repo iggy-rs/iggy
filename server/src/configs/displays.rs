@@ -1,12 +1,12 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
-use crate::configs::system::CompressionConfig;
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
     resource_quota::MemoryResourceQuota,
     server::{MessageCleanerConfig, MessageSaverConfig, ServerConfig},
     system::{
-        CacheConfig, DatabaseConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
-        SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+        CacheConfig, CompressionConfig, DatabaseConfig, EncryptionConfig, LoggingConfig,
+        PartitionConfig, RetentionPolicyConfig, SegmentConfig, StreamConfig, SystemConfig,
+        TopicConfig,
     },
     tcp::{TcpConfig, TcpTlsConfig},
 };
@@ -152,6 +152,16 @@ impl Display for CacheConfig {
     }
 }
 
+impl Display for RetentionPolicyConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ message_expiry: {}, max_topic_size: {} }}",
+            self.message_expiry, self.max_topic_size
+        )
+    }
+}
+
 impl Display for EncryptionConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{ enabled: {} }}", self.enabled)
@@ -188,8 +198,8 @@ impl Display for SegmentConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ message_expiry: {}, size_bytes: {}, cache_indexes: {}, cache_time_indexes: {} }}",
-            self.message_expiry, self.size_bytes, self.cache_indexes, self.cache_time_indexes
+            "{{ size_bytes: {}, cache_indexes: {}, cache_time_indexes: {} }}",
+            self.size_bytes, self.cache_indexes, self.cache_time_indexes
         )
     }
 }

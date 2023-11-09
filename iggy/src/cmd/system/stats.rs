@@ -53,7 +53,7 @@ impl CliCommand for GetStatsCmd {
         ]);
         table.add_row(vec![
             "Iggy Server Memory Usage",
-            Byte::from_bytes(stats.memory_usage as u128)
+            Byte::from_bytes(stats.memory_usage)
                 .get_appropriate_unit(true)
                 .to_string()
                 .as_str(),
@@ -61,14 +61,14 @@ impl CliCommand for GetStatsCmd {
 
         table.add_row(vec![
             "Total Memory (RAM)",
-            Byte::from_bytes(stats.total_memory as u128)
+            Byte::from_bytes(stats.total_memory)
                 .get_appropriate_unit(true)
                 .to_string()
                 .as_str(),
         ]);
         table.add_row(vec![
             "Available Memory (RAM)",
-            Byte::from_bytes(stats.available_memory as u128)
+            Byte::from_bytes(stats.available_memory)
                 .get_appropriate_unit(true)
                 .to_string()
                 .as_str(),
@@ -89,21 +89,21 @@ impl CliCommand for GetStatsCmd {
 
         table.add_row(vec![
             "Read Bytes",
-            Byte::from_bytes(stats.read_bytes as u128)
+            Byte::from_bytes(stats.read_bytes)
                 .get_appropriate_unit(true)
                 .to_string()
                 .as_str(),
         ]);
         table.add_row(vec![
             "Written Bytes",
-            Byte::from_bytes(stats.written_bytes as u128)
+            Byte::from_bytes(stats.written_bytes)
                 .get_appropriate_unit(true)
                 .to_string()
                 .as_str(),
         ]);
         table.add_row(vec![
             "Messages Size Bytes",
-            Byte::from_bytes(stats.messages_size_bytes as u128)
+            Byte::from_bytes(stats.messages_size_bytes)
                 .get_appropriate_unit(true)
                 .to_string()
                 .as_str(),

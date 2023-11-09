@@ -1,6 +1,11 @@
 use crate::configs::resource_quota::MemoryResourceQuota;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use byte_unit::Byte;
+use iggy::{
+    compression::compression_algorithm::CompressionAlgorithm, utils::duration::IggyDuration,
+};
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SystemConfig {
@@ -8,6 +13,7 @@ pub struct SystemConfig {
     pub database: DatabaseConfig,
     pub logging: LoggingConfig,
     pub cache: CacheConfig,
+    pub retention_policy: RetentionPolicyConfig,
     pub stream: StreamConfig,
     pub topic: TopicConfig,
     pub partition: PartitionConfig,
@@ -41,6 +47,14 @@ pub struct CacheConfig {
     pub size: MemoryResourceQuota,
 }
 
+#[serde_as]
+#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
+pub struct RetentionPolicyConfig {
+    #[serde_as(as = "DisplayFromStr")]
+    pub message_expiry: IggyDuration,
+    pub max_topic_size: Byte,
+}
+
 #[derive(Debug, Deserialize, Serialize, Default)]
 pub struct EncryptionConfig {
     pub enabled: bool,
@@ -68,7 +82,6 @@ pub struct PartitionConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SegmentConfig {
-    pub message_expiry: u32,
     pub size_bytes: u32,
     pub cache_indexes: bool,
     pub cache_time_indexes: bool,

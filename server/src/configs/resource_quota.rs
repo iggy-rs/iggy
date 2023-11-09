@@ -18,7 +18,7 @@ impl MemoryResourceQuota {
     /// NOTE: This is a blocking operation and it's slow. Don't use it in the hot path.
     pub fn into(self) -> u64 {
         match self {
-            MemoryResourceQuota::Bytes(byte) => byte.get_bytes() as u64,
+            MemoryResourceQuota::Bytes(byte) => byte.get_bytes(),
             MemoryResourceQuota::Percentage(percentage) => {
                 let mut sys = sysinfo::System::new_all();
                 sys.refresh_system();

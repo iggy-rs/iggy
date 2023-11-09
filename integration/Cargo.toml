@@ -6,7 +6,9 @@ edition = "2021"
 [dependencies]
 assert_cmd = "2.0.12"
 async-trait = "0.1.68"
-byte-unit = "4.0.19"
+byte-unit = { version = "4.0.19", default-features = false, features = [
+    "serde",
+] }
 bytes = "1.4.0"
 derive_more = "0.99.17"
 futures = "0.3.28"

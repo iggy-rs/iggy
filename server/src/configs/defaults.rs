@@ -8,7 +8,7 @@ use crate::configs::server::{
 };
 use crate::configs::system::{
     CacheConfig, CompressionConfig, DatabaseConfig, EncryptionConfig, LoggingConfig,
-    PartitionConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    PartitionConfig, RetentionPolicyConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -121,6 +121,7 @@ impl Default for SystemConfig {
             database: DatabaseConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),
+            retention_policy: RetentionPolicyConfig::default(),
             stream: StreamConfig::default(),
             encryption: EncryptionConfig::default(),
             topic: TopicConfig::default(),
@@ -168,6 +169,15 @@ impl Default for CacheConfig {
     }
 }
 
+impl Default for RetentionPolicyConfig {
+    fn default() -> RetentionPolicyConfig {
+        RetentionPolicyConfig {
+            message_expiry: "0".parse().unwrap(),
+            max_topic_size: "10 GB".parse().unwrap(),
+        }
+    }
+}
+
 impl Default for StreamConfig {
     fn default() -> StreamConfig {
         StreamConfig {
@@ -199,7 +209,6 @@ impl Default for PartitionConfig {
 impl Default for SegmentConfig {
     fn default() -> SegmentConfig {
         SegmentConfig {
-            message_expiry: 0,
             size_bytes: 1024 * 1024 * 1024,
             cache_indexes: true,
             cache_time_indexes: true,

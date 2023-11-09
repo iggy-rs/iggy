@@ -91,6 +91,10 @@ retention_days = 7
 enabled = true
 size = "4GB"
 
+[system.retention_policy]
+message_expiry = "disabled"
+max_topic_size = "10 GB"
+
 [system.encryption]
 enabled = false
 key = ""
@@ -113,7 +117,6 @@ validate_checksum = false
 messages_required_to_save = 10_000
 
 [system.segment]
-message_expiry = 0
 size_bytes = 1_000_000_000
 cache_indexes = true
 cache_time_indexes = true

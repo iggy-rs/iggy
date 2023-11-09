@@ -3,7 +3,7 @@ extern crate sysinfo;
 use super::server::{MessageCleanerConfig, MessageSaverConfig};
 use super::system::CompressionConfig;
 use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
-use crate::configs::system::{CacheConfig, SegmentConfig};
+use crate::configs::system::{CacheConfig, RetentionPolicyConfig, SegmentConfig};
 use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
 use byte_unit::{Byte, ByteUnit};
@@ -16,6 +16,7 @@ impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {
         self.system.segment.validate()?;
         self.system.cache.validate()?;
+        self.system.retention_policy.validate()?;
         self.system.compression.validate()?;
         self.personal_access_token.validate()?;
 
@@ -48,12 +49,9 @@ impl Validatable<ServerError> for CacheConfig {
         let free_memory = sys.free_memory();
         let cache_percentage = (limit_bytes as f64 / total_memory as f64) * 100.0;
 
-        let pretty_cache_limit =
-            Byte::from_bytes(limit_bytes as u128).get_adjusted_unit(ByteUnit::MB);
-        let pretty_total_memory =
-            Byte::from_bytes(total_memory as u128).get_adjusted_unit(ByteUnit::MB);
-        let pretty_free_memory =
-            Byte::from_bytes(free_memory as u128).get_adjusted_unit(ByteUnit::MB);
+        let pretty_cache_limit = Byte::from_bytes(limit_bytes).get_adjusted_unit(ByteUnit::MB);
+        let pretty_total_memory = Byte::from_bytes(total_memory).get_adjusted_unit(ByteUnit::MB);
+        let pretty_free_memory = Byte::from_bytes(free_memory).get_adjusted_unit(ByteUnit::MB);
 
         if limit_bytes > total_memory {
             return Err(ServerError::CacheConfigValidationFailure(format!(
@@ -73,6 +71,17 @@ impl Validatable<ServerError> for CacheConfig {
             "Cache configuration -> cache size set to {} ({:.2}% of total memory: {}, free memory: {}).",
             pretty_cache_limit, cache_percentage, pretty_total_memory, pretty_free_memory
         );
+
+        Ok(())
+    }
+}
+
+impl Validatable<ServerError> for RetentionPolicyConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        // TODO(hubcio): Change this message once topic size based retention policy is fully developed.
+        if self.max_topic_size.get_bytes() > 0 {
+            warn!("Retention policy max_topic_size is not implemented yet!");
+        }
 
         Ok(())
     }

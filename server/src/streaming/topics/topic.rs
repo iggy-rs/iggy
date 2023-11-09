@@ -63,7 +63,7 @@ impl Topic {
                     0 => None,
                     _ => Some(expiry),
                 },
-                None => match config.segment.message_expiry {
+                None => match config.retention_policy.message_expiry.as_secs() {
                     0 => None,
                     expiry => Some(expiry),
                 },

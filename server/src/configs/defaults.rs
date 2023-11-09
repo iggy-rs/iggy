@@ -209,7 +209,7 @@ impl Default for PartitionConfig {
 impl Default for SegmentConfig {
     fn default() -> SegmentConfig {
         SegmentConfig {
-            size_bytes: 1024 * 1024 * 1024,
+            size_bytes: 1000 * 1000 * 1000,
             cache_indexes: true,
             cache_time_indexes: true,
         }

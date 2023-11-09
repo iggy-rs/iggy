@@ -107,7 +107,7 @@ impl Consumer {
         let end_timestamp = Instant::now();
         let duration = end_timestamp - start_timestamp;
         let average_latency: Duration = latencies.iter().sum::<Duration>() / latencies.len() as u32;
-        let average_throughput = total_size_bytes as f64 / duration.as_secs_f64() / 1024.0 / 1024.0;
+        let average_throughput = total_size_bytes as f64 / duration.as_secs_f64() / 1e6;
 
         info!(
         "Consumer #{} → polled {} messages ({} batches of {} messages in {} ms, total size: {} bytes, average latency: {:.2} ms, average throughput: {:.2} MB/s",

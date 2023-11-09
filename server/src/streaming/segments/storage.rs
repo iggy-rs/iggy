@@ -22,7 +22,7 @@ use tracing::{error, info};
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
 const INDEX_SIZE: u32 = 4;
-const BUF_READER_CAPACITY_BYTES: usize = 512 * 1024;
+const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
 pub struct FileSegmentStorage {

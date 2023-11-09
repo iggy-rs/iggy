@@ -90,8 +90,8 @@ impl BenchmarkResults {
             .as_secs_f64()
             * 1000.0;
         let average_throughput =
-            total_size_bytes as f64 / total_duration / 1024.0 / 1024.0 / self.results.len() as f64;
-        let total_throughput = total_size_bytes as f64 / total_duration / 1024.0 / 1024.0;
+            total_size_bytes as f64 / total_duration / 1e6 / self.results.len() as f64;
+        let total_throughput = total_size_bytes as f64 / total_duration / 1e6;
         let messages_per_second = total_messages as f64 / total_duration;
 
         BenchmarkStatistics {

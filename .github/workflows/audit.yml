@@ -1,4 +1,4 @@
-name: Security audit
+name: security
 on:
   schedule:
     - cron: '0 13 * * *'  # At 13:00 AM UTC, which is 14:00 PM CET

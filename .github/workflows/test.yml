@@ -8,7 +8,7 @@
 # - merge Docker meta into one step
 # - implement cargo-semver-checks
 
-name: Test
+name: test
 on:
   pull_request:
     branches:
@@ -97,6 +97,8 @@ jobs:
           # - beta
     steps:
       - uses: actions/checkout@v3
+
+      - uses: ouzi-dev/commit-status-updater@v2
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2

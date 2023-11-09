@@ -1,4 +1,4 @@
-name: Sanity
+name: sanity
 on:
   workflow_call:
 

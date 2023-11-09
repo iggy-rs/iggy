@@ -252,7 +252,7 @@ fn extend_client(client: &Client, bytes: &mut Vec<u8>) {
 
 fn extend_user(user: &User, bytes: &mut Vec<u8>) {
     bytes.put_u32_le(user.id);
-    bytes.put_u64(user.created_at);
+    bytes.put_u64_le(user.created_at);
     bytes.put_u8(user.status.as_code());
     bytes.put_u8(user.username.len() as u8);
     bytes.extend(user.username.as_bytes());

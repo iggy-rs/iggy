@@ -43,9 +43,9 @@ use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::sync::Arc;
 use tracing::{event, Level};
 
-fn get_command(args: &IggyConsoleArgs) -> Box<dyn CliCommand> {
+fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> {
     #[warn(clippy::let_and_return)]
-    match &args.command {
+    match command {
         Command::Stream(command) => match command {
             StreamAction::Create(args) => {
                 Box::new(CreateStreamCmd::new(args.stream_id, args.name.clone()))
@@ -142,11 +142,19 @@ fn get_command(args: &IggyConsoleArgs) -> Box<dyn CliCommand> {
 async fn main() -> Result<(), IggyCmdError> {
     let args = IggyConsoleArgs::parse();
 
+    if args.command.is_none() {
+        IggyConsoleArgs::print_overview();
+
+        return Ok(());
+    }
+
     let mut logging = Logging::new();
     logging.init(args.quiet, &args.debug);
 
+    let command = args.command.clone().unwrap();
+
     // Get command based on command line arguments
-    let mut command = get_command(&args);
+    let mut command = get_command(command, &args);
 
     // Create credentials based on command line arguments and command
     let mut credentials = IggyCredentials::new(&args, command.login_required())?;

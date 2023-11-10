@@ -2,7 +2,7 @@ use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
 use iggy::identifier::Identifier;
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub(crate) enum StreamAction {
     /// Create stream with given ID and name
     ///
@@ -48,7 +48,7 @@ pub(crate) enum StreamAction {
     List(StreamListArgs),
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct StreamCreateArgs {
     /// Stream ID to create topic
     pub(crate) stream_id: u32,
@@ -56,7 +56,7 @@ pub(crate) struct StreamCreateArgs {
     pub(crate) name: String,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct StreamDeleteArgs {
     /// Stream ID to delete
     ///
@@ -64,7 +64,7 @@ pub(crate) struct StreamDeleteArgs {
     pub(crate) stream_id: Identifier,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct StreamUpdateArgs {
     /// Stream ID to update
     ///
@@ -74,7 +74,7 @@ pub(crate) struct StreamUpdateArgs {
     pub(crate) name: String,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct StreamGetArgs {
     /// Stream ID to get
     ///
@@ -82,7 +82,7 @@ pub(crate) struct StreamGetArgs {
     pub(crate) stream_id: Identifier,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct StreamListArgs {
     /// List mode (table or list)
     #[clap(short, long, value_enum, default_value_t = ListMode::Table)]

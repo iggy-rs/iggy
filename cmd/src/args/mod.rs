@@ -12,13 +12,18 @@ use crate::args::{
     partition::PartitionAction, personal_access_token::PersonalAccessTokenAction,
     stream::StreamAction, system::PingArgs, topic::TopicAction,
 };
+use clap::{Args, Command as ClapCommand};
 use clap::{Parser, Subcommand};
+use figlet_rs::FIGfont;
 use iggy::args::Args as IggyArgs;
 use std::path::PathBuf;
 
 const QUIC_TRANSPORT: &str = "quic";
 const HTTP_TRANSPORT: &str = "http";
 const TCP_TRANSPORT: &str = "tcp";
+
+static CARGO_BIN_NAME: &str = env!("CARGO_BIN_NAME");
+static CARGO_PKG_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -27,7 +32,7 @@ pub(crate) struct IggyConsoleArgs {
     pub(crate) iggy: IggyArgs,
 
     #[clap(subcommand)]
-    pub(crate) command: Command,
+    pub(crate) command: Option<Command>,
 
     /// Quiet mode (disabled stdout printing)
     #[clap(short, long, default_value_t = false)]
@@ -58,7 +63,7 @@ pub(crate) struct IggyConsoleArgs {
     pub(crate) token_name: Option<String>,
 }
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub(crate) enum Command {
     /// stream operations
     #[clap(subcommand)]
@@ -123,5 +128,27 @@ impl IggyConsoleArgs {
             ),
             _ => None,
         }
+    }
+
+    pub(crate) fn print_overview() {
+        let mut cli = IggyConsoleArgs::augment_args_for_update(
+            ClapCommand::new(CARGO_BIN_NAME).bin_name(CARGO_BIN_NAME),
+        );
+
+        let full_help = cli.render_help().to_string();
+        let help = full_help.replace(
+            &full_help[full_help.find("Options:").unwrap()..full_help.len()],
+            "",
+        );
+
+        let standard_font = FIGfont::standard().unwrap();
+        let figure = standard_font.convert("Iggy CLI").unwrap();
+
+        println!("{figure}");
+        println!("{help}");
+        println!("Run '{CARGO_BIN_NAME} --help' for full help message.");
+        println!("Run '{CARGO_BIN_NAME} COMMAND --help' for more information on a command.");
+        println!();
+        println!("For more help on what's Iggy and how to use it, head to {CARGO_PKG_HOMEPAGE}");
     }
 }

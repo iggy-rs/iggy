@@ -1,6 +1,6 @@
 use clap::Args;
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct PingArgs {
     /// Stop after sending count Ping packets
     #[arg(short, long, default_value_t = 1)]

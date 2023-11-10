@@ -4,7 +4,7 @@ use iggy::cmd::utils::message_expiry::MessageExpiry;
 use iggy::identifier::Identifier;
 use std::convert::From;
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub(crate) enum TopicAction {
     /// Create topic with given ID, name, number of partitions
     /// and expiry time for given stream ID
@@ -65,7 +65,7 @@ pub(crate) enum TopicAction {
     List(TopicListArgs),
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct TopicCreateArgs {
     /// Stream ID to create topic
     ///
@@ -84,7 +84,7 @@ pub(crate) struct TopicCreateArgs {
     pub(crate) message_expiry: Option<Vec<MessageExpiry>>,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct TopicDeleteArgs {
     /// Stream ID to delete topic
     ///
@@ -98,7 +98,7 @@ pub(crate) struct TopicDeleteArgs {
     pub(crate) topic_id: Identifier,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct TopicUpdateArgs {
     /// Stream ID to update topic
     ///
@@ -118,7 +118,7 @@ pub(crate) struct TopicUpdateArgs {
     pub(crate) message_expiry: Option<Vec<MessageExpiry>>,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct TopicGetArgs {
     /// Stream ID to get topic
     ///
@@ -132,7 +132,7 @@ pub(crate) struct TopicGetArgs {
     pub(crate) topic_id: Identifier,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct TopicListArgs {
     /// Stream ID to list topics
     ///

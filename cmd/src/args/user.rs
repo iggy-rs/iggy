@@ -6,7 +6,7 @@ use std::convert::From;
 
 use super::permissions::global::GlobalPermissionsArg;
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub(crate) enum UserAction {
     /// Create user with given username and password
     ///
@@ -28,7 +28,7 @@ pub(crate) enum UserAction {
     Delete(UserDeleteArgs),
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct UserCreateArgs {
     /// Username
     pub(crate) username: String,
@@ -92,7 +92,7 @@ pub(crate) struct UserCreateArgs {
     pub(crate) stream_permissions: Option<Vec<StreamPermissionsArg>>,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct UserDeleteArgs {
     /// User ID to delete
     ///

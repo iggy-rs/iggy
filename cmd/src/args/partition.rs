@@ -2,7 +2,7 @@ use clap::{Args, Subcommand};
 use iggy::identifier::Identifier;
 use std::convert::From;
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub(crate) enum PartitionAction {
     /// Create partitions for the specified topic ID
     /// and stream ID based on the given count.
@@ -32,7 +32,7 @@ pub(crate) enum PartitionAction {
     Delete(PartitionDeleteArgs),
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct PartitionCreateArgs {
     /// Stream ID to create partitions
     ///
@@ -49,7 +49,7 @@ pub(crate) struct PartitionCreateArgs {
     pub(crate) partitions_count: u32,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct PartitionDeleteArgs {
     /// Stream ID to delete partitions
     ///

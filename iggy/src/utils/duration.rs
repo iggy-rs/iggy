@@ -1,4 +1,4 @@
-use human_time::ToHumanTimeString;
+use humantime::format_duration;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter},
@@ -17,10 +17,7 @@ impl IggyDuration {
     }
 
     pub fn as_human_time_string(&self) -> String {
-        self.duration.to_human_time_string_with_format(
-            |n, unit| format!("{n}{unit}",),
-            |acc, item| format!("{} {}", acc, item),
-        )
+        format!("{}", format_duration(self.duration))
     }
 
     pub fn as_secs(&self) -> u32 {
@@ -67,6 +64,16 @@ mod tests {
         let duration = Duration::new(3661, 0); // 1 hour, 1 minute and 1 second
         let iggy_duration = IggyDuration::new(duration);
         assert_eq!(iggy_duration.as_human_time_string(), "1h 1m 1s");
+    }
+
+    #[test]
+    fn test_long_duration_as_human_time_string() {
+        let duration = Duration::new(36611233, 0); // 1year 1month 28days 1hour 13minutes 37seconds
+        let iggy_duration = IggyDuration::new(duration);
+        assert_eq!(
+            iggy_duration.as_human_time_string(),
+            "1year 1month 28days 1h 13m 37s"
+        );
     }
 
     #[test]

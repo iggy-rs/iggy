@@ -157,6 +157,20 @@ Options:
 {CLAP_INDENT}
           When personal access token is created using command line tool and stored inside platform-specific secure storage its name can be used as an value for this option without revealing token value.
 
+      --generate <GENERATOR>
+          Shell completion generator for iggy command
+{CLAP_INDENT}
+          Option prints shell completion code on standard output for selected shell.
+          Redirect standard output to file and follow and use selected shell means
+          to enable completion for iggy command.
+          Option cannot be combined with other options.
+{CLAP_INDENT}
+          Example:
+           iggy --generate bash > iggy_completion.bash
+           source iggy_completion.bash
+{CLAP_INDENT}
+          [possible values: bash, elvish, fish, powershell, zsh]
+
   -h, --help
           Print help (see a summary with '-h')
 

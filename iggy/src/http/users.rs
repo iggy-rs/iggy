@@ -87,7 +87,7 @@ impl HttpClient {
             .post(&format!("{PATH}/refresh-token"), &command)
             .await?;
         let identity_info: IdentityInfo = response.json().await?;
-        if identity_info.token.is_none() {
+        if identity_info.tokens.is_none() {
             return Err(Error::JwtMissing);
         }
 

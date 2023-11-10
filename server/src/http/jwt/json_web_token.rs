@@ -31,6 +31,7 @@ pub struct RevokedAccessToken {
 pub struct GeneratedTokens {
     pub user_id: UserId,
     pub access_token: String,
+    pub access_token_expiry: u64,
     pub refresh_token: String,
-    pub expiry: u64,
+    pub refresh_token_expiry: u64,
 }

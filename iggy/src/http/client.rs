@@ -205,18 +205,18 @@ impl HttpClient {
 
     /// Set the access token and refresh token from the provided identity.
     pub async fn set_tokens_from_identity(&self, identity: &IdentityInfo) -> Result<(), Error> {
-        if identity.token.is_none() {
+        if identity.tokens.is_none() {
             return Err(Error::JwtMissing);
         }
 
-        let token = identity.token.as_ref().unwrap();
-        if token.access_token.is_empty() {
+        let tokens = identity.tokens.as_ref().unwrap();
+        if tokens.access_token.token.is_empty() {
             return Err(Error::JwtMissing);
         }
 
-        self.set_access_token(Some(token.access_token.clone()))
+        self.set_access_token(Some(tokens.access_token.token.clone()))
             .await;
-        self.set_refresh_token(Some(token.refresh_token.clone()))
+        self.set_refresh_token(Some(tokens.refresh_token.token.clone()))
             .await;
         Ok(())
     }

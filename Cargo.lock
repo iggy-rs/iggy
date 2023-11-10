@@ -1490,25 +1490,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df3b46402a9d5adb4c86a0cf463f42e19994e3ee891101b1841f30a545cb49a9"
 
 [[package]]
-name = "human-time"
-version = "0.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "259822ea527bd0d5ebf3108d84e98ac4f20769e2e8b2f3ab76e1dd6e21de7f3c"
-dependencies = [
- "human-time-macros",
-]
-
-[[package]]
-name = "human-time-macros"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a04129f85bfd960234ed3fa53212a4904881e024322e804ac5a48da239e44a09"
-dependencies = [
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
 name = "human_bytes"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1619,7 +1600,6 @@ dependencies = [
  "convert_case 0.6.0",
  "crc32fast",
  "flume",
- "human-time",
  "humantime",
  "keyring",
  "lazy_static",

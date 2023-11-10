@@ -3,7 +3,7 @@ use clap::{Args, Subcommand};
 use iggy::cmd::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use std::convert::From;
 
-#[derive(Debug, Subcommand)]
+#[derive(Debug, Clone, Subcommand)]
 pub(crate) enum PersonalAccessTokenAction {
     /// Create personal access token
     ///
@@ -32,7 +32,7 @@ pub(crate) enum PersonalAccessTokenAction {
     List(PersonalAccessTokenListArgs),
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct PersonalAccessTokenCreateArgs {
     /// Name of the personal access token
     pub(crate) name: String,
@@ -53,13 +53,13 @@ pub(crate) struct PersonalAccessTokenCreateArgs {
     pub(crate) store_token: bool,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct PersonalAccessTokenDeleteArgs {
     /// Personal access token name to delete
     pub(crate) name: String,
 }
 
-#[derive(Debug, Args)]
+#[derive(Debug, Clone, Args)]
 pub(crate) struct PersonalAccessTokenListArgs {
     /// List mode (table or list)
     #[clap(short, long, value_enum, default_value_t = ListMode::Table)]

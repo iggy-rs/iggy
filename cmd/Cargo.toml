@@ -1,14 +1,16 @@
 [package]
 name = "cmd"
-version = "0.9.0"
+version = "0.9.1"
 edition = "2021"
 authors = ["bartosz.ciesla@gmail.com"]
 repository = "https://github.com/iggy-rs/iggy"
+homepage = "https://iggy.rs"
 
 [dependencies]
 anyhow = "1.0.75"
 async-trait = "0.1.68"
 clap = { version = "4.1.11", features = ["derive"] }
+figlet-rs = "0.1.5"
 iggy = { path = "../iggy", features = ["iggy-cmd"] }
 keyring = "2.0.5"
 passterm = "2.0.1"

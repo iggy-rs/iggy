@@ -12,7 +12,7 @@ pub async fn should_help_match() {
             format!(
                 r#"Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second.
 
-{USAGE_PREFIX} [OPTIONS] <COMMAND>
+{USAGE_PREFIX} [OPTIONS] [COMMAND]
 
 Commands:
   stream     stream operations

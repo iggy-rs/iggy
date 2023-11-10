@@ -722,11 +722,12 @@ dependencies = [
 
 [[package]]
 name = "cmd"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "async-trait",
  "clap",
+ "figlet-rs",
  "iggy",
  "keyring",
  "passterm",

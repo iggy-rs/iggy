@@ -142,9 +142,13 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
 async fn main() -> Result<(), IggyCmdError> {
     let args = IggyConsoleArgs::parse();
 
+    if let Some(generator) = args.generator {
+        args.generate_completion(generator);
+        return Ok(());
+    }
+
     if args.command.is_none() {
         IggyConsoleArgs::print_overview();
-
         return Ok(());
     }
 

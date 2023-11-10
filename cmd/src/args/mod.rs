@@ -14,6 +14,7 @@ use crate::args::{
 };
 use clap::{Args, Command as ClapCommand};
 use clap::{Parser, Subcommand};
+use clap_complete::{generate, Generator, Shell};
 use figlet_rs::FIGfont;
 use iggy::args::Args as IggyArgs;
 use std::path::PathBuf;
@@ -61,6 +62,20 @@ pub(crate) struct IggyConsoleArgs {
     /// this option without revealing token value.
     #[clap(short = 'n', long, group = "credentials")]
     pub(crate) token_name: Option<String>,
+
+    /// Shell completion generator for iggy command
+    ///
+    /// Option prints shell completion code on standard output for selected shell.
+    /// Redirect standard output to file and follow and use selected shell means
+    /// to enable completion for iggy command.
+    /// Option cannot be combined with other options.
+    ///
+    /// Example:
+    ///  iggy --generate bash > iggy_completion.bash
+    ///  source iggy_completion.bash
+    #[clap(verbatim_doc_comment)]
+    #[clap(long = "generate", value_enum)]
+    pub(crate) generator: Option<Shell>,
 }
 
 #[derive(Debug, Clone, Subcommand)]
@@ -128,6 +143,17 @@ impl IggyConsoleArgs {
             ),
             _ => None,
         }
+    }
+
+    pub(crate) fn generate_completion<G: Generator>(&self, generator: G) {
+        generate(
+            generator,
+            &mut IggyConsoleArgs::augment_args_for_update(
+                ClapCommand::new(CARGO_BIN_NAME).bin_name(CARGO_BIN_NAME),
+            ),
+            CARGO_BIN_NAME,
+            &mut std::io::stdout(),
+        );
     }
 
     pub(crate) fn print_overview() {

@@ -254,8 +254,8 @@ size = "4GB"
 [system.retention_policy]
 # Configures the message expiry setting.
 # "disabled" means messages are kept indefinitely.
-# A time value in seconds determines the lifespan of messages.
-# Example: `message_expiry = 86400` means messages will expire after 24 hours (86400 seconds)
+# A time value in human readable format determines the lifespan of messages.
+# Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
 message_expiry = "disabled"
 
 # Maximum size of a topic, e.g., "10 GB".

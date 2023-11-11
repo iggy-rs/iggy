@@ -223,6 +223,7 @@ path = "local_data"
 # Database configuration.
 [system.database]
 # Path for storing database files.
+# Specifies the directory where database files are stored, relative to `system.path`.
 path = "database"
 
 # Logging configuration.
@@ -254,6 +255,7 @@ size = "4GB"
 # Configures the message expiry setting.
 # "disabled" means messages are kept indefinitely.
 # A time value in seconds determines the lifespan of messages.
+# Example: `message_expiry = 86400` means messages will expire after 24 hours (86400 seconds)
 message_expiry = "disabled"
 
 # Maximum size of a topic, e.g., "10 GB".
@@ -322,8 +324,9 @@ messages_required_to_save = 10_000
 
 # Segment configuration
 [system.segment]
-# Defines the maximum size of a storage segment in bytes (integer).
+# Defines the soft limit for the size of a storage segment in bytes (integer).
 # When a segment reaches this size, a new segment is created for subsequent data.
+# Example: if `size_bytes` is set to 1,000,000,000 (approx. 1GB), the actual segment size may be 1GB + the size of one additional message.
 size_bytes = 1_000_000_000
 
 # Controls whether to cache indexes for segment access (boolean).

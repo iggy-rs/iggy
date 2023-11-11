@@ -1,13 +1,14 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
+use crate::http::mapper::map_generated_tokens_to_identity_info;
 use crate::http::shared::AppState;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post};
 use axum::{Extension, Json, Router};
-use iggy::models::identity_info::{IdentityInfo, TokenInfo};
+use iggy::models::identity_info::IdentityInfo;
 use iggy::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
@@ -78,15 +79,6 @@ async fn login_with_personal_access_token(
     let user = system
         .login_with_personal_access_token(&command.token, None)
         .await?;
-    let token = state.jwt_manager.generate(user.id)?;
-    Ok(Json(IdentityInfo {
-        user_id: user.id,
-        token: Some({
-            TokenInfo {
-                access_token: token.access_token,
-                refresh_token: token.refresh_token,
-                expiry: token.expiry,
-            }
-        }),
-    }))
+    let tokens = state.jwt_manager.generate(user.id)?;
+    Ok(Json(map_generated_tokens_to_identity_info(tokens)))
 }

@@ -1,3 +1,4 @@
+use crate::http::jwt::json_web_token::GeneratedTokens;
 use crate::streaming::clients::client_manager::Client;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::streams::stream::Stream;
@@ -6,6 +7,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::user::User;
 use iggy::models::client_info::ConsumerGroupInfo;
 use iggy::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
+use iggy::models::identity_info::{IdentityInfo, IdentityTokens, TokenInfo};
 use iggy::models::personal_access_token::PersonalAccessTokenInfo;
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
@@ -209,4 +211,22 @@ pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> ConsumerGroup
         });
     }
     consumer_group_details
+}
+
+pub fn map_generated_tokens_to_identity_info(tokens: GeneratedTokens) -> IdentityInfo {
+    IdentityInfo {
+        user_id: tokens.user_id,
+        tokens: Some({
+            IdentityTokens {
+                access_token: TokenInfo {
+                    token: tokens.access_token,
+                    expiry: tokens.access_token_expiry,
+                },
+                refresh_token: TokenInfo {
+                    token: tokens.refresh_token,
+                    expiry: tokens.refresh_token_expiry,
+                },
+            }
+        }),
+    }
 }

@@ -1,6 +1,7 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
+use crate::http::mapper::map_generated_tokens_to_identity_info;
 use crate::http::shared::AppState;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
@@ -8,7 +9,7 @@ use axum::http::StatusCode;
 use axum::routing::{get, post, put};
 use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
-use iggy::models::identity_info::{IdentityInfo, TokenInfo};
+use iggy::models::identity_info::IdentityInfo;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
@@ -167,17 +168,8 @@ async fn login_user(
     let user = system
         .login_user(&command.username, &command.password, None)
         .await?;
-    let token = state.jwt_manager.generate(user.id)?;
-    Ok(Json(IdentityInfo {
-        user_id: user.id,
-        token: Some({
-            TokenInfo {
-                access_token: token.access_token,
-                refresh_token: token.refresh_token,
-                expiry: token.expiry,
-            }
-        }),
-    }))
+    let tokens = state.jwt_manager.generate(user.id)?;
+    Ok(Json(map_generated_tokens_to_identity_info(tokens)))
 }
 
 async fn logout_user(
@@ -201,17 +193,8 @@ async fn refresh_token(
     State(state): State<Arc<AppState>>,
     Json(command): Json<RefreshToken>,
 ) -> Result<Json<IdentityInfo>, CustomError> {
-    let token = state.jwt_manager.refresh_token(&command.refresh_token)?;
-    Ok(Json(IdentityInfo {
-        user_id: token.user_id,
-        token: Some({
-            TokenInfo {
-                access_token: token.access_token,
-                refresh_token: token.refresh_token,
-                expiry: token.expiry,
-            }
-        }),
-    }))
+    let tokens = state.jwt_manager.refresh_token(&command.refresh_token)?;
+    Ok(Json(map_generated_tokens_to_identity_info(tokens)))
 }
 
 #[derive(Debug, Deserialize)]

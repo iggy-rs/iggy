@@ -163,7 +163,7 @@ pub fn map_identity_info(payload: &[u8]) -> Result<IdentityInfo, Error> {
     let user_id = u32::from_le_bytes(payload[..4].try_into()?);
     Ok(IdentityInfo {
         user_id,
-        token: None,
+        tokens: None,
     })
 }
 

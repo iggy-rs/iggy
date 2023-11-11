@@ -192,7 +192,8 @@ impl JwtManager {
             user_id,
             access_token: access_token.unwrap(),
             refresh_token: raw_refresh_token,
-            expiry: exp,
+            access_token_expiry: exp,
+            refresh_token_expiry: refresh_token.expiry,
         })
     }
 

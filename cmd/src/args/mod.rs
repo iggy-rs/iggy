@@ -71,6 +71,8 @@ pub(crate) struct IggyConsoleArgs {
     /// Option cannot be combined with other options.
     ///
     /// Example:
+    ///  source <(iggy --generate bash)
+    /// or
     ///  iggy --generate bash > iggy_completion.bash
     ///  source iggy_completion.bash
     #[clap(verbatim_doc_comment)]

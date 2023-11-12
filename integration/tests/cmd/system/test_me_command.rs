@@ -50,11 +50,11 @@ impl TestMeCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestMeCmd {
-    async fn prepare_server_state(&self, _client: &dyn Client) {}
+    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
-            .with_credentials()
+            .with_env_credentials()
             .opts(self.protocol.as_arg())
             .arg("me")
     }

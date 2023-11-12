@@ -31,7 +31,7 @@ impl TestStreamListCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestStreamListCmd {
-    async fn prepare_server_state(&self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream = client
             .create_stream(&CreateStream {
                 stream_id: self.stream_id,
@@ -46,7 +46,7 @@ impl IggyCmdTestCase for TestStreamListCmd {
             .arg("stream")
             .arg("list")
             .args(self.to_args())
-            .with_credentials()
+            .with_env_credentials()
     }
 
     fn verify_command(&self, command_state: Assert) {

@@ -51,9 +51,18 @@ impl IggyCmdCommand {
         self
     }
 
-    pub(crate) fn with_credentials(self) -> Self {
+    pub(crate) fn with_env_credentials(self) -> Self {
         self.env("IGGY_USERNAME", DEFAULT_ROOT_USERNAME)
             .env("IGGY_PASSWORD", DEFAULT_ROOT_PASSWORD)
+    }
+
+    pub(crate) fn with_cli_credentials(mut self) -> Self {
+        self.opts.push(String::from("--username"));
+        self.opts.push(String::from(DEFAULT_ROOT_USERNAME));
+        self.opts.push(String::from("--password"));
+        self.opts.push(String::from(DEFAULT_ROOT_PASSWORD));
+
+        self
     }
 
     pub(crate) fn get_opts_and_args(&self) -> Vec<String> {

@@ -1682,6 +1682,7 @@ dependencies = [
  "futures",
  "humantime",
  "iggy",
+ "keyring",
  "libc",
  "predicates",
  "serial_test",

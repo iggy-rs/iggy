@@ -11,7 +11,7 @@ struct TestStatsCmd {}
 
 #[async_trait]
 impl IggyCmdTestCase for TestStatsCmd {
-    async fn prepare_server_state(&self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream_id = Identifier::from_str_value("logs").unwrap();
         let stream = client
             .create_stream(&CreateStream {
@@ -34,7 +34,7 @@ impl IggyCmdTestCase for TestStatsCmd {
     }
 
     fn get_command(&self) -> IggyCmdCommand {
-        IggyCmdCommand::new().arg("stats").with_credentials()
+        IggyCmdCommand::new().arg("stats").with_env_credentials()
     }
 
     fn verify_command(&self, command_state: Assert) {

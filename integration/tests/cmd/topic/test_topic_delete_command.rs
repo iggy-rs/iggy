@@ -56,7 +56,7 @@ impl TestTopicDeleteCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestTopicDeleteCmd {
-    async fn prepare_server_state(&self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream = client
             .create_stream(&CreateStream {
                 stream_id: self.stream_id,
@@ -82,7 +82,7 @@ impl IggyCmdTestCase for TestTopicDeleteCmd {
             .arg("topic")
             .arg("delete")
             .args(self.to_args())
-            .with_credentials()
+            .with_env_credentials()
     }
 
     fn verify_command(&self, command_state: Assert) {

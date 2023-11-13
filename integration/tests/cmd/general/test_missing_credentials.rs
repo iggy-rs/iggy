@@ -9,7 +9,7 @@ struct TestNoCredentialsCmd {}
 
 #[async_trait]
 impl IggyCmdTestCase for TestNoCredentialsCmd {
-    async fn prepare_server_state(&self, _client: &dyn Client) {}
+    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new().arg("me")

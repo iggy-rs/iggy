@@ -2,21 +2,25 @@ use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
-use predicates::str::diff;
+use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
-struct TestQuietModCmd {}
+#[derive(Debug, Default)]
+struct TestLoginOptions {}
 
 #[async_trait]
-impl IggyCmdTestCase for TestQuietModCmd {
+impl IggyCmdTestCase for TestLoginOptions {
     async fn prepare_server_state(&mut self, _client: &dyn Client) {}
 
     fn get_command(&self) -> IggyCmdCommand {
-        IggyCmdCommand::new().arg("ping").opt("-q")
+        IggyCmdCommand::new().with_cli_credentials().arg("me")
     }
 
     fn verify_command(&self, command_state: Assert) {
-        command_state.success().stdout(diff(""));
+        command_state
+            .success()
+            .stdout(starts_with("Executing me command\n"))
+            .stdout(contains(String::from("Transport | TCP")));
     }
 
     async fn verify_server_state(&self, _client: &dyn Client) {}
@@ -24,9 +28,11 @@ impl IggyCmdTestCase for TestQuietModCmd {
 
 #[tokio::test]
 #[parallel]
-pub async fn should_be_no_output() {
+pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;
-    iggy_cmd_test.execute_test(TestQuietModCmd {}).await;
+    iggy_cmd_test
+        .execute_test(TestLoginOptions::default())
+        .await;
 }

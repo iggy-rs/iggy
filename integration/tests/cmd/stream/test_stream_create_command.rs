@@ -23,14 +23,14 @@ impl TestStreamCreateCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestStreamCreateCmd {
-    async fn prepare_server_state(&self, _client: &dyn Client) {}
+    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
             .arg("stream")
             .arg("create")
             .args(self.to_args())
-            .with_credentials()
+            .with_env_credentials()
     }
 
     fn verify_command(&self, command_state: Assert) {

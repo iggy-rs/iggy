@@ -57,7 +57,7 @@ impl OutputFormat {
 
 #[async_trait]
 pub(crate) trait IggyCmdTestCase {
-    async fn prepare_server_state(&self, client: &dyn Client);
+    async fn prepare_server_state(&mut self, client: &dyn Client);
     fn get_command(&self) -> IggyCmdCommand;
     fn verify_command(&self, command_state: Assert);
     async fn verify_server_state(&self, client: &dyn Client);
@@ -107,7 +107,7 @@ impl IggyCmdTest {
         assert_eq!(identity_info.user_id, 1);
     }
 
-    pub(crate) async fn execute_test(&mut self, test_case: impl IggyCmdTestCase) {
+    pub(crate) async fn execute_test(&mut self, mut test_case: impl IggyCmdTestCase) {
         // Make sure server is started
         assert!(
             self.server.is_started(),

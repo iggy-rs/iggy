@@ -46,7 +46,7 @@ impl TestUserDeleteCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestUserDeleteCmd {
-    async fn prepare_server_state(&self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let user = client
             .create_user(&CreateUser {
                 username: self.username.clone(),
@@ -63,7 +63,7 @@ impl IggyCmdTestCase for TestUserDeleteCmd {
             .arg("user")
             .arg("delete")
             .arg(self.to_arg())
-            .with_credentials()
+            .with_env_credentials()
     }
 
     fn verify_command(&self, command_state: Assert) {

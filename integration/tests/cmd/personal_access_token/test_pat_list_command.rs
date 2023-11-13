@@ -33,7 +33,7 @@ impl TestPatListCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestPatListCmd {
-    async fn prepare_server_state(&self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let pat = client
             .create_personal_access_token(&CreatePersonalAccessToken {
                 name: self.name.clone(),
@@ -48,7 +48,7 @@ impl IggyCmdTestCase for TestPatListCmd {
             .arg("pat")
             .arg("list")
             .args(self.to_args())
-            .with_credentials()
+            .with_env_credentials()
     }
 
     fn verify_command(&self, command_state: Assert) {

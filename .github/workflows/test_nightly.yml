@@ -1,5 +1,6 @@
 name: test_nightly
 on:
+  workflow_dispatch:
   schedule:
     - cron: '0 10 * * *'  # At 10:00 AM UTC, which is 11:00 AM CET
 
@@ -97,6 +98,7 @@ jobs:
     needs: build_and_test
     if: always()
     steps:
+      - uses: actions/checkout@v3
       - name: Everything is fine
         if: ${{ !(contains(needs.*.result, 'failure')) }}
         run: exit 0

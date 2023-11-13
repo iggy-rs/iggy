@@ -72,7 +72,7 @@ jobs:
           # - nightly
           # - beta
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2

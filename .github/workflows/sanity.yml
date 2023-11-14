@@ -9,7 +9,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: dtolnay/rust-toolchain@stable
       - uses: clechasseur/rs-cargo@v2
         with:
@@ -53,6 +52,51 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
       - uses: taiki-e/install-action@cargo-udeps
       - run: cargo +nightly udeps --all-targets --all-features
+
+  check-commit-message:
+    name: Validate commit messages
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check subject line length
+        uses: gsactions/commit-message-checker@v2
+        with:
+          excludeDescription: 'true'               # exclude description body of a pull request
+          excludeTitle: 'true'                     # exclude the title of a pull request
+          checkAllCommitMessages: 'true'           # checks all commits associated with the pull request
+          accessToken: ${{ secrets.GITHUB_TOKEN }} # needed only when checkAllCommitMessages is true
+          pattern: '^.{0,80}(\n.*)*$'
+          error: 'Subject of all commits in the PR has to be shorter than 80 characters.'
+
+      - name: Disallow issue hashtag in subject
+        uses: gsactions/commit-message-checker@v2
+        with:
+          excludeDescription: 'true'
+          excludeTitle: 'true'
+          checkAllCommitMessages: 'true'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+          pattern: '^(?!.*#\d*).*(\n.*)*$'
+          error: 'Do not include issue hashtags (e.g., #123) in the subject of any commit in the PR.'
+
+      - name: Disallow specific prefixes in title
+        uses: gsactions/commit-message-checker@v2
+        with:
+          excludeDescription: 'true'
+          excludeTitle: 'true'
+          checkAllCommitMessages: 'true'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+          pattern: '^(?!(.*(feat|fix|docs|style|refactor|perf|test|chore):.*(\n.*)*$)).*'
+          error: 'Do not use prefixes like "feat:", "fix:", etc., in the subject of any commit in the PR.'
+
+      - name: Disallow lowercase subject
+        uses: gsactions/commit-message-checker@v2
+        with:
+          excludeDescription: 'true'
+          excludeTitle: 'true'
+          checkAllCommitMessages: 'true'
+          accessToken: ${{ secrets.GITHUB_TOKEN }}
+          pattern: '^[A-Z].*(\n.*)*$'
+          error: 'Subject of all commits in the PR has to start with a capital letter.'
 
 # Uncomment this when we have a proper release - 1.0.0
 #   semver-checks:

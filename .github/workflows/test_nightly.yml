@@ -102,10 +102,11 @@ jobs:
       - name: Everything is fine
         if: ${{ !(contains(needs.*.result, 'failure')) }}
         run: exit 0
-      - name: Some tests failed
+      - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') }}
         uses: JasonEtco/create-an-issue@v2.9.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_BOT_CONTEXT_STRING: "nightly QEMU arm/aarch64 test suite"
         with:
           filename: .github/ISSUE_TEMPLATE.md

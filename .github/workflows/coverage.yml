@@ -6,41 +6,60 @@ on:
       - master
 env:
   CARGO_TERM_COLOR: always
+  GITHUB_BOT_CONTEXT_STRING: "codecov coverage reporting job"
 
 jobs:
-    coverage:
-      runs-on: ubuntu-latest
-      env:
-        CARGO_TERM_COLOR: always
-      steps:
-        - uses: actions/checkout@v4
+  coverage:
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v4
 
-        - name: Cache cargo & target directories
-          uses: Swatinem/rust-cache@v2
-          with:
-            key: "v2"
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "v2"
 
-        - name: Install gnome-keyring and keyutils on Linux
-          run: |
-            sudo apt-get update --yes && sudo apt-get install --yes gnome-keyring keyutils
-            rm -f $HOME/.local/share/keyrings/*
-            echo -n "test" | gnome-keyring-daemon --unlock
+      - name: Install gnome-keyring and keyutils on Linux
+        run: |
+          sudo apt-get update --yes && sudo apt-get install --yes gnome-keyring keyutils
+          rm -f $HOME/.local/share/keyrings/*
+          echo -n "test" | gnome-keyring-daemon --unlock
 
-        - name: Install cargo-llvm-cov
-          uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
 
-        - name: Build
-          run: source <(cargo llvm-cov show-env --export-prefix) && cargo build
+      - name: Build
+        run: source <(cargo llvm-cov show-env --export-prefix) && cargo build
 
-        - name: Test
-          run: source <(cargo llvm-cov show-env --export-prefix) && cargo test
+      - name: Test
+        run: source <(cargo llvm-cov show-env --export-prefix) && cargo test
 
-        - name: Generate code coverage
-          run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --codecov --output-path codecov.json --ignore-filename-regex '(bench\/|cli\/|integration\/|tools\/)'
+      - name: Generate code coverage
+        run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --codecov --output-path codecov.json --ignore-filename-regex '(bench\/|cli\/|integration\/|tools\/)'
 
-        - name: Upload coverage to Codecov
-          uses: codecov/codecov-action@v3
-          with:
-            token: ${{ secrets.CODECOV_TOKEN }}
-            files: codecov.json
-            fail_ci_if_error: false
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: codecov.json
+          fail_ci_if_error: false
+
+  finalize:
+    runs-on: ubuntu-latest
+    needs: coverage
+    if: always()
+    steps:
+      - uses: actions/checkout@v3
+      - name: Everything is fine
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: Something went wrong
+        if: ${{ contains(needs.*.result, 'failure') }}
+        uses: JasonEtco/create-an-issue@v2.9.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_BOT_CONTEXT_STRING: "codecov coverage reporting job"
+        with:
+          filename: .github/ISSUE_TEMPLATE.md

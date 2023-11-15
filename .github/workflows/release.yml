@@ -154,7 +154,7 @@ jobs:
         run: echo "::notice ::Published ${{ needs.tag.outputs.version }} release artifacts on GitHub"
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
+        uses: docker/setup-qemu-action@v3
         with:
           platforms: "arm64,arm"
         if: ${{ matrix.platform.cross }}

@@ -79,8 +79,8 @@ jobs:
             target: x86_64-unknown-linux-musl
             bin:
               - iggy-server
-              - iggy-cmd
               - iggy-cli
+              - iggy
             name: iggy-Linux-x86_64-musl.tar.gz
             cargo_command: cargo
             docker_arch: linux/amd64
@@ -91,8 +91,8 @@ jobs:
             target: arm-unknown-linux-musleabi
             bin:
               - iggy-server
-              - iggy-cmd
               - iggy-cli
+              - iggy
             name: iggy-Linux-arm-musl.tar.gz
             docker_arch: linux/arm/v7
             cross: true
@@ -103,8 +103,8 @@ jobs:
             target: aarch64-unknown-linux-musl
             bin:
               - iggy-server
-              - iggy-cmd
               - iggy-cli
+              - iggy
             name: iggy-Linux-aarch64-musl.tar.gz
             docker_arch: linux/arm64/v8
             cross: true
@@ -146,6 +146,7 @@ jobs:
           mkdir -p release_artifacts/
           cp target/${{ matrix.platform.target }}/release/iggy-server release_artifacts/
           cp target/${{ matrix.platform.target }}/release/iggy-cli release_artifacts/
+          cp target/${{ matrix.platform.target }}/release/iggy release_artifacts/
 
       - name: Release artifacts archive on GitHub
         uses: actions/upload-artifact@v3

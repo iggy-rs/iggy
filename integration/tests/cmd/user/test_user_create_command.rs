@@ -301,8 +301,6 @@ pub async fn should_help_match() {
             format!(
                 r#"Create user with given username and password
 
-Stream ID can be specified as a stream name or ID
-
 Examples
  iggy user create testuser pass#1%X!
  iggy user create guest guess --user-status inactive
@@ -312,9 +310,14 @@ Examples
 Arguments:
   <USERNAME>
           Username
+{CLAP_INDENT}
+          Unique identifier for the user account on iggy server,
+          must be between 3 and 50 characters long.
 
   <PASSWORD>
           Password
+{CLAP_INDENT}
+          Password of the user, must be between 3 and 100 characters long.
 
 Options:
   -u, --user-status <USER_STATUS>

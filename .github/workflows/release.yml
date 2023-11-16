@@ -177,7 +177,7 @@ jobs:
 
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.DOCKERHUB_REGISTRY_NAME }}
 
@@ -232,7 +232,7 @@ jobs:
 
       - name: Docker meta (tag was created)
         if: ${{ needs.tag.outputs.tag_created == 'true' }}
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.DOCKERHUB_REGISTRY_NAME }}
           tags: |
@@ -241,7 +241,7 @@ jobs:
 
       - name: Docker meta (tag was not created)
         if: ${{ needs.tag.outputs.tag_created == '' }}
-        uses: docker/metadata-action@v4
+        uses: docker/metadata-action@v5
         with:
           images: ${{ env.DOCKERHUB_REGISTRY_NAME }}
           tags: |

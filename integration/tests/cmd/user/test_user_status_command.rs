@@ -151,7 +151,7 @@ pub async fn should_help_match() {
             format!(
                 r#"Change status for user with given ID
 
-User ID can be specified as a username or ID
+The user ID can be specified as either a username or an ID
 
 Examples:
  iggy user status 2 active
@@ -163,7 +163,7 @@ Arguments:
   <USER_ID>
           User ID to update
 {CLAP_INDENT}
-          User ID can be specified as a username or ID
+          The user ID can be specified as either a username or an ID
 
   <STATUS>
           New status

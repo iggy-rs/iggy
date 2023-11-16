@@ -19,6 +19,7 @@ use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::cmd::users::change_password::ChangePasswordCmd;
+use iggy::cmd::users::update_permissions::UpdatePermissionsCmd;
 use iggy::cmd::users::update_user::{UpdateUserCmd, UpdateUserType};
 use iggy::cmd::{
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
@@ -153,6 +154,14 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
                 change_pwd_args.user_id,
                 change_pwd_args.current_password,
                 change_pwd_args.new_password,
+            )),
+            UserAction::Permissions(permissions_args) => Box::new(UpdatePermissionsCmd::new(
+                permissions_args.user_id.clone(),
+                PermissionsArgs::new(
+                    permissions_args.global_permissions.clone(),
+                    permissions_args.stream_permissions.clone(),
+                )
+                .into(),
             )),
         },
     }

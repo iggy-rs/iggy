@@ -30,6 +30,7 @@ jobs:
             bin:
               - iggy-server
               - iggy-cli
+              - iggy
             name: iggy-Linux-arm-musl.tar.gz
             docker_arch: linux/arm/v7
             cross: true
@@ -41,6 +42,7 @@ jobs:
             bin:
               - iggy-server
               - iggy-cli
+              - iggy
             name: iggy-Linux-aarch64-musl.tar.gz
             docker_arch: linux/arm64/v8
             cross: true

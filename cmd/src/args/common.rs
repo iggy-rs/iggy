@@ -2,6 +2,7 @@ use clap::ValueEnum;
 use iggy::cmd::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokensOutput;
 use iggy::cmd::streams::get_streams::GetStreamsOutput;
 use iggy::cmd::topics::get_topics::GetTopicsOutput;
+use iggy::cmd::users::get_users::GetUsersOutput;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub(crate) enum ListMode {
@@ -32,6 +33,15 @@ impl From<ListMode> for GetPersonalAccessTokensOutput {
         match mode {
             ListMode::Table => GetPersonalAccessTokensOutput::Table,
             ListMode::List => GetPersonalAccessTokensOutput::List,
+        }
+    }
+}
+
+impl From<ListMode> for GetUsersOutput {
+    fn from(mode: ListMode) -> Self {
+        match mode {
+            ListMode::Table => GetUsersOutput::Table,
+            ListMode::List => GetUsersOutput::List,
         }
     }
 }

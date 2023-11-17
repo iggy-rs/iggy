@@ -34,7 +34,10 @@ use iggy::cmd::{
         create_topic::CreateTopicCmd, delete_topic::DeleteTopicCmd, get_topic::GetTopicCmd,
         get_topics::GetTopicsCmd, update_topic::UpdateTopicCmd,
     },
-    users::{create_user::CreateUserCmd, delete_user::DeleteUserCmd},
+    users::{
+        create_user::CreateUserCmd, delete_user::DeleteUserCmd, get_user::GetUserCmd,
+        get_users::GetUsersCmd,
+    },
     utils::{
         message_expiry::MessageExpiry, personal_access_token_expiry::PersonalAccessTokenExpiry,
     },
@@ -133,6 +136,12 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
             )),
             UserAction::Delete(user_delete_args) => {
                 Box::new(DeleteUserCmd::new(user_delete_args.user_id.clone()))
+            }
+            UserAction::Get(user_get_args) => {
+                Box::new(GetUserCmd::new(user_get_args.user_id.clone()))
+            }
+            UserAction::List(user_list_args) => {
+                Box::new(GetUsersCmd::new(user_list_args.list_mode.into()))
             }
         },
     }

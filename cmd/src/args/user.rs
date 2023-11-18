@@ -1,3 +1,4 @@
+use crate::args::common::ListMode;
 use crate::args::permissions::stream::StreamPermissionsArg;
 use crate::args::permissions::UserStatusArg;
 use clap::{Args, Subcommand};
@@ -26,6 +27,23 @@ pub(crate) enum UserAction {
     ///  iggy user delete testuser
     #[clap(verbatim_doc_comment)]
     Delete(UserDeleteArgs),
+    /// Get details of a single user with given ID
+    ///
+    /// User ID can be specified as a username or ID
+    ///
+    /// Examples:
+    ///  iggy user get 2
+    ///  iggy user get testuser
+    #[clap(verbatim_doc_comment)]
+    Get(UserGetArgs),
+    /// List all users
+    ///
+    /// Examples:
+    ///  iggy user list
+    ///  iggy user list --list-mode table
+    ///  iggy user list -l table
+    #[clap(verbatim_doc_comment)]
+    List(UserListArgs),
 }
 
 #[derive(Debug, Clone, Args)]
@@ -98,4 +116,19 @@ pub(crate) struct UserDeleteArgs {
     ///
     /// User ID can be specified as a username or ID
     pub(crate) user_id: Identifier,
+}
+
+#[derive(Debug, Clone, Args)]
+pub(crate) struct UserGetArgs {
+    /// User ID to get
+    ///
+    /// User ID can be specified as a username or ID
+    pub(crate) user_id: Identifier,
+}
+
+#[derive(Debug, Clone, Args)]
+pub(crate) struct UserListArgs {
+    /// List mode (table or list)
+    #[clap(short, long, value_enum, default_value_t = ListMode::Table)]
+    pub(crate) list_mode: ListMode,
 }

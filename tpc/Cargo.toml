@@ -19,7 +19,7 @@ thiserror = "1.0.40"
 toml = "0.8.8"
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
-tracing-appender = "0.2.2"
+tracing-appender = "0.2.3"
 monoio = { version = "0.1.10-beta.1", features = ["signal"] }
 
 [[bin]]

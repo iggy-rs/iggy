@@ -7,6 +7,9 @@ pub static PRINT_TARGET: &str = "iggy::cmd::output";
 #[async_trait]
 pub trait CliCommand {
     fn explain(&self) -> String;
+    fn use_tracing(&self) -> bool {
+        true
+    }
     fn login_required(&self) -> bool {
         true
     }

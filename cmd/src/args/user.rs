@@ -11,8 +11,6 @@ use super::permissions::global::GlobalPermissionsArg;
 pub(crate) enum UserAction {
     /// Create user with given username and password
     ///
-    /// Stream ID can be specified as a stream name or ID
-    ///
     /// Examples
     ///  iggy user create testuser pass#1%X!
     ///  iggy user create guest guess --user-status inactive
@@ -44,13 +42,49 @@ pub(crate) enum UserAction {
     ///  iggy user list -l table
     #[clap(verbatim_doc_comment)]
     List(UserListArgs),
+    /// Change username for user with given ID
+    ///
+    /// User ID can be specified as a username or ID
+    ///
+    /// Examples:
+    ///  iggy user name 2 new_user_name
+    ///  iggy user name testuser test_user
+    #[clap(verbatim_doc_comment)]
+    Name(UserNameArgs),
+    /// Change status for user with given ID
+    ///
+    /// User ID can be specified as a username or ID
+    ///
+    /// Examples:
+    ///  iggy user status 2 active
+    ///  iggy user status testuser inactive
+    #[clap(verbatim_doc_comment)]
+    Status(UserStatusArgs),
+    /// Change password for user with given ID
+    ///
+    /// User ID can be specified as a username or ID
+    ///
+    /// Examples:
+    ///  iggy user password 2
+    ///  iggy user password client
+    ///  iggy user password 3 current_password new_password
+    ///  iggy user password testuser curpwd p@sswor4
+    #[clap(verbatim_doc_comment)]
+    Password(UserPasswordArgs),
 }
 
 #[derive(Debug, Clone, Args)]
 pub(crate) struct UserCreateArgs {
     /// Username
+    ///
+    /// Unique identifier for the user account on iggy server,
+    /// must be between 3 and 50 characters long.
+    #[clap(verbatim_doc_comment)]
     pub(crate) username: String,
     /// Password
+    ///
+    /// Password of the user, must be between 3 and 100 characters long.
+    #[clap(verbatim_doc_comment)]
     pub(crate) password: String,
     /// User status
     #[clap(short, long)]
@@ -131,4 +165,52 @@ pub(crate) struct UserListArgs {
     /// List mode (table or list)
     #[clap(short, long, value_enum, default_value_t = ListMode::Table)]
     pub(crate) list_mode: ListMode,
+}
+
+#[derive(Debug, Clone, Args)]
+pub(crate) struct UserNameArgs {
+    /// User ID to update
+    ///
+    /// User ID can be specified as a username or ID
+    pub(crate) user_id: Identifier,
+    /// New username
+    ///
+    /// New and unique identifier for the user account on iggy server,
+    /// must be between 3 and 50 characters long.
+    #[clap(verbatim_doc_comment)]
+    pub(crate) username: String,
+}
+
+#[derive(Debug, Clone, Args)]
+pub(crate) struct UserStatusArgs {
+    /// User ID to update
+    ///
+    /// User ID can be specified as a username or ID
+    pub(crate) user_id: Identifier,
+    /// New status
+    pub(crate) status: UserStatusArg,
+}
+
+#[derive(Debug, Clone, Args)]
+pub(crate) struct UserPasswordArgs {
+    /// User ID to update
+    ///
+    /// User ID can be specified as a username or ID
+    pub(crate) user_id: Identifier,
+    /// Current password
+    ///
+    /// Current password, must be between 3 and 100 characters long.
+    /// An optional parameter to specify the current password for the given user.
+    /// If not provided, the user will be prompted interactively to enter the
+    /// password securely, and the quiet mode option will not have any effect.
+    #[clap(verbatim_doc_comment)]
+    pub(crate) current_password: Option<String>,
+    /// New password
+    ///
+    /// New password, must be between 3 and 100 characters long.
+    /// An optional parameter to specify the new password for the given user.
+    /// If not provided, the user will be prompted interactively to enter the
+    /// password securely, and the quiet mode option will not have any effect.
+    #[clap(verbatim_doc_comment)]
+    pub(crate) new_password: Option<String>,
 }

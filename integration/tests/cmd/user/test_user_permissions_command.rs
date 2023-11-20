@@ -1,75 +1,49 @@
 use crate::cmd::common::{
-    IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, CLAP_INDENT, USAGE_PREFIX,
+    IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, TestUserId, CLAP_INDENT,
+    USAGE_PREFIX,
 };
 use crate::cmd::user::common::PermissionsTestArgs;
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::models::permissions::Permissions;
 use iggy::models::permissions::{GlobalPermissions, StreamPermissions, TopicPermissions};
-use iggy::models::{permissions::Permissions, user_status::UserStatus};
+use iggy::models::user_info::UserId;
+use iggy::users::create_user::CreateUser;
 use iggy::users::get_user::GetUser;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone)]
-enum UserStatusTest {
-    Default,
-    Active,
-    Inactive,
-}
-
-impl UserStatusTest {
-    fn as_arg(&self) -> Vec<String> {
-        match self {
-            Self::Default => vec![],
-            Self::Active => vec![String::from("--user-status"), String::from("active")],
-            Self::Inactive => vec![String::from("--user-status"), String::from("inactive")],
-        }
-    }
-}
-
-impl Default for UserStatusTest {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
-impl From<UserStatusTest> for UserStatus {
-    fn from(value: UserStatusTest) -> Self {
-        match value {
-            UserStatusTest::Default => Self::Active,
-            UserStatusTest::Active => Self::Active,
-            UserStatusTest::Inactive => Self::Inactive,
-        }
-    }
-}
-
-struct TestUserCreateCmd {
+struct TestUserPermissionsCmd {
     username: String,
-    password: String,
-    status: UserStatusTest,
     permissions: PermissionsTestArgs,
+    using_identifier: TestUserId,
+    user_id: Option<UserId>,
 }
 
-impl TestUserCreateCmd {
+impl TestUserPermissionsCmd {
     fn new(
         username: String,
-        password: String,
-        status: UserStatusTest,
         permissions: PermissionsTestArgs,
+        using_identifier: TestUserId,
     ) -> Self {
         Self {
             username,
-            password,
-            status,
             permissions,
+            using_identifier,
+            user_id: None,
         }
     }
 
     fn to_args(&self) -> Vec<String> {
-        let mut args = vec![self.username.clone(), self.password.clone()];
-        args.extend(self.status.as_arg());
+        let mut args = match self.using_identifier {
+            TestUserId::Named => vec![self.username.clone()],
+            TestUserId::Numeric => {
+                vec![format!("{}", self.user_id.unwrap())]
+            }
+        };
+
         args.extend(self.permissions.as_arg());
 
         args
@@ -77,22 +51,45 @@ impl TestUserCreateCmd {
 }
 
 #[async_trait]
-impl IggyCmdTestCase for TestUserCreateCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
+impl IggyCmdTestCase for TestUserPermissionsCmd {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
+        let create_user = client
+            .create_user(&CreateUser {
+                username: self.username.clone(),
+                ..Default::default()
+            })
+            .await;
+        assert!(create_user.is_ok());
+        let user = client
+            .get_user(&GetUser {
+                user_id: Identifier::from_str_value(self.username.as_str()).unwrap(),
+            })
+            .await;
+        assert!(user.is_ok());
+        self.user_id = Some(user.unwrap().id);
+    }
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
             .arg("user")
-            .arg("create")
+            .arg("permissions")
             .args(self.to_args())
             .with_env_credentials()
     }
 
     fn verify_command(&self, command_state: Assert) {
-        command_state
-            .success()
-            .stdout(diff(format!("Executing create user with username: {} and password: {}\nUser with username: {} and password: {} created\n",
-                                            self.username, self.password, self.username, self.password)));
+        let message = match self.using_identifier {
+            TestUserId::Named => format!(
+                "Executing update permissions for user with ID: {}\nPermissions for user with ID: {} updated\n",
+                self.username, self.username
+            ),
+            TestUserId::Numeric => format!(
+                "Executing update permissions for user with ID: {}\nPermissions for user with ID: {} updated\n",
+                self.user_id.unwrap(), self.user_id.unwrap()
+            ),
+        };
+
+        command_state.success().stdout(diff(message));
     }
 
     async fn verify_server_state(&self, client: &dyn Client) {
@@ -104,7 +101,6 @@ impl IggyCmdTestCase for TestUserCreateCmd {
         assert!(user.is_ok());
         let user = user.unwrap();
         assert_eq!(user.username, self.username);
-        assert_eq!(user.status, self.status.clone().into());
         assert_eq!(
             user.permissions,
             self.permissions.expected_permissions.clone()
@@ -119,36 +115,10 @@ pub async fn should_be_successful() {
 
     iggy_cmd_test.setup().await;
     iggy_cmd_test
-        .execute_test(TestUserCreateCmd::new(
-            String::from("username"),
-            String::from("password"),
-            UserStatusTest::Default,
-            PermissionsTestArgs::default(),
-        ))
-        .await;
-    iggy_cmd_test
-        .execute_test(TestUserCreateCmd::new(
-            String::from("active_user"),
-            String::from("password"),
-            UserStatusTest::Active,
-            PermissionsTestArgs::default(),
-        ))
-        .await;
-    iggy_cmd_test
-        .execute_test(TestUserCreateCmd::new(
-            String::from("inactive_user"),
-            String::from("password"),
-            UserStatusTest::Inactive,
-            PermissionsTestArgs::default(),
-        ))
-        .await;
-    iggy_cmd_test
-        .execute_test(TestUserCreateCmd::new(
+        .execute_test(TestUserPermissionsCmd::new(
             String::from("reader"),
-            String::from("password"),
-            UserStatusTest::Active,
             PermissionsTestArgs::new(
-                Some(String::from("r_srv,r_usr,r_top")),
+                Some(String::from("r_srv,r_usr,r_top,s_msg,p_msg")),
                 vec![],
                 Some(Permissions {
                     global: GlobalPermissions {
@@ -160,19 +130,18 @@ pub async fn should_be_successful() {
                         read_streams: false,
                         manage_topics: false,
                         read_topics: true,
-                        poll_messages: false,
-                        send_messages: false,
+                        poll_messages: true,
+                        send_messages: true,
                     },
                     streams: None,
                 }),
             ),
+            TestUserId::Named,
         ))
         .await;
     iggy_cmd_test
-        .execute_test(TestUserCreateCmd::new(
+        .execute_test(TestUserPermissionsCmd::new(
             String::from("stream3"),
-            String::from("password"),
-            UserStatusTest::Active,
             PermissionsTestArgs::new(
                 None,
                 vec![String::from("3")],
@@ -181,23 +150,22 @@ pub async fn should_be_successful() {
                     streams: Some(HashMap::from([(3u32, StreamPermissions::default())])),
                 }),
             ),
+            TestUserId::Numeric,
         ))
         .await;
     iggy_cmd_test
-        .execute_test(TestUserCreateCmd::new(
-            String::from("stream1"),
-            String::from("password"),
-            UserStatusTest::Active,
+        .execute_test(TestUserPermissionsCmd::new(
+            String::from("stream1topic2full"),
             PermissionsTestArgs::new(
                 None,
-                vec![String::from("1#1:m_top,r_top,p_msg,s_msg")],
+                vec![String::from("1#2:m_top,r_top,p_msg,s_msg")],
                 Some(Permissions {
                     global: GlobalPermissions::default(),
                     streams: Some(HashMap::from([(
                         1u32,
                         StreamPermissions {
                             topics: Some(HashMap::from([(
-                                1,
+                                2,
                                 TopicPermissions {
                                     manage_topic: true,
                                     read_topic: true,
@@ -210,16 +178,15 @@ pub async fn should_be_successful() {
                     )])),
                 }),
             ),
+            TestUserId::Named,
         ))
         .await;
     iggy_cmd_test
-        .execute_test(TestUserCreateCmd::new(
-            String::from("giant"),
-            String::from("password"),
-            UserStatusTest::Active,
+        .execute_test(TestUserPermissionsCmd::new(
+            String::from("misc"),
             PermissionsTestArgs::new(
                 Some(String::from("m_srv,r_srv,m_str,r_str")),
-                vec![String::from("2#1:p_msg,s_msg")],
+                vec![String::from("2#2:p_msg,s_msg")],
                 Some(Permissions {
                     global: GlobalPermissions {
                         manage_servers: true,
@@ -237,7 +204,7 @@ pub async fn should_be_successful() {
                         2u32,
                         StreamPermissions {
                             topics: Some(HashMap::from([(
-                                1,
+                                2u32,
                                 TopicPermissions {
                                     manage_topic: false,
                                     read_topic: false,
@@ -250,6 +217,7 @@ pub async fn should_be_successful() {
                     )])),
                 }),
             ),
+            TestUserId::Named,
         ))
         .await;
 }

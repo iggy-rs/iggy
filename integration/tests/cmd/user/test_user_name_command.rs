@@ -79,11 +79,6 @@ impl IggyCmdTestCase for TestUserNameCmd {
         let message = format!("Executing update user with ID: {} with username: {}\nUser with ID: {} updated with username: {}\n",
                                       identifier, self.new_username, identifier, self.new_username);
 
-        // let message = match self.using_identifier {
-        //     TestUserId::Named => format!("Executing update user with ID: {} with username: {}\nUser with ID: {} updated with username: {}\n", self.username, self.new_username, self.username, self.new_username),
-        //     TestUserId::Numeric => format!("Executing update user with ID: {} with username: {}\nUser with ID: {} updated with username: {}\n", self.user_id.unwrap(), self.new_username, self.user_id.unwrap(), self.new_username),
-        // };
-
         command_state.success().stdout(diff(message));
     }
 
@@ -137,7 +132,7 @@ pub async fn should_help_match() {
             format!(
                 r#"Change username for user with given ID
 
-User ID can be specified as a username or ID
+The user ID can be specified as either a username or an ID
 
 Examples:
  iggy user name 2 new_user_name
@@ -149,7 +144,7 @@ Arguments:
   <USER_ID>
           User ID to update
 {CLAP_INDENT}
-          User ID can be specified as a username or ID
+          The user ID can be specified as either a username or an ID
 
   <USERNAME>
           New username

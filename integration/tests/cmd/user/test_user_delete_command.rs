@@ -126,7 +126,7 @@ pub async fn should_help_match() {
             format!(
                 r"Delete user with given ID
 
-User ID can be specified as a username or ID
+The user ID can be specified as either a username or an ID
 
 Examples:
  iggy user delete 2
@@ -138,7 +138,7 @@ Arguments:
   <USER_ID>
           User ID to delete
 {CLAP_INDENT}
-          User ID can be specified as a username or ID
+          The user ID can be specified as either a username or an ID
 
 Options:
   -h, --help

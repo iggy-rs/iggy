@@ -242,7 +242,7 @@ pub async fn should_help_match() {
             format!(
                 r#"Get details of a single user with given ID
 
-User ID can be specified as a username or ID
+The user ID can be specified as either a username or an ID
 
 Examples:
  iggy user get 2
@@ -254,7 +254,7 @@ Arguments:
   <USER_ID>
           User ID to get
 {CLAP_INDENT}
-          User ID can be specified as a username or ID
+          The user ID can be specified as either a username or an ID
 
 Options:
   -h, --help

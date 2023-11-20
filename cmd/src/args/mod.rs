@@ -29,7 +29,7 @@ static CARGO_PKG_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
 pub(crate) struct IggyConsoleArgs {
-    #[clap(flatten)]
+    #[clap(flatten, verbatim_doc_comment)]
     pub(crate) iggy: IggyArgs,
 
     #[clap(subcommand)]
@@ -48,7 +48,11 @@ pub(crate) struct IggyConsoleArgs {
     pub(crate) username: Option<String>,
 
     /// Iggy server password
-    #[clap(short, long)]
+    ///
+    /// An optional parameter to specify the password for authentication.
+    /// If not provided, user will be prompted interactively to enter the
+    /// password securely.
+    #[clap(short, long, verbatim_doc_comment)]
     pub(crate) password: Option<String>,
 
     /// Iggy server personal access token
@@ -58,9 +62,9 @@ pub(crate) struct IggyConsoleArgs {
     /// Iggy server personal access token name
     ///
     /// When personal access token is created using command line tool and stored
-    /// inside platform-specific secure storage its name can be used as an value for
-    /// this option without revealing token value.
-    #[clap(short = 'n', long, group = "credentials")]
+    /// inside platform-specific secure storage its name can be used as a value
+    /// for this option without revealing the token value.
+    #[clap(short = 'n', long, group = "credentials", verbatim_doc_comment)]
     pub(crate) token_name: Option<String>,
 
     /// Shell completion generator for iggy command

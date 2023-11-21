@@ -33,7 +33,7 @@ jobs:
         id: extract_version
         run: |
           version=$(cargo pkgid -p server | cut -d# -f2 | cut -d: -f2)
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "server_version=$version" >> "$GITHUB_OUTPUT"
           echo "::notice ::Version from Cargo.toml $version"
 
       - name: Check if version is a Git tag
@@ -41,12 +41,12 @@ jobs:
         if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock server/Cargo.toml' }}
         id: check_git_tag
         with:
-          tag: "${{ steps.extract_version.outputs.version }}"
+          tag: "server-${{ steps.extract_version.outputs.version }}"
 
       - name: Print message
         if: ${{ steps.check_git_tag.outputs.exists == 'true' }}
         run: |
-          echo "::notice ::Tag ${{ steps.extract_version.outputs.version }} exists, skipping tag creation"
+          echo "::notice ::Tag server-${{ steps.extract_version.outputs.version }} exists, skipping tag creation"
 
       - name: Create tag
         if: ${{ steps.check_git_tag.outputs.exists == 'false' }}
@@ -54,17 +54,13 @@ jobs:
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git tag -a ${{ steps.extract_version.outputs.version }} -m "${{ steps.extract_version.outputs.version }}"
-          git push origin ${{ steps.extract_version.outputs.version }}
-          echo "::notice ::Created ${{ steps.extract_version.outputs.version }} tag"
+          git tag -a server-${{ steps.extract_version.outputs.version }} -m "server-${{ steps.extract_version.outputs.version }}"
+          git push origin server-${{ steps.extract_version.outputs.version }}
+          echo "::notice ::Created server-${{ steps.extract_version.outputs.version }} tag"
           echo "tag_created=true" >> "$GITHUB_OUTPUT"
 
-      - name: Get Repository Name
-        id: repository
-        run: echo "name=${GITHUB_REPOSITORY#*/}" >> $GITHUB_OUTPUT
-
     outputs:
-      version: ${{ steps.extract_version.outputs.version }}
+      server_version: ${{ steps.extract_version.outputs.server_version }}
       tag_created: ${{ steps.tagging.outputs.tag_created }}
 
   release_and_publish:
@@ -113,7 +109,7 @@ jobs:
         toolchain:
           - stable
     outputs:
-      version: ${{ needs.tag.outputs.version }}
+      version: ${{ needs.tag.outputs.server_version }}
       tag_created: ${{ needs.tag.outputs.tag_created }}
 
     steps:
@@ -155,7 +151,7 @@ jobs:
           path: release_artifacts/
 
       - name: Print message
-        run: echo "::notice ::Published ${{ needs.tag.outputs.version }} release artifacts on GitHub"
+        run: echo "::notice ::Published ${{ needs.tag.outputs.server_version }} release artifacts on GitHub"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -236,7 +232,7 @@ jobs:
         with:
           images: ${{ env.DOCKERHUB_REGISTRY_NAME }}
           tags: |
-            ${{ needs.tag.outputs.version }}
+            ${{ needs.tag.outputs.server_version }}
             latest
 
       - name: Docker meta (tag was not created)

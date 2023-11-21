@@ -148,6 +148,10 @@ Options:
 
   -p, --password <PASSWORD>
           Iggy server password
+{CLAP_INDENT}
+          An optional parameter to specify the password for authentication.
+          If not provided, user will be prompted interactively to enter the
+          password securely.
 
   -t, --token <TOKEN>
           Iggy server personal access token
@@ -155,7 +159,9 @@ Options:
   -n, --token-name <TOKEN_NAME>
           Iggy server personal access token name
 {CLAP_INDENT}
-          When personal access token is created using command line tool and stored inside platform-specific secure storage its name can be used as an value for this option without revealing token value.
+          When personal access token is created using command line tool and stored
+          inside platform-specific secure storage its name can be used as a value
+          for this option without revealing the token value.
 
       --generate <GENERATOR>
           Shell completion generator for iggy command

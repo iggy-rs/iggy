@@ -19,9 +19,9 @@ pub struct ChangePassword {
     /// Unique user ID (numeric or name).
     #[serde(skip)]
     pub user_id: Identifier,
-    /// Current password, must be between 3 and 50 characters long.
+    /// Current password, must be between 3 and 100 characters long.
     pub current_password: String,
-    /// New password, must be between 3 and 50 characters long.
+    /// New password, must be between 3 and 100 characters long.
     pub new_password: String,
 }
 

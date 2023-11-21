@@ -18,6 +18,9 @@ use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::cmd::users::change_password::ChangePasswordCmd;
+use iggy::cmd::users::update_permissions::UpdatePermissionsCmd;
+use iggy::cmd::users::update_user::{UpdateUserCmd, UpdateUserType};
 use iggy::cmd::{
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
     personal_access_tokens::{
@@ -124,25 +127,42 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
             ),
         },
         Command::User(command) => match command {
-            UserAction::Create(user_create_args) => Box::new(CreateUserCmd::new(
-                user_create_args.username.clone(),
-                user_create_args.password.clone(),
-                user_create_args.user_status.clone().into(),
+            UserAction::Create(create_args) => Box::new(CreateUserCmd::new(
+                create_args.username.clone(),
+                create_args.password.clone(),
+                create_args.user_status.clone().into(),
                 PermissionsArgs::new(
-                    user_create_args.global_permissions.clone(),
-                    user_create_args.stream_permissions.clone(),
+                    create_args.global_permissions.clone(),
+                    create_args.stream_permissions.clone(),
                 )
                 .into(),
             )),
-            UserAction::Delete(user_delete_args) => {
-                Box::new(DeleteUserCmd::new(user_delete_args.user_id.clone()))
+            UserAction::Delete(delete_args) => {
+                Box::new(DeleteUserCmd::new(delete_args.user_id.clone()))
             }
-            UserAction::Get(user_get_args) => {
-                Box::new(GetUserCmd::new(user_get_args.user_id.clone()))
-            }
-            UserAction::List(user_list_args) => {
-                Box::new(GetUsersCmd::new(user_list_args.list_mode.into()))
-            }
+            UserAction::Get(get_args) => Box::new(GetUserCmd::new(get_args.user_id.clone())),
+            UserAction::List(list_args) => Box::new(GetUsersCmd::new(list_args.list_mode.into())),
+            UserAction::Name(name_args) => Box::new(UpdateUserCmd::new(
+                name_args.user_id.clone(),
+                UpdateUserType::Name(name_args.username.clone()),
+            )),
+            UserAction::Status(status_args) => Box::new(UpdateUserCmd::new(
+                status_args.user_id.clone(),
+                UpdateUserType::Status(status_args.status.clone().into()),
+            )),
+            UserAction::Password(change_pwd_args) => Box::new(ChangePasswordCmd::new(
+                change_pwd_args.user_id,
+                change_pwd_args.current_password,
+                change_pwd_args.new_password,
+            )),
+            UserAction::Permissions(permissions_args) => Box::new(UpdatePermissionsCmd::new(
+                permissions_args.user_id.clone(),
+                PermissionsArgs::new(
+                    permissions_args.global_permissions.clone(),
+                    permissions_args.stream_permissions.clone(),
+                )
+                .into(),
+            )),
         },
     }
 }
@@ -186,7 +206,11 @@ async fn main() -> Result<(), IggyCmdError> {
     credentials.set_iggy_client(&client);
     credentials.login_user().await?;
 
-    event!(target: PRINT_TARGET, Level::INFO, "Executing {}", command.explain());
+    if command.use_tracing() {
+        event!(target: PRINT_TARGET, Level::INFO, "Executing {}", command.explain());
+    } else {
+        println!("Executing {}", command.explain());
+    }
     command.execute_cmd(&client).await?;
 
     credentials.logout_user().await?;

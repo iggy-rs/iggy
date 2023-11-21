@@ -1,5 +1,11 @@
+mod common;
 mod test_login_options;
 mod test_user_create_command;
 mod test_user_delete_command;
 mod test_user_get_command;
+mod test_user_help_command;
 mod test_user_list_command;
+mod test_user_name_command;
+mod test_user_password_command;
+mod test_user_permissions_command;
+mod test_user_status_command;

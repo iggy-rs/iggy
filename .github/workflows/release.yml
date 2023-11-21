@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check if Cargo.toml and Cargo.lock are changed
-        uses: tj-actions/changed-files@v39
+        uses: tj-actions/changed-files@v40
         id: all_changed_files
         with:
           files: |
@@ -183,7 +183,7 @@ jobs:
 
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v5
         with:
           context: ./
           file: ./Dockerfile.ci

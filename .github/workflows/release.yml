@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check if Cargo.toml and Cargo.lock are changed
-        uses: tj-actions/changed-files@v39
+        uses: tj-actions/changed-files@v40
         id: all_changed_files
         with:
           files: |
@@ -170,7 +170,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -222,7 +222,7 @@ jobs:
           path: /tmp/digests
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}

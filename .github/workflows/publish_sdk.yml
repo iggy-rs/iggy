@@ -82,7 +82,7 @@ jobs:
       - name: if sdk published
         if: fromJSON(steps.publish-crate.outputs.published).*
         run: |
-          LIST="${{ join(fromJSON(steps.publish-crate.outputs.published).*.name, ', ')) }}"
+          LIST="${{ join(fromJSON(steps.publish-crate.outputs.published).*.name, ', ') }}"
           echo "Published crates: $LIST"
 
   finalize:

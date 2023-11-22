@@ -41,12 +41,12 @@ jobs:
         if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock server/Cargo.toml' }}
         id: check_git_tag
         with:
-          tag: "server-${{ steps.extract_version.outputs.version }}"
+          tag: "server-${{ steps.extract_version.outputs.server_version }}"
 
       - name: Print message
         if: ${{ steps.check_git_tag.outputs.exists == 'true' }}
         run: |
-          echo "::notice ::Tag server-${{ steps.extract_version.outputs.version }} exists, skipping tag creation"
+          echo "::notice ::Tag server-${{ steps.extract_version.outputs.server_version }} exists, skipping tag creation"
 
       - name: Create tag
         if: ${{ steps.check_git_tag.outputs.exists == 'false' }}
@@ -54,9 +54,9 @@ jobs:
         run: |
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
-          git tag -a server-${{ steps.extract_version.outputs.version }} -m "server-${{ steps.extract_version.outputs.version }}"
-          git push origin server-${{ steps.extract_version.outputs.version }}
-          echo "::notice ::Created server-${{ steps.extract_version.outputs.version }} tag"
+          git tag -a server-${{ steps.extract_version.outputs.server_version }} -m "server-${{ steps.extract_version.outputs.server_version }}"
+          git push origin server-${{ steps.extract_version.outputs.server_version }}
+          echo "::notice ::Created server-${{ steps.extract_version.outputs.server_version }} tag"
           echo "tag_created=true" >> "$GITHUB_OUTPUT"
 
     outputs:

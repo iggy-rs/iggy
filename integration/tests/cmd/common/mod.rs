@@ -15,7 +15,8 @@ use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use integration::test_server::TestServer;
 use std::fmt::{Display, Formatter, Result};
-use std::process::Command;
+use std::io::Write;
+use std::process::{Command, Stdio};
 use std::sync::Arc;
 
 pub(crate) enum TestIdentifier {
@@ -59,6 +60,9 @@ impl OutputFormat {
 pub(crate) trait IggyCmdTestCase {
     async fn prepare_server_state(&mut self, client: &dyn Client);
     fn get_command(&self) -> IggyCmdCommand;
+    fn provide_stdin_input(&self) -> Option<Vec<String>> {
+        None
+    }
     fn verify_command(&self, command_state: Assert);
     async fn verify_server_state(&self, client: &dyn Client);
     fn protocol(&self, server: &TestServer) -> Vec<String> {
@@ -151,8 +155,32 @@ impl IggyCmdTest {
             command_args.get_opts_and_args().join(" ")
         );
 
-        // Execute test command
-        let assert = command.args(command_args.get_opts_and_args()).assert();
+        let command = command.args(command_args.get_opts_and_args());
+        let assert = if let Some(stdin_input) = test_case.provide_stdin_input() {
+            let mut child = command
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .spawn()
+                .expect("Failed to spawn child process");
+
+            let mut stdin = child.stdin.take().expect("Failed to open stdin");
+            std::thread::spawn(move || {
+                stdin_input.into_iter().for_each(|line| {
+                    stdin
+                        .write_all(format!("{}\n", line).as_bytes())
+                        .unwrap_or_else(|_| panic!("Failed to write to stdin \"{}\"", line,))
+                });
+            });
+
+            child
+                .wait_with_output()
+                .expect("Failed to read stdout")
+                .assert()
+        } else {
+            // Execute test command
+            command.assert()
+        };
+
         // Verify command output, exit code, etc in the test (if needed)
         test_case.verify_command(assert);
         // Verify iggy server state after the test

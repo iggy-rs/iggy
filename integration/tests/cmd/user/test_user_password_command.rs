@@ -12,11 +12,18 @@ use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
 
+enum ProvidePasswords {
+    BothAsArgs,
+    CurrentAsArg,
+    BothViaStdin,
+}
+
 struct TestUserPasswordCmd {
     username: String,
     password: String,
     new_password: String,
     using_identifier: TestUserId,
+    password_input: ProvidePasswords,
     user_id: Option<UserId>,
 }
 
@@ -26,29 +33,23 @@ impl TestUserPasswordCmd {
         password: String,
         new_password: String,
         using_identifier: TestUserId,
+        password_input: ProvidePasswords,
     ) -> Self {
         Self {
             username,
             password,
             new_password,
             using_identifier,
+            password_input,
             user_id: None,
         }
     }
 
     fn to_args(&self) -> Vec<String> {
         match self.using_identifier {
-            TestUserId::Named => vec![
-                self.username.clone(),
-                self.password.clone(),
-                format!("{}", self.new_password.clone()),
-            ],
+            TestUserId::Named => vec![self.username.clone()],
             TestUserId::Numeric => {
-                vec![
-                    format!("{}", self.user_id.unwrap()),
-                    self.password.clone(),
-                    format!("{}", self.new_password.clone()),
-                ]
+                vec![format!("{}", self.user_id.unwrap())]
             }
         }
     }
@@ -75,11 +76,31 @@ impl IggyCmdTestCase for TestUserPasswordCmd {
     }
 
     fn get_command(&self) -> IggyCmdCommand {
-        IggyCmdCommand::new()
+        let command = IggyCmdCommand::new()
             .arg("user")
             .arg("password")
-            .args(self.to_args())
-            .with_env_credentials()
+            .with_env_credentials();
+
+        match self.password_input {
+            ProvidePasswords::BothAsArgs => command
+                .args(self.to_args())
+                .arg(self.password.clone())
+                .arg(self.new_password.clone()),
+            ProvidePasswords::CurrentAsArg => {
+                command.args(self.to_args()).arg(self.password.clone())
+            }
+            ProvidePasswords::BothViaStdin => command.args(self.to_args()),
+        }
+    }
+
+    fn provide_stdin_input(&self) -> Option<Vec<String>> {
+        match self.password_input {
+            ProvidePasswords::BothAsArgs => None,
+            ProvidePasswords::CurrentAsArg => Some(vec![self.new_password.clone()]),
+            ProvidePasswords::BothViaStdin => {
+                Some(vec![self.password.clone(), self.new_password.clone()])
+            }
+        }
     }
 
     fn verify_command(&self, command_state: Assert) {
@@ -119,6 +140,7 @@ pub async fn should_be_successful() {
             String::from("password"),
             String::from("new-password"),
             TestUserId::Numeric,
+            ProvidePasswords::BothAsArgs,
         ))
         .await;
     iggy_cmd_test
@@ -127,6 +149,7 @@ pub async fn should_be_successful() {
             String::from("easy-pass"),
             String::from("P@$$w0r4"),
             TestUserId::Named,
+            ProvidePasswords::CurrentAsArg,
         ))
         .await;
     iggy_cmd_test
@@ -135,6 +158,7 @@ pub async fn should_be_successful() {
             String::from("1234"),
             String::from("4321"),
             TestUserId::Named,
+            ProvidePasswords::BothViaStdin,
         ))
         .await;
     iggy_cmd_test
@@ -143,6 +167,7 @@ pub async fn should_be_successful() {
             String::from("password"),
             String::from("password"),
             TestUserId::Named,
+            ProvidePasswords::CurrentAsArg,
         ))
         .await;
 }

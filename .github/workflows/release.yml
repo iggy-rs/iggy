@@ -83,7 +83,7 @@ jobs:
             cross: false
 
           - os_name: Linux-arm
-            os: ubuntu-22.04
+            os: ubuntu-latest
             target: arm-unknown-linux-musleabi
             bin:
               - iggy-server

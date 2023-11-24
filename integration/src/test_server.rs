@@ -1,6 +1,7 @@
 use assert_cmd::prelude::CommandCargoExt;
 use async_trait::async_trait;
 use derive_more::Display;
+use futures::executor::block_on;
 use iggy::client::{Client, StreamClient, UserClient};
 use iggy::clients::client::IggyClient;
 use iggy::identifier::Identifier;
@@ -12,12 +13,13 @@ use iggy::users::defaults::*;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::get_users::GetUsers;
 use iggy::users::login_user::LoginUser;
+use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
-use std::net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream, UdpSocket};
-use std::path::PathBuf;
+use std::net::{Ipv4Addr, SocketAddr};
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::thread::{panicking, sleep};
 use std::time::Duration;
@@ -47,7 +49,7 @@ pub enum Transport {
     Tcp,
 }
 
-#[derive(Display)]
+#[derive(Display, Debug)]
 enum ServerProtocolAddr {
     #[display(fmt = "RAW_TCP:{_0}")]
     RawTcp(SocketAddr),
@@ -59,6 +61,7 @@ enum ServerProtocolAddr {
     QuicUdp(SocketAddr),
 }
 
+#[derive(Debug)]
 pub struct TestServer {
     local_data_path: String,
     envs: HashMap<String, String>,
@@ -114,7 +117,7 @@ impl TestServer {
         }
 
         if server_addrs.is_empty() {
-            server_addrs = Self::get_free_addrs();
+            server_addrs = Self::get_server_addrs_with_random_port();
         }
 
         Self {
@@ -131,7 +134,6 @@ impl TestServer {
 
     pub fn start(&mut self) {
         self.set_server_addrs_from_env();
-        self.wait_until_server_freed_ports();
         self.cleanup();
         let files_path = self.local_data_path.clone();
         let mut command = if let Some(server_executable_path) = &self.server_executable_path {
@@ -180,7 +182,6 @@ impl TestServer {
                 }
             });
         }
-
         self.wait_until_server_has_bound();
     }
 
@@ -221,7 +222,6 @@ impl TestServer {
                 }
             }
         }
-        self.wait_until_server_freed_ports();
         self.cleanup();
     }
 
@@ -243,24 +243,12 @@ impl TestServer {
         }
     }
 
-    fn get_free_addrs() -> Vec<ServerProtocolAddr> {
-        let tcp_port1 = Self::get_free_tcp_port();
-        let tcp_port2 = Self::get_free_tcp_port();
-        let udp_port = Self::get_free_udp_port();
-
+    fn get_server_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
+        let addr = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0);
         vec![
-            ServerProtocolAddr::QuicUdp(SocketAddr::new(
-                Ipv4Addr::new(127, 0, 0, 1).into(),
-                udp_port,
-            )),
-            ServerProtocolAddr::RawTcp(SocketAddr::new(
-                Ipv4Addr::new(127, 0, 0, 1).into(),
-                tcp_port1,
-            )),
-            ServerProtocolAddr::HttpTcp(SocketAddr::new(
-                Ipv4Addr::new(127, 0, 0, 1).into(),
-                tcp_port2,
-            )),
+            ServerProtocolAddr::QuicUdp(addr),
+            ServerProtocolAddr::RawTcp(addr),
+            ServerProtocolAddr::HttpTcp(addr),
         ]
     }
 
@@ -282,86 +270,50 @@ impl TestServer {
         }
     }
 
-    fn wait_until_server_has_bound(&self) {
-        #[cfg(unix)]
-        for addr in &self.server_addrs {
-            Self::ensure_server_bound(addr);
-        }
+    fn wait_until_server_has_bound(&mut self) {
+        let config_path = format!("{}/runtime/current_config.toml", self.local_data_path);
+        let file_config_provider = FileConfigProvider::new(config_path.clone());
 
-        // Dirty hack for Windows
-        #[cfg(not(unix))]
-        sleep(Duration::from_secs(5))
-    }
-
-    fn wait_until_server_freed_ports(&self) {
-        #[cfg(unix)]
-        for addr in &self.server_addrs {
-            Self::wait_until_port_is_free(addr);
-        }
-
-        // Dirty hack for Windows
-        #[cfg(not(unix))]
-        sleep(Duration::from_secs(5))
-    }
-
-    fn ensure_server_bound(server_protocol_addr: &ServerProtocolAddr) {
         let max_attempts = (MAX_PORT_WAIT_DURATION_S * 1000) / SLEEP_INTERVAL_MS;
-        for _ in 0..max_attempts {
-            let success = match server_protocol_addr {
-                ServerProtocolAddr::RawTcp(addr) => TcpStream::connect(addr).is_ok(),
-                ServerProtocolAddr::HttpTcp(addr) => TcpStream::connect(addr).is_ok(),
-                ServerProtocolAddr::QuicUdp(addr) => {
-                    let socket =
-                        UdpSocket::bind("0.0.0.0:0").expect("Failed to bind to local port");
-                    socket.send_to(&[0], addr).is_ok()
+        self.server_addrs.clear();
+
+        let config = block_on(async {
+            let mut loaded_config = None;
+
+            for _ in 0..max_attempts {
+                if !Path::new(&config_path).exists() {
+                    sleep(Duration::from_millis(SLEEP_INTERVAL_MS));
+                    continue;
                 }
-            };
-
-            if success {
-                return;
+                match file_config_provider.load_config().await {
+                    Ok(config) => {
+                        loaded_config = Some(config);
+                        break;
+                    }
+                    Err(_) => sleep(Duration::from_millis(SLEEP_INTERVAL_MS)),
+                }
             }
-            sleep(Duration::from_millis(SLEEP_INTERVAL_MS));
+            loaded_config
+        });
+
+        if let Some(config) = config {
+            self.server_addrs.push(ServerProtocolAddr::QuicUdp(
+                config.quic.address.parse().unwrap(),
+            ));
+
+            self.server_addrs.push(ServerProtocolAddr::RawTcp(
+                config.tcp.address.parse().unwrap(),
+            ));
+
+            self.server_addrs.push(ServerProtocolAddr::HttpTcp(
+                config.http.address.parse().unwrap(),
+            ));
+        } else {
+            panic!(
+                "Failed to load config from file {} in {} s!",
+                config_path, MAX_PORT_WAIT_DURATION_S
+            );
         }
-
-        panic!(
-            "Failed to connect to the server at {} in {} seconds!",
-            server_protocol_addr, MAX_PORT_WAIT_DURATION_S
-        );
-    }
-
-    fn get_free_tcp_port() -> u16 {
-        let listener = TcpListener::bind(("0.0.0.0", 0)).unwrap();
-        let port = listener.local_addr().unwrap().port();
-        drop(listener);
-        port
-    }
-
-    fn get_free_udp_port() -> u16 {
-        let socket = UdpSocket::bind(("0.0.0.0", 0)).unwrap();
-        let port = socket.local_addr().unwrap().port();
-        drop(socket);
-        port
-    }
-
-    fn wait_until_port_is_free(server_protocol_addr: &ServerProtocolAddr) {
-        let max_attempts = (MAX_PORT_WAIT_DURATION_S * 1000) / SLEEP_INTERVAL_MS;
-        for _ in 0..max_attempts {
-            let success = match server_protocol_addr {
-                ServerProtocolAddr::RawTcp(addr) => TcpListener::bind(addr).is_ok(),
-                ServerProtocolAddr::HttpTcp(addr) => TcpListener::bind(addr).is_ok(),
-                ServerProtocolAddr::QuicUdp(addr) => UdpSocket::bind(addr).is_ok(),
-            };
-
-            if success {
-                return;
-            }
-            sleep(Duration::from_millis(SLEEP_INTERVAL_MS));
-        }
-
-        panic!(
-            "{} is still in use after {} seconds",
-            server_protocol_addr, MAX_PORT_WAIT_DURATION_S
-        );
     }
 
     fn get_stdout_file_path(&self) -> PathBuf {

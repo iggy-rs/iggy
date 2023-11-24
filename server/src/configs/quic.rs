@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct QuicConfig {
     pub enabled: bool,
     pub address: String,
@@ -14,7 +14,7 @@ pub struct QuicConfig {
     pub certificate: QuicCertificateConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct QuicCertificateConfig {
     pub self_signed: bool,
     pub cert_file: String,

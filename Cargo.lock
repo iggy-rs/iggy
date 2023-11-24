@@ -1690,6 +1690,7 @@ dependencies = [
  "server",
  "sled",
  "tokio",
+ "toml 0.8.4",
  "uuid",
 ]
 

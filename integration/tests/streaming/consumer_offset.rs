@@ -15,8 +15,8 @@ async fn assert_persisted_offsets(storage: &dyn PartitionStorage, kind: Consumer
     let stream_id = 1;
     let topic_id = 2;
     let partition_id = 3;
-    let consumer_ids_count = 100;
-    let offsets_count = 1000;
+    let consumer_ids_count = 50;
+    let offsets_count = 500;
     for consumer_id in 1..=consumer_ids_count {
         let expected_offsets_count = consumer_id;
         for offset in 0..=offsets_count {

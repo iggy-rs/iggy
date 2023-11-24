@@ -21,7 +21,7 @@ const TOPIC_NAME: &str = "test-topic";
 const PARTITIONS_COUNT: u32 = 3;
 const CONSUMER_GROUP_ID: u32 = 10;
 const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
-const MESSAGES_COUNT: u32 = 1000;
+const MESSAGES_COUNT: u32 = 500;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;

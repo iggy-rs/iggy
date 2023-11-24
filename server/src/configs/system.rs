@@ -11,6 +11,7 @@ use serde_with::DisplayFromStr;
 pub struct SystemConfig {
     pub path: String,
     pub database: DatabaseConfig,
+    pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
     pub cache: CacheConfig,
     pub retention_policy: RetentionPolicyConfig,
@@ -24,6 +25,11 @@ pub struct SystemConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DatabaseConfig {
+    pub path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct RuntimeConfig {
     pub path: String,
 }
 
@@ -94,6 +100,10 @@ impl SystemConfig {
 
     pub fn get_database_path(&self) -> String {
         format!("{}/{}", self.get_system_path(), self.database.path)
+    }
+
+    pub fn get_runtime_path(&self) -> String {
+        format!("{}/{}", self.get_system_path(), self.runtime.path)
     }
 
     pub fn get_streams_path(&self) -> String {

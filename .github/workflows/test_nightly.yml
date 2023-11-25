@@ -132,7 +132,7 @@ jobs:
         if: ${{ !(contains(needs.*.result, 'failure')) }}
         run: exit 0
       - name: Something went wrong
-        if: ${{ contains(needs.*.result, 'failure') }}
+        if: ${{ contains(needs.*.result, 'failure') && github.event_name != 'workflow_dispatch' }}
         uses: JasonEtco/create-an-issue@v2.9.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

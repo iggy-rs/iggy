@@ -109,7 +109,7 @@ jobs:
           command: "build"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' }}"
+          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
 
       - name: Run tests
         uses: houseabsolute/actions-rust-cross@v0
@@ -117,7 +117,7 @@ jobs:
           command: "test"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' }}"
+          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
 
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }

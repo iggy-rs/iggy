@@ -17,39 +17,70 @@ concurrency:
 
 jobs:
   build_and_test:
-    name: ${{ matrix.platform.skip_tests == true && 'build' || 'build and test' }} ${{ matrix.platform.os_name }}
+    name: 'build and test ${{ matrix.platform.profile }} ${{ matrix.platform.os_name }}'
     runs-on: ${{ matrix.platform.os }}
-    timeout-minutes: 45
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
         platform:
+          - os_name: Linux-x86_64-musl
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            name: iggy-Linux-x86_64-musl.tar.gz
+            cargo_command: cargo
+            profile: debug
+            docker_arch: linux/amd64
+            cross: false
+
+          - os_name: Linux-x86_64-musl
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            name: iggy-Linux-x86_64-musl.tar.gz
+            cargo_command: cargo
+            profile: release
+            docker_arch: linux/amd64
+            cross: false
+
           - os_name: Linux-arm
-            os: ubuntu-22.04
+            os: ubuntu-latest
             target: arm-unknown-linux-musleabi
-            bin:
-              - iggy-server
-              - iggy-cli
-              - iggy
             name: iggy-Linux-arm-musl.tar.gz
             docker_arch: linux/arm/v7
+            profile: debug
+            cross: true
+            qemu_runner: "qemu-arm"
+
+          - os_name: Linux-arm
+            os: ubuntu-latest
+            target: arm-unknown-linux-musleabi
+            name: iggy-Linux-arm-musl.tar.gz
+            docker_arch: linux/arm/v7
+            profile: release
             cross: true
             qemu_runner: "qemu-arm"
 
           - os_name: Linux-aarch64-musl
             os: ubuntu-latest
             target: aarch64-unknown-linux-musl
-            bin:
-              - iggy-server
-              - iggy-cli
-              - iggy
             name: iggy-Linux-aarch64-musl.tar.gz
             docker_arch: linux/arm64/v8
+            profile: debug
             cross: true
             qemu_runner: "qemu-aarch64"
+
+          - os_name: Linux-aarch64-musl
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            name: iggy-Linux-aarch64-musl.tar.gz
+            docker_arch: linux/arm64/v8
+            profile: release
+            cross: true
+            qemu_runner: "qemu-aarch64"
+
         toolchain:
           - stable
-          # - nightly
+          - nightly
           # - beta
     steps:
       - uses: actions/checkout@v4
@@ -78,7 +109,7 @@ jobs:
           command: "build"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: "--verbose"
+          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' }}"
 
       - name: Run tests
         uses: houseabsolute/actions-rust-cross@v0
@@ -86,12 +117,11 @@ jobs:
           command: "test"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: "--verbose"
-        if: ${{ !matrix.platform.skip_tests }}
+          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' }}"
 
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }
-        if: runner.os != 'Windows'
+
   finalize:
     runs-on: ubuntu-latest
     needs: build_and_test
@@ -106,6 +136,6 @@ jobs:
         uses: JasonEtco/create-an-issue@v2.9.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_BOT_CONTEXT_STRING: "nightly QEMU arm/aarch64 test suite"
+          GITHUB_BOT_CONTEXT_STRING: "nightly test suite"
         with:
           filename: .github/ISSUE_TEMPLATE.md

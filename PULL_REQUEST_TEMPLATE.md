@@ -1,34 +1,31 @@
-## Proposed Changes
+# **PR Submission Guidelines**
 
-- [ ] Add a concise description of the changes proposed in this PR.
+**Please remove this entire section before submitting your PR.**
+**This section is only for your reference.**
 
-## Types of Changes
+🙌 **Thank you for contributing to `iggy`!**
 
-What types of changes does your code introduce to the project? (check at least one)
+To help us incorporate your changes efficiently, please adhere to the following guidelines:
 
-- [ ] Bugfix
-- [ ] New Feature
-- [ ] Code style update (formatting, renaming)
-- [ ] Refactoring (no functional changes)
-- [ ] Documentation updates
-- [ ] Other (please describe):
+## General Coding Remarks
 
-## Checklist
+- **Code Linting**: Run `rustfmt` to ensure your code adheres to the project's style.
+- **Unit Testing**: Write or update unit tests to cover your changes.
+- **Integration Testing**: Write or update integration tests to cover your changes.
+- **Project Structure**: Follow the `iggy` project's structure and coding style.
+- **Build Integrity**: Ensure your code compiles and runs error-free.
 
-Before submitting the PR, please make sure you've done the following:
+## Commit Message Rules
 
-- [ ] Lint your code using `rustfmt`.
-- [ ] Write or update unit tests to cover your changes.
-- [ ] Ensure your code builds without errors or warnings.
-- [ ] Update the documentation if necessary.
-- [ ] Link to any relevant issues or pull requests.
-- [ ] Include a brief summary of why this change is needed and what problem it solves.
+- **Description**: Provide a concise description of the changes.
+- **Tags**: Avoid using GitHub tags like `feat:` or `chore:`.
+- **Style**: Use an imperative style in the subject line (e.g., "Fix bug" rather than "Fixed bug" or "Fixes bug").
+- **Brevity**: Keep the subject line under 80 characters.
+- **Rationale**: Explain the 'why' and 'what' of your changes in the summary.
+- **Details**: Use the body to elaborate on the 'how' of your changes.
+- **Context**: Include 'before' and 'after' scenarios if applicable.
+- **References**: Link any relevant issues or PRs in the message body.
 
-## Reviewer Instructions
+**Remember:** Your contribution is essential to the success of `iggy`. Please ensure that your PR conforms to these guidelines for a swift and smooth integration process.
 
-- [ ] Specify any particular aspects or areas of the code that you'd like reviewers to focus on.
-
-## Testing
-
-- [ ] Describe the steps taken to test your changes.
-- [ ] Provide information on the environments and platforms where you tested these changes.
+Thank you!

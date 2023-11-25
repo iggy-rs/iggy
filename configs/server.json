@@ -94,6 +94,9 @@
     "database": {
       "path": "database"
     },
+    "runtime": {
+      "path": "runtime"
+    },
     "logging": {
       "path": "logs",
       "level": "info",

@@ -226,6 +226,12 @@ path = "local_data"
 # Specifies the directory where database files are stored, relative to `system.path`.
 path = "database"
 
+# Runtime configuration.
+[system.runtime]
+# Path for storing runtime data.
+# Specifies the directory where any runtime data is stored, relative to `system.path`.
+path = "runtime"
+
 # Logging configuration.
 [system.logging]
 # Path for storing log files.

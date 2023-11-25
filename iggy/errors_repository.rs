@@ -117,6 +117,22 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             template: "Cannot create base directory, Path: {0}".to_string(),
         },
         ErrorRepositoryEntry {
+            snake_case_name: "cannot_create_runtime_directory".to_string(),
+            code: 11,
+            signature: "String".to_string(),
+            converts_from: "".to_string(),
+            source: "".to_string(),
+            template: "Cannot create runtime directory, Path: {0}".to_string(),
+        },
+        ErrorRepositoryEntry {
+            snake_case_name: "cannot_remove_runtime_directory".to_string(),
+            code: 12,
+            signature: "String".to_string(),
+            converts_from: "".to_string(),
+            source: "".to_string(),
+            template: "Cannot remove runtime directory, Path: {0}".to_string(),
+        },
+        ErrorRepositoryEntry {
             snake_case_name: "resource_not_found".to_string(),
             code: 20,
             signature: "String".to_string(),

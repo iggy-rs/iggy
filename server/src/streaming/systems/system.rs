@@ -14,7 +14,7 @@ use sled::Db;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::fs::create_dir;
+use tokio::fs::{create_dir, remove_dir_all};
 use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tracing::{info, trace};
@@ -125,6 +125,7 @@ impl System {
 
     pub async fn init(&mut self) -> Result<(), Error> {
         let system_path = self.config.get_system_path();
+
         if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
             return Err(Error::CannotCreateBaseDirectory(system_path));
         }
@@ -132,6 +133,15 @@ impl System {
         let streams_path = self.config.get_streams_path();
         if !Path::new(&streams_path).exists() && create_dir(&streams_path).await.is_err() {
             return Err(Error::CannotCreateStreamsDirectory(streams_path));
+        }
+
+        let runtime_path = self.config.get_runtime_path();
+        if Path::new(&runtime_path).exists() && remove_dir_all(&runtime_path).await.is_err() {
+            return Err(Error::CannotRemoveRuntimeDirectory(runtime_path));
+        }
+
+        if create_dir(&runtime_path).await.is_err() {
+            return Err(Error::CannotCreateRuntimeDirectory(runtime_path));
         }
 
         info!(

@@ -71,20 +71,29 @@ async fn main() -> Result<(), ServerError> {
     #[cfg(windows)]
     let mut ctrl_c = tokio::signal::ctrl_c();
 
+    let mut current_config = config.clone();
+
     if config.http.enabled {
-        let system = system.clone();
-        tokio::spawn(async move {
-            http_server::start(config.http, system).await;
-        });
+        let http_addr = http_server::start(config.http, system.clone()).await;
+        current_config.http.address = http_addr.to_string();
     }
 
     if config.quic.enabled {
-        quic_server::start(config.quic, system.clone());
+        let quic_addr = quic_server::start(config.quic, system.clone());
+        current_config.quic.address = quic_addr.to_string();
     }
 
     if config.tcp.enabled {
-        tcp_server::start(config.tcp, system.clone());
+        let tcp_addr = tcp_server::start(config.tcp, system.clone()).await;
+        current_config.tcp.address = tcp_addr.to_string();
     }
+
+    let runtime_path = current_config.system.get_runtime_path();
+    let current_config_path = format!("{}/current_config.toml", runtime_path);
+    let current_config_content =
+        toml::to_string(&current_config).expect("Cannot serialize current_config");
+
+    tokio::fs::write(current_config_path, current_config_content).await?;
 
     let elapsed_time = startup_timestamp.elapsed();
     info!(

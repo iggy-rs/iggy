@@ -80,7 +80,8 @@ pub(crate) struct IggyCmdTest {
 
 impl IggyCmdTest {
     pub(crate) fn new() -> Self {
-        let server = TestServer::default();
+        let mut server = TestServer::default();
+        server.start();
         let tcp_client_config = TcpClientConfig {
             server_address: server.get_raw_tcp_addr().unwrap(),
             ..TcpClientConfig::default()
@@ -92,7 +93,6 @@ impl IggyCmdTest {
     }
 
     pub(crate) async fn setup(&mut self) {
-        self.server.start();
         self.client.connect().await.unwrap();
 
         let ping_result = self.client.ping(&Ping {}).await;

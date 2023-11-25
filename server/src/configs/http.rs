@@ -2,7 +2,7 @@ use iggy::error::Error;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HttpConfig {
     pub enabled: bool,
     pub address: String,
@@ -12,7 +12,7 @@ pub struct HttpConfig {
     pub tls: HttpTlsConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct HttpCorsConfig {
     pub enabled: bool,
     pub allowed_methods: Vec<String>,
@@ -23,7 +23,7 @@ pub struct HttpCorsConfig {
     pub allow_private_network: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct HttpJwtConfig {
     pub algorithm: String,
     pub issuer: String,
@@ -39,7 +39,7 @@ pub struct HttpJwtConfig {
     pub use_base64_secret: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct HttpMetricsConfig {
     pub enabled: bool,
     pub endpoint: String,
@@ -51,7 +51,7 @@ pub enum JwtSecret {
     Base64(String),
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone)]
 pub struct HttpTlsConfig {
     pub enabled: bool,
     pub cert_file: String,

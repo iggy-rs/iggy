@@ -8,7 +8,7 @@ use iggy::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ServerConfig {
     pub message_cleaner: MessageCleanerConfig,
     pub message_saver: MessageSaverConfig,
@@ -19,13 +19,13 @@ pub struct ServerConfig {
     pub http: HttpConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MessageCleanerConfig {
     pub enabled: bool,
     pub interval: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MessageSaverConfig {
     pub enabled: bool,
     pub enforce_fsync: bool,

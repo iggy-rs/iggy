@@ -6,11 +6,14 @@ use quinn::{Endpoint, IdleTimeout, VarInt};
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::info;
 
-pub fn start(config: QuicConfig, system: SharedSystem) {
+/// Starts the QUIC server.
+/// Returns the address the server is listening on.
+pub fn start(config: QuicConfig, system: SharedSystem) -> SocketAddr {
     info!("Initializing Iggy QUIC server...");
     let quic_config = configure_quic(&config);
     if let Err(error) = quic_config {
@@ -18,8 +21,10 @@ pub fn start(config: QuicConfig, system: SharedSystem) {
     }
 
     let endpoint = Endpoint::server(quic_config.unwrap(), config.address.parse().unwrap()).unwrap();
+    let addr = endpoint.local_addr().unwrap();
     listener::start(endpoint, system);
-    info!("Iggy QUIC server has started on: {:?}", config.address);
+    info!("Iggy QUIC server has started on: {:?}", addr);
+    addr
 }
 
 fn configure_quic(config: &QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Error>> {

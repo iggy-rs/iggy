@@ -8,7 +8,8 @@ use crate::configs::server::{
 };
 use crate::configs::system::{
     CacheConfig, CompressionConfig, DatabaseConfig, EncryptionConfig, LoggingConfig,
-    PartitionConfig, RetentionPolicyConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    PartitionConfig, RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig,
+    SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -119,6 +120,7 @@ impl Default for SystemConfig {
         SystemConfig {
             path: "local_data".to_string(),
             database: DatabaseConfig::default(),
+            runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),
             retention_policy: RetentionPolicyConfig::default(),
@@ -136,6 +138,14 @@ impl Default for DatabaseConfig {
     fn default() -> DatabaseConfig {
         DatabaseConfig {
             path: "database".to_string(),
+        }
+    }
+}
+
+impl Default for RuntimeConfig {
+    fn default() -> RuntimeConfig {
+        RuntimeConfig {
+            path: "runtime".to_string(),
         }
     }
 }

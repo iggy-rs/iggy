@@ -109,7 +109,7 @@ jobs:
           command: "build"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' }}"
+          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
 
       - name: Run tests
         uses: houseabsolute/actions-rust-cross@v0
@@ -117,7 +117,7 @@ jobs:
           command: "test"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' }}"
+          args: "--verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
 
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }
@@ -132,7 +132,7 @@ jobs:
         if: ${{ !(contains(needs.*.result, 'failure')) }}
         run: exit 0
       - name: Something went wrong
-        if: ${{ contains(needs.*.result, 'failure') }}
+        if: ${{ contains(needs.*.result, 'failure') && github.event_name != 'workflow_dispatch' }}
         uses: JasonEtco/create-an-issue@v2.9.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

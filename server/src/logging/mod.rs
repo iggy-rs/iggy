@@ -4,7 +4,7 @@ use std::io::{self, Write};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
-use tracing::{info, trace};
+use tracing::{event, info, trace, Level};
 use tracing_appender::non_blocking::WorkerGuard;
 use tracing_subscriber::{
     filter::LevelFilter, fmt, fmt::MakeWriter, prelude::*, reload, reload::Handle, Layer, Registry,
@@ -83,7 +83,8 @@ pub struct Logging {
     file_guard: Option<WorkerGuard>,
     file_reload_handle: Option<ReloadHandle>,
 
-    filtering_reload_handle: Option<ReloadHandle>,
+    filtering_stdout_reload_handle: Option<ReloadHandle>,
+    filtering_file_reload_handle: Option<ReloadHandle>,
 
     early_logs_buffer: Arc<Mutex<Vec<String>>>,
 }
@@ -95,7 +96,8 @@ impl Logging {
             stdout_reload_handle: None,
             file_guard: None,
             file_reload_handle: None,
-            filtering_reload_handle: None,
+            filtering_stdout_reload_handle: None,
+            filtering_file_reload_handle: None,
             early_logs_buffer: Arc::new(Mutex::new(vec![])),
         }
     }
@@ -108,14 +110,19 @@ impl Logging {
         // All layers will be replaced during late_init
         let mut layers = vec![];
 
-        let filtering_layer = Self::get_filtering_level(None);
-        let (_, filtering_layer_reload_handle) = reload::Layer::new(filtering_layer.boxed());
-        self.filtering_reload_handle = Some(filtering_layer_reload_handle);
+        let filtering_level = Self::get_filtering_level(None);
+        let (filtering_stdout_layer, filtering_stdout_reload_handle) =
+            reload::Layer::new(filtering_level.boxed());
+        self.filtering_stdout_reload_handle = Some(filtering_stdout_reload_handle);
+
+        let (filtering_file_layer, filtering_file_reload_handle) =
+            reload::Layer::new(filtering_level.boxed());
+        self.filtering_file_reload_handle = Some(filtering_file_reload_handle);
 
         let stdout_layer = fmt::Layer::default().with_writer(|| NullWriter);
         let (stdout_layer, stdout_layer_reload_handle) = reload::Layer::new(stdout_layer.boxed());
         self.stdout_reload_handle = Some(stdout_layer_reload_handle);
-        layers.push(stdout_layer.and_then(filtering_layer));
+        layers.push(stdout_layer.and_then(filtering_stdout_layer));
 
         let file_layer = fmt::Layer::default()
             .with_target(true)
@@ -123,7 +130,7 @@ impl Logging {
             .with_ansi(true);
         let (file_layer, file_layer_reload_handle) = reload::Layer::new(file_layer.boxed());
         self.file_reload_handle = Some(file_layer_reload_handle);
-        layers.push(file_layer.and_then(filtering_layer));
+        layers.push(file_layer.and_then(filtering_file_layer));
 
         let subscriber = tracing_subscriber::registry().with(layers);
 
@@ -160,22 +167,29 @@ impl Logging {
         trace!("Logging config: {}", config);
 
         let filtering_level = Self::get_filtering_level(Some(config));
-        let _ = self
-            .filtering_reload_handle
+
+        self.filtering_stdout_reload_handle
             .as_ref()
             .ok_or(ServerError::FilterReloadFailure)?
-            .modify(|layer| *layer = filtering_level.boxed());
+            .modify(|layer| *layer = filtering_level.boxed())
+            .expect("Failed to modify stdout filtering layer");
+
+        self.filtering_file_reload_handle
+            .as_ref()
+            .ok_or(ServerError::FilterReloadFailure)?
+            .modify(|layer| *layer = filtering_level.boxed())
+            .expect("Failed to modify file filtering layer");
 
         // Initialize non-blocking stdout layer
         let (_, stdout_guard) = tracing_appender::non_blocking(std::io::stdout());
         let stdout_layer = fmt::Layer::default().with_ansi(true).boxed();
         self.stdout_guard = Some(stdout_guard);
 
-        let _ = self
-            .stdout_reload_handle
+        self.stdout_reload_handle
             .as_ref()
             .ok_or(ServerError::StdoutReloadFailure)?
-            .modify(|layer| *layer = stdout_layer);
+            .modify(|layer| *layer = stdout_layer)
+            .expect("Failed to modify stdout layer");
 
         self.dump_to_stdout();
 
@@ -196,16 +210,26 @@ impl Logging {
             .boxed();
 
         self.file_guard = Some(file_guard);
-        let _ = self
-            .file_reload_handle
+        self.file_reload_handle
             .as_ref()
             .ok_or(ServerError::FileReloadFailure)?
-            .modify(|layer| *layer = file_layer);
+            .modify(|layer| *layer = file_layer)
+            .expect("Failed to modify file layer");
+        let level = filtering_level.to_string();
 
-        info!(
+        let print = format!(
             "Logging initialized, logs will be stored at: {:?}. Logs will be rotated hourly. Log level is: {}.",
-            logs_path, filtering_level
+            logs_path, level
         );
+
+        match filtering_level {
+            LevelFilter::OFF => (),
+            LevelFilter::ERROR => event!(Level::ERROR, "{}", print),
+            LevelFilter::WARN => event!(Level::WARN, "{}", print),
+            LevelFilter::INFO => event!(Level::INFO, "{}", print),
+            LevelFilter::DEBUG => event!(Level::DEBUG, "{}", print),
+            LevelFilter::TRACE => event!(Level::TRACE, "{}", print),
+        }
 
         Ok(())
     }

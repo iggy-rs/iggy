@@ -2,7 +2,7 @@ use crate::cmd::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
-use predicates::str::diff;
+use predicates::str::starts_with;
 use serial_test::parallel;
 
 struct TestNoCredentialsCmd {}
@@ -16,10 +16,12 @@ impl IggyCmdTestCase for TestNoCredentialsCmd {
     }
 
     fn verify_command(&self, command_state: Assert) {
+        // Use starts_with without closing bracket (CI tests run with RUST_BACKTRACE which causes rust to emit
+        // longer message with full stack trace at the end of which closing bracket is located).
         command_state
             .failure()
-            .stderr(diff(
-                "Error: CommandError(Iggy command line tool error\n\nCaused by:\n    Missing iggy server credentials)\n",
+            .stderr(starts_with(
+                "Error: CommandError(Iggy command line tool error\n\nCaused by:\n    Missing iggy server credentials",
             ));
     }
 

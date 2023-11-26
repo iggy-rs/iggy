@@ -475,7 +475,7 @@ dependencies = [
 
 [[package]]
 name = "bench"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1585,7 +1585,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.0.124"
+version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -3049,7 +3049,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.0.53"
+version = "0.1.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -3535,7 +3535,7 @@ dependencies = [
 
 [[package]]
 name = "tools"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "bytes",

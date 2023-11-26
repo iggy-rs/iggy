@@ -124,11 +124,38 @@ async fn should_persist_and_load_segment_with_messages() {
         start_offset,
     )
     .await;
-    let messages_count = 10;
+
+    // 128 messages of size 64 bytes (including headers) means 8192 bytes, which is the default
+    // BufWriter capacity - this means that the segment should be flushed to disk after appending
+    // all messages.
+    let messages_count = 128;
+    let mut total_messages_size = 0;
+    let create_test_message =
+        |index| create_message(index, "fancy_test_payload_", TimeStamp::now().to_micros());
+    let expected_message_size = create_test_message(0).get_size_bytes();
+
     for i in 0..messages_count {
-        let message = create_message(i, "test", TimeStamp::now().to_micros());
+        let message = create_message(i, "fancy_test_payload_", TimeStamp::now().to_micros());
+        let message_size = message.get_size_bytes();
+        total_messages_size += message_size;
+        assert_eq!(
+            message_size, expected_message_size,
+            "Message size does not match the expected size"
+        );
         segment.append_messages(&[Arc::new(message)]).await.unwrap();
     }
+
+    let default_buf_writer_capacity = 8192;
+    assert_eq!(
+        total_messages_size % default_buf_writer_capacity,
+        0,
+        "Total size of messages should be divisible by default buffer writer capacity \
+        (total size: {}, default capacity: {}, single message size: {}, number of messages: {})",
+        total_messages_size,
+        default_buf_writer_capacity,
+        expected_message_size,
+        messages_count
+    );
 
     segment
         .persist_messages(setup.storage.segment.clone())

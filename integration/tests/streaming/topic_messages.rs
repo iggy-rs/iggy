@@ -50,7 +50,7 @@ async fn given_enabled_cache_without_enough_capacity_all_messages_should_be_poll
 
 async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool) {
     let messages_count = 1000;
-    let payload_size_bytes = 1000;
+    let payload_size_bytes = 974; // 974 + 50 bytes of headers = 1024 bytes
     let config = SystemConfig {
         cache,
         ..Default::default()
@@ -61,9 +61,39 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
     let partitioning = Partitioning::partition_id(partition_id);
     let messages = (0..messages_count)
         .map(|id| {
-            get_message(format!("{}:{}", id + 1, create_payload(payload_size_bytes)).as_str())
+            get_message(format!("{:04}:{}", id + 1, create_payload(payload_size_bytes)).as_str())
         })
         .collect::<Vec<_>>();
+
+    let are_all_messages_same_size = messages
+        .iter()
+        .map(|message| message.get_size_bytes())
+        .all(|size| size == messages[0].get_size_bytes());
+
+    assert!(
+        are_all_messages_same_size,
+        "Not all messages are of size {} bytes",
+        messages[0].get_size_bytes()
+    );
+
+    let total_messages_size = messages
+        .iter()
+        .map(|message| message.get_size_bytes())
+        .sum::<u32>();
+
+    let default_buf_writer_capacity = 8 * 1024;
+
+    assert_eq!(
+        total_messages_size % default_buf_writer_capacity,
+        0,
+        "Total size of messages should be divisible by default buffer writer capacity \
+        (total size: {}, default capacity: {}, single message size: {}, number of messages: {})",
+        total_messages_size,
+        default_buf_writer_capacity,
+        messages[0].get_size_bytes(),
+        messages_count
+    );
+
     let mut sent_messages = Vec::new();
     for message in &messages {
         sent_messages.push(get_message(from_utf8(&message.payload).unwrap()))
@@ -95,7 +125,7 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
         let sent_message = sent_messages.get(index).unwrap();
         assert_eq!(sent_message.payload, polled_message.payload);
         let polled_payload_str = from_utf8(&polled_message.payload).unwrap();
-        assert!(polled_payload_str.starts_with(&format!("{}:", index + 1)));
+        assert!(polled_payload_str.starts_with(&format!("{:04}:", index + 1)));
     }
 }
 

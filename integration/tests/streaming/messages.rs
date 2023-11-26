@@ -15,7 +15,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     let stream_id = 1;
     let topic_id = 1;
     let partition_id = 1;
-    let messages_count = 1000;
+    let messages_count = 1024;
     let config = Arc::new(SystemConfig {
         path: setup.config.path.to_string(),
         partition: PartitionConfig {
@@ -41,7 +41,8 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         let state = MessageState::Available;
         let timestamp = TimeStamp::now().to_micros();
         let id = i as u128;
-        let payload = Bytes::from(format!("message {}", i));
+        // thanks to this weird the payload, each message will be 128 bytes (including headers)
+        let payload = Bytes::from(format!("fancy_test_message___{:04}", i));
         let checksum = checksum::calculate(&payload);
         let mut headers = HashMap::new();
         headers.insert(
@@ -77,6 +78,35 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         appended_messages.push(appended_message);
         messages.push(message);
     }
+
+    let are_all_messages_same_size = messages
+        .iter()
+        .map(|message| message.get_size_bytes())
+        .all(|size| size == messages[0].get_size_bytes());
+
+    assert!(
+        are_all_messages_same_size,
+        "Not all messages are of size {} bytes",
+        messages[0].get_size_bytes()
+    );
+
+    let total_messages_size = messages
+        .iter()
+        .map(|message| message.get_size_bytes())
+        .sum::<u32>();
+
+    let default_buf_writer_capacity = 8 * 1024;
+
+    assert_eq!(
+        total_messages_size % default_buf_writer_capacity,
+        0,
+        "Total size of messages should be divisible by default buffer writer capacity \
+        (total size: {}, default capacity: {}, single message size: {}, number of messages: {})",
+        total_messages_size,
+        default_buf_writer_capacity,
+        messages[0].get_size_bytes(),
+        messages_count
+    );
 
     setup.create_partitions_directory(stream_id, topic_id).await;
     partition.persist().await.unwrap();

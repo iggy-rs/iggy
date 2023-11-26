@@ -15,20 +15,20 @@ pub(crate) enum PersonalAccessTokenAction {
     ///  iggy pat create name
     ///  iggy pat create client 1day
     ///  iggy pat create sensor 3weeks
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(PersonalAccessTokenCreateArgs),
     /// Delete personal access token
     ///
     /// Examples
     ///  iggy pat delete name
     ///  iggy pat delete client
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "d")]
     Delete(PersonalAccessTokenDeleteArgs),
     /// List all personal access tokens
     ///
     /// Examples
     ///  iggy pat list
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "l")]
     List(PersonalAccessTokenListArgs),
 }
 

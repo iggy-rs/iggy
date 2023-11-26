@@ -15,9 +15,9 @@ pub async fn should_help_match() {
 {USAGE_PREFIX} pat <COMMAND>
 
 Commands:
-  create  Create personal access token
-  delete  Delete personal access token
-  list    List all personal access tokens
+  create  Create personal access token [aliases: c]
+  delete  Delete personal access token [aliases: d]
+  list    List all personal access tokens [aliases: l]
   help    Print this message or the help of the given subcommand(s)
 
 Options:

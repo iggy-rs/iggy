@@ -9,7 +9,7 @@ pub(crate) enum StreamAction {
     /// Examples:
     ///  iggy stream create 1 prod
     ///  iggy stream create 2 test
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(StreamCreateArgs),
     /// Delete stream with given ID
     ///
@@ -18,7 +18,7 @@ pub(crate) enum StreamAction {
     /// Examples:
     ///  iggy stream delete 1
     ///  iggy stream delete test
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "d")]
     Delete(StreamDeleteArgs),
     /// Update stream name for given stream ID
     ///
@@ -27,7 +27,7 @@ pub(crate) enum StreamAction {
     /// Examples:
     ///  iggy stream update 1 production
     ///  iggy stream update test development
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "u")]
     Update(StreamUpdateArgs),
     /// Get details of a single stream with given ID
     ///
@@ -36,7 +36,7 @@ pub(crate) enum StreamAction {
     /// Examples:
     ///  iggy stream get 1
     ///  iggy stream get test
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "g")]
     Get(StreamGetArgs),
     /// List all streams
     ///
@@ -44,7 +44,7 @@ pub(crate) enum StreamAction {
     ///  iggy stream list
     ///  iggy stream list --list-mode table
     ///  iggy stream list -l table
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "l")]
     List(StreamListArgs),
 }
 

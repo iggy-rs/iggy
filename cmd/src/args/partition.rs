@@ -15,7 +15,7 @@ pub(crate) enum PartitionAction {
     ///  iggy partition create prod 2 2
     ///  iggy partition create test sensor 2
     ///  iggy partition create 1 sensor 16
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(PartitionCreateArgs),
     /// Delete partitions for the specified topic ID
     /// and stream ID based on the given count.
@@ -28,7 +28,7 @@ pub(crate) enum PartitionAction {
     ///  iggy partition delete prod 2 2
     ///  iggy partition delete test sensor 2
     ///  iggy partition delete 1 sensor 16
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "d")]
     Delete(PartitionDeleteArgs),
 }
 

@@ -87,13 +87,13 @@ pub(crate) struct IggyConsoleArgs {
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum Command {
     /// stream operations
-    #[clap(subcommand)]
+    #[command(subcommand, visible_alias = "s")]
     Stream(StreamAction),
     /// topic operations
-    #[clap(subcommand)]
+    #[command(subcommand, visible_alias = "t")]
     Topic(TopicAction),
     /// partition operations
-    #[clap(subcommand)]
+    #[command(subcommand, visible_alias = "p")]
     Partition(PartitionAction),
     /// ping iggy server
     ///
@@ -110,10 +110,10 @@ pub(crate) enum Command {
     /// Server OS name, version, etc. are also collected.
     Stats,
     /// personal access token operations
-    #[clap(subcommand)]
+    #[command(subcommand)]
     Pat(PersonalAccessTokenAction),
     /// user operations
-    #[clap(subcommand)]
+    #[command(subcommand, visible_alias = "u")]
     User(UserAction),
 }
 

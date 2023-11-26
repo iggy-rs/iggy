@@ -15,7 +15,7 @@ pub(crate) enum TopicAction {
     ///  iggy topic create 1 1 2 sensor1 15days
     ///  iggy topic create prod 2 2 sensor2
     ///  iggy topic create test 3 2 debugs 1day 1hour 1min 1sec
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(TopicCreateArgs),
     /// Delete topic with given ID in given stream ID
     ///
@@ -27,7 +27,7 @@ pub(crate) enum TopicAction {
     ///  iggy topic delete prod 2
     ///  iggy topic delete test debugs
     ///  iggy topic delete 2 debugs
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "d")]
     Delete(TopicDeleteArgs),
     /// Update topic name an message expiry time for given topic ID in given stream ID
     ///
@@ -40,7 +40,7 @@ pub(crate) enum TopicAction {
     ///  iggy update test debugs ready 15days
     ///  iggy update 1 1 new-name
     ///  iggy update 1 2 new-name 1day 1hour 1min 1sec
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "u")]
     Update(TopicUpdateArgs),
     /// Get topic detail for given topic ID and stream ID
     ///
@@ -52,7 +52,7 @@ pub(crate) enum TopicAction {
     ///  iggy topic get prod 2
     ///  iggy topic get test debugs
     ///  iggy topic get 2 debugs
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "g")]
     Get(TopicGetArgs),
     /// List all topics in given stream ID
     ///
@@ -61,7 +61,7 @@ pub(crate) enum TopicAction {
     /// Examples
     ///  iggy topic list 1
     ///  iggy topic list prod
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "l")]
     List(TopicListArgs),
 }
 

@@ -15,11 +15,11 @@ pub async fn should_help_match() {
 {USAGE_PREFIX} stream <COMMAND>
 
 Commands:
-  create  Create stream with given ID and name
-  delete  Delete stream with given ID
-  update  Update stream name for given stream ID
-  get     Get details of a single stream with given ID
-  list    List all streams
+  create  Create stream with given ID and name [aliases: c]
+  delete  Delete stream with given ID [aliases: d]
+  update  Update stream name for given stream ID [aliases: u]
+  get     Get details of a single stream with given ID [aliases: g]
+  list    List all streams [aliases: l]
   help    Print this message or the help of the given subcommand(s)
 
 Options:

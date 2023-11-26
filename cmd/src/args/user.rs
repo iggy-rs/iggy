@@ -14,7 +14,7 @@ pub(crate) enum UserAction {
     /// Examples
     ///  iggy user create testuser pass#1%X!
     ///  iggy user create guest guess --user-status inactive
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(UserCreateArgs),
     /// Delete user with given ID
     ///
@@ -23,7 +23,7 @@ pub(crate) enum UserAction {
     /// Examples:
     ///  iggy user delete 2
     ///  iggy user delete testuser
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "d")]
     Delete(UserDeleteArgs),
     /// Get details of a single user with given ID
     ///
@@ -32,7 +32,7 @@ pub(crate) enum UserAction {
     /// Examples:
     ///  iggy user get 2
     ///  iggy user get testuser
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "g")]
     Get(UserGetArgs),
     /// List all users
     ///
@@ -40,7 +40,7 @@ pub(crate) enum UserAction {
     ///  iggy user list
     ///  iggy user list --list-mode table
     ///  iggy user list -l table
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "l")]
     List(UserListArgs),
     /// Change username for user with given ID
     ///
@@ -49,7 +49,7 @@ pub(crate) enum UserAction {
     /// Examples:
     ///  iggy user name 2 new_user_name
     ///  iggy user name testuser test_user
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "n")]
     Name(UserNameArgs),
     /// Change status for user with given ID
     ///
@@ -58,7 +58,7 @@ pub(crate) enum UserAction {
     /// Examples:
     ///  iggy user status 2 active
     ///  iggy user status testuser inactive
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "s")]
     Status(UserStatusArgs),
     /// Change password for user with given ID
     ///
@@ -69,7 +69,7 @@ pub(crate) enum UserAction {
     ///  iggy user password client
     ///  iggy user password 3 current_password new_password
     ///  iggy user password testuser curpwd p@sswor4
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "pwd")]
     Password(UserPasswordArgs),
     /// Set permissions for user with given ID
     ///
@@ -81,7 +81,7 @@ pub(crate) enum UserAction {
     /// Examples:
     ///  iggy user permissions 2
     ///  iggy user permissions client
-    #[clap(verbatim_doc_comment)]
+    #[clap(verbatim_doc_comment, visible_alias = "p")]
     Permissions(UserPermissionsArgs),
 }
 

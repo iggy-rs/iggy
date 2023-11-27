@@ -253,6 +253,7 @@ jobs:
 
   create_github_release:
     runs-on: ubuntu-latest
+    if: ${{ needs.tag.outputs.tag_created == 'true' }}
     needs:
       - release_and_publish
       - tag

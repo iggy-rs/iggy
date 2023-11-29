@@ -8,7 +8,7 @@ pub struct AppState {
     pub system: SharedSystem,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RequestDetails {
     pub request_id: Ulid,
     pub ip_address: SocketAddr,

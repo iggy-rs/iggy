@@ -11,11 +11,13 @@ use crate::http::{
 };
 use crate::streaming::systems::system::SharedSystem;
 use axum::http::Method;
-use axum::{middleware, Router};
+use axum::{middleware, Router, ServiceExt};
 use axum_server::tls_rustls::RustlsConfig;
-use std::net::{SocketAddr, TcpListener};
+use std::net::SocketAddr;
+use std::net::TcpListener as StdTcpListener;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio::net::TcpListener as TokioTcpListener;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{error, info};
 
@@ -29,59 +31,54 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
     };
 
     let app_state = build_app_state(&config, system).await;
-    let mut app = Router::new()
-        .nest(
-            "/",
-            system::router(app_state.clone(), &config.metrics)
-                .nest(
-                    "/personal-access-tokens",
-                    personal_access_tokens::router(app_state.clone()),
-                )
-                .nest("/users", users::router(app_state.clone()))
-                .nest(
-                    "/streams",
-                    streams::router(app_state.clone()).nest(
-                        "/:stream_id/topics",
-                        topics::router(app_state.clone())
-                            .nest(
-                                "/:topic_id/consumer-groups",
-                                consumer_groups::router(app_state.clone()),
-                            )
-                            .nest("/:topic_id/messages", messages::router(app_state.clone()))
-                            .nest(
-                                "/:topic_id/consumer-offsets",
-                                consumer_offsets::router(app_state.clone()),
-                            )
-                            .nest(
-                                "/:topic_id/partitions",
-                                partitions::router(app_state.clone()),
-                            ),
-                    ),
-                ),
-        )
+
+    let system_routes = system::router(app_state.clone(), &config.metrics);
+    let pat_routes = personal_access_tokens::router(app_state.clone());
+    let user_routes = users::router(app_state.clone());
+    let stream_routes = streams::router(app_state.clone());
+    let topic_routes = topics::router(app_state.clone());
+    let consumer_group_routes = consumer_groups::router(app_state.clone());
+    let message_routes = messages::router(app_state.clone());
+    let consumer_offset_routes = consumer_offsets::router(app_state.clone());
+    let partition_routes = partitions::router(app_state.clone());
+
+    let app = Router::new()
+        .merge(system_routes)
+        .merge(pat_routes)
+        .merge(user_routes)
+        .merge(stream_routes)
+        .merge(topic_routes)
+        .merge(consumer_group_routes)
+        .merge(message_routes)
+        .merge(consumer_offset_routes)
+        .merge(partition_routes)
         .layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
 
-    if config.cors.enabled {
-        app = app.layer(configure_cors(config.cors));
-    }
+    let app = if config.cors.enabled {
+        app.layer(configure_cors(config.cors))
+    } else {
+        app
+    };
 
-    if config.metrics.enabled {
-        app = app.layer(middleware::from_fn_with_state(app_state.clone(), metrics));
-    }
+    let app = if config.metrics.enabled {
+        app.layer(middleware::from_fn_with_state(app_state.clone(), metrics))
+    } else {
+        app
+    };
 
     start_expired_tokens_cleaner(app_state.clone());
-    app = app.layer(middleware::from_fn(request_diagnostics));
-
-    let listener = TcpListener::bind(config.address).unwrap();
+    let app = app.layer(middleware::from_fn(request_diagnostics));
 
     if !config.tls.enabled {
-        let server = axum::Server::from_tcp(listener)
-            .expect("Failed to start HTTP server")
-            .serve(app.into_make_service_with_connect_info::<SocketAddr>());
-        let addr = server.local_addr();
+        let listener = TokioTcpListener::bind(config.address)
+            .await
+            .expect("Failed to bind TCP listener for HTTP API");
+        let addr = listener
+            .local_addr()
+            .expect("Failed to get local address for HTTP API");
         info!("Started {api_name} on: {:?}", addr);
         tokio::task::spawn(async move {
-            if let Err(error) = server.await {
+            if let Err(error) = axum::serve(listener, app).await {
                 error!("HTTP server error: {}", error);
             }
         });
@@ -94,9 +91,11 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
         .await
         .unwrap();
 
+        let listener = StdTcpListener::bind(config.address)
+            .expect("Failed to bind TCP listener for HTTP TLS API");
         let addr = listener
             .local_addr()
-            .expect("Failed to get local address for HTTP TLS server");
+            .expect("Failed to get local address for HTTP TLS API");
 
         info!("Started {api_name} on: {:?}", addr);
 
@@ -106,7 +105,6 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
                 .await
                 .unwrap();
         });
-
         addr
     }
 }
@@ -137,6 +135,7 @@ async fn build_app_state(config: &HttpConfig, system: SharedSystem) -> Arc<AppSt
         system,
     })
 }
+
 fn configure_cors(config: HttpCorsConfig) -> CorsLayer {
     let allowed_origins = match config.allowed_origins {
         origins if origins.is_empty() => AllowOrigin::default(),

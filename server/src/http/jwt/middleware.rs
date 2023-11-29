@@ -1,5 +1,6 @@
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::{AppState, RequestDetails};
+use axum::body::Body;
 use axum::{
     extract::State,
     http::{Request, StatusCode},
@@ -21,10 +22,10 @@ const UNAUTHORIZED_PATHS: &[&str] = &[
     "/personal-access-tokens/login",
 ];
 
-pub async fn jwt_auth<T>(
+pub async fn jwt_auth(
     State(state): State<Arc<AppState>>,
-    mut request: Request<T>,
-    next: Next<T>,
+    mut request: Request<Body>,
+    next: Next,
 ) -> Result<Response, StatusCode> {
     if UNAUTHORIZED_PATHS.contains(&request.uri().path()) {
         return Ok(next.run(request).await);

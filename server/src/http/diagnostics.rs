@@ -1,5 +1,6 @@
 use crate::http::shared::RequestDetails;
 use crate::streaming::utils::random_id;
+use axum::body::Body;
 use axum::{
     extract::ConnectInfo,
     http::{Request, StatusCode},
@@ -10,10 +11,10 @@ use std::net::SocketAddr;
 use tokio::time::Instant;
 use tracing::debug;
 
-pub async fn request_diagnostics<T>(
+pub async fn request_diagnostics(
     ConnectInfo(ip_address): ConnectInfo<SocketAddr>,
-    mut request: Request<T>,
-    next: Next<T>,
+    mut request: Request<Body>,
+    next: Next,
 ) -> Result<Response, StatusCode> {
     let request_id = random_id::get_ulid();
     let path_and_query = request

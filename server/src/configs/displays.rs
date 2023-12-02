@@ -1,4 +1,5 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
+use crate::configs::system::MessageDeduplicationConfig;
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
     resource_quota::MemoryResourceQuota,
@@ -184,13 +185,22 @@ impl Display for PartitionConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, messages_required_to_save: {}, deduplicate_messages: {}, enforce_fsync: {}, validate_checksum: {} }}",
+          "{{ path: {}, messages_required_to_save: {}, enforce_fsync: {}, validate_checksum: {} }}",
           self.path,
           self.messages_required_to_save,
-          self.deduplicate_messages,
           self.enforce_fsync,
           self.validate_checksum
       )
+    }
+}
+
+impl Display for MessageDeduplicationConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ enabled: {}, max_entries: {:?}, expiry: {:?} }}",
+            self.enabled, self.max_entries, self.expiry
+        )
     }
 }
 

@@ -127,7 +127,6 @@
     },
     "partition": {
       "path": "partitions",
-      "deduplicate_messages": false,
       "enforce_fsync": false,
       "validate_checksum": false,
       "messages_required_to_save": 10000
@@ -136,6 +135,11 @@
       "size_bytes": 1000000000,
       "cache_indexes": true,
       "cache_time_indexes": true
+    },
+    "message_deduplication": {
+      "enabled": false,
+      "max_entries": 1000,
+      "expiry": "1m"
     }
   }
 }

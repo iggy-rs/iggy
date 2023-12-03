@@ -34,12 +34,12 @@ impl Default for QuicConfig {
             enabled: true,
             address: "127.0.0.1:8080".to_string(),
             max_concurrent_bidi_streams: 10000,
-            datagram_send_buffer_size: 100000,
-            initial_mtu: 10000,
-            send_window: 100000,
-            receive_window: 100000,
-            keep_alive_interval: 5000,
-            max_idle_timeout: 10000,
+            datagram_send_buffer_size: "100KB".parse().unwrap(),
+            initial_mtu: "10KB".parse().unwrap(),
+            send_window: "100KB".parse().unwrap(),
+            receive_window: "100KB".parse().unwrap(),
+            keep_alive_interval: "5s".parse().unwrap(),
+            max_idle_timeout: "10s".parse().unwrap(),
             certificate: QuicCertificateConfig::default(),
         }
     }
@@ -78,11 +78,30 @@ impl Default for HttpConfig {
     }
 }
 
+impl Default for HttpJwtConfig {
+    fn default() -> HttpJwtConfig {
+        HttpJwtConfig {
+            algorithm: "HS256".to_string(),
+            issuer: "iggy".to_string(),
+            audience: "iggy".to_string(),
+            valid_issuers: vec!["iggy".to_string()],
+            valid_audiences: vec!["iggy".to_string()],
+            access_token_expiry: "1h".parse().unwrap(),
+            refresh_token_expiry: "1d".parse().unwrap(),
+            clock_skew: "5s".parse().unwrap(),
+            not_before: "0s".parse().unwrap(),
+            encoding_secret: "top_secret$iggy.rs$_jwt_HS256_key#!".to_string(),
+            decoding_secret: "top_secret$iggy.rs$_jwt_HS256_key#!".to_string(),
+            use_base64_secret: false,
+        }
+    }
+}
+
 impl Default for MessageCleanerConfig {
     fn default() -> MessageCleanerConfig {
         MessageCleanerConfig {
             enabled: true,
-            interval: 60,
+            interval: "1m".parse().unwrap(),
         }
     }
 }
@@ -92,7 +111,7 @@ impl Default for MessageSaverConfig {
         MessageSaverConfig {
             enabled: true,
             enforce_fsync: true,
-            interval: 30,
+            interval: "30s".parse().unwrap(),
         }
     }
 }
@@ -110,7 +129,7 @@ impl Default for PersonalAccessTokenCleanerConfig {
     fn default() -> PersonalAccessTokenCleanerConfig {
         PersonalAccessTokenCleanerConfig {
             enabled: true,
-            interval: 60,
+            interval: "1m".parse().unwrap(),
         }
     }
 }
@@ -165,8 +184,8 @@ impl Default for LoggingConfig {
         LoggingConfig {
             path: "logs".to_string(),
             level: "info".to_string(),
-            max_size_megabytes: 200,
-            retention_days: 7,
+            max_size: "200 MB".parse().unwrap(),
+            retention: "7 days".parse().unwrap(),
         }
     }
 }
@@ -219,7 +238,7 @@ impl Default for PartitionConfig {
 impl Default for SegmentConfig {
     fn default() -> SegmentConfig {
         SegmentConfig {
-            size_bytes: 1000 * 1000 * 1000,
+            size: "1 GB".parse().unwrap(),
             cache_indexes: true,
             cache_time_indexes: true,
         }

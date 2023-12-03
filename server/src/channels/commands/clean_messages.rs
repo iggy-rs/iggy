@@ -4,8 +4,8 @@ use crate::{channels::server_command::ServerCommand, configs::server::MessageCle
 use async_trait::async_trait;
 use flume::Sender;
 use iggy::error::Error;
+use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::TimeStamp;
-use std::time::Duration;
 use tokio::time;
 use tracing::{error, info};
 
@@ -16,7 +16,7 @@ struct DeletedSegments {
 
 pub struct MessagesCleaner {
     enabled: bool,
-    interval: Duration,
+    interval: IggyDuration,
     sender: Sender<CleanMessagesCommand>,
 }
 
@@ -30,7 +30,7 @@ impl MessagesCleaner {
     pub fn new(config: &MessageCleanerConfig, sender: Sender<CleanMessagesCommand>) -> Self {
         Self {
             enabled: config.enabled,
-            interval: Duration::from_secs(config.interval),
+            interval: config.interval,
             sender,
         }
     }
@@ -49,7 +49,7 @@ impl MessagesCleaner {
         );
 
         tokio::spawn(async move {
-            let mut interval_timer = time::interval(interval);
+            let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
                 sender.send(CleanMessagesCommand).unwrap_or_else(|err| {

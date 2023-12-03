@@ -6,13 +6,14 @@ use crate::streaming::segments::storage::FileSegmentStorage;
 use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
-use std::{sync::Arc, time::Duration};
+use iggy::utils::duration::IggyDuration;
+use std::sync::Arc;
 use tokio::time;
 use tracing::{error, info, warn};
 
 pub struct MessagesSaver {
     enforce_fsync: bool,
-    interval: Duration,
+    interval: IggyDuration,
     sender: Sender<SaveMessagesCommand>,
 }
 
@@ -28,7 +29,7 @@ impl MessagesSaver {
     pub fn new(config: &MessageSaverConfig, sender: Sender<SaveMessagesCommand>) -> Self {
         Self {
             enforce_fsync: config.enforce_fsync,
-            interval: Duration::from_secs(config.interval),
+            interval: config.interval,
             sender,
         }
     }
@@ -48,7 +49,7 @@ impl MessagesSaver {
         );
 
         tokio::spawn(async move {
-            let mut interval_timer = time::interval(interval);
+            let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
                 let command = SaveMessagesCommand { enforce_fsync };

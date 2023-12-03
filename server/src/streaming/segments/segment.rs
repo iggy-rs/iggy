@@ -72,7 +72,7 @@ impl Segment {
     }
 
     pub async fn is_full(&self) -> bool {
-        if self.current_size_bytes >= self.config.segment.size_bytes {
+        if self.current_size_bytes >= self.config.segment.size.get_bytes() as u32 {
             return true;
         }
 

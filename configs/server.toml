@@ -60,17 +60,17 @@ valid_issuers = ["iggy.rs"]
 # Lists valid audiences for JWT validation to confirm tokens are for the intended recipient.
 valid_audiences = ["iggy.rs"]
 
-# Expiry time for access tokens, in seconds.
-access_token_expiry = 3600
+# Expiry time for access tokens.
+access_token_expiry = "1h"
 
-# Expiry time for refresh tokens, in seconds.
-refresh_token_expiry = 86400
+# Expiry time for refresh tokens.
+refresh_token_expiry = "1d"
 
-# Tolerance for timing discrepancies in seconds during token validation.
-clock_skew = 5
+# Tolerance for timing discrepancies during token validation.
+clock_skew = "5s"
 
-# Time in seconds before which the token should not be considered valid.
-not_before = 0
+# Time before which the token should not be considered valid.
+not_before = "0s"
 
 # Secret key for encoding JWTs.
 encoding_secret = "top_secret$iggy.rs$_jwt_HS256_key#!"
@@ -145,22 +145,22 @@ address = "0.0.0.0:8080"
 max_concurrent_bidi_streams = 10_000
 
 # Size of the buffer for sending datagrams in QUIC.
-datagram_send_buffer_size = 100_000
+datagram_send_buffer_size = "100KB"
 
 # Initial Maximum Transmission Unit (MTU) for QUIC connections.
-initial_mtu = 8_000
+initial_mtu = "8KB"
 
 # Size of the sending window in QUIC, controlling data flow.
-send_window = 100_000
+send_window = "100KB"
 
 # Size of the receiving window in QUIC, controlling data flow.
-receive_window = 100_000
+receive_window = "100KB"
 
-# Interval in milliseconds for sending keep-alive messages in QUIC.
-keep_alive_interval = 5_000
+# Interval for sending keep-alive messages in QUIC.
+keep_alive_interval = "5s"
 
-# Maximum idle time in milliseconds before a QUIC connection is closed.
-max_idle_timeout = 10_000
+# Maximum idle time before a QUIC connection is closed.
+max_idle_timeout = "10s"
 
 # QUIC certificate configuration.
 [quic.certificate]
@@ -182,8 +182,8 @@ key_file = "certs/iggy_key.pem"
 # `false` turns it off, messages will not be auto-deleted based on expiry.
 enabled = true
 
-# Interval in seconds for running the message cleaner.
-interval = 60
+# Interval for running the message cleaner.
+interval = "1m"
 
 # Message saver configuration.
 [message_saver]
@@ -197,8 +197,8 @@ enabled = true
 # `false` for asynchronous saving, improving performance but with delayed data writing.
 enforce_fsync = true
 
-# Interval in seconds for running the message saver.
-interval = 30
+# Interval for running the message saver.
+interval = "30s"
 
 # Personal access token configuration.
 [personal_access_token]
@@ -212,8 +212,8 @@ max_tokens_per_user = 100
 # `false` disables it, tokens remain active until manually revoked or expired.
 enabled = true
 
-# Interval in seconds for running the token cleaner.
-interval = 60
+# Interval for running the token cleaner.
+interval = "1m"
 
 # System configuration.
 [system]
@@ -240,11 +240,11 @@ path = "logs"
 # Level of logging detail. Options: "debug", "info", "warn", "error".
 level = "info"
 
-# Maximum size of log files in megabytes before rotation.
-max_size_megabytes = 512
+# Maximum size of the log files before rotation.
+max_size = "512 MB"
 
-# Number of days to retain log files before deletion.
-retention_days = 7
+# Time to retain log files before deletion.
+retention = "7 days"
 
 # Cache configuration.
 [system.cache]
@@ -253,7 +253,7 @@ retention_days = 7
 # `false` disables caching, data is always read from the source.
 enabled = true
 
-# Maximum size of the cache, e.g., "4GB".
+# Maximum size of the cache, e.g. "4GB".
 size = "4GB"
 
 # Data retention policy configuration.
@@ -275,7 +275,7 @@ max_topic_size = "10 GB"
 enabled = false
 
 # The encryption key used when encryption is enabled (string).
-# Should be a 32-byte length key, provided as a base64 encoded string.
+# Should be a 32 bytes length key, provided as a base64 encoded string.
 # This key is required and used only if encryption is enabled.
 key = ""
 
@@ -325,10 +325,10 @@ messages_required_to_save = 10_000
 
 # Segment configuration
 [system.segment]
-# Defines the soft limit for the size of a storage segment in bytes (integer).
+# Defines the soft limit for the size of a storage segment.
 # When a segment reaches this size, a new segment is created for subsequent data.
-# Example: if `size_bytes` is set to 1,000,000,000 (approx. 1GB), the actual segment size may be 1GB + the size of one additional message.
-size_bytes = 1_000_000_000
+# Example: if `size` is set "1GB", the actual segment size may be 1GB + the size of remaining messages in received batch.
+size = "1GB"
 
 # Controls whether to cache indexes for segment access (boolean).
 # `true` keeps indexes in memory, speeding up data retrieval.

@@ -209,7 +209,7 @@ impl Display for SegmentConfig {
         write!(
             f,
             "{{ size_bytes: {}, cache_indexes: {}, cache_time_indexes: {} }}",
-            self.size_bytes, self.cache_indexes, self.cache_time_indexes
+            self.size, self.cache_indexes, self.cache_time_indexes
         )
     }
 }
@@ -218,8 +218,8 @@ impl Display for LoggingConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ path: {}, level: {}, max_size_megabytes: {}, retention_days: {} }}",
-            self.path, self.level, self.max_size_megabytes, self.retention_days
+            "{{ path: {}, level: {}, max_size: {}, retention: {} }}",
+            self.path, self.level, self.max_size, self.retention
         )
     }
 }

@@ -89,7 +89,7 @@ impl Validatable<ServerError> for RetentionPolicyConfig {
 
 impl Validatable<ServerError> for SegmentConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.size_bytes > segment::MAX_SIZE_BYTES {
+        if self.size.get_bytes() as u32 > segment::MAX_SIZE_BYTES {
             error!(
                 "Segment configuration -> size cannot be greater than: {} bytes.",
                 segment::MAX_SIZE_BYTES
@@ -103,7 +103,7 @@ impl Validatable<ServerError> for SegmentConfig {
 
 impl Validatable<ServerError> for MessageSaverConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.enabled && self.interval == 0 {
+        if self.enabled && self.interval.is_zero() {
             error!("Message saver interval size cannot be zero, it must be greater than 0.");
             return Err(ServerError::InvalidConfiguration);
         }
@@ -114,7 +114,7 @@ impl Validatable<ServerError> for MessageSaverConfig {
 
 impl Validatable<ServerError> for MessageCleanerConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.enabled && self.interval == 0 {
+        if self.enabled && self.interval.is_zero() {
             error!("Message cleaner interval size cannot be zero, it must be greater than 0.");
             return Err(ServerError::InvalidConfiguration);
         }
@@ -130,7 +130,7 @@ impl Validatable<ServerError> for PersonalAccessTokenConfig {
             return Err(ServerError::InvalidConfiguration);
         }
 
-        if self.cleaner.enabled && self.cleaner.interval == 0 {
+        if self.cleaner.enabled && self.cleaner.interval.is_zero() {
             error!(
                 "Personal access token cleaner interval cannot be zero, it must be greater than 0."
             );

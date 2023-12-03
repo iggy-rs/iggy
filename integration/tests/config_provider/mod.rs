@@ -36,7 +36,7 @@ async fn validate_server_config_json_from_repository() {
 #[tokio::test]
 async fn validate_custom_env_provider() {
     env::set_var("IGGY_SYSTEM_DATABASE_PATH", "awesome_database_path");
-    env::set_var("IGGY_QUIC_DATAGRAM_SEND_BUFFER_SIZE", "1337");
+    env::set_var("IGGY_QUIC_DATAGRAM_SEND_BUFFER_SIZE", "1KB");
     env::set_var("IGGY_QUIC_CERTIFICATE_SELF_SIGNED", "false");
     env::set_var("IGGY_HTTP_ENABLED", "false");
     env::set_var("IGGY_SYSTEM_PARTITION_MESSAGES_REQUIRED_TO_SAVE", "42");
@@ -50,7 +50,10 @@ async fn validate_custom_env_provider() {
         .expect("Failed to load default server.toml config");
 
     assert_eq!(config.system.database.path, "awesome_database_path");
-    assert_eq!(config.quic.datagram_send_buffer_size, 1337);
+    assert_eq!(
+        config.quic.datagram_send_buffer_size,
+        "1KB".parse().unwrap()
+    );
     assert!(!config.quic.certificate.self_signed);
     assert!(!config.http.enabled);
     assert_eq!(config.system.partition.messages_required_to_save, 42);

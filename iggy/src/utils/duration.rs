@@ -23,6 +23,14 @@ impl IggyDuration {
     pub fn as_secs(&self) -> u32 {
         self.duration.as_secs() as u32
     }
+
+    pub fn get_duration(&self) -> Duration {
+        self.duration
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.duration.as_secs() == 0
+    }
 }
 
 impl FromStr for IggyDuration {

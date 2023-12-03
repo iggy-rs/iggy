@@ -8,8 +8,8 @@ use crate::configs::server::{
 };
 use crate::configs::system::{
     CacheConfig, CompressionConfig, DatabaseConfig, EncryptionConfig, LoggingConfig,
-    PartitionConfig, RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig,
-    SystemConfig, TopicConfig,
+    MessageDeduplicationConfig, PartitionConfig, RetentionPolicyConfig, RuntimeConfig,
+    SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -130,6 +130,7 @@ impl Default for SystemConfig {
             partition: PartitionConfig::default(),
             segment: SegmentConfig::default(),
             compression: CompressionConfig::default(),
+            message_deduplication: MessageDeduplicationConfig::default(),
         }
     }
 }
@@ -209,7 +210,6 @@ impl Default for PartitionConfig {
         PartitionConfig {
             path: "partitions".to_string(),
             messages_required_to_save: 1000,
-            deduplicate_messages: false,
             enforce_fsync: false,
             validate_checksum: false,
         }
@@ -222,6 +222,16 @@ impl Default for SegmentConfig {
             size_bytes: 1000 * 1000 * 1000,
             cache_indexes: true,
             cache_time_indexes: true,
+        }
+    }
+}
+
+impl Default for MessageDeduplicationConfig {
+    fn default() -> MessageDeduplicationConfig {
+        MessageDeduplicationConfig {
+            enabled: false,
+            max_entries: 1000,
+            expiry: "1m".parse().unwrap(),
         }
     }
 }

@@ -21,6 +21,7 @@ pub struct SystemConfig {
     pub segment: SegmentConfig,
     pub encryption: EncryptionConfig,
     pub compression: CompressionConfig,
+    pub message_deduplication: MessageDeduplicationConfig,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -81,9 +82,17 @@ pub struct TopicConfig {
 pub struct PartitionConfig {
     pub path: String,
     pub messages_required_to_save: u32,
-    pub deduplicate_messages: bool,
     pub enforce_fsync: bool,
     pub validate_checksum: bool,
+}
+
+#[serde_as]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct MessageDeduplicationConfig {
+    pub enabled: bool,
+    pub max_entries: u64,
+    #[serde_as(as = "DisplayFromStr")]
+    pub expiry: IggyDuration,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

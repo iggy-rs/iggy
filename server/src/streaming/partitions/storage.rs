@@ -11,7 +11,7 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 
 #[derive(Debug)]
 pub struct FilePartitionStorage {
@@ -230,14 +230,18 @@ impl Storage<Partition> for FilePartitionStorage {
             }
 
             // Load the unique message IDs for the partition if the deduplication feature is enabled.
-            if partition.message_ids.is_some() {
+            let mut unique_message_ids_count = 0;
+            if let Some(message_deduplicator) = &partition.message_deduplicator {
                 info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
-                let partition_message_ids = partition.message_ids.as_mut().unwrap();
                 let message_ids = segment.storage.segment.load_message_ids(&segment).await?;
                 for message_id in message_ids {
-                    partition_message_ids.insert(message_id);
+                    if message_deduplicator.try_insert(&message_id).await {
+                        unique_message_ids_count += 1;
+                    } else {
+                        warn!("Duplicated message ID: {} for partition with ID: {} and segment with start offset: {}.", message_id, partition.partition_id, segment.start_offset);
+                    }
                 }
-                info!("Loaded: {} unique message IDs for partition with ID: {} and segment with start offset: {}...", partition_message_ids.len(), partition.partition_id, segment.start_offset);
+                info!("Loaded: {} unique message IDs for partition with ID: {} and segment with start offset: {}...", unique_message_ids_count, partition.partition_id, segment.start_offset);
             }
 
             partition.segments.push(segment);

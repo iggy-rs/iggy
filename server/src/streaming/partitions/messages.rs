@@ -333,27 +333,29 @@ impl Partition {
             }
         }
 
-        if let Some(message_ids) = &mut self.message_ids {
-            messages = messages
-                .into_iter()
-                .filter_map(|mut message| {
-                    if message.id == 0 || !message_ids.contains(&message.id) {
-                        message.id = random_id::get_uuid();
-                        message_ids.insert(message.id);
-                        Some(message)
-                    } else {
-                        warn!(
-                            "Ignored the duplicated message ID: {} for partition with ID: {}.",
-                            message.id, self.partition_id
-                        );
-                        None
-                    }
-                })
-                .collect();
+        for message in &mut messages {
+            if message.id == 0 {
+                message.id = random_id::get_uuid();
+            }
+        }
+
+        if let Some(message_deduplicator) = &mut self.message_deduplicator {
+            let mut deduplicated_messages = Vec::with_capacity(messages.len());
+            for message in messages {
+                if message_deduplicator.try_insert(&message.id).await {
+                    deduplicated_messages.push(message);
+                } else {
+                    warn!(
+                        "Ignored the duplicated message ID: {} for partition with ID: {}.",
+                        message.id, self.partition_id
+                    );
+                }
+            }
+
+            messages = deduplicated_messages;
         }
 
         let messages_count = messages.len() as u32;
-
         for message in &mut messages {
             if self.should_increment_offset {
                 self.current_offset += 1;
@@ -392,5 +394,93 @@ impl Partition {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
+    use crate::streaming::storage::tests::get_test_system_storage;
+    use bytes::Bytes;
+    use iggy::models::messages::MessageState;
+    use iggy::utils::checksum;
+
+    #[tokio::test]
+    async fn given_disabled_message_deduplication_all_messages_should_be_appended() {
+        let mut partition = create_partition(false);
+        let messages = create_messages();
+        let messages_count = messages.len() as u32;
+        partition.append_messages(messages).await.unwrap();
+
+        let loaded_messages = partition
+            .get_messages_by_offset(0, messages_count)
+            .await
+            .unwrap();
+        assert_eq!(loaded_messages.len(), messages_count as usize);
+    }
+
+    #[tokio::test]
+    async fn given_enabled_message_deduplication_only_messages_with_unique_id_should_be_appended() {
+        let mut partition = create_partition(true);
+        let messages = create_messages();
+        let messages_count = messages.len() as u32;
+        let unique_messages_count = 3;
+        partition.append_messages(messages).await.unwrap();
+
+        let loaded_messages = partition
+            .get_messages_by_offset(0, messages_count)
+            .await
+            .unwrap();
+        assert_eq!(loaded_messages.len(), unique_messages_count);
+    }
+
+    fn create_partition(deduplication_enabled: bool) -> Partition {
+        let storage = Arc::new(get_test_system_storage());
+        let stream_id = 1;
+        let topic_id = 2;
+        let partition_id = 3;
+        let with_segment = true;
+        let config = Arc::new(SystemConfig {
+            message_deduplication: MessageDeduplicationConfig {
+                enabled: deduplication_enabled,
+                ..Default::default()
+            },
+            ..Default::default()
+        });
+        Partition::create(
+            stream_id,
+            topic_id,
+            partition_id,
+            with_segment,
+            config,
+            storage,
+            None,
+        )
+    }
+
+    fn create_messages() -> Vec<Message> {
+        vec![
+            create_message(0, 1, "message 1"),
+            create_message(1, 2, "message 2"),
+            create_message(2, 3, "message 3"),
+            create_message(3, 2, "message 3.2"),
+            create_message(4, 1, "message 1.2"),
+            create_message(5, 3, "message 3.3"),
+        ]
+    }
+
+    fn create_message(offset: u64, id: u128, payload: &str) -> Message {
+        let payload = Bytes::from(payload.to_string());
+        let checksum = checksum::calculate(payload.as_ref());
+        Message::create(
+            offset,
+            MessageState::Available,
+            1,
+            id,
+            payload,
+            checksum,
+            None,
+        )
     }
 }

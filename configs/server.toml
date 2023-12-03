@@ -260,7 +260,7 @@ size = "4GB"
 [system.retention_policy]
 # Configures the message expiry setting.
 # "disabled" means messages are kept indefinitely.
-# A time value in human readable format determines the lifespan of messages.
+# A time value in human-readable format determines the lifespan of messages.
 # Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
 message_expiry = "disabled"
 
@@ -308,11 +308,6 @@ path = "topics"
 # Specifies the directory where partition data is stored, relative to `topic.path`.
 path = "partitions"
 
-# Controls whether message deduplication is enabled (boolean).
-# `true` activates deduplication, ignoring messages with duplicate IDs.
-# `false` treats each message as unique, even if IDs are duplicated.
-deduplicate_messages = false
-
 # Determines whether to enforce file synchronization on partition updates (boolean).
 # `true` ensures immediate writing of data to disk for durability.
 # `false` allows the OS to manage write operations, which can improve performance.
@@ -344,3 +339,16 @@ cache_indexes = true
 # `true` allows faster timestamp-based data retrieval by keeping indexes in memory.
 # `false` conserves memory by reading time indexes from disk, which may slow down access.
 cache_time_indexes = true
+
+# Message deduplication configuration
+[system.message_deduplication]
+# Controls whether message deduplication is enabled (boolean).
+# `true` activates deduplication, ignoring messages with duplicate IDs.
+# `false` treats each message as unique, even if IDs are duplicated.
+enabled = false
+# Maximum number of ID entries in the deduplication cache (u64).
+max_entries = 1000
+# Maximum age of ID entries in the deduplication cache in human-readable format.
+expiry = "1m"
+
+

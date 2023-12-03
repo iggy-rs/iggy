@@ -1,12 +1,13 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
+use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use iggy::consumer::ConsumerKind;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::TimeStamp;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -19,7 +20,7 @@ pub struct Partition {
     pub current_offset: u64,
     pub cache: Option<SmartCache<Arc<Message>>>,
     pub cached_memory_tracker: Option<Arc<CacheMemoryTracker>>,
-    pub message_ids: Option<HashSet<u128>>,
+    pub message_deduplicator: Option<MessageDeduplicator>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
     pub created_at: u64,
@@ -96,8 +97,21 @@ impl Partition {
             message_expiry,
             cache: messages,
             cached_memory_tracker,
-            message_ids: match config.partition.deduplicate_messages {
-                true => Some(HashSet::new()),
+            message_deduplicator: match config.message_deduplication.enabled {
+                true => Some(MessageDeduplicator::new(
+                    if config.message_deduplication.max_entries > 0 {
+                        Some(config.message_deduplication.max_entries)
+                    } else {
+                        None
+                    },
+                    {
+                        if config.message_deduplication.expiry.is_zero() {
+                            None
+                        } else {
+                            Some(config.message_deduplication.expiry)
+                        }
+                    },
+                )),
                 false => None,
             },
             segments: vec![],

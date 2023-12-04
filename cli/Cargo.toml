@@ -10,7 +10,7 @@ clap = { version = "4.1.11", features = ["derive"] }
 figlet-rs = "0.1.5"
 iggy = { path = "../iggy" }
 quinn = "0.10.0"
-rustls = { version = "0.21.1", features = ["dangerous_configuration", "quic"] }
+rustls = { version = "0.22.0", features = ["dangerous_configuration", "quic"] }
 thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"] }
 tracing = { version = "0.1.37" }

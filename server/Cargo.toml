@@ -30,7 +30,7 @@ quinn = "0.10.*"
 rcgen = "0.11.*"
 ring = "0.17.*"
 rmp-serde = "1.1.2"
-rustls = { version = "0.21.*", features = ["dangerous_configuration", "quic"] }
+rustls = { version = "0.22.*", features = ["dangerous_configuration", "quic"] }
 rustls-pemfile = "1.0.3"
 serde = { version = "1.0.*", features = ["derive", "rc"] }
 serde_json = "1.0.*"

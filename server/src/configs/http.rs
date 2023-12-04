@@ -1,6 +1,9 @@
 use iggy::error::Error;
+use iggy::utils::duration::IggyDuration;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HttpConfig {
@@ -23,17 +26,22 @@ pub struct HttpCorsConfig {
     pub allow_private_network: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[serde_as]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HttpJwtConfig {
     pub algorithm: String,
     pub issuer: String,
     pub audience: String,
     pub valid_issuers: Vec<String>,
     pub valid_audiences: Vec<String>,
-    pub access_token_expiry: u64,
-    pub refresh_token_expiry: u64,
-    pub clock_skew: u64,
-    pub not_before: u64,
+    #[serde_as(as = "DisplayFromStr")]
+    pub access_token_expiry: IggyDuration,
+    #[serde_as(as = "DisplayFromStr")]
+    pub refresh_token_expiry: IggyDuration,
+    #[serde_as(as = "DisplayFromStr")]
+    pub clock_skew: IggyDuration,
+    #[serde_as(as = "DisplayFromStr")]
+    pub not_before: IggyDuration,
     pub encoding_secret: String,
     pub decoding_secret: String,
     pub use_base64_secret: bool,

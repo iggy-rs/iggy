@@ -4,6 +4,7 @@ use crate::http::jwt::refresh_token::RefreshToken;
 use crate::http::jwt::storage::TokenStorage;
 use iggy::error::Error;
 use iggy::models::user_info::UserId;
+use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::TimeStamp;
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use sled::Db;
@@ -15,9 +16,9 @@ use tracing::{debug, error, info};
 pub struct IssuerOptions {
     pub issuer: String,
     pub audience: String,
-    pub access_token_expiry: u64,
-    pub refresh_token_expiry: u64,
-    pub not_before: u64,
+    pub access_token_expiry: IggyDuration,
+    pub refresh_token_expiry: IggyDuration,
+    pub not_before: IggyDuration,
     pub key: EncodingKey,
     pub algorithm: Algorithm,
 }
@@ -25,7 +26,7 @@ pub struct IssuerOptions {
 pub struct ValidatorOptions {
     pub valid_audiences: Vec<String>,
     pub valid_issuers: Vec<String>,
-    pub clock_skew: u64,
+    pub clock_skew: IggyDuration,
     pub key: DecodingKey,
 }
 
@@ -83,12 +84,12 @@ impl JwtManager {
         algorithm: Algorithm,
         issuers: &[String],
         audiences: &[String],
-        clock_skew: u64,
+        clock_skew: IggyDuration,
     ) -> Validation {
         let mut validator = Validation::new(algorithm);
         validator.set_issuer(issuers);
         validator.set_audience(audiences);
-        validator.leeway = clock_skew;
+        validator.leeway = clock_skew.as_secs() as u64;
         validator
     }
 
@@ -166,8 +167,8 @@ impl JwtManager {
         let header = Header::new(self.issuer.algorithm);
         let now = TimeStamp::now().to_secs();
         let iat = now;
-        let exp = iat + self.issuer.access_token_expiry;
-        let nbf = iat + self.issuer.not_before;
+        let exp = iat + self.issuer.access_token_expiry.as_secs() as u64;
+        let nbf = iat + self.issuer.not_before.as_secs() as u64;
         let claims = JwtClaims {
             jti: uuid::Uuid::new_v4().to_string(),
             sub: user_id,
@@ -184,8 +185,11 @@ impl JwtManager {
             return Err(Error::CannotGenerateJwt);
         }
 
-        let (refresh_token, raw_refresh_token) =
-            RefreshToken::new(user_id, now, self.issuer.refresh_token_expiry);
+        let (refresh_token, raw_refresh_token) = RefreshToken::new(
+            user_id,
+            now,
+            self.issuer.refresh_token_expiry.as_secs() as u64,
+        );
         self.tokens_storage.save_refresh_token(&refresh_token)?;
 
         Ok(GeneratedTokens {

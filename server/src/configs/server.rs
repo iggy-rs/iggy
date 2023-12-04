@@ -4,8 +4,11 @@ use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;
 use crate::configs::tcp::TcpConfig;
 use crate::server_error::ServerError;
+use iggy::utils::duration::IggyDuration;
 use iggy::validatable::Validatable;
 use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use serde_with::DisplayFromStr;
 use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -19,17 +22,21 @@ pub struct ServerConfig {
     pub http: HttpConfig,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MessageCleanerConfig {
     pub enabled: bool,
-    pub interval: u64,
+    #[serde_as(as = "DisplayFromStr")]
+    pub interval: IggyDuration,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct MessageSaverConfig {
     pub enabled: bool,
     pub enforce_fsync: bool,
-    pub interval: u64,
+    #[serde_as(as = "DisplayFromStr")]
+    pub interval: IggyDuration,
 }
 
 #[derive(Debug, Deserialize, Serialize, Copy, Clone)]
@@ -38,10 +45,12 @@ pub struct PersonalAccessTokenConfig {
     pub cleaner: PersonalAccessTokenCleanerConfig,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize, Copy, Clone)]
 pub struct PersonalAccessTokenCleanerConfig {
     pub enabled: bool,
-    pub interval: u64,
+    #[serde_as(as = "DisplayFromStr")]
+    pub interval: IggyDuration,
 }
 
 impl ServerConfig {

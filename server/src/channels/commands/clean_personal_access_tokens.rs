@@ -3,14 +3,14 @@ use crate::configs::server::PersonalAccessTokenCleanerConfig;
 use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::Sender;
+use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::TimeStamp;
-use std::time::Duration;
 use tokio::time;
 use tracing::{debug, error, info};
 
 pub struct PersonalAccessTokenCleaner {
     enabled: bool,
-    interval: Duration,
+    interval: IggyDuration,
     sender: Sender<CleanPersonalAccessTokensCommand>,
 }
 
@@ -27,7 +27,7 @@ impl PersonalAccessTokenCleaner {
     ) -> Self {
         Self {
             enabled: config.enabled,
-            interval: Duration::from_secs(config.interval),
+            interval: config.interval,
             sender,
         }
     }
@@ -46,7 +46,7 @@ impl PersonalAccessTokenCleaner {
         );
 
         tokio::spawn(async move {
-            let mut interval_timer = time::interval(interval);
+            let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
                 sender

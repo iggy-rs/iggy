@@ -8,7 +8,6 @@ use std::fs::File;
 use std::io::BufReader;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
 use tracing::info;
 
 /// Starts the QUIC server.
@@ -35,17 +34,16 @@ fn configure_quic(config: &QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Er
 
     let mut server_config = quinn::ServerConfig::with_single_cert(certificate, key)?;
     let mut transport = quinn::TransportConfig::default();
-    transport.initial_mtu(config.initial_mtu);
-    transport.send_window(config.send_window);
-    transport.receive_window(VarInt::try_from(config.receive_window)?);
-    transport.datagram_send_buffer_size(config.datagram_send_buffer_size);
+    transport.initial_mtu(config.initial_mtu.get_bytes() as u16);
+    transport.send_window(config.send_window.get_bytes());
+    transport.receive_window(VarInt::try_from(config.receive_window.get_bytes())?);
+    transport.datagram_send_buffer_size(config.datagram_send_buffer_size.get_bytes() as usize);
     transport.max_concurrent_bidi_streams(VarInt::try_from(config.max_concurrent_bidi_streams)?);
-    if config.keep_alive_interval > 0 {
-        transport.keep_alive_interval(Some(Duration::from_millis(config.keep_alive_interval)));
+    if !config.keep_alive_interval.is_zero() {
+        transport.keep_alive_interval(Some(config.keep_alive_interval.get_duration()));
     }
-    if config.max_idle_timeout > 0 {
-        let max_idle_timeout =
-            IdleTimeout::try_from(Duration::from_millis(config.max_idle_timeout))?;
+    if !config.max_idle_timeout.is_zero() {
+        let max_idle_timeout = IdleTimeout::try_from(config.max_idle_timeout.get_duration())?;
         transport.max_idle_timeout(Some(max_idle_timeout));
     }
 

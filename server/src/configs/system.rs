@@ -40,12 +40,14 @@ pub struct CompressionConfig {
     pub default_algorithm: CompressionAlgorithm,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LoggingConfig {
     pub path: String,
     pub level: String,
-    pub max_size_megabytes: u64,
-    pub retention_days: u32,
+    pub max_size: Byte,
+    #[serde_as(as = "DisplayFromStr")]
+    pub retention: IggyDuration,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -97,7 +99,7 @@ pub struct MessageDeduplicationConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SegmentConfig {
-    pub size_bytes: u32,
+    pub size: Byte,
     pub cache_indexes: bool,
     pub cache_time_indexes: bool,
 }

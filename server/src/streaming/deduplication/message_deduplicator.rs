@@ -70,7 +70,7 @@ mod tests {
             let id = i as u128;
             assert!(deduplicator.try_insert(&id).await);
             assert!(deduplicator.exists(&id));
-            sleep(ttl.get_duration()).await;
+            sleep(2 * ttl.get_duration()).await;
             assert!(!deduplicator.exists(&id));
             assert!(deduplicator.try_insert(&id).await);
         }

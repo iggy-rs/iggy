@@ -44,7 +44,7 @@ tokio-native-tls = "0.3.1"
 tokio-rustls = "0.24.1"
 toml = "0.8.*"
 tower = { version = "0.4.13" }
-tower-http = { version = "0.4.0", features = [
+tower-http = { version = "0.5.0", features = [
     "add-extension",
     "cors",
     "trace",

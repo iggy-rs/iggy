@@ -34,10 +34,10 @@ fn configure_quic(config: &QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Er
 
     let mut server_config = quinn::ServerConfig::with_single_cert(certificate, key)?;
     let mut transport = quinn::TransportConfig::default();
-    transport.initial_mtu(config.initial_mtu.get_bytes() as u16);
-    transport.send_window(config.send_window.get_bytes());
-    transport.receive_window(VarInt::try_from(config.receive_window.get_bytes())?);
-    transport.datagram_send_buffer_size(config.datagram_send_buffer_size.get_bytes() as usize);
+    transport.initial_mtu(config.initial_mtu.as_u64() as u16);
+    transport.send_window(config.send_window.as_u64());
+    transport.receive_window(VarInt::try_from(config.receive_window.as_u64())?);
+    transport.datagram_send_buffer_size(config.datagram_send_buffer_size.as_u64() as usize);
     transport.max_concurrent_bidi_streams(VarInt::try_from(config.max_concurrent_bidi_streams)?);
     if !config.keep_alive_interval.is_zero() {
         transport.keep_alive_interval(Some(config.keep_alive_interval.get_duration()));

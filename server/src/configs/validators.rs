@@ -6,7 +6,7 @@ use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, RetentionPolicyConfig, SegmentConfig};
 use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
-use byte_unit::{Byte, ByteUnit};
+use byte_unit::{Byte, UnitType};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::validatable::Validatable;
 use sysinfo::SystemExt;
@@ -49,9 +49,12 @@ impl Validatable<ServerError> for CacheConfig {
         let free_memory = sys.free_memory();
         let cache_percentage = (limit_bytes as f64 / total_memory as f64) * 100.0;
 
-        let pretty_cache_limit = Byte::from_bytes(limit_bytes).get_adjusted_unit(ByteUnit::MB);
-        let pretty_total_memory = Byte::from_bytes(total_memory).get_adjusted_unit(ByteUnit::MB);
-        let pretty_free_memory = Byte::from_bytes(free_memory).get_adjusted_unit(ByteUnit::MB);
+        let pretty_cache_limit =
+            Byte::from_u64(limit_bytes).get_appropriate_unit(UnitType::Decimal);
+        let pretty_total_memory =
+            Byte::from_u64(total_memory).get_appropriate_unit(UnitType::Decimal);
+        let pretty_free_memory =
+            Byte::from_u64(free_memory).get_appropriate_unit(UnitType::Decimal);
 
         if limit_bytes > total_memory {
             return Err(ServerError::CacheConfigValidationFailure(format!(
@@ -79,7 +82,7 @@ impl Validatable<ServerError> for CacheConfig {
 impl Validatable<ServerError> for RetentionPolicyConfig {
     fn validate(&self) -> Result<(), ServerError> {
         // TODO(hubcio): Change this message once topic size based retention policy is fully developed.
-        if self.max_topic_size.get_bytes() > 0 {
+        if self.max_topic_size.as_u64() > 0 {
             warn!("Retention policy max_topic_size is not implemented yet!");
         }
 
@@ -89,7 +92,7 @@ impl Validatable<ServerError> for RetentionPolicyConfig {
 
 impl Validatable<ServerError> for SegmentConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.size.get_bytes() as u32 > segment::MAX_SIZE_BYTES {
+        if self.size.as_u64() as u32 > segment::MAX_SIZE_BYTES {
             error!(
                 "Segment configuration -> size cannot be greater than: {} bytes.",
                 segment::MAX_SIZE_BYTES

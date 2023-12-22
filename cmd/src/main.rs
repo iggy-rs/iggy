@@ -11,6 +11,7 @@ use crate::args::{
 use crate::credentials::IggyCredentials;
 use crate::error::IggyCmdError;
 use crate::logging::Logging;
+use args::message::MessageAction;
 use args::partition::PartitionAction;
 use args::user::UserAction;
 use clap::Parser;
@@ -24,6 +25,7 @@ use iggy::cmd::{
         delete_consumer_group::DeleteConsumerGroupCmd, get_consumer_group::GetConsumerGroupCmd,
         get_consumer_groups::GetConsumerGroupsCmd,
     },
+    message::{poll_messages::PollMessagesCmd, send_messages::SendMessagesCmd},
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
     personal_access_tokens::{
         create_personal_access_token::CreatePersonalAccessTokenCmd,
@@ -198,6 +200,27 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
                 list_args.stream_id.clone(),
                 list_args.topic_id.clone(),
                 list_args.list_mode.into(),
+            )),
+        },
+        Command::Message(command) => match command {
+            MessageAction::Send(send_args) => Box::new(SendMessagesCmd::new(
+                send_args.stream_id.clone(),
+                send_args.topic_id.clone(),
+                send_args.partition_id,
+                send_args.message_key.clone(),
+                send_args.messages.clone(),
+            )),
+            MessageAction::Poll(poll_args) => Box::new(PollMessagesCmd::new(
+                poll_args.stream_id.clone(),
+                poll_args.topic_id.clone(),
+                poll_args.partition_id,
+                poll_args.message_count,
+                poll_args.auto_commit,
+                poll_args.offset,
+                poll_args.first,
+                poll_args.last,
+                poll_args.next,
+                poll_args.consumer.clone(),
             )),
         },
     }

@@ -25,6 +25,7 @@ Commands:
   user            user operations [aliases: u]
   client          client operations [aliases: c]
   consumer-group  consumer group operations [aliases: g]
+  message         message operations [aliases: m]
   help            Print this message or the help of the given subcommand(s)
 
 Options:

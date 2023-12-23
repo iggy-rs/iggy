@@ -28,7 +28,7 @@ jsonwebtoken = "9.0.0"
 moka = { version = "0.12.1", features = ["future"] }
 prometheus-client = "0.22.0"
 quinn = "0.10.*"
-rcgen = "0.11.*"
+rcgen = "0.12.0"
 ring = "0.17.*"
 rmp-serde = "1.1.2"
 rustls = { version = "0.21.*", features = ["dangerous_configuration", "quic"] }
@@ -38,7 +38,7 @@ serde_json = "1.0.*"
 serde_with = { version = "3.3.0", features = ["base64", "macros"] }
 sled = "0.34.7"
 strip-ansi-escapes = "0.2.0"
-sysinfo = "0.29.*"
+sysinfo = "0.30.0"
 thiserror = "1.0.*"
 tokio = { version = "1.33.0", features = ["full"] }
 tokio-native-tls = "0.3.1"

@@ -5,7 +5,7 @@ use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
 use std::str::FromStr;
-use sysinfo::SystemExt;
+use sysinfo::System;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum MemoryResourceQuota {
@@ -20,9 +20,8 @@ impl MemoryResourceQuota {
         match self {
             MemoryResourceQuota::Bytes(byte) => byte.as_u64(),
             MemoryResourceQuota::Percentage(percentage) => {
-                let mut sys = sysinfo::System::new_all();
-                sys.refresh_system();
-                sys.refresh_processes();
+                let mut sys = System::new_all();
+                sys.refresh_all();
 
                 let total_memory = sys.total_memory();
                 (total_memory as f64 * (percentage as f64 / 100.0)) as u64

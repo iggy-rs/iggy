@@ -4,7 +4,7 @@ use crate::configs::resource_quota::MemoryResourceQuota;
 use crate::configs::system::CacheConfig;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Once};
-use sysinfo::SystemExt;
+use sysinfo::System;
 use tracing::info;
 
 static ONCE: Once = Once::new();
@@ -39,9 +39,8 @@ impl CacheMemoryTracker {
     }
 
     fn new(limit: MemoryResourceQuota) -> Self {
-        let mut sys = sysinfo::System::new_all();
-        sys.refresh_system();
-        sys.refresh_processes();
+        let mut sys = System::new_all();
+        sys.refresh_all();
 
         let total_memory_bytes = sys.total_memory();
         let free_memory = sys.free_memory();

@@ -66,12 +66,13 @@ fn load_certificates(
     key_file: &str,
 ) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey), Box<dyn Error>> {
     let mut cert_chain_reader = BufReader::new(File::open(cert_file)?);
-    let certs = rustls_pemfile::certs(&mut cert_chain_reader)?
-        .into_iter()
-        .map(rustls::Certificate)
+    let certs = rustls_pemfile::certs(&mut cert_chain_reader)
+        .map(|x| rustls::Certificate(x.unwrap().to_vec()))
         .collect();
     let mut key_reader = BufReader::new(File::open(key_file)?);
-    let mut keys = rustls_pemfile::rsa_private_keys(&mut key_reader)?;
-    let key = rustls::PrivateKey(keys.remove(0));
+    let mut keys = rustls_pemfile::rsa_private_keys(&mut key_reader)
+        .map(|x| rustls::PrivateKey(x.unwrap().secret_pkcs1_der().to_vec()))
+        .collect::<Vec<_>>();
+    let key = rustls::PrivateKey(keys.remove(0).0);
     Ok((certs, key))
 }

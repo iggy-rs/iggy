@@ -5,9 +5,11 @@ use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
 use bytes::BufMut;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
+use rustls::client::{ServerCertVerified, ServerCertVerifier};
+use rustls::{Certificate, ServerName};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tracing::{error, info, trace};
@@ -256,6 +258,7 @@ fn configure(config: &QuicClientConfig) -> Result<ClientConfig, Error> {
     Ok(client_config)
 }
 
+#[derive(Debug)]
 struct SkipServerVerification;
 
 impl SkipServerVerification {
@@ -264,16 +267,16 @@ impl SkipServerVerification {
     }
 }
 
-impl rustls::client::ServerCertVerifier for SkipServerVerification {
+impl ServerCertVerifier for SkipServerVerification {
     fn verify_server_cert(
         &self,
-        _end_entity: &rustls::Certificate,
-        _intermediates: &[rustls::Certificate],
-        _server_name: &rustls::ServerName,
-        _scts: &mut dyn Iterator<Item = &[u8]>,
-        _ocsp_response: &[u8],
-        _now: std::time::SystemTime,
-    ) -> Result<rustls::client::ServerCertVerified, rustls::Error> {
-        Ok(rustls::client::ServerCertVerified::assertion())
+        _: &Certificate,
+        _: &[Certificate],
+        _: &ServerName,
+        _: &mut dyn Iterator<Item = &[u8]>,
+        _: &[u8],
+        _: SystemTime,
+    ) -> Result<ServerCertVerified, rustls::Error> {
+        Ok(ServerCertVerified::assertion())
     }
 }

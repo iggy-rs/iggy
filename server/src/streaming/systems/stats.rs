@@ -2,7 +2,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use iggy::error::Error;
 use iggy::models::stats::Stats;
-use sysinfo::{PidExt, ProcessExt, SystemExt};
+// use sysinfo::{PidExt, ProcessExt, SystemExt};
 
 const PROCESS_NAME: &str = "iggy-server";
 
@@ -11,8 +11,7 @@ impl System {
         self.ensure_authenticated(session)?;
         self.permissioner.get_stats(session.user_id)?;
         let mut sys = sysinfo::System::new_all();
-        sys.refresh_system();
-        sys.refresh_processes();
+        sys.refresh_all();
 
         let mut stats = Stats {
             process_id: 0,
@@ -54,13 +53,11 @@ impl System {
             read_bytes: 0,
             written_bytes: 0,
             messages_size_bytes: 0,
-            hostname: sys.host_name().unwrap_or("unknown_hostname".to_string()),
-            os_name: sys.name().unwrap_or("unknown_os_name".to_string()),
-            os_version: sys
-                .long_os_version()
+            hostname: sysinfo::System::host_name().unwrap_or("unknown_hostname".to_string()),
+            os_name: sysinfo::System::name().unwrap_or("unknown_os_name".to_string()),
+            os_version: sysinfo::System::long_os_version()
                 .unwrap_or("unknown_os_version".to_string()),
-            kernel_version: sys
-                .kernel_version()
+            kernel_version: sysinfo::System::kernel_version()
                 .unwrap_or("unknown_kernel_version".to_string()),
         };
 

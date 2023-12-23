@@ -9,7 +9,7 @@ use crate::streaming::segments::segment;
 use byte_unit::{Byte, UnitType};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::validatable::Validatable;
-use sysinfo::SystemExt;
+use sysinfo::System;
 use tracing::{error, info, warn};
 
 impl Validatable<ServerError> for ServerConfig {
@@ -42,8 +42,8 @@ impl Validatable<ServerError> for CompressionConfig {
 impl Validatable<ServerError> for CacheConfig {
     fn validate(&self) -> Result<(), ServerError> {
         let limit_bytes = self.size.clone().into();
-        let mut sys = sysinfo::System::new_all();
-        sys.refresh_system();
+        let mut sys = System::new_all();
+        sys.refresh_all();
         sys.refresh_processes();
         let total_memory = sys.total_memory();
         let free_memory = sys.free_memory();

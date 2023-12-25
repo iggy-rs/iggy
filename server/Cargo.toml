@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 build = "src/build.rs"
 
@@ -8,7 +8,7 @@ build = "src/build.rs"
 aes-gcm = "0.10.*"
 anyhow = "1.0.*"
 async-trait = "0.1.*"
-axum = "0.7.1"
+axum = "0.7.2"
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }
 bcrypt = "0.15.0"
 blake3 = "1.5.0"
@@ -24,7 +24,7 @@ figment = { version = "0.10.*", features = ["json", "toml", "env"] }
 flume = "0.11.0"
 futures = "0.3.*"
 iggy = { path = "../iggy" }
-jsonwebtoken = "9.0.0"
+jsonwebtoken = "9.*"
 moka = { version = "0.12.1", features = ["future"] }
 prometheus-client = "0.22.0"
 quinn = { version = "0.10.2" }
@@ -52,10 +52,10 @@ tower-http = { version = "0.5.0", features = [
 tower-layer = "0.3.2"
 tower-service = "0.3.2"
 tracing = { version = "0.1.*" }
-tracing-appender = "0.2.2"
-tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
-ulid = "1.1.0"
-uuid = { version = "1.5.0", features = ["v4", "fast-rng", "zerocopy"] }
+tracing-appender = "0.2.*"
+tracing-subscriber = { version = "0.3.*", features = ["fmt"] }
+ulid = "1.*"
+uuid = { version = "1.*", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.*", features = ["xxh32"] }
 
 [dev-dependencies]

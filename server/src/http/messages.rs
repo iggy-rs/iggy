@@ -17,7 +17,10 @@ use std::sync::Arc;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(poll_messages).post(send_messages))
+        .route(
+            "/streams/:stream_id/topics/:topic_id/messages",
+            get(poll_messages).post(send_messages),
+        )
         .with_state(state)
 }
 

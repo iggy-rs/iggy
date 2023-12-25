@@ -5,10 +5,7 @@ use crate::http::jwt::jwt_manager::JwtManager;
 use crate::http::jwt::middleware::jwt_auth;
 use crate::http::metrics::metrics;
 use crate::http::shared::AppState;
-use crate::http::{
-    consumer_groups, consumer_offsets, messages, partitions, personal_access_tokens, streams,
-    system, topics, users,
-};
+use crate::http::*;
 use crate::streaming::systems::system::SharedSystem;
 use axum::http::Method;
 use axum::{middleware, Router};
@@ -30,35 +27,15 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
 
     let app_state = build_app_state(&config, system).await;
     let mut app = Router::new()
-        .nest(
-            "/",
-            system::router(app_state.clone(), &config.metrics)
-                .nest(
-                    "/personal-access-tokens",
-                    personal_access_tokens::router(app_state.clone()),
-                )
-                .nest("/users", users::router(app_state.clone()))
-                .nest(
-                    "/streams",
-                    streams::router(app_state.clone()).nest(
-                        "/:stream_id/topics",
-                        topics::router(app_state.clone())
-                            .nest(
-                                "/:topic_id/consumer-groups",
-                                consumer_groups::router(app_state.clone()),
-                            )
-                            .nest("/:topic_id/messages", messages::router(app_state.clone()))
-                            .nest(
-                                "/:topic_id/consumer-offsets",
-                                consumer_offsets::router(app_state.clone()),
-                            )
-                            .nest(
-                                "/:topic_id/partitions",
-                                partitions::router(app_state.clone()),
-                            ),
-                    ),
-                ),
-        )
+        .merge(system::router(app_state.clone(), &config.metrics))
+        .merge(personal_access_tokens::router(app_state.clone()))
+        .merge(users::router(app_state.clone()))
+        .merge(streams::router(app_state.clone()))
+        .merge(topics::router(app_state.clone()))
+        .merge(consumer_groups::router(app_state.clone()))
+        .merge(consumer_offsets::router(app_state.clone()))
+        .merge(partitions::router(app_state.clone()))
+        .merge(messages::router(app_state.clone()))
         .layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
 
     if config.cors.enabled {

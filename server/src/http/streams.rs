@@ -16,9 +16,9 @@ use std::sync::Arc;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(get_streams).post(create_stream))
+        .route("/streams", get(get_streams).post(create_stream))
         .route(
-            "/:stream_id",
+            "/streams/:stream_id",
             get(get_stream).put(update_stream).delete(delete_stream),
         )
         .with_state(state)

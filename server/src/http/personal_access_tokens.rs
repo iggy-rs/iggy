@@ -18,11 +18,17 @@ use std::sync::Arc;
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
         .route(
-            "/",
+            "/personal-access-tokens",
             get(get_personal_access_tokens).post(create_personal_access_token),
         )
-        .route("/:name", delete(delete_personal_access_token))
-        .route("/login", post(login_with_personal_access_token))
+        .route(
+            "/personal-access-tokens/:name",
+            delete(delete_personal_access_token),
+        )
+        .route(
+            "/personal-access-tokens/login",
+            post(login_with_personal_access_token),
+        )
         .with_state(state)
 }
 

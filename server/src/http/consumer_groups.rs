@@ -15,9 +15,12 @@ use std::sync::Arc;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
-        .route("/", get(get_consumer_groups).post(create_consumer_group))
         .route(
-            "/:consumer_group_id",
+            "/streams/:stream_id/topics/:topic_id/consumer-groups",
+            get(get_consumer_groups).post(create_consumer_group),
+        )
+        .route(
+            "/streams/:stream_id/topics/:topic_id/consumer-groups/:consumer_group_id",
             get(get_consumer_group).delete(delete_consumer_group),
         )
         .with_state(state)

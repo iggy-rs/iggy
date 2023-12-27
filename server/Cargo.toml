@@ -7,7 +7,7 @@ build = "src/build.rs"
 [dependencies]
 aes-gcm = "0.10.*"
 anyhow = "1.0.*"
-async-trait = "0.1.*"
+async-trait = "0.1.75"
 axum = "0.7.2"
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }
 bcrypt = "0.15.0"

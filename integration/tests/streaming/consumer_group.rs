@@ -16,7 +16,7 @@ async fn should_persist_consumer_group_and_then_load_it_from_disk() {
 
     let consumer_groups = storage.load_consumer_groups(&topic).await.unwrap();
     assert_eq!(consumer_groups.len(), 1);
-    let consumer_group = consumer_groups.get(0).unwrap();
+    let consumer_group = consumer_groups.first().unwrap();
 
     let consumer_group_by_id = topic
         .get_consumer_group(&Identifier::numeric(consumer_group_id).unwrap())
@@ -53,7 +53,7 @@ async fn should_delete_consumer_group_from_disk() {
 
     let consumer_groups = storage.load_consumer_groups(&topic).await.unwrap();
     assert_eq!(consumer_groups.len(), 1);
-    let consumer_group = consumer_groups.get(0).unwrap();
+    let consumer_group = consumer_groups.first().unwrap();
 
     let deleted_consumer_group = topic
         .delete_consumer_group(&Identifier::numeric(consumer_group_id).unwrap())

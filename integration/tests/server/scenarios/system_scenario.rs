@@ -80,7 +80,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 4. Get streams and validate that created stream exists
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert_eq!(streams.len(), 1);
-    let stream = streams.get(0).unwrap();
+    let stream = streams.first().unwrap();
     assert_eq!(stream.id, STREAM_ID);
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
@@ -140,7 +140,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .await
         .unwrap();
     assert_eq!(topics.len(), 1);
-    let topic = topics.get(0).unwrap();
+    let topic = topics.first().unwrap();
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
@@ -195,7 +195,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.topics_count, 1);
     assert_eq!(stream.topics.len(), 1);
     assert_eq!(stream.messages_count, 0);
-    let stream_topic = stream.topics.get(0).unwrap();
+    let stream_topic = stream.topics.first().unwrap();
     assert_eq!(stream_topic.id, topic.id);
     assert_eq!(stream_topic.name, topic.name);
     assert_eq!(stream_topic.partitions_count, topic.partitions_count);
@@ -442,7 +442,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
 
     assert_eq!(consumer_groups.len(), 1);
-    let consumer_group = consumer_groups.get(0).unwrap();
+    let consumer_group = consumer_groups.first().unwrap();
     assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
     assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
     assert_eq!(consumer_group.members_count, 0);

@@ -7,7 +7,7 @@ repository = "https://github.com/iggy-rs/iggy"
 homepage = "https://iggy.rs"
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.76"
 async-trait = "0.1.75"
 clap = { version = "4.1.11", features = ["derive"] }
 clap_complete = "4.4.4"

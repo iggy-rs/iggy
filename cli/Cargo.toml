@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.70"
+anyhow = "1.0.76"
 bytes = "1.4.0"
 clap = { version = "4.1.11", features = ["derive"] }
 figlet-rs = "0.1.5"

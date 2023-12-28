@@ -47,7 +47,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(users.len(), 1);
 
     // 5. Get user details
-    let user = users.get(0).unwrap();
+    let user = users.first().unwrap();
     assert_eq!(user.id, 1);
     assert!(user.created_at > 0);
     assert_eq!(user.username, DEFAULT_ROOT_USERNAME);

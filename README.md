@@ -1,6 +1,6 @@
 # Iggy
 
-[Website](https://iggy.rs) | [Getting started](https://docs.iggy.rs/introduction/getting-started/) | [Documentation](https://docs.iggy.rs) | [Discord](https://iggy.rs/discord) | [Crates](https://crates.io/crates/iggy)
+[Website](https://iggy.rs) | [Getting started](https://docs.iggy.rs/introduction/getting-started/) | [Documentation](https://docs.iggy.rs) | [Blog](https://blog.iggy.rs) | [Discord](https://iggy.rs/discord) | [Crates](https://crates.io/crates/iggy)
 
 ![crates.io](https://img.shields.io/crates/v/iggy.svg)
 ![workflow](https://github.com/iggy-rs/iggy/actions/workflows/test.yml/badge.svg)

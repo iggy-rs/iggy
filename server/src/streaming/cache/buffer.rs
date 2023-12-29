@@ -1,6 +1,6 @@
 use super::memory_tracker::CacheMemoryTracker;
+use atone::Vc;
 use iggy::sizeable::Sizeable;
-use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::ops::Index;
 use std::sync::Arc;
@@ -8,7 +8,7 @@ use std::sync::Arc;
 #[derive(Debug)]
 pub struct SmartCache<T: Sizeable + Debug> {
     current_size: u64,
-    buffer: VecDeque<T>,
+    buffer: Vc<T>,
     memory_tracker: Arc<CacheMemoryTracker>,
 }
 
@@ -18,7 +18,7 @@ where
 {
     pub fn new() -> Self {
         let current_size = 0;
-        let buffer = VecDeque::new();
+        let buffer = Vc::new();
         let memory_tracker = CacheMemoryTracker::get_instance().unwrap();
 
         Self {

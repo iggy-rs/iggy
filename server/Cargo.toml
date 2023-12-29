@@ -8,6 +8,7 @@ build = "src/build.rs"
 aes-gcm = "0.10.*"
 anyhow = "1.0.76"
 async-trait = "0.1.75"
+atone = "0.3.7"
 axum = "0.7.2"
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }
 bcrypt = "0.15.0"

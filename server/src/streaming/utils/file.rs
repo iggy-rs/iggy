@@ -1,7 +1,5 @@
-use std::{
-    collections::VecDeque,
-    path::{Path, PathBuf},
-};
+use atone::Vc;
+use std::path::{Path, PathBuf};
 use tokio::fs::{read_dir, File, OpenOptions};
 
 pub async fn open(path: &str) -> Result<File, std::io::Error> {
@@ -21,7 +19,7 @@ where
     P: Into<PathBuf> + AsRef<Path>,
 {
     let mut total_size = 0;
-    let mut queue: VecDeque<PathBuf> = VecDeque::new();
+    let mut queue: Vc<PathBuf> = Vc::new();
     queue.push_back(path.into());
 
     while let Some(current_path) = queue.pop_front() {

@@ -15,7 +15,7 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let bytes;
     {
-        let system = system.read().await;
+        let system = system.read();
         let client = system.get_client(session, command.client_id).await?;
         {
             let client = client.read().await;

@@ -121,7 +121,7 @@ async fn main() -> Result<(), ServerError> {
     }
 
     let shutdown_timestamp = Instant::now();
-    let mut system = system.write().await;
+    let mut system = system.write();
     let persister = Arc::new(FileWithSyncPersister);
     let storage = Arc::new(FileSegmentStorage::new(persister));
     system.shutdown(storage).await?;

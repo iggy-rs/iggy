@@ -14,7 +14,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let system = system.read().await;
+    let system = system.read();
     let topics = system.find_topics(session, &command.stream_id)?;
     let topics = mapper::map_topics(&topics).await;
     sender.send_ok_response(&topics).await?;

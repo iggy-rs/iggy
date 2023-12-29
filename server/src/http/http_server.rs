@@ -98,7 +98,7 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
 async fn build_app_state(config: &HttpConfig, system: SharedSystem) -> Arc<AppState> {
     let db;
     {
-        let system_read = system.read().await;
+        let system_read = system.read();
         db = system_read
             .db
             .as_ref()

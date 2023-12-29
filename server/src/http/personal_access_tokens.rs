@@ -36,7 +36,7 @@ async fn get_personal_access_tokens(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<PersonalAccessTokenInfo>>, CustomError> {
-    let system = state.system.read().await;
+    let system = state.system.read();
     let personal_access_tokens = system
         .get_personal_access_tokens(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
@@ -50,7 +50,7 @@ async fn create_personal_access_token(
     Json(command): Json<CreatePersonalAccessToken>,
 ) -> Result<Json<RawPersonalAccessToken>, CustomError> {
     command.validate()?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     let token = system
         .create_personal_access_token(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -66,7 +66,7 @@ async fn delete_personal_access_token(
     Extension(identity): Extension<Identity>,
     Path(name): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    let system = state.system.read().await;
+    let system = state.system.read();
     system
         .delete_personal_access_token(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -81,7 +81,7 @@ async fn login_with_personal_access_token(
     Json(command): Json<LoginWithPersonalAccessToken>,
 ) -> Result<Json<IdentityInfo>, CustomError> {
     command.validate()?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     let user = system
         .login_with_personal_access_token(&command.token, None)
         .await?;

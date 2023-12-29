@@ -43,7 +43,6 @@ async fn handle_connection(
         info!("Client has connected: {address}");
         let client_id = system
             .read()
-            .await
             .add_client(&address, Transport::Quic)
             .await;
         let mut session = Session::from_client_id(client_id, address);
@@ -52,12 +51,12 @@ async fn handle_connection(
             let mut stream = match stream {
                 Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
                     info!("Connection closed");
-                    system.read().await.delete_client(&address).await;
+                    system.read().delete_client(&address).await;
                     return Ok(());
                 }
                 Err(error) => {
                     error!("Error when handling QUIC stream: {:?}", error);
-                    system.read().await.delete_client(&address).await;
+                    system.read().delete_client(&address).await;
                     return Err(error);
                 }
                 Ok(stream) => stream,

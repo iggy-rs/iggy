@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write().await;
+    let mut system = system.write();
     system
         .delete_topic(session, &command.stream_id, &command.topic_id)
         .await?;

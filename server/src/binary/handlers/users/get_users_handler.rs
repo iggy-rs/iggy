@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let system = system.read().await;
+    let system = system.read();
     let users = system.get_users(session).await?;
     let users = mapper::map_users(&users);
     sender.send_ok_response(users.as_slice()).await?;

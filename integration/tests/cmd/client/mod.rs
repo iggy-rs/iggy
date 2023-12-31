@@ -1,0 +1,3 @@
+mod test_client_get_command;
+mod test_client_help_command;
+mod test_client_list_command;

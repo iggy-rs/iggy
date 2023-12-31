@@ -1,3 +1,4 @@
+pub(crate) mod client;
 pub(crate) mod common;
 pub(crate) mod partition;
 pub(crate) mod permissions;
@@ -9,8 +10,9 @@ pub(crate) mod user;
 
 use self::user::UserAction;
 use crate::args::{
-    partition::PartitionAction, personal_access_token::PersonalAccessTokenAction,
-    stream::StreamAction, system::PingArgs, topic::TopicAction,
+    client::ClientAction, partition::PartitionAction,
+    personal_access_token::PersonalAccessTokenAction, stream::StreamAction, system::PingArgs,
+    topic::TopicAction,
 };
 use clap::{Args, Command as ClapCommand};
 use clap::{Parser, Subcommand};
@@ -115,6 +117,9 @@ pub(crate) enum Command {
     /// user operations
     #[command(subcommand, visible_alias = "u")]
     User(UserAction),
+    /// client operations
+    #[command(subcommand, visible_alias = "c")]
+    Client(ClientAction),
 }
 
 impl IggyConsoleArgs {

@@ -1,3 +1,4 @@
+mod client;
 mod common;
 mod general;
 mod partition;

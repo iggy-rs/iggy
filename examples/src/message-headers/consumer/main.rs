@@ -71,3 +71,160 @@ fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bytes::Bytes;
+    use examples::shared::utils;
+    use iggy::models::header::HeaderValue;
+    use iggy::models::messages::MessageState;
+    use std::collections::HashMap;
+    use std::str::FromStr;
+    use tracing_test::traced_test;
+
+    fn create_headers(message_type: &str) -> HashMap<HeaderKey, HeaderValue> {
+        let mut headers = HashMap::new();
+        headers.insert(
+            HeaderKey::new("Message_type").unwrap(),
+            HeaderValue::from_str(message_type).unwrap(),
+        );
+        headers
+    }
+
+    #[test]
+    #[traced_test]
+    fn handle_message_should_succeed_for_valid_order_created_type() {
+        let test_order_created = OrderCreated {
+            order_id: 1,
+            currency_pair: "EUR/USD".to_string(),
+            price: 3.45,
+            quantity: 1.0,
+            side: "buy".to_string(),
+            timestamp: utils::timestamp(),
+        }
+        .to_json();
+        let message = Message::empty(
+            0,
+            MessageState::Available,
+            0,
+            Bytes::from(test_order_created),
+            0,
+            Some(create_headers("order_created")),
+        );
+        let res = handle_message(&message);
+        assert!(res.is_ok());
+        assert!(logs_contain(
+            "Handling message type: order_created at offset: 0..."
+        ));
+        assert!(logs_contain("OrderCreated"));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "INFO", 2));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "WARN", 0));
+    }
+
+    #[test]
+    #[traced_test]
+    fn handle_message_should_succeed_for_valid_order_confirmed_type() {
+        let test_order_confirmed = OrderConfirmed {
+            order_id: 1,
+            price: 3.45,
+            timestamp: utils::timestamp(),
+        }
+        .to_json();
+        let message = Message::empty(
+            0,
+            MessageState::Available,
+            0,
+            Bytes::from(test_order_confirmed),
+            0,
+            Some(create_headers("order_confirmed")),
+        );
+        let res = handle_message(&message);
+        assert!(res.is_ok());
+        assert!(logs_contain(
+            "Handling message type: order_confirmed at offset: 0..."
+        ));
+        assert!(logs_contain("OrderConfirmed"));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "INFO", 2));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "WARN", 0));
+    }
+
+    #[test]
+    #[traced_test]
+    fn handle_message_should_succeed_for_valid_order_rejected_type() {
+        let test_order_rejected = OrderRejected {
+            order_id: 1,
+            timestamp: utils::timestamp(),
+            reason: "cancelled_by_user".to_string(),
+        }
+        .to_json();
+        let message = Message::empty(
+            0,
+            MessageState::Available,
+            0,
+            Bytes::from(test_order_rejected),
+            0,
+            Some(create_headers("order_rejected")),
+        );
+        let res = handle_message(&message);
+        assert!(res.is_ok());
+        assert!(logs_contain(
+            "Handling message type: order_rejected at offset: 0..."
+        ));
+        assert!(logs_contain("OrderRejected"));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "INFO", 2));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "WARN", 0));
+    }
+
+    #[test]
+    #[traced_test]
+    fn handle_message_should_warn_for_invalid_order_type() {
+        let message = Message::empty(
+            0,
+            MessageState::Available,
+            0,
+            Bytes::from(""),
+            0,
+            Some(create_headers("order_unknown")),
+        );
+        let res = handle_message(&message);
+        assert!(res.is_ok());
+        assert!(logs_contain(
+            "Handling message type: order_unknown at offset: 0..."
+        ));
+        assert!(logs_contain("Received unknown message type: order_unknown"));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "INFO", 1));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "WARN", 1));
+    }
+
+    #[test]
+    #[traced_test]
+    fn handle_message_should_report_error_for_valid_order_type_with_invalid_payload() {
+        let message = Message::empty(
+            0,
+            MessageState::Available,
+            0,
+            Bytes::from(""),
+            0,
+            Some(create_headers("order_created")),
+        );
+        let res = handle_message(&message);
+        assert!(res.is_err());
+        assert!(logs_contain(
+            "Handling message type: order_created at offset: 0..."
+        ));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "INFO", 1));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "WARN", 0));
+    }
+
+    #[test]
+    #[traced_test]
+    #[should_panic]
+    #[allow(unused_must_use)]
+    fn handle_message_should_panic_for_message_with_missing_headers() {
+        let message = Message::empty(0, MessageState::Available, 0, Bytes::from(""), 0, None);
+        handle_message(&message); // panicked: called `Option::unwrap()` on a `None` value
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "INFO", 0));
+        logs_assert(|lines: &[&str]| utils::matching_log_entry_counts(lines, "WARN", 0));
+    }
+}

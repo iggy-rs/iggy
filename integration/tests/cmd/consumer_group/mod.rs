@@ -1,0 +1,5 @@
+mod test_consumer_group_create_command;
+mod test_consumer_group_delete_command;
+mod test_consumer_group_get_command;
+mod test_consumer_group_help_command;
+mod test_consumer_group_list_command;

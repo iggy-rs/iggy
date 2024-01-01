@@ -19,24 +19,26 @@ use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tracing::{info, trace};
 
+use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
+
 #[derive(Debug)]
 pub struct SharedSystem {
-    system: Arc<RwLock<System>>,
+    system: SharedMut<System>,
 }
 
 impl SharedSystem {
     pub fn new(system: System) -> SharedSystem {
         SharedSystem {
-            system: Arc::new(RwLock::new(system)),
+            system: SharedMut::new(system),
         }
     }
 
-    pub async fn read(&self) -> tokio::sync::RwLockReadGuard<'_, System> {
-        self.system.read().await
+    pub fn read(&self) -> SharedReadLock<System> {
+        self.system.read()
     }
 
-    pub async fn write(&self) -> tokio::sync::RwLockWriteGuard<'_, System> {
-        self.system.write().await
+    pub fn write(&self) -> SharedWriteLock<System> {
+        self.system.write()
     }
 }
 

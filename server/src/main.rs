@@ -1,32 +1,21 @@
-mod args;
-mod binary;
-mod channels;
-mod configs;
-mod http;
-mod logging;
-mod quic;
-mod server_error;
-mod streaming;
-mod tcp;
-
-use crate::args::Args;
-use crate::channels::commands::clean_messages::CleanMessagesExecutor;
-use crate::channels::commands::clean_personal_access_tokens::CleanPersonalAccessTokensExecutor;
-use crate::channels::commands::save_messages::SaveMessagesExecutor;
-use crate::channels::handler::ServerCommandHandler;
-use crate::configs::config_provider;
-use crate::configs::server::ServerConfig;
-use crate::http::http_server;
-use crate::logging::Logging;
-use crate::quic::quic_server;
-use crate::server_error::ServerError;
-use crate::streaming::persistence::persister::FileWithSyncPersister;
-use crate::streaming::segments::storage::FileSegmentStorage;
-use crate::streaming::systems::system::{SharedSystem, System};
-use crate::tcp::tcp_server;
 use anyhow::Result;
 use clap::Parser;
 use figlet_rs::FIGfont;
+use server::args::Args;
+use server::channels::commands::clean_messages::CleanMessagesExecutor;
+use server::channels::commands::clean_personal_access_tokens::CleanPersonalAccessTokensExecutor;
+use server::channels::commands::save_messages::SaveMessagesExecutor;
+use server::channels::handler::ServerCommandHandler;
+use server::configs::config_provider;
+use server::configs::server::ServerConfig;
+use server::http::http_server;
+use server::logging::Logging;
+use server::quic::quic_server;
+use server::server_error::ServerError;
+use server::streaming::persistence::persister::FileWithSyncPersister;
+use server::streaming::segments::storage::FileSegmentStorage;
+use server::streaming::systems::system::{SharedSystem, System};
+use server::tcp::tcp_server;
 use std::sync::Arc;
 use tokio::time::Instant;
 use tracing::info;
@@ -121,7 +110,7 @@ async fn main() -> Result<(), ServerError> {
     }
 
     let shutdown_timestamp = Instant::now();
-    let mut system = system.write().await;
+    let mut system = system.write();
     let persister = Arc::new(FileWithSyncPersister);
     let storage = Arc::new(FileSegmentStorage::new(persister));
     system.shutdown(storage).await?;

@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write().await;
+    let mut system = system.write();
     system
         .create_topic(
             session,

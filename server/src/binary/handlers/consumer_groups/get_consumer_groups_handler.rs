@@ -14,7 +14,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let system = system.read().await;
+    let system = system.read();
     let consumer_groups =
         system.get_consumer_groups(session, &command.stream_id, &command.topic_id)?;
     let consumer_groups = mapper::map_consumer_groups(&consumer_groups).await;

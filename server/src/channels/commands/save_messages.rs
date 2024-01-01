@@ -73,7 +73,6 @@ impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
         let storage = Arc::new(FileSegmentStorage::new(persister));
         system
             .write()
-            .await
             .persist_messages(storage)
             .await
             .unwrap_or_else(|error| {

@@ -13,6 +13,6 @@ pub async fn metrics(
     request: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    state.system.read().await.metrics.increment_http_requests();
+    state.system.read().metrics.increment_http_requests();
     Ok(next.run(request).await)
 }

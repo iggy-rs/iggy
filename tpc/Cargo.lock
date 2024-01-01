@@ -614,9 +614,9 @@ dependencies = [
 
 [[package]]
 name = "monoio"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c91a9bcc2622991bc92f3b6d7dc495329c4863e4dc530d1748529b009bb2170a"
+checksum = "3c7d2b656fb51eca3f9ef301f68435c789a6e08d200be1dc887a4c8b8d4b70fe"
 dependencies = [
  "auto-const-array",
  "bytes",
@@ -625,6 +625,7 @@ dependencies = [
  "fxhash",
  "io-uring",
  "libc",
+ "memchr",
  "mio",
  "monoio-macros",
  "nix 0.26.4",

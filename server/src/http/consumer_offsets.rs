@@ -34,7 +34,7 @@ async fn get_consumer_offset(
     query.validate()?;
     let consumer_id = PollingConsumer::resolve_consumer_id(&query.consumer.id);
     let consumer = PollingConsumer::Consumer(consumer_id, query.partition_id.unwrap_or(0));
-    let system = state.system.read().await;
+    let system = state.system.read();
     let offset = system
         .get_consumer_offset(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -57,7 +57,7 @@ async fn store_consumer_offset(
     command.validate()?;
     let consumer_id = PollingConsumer::resolve_consumer_id(&command.consumer.id);
     let consumer = PollingConsumer::Consumer(consumer_id, command.partition_id.unwrap_or(0));
-    let system = state.system.read().await;
+    let system = state.system.read();
     system
         .store_consumer_offset(
             &Session::stateless(identity.user_id, identity.ip_address),

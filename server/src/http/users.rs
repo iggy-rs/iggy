@@ -42,7 +42,7 @@ async fn get_user(
     Path(user_id): Path<String>,
 ) -> Result<Json<UserInfoDetails>, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     let user = system
         .find_user(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -57,7 +57,7 @@ async fn get_users(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<UserInfo>>, CustomError> {
-    let system = state.system.read().await;
+    let system = state.system.read();
     let users = system
         .get_users(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
@@ -71,7 +71,7 @@ async fn create_user(
     Json(command): Json<CreateUser>,
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
-    let mut system = state.system.write().await;
+    let mut system = state.system.write();
     system
         .create_user(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -92,7 +92,7 @@ async fn update_user(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     system
         .update_user(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -112,7 +112,7 @@ async fn update_permissions(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let mut system = state.system.write().await;
+    let mut system = state.system.write();
     system
         .update_permissions(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -131,7 +131,7 @@ async fn change_password(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     system
         .change_password(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -149,7 +149,7 @@ async fn delete_user(
     Path(user_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
-    let mut system = state.system.write().await;
+    let mut system = state.system.write();
     system
         .delete_user(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -164,7 +164,7 @@ async fn login_user(
     Json(command): Json<LoginUser>,
 ) -> Result<Json<IdentityInfo>, CustomError> {
     command.validate()?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     let user = system
         .login_user(&command.username, &command.password, None)
         .await?;
@@ -178,7 +178,7 @@ async fn logout_user(
     Json(command): Json<LogoutUser>,
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     system
         .logout_user(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;

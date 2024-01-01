@@ -36,7 +36,7 @@ pub async fn start(address: &str, system: SharedSystem) -> SocketAddr {
                             handle_connection(address, &mut sender, system.clone()).await
                         {
                             handle_error(error);
-                            system.read().await.delete_client(&address).await;
+                            system.read().delete_client(&address).await;
                         }
                     });
                 }

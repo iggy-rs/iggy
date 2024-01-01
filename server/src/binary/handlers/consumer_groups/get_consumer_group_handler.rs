@@ -14,7 +14,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let system = system.read().await;
+    let system = system.read();
     let consumer_group = system.get_consumer_group(
         session,
         &command.stream_id,

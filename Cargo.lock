@@ -1964,6 +1964,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "keepcalm"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "031ddc7e27bbb011c78958881a3723873608397b8b10e146717fc05cf3364d78"
+dependencies = [
+ "once_cell",
+ "parking_lot 0.12.1",
+]
+
+[[package]]
 name = "keyring"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3383,6 +3393,8 @@ dependencies = [
  "futures",
  "iggy",
  "jsonwebtoken",
+ "keepcalm",
+ "libc",
  "moka",
  "prometheus-client",
  "quinn",

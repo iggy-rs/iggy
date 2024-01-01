@@ -15,7 +15,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let system = system.read().await;
+    let system = system.read();
     let consumer =
         PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
     let offset = system

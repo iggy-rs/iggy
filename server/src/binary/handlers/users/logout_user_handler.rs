@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let system = system.read().await;
+    let system = system.read();
     system.logout_user(session).await?;
     session.clear_user_id();
     sender.send_empty_ok_response().await?;

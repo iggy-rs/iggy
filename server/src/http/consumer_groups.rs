@@ -34,7 +34,7 @@ async fn get_consumer_group(
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let consumer_group_id = Identifier::from_str_value(&consumer_group_id)?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     let consumer_group = system.get_consumer_group(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
@@ -53,7 +53,7 @@ async fn get_consumer_groups(
 ) -> Result<Json<Vec<ConsumerGroup>>, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     let consumer_groups = system.get_consumer_groups(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
@@ -72,7 +72,7 @@ async fn create_consumer_group(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    let mut system = state.system.write().await;
+    let mut system = state.system.write();
     system
         .create_consumer_group(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -93,7 +93,7 @@ async fn delete_consumer_group(
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let consumer_group_id = Identifier::from_str_value(&consumer_group_id)?;
-    let mut system = state.system.write().await;
+    let mut system = state.system.write();
     system
         .delete_consumer_group(
             &Session::stateless(identity.user_id, identity.ip_address),

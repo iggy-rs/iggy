@@ -30,6 +30,7 @@ flume = "0.11.0"
 futures = "0.3.30"
 iggy = { path = "../iggy" }
 jsonwebtoken = "9.*"
+keepcalm = "0.3.5"
 moka = { version = "0.12.1", features = ["future"] }
 prometheus-client = "0.22.0"
 quinn = { version = "0.10.2" }

@@ -3394,7 +3394,6 @@ dependencies = [
  "iggy",
  "jsonwebtoken",
  "keepcalm",
- "libc",
  "moka",
  "prometheus-client",
  "quinn",

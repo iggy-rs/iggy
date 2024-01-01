@@ -65,7 +65,7 @@ impl PersonalAccessTokenCleaner {
 #[async_trait]
 impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessTokensExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: CleanPersonalAccessTokensCommand) {
-        let system = system.read().await;
+        let system = system.read();
         let tokens = system.storage.personal_access_token.load_all().await;
         if tokens.is_err() {
             error!("Failed to load personal access tokens: {:?}", tokens);

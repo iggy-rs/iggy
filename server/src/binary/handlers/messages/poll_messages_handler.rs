@@ -18,7 +18,7 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let consumer =
         PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
-    let system = system.read().await;
+    let system = system.read();
     let messages = system
         .poll_messages(
             session,

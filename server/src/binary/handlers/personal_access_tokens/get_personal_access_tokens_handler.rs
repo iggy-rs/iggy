@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");
-    let system = system.read().await;
+    let system = system.read();
     let personal_access_tokens = system.get_personal_access_tokens(session).await?;
     let personal_access_tokens = mapper::map_personal_access_tokens(&personal_access_tokens);
     sender

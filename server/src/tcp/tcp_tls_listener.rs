@@ -58,7 +58,7 @@ pub(crate) async fn start(address: &str, config: TcpTlsConfig, system: SharedSys
                             handle_connection(address, &mut sender, system.clone()).await
                         {
                             handle_error(error);
-                            system.read().await.delete_client(&address).await;
+                            system.read().delete_client(&address).await;
                         }
                     });
                 }

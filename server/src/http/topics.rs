@@ -132,7 +132,7 @@ async fn purge_topic(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let system = state.system.read().await;
+    let system = state.system.read();
     system
         .purge_topic(
             &Session::stateless(identity.user_id, identity.ip_address),

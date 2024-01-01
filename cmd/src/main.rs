@@ -5,8 +5,8 @@ mod logging;
 
 use crate::args::permissions::PermissionsArgs;
 use crate::args::{
-    personal_access_token::PersonalAccessTokenAction, stream::StreamAction, topic::TopicAction,
-    Command, IggyConsoleArgs,
+    client::ClientAction, personal_access_token::PersonalAccessTokenAction, stream::StreamAction,
+    topic::TopicAction, Command, IggyConsoleArgs,
 };
 use crate::credentials::IggyCredentials;
 use crate::error::IggyCmdError;
@@ -22,6 +22,7 @@ use iggy::cmd::users::change_password::ChangePasswordCmd;
 use iggy::cmd::users::update_permissions::UpdatePermissionsCmd;
 use iggy::cmd::users::update_user::{UpdateUserCmd, UpdateUserType};
 use iggy::cmd::{
+    client::{get_client::GetClientCmd, get_clients::GetClientsCmd},
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
     personal_access_tokens::{
         create_personal_access_token::CreatePersonalAccessTokenCmd,
@@ -163,6 +164,12 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
                 )
                 .into(),
             )),
+        },
+        Command::Client(command) => match command {
+            ClientAction::Get(get_args) => Box::new(GetClientCmd::new(get_args.client_id)),
+            ClientAction::List(list_args) => {
+                Box::new(GetClientsCmd::new(list_args.list_mode.into()))
+            }
         },
     }
 }

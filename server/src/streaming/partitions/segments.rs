@@ -3,6 +3,11 @@ use crate::streaming::segments::segment::Segment;
 use iggy::error::Error;
 use tracing::info;
 
+pub struct DeletedSegment {
+    pub end_offset: u64,
+    pub messages_count: u64,
+}
+
 impl Partition {
     pub fn get_segments_count(&self) -> u32 {
         self.segments.len() as u32
@@ -47,17 +52,26 @@ impl Partition {
         Ok(())
     }
 
-    pub async fn delete_segment(&mut self, start_offset: u64) -> Result<&Segment, Error> {
-        let segment = self
-            .segments
-            .iter()
-            .find(|s| s.start_offset == start_offset);
-        if segment.is_none() {
-            return Err(Error::SegmentNotFound);
+    pub async fn delete_segment(&mut self, start_offset: u64) -> Result<DeletedSegment, Error> {
+        let deleted_segment;
+        {
+            let segment = self
+                .segments
+                .iter()
+                .find(|s| s.start_offset == start_offset);
+            if segment.is_none() {
+                return Err(Error::SegmentNotFound);
+            }
+
+            let segment = segment.unwrap();
+            self.storage.segment.delete(segment).await?;
+            deleted_segment = DeletedSegment {
+                end_offset: segment.end_offset,
+                messages_count: segment.get_messages_count(),
+            };
         }
 
-        let segment = segment.unwrap();
-        self.storage.segment.delete(segment).await?;
-        Ok(segment)
+        self.segments.retain(|s| s.start_offset != start_offset);
+        Ok(deleted_segment)
     }
 }

@@ -401,10 +401,8 @@ impl Partition {
 mod tests {
     use super::*;
     use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
+    use crate::streaming::partitions::create_messages;
     use crate::streaming::storage::tests::get_test_system_storage;
-    use bytes::Bytes;
-    use iggy::models::messages::MessageState;
-    use iggy::utils::checksum;
 
     #[tokio::test]
     async fn given_disabled_message_deduplication_all_messages_should_be_appended() {
@@ -455,31 +453,6 @@ mod tests {
             with_segment,
             config,
             storage,
-            None,
-        )
-    }
-
-    fn create_messages() -> Vec<Message> {
-        vec![
-            create_message(0, 1, "message 1"),
-            create_message(1, 2, "message 2"),
-            create_message(2, 3, "message 3"),
-            create_message(3, 2, "message 3.2"),
-            create_message(4, 1, "message 1.2"),
-            create_message(5, 3, "message 3.3"),
-        ]
-    }
-
-    fn create_message(offset: u64, id: u128, payload: &str) -> Message {
-        let payload = Bytes::from(payload.to_string());
-        let checksum = checksum::calculate(payload.as_ref());
-        Message::create(
-            offset,
-            MessageState::Available,
-            1,
-            id,
-            payload,
-            checksum,
             None,
         )
     }

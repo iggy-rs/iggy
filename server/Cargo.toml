@@ -4,6 +4,10 @@ version = "0.1.5"
 edition = "2021"
 build = "src/build.rs"
 
+[features]
+default = []
+jemalloc = ["dep:tikv-jemallocator"]
+
 [dependencies]
 aes-gcm = "0.10.*"
 anyhow = "1.0.76"
@@ -60,8 +64,8 @@ ulid = "1.*"
 uuid = { version = "1.*", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.*", features = ["xxh32"] }
 
-[dev-dependencies]
-libc = "0.2.147"
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = { version = "0.5", optional = true }
 
 [build-dependencies]
 vergen = { version = "8.2.*", features = [

@@ -21,7 +21,7 @@ impl Partition {
         self.unsaved_messages_count = 0;
         self.should_increment_offset = false;
         if let Some(cache) = self.cache.as_mut() {
-            cache.clear();
+            cache.purge();
         }
         for segment in &self.segments {
             self.storage.segment.delete(segment).await?;

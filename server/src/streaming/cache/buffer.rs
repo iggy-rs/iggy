@@ -70,7 +70,7 @@ where
         }
     }
 
-    pub fn clear(&mut self) {
+    pub fn purge(&mut self) {
         self.buffer.clear();
         self.memory_tracker.decrement_used_memory(self.current_size);
         self.current_size = 0;

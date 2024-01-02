@@ -111,4 +111,17 @@ impl System {
             .await;
         Ok(())
     }
+
+    pub async fn purge_topic(
+        &self,
+        session: &Session,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+    ) -> Result<(), Error> {
+        let stream = self.get_stream(stream_id)?;
+        let topic = stream.get_topic(topic_id)?;
+        self.permissioner
+            .purge_topic(session.user_id, stream.stream_id, topic.topic_id)?;
+        topic.purge().await
+    }
 }

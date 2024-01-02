@@ -85,6 +85,10 @@ impl Permissioner {
         self.manage_topic(user_id, stream_id, topic_id)
     }
 
+    pub fn purge_topic(&self, user_id: u32, stream_id: u32, topic_id: u32) -> Result<(), Error> {
+        self.manage_topic(user_id, stream_id, topic_id)
+    }
+
     fn manage_topic(&self, user_id: u32, stream_id: u32, topic_id: u32) -> Result<(), Error> {
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_streams || global_permissions.manage_topics {

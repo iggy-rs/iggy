@@ -30,6 +30,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use crate::topics::purge_topic::PurgeTopic;
 use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
@@ -108,6 +109,8 @@ pub const DELETE_TOPIC: &str = "topic.delete";
 pub const DELETE_TOPIC_CODE: u32 = 303;
 pub const UPDATE_TOPIC: &str = "topic.update";
 pub const UPDATE_TOPIC_CODE: u32 = 304;
+pub const PURGE_TOPIC: &str = "topic.purge";
+pub const PURGE_TOPIC_CODE: u32 = 305;
 pub const CREATE_PARTITIONS: &str = "partition.create";
 pub const CREATE_PARTITIONS_CODE: u32 = 402;
 pub const DELETE_PARTITIONS: &str = "partition.delete";
@@ -159,6 +162,7 @@ pub enum Command {
     CreateTopic(CreateTopic),
     DeleteTopic(DeleteTopic),
     UpdateTopic(UpdateTopic),
+    PurgeTopic(PurgeTopic),
     CreatePartitions(CreatePartitions),
     DeletePartitions(DeletePartitions),
     GetConsumerGroup(GetConsumerGroup),
@@ -221,6 +225,7 @@ impl BytesSerializable for Command {
             Command::CreateTopic(payload) => as_bytes(CREATE_TOPIC_CODE, &payload.as_bytes()),
             Command::DeleteTopic(payload) => as_bytes(DELETE_TOPIC_CODE, &payload.as_bytes()),
             Command::UpdateTopic(payload) => as_bytes(UPDATE_TOPIC_CODE, &payload.as_bytes()),
+            Command::PurgeTopic(payload) => as_bytes(PURGE_TOPIC_CODE, &payload.as_bytes()),
             Command::CreatePartitions(payload) => {
                 as_bytes(CREATE_PARTITIONS_CODE, &payload.as_bytes())
             }
@@ -300,6 +305,7 @@ impl BytesSerializable for Command {
             CREATE_TOPIC_CODE => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
             DELETE_TOPIC_CODE => Ok(Command::DeleteTopic(DeleteTopic::from_bytes(payload)?)),
             UPDATE_TOPIC_CODE => Ok(Command::UpdateTopic(UpdateTopic::from_bytes(payload)?)),
+            PURGE_TOPIC_CODE => Ok(Command::PurgeTopic(PurgeTopic::from_bytes(payload)?)),
             CREATE_PARTITIONS_CODE => Ok(Command::CreatePartitions(CreatePartitions::from_bytes(
                 payload,
             )?)),
@@ -387,6 +393,7 @@ impl FromStr for Command {
             CREATE_TOPIC => Ok(Command::CreateTopic(CreateTopic::from_str(payload)?)),
             DELETE_TOPIC => Ok(Command::DeleteTopic(DeleteTopic::from_str(payload)?)),
             UPDATE_TOPIC => Ok(Command::UpdateTopic(UpdateTopic::from_str(payload)?)),
+            PURGE_TOPIC => Ok(Command::PurgeTopic(PurgeTopic::from_str(payload)?)),
             CREATE_PARTITIONS => Ok(Command::CreatePartitions(CreatePartitions::from_str(
                 payload,
             )?)),
@@ -459,6 +466,7 @@ impl Display for Command {
             Command::CreateTopic(payload) => write!(formatter, "{CREATE_TOPIC}|{payload}"),
             Command::DeleteTopic(payload) => write!(formatter, "{DELETE_TOPIC}|{payload}"),
             Command::UpdateTopic(payload) => write!(formatter, "{UPDATE_TOPIC}|{payload}"),
+            Command::PurgeTopic(payload) => write!(formatter, "{PURGE_TOPIC}|{payload}"),
             Command::CreatePartitions(payload) => {
                 write!(formatter, "{CREATE_PARTITIONS}|{payload}")
             }
@@ -662,6 +670,11 @@ mod tests {
             &UpdateTopic::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::PurgeTopic(PurgeTopic::default()),
+            PURGE_TOPIC_CODE,
+            &PurgeTopic::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::CreatePartitions(CreatePartitions::default()),
             CREATE_PARTITIONS_CODE,
             &CreatePartitions::default(),
@@ -856,6 +869,11 @@ mod tests {
             &Command::UpdateTopic(UpdateTopic::default()),
             UPDATE_TOPIC,
             &UpdateTopic::default(),
+        );
+        assert_read_from_string(
+            &Command::PurgeTopic(PurgeTopic::default()),
+            PURGE_TOPIC,
+            &PurgeTopic::default(),
         );
         assert_read_from_string(
             &Command::CreatePartitions(CreatePartitions::default()),

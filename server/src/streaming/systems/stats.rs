@@ -2,7 +2,6 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use iggy::error::Error;
 use iggy::models::stats::Stats;
-// use sysinfo::{PidExt, ProcessExt, SystemExt};
 
 const PROCESS_NAME: &str = "iggy-server";
 

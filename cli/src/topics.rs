@@ -4,6 +4,7 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
+use iggy::topics::purge_topic::PurgeTopic;
 use iggy::topics::update_topic::UpdateTopic;
 use tracing::info;
 
@@ -36,5 +37,10 @@ pub async fn delete_topic(command: &DeleteTopic, client: &dyn Client) -> Result<
 
 pub async fn update_topic(command: &UpdateTopic, client: &dyn Client) -> Result<(), ClientError> {
     client.update_topic(command).await?;
+    Ok(())
+}
+
+pub async fn purge_topic(command: &PurgeTopic, client: &dyn Client) -> Result<(), ClientError> {
+    client.purge_topic(command).await?;
     Ok(())
 }

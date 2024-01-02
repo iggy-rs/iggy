@@ -10,7 +10,7 @@ path = "src/data-seeder/main.rs"
 [dependencies]
 anyhow = "1.0.76"
 bytes = "1.4.0"
-clap = { version = "4.1.11", features = ["derive"] }
+clap = { version = "4.4.12", features = ["derive"] }
 iggy = { path = "../iggy" }
 rand = "0.8.5"
 thiserror = "1.0.40"

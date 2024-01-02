@@ -51,4 +51,12 @@ impl Topic {
 
         Ok(())
     }
+
+    pub async fn purge(&self) -> Result<(), Error> {
+        for partition in self.get_partitions() {
+            let mut partition = partition.write().await;
+            partition.purge().await?;
+        }
+        Ok(())
+    }
 }

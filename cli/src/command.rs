@@ -68,6 +68,7 @@ pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError>
         Command::CreateTopic(payload) => topics::create_topic(&payload, client).await,
         Command::DeleteTopic(payload) => topics::delete_topic(&payload, client).await,
         Command::UpdateTopic(payload) => topics::update_topic(&payload, client).await,
+        Command::PurgeTopic(payload) => topics::purge_topic(&payload, client).await,
         Command::CreatePartitions(payload) => partitions::create_partitions(&payload, client).await,
         Command::DeletePartitions(payload) => partitions::delete_partitions(&payload, client).await,
         Command::GetConsumerGroup(payload) => {

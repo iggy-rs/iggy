@@ -6,6 +6,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use crate::topics::purge_topic::PurgeTopic;
 use crate::topics::update_topic::UpdateTopic;
 use async_trait::async_trait;
 
@@ -51,6 +52,18 @@ impl TopicClient for HttpClient {
         self.delete(&get_details_path(
             &command.stream_id.as_string(),
             &command.topic_id.as_string(),
+        ))
+        .await?;
+        Ok(())
+    }
+
+    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), Error> {
+        self.delete(&format!(
+            "{}/purge",
+            &get_details_path(
+                &command.stream_id.as_string(),
+                &command.topic_id.as_string(),
+            )
         ))
         .await?;
         Ok(())

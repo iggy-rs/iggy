@@ -151,7 +151,7 @@ async fn delete_expired_segments(
                     let deleted_segment = partition.delete_segment(*start_offset).await?;
                     last_end_offset = deleted_segment.end_offset;
                     segments_count += 1;
-                    messages_count += deleted_segment.get_messages_count();
+                    messages_count += deleted_segment.messages_count;
                 }
 
                 if partition.get_segments().is_empty() {

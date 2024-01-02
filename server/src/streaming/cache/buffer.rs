@@ -70,6 +70,12 @@ where
         }
     }
 
+    pub fn purge(&mut self) {
+        self.buffer.clear();
+        self.memory_tracker.decrement_used_memory(self.current_size);
+        self.current_size = 0;
+    }
+
     pub fn is_empty(&self) -> bool {
         self.buffer.is_empty()
     }

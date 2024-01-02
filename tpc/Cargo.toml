@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.76"
+anyhow = "1.0.78"
 async-trait = "0.1.76"
 bytes = "1.4.0"
 chrono = "0.4.30"

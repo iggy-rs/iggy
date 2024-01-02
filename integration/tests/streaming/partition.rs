@@ -1,4 +1,5 @@
 use crate::streaming::common::test_setup::TestSetup;
+use crate::streaming::create_messages;
 use server::streaming::partitions::partition::Partition;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
 use tokio::fs;
@@ -108,6 +109,40 @@ async fn should_delete_existing_partition_from_disk() {
         partition.delete().await.unwrap();
 
         assert!(fs::metadata(&partition.path).await.is_err());
+    }
+}
+
+#[tokio::test]
+async fn should_purge_existing_partition_on_disk() {
+    let setup = TestSetup::init().await;
+    let with_segment = true;
+    let stream_id = 1;
+    let topic_id = 2;
+    setup.create_partitions_directory(stream_id, topic_id).await;
+    let partition_ids = get_partition_ids();
+    for partition_id in partition_ids {
+        let mut partition = Partition::create(
+            stream_id,
+            topic_id,
+            partition_id,
+            with_segment,
+            setup.config.clone(),
+            setup.storage.clone(),
+            None,
+        );
+        partition.persist().await.unwrap();
+        assert_persisted_partition(&partition.path, with_segment).await;
+        let messages = create_messages();
+        let messages_count = messages.len();
+        partition.append_messages(messages).await.unwrap();
+        let loaded_messages = partition.get_messages_by_offset(0, 100).await.unwrap();
+        assert_eq!(loaded_messages.len(), messages_count);
+        partition.purge().await.unwrap();
+        assert_eq!(partition.current_offset, 0);
+        assert_eq!(partition.unsaved_messages_count, 0);
+        assert!(!partition.should_increment_offset);
+        let loaded_messages = partition.get_messages_by_offset(0, 100).await.unwrap();
+        assert!(loaded_messages.is_empty());
     }
 }
 

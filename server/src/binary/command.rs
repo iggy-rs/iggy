@@ -142,6 +142,9 @@ async fn try_handle(
         Command::UpdateTopic(command) => {
             update_topic_handler::handle(command, sender, session, system).await
         }
+        Command::PurgeTopic(command) => {
+            purge_topic_handler::handle(command, sender, session, system).await
+        }
         Command::CreatePartitions(command) => {
             create_partitions_handler::handle(command, sender, session, system).await
         }

@@ -14,7 +14,6 @@ pub struct PersonalAccessToken {
     pub expiry: Option<u64>,
 }
 
-#[allow(dead_code)]
 impl PersonalAccessToken {
     // Raw token is generated and returned only once
     pub fn new(user_id: UserId, name: &str, now: u64, expiry: Option<u32>) -> (Self, String) {

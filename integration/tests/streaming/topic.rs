@@ -1,4 +1,8 @@
 use crate::streaming::common::test_setup::TestSetup;
+use crate::streaming::create_messages;
+use iggy::messages::poll_messages::PollingStrategy;
+use iggy::messages::send_messages::Partitioning;
+use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
 use tokio::fs;
 
@@ -106,6 +110,65 @@ async fn should_delete_existing_topic_from_disk() {
         topic.delete().await.unwrap();
 
         assert!(fs::metadata(&topic.path).await.is_err());
+    }
+}
+
+#[tokio::test]
+async fn should_purge_existing_topic_on_disk() {
+    let setup = TestSetup::init().await;
+    let stream_id = 1;
+    setup.create_topics_directory(stream_id).await;
+    let partitions_count = 3;
+    let topic_ids = get_topic_ids();
+    for topic_id in topic_ids {
+        let name = format!("test-{}", topic_id);
+        let topic = Topic::create(
+            stream_id,
+            topic_id,
+            &name,
+            partitions_count,
+            setup.config.clone(),
+            setup.storage.clone(),
+            None,
+        )
+        .unwrap();
+        topic.persist().await.unwrap();
+        assert_persisted_topic(
+            &topic.path,
+            &setup.config.get_partitions_path(stream_id, topic_id),
+            partitions_count,
+        )
+        .await;
+
+        let messages = create_messages();
+        let messages_count = messages.len();
+        topic
+            .append_messages(&Partitioning::partition_id(1), messages)
+            .await
+            .unwrap();
+        let loaded_messages = topic
+            .get_messages(
+                PollingConsumer::Consumer(1, 1),
+                1,
+                PollingStrategy::offset(0),
+                100,
+            )
+            .await
+            .unwrap();
+        assert_eq!(loaded_messages.messages.len(), messages_count);
+
+        topic.purge().await.unwrap();
+        let loaded_messages = topic
+            .get_messages(
+                PollingConsumer::Consumer(1, 1),
+                1,
+                PollingStrategy::offset(0),
+                100,
+            )
+            .await
+            .unwrap();
+        assert_eq!(loaded_messages.current_offset, 0);
+        assert!(loaded_messages.messages.is_empty());
     }
 }
 

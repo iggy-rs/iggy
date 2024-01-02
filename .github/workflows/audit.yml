@@ -6,9 +6,43 @@ on:
 
 jobs:
   audit:
+    name: Run cargo audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: rustsec/audit-check@v1.4.1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+  clippy:
+    name: Run cargo clippy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: clippy
+          override: true
+
+      - name: Install clippy-sarif sarif-fmt
+        run: cargo install clippy-sarif sarif-fmt
+
+      - name: Run cargo clippy and convert to SARIF
+        run:
+          cargo clippy
+          --all-features --all-targets
+          --message-format=json | clippy-sarif | tee rust-clippy-results.sarif | sarif-fmt
+        continue-on-error: true
+
+      - name: Upload analysis results to GitHub
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: rust-clippy-results.sarif
+          wait-for-processing: true

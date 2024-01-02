@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 build = "src/build.rs"
 
@@ -23,7 +23,7 @@ byte-unit = { version = "5.1.2", default-features = false, features = [
 ] }
 bytes = "1.5.0"
 chrono = "0.4.*"
-clap = { version = "4.4.7", features = ["derive"] }
+clap = { version = "4.4.12", features = ["derive"] }
 figlet-rs = "0.1.5"
 figment = { version = "0.10.*", features = ["json", "toml", "env"] }
 flume = "0.11.0"

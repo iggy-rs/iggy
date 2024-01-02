@@ -48,6 +48,7 @@ use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
+use crate::topics::purge_topic::PurgeTopic;
 use crate::topics::update_topic::UpdateTopic;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
@@ -653,6 +654,10 @@ impl TopicClient for IggyClient {
 
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
         self.client.read().await.delete_topic(command).await
+    }
+
+    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), Error> {
+        self.client.read().await.purge_topic(command).await
     }
 }
 

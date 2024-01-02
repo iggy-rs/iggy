@@ -32,6 +32,7 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
+use iggy::topics::purge_topic::PurgeTopic;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
@@ -612,7 +613,20 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(updated_topic.name, updated_topic_name);
     assert_eq!(updated_topic.message_expiry, Some(updated_message_expiry));
 
-    // 37. Delete the existing topic and ensure it doesn't exist anymore
+    // 37. Purge the existing topic and ensure it has no messages
+    client
+        .purge_topic(&PurgeTopic {
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
+        })
+        .await
+        .unwrap();
+
+    let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+    assert_eq!(polled_messages.current_offset, 0);
+    assert!(polled_messages.messages.is_empty());
+
+    // 38. Delete the existing topic and ensure it doesn't exist anymore
     client
         .delete_topic(&DeleteTopic {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
@@ -628,7 +642,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert!(topics.is_empty());
 
-    // 38. Update the existing stream and ensure it's updated
+    // 39. Update the existing stream and ensure it's updated
     let updated_stream_name = format!("{}-updated", STREAM_NAME);
 
     client
@@ -648,7 +662,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert_eq!(updated_stream.name, updated_stream_name);
 
-    // 39. Delete the existing stream and ensure it doesn't exist anymore
+    // 40. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(&DeleteStream {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
@@ -658,7 +672,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
-    // 40. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 41. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients(&GetClients {}).await.unwrap();
 
     assert!(clients.len() <= 1);

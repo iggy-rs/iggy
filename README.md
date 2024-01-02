@@ -6,6 +6,7 @@
 [![docs](https://docs.rs/iggy/badge.svg)](https://docs.rs/iggy)
 [![workflow](https://github.com/iggy-rs/iggy/actions/workflows/test.yml/badge.svg)](https://github.com/iggy-rs/iggy/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/iggy-rs/iggy/graph/badge.svg?token=D9TIWPBWE2)](https://codecov.io/gh/iggy-rs/iggy)
+[![dependency](https://deps.rs/repo/github/iggy-rs/iggy/status.svg)](https://deps.rs/repo/github/iggy-rs/iggy)
 
 ---
 

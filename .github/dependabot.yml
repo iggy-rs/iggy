@@ -7,49 +7,7 @@ updates:
     rebase-strategy: "disabled"
 
   - package-ecosystem: "cargo"
-    directory: "/bench"
+    directory: "/"
     schedule:
-      interval: "weekly"
-    rebase-strategy: "disabled"
-
-  - package-ecosystem: "cargo"
-    directory: "/cli"
-    schedule:
-      interval: "weekly"
-    rebase-strategy: "disabled"
-
-  - package-ecosystem: "cargo"
-    directory: "/cmd"
-    schedule:
-      interval: "weekly"
-    rebase-strategy: "disabled"
-
-  - package-ecosystem: "cargo"
-    directory: "/iggy"
-    schedule:
-      interval: "weekly"
-    rebase-strategy: "disabled"
-
-  - package-ecosystem: "cargo"
-    directory: "/integration"
-    schedule:
-      interval: "weekly"
-    rebase-strategy: "disabled"
-
-  - package-ecosystem: "cargo"
-    directory: "/server"
-    schedule:
-      interval: "weekly"
-    rebase-strategy: "disabled"
-
-  - package-ecosystem: "cargo"
-    directory: "/tools"
-    schedule:
-      interval: "weekly"
-    rebase-strategy: "disabled"
-
-  - package-ecosystem: "cargo"
-    directory: "/tpc"
-    schedule:
-      interval: "weekly"
+      interval: "daily"
     rebase-strategy: "disabled"

@@ -13,7 +13,7 @@ bytes = "1.4.0"
 clap = { version = "4.4.12", features = ["derive"] }
 iggy = { path = "../iggy" }
 rand = "0.8.5"
-thiserror = "1.0.40"
+thiserror = "1.0.56"
 tokio = { version = "1.28.2", features = ["full"] }
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.16" }

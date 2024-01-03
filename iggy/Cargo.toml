@@ -15,7 +15,7 @@ readme = "../README.md"
 aes-gcm = "0.10.3"
 anyhow = "1.0.76"
 async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
-async-trait = "0.1.75"
+async-trait = "0.1.77"
 base64 = "0.21.5"
 byte-unit = { version = "5.1.2", default-features = false, features = [
     "serde",

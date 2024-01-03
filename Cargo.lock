@@ -1227,23 +1227,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "examples"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "bytes",
- "clap",
- "iggy",
- "rand",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1833,6 +1816,23 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tracing",
+]
+
+[[package]]
+name = "iggy_examples"
+version = "0.0.1"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "clap",
+ "iggy",
+ "rand",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]

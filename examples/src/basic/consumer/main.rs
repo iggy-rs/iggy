@@ -1,9 +1,9 @@
 use clap::Parser;
-use examples::shared::args::Args;
-use examples::shared::system;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::models::messages::Message;
+use iggy_examples::shared::args::Args;
+use iggy_examples::shared::system;
 use std::error::Error;
 use std::sync::Arc;
 use tracing::info;

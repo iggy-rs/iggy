@@ -36,12 +36,12 @@ name = "message-headers-producer"
 path = "src/message-headers/producer/main.rs"
 
 [dependencies]
-anyhow = "1.0.76"
+anyhow = "1.0.79"
 bytes = "1.4.0"
 clap = { version = "4.4.12", features = ["derive"] }
 iggy = { path = "../iggy" }
 rand = "0.8.5"
-serde = { version = "1.0.159", features = ["derive", "rc"] }
+serde = { version = "1.0.194", features = ["derive", "rc"] }
 serde_json = "1.0.95"
 thiserror = "1.0.40"
 tokio = { version = "1.28.2", features = ["full"] }

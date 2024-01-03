@@ -8,7 +8,7 @@ homepage = "https://iggy.rs"
 
 [dependencies]
 anyhow = "1.0.76"
-async-trait = "0.1.75"
+async-trait = "0.1.77"
 clap = { version = "4.4.12", features = ["derive"] }
 clap_complete = "4.4.5"
 figlet-rs = "0.1.5"

@@ -1,13 +1,13 @@
 use anyhow::Result;
 use clap::Parser;
-use examples::shared::args::Args;
-use examples::shared::messages::*;
-use examples::shared::system;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
 use iggy::models::header::HeaderKey;
 use iggy::models::messages::Message;
+use iggy_examples::shared::args::Args;
+use iggy_examples::shared::messages::*;
+use iggy_examples::shared::system;
 use std::error::Error;
 use std::sync::Arc;
 use tracing::{info, warn};

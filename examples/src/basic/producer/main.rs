@@ -1,11 +1,11 @@
 use clap::Parser;
-use examples::shared::args::Args;
-use examples::shared::system;
 use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy_examples::shared::args::Args;
+use iggy_examples::shared::system;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;

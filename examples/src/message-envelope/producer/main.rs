@@ -1,14 +1,14 @@
 use anyhow::Result;
 use clap::Parser;
-use examples::shared::args::Args;
-use examples::shared::messages_generator::MessagesGenerator;
-use examples::shared::system;
 use iggy::client::MessageClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::IggyClient;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy_examples::shared::args::Args;
+use iggy_examples::shared::messages_generator::MessagesGenerator;
+use iggy_examples::shared::system;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;

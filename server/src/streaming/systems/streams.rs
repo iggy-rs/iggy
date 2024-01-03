@@ -264,6 +264,17 @@ impl System {
             .await;
         Ok(stream_id)
     }
+
+    pub async fn purge_stream(
+        &self,
+        session: &Session,
+        stream_id: &Identifier,
+    ) -> Result<(), Error> {
+        let stream = self.get_stream(stream_id)?;
+        self.permissioner
+            .purge_stream(session.user_id, stream.stream_id)?;
+        stream.purge().await
+    }
 }
 
 #[cfg(test)]

@@ -37,6 +37,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::streams::purge_stream::PurgeStream;
 use crate::streams::update_stream::UpdateStream;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
@@ -631,6 +632,10 @@ impl StreamClient for IggyClient {
 
     async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error> {
         self.client.read().await.delete_stream(command).await
+    }
+
+    async fn purge_stream(&self, command: &PurgeStream) -> Result<(), Error> {
+        self.client.read().await.purge_stream(command).await
     }
 }
 

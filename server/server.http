@@ -211,6 +211,10 @@ DELETE {{url}}/streams/{{stream_id}}
 Authorization: Bearer {{access_token}}
 
 ###
+DELETE {{url}}/streams/{{stream_id}}/purge
+Authorization: Bearer {{access_token}}
+
+###
 GET {{url}}/streams/{{stream_id}}/topics
 Authorization: Bearer {{access_token}}
 
@@ -242,6 +246,10 @@ Content-Type: application/json
 
 ###
 DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}
+Authorization: Bearer {{access_token}}
+
+###
+DELETE {{url}}/streams/{{stream_id}}/topics/{{topic_id}}/purge
 Authorization: Bearer {{access_token}}
 
 ###

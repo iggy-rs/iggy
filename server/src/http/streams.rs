@@ -5,7 +5,7 @@ use crate::http::shared::AppState;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::get;
+use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
 use iggy::models::stream::{Stream, StreamDetails};
@@ -21,6 +21,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             "/streams/:stream_id",
             get(get_stream).put(update_stream).delete(delete_stream),
         )
+        .route("/streams/:stream_id/purge", delete(purge_stream))
         .with_state(state)
 }
 
@@ -95,6 +96,22 @@ async fn delete_stream(
     let mut system = state.system.write();
     system
         .delete_stream(
+            &Session::stateless(identity.user_id, identity.ip_address),
+            &stream_id,
+        )
+        .await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+async fn purge_stream(
+    State(state): State<Arc<AppState>>,
+    Extension(identity): Extension<Identity>,
+    Path(stream_id): Path<String>,
+) -> Result<StatusCode, CustomError> {
+    let stream_id = Identifier::from_str_value(&stream_id)?;
+    let system = state.system.read();
+    system
+        .purge_stream(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
         )

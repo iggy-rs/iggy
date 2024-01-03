@@ -127,6 +127,9 @@ async fn try_handle(
         Command::UpdateStream(command) => {
             update_stream_handler::handle(command, sender, session, system).await
         }
+        Command::PurgeStream(command) => {
+            purge_stream_handler::handle(command, sender, session, system).await
+        }
         Command::GetTopic(command) => {
             get_topic_handler::handle(command, sender, session, system).await
         }

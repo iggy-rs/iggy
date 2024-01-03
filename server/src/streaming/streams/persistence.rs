@@ -28,4 +28,11 @@ impl Stream {
 
         Ok(())
     }
+
+    pub async fn purge(&self) -> Result<(), Error> {
+        for topic in self.get_topics() {
+            topic.purge().await?;
+        }
+        Ok(())
+    }
 }

@@ -63,6 +63,7 @@ pub async fn handle(input: &str, client: &IggyClient) -> Result<(), ClientError>
         Command::CreateStream(payload) => streams::create_stream(&payload, client).await,
         Command::DeleteStream(payload) => streams::delete_stream(&payload, client).await,
         Command::UpdateStream(payload) => streams::update_stream(&payload, client).await,
+        Command::PurgeStream(payload) => streams::purge_stream(&payload, client).await,
         Command::GetTopic(payload) => topics::get_topic(&payload, client).await,
         Command::GetTopics(payload) => topics::get_topics(&payload, client).await,
         Command::CreateTopic(payload) => topics::create_topic(&payload, client).await,

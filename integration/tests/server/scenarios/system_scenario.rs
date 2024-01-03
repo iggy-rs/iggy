@@ -23,6 +23,7 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::streams::get_streams::GetStreams;
+use iggy::streams::purge_stream::PurgeStream;
 use iggy::streams::update_stream::UpdateStream;
 use iggy::system::get_clients::GetClients;
 use iggy::system::get_me::GetMe;
@@ -215,18 +216,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert!(create_topic_result.is_err());
 
     // 17. Send messages to the specific topic and partition
-    let mut messages = Vec::new();
-    for offset in 0..MESSAGES_COUNT {
-        let id = (offset + 1) as u128;
-        let payload = get_message_payload(offset as u64);
-        messages.push(Message {
-            id,
-            length: payload.len() as u32,
-            payload,
-            headers: None,
-        });
-    }
-
+    let messages = create_messages();
     let mut send_messages = SendMessages {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
@@ -626,23 +616,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(polled_messages.current_offset, 0);
     assert!(polled_messages.messages.is_empty());
 
-    // 38. Delete the existing topic and ensure it doesn't exist anymore
-    client
-        .delete_topic(&DeleteTopic {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        })
-        .await
-        .unwrap();
-    let topics = client
-        .get_topics(&GetTopics {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        })
-        .await
-        .unwrap();
-    assert!(topics.is_empty());
-
-    // 39. Update the existing stream and ensure it's updated
+    // 38. Update the existing stream and ensure it's updated
     let updated_stream_name = format!("{}-updated", STREAM_NAME);
 
     client
@@ -662,7 +636,44 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert_eq!(updated_stream.name, updated_stream_name);
 
-    // 40. Delete the existing stream and ensure it doesn't exist anymore
+    // 39. Purge the existing stream and ensure it has no messages
+    let messages = create_messages();
+    let mut send_messages = SendMessages {
+        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
+        partitioning: Partitioning::partition_id(PARTITION_ID),
+        messages,
+    };
+    client.send_messages(&mut send_messages).await.unwrap();
+
+    client
+        .purge_stream(&PurgeStream {
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        })
+        .await
+        .unwrap();
+
+    let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+    assert_eq!(polled_messages.current_offset, 0);
+    assert!(polled_messages.messages.is_empty());
+
+    // 40. Delete the existing topic and ensure it doesn't exist anymore
+    client
+        .delete_topic(&DeleteTopic {
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
+        })
+        .await
+        .unwrap();
+    let topics = client
+        .get_topics(&GetTopics {
+            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+        })
+        .await
+        .unwrap();
+    assert!(topics.is_empty());
+
+    // 41. Delete the existing stream and ensure it doesn't exist anymore
     client
         .delete_stream(&DeleteStream {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
@@ -672,7 +683,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
-    // 41. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 42. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients(&GetClients {}).await.unwrap();
 
     assert!(clients.len() <= 1);
@@ -685,6 +696,21 @@ fn assert_message(message: &iggy::models::messages::Message, offset: u64) {
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);
     assert_eq!(message.payload, expected_payload);
+}
+
+fn create_messages() -> Vec<Message> {
+    let mut messages = Vec::new();
+    for offset in 0..MESSAGES_COUNT {
+        let id = (offset + 1) as u128;
+        let payload = get_message_payload(offset as u64);
+        messages.push(Message {
+            id,
+            length: payload.len() as u32,
+            payload,
+            headers: None,
+        });
+    }
+    messages
 }
 
 fn get_message_payload(offset: u64) -> Bytes {

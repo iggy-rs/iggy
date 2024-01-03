@@ -29,6 +29,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::streams::purge_stream::PurgeStream;
 use crate::streams::update_stream::UpdateStream;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
@@ -187,6 +188,10 @@ pub trait StreamClient {
     ///
     /// Authentication is required, and the permission to manage the streams.
     async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error>;
+    /// Purge a stream by unique ID or name.
+    ///
+    /// Authentication is required, and the permission to manage the streams.
+    async fn purge_stream(&self, command: &PurgeStream) -> Result<(), Error>;
 }
 
 /// This trait defines the methods to interact with the topic module.

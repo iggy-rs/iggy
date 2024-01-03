@@ -7,6 +7,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::streams::purge_stream::PurgeStream;
 use crate::streams::update_stream::UpdateStream;
 use async_trait::async_trait;
 
@@ -30,5 +31,9 @@ impl StreamClient for QuicClient {
 
     async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error> {
         binary::streams::delete_stream(self, command).await
+    }
+
+    async fn purge_stream(&self, command: &PurgeStream) -> Result<(), Error> {
+        binary::streams::purge_stream(self, command).await
     }
 }

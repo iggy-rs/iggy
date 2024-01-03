@@ -20,6 +20,7 @@ use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
 use crate::streams::get_streams::GetStreams;
+use crate::streams::purge_stream::PurgeStream;
 use crate::streams::update_stream::UpdateStream;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
@@ -99,6 +100,8 @@ pub const DELETE_STREAM: &str = "stream.delete";
 pub const DELETE_STREAM_CODE: u32 = 203;
 pub const UPDATE_STREAM: &str = "stream.update";
 pub const UPDATE_STREAM_CODE: u32 = 204;
+pub const PURGE_STREAM: &str = "stream.purge";
+pub const PURGE_STREAM_CODE: u32 = 205;
 pub const GET_TOPIC: &str = "topic.get";
 pub const GET_TOPIC_CODE: u32 = 300;
 pub const GET_TOPICS: &str = "topic.list";
@@ -157,6 +160,7 @@ pub enum Command {
     CreateStream(CreateStream),
     DeleteStream(DeleteStream),
     UpdateStream(UpdateStream),
+    PurgeStream(PurgeStream),
     GetTopic(GetTopic),
     GetTopics(GetTopics),
     CreateTopic(CreateTopic),
@@ -220,6 +224,7 @@ impl BytesSerializable for Command {
             Command::CreateStream(payload) => as_bytes(CREATE_STREAM_CODE, &payload.as_bytes()),
             Command::DeleteStream(payload) => as_bytes(DELETE_STREAM_CODE, &payload.as_bytes()),
             Command::UpdateStream(payload) => as_bytes(UPDATE_STREAM_CODE, &payload.as_bytes()),
+            Command::PurgeStream(payload) => as_bytes(PURGE_STREAM_CODE, &payload.as_bytes()),
             Command::GetTopic(payload) => as_bytes(GET_TOPIC_CODE, &payload.as_bytes()),
             Command::GetTopics(payload) => as_bytes(GET_TOPICS_CODE, &payload.as_bytes()),
             Command::CreateTopic(payload) => as_bytes(CREATE_TOPIC_CODE, &payload.as_bytes()),
@@ -300,6 +305,7 @@ impl BytesSerializable for Command {
             CREATE_STREAM_CODE => Ok(Command::CreateStream(CreateStream::from_bytes(payload)?)),
             DELETE_STREAM_CODE => Ok(Command::DeleteStream(DeleteStream::from_bytes(payload)?)),
             UPDATE_STREAM_CODE => Ok(Command::UpdateStream(UpdateStream::from_bytes(payload)?)),
+            PURGE_STREAM_CODE => Ok(Command::PurgeStream(PurgeStream::from_bytes(payload)?)),
             GET_TOPIC_CODE => Ok(Command::GetTopic(GetTopic::from_bytes(payload)?)),
             GET_TOPICS_CODE => Ok(Command::GetTopics(GetTopics::from_bytes(payload)?)),
             CREATE_TOPIC_CODE => Ok(Command::CreateTopic(CreateTopic::from_bytes(payload)?)),
@@ -388,6 +394,7 @@ impl FromStr for Command {
             CREATE_STREAM => Ok(Command::CreateStream(CreateStream::from_str(payload)?)),
             DELETE_STREAM => Ok(Command::DeleteStream(DeleteStream::from_str(payload)?)),
             UPDATE_STREAM => Ok(Command::UpdateStream(UpdateStream::from_str(payload)?)),
+            PURGE_STREAM => Ok(Command::PurgeStream(PurgeStream::from_str(payload)?)),
             GET_TOPIC => Ok(Command::GetTopic(GetTopic::from_str(payload)?)),
             GET_TOPICS => Ok(Command::GetTopics(GetTopics::from_str(payload)?)),
             CREATE_TOPIC => Ok(Command::CreateTopic(CreateTopic::from_str(payload)?)),
@@ -461,6 +468,7 @@ impl Display for Command {
             Command::CreateStream(payload) => write!(formatter, "{CREATE_STREAM}|{payload}"),
             Command::DeleteStream(payload) => write!(formatter, "{DELETE_STREAM}|{payload}"),
             Command::UpdateStream(payload) => write!(formatter, "{UPDATE_STREAM}|{payload}"),
+            Command::PurgeStream(payload) => write!(formatter, "{PURGE_STREAM}|{payload}"),
             Command::GetTopic(payload) => write!(formatter, "{GET_TOPIC}|{payload}"),
             Command::GetTopics(payload) => write!(formatter, "{GET_TOPICS}|{payload}"),
             Command::CreateTopic(payload) => write!(formatter, "{CREATE_TOPIC}|{payload}"),
@@ -643,6 +651,11 @@ mod tests {
             &Command::UpdateStream(UpdateStream::default()),
             UPDATE_STREAM_CODE,
             &UpdateStream::default(),
+        );
+        assert_serialized_as_bytes_and_deserialized_from_bytes(
+            &Command::PurgeStream(PurgeStream::default()),
+            PURGE_STREAM_CODE,
+            &PurgeStream::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::GetTopic(GetTopic::default()),
@@ -844,6 +857,11 @@ mod tests {
             &Command::UpdateStream(UpdateStream::default()),
             UPDATE_STREAM,
             &UpdateStream::default(),
+        );
+        assert_read_from_string(
+            &Command::PurgeStream(PurgeStream::default()),
+            PURGE_STREAM,
+            &PurgeStream::default(),
         );
         assert_read_from_string(
             &Command::GetTopic(GetTopic::default()),

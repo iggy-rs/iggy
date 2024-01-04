@@ -42,7 +42,7 @@ clap = { version = "4.4.12", features = ["derive"] }
 iggy = { path = "../iggy" }
 rand = "0.8.5"
 serde = { version = "1.0.194", features = ["derive", "rc"] }
-serde_json = "1.0.110"
+serde_json = "1.0.111"
 thiserror = "1.0.56"
 tokio = { version = "1.28.2", features = ["full"] }
 tracing = { version = "0.1.37" }

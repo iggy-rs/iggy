@@ -1,5 +1,6 @@
 pub(crate) mod client;
 pub(crate) mod common;
+pub(crate) mod consumer_group;
 pub(crate) mod partition;
 pub(crate) mod permissions;
 pub(crate) mod personal_access_token;
@@ -10,7 +11,7 @@ pub(crate) mod user;
 
 use self::user::UserAction;
 use crate::args::{
-    client::ClientAction, partition::PartitionAction,
+    client::ClientAction, consumer_group::ConsumerGroupAction, partition::PartitionAction,
     personal_access_token::PersonalAccessTokenAction, stream::StreamAction, system::PingArgs,
     topic::TopicAction,
 };
@@ -120,6 +121,9 @@ pub(crate) enum Command {
     /// client operations
     #[command(subcommand, visible_alias = "c")]
     Client(ClientAction),
+    /// consumer group operations
+    #[command(subcommand, visible_alias = "g")]
+    ConsumerGroup(ConsumerGroupAction),
 }
 
 impl IggyConsoleArgs {

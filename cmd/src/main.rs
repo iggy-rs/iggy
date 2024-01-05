@@ -3,10 +3,10 @@ mod credentials;
 mod error;
 mod logging;
 
-use crate::args::permissions::PermissionsArgs;
 use crate::args::{
-    client::ClientAction, personal_access_token::PersonalAccessTokenAction, stream::StreamAction,
-    topic::TopicAction, Command, IggyConsoleArgs,
+    client::ClientAction, consumer_group::ConsumerGroupAction, permissions::PermissionsArgs,
+    personal_access_token::PersonalAccessTokenAction, stream::StreamAction, topic::TopicAction,
+    Command, IggyConsoleArgs,
 };
 use crate::credentials::IggyCredentials;
 use crate::error::IggyCmdError;
@@ -15,14 +15,15 @@ use args::partition::PartitionAction;
 use args::user::UserAction;
 use clap::Parser;
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
-use iggy::client_provider;
-use iggy::client_provider::ClientProviderConfig;
+use iggy::client_provider::{self, ClientProviderConfig};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
-use iggy::cmd::users::change_password::ChangePasswordCmd;
-use iggy::cmd::users::update_permissions::UpdatePermissionsCmd;
-use iggy::cmd::users::update_user::{UpdateUserCmd, UpdateUserType};
 use iggy::cmd::{
     client::{get_client::GetClientCmd, get_clients::GetClientsCmd},
+    consumer_group::{
+        create_consumer_group::CreateConsumerGroupCmd,
+        delete_consumer_group::DeleteConsumerGroupCmd, get_consumer_group::GetConsumerGroupCmd,
+        get_consumer_groups::GetConsumerGroupsCmd,
+    },
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
     personal_access_tokens::{
         create_personal_access_token::CreatePersonalAccessTokenCmd,
@@ -39,8 +40,13 @@ use iggy::cmd::{
         get_topics::GetTopicsCmd, update_topic::UpdateTopicCmd,
     },
     users::{
-        create_user::CreateUserCmd, delete_user::DeleteUserCmd, get_user::GetUserCmd,
+        change_password::ChangePasswordCmd,
+        create_user::CreateUserCmd,
+        delete_user::DeleteUserCmd,
+        get_user::GetUserCmd,
         get_users::GetUsersCmd,
+        update_permissions::UpdatePermissionsCmd,
+        update_user::{UpdateUserCmd, UpdateUserType},
     },
     utils::{
         message_expiry::MessageExpiry, personal_access_token_expiry::PersonalAccessTokenExpiry,
@@ -170,6 +176,29 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
             ClientAction::List(list_args) => {
                 Box::new(GetClientsCmd::new(list_args.list_mode.into()))
             }
+        },
+        Command::ConsumerGroup(command) => match command {
+            ConsumerGroupAction::Create(create_args) => Box::new(CreateConsumerGroupCmd::new(
+                create_args.stream_id.clone(),
+                create_args.topic_id.clone(),
+                create_args.consumer_group_id,
+                create_args.name.clone(),
+            )),
+            ConsumerGroupAction::Delete(delete_args) => Box::new(DeleteConsumerGroupCmd::new(
+                delete_args.stream_id.clone(),
+                delete_args.topic_id.clone(),
+                delete_args.consumer_group_id.clone(),
+            )),
+            ConsumerGroupAction::Get(get_args) => Box::new(GetConsumerGroupCmd::new(
+                get_args.stream_id.clone(),
+                get_args.topic_id.clone(),
+                get_args.consumer_group_id.clone(),
+            )),
+            ConsumerGroupAction::List(list_args) => Box::new(GetConsumerGroupsCmd::new(
+                list_args.stream_id.clone(),
+                list_args.topic_id.clone(),
+                list_args.list_mode.into(),
+            )),
         },
     }
 }

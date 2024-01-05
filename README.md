@@ -3,10 +3,14 @@
 [Website](https://iggy.rs) | [Getting started](https://docs.iggy.rs/introduction/getting-started/) | [Documentation](https://docs.iggy.rs) | [Blog](https://blog.iggy.rs) | [Discord](https://iggy.rs/discord) | [Crates](https://crates.io/crates/iggy)
 
 [![crates.io](https://img.shields.io/crates/v/iggy.svg)](https://crates.io/crates/iggy)
+[![crates.io](https://img.shields.io/crates/d/iggy.svg)](https://crates.io/crates/iggy)
 [![docs](https://docs.rs/iggy/badge.svg)](https://docs.rs/iggy)
 [![workflow](https://github.com/iggy-rs/iggy/actions/workflows/test.yml/badge.svg)](https://github.com/iggy-rs/iggy/actions/workflows/test.yml)
 [![codecov](https://codecov.io/gh/iggy-rs/iggy/graph/badge.svg?token=D9TIWPBWE2)](https://codecov.io/gh/iggy-rs/iggy)
 [![dependency](https://deps.rs/repo/github/iggy-rs/iggy/status.svg)](https://deps.rs/repo/github/iggy-rs/iggy)
+
+[![x](https://img.shields.io/twitter/follow/iggy_rs_?style=social)](https://twitter.com/iggy_rs_)
+[![discord](https://img.shields.io/discord/1144142576266530928)](https://iggy.rs/discord)
 
 ---
 

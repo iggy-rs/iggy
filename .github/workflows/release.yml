@@ -75,7 +75,6 @@ jobs:
             target: x86_64-unknown-linux-musl
             bin:
               - iggy-server
-              - iggy-cli
               - iggy
             name: iggy-Linux-x86_64-musl.tar.gz
             cargo_command: cargo
@@ -87,7 +86,6 @@ jobs:
             target: arm-unknown-linux-musleabi
             bin:
               - iggy-server
-              - iggy-cli
               - iggy
             name: iggy-Linux-arm-musl.tar.gz
             docker_arch: linux/arm/v7
@@ -99,7 +97,6 @@ jobs:
             target: aarch64-unknown-linux-musl
             bin:
               - iggy-server
-              - iggy-cli
               - iggy
             name: iggy-Linux-aarch64-musl.tar.gz
             docker_arch: linux/arm64/v8
@@ -139,7 +136,6 @@ jobs:
         run: |
           mkdir -p release_artifacts/
           cp target/${{ matrix.platform.target }}/release/iggy-server release_artifacts/
-          cp target/${{ matrix.platform.target }}/release/iggy-cli release_artifacts/
           cp target/${{ matrix.platform.target }}/release/iggy release_artifacts/
 
       - name: Upload release assets to GitHub Actions
@@ -186,7 +182,6 @@ jobs:
           outputs: type=image,name=${{ env.DOCKERHUB_REGISTRY_NAME }},push-by-digest=true,name-canonical=true,push=true
           build-args: |
             IGGY_CMD_PATH=target/${{ matrix.platform.target }}/release/iggy
-            IGGY_CLI_PATH=target/${{ matrix.platform.target }}/release/iggy-cli
             IGGY_SERVER_PATH=target/${{ matrix.platform.target }}/release/iggy-server
 
       - name: Export digest

@@ -8,6 +8,7 @@ use iggy::consumer::ConsumerKind;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::TimeStamp;
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -30,6 +31,48 @@ pub struct Partition {
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
+}
+
+impl fmt::Display for Partition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "stream ID: {}", self.stream_id)?;
+        write!(f, "topic ID: {}", self.topic_id)?;
+        write!(f, "partition ID: {}", self.partition_id)?;
+        write!(f, "path: {}", self.path)?;
+        write!(f, "current offset: {}", self.current_offset)?;
+        if let Some(cache) = &self.cache {
+            write!(f, "cache: {:?}", cache)?;
+        };
+        if let Some(cmt) = &self.cached_memory_tracker {
+            write!(f, "cached memory tracker: {:?}", cmt)?;
+        };
+        if let Some(mdd) = &self.message_deduplicator {
+            write!(f, "message deduplicator: {:?}", mdd)?;
+        };
+        write!(f, "unsaved message count: {}", self.unsaved_messages_count)?;
+        write!(
+            f,
+            "should increment offset: {}",
+            self.should_increment_offset
+        )?;
+        write!(f, "created at: {}", self.created_at)?;
+        if let Some(me) = &self.message_expiry {
+            write!(f, "message expiry: {}", me)?;
+        };
+        write!(
+            f,
+            "consumer offset count: {}",
+            self.consumer_offsets.blocking_read().len()
+        )?;
+        write!(
+            f,
+            "consumer group offset count: {}",
+            self.consumer_group_offsets.blocking_read().len()
+        )?;
+        write!(f, "segment count: {}", self.segments.len())?;
+        write!(f, "config: {}", self.config)?;
+        write!(f, "storage: {:?}", self.storage)
+    }
 }
 
 #[derive(Debug, PartialEq)]

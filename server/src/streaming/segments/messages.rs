@@ -112,7 +112,7 @@ impl Segment {
             return Ok(EMPTY_MESSAGES);
         }
 
-        if let Some(indexes) = &self.indexes {
+        if let Some(indexes) = &self.indices {
             let relative_start_offset = start_offset - self.start_offset;
             let relative_end_offset = end_offset - self.start_offset;
             let start_index = indexes.get(relative_start_offset as usize);
@@ -187,26 +187,26 @@ impl Segment {
         let unsaved_messages = self.unsaved_messages.get_or_insert_with(Vec::new);
         unsaved_messages.reserve(len);
 
-        if let Some(indexes) = &mut self.indexes {
+        if let Some(indexes) = &mut self.indices {
             indexes.reserve(len);
         }
 
-        if let Some(time_indexes) = &mut self.time_indexes {
+        if let Some(time_indexes) = &mut self.time_indices {
             time_indexes.reserve(len);
         }
 
         // Not the prettiest code. It's done this way to avoid repeatably
         // checking if indexes and time_indexes are Some or None.
-        if self.indexes.is_some() && self.time_indexes.is_some() {
+        if self.indices.is_some() && self.time_indices.is_some() {
             for message in messages {
                 let relative_offset = (message.offset - self.start_offset) as u32;
 
-                self.indexes.as_mut().unwrap().push(Index {
+                self.indices.as_mut().unwrap().push(Index {
                     relative_offset,
                     position: self.current_size_bytes,
                 });
 
-                self.time_indexes.as_mut().unwrap().push(TimeIndex {
+                self.time_indices.as_mut().unwrap().push(TimeIndex {
                     relative_offset,
                     timestamp: message.timestamp,
                 });
@@ -215,11 +215,11 @@ impl Segment {
                 self.current_offset = message.offset;
                 unsaved_messages.push(message.clone());
             }
-        } else if self.indexes.is_some() {
+        } else if self.indices.is_some() {
             for message in messages {
                 let relative_offset = (message.offset - self.start_offset) as u32;
 
-                self.indexes.as_mut().unwrap().push(Index {
+                self.indices.as_mut().unwrap().push(Index {
                     relative_offset,
                     position: self.current_size_bytes,
                 });
@@ -228,11 +228,11 @@ impl Segment {
                 self.current_offset = message.offset;
                 unsaved_messages.push(message.clone());
             }
-        } else if self.time_indexes.is_some() {
+        } else if self.time_indices.is_some() {
             for message in messages {
                 let relative_offset = (message.offset - self.start_offset) as u32;
 
-                self.time_indexes.as_mut().unwrap().push(TimeIndex {
+                self.time_indices.as_mut().unwrap().push(TimeIndex {
                     relative_offset,
                     timestamp: message.timestamp,
                 });

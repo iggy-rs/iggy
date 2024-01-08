@@ -1,3 +1,4 @@
+mod test_basic;
 mod test_getting_started;
 
 use assert_cmd::Command;

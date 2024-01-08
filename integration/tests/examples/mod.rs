@@ -1,5 +1,6 @@
 mod test_basic;
 mod test_getting_started;
+mod test_message_envelope;
 mod test_message_headers;
 
 use assert_cmd::Command;

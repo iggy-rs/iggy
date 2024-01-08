@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 
 pub const ORDER_CREATED_TYPE: &str = "order_created";
 pub const ORDER_CONFIRMED_TYPE: &str = "order_confirmed";
@@ -34,7 +34,7 @@ impl Envelope {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct OrderCreated {
     pub order_id: u64,
     pub currency_pair: String,
@@ -44,11 +44,34 @@ pub struct OrderCreated {
     pub timestamp: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+impl Debug for OrderCreated {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("OrderCreated")
+            .field("order_id", &self.order_id)
+            .field("currency_pair", &self.currency_pair)
+            .field("price", &format!("{:.2}", self.price))
+            .field("quantity", &format!("{:.2}", self.quantity))
+            .field("side", &self.side)
+            .field("timestamp", &self.timestamp)
+            .finish()
+    }
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct OrderConfirmed {
     pub order_id: u64,
     pub price: f64,
     pub timestamp: u64,
+}
+
+impl Debug for OrderConfirmed {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("OrderConfirmed")
+            .field("order_id", &self.order_id)
+            .field("price", &format!("{:.2}", self.price))
+            .field("timestamp", &self.timestamp)
+            .finish()
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize)]

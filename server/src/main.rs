@@ -58,7 +58,7 @@ async fn main() -> Result<(), ServerError> {
     };
 
     #[cfg(windows)]
-    let mut ctrl_c = tokio::signal::ctrl_c();
+    let ctrl_c = tokio::signal::ctrl_c();
 
     let mut current_config = config.clone();
 
@@ -89,6 +89,7 @@ async fn main() -> Result<(), ServerError> {
         "Iggy server has started - overall startup took {} ms.",
         elapsed_time.as_millis()
     );
+
     #[cfg(unix)]
     tokio::select! {
         _ = ctrl_c.recv() => {
@@ -100,7 +101,7 @@ async fn main() -> Result<(), ServerError> {
     }
 
     #[cfg(windows)]
-    match tokio::signal::ctrl_c().await {
+    match ctrl_c.await {
         Ok(()) => {
             info!("Received CTRL-C. Shutting down Iggy server...");
         }

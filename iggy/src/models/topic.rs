@@ -1,4 +1,4 @@
-use crate::models::partition::Partition;
+use crate::{models::partition::Partition, utils::byte_size::IggyByteSize};
 use serde::{Deserialize, Serialize};
 
 /// `Topic` represents the medium level of logical separation of data as it's a part of the stream.
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// - `id`: the unique identifier (numeric) of the topic.
 /// - `created_at`: the timestamp when the topic was created.
 /// - `name`: the unique name of the topic.
-/// - `size_bytes`: the total size of the topic in bytes.
+/// - `size`: the total size of the topic in bytes.
 /// - `message_expiry`: the optional expiry of the messages in the topic.
 /// - `messages_count`: the total number of messages in the topic.
 /// - `partitions_count`: the total number of partitions in the topic.
@@ -19,7 +19,7 @@ pub struct Topic {
     /// The unique name of the topic.
     pub name: String,
     /// The total size of the topic in bytes.
-    pub size_bytes: u64,
+    pub size_bytes: IggyByteSize,
     /// The optional expiry of the messages in the topic.
     pub message_expiry: Option<u32>,
     /// The total number of messages in the topic.
@@ -33,7 +33,7 @@ pub struct Topic {
 /// - `id`: the unique identifier (numeric) of the topic.
 /// - `created_at`: the timestamp when the topic was created.
 /// - `name`: the unique name of the topic.
-/// - `size_bytes`: the total size of the topic in bytes.
+/// - `size`: the total size of the topic in bytes.
 /// - `message_expiry`: the optional expiry of the messages in the topic.
 /// - `messages_count`: the total number of messages in the topic.
 /// - `partitions_count`: the total number of partitions in the topic.
@@ -47,7 +47,7 @@ pub struct TopicDetails {
     /// The unique name of the topic.
     pub name: String,
     /// The total size of the topic in bytes.
-    pub size_bytes: u64,
+    pub size: IggyByteSize,
     /// The optional expiry of the messages in the topic.
     pub message_expiry: Option<u32>,
     /// The total number of messages in the topic.

@@ -51,7 +51,7 @@ impl CliCommand for GetTopicCmd {
                 .as_str(),
         ]);
         table.add_row(vec!["Topic name", topic.name.as_str()]);
-        table.add_row(vec!["Topic size", format!("{}", topic.size_bytes).as_str()]);
+        table.add_row(vec!["Topic size", format!("{}", topic.size).as_str()]);
         table.add_row(vec![
             "Message expiry",
             match topic.message_expiry {

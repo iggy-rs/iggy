@@ -1,5 +1,5 @@
 use crate::configs::resource_quota::MemoryResourceQuota;
-use byte_unit::Byte;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::{
     compression::compression_algorithm::CompressionAlgorithm, utils::duration::IggyDuration,
 };
@@ -45,7 +45,7 @@ pub struct CompressionConfig {
 pub struct LoggingConfig {
     pub path: String,
     pub level: String,
-    pub max_size: Byte,
+    pub max_size: IggyByteSize,
     #[serde_as(as = "DisplayFromStr")]
     pub retention: IggyDuration,
 }
@@ -61,7 +61,7 @@ pub struct CacheConfig {
 pub struct RetentionPolicyConfig {
     #[serde_as(as = "DisplayFromStr")]
     pub message_expiry: IggyDuration,
-    pub max_topic_size: Byte,
+    pub max_topic_size: IggyByteSize,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -99,7 +99,7 @@ pub struct MessageDeduplicationConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SegmentConfig {
-    pub size: Byte,
+    pub size: IggyByteSize,
     pub cache_indexes: bool,
     pub cache_time_indexes: bool,
 }

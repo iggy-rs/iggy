@@ -1,4 +1,4 @@
-use byte_unit::Byte;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -10,10 +10,10 @@ pub struct QuicConfig {
     pub enabled: bool,
     pub address: String,
     pub max_concurrent_bidi_streams: u64,
-    pub datagram_send_buffer_size: Byte,
-    pub initial_mtu: Byte,
-    pub send_window: Byte,
-    pub receive_window: Byte,
+    pub datagram_send_buffer_size: IggyByteSize,
+    pub initial_mtu: IggyByteSize,
+    pub send_window: IggyByteSize,
+    pub receive_window: IggyByteSize,
     #[serde_as(as = "DisplayFromStr")]
     pub keep_alive_interval: IggyDuration,
     #[serde_as(as = "DisplayFromStr")]

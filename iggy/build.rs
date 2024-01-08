@@ -239,7 +239,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         "use std::num::ParseIntError;".to_string(),
         "use std::str::Utf8Error;".to_string(),
         "use thiserror::Error;".to_string(),
-        "use tokio::io;\n".to_string(),
+        "use tokio::io;".to_string(),
+        "use byte_unit::ParseError as ByteUnitParseError;\n".to_string(),
         "#[derive(Debug, Error)]".to_string(),
         ErrorEnum {
             pascal_case_name: "Error".to_string(),

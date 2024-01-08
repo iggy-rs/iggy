@@ -1,9 +1,9 @@
 use crate::streaming::common::test_setup::TestSetup;
-use byte_unit::Byte;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::Message;
+use iggy::utils::byte_size::IggyByteSize;
 use server::configs::resource_quota::MemoryResourceQuota;
 use server::configs::system::{CacheConfig, SystemConfig};
 use server::streaming::polling_consumer::PollingConsumer;
@@ -29,7 +29,7 @@ async fn given_enabled_cache_with_enough_capacity_all_messages_should_be_polled(
     assert_polling_messages(
         CacheConfig {
             enabled: true,
-            size: MemoryResourceQuota::Bytes(Byte::from(100_000_000u32)),
+            size: MemoryResourceQuota::Bytes(IggyByteSize::from(100_000_000)),
         },
         true,
     )
@@ -41,7 +41,7 @@ async fn given_enabled_cache_without_enough_capacity_all_messages_should_be_poll
     assert_polling_messages(
         CacheConfig {
             enabled: true,
-            size: MemoryResourceQuota::Bytes(Byte::from(100_000u32)),
+            size: MemoryResourceQuota::Bytes(IggyByteSize::from(100_000)),
         },
         true,
     )

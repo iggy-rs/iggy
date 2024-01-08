@@ -453,6 +453,14 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             template: "Cannot parse integer".to_string(),
         },
         ErrorRepositoryEntry {
+            snake_case_name: "cannot_parse_byte_unit".to_string(),
+            code: 205,
+            signature: "".to_string(),
+            converts_from: "ByteUnitParseError".to_string(),
+            source: "".to_string(),
+            template: "Cannot parse byte unit".to_string(),
+        },
+        ErrorRepositoryEntry {
             snake_case_name: "http_response_error".to_string(),
             code: 300,
             signature: "u16, String".to_string(),

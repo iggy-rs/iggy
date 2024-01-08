@@ -37,7 +37,7 @@ impl FromStr for IggyDuration {
     type Err = humantime::DurationError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "0" || s == "unlimited" || s == "disabled" {
+        if s == "0" || s == "unlimited" || s == "disabled" || s == "None" || s == "none" {
             Ok(IggyDuration {
                 duration: Duration::new(0, 0),
             })

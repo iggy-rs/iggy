@@ -57,9 +57,6 @@ async fn main() -> Result<(), ServerError> {
         )
     };
 
-    #[cfg(windows)]
-    let mut ctrl_c = tokio::signal::ctrl_c();
-
     let mut current_config = config.clone();
 
     if config.http.enabled {
@@ -89,6 +86,7 @@ async fn main() -> Result<(), ServerError> {
         "Iggy server has started - overall startup took {} ms.",
         elapsed_time.as_millis()
     );
+
     #[cfg(unix)]
     tokio::select! {
         _ = ctrl_c.recv() => {

@@ -2,7 +2,7 @@ use super::verify_stdout_contains_expected_logs;
 use crate::examples::{IggyExampleTest, IggyExampleTestCase};
 use serial_test::serial;
 
-static EXPECECTED_CONSUMER_OUTPUT: [&'static str; 13] = [
+static EXPECECTED_CONSUMER_OUTPUT: [&str; 13] = [
     "Iggy client is connecting to server: 127.0.0.1:8090..",
     "Iggy client has connected to server: 127.0.0.1:8090",
     "Messages will be consumed from stream: 1, topic: 1, partition: 1 with interval 500 ms.",

@@ -22,7 +22,7 @@ impl<'a> IggyExampleTestCase for TestBasic<'a> {
         // remove leading + trailing `,` and add trailing elipses
         let producer_formatted_message = format!(
             "{}...",
-            producer_captured_message[1..producer_captured_message.len() - 1].to_string()
+            &producer_captured_message[1..producer_captured_message.len() - 1]
         );
         assert!(
             consumer_stdout.contains(&producer_formatted_message),

@@ -164,9 +164,9 @@ impl<'a> IggyExampleTest<'a> {
 
     async fn spawn_executables(&mut self) -> (String, String) {
         let mut producer_cmd = Command::cargo_bin(format!("examples/{}-producer", self.module))
-            .expect(format!("Failed to find {}-producer", self.module).as_str());
+            .unwrap_or_else(|_| panic!("Failed to find {}-producer", self.module));
         let mut consumer_cmd = Command::cargo_bin(format!("examples/{}-consumer", self.module))
-            .expect(format!("Failed to find {}-consumer", self.module).as_str());
+            .unwrap_or_else(|_| panic!("Failed to find {}-consumer", self.module));
         let producer_handle = tokio::spawn(async move {
             let producer_assert = producer_cmd.timeout(Duration::from_secs(1)).assert();
             let producer_output = producer_assert.get_output();

@@ -2,9 +2,7 @@ use super::verify_stdout_contains_expected_logs;
 use crate::examples::{IggyExampleTest, IggyExampleTestCase};
 use serial_test::serial;
 
-static EXPECECTED_CONSUMER_OUTPUT: [&str; 13] = [
-    "Iggy client is connecting to server: 127.0.0.1:8090..",
-    "Iggy client has connected to server: 127.0.0.1:8090",
+static EXPECTED_CONSUMER_OUTPUT: [&str; 11] = [
     "Messages will be consumed from stream: 1, topic: 1, partition: 1 with interval 500 ms.",
     "Handling message at offset: 0, payload: message-1...",
     "Handling message at offset: 1, payload: message-2...",
@@ -39,7 +37,7 @@ impl<'a> IggyExampleTestCase for TestGettingStarted<'a> {
 #[tokio::test]
 #[serial]
 async fn should_succeed_with_no_existing_stream_or_topic() {
-    let mut iggy_example_test = IggyExampleTest::new("getting-started");
+    let mut iggy_example_test = IggyExampleTest::default();
     iggy_example_test.setup(false).await;
 
     iggy_example_test
@@ -52,7 +50,7 @@ async fn should_succeed_with_no_existing_stream_or_topic() {
                 "Messages will be sent to stream: 1, topic: 1, partition: 1 with interval 500 ms.",
                 "Sent 10 message(s).",
             ],
-            expected_consumer_output: EXPECECTED_CONSUMER_OUTPUT.to_vec(),
+            expected_consumer_output: EXPECTED_CONSUMER_OUTPUT.to_vec(),
         })
         .await;
 }
@@ -60,7 +58,7 @@ async fn should_succeed_with_no_existing_stream_or_topic() {
 #[tokio::test]
 #[serial]
 async fn should_succeed_with_preexisting_stream_and_topic() {
-    let mut iggy_example_test = IggyExampleTest::new("getting-started");
+    let mut iggy_example_test = IggyExampleTest::default();
     iggy_example_test.setup(true).await;
 
     iggy_example_test
@@ -74,7 +72,7 @@ async fn should_succeed_with_preexisting_stream_and_topic() {
                 "Topic already exists and will not be created again.",
                 "Sent 10 message(s).",
             ],
-            expected_consumer_output: EXPECECTED_CONSUMER_OUTPUT.to_vec(),
+            expected_consumer_output: EXPECTED_CONSUMER_OUTPUT.to_vec(),
         })
         .await;
 }

@@ -1,6 +1,6 @@
 use super::{parse_sent_message, verify_stdout_contains_expected_logs};
 use crate::examples::{IggyExampleTest, IggyExampleTestCase};
-use serial_test::serial;
+use serial_test::parallel;
 
 struct TestMessageMeaders<'a> {
     expected_producer_output: Vec<&'a str>,
@@ -32,25 +32,21 @@ impl<'a> IggyExampleTestCase for TestMessageMeaders<'a> {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 async fn should_successfully_execute() {
-    let mut iggy_example_test = IggyExampleTest::new("message-headers");
+    let mut iggy_example_test = IggyExampleTest::new("message-headers", None);
     iggy_example_test.setup(false).await;
 
     iggy_example_test
         .execute_test(TestMessageMeaders {
             expected_producer_output: vec![
                 "Message headers producer has started, selected transport: tcp",
-                "Iggy client is connecting to server: 127.0.0.1:8090...",
-                "Iggy client has connected to server: 127.0.0.1:8090",
                 "Received an invalid response with status: 1009 (stream_id_not_found).",
                 "Stream does not exist, creating...",
                 "Messages will be sent to stream: 9999, topic: 1, partition: 1 with interval 1000 ms."
             ],
             expected_consumer_output: vec![
                 "Message headers consumer has started, selected transport: tcp",
-                "Iggy client is connecting to server: 127.0.0.1:8090...",
-                "Iggy client has connected to server: 127.0.0.1:8090",
                 "Validating if stream: 9999 exists..",
                 "Stream: 9999 was found.",
                 "Validating if topic: 1 exists..",

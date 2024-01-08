@@ -66,14 +66,33 @@ fn verify_stdout_contains_expected_logs(
 pub(crate) trait IggyExampleTestCase {
     fn verify_log_output(&self, producer_stdout: &str, consumer_stdout: &str);
     fn verify_message_output(&self, producer_stdout: &str, consumer_stdout: &str);
+    fn verify_server_output(
+        &self,
+        producer_stdout: &str,
+        consumer_stdout: &str,
+        server: &TestServer,
+    ) {
+        let server_addr = server.get_raw_tcp_addr().unwrap();
+        for stdout in [producer_stdout, consumer_stdout] {
+            assert!(stdout.contains(
+                format!("Iggy client is connecting to server: {}...", &server_addr).as_str()
+            ));
+            assert!(stdout.contains(
+                format!("Iggy client has connected to server: {}", &server_addr).as_str()
+            ));
+        }
+    }
+    fn protocol(&self, server: &TestServer) -> Vec<String> {
+        vec![
+            "--tcp-server-address".into(),
+            server.get_raw_tcp_addr().unwrap(),
+        ]
+    }
 }
 
-// public methods
 impl<'a> IggyExampleTest<'a> {
-    pub(crate) fn new(module: &'a str) -> Self {
-        let mut tcp_env = HashMap::new();
-        tcp_env.insert("IGGY_TCP_ADDRESS".to_string(), "127.0.0.1:8090".to_string());
-        let mut server = TestServer::new(Some(tcp_env), true, None);
+    pub(crate) fn new(module: &'a str, tcp_env: Option<HashMap<String, String>>) -> Self {
+        let mut server = TestServer::new(tcp_env, true, None);
         server.start();
 
         let tcp_client_config = TcpClientConfig {
@@ -128,14 +147,16 @@ impl<'a> IggyExampleTest<'a> {
             "Server is not running, make sure it has been started with IggyExampleTest::setup()"
         );
         self.build_executables();
-        let (producer_stdout, consumer_stdout) = self.spawn_executables().await;
+        let (producer_stdout, consumer_stdout) = self
+            .spawn_executables(test_case.protocol(&self.server))
+            .await;
 
+        test_case.verify_server_output(&producer_stdout, &consumer_stdout, &self.server);
         test_case.verify_log_output(&producer_stdout, &consumer_stdout);
         test_case.verify_message_output(&producer_stdout, &consumer_stdout);
     }
 }
 
-// private methods
 impl<'a> IggyExampleTest<'a> {
     fn build_executables(&mut self) {
         let mut root_dir = get_root_path();
@@ -162,20 +183,27 @@ impl<'a> IggyExampleTest<'a> {
         }
     }
 
-    async fn spawn_executables(&mut self) -> (String, String) {
+    async fn spawn_executables(&mut self, tcp_server_address: Vec<String>) -> (String, String) {
         let mut producer_cmd = Command::cargo_bin(format!("examples/{}-producer", self.module))
             .unwrap_or_else(|_| panic!("Failed to find {}-producer", self.module));
         let mut consumer_cmd = Command::cargo_bin(format!("examples/{}-consumer", self.module))
             .unwrap_or_else(|_| panic!("Failed to find {}-consumer", self.module));
+        let tcp_server_address_clone = tcp_server_address.clone();
         let producer_handle = tokio::spawn(async move {
-            let producer_assert = producer_cmd.timeout(Duration::from_secs(1)).assert();
+            let producer_assert = producer_cmd
+                .args(tcp_server_address)
+                .timeout(Duration::from_secs(1))
+                .assert();
             let producer_output = producer_assert.get_output();
             String::from_utf8_lossy(&producer_output.stdout)
                 .as_ref()
                 .to_string()
         });
         let consumer_handle = tokio::spawn(async move {
-            let consumer_assert = consumer_cmd.timeout(Duration::from_secs(1)).assert();
+            let consumer_assert = consumer_cmd
+                .args(tcp_server_address_clone)
+                .timeout(Duration::from_secs(1))
+                .assert();
             let consumer_output = consumer_assert.get_output();
             String::from_utf8_lossy(&consumer_output.stdout)
                 .as_ref()
@@ -185,5 +213,13 @@ impl<'a> IggyExampleTest<'a> {
             producer_handle.await.unwrap(),
             consumer_handle.await.unwrap(),
         )
+    }
+}
+
+impl<'a> Default for IggyExampleTest<'a> {
+    fn default() -> Self {
+        let mut tcp_env: HashMap<String, String> = HashMap::new();
+        tcp_env.insert("IGGY_TCP_ADDRESS".to_string(), "127.0.0.1:8090".to_string());
+        Self::new("getting-started", Some(tcp_env))
     }
 }

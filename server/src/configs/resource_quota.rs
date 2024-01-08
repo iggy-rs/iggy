@@ -1,6 +1,4 @@
-extern crate byte_unit;
-
-use byte_unit::Byte;
+use iggy::utils::byte_size::IggyByteSize;
 use serde::de::{self, Deserializer, Visitor};
 use serde::{Deserialize, Serialize, Serializer};
 use std::fmt;
@@ -9,7 +7,7 @@ use sysinfo::System;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum MemoryResourceQuota {
-    Bytes(Byte),
+    Bytes(IggyByteSize),
     Percentage(u8),
 }
 
@@ -18,7 +16,7 @@ impl MemoryResourceQuota {
     /// NOTE: This is a blocking operation and it's slow. Don't use it in the hot path.
     pub fn into(self) -> u64 {
         match self {
-            MemoryResourceQuota::Bytes(byte) => byte.as_u64(),
+            MemoryResourceQuota::Bytes(byte) => byte.as_bytes_u64(),
             MemoryResourceQuota::Percentage(percentage) => {
                 let mut sys = System::new_all();
                 sys.refresh_all();
@@ -46,9 +44,9 @@ impl FromStr for MemoryResourceQuota {
                 Err(_) => Err("Invalid percentage value".to_string()),
             }
         } else {
-            match Byte::from_str(s) {
+            match s.parse::<IggyByteSize>() {
                 Ok(byte) => Ok(MemoryResourceQuota::Bytes(byte)),
-                Err(_) => Err("Invalid byte unit".to_string()),
+                Err(_) => Err("Memory resource quota parsing error".to_string()),
             }
         }
     }
@@ -119,21 +117,26 @@ mod tests {
         let parsed: Result<MemoryResourceQuota, String> = "4 GB".parse();
         assert_eq!(
             parsed,
-            Ok(MemoryResourceQuota::Bytes(Byte::from_str("4GB").unwrap()))
+            Ok(MemoryResourceQuota::Bytes(
+                IggyByteSize::from_str("4GB").unwrap()
+            ))
         );
     }
 
     #[test]
     fn test_invalid_memory() {
         let parsed: Result<MemoryResourceQuota, String> = "invalid".parse();
-        assert_eq!(parsed, Err("Invalid byte unit".to_string()));
+        assert_eq!(
+            parsed,
+            Err("Memory resource quota parsing error".to_string())
+        );
     }
 
     #[test]
     fn test_serialize() {
-        let quota = MemoryResourceQuota::Bytes(Byte::from_str("4GB").unwrap());
+        let quota: u64 = MemoryResourceQuota::Bytes(IggyByteSize::from_str("4GB").unwrap()).into();
         let serialized = serde_json::to_string(&quota).unwrap();
-        assert_eq!(serialized, json!("4000000000").to_string());
+        assert_eq!(serialized, json!(4000000000u32).to_string());
 
         let quota = MemoryResourceQuota::Percentage(25);
         let serialized = serde_json::to_string(&quota).unwrap();
@@ -150,7 +153,7 @@ mod tests {
         let unwrapped = deserialized.unwrap();
         assert_eq!(
             unwrapped,
-            MemoryResourceQuota::Bytes(Byte::from_str("4GB").unwrap())
+            MemoryResourceQuota::Bytes(IggyByteSize::from_str("4GB").unwrap())
         );
     }
 

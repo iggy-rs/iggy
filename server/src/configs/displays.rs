@@ -158,7 +158,8 @@ impl Display for RetentionPolicyConfig {
         write!(
             f,
             "{{ message_expiry: {}, max_topic_size: {} }}",
-            self.message_expiry, self.max_topic_size
+            self.message_expiry,
+            self.max_topic_size.to_human_string_with_special_zero()
         )
     }
 }
@@ -219,7 +220,10 @@ impl Display for LoggingConfig {
         write!(
             f,
             "{{ path: {}, level: {}, max_size: {}, retention: {} }}",
-            self.path, self.level, self.max_size, self.retention
+            self.path,
+            self.level,
+            self.max_size.to_human_string_with_special_zero(),
+            self.retention
         )
     }
 }

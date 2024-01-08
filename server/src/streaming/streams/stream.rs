@@ -1,6 +1,7 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::topic::Topic;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::TimeStamp;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -45,12 +46,12 @@ impl Stream {
         }
     }
 
-    pub async fn get_size_bytes(&self) -> u64 {
+    pub async fn get_size(&self) -> IggyByteSize {
         let mut size_bytes = 0;
         for topic in self.topics.values() {
-            size_bytes += topic.get_size_bytes().await;
+            size_bytes += topic.get_size().await.as_bytes_u64();
         }
-        size_bytes
+        IggyByteSize::from(size_bytes)
     }
 }
 

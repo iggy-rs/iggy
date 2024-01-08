@@ -3,6 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use iggy::error::Error;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::TimeStamp;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU32;
@@ -75,13 +76,13 @@ impl Topic {
         Ok(topic)
     }
 
-    pub async fn get_size_bytes(&self) -> u64 {
+    pub async fn get_size(&self) -> IggyByteSize {
         let mut size_bytes = 0;
         for partition in self.get_partitions() {
             let partition = partition.read().await;
             size_bytes += partition.get_size_bytes();
         }
-        size_bytes
+        IggyByteSize::from(size_bytes)
     }
 
     pub fn get_partitions(&self) -> Vec<Arc<RwLock<Partition>>> {

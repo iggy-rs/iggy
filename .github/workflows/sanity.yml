@@ -44,6 +44,14 @@ jobs:
       - run: cargo install cargo-sort
       - run: cargo sort --check --workspace
 
+  doctest:
+    name: Test documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --doc
+
   unused_dependencies:
     name: Unused dependencies
     runs-on: ubuntu-latest

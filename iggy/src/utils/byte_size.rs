@@ -14,7 +14,7 @@ use super::duration::IggyDuration;
 /// # Examples
 ///
 /// ```
-/// use your_crate::IggyByteSize;
+/// use iggy::utils::byte_size::IggyByteSize;
 ///
 /// let size = IggyByteSize::from(1024_u64);
 /// println!("Size in bytes: {}", size.as_bytes_u64());

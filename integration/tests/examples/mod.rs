@@ -1,3 +1,5 @@
+mod test_getting_started;
+
 use assert_cmd::Command;
 use iggy::client::Client;
 use iggy::client::StreamClient;

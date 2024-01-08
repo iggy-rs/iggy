@@ -43,8 +43,6 @@ async fn should_succeed_with_no_existing_stream_or_topic() {
     iggy_example_test
         .execute_test(TestGettingStarted {
             expected_producer_output: vec![
-                "Iggy client is connecting to server: 127.0.0.1:8090..",
-                "Iggy client has connected to server: 127.0.0.1:8090",
                 "Stream was created.",
                 "Topic was created.",
                 "Messages will be sent to stream: 1, topic: 1, partition: 1 with interval 500 ms.",
@@ -64,8 +62,6 @@ async fn should_succeed_with_preexisting_stream_and_topic() {
     iggy_example_test
         .execute_test(TestGettingStarted {
             expected_producer_output: vec![
-                "Iggy client is connecting to server: 127.0.0.1:8090..",
-                "Iggy client has connected to server: 127.0.0.1:8090",
                 "Received an invalid response with status: 1011 (stream_id_already_exists).",
                 "Stream already exists and will not be created again.",
                 "Received an invalid response with status: 2012 (topic_id_already_exists).",

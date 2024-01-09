@@ -99,7 +99,13 @@ impl TestServer {
             TestServer::get_random_path()
         };
 
-        Self::create(local_data_path, envs, cleanup, server_executable_path, ip_kind)
+        Self::create(
+            local_data_path,
+            envs,
+            cleanup,
+            server_executable_path,
+            ip_kind,
+        )
     }
 
     pub fn create(
@@ -126,7 +132,7 @@ impl TestServer {
         if server_addrs.is_empty() {
             server_addrs = match ip_kind {
                 IpAddrKind::V6 => Self::get_server_ipv6_addrs_with_random_port(),
-                _ =>  Self::get_server_ipv4_addrs_with_random_port(),
+                _ => Self::get_server_ipv4_addrs_with_random_port(),
             }
         }
 
@@ -263,7 +269,7 @@ impl TestServer {
     }
 
     fn get_server_ipv6_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
-        let addr = SocketAddr::new(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1).into(), 0);
+        let addr = SocketAddr::new(Ipv6Addr::LOCALHOST.into(), 0);
         vec![
             ServerProtocolAddr::QuicUdp(addr),
             ServerProtocolAddr::RawTcp(addr),

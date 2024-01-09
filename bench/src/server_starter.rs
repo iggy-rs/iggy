@@ -1,5 +1,5 @@
 use crate::args::common::IggyBenchArgs;
-use integration::test_server::{TestServer, Transport, SYSTEM_PATH_ENV_VAR};
+use integration::test_server::{IpAddrKind, TestServer, Transport, SYSTEM_PATH_ENV_VAR};
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::{collections::HashMap, time::Instant};
@@ -101,6 +101,7 @@ pub async fn start_server_if_needed(args: &mut IggyBenchArgs) -> Option<TestServ
             Some(envs),
             args.cleanup,
             args.server_executable_path.clone(),
+            IpAddrKind::V4,
         );
         let now = Instant::now();
         test_server.start();

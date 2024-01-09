@@ -20,7 +20,7 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use integration::file::*;
-use integration::test_server::{TestServer, IpAddrKind};
+use integration::test_server::{IpAddrKind, TestServer};
 use regex::Regex;
 use std::collections::HashMap;
 use std::process::Command as StdCommand;

@@ -1977,6 +1977,7 @@ dependencies = [
  "keyring",
  "libc",
  "predicates",
+ "regex",
  "serial_test",
  "server",
  "sled",

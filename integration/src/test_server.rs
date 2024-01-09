@@ -18,7 +18,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, Write};
-use std::net::{Ipv4Addr, SocketAddr};
+use std::net::{Ipv4Addr, Ipv6Addr, SocketAddr};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::thread::{panicking, sleep};
@@ -31,6 +31,11 @@ const USER_PASSWORD: &str = "secret";
 const MAX_PORT_WAIT_DURATION_S: u64 = 120;
 const SLEEP_INTERVAL_MS: u64 = 20;
 const LOCAL_DATA_PREFIX: &str = "local_data_";
+
+pub enum IpAddrKind {
+    V4,
+    V6,
+}
 
 #[async_trait]
 pub trait ClientFactory: Sync + Send {
@@ -78,6 +83,7 @@ impl TestServer {
         extra_envs: Option<HashMap<String, String>>,
         cleanup: bool,
         server_executable_path: Option<String>,
+        ip_kind: IpAddrKind,
     ) -> Self {
         let mut envs = HashMap::new();
         if let Some(extra) = extra_envs {
@@ -93,7 +99,7 @@ impl TestServer {
             TestServer::get_random_path()
         };
 
-        Self::create(local_data_path, envs, cleanup, server_executable_path)
+        Self::create(local_data_path, envs, cleanup, server_executable_path, ip_kind)
     }
 
     pub fn create(
@@ -101,6 +107,7 @@ impl TestServer {
         envs: HashMap<String, String>,
         cleanup: bool,
         server_executable_path: Option<String>,
+        ip_kind: IpAddrKind,
     ) -> Self {
         let mut server_addrs = Vec::new();
 
@@ -117,7 +124,10 @@ impl TestServer {
         }
 
         if server_addrs.is_empty() {
-            server_addrs = Self::get_server_addrs_with_random_port();
+            server_addrs = match ip_kind {
+                IpAddrKind::V6 => Self::get_server_ipv6_addrs_with_random_port(),
+                _ =>  Self::get_server_ipv4_addrs_with_random_port(),
+            }
         }
 
         Self {
@@ -243,8 +253,17 @@ impl TestServer {
         }
     }
 
-    fn get_server_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
+    fn get_server_ipv4_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
         let addr = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0);
+        vec![
+            ServerProtocolAddr::QuicUdp(addr),
+            ServerProtocolAddr::RawTcp(addr),
+            ServerProtocolAddr::HttpTcp(addr),
+        ]
+    }
+
+    fn get_server_ipv6_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
+        let addr = SocketAddr::new(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1).into(), 0);
         vec![
             ServerProtocolAddr::QuicUdp(addr),
             ServerProtocolAddr::RawTcp(addr),
@@ -397,7 +416,7 @@ impl Drop for TestServer {
 
 impl Default for TestServer {
     fn default() -> Self {
-        TestServer::new(None, true, None)
+        TestServer::new(None, true, None, IpAddrKind::V4)
     }
 }
 

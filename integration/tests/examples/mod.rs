@@ -20,7 +20,7 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use integration::file::*;
-use integration::test_server::TestServer;
+use integration::test_server::{TestServer, IpAddrKind};
 use regex::Regex;
 use std::collections::HashMap;
 use std::process::Command as StdCommand;
@@ -92,7 +92,7 @@ pub(crate) trait IggyExampleTestCase {
 
 impl<'a> IggyExampleTest<'a> {
     pub(crate) fn new(module: &'a str, tcp_env: Option<HashMap<String, String>>) -> Self {
-        let mut server = TestServer::new(tcp_env, true, None);
+        let mut server = TestServer::new(tcp_env, true, None, IpAddrKind::V4);
         server.start();
 
         let tcp_client_config = TcpClientConfig {

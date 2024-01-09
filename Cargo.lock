@@ -900,7 +900,7 @@ dependencies = [
 
 [[package]]
 name = "cmd"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1859,7 +1859,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1984,6 +1984,7 @@ dependencies = [
  "tokio",
  "toml",
  "uuid",
+ "xxhash-rust",
 ]
 
 [[package]]

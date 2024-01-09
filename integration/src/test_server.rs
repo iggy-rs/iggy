@@ -260,7 +260,7 @@ impl TestServer {
     }
 
     fn get_server_ipv4_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
-        let addr = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0);
+        let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
         vec![
             ServerProtocolAddr::QuicUdp(addr),
             ServerProtocolAddr::RawTcp(addr),

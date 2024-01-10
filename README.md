@@ -140,7 +140,7 @@ Start the server:
 
 `cargo r --bin iggy-server`
 
-*Please note that all commands below are using `iggy` binary, which is part of release (`cmd` sub-crate).*
+*Please note that all commands below are using `iggy` binary, which is part of release (`cli` sub-crate).*
 
 Create a stream with ID 1 named `dev` using default credentials and `tcp` transport (available transports: `quic`, `tcp`, `http`, default `tcp`):
 

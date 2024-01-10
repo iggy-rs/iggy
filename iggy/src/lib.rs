@@ -6,7 +6,7 @@ pub mod client;
 pub mod client_error;
 pub mod client_provider;
 pub mod clients;
-#[cfg(feature = "iggy-cmd")]
+#[cfg(feature = "iggy-cli")]
 pub mod cmd;
 pub mod command;
 pub mod compression;

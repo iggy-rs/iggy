@@ -4,6 +4,7 @@ use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::TimeStamp;
+use std::fmt;
 use std::sync::Arc;
 
 pub const LOG_EXTENSION: &str = "log";
@@ -27,9 +28,39 @@ pub struct Segment {
     pub(crate) message_expiry: Option<u32>,
     pub(crate) unsaved_messages: Option<Vec<Arc<Message>>>,
     pub(crate) config: Arc<SystemConfig>,
-    pub(crate) indexes: Option<Vec<Index>>,
-    pub(crate) time_indexes: Option<Vec<TimeIndex>>,
+    pub(crate) indices: Option<Vec<Index>>,
+    pub(crate) time_indices: Option<Vec<TimeIndex>>,
     pub(crate) storage: Arc<SystemStorage>,
+}
+
+impl fmt::Display for Segment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "stream ID: {}", self.stream_id)?;
+        write!(f, "topic ID: {}", self.topic_id)?;
+        write!(f, "partition ID: {}", self.partition_id)?;
+        write!(f, "start offset: {}", self.start_offset)?;
+        write!(f, "end offset: {}", self.end_offset)?;
+        write!(f, "current offset: {}", self.current_offset)?;
+        write!(f, "index path: {}", self.index_path)?;
+        write!(f, "log path: {}", self.log_path)?;
+        write!(f, "time index path: {}", self.time_index_path)?;
+        write!(f, "current size (bytes): {}", self.current_size_bytes)?;
+        write!(f, "is closed: {}", self.is_closed)?;
+        if let Some(me) = &self.message_expiry {
+            write!(f, "message expiry: {}", me)?;
+        };
+        if let Some(usm) = &self.unsaved_messages {
+            write!(f, "unsaved messages count: {}", usm.len())?;
+        };
+        write!(f, "config: {}", self.config)?;
+        if let Some(indices) = &self.indices {
+            write!(f, "indices count: {}", indices.len())?;
+        };
+        if let Some(t_indices) = &self.time_indices {
+            write!(f, "time indices count: {}", t_indices.len())?;
+        };
+        write!(f, "storage: {:?}", self.storage)
+    }
 }
 
 impl Segment {
@@ -56,11 +87,11 @@ impl Segment {
             time_index_path: Self::get_time_index_path(&path),
             current_size_bytes: 0,
             message_expiry,
-            indexes: match config.segment.cache_indexes {
+            indices: match config.segment.cache_indexes {
                 true => Some(Vec::new()),
                 false => None,
             },
-            time_indexes: match config.segment.cache_time_indexes {
+            time_indices: match config.segment.cache_time_indexes {
                 true => Some(Vec::new()),
                 false => None,
             },
@@ -154,8 +185,8 @@ mod tests {
         assert_eq!(segment.time_index_path, time_index_path);
         assert_eq!(segment.message_expiry, message_expiry);
         assert!(segment.unsaved_messages.is_none());
-        assert!(segment.indexes.is_some());
-        assert!(segment.time_indexes.is_some());
+        assert!(segment.indices.is_some());
+        assert!(segment.time_indices.is_some());
         assert!(!segment.is_closed);
         assert!(!segment.is_full().await);
     }
@@ -185,7 +216,7 @@ mod tests {
             None,
         );
 
-        assert!(segment.indexes.is_none());
+        assert!(segment.indices.is_none());
     }
 
     #[test]
@@ -213,6 +244,6 @@ mod tests {
             None,
         );
 
-        assert!(segment.time_indexes.is_none());
+        assert!(segment.time_indices.is_none());
     }
 }

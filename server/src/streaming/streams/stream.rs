@@ -4,6 +4,7 @@ use crate::streaming::topics::topic::Topic;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::TimeStamp;
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -14,9 +15,23 @@ pub struct Stream {
     pub topics_path: String,
     pub created_at: u64,
     pub(crate) topics: HashMap<u32, Topic>,
-    pub(crate) topics_ids: HashMap<String, u32>,
+    pub(crate) topic_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
+}
+
+impl fmt::Display for Stream {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "stream ID: {}", self.stream_id)?;
+        write!(f, "name: {}", self.name)?;
+        write!(f, "path: {}", self.path)?;
+        write!(f, "topics path: {}", self.topics_path)?;
+        write!(f, "created at: {}", self.created_at)?;
+        write!(f, "topics count: {}", self.topics.len())?;
+        write!(f, "topic ids count: {}", self.topic_ids.len())?;
+        write!(f, "config: {}", self.config)?;
+        write!(f, "storage: {:?}", self.storage)
+    }
 }
 
 impl Stream {
@@ -40,7 +55,7 @@ impl Stream {
             topics_path,
             config,
             topics: HashMap::new(),
-            topics_ids: HashMap::new(),
+            topic_ids: HashMap::new(),
             storage,
             created_at: TimeStamp::now().to_micros(),
         }

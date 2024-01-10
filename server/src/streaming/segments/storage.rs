@@ -56,10 +56,10 @@ impl Storage<Segment> for FileSegmentStorage {
         );
 
         if segment.config.segment.cache_indexes {
-            segment.indexes = Some(segment.storage.segment.load_all_indexes(segment).await?);
+            segment.indices = Some(segment.storage.segment.load_all_indexes(segment).await?);
             info!(
                 "Loaded {} indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-                segment.indexes.as_ref().unwrap().len(),
+                segment.indices.as_ref().unwrap().len(),
                 segment.start_offset,
                 segment.partition_id,
                 segment.topic_id,
@@ -72,12 +72,12 @@ impl Storage<Segment> for FileSegmentStorage {
             if !time_indexes.is_empty() {
                 let last_index = time_indexes.last().unwrap();
                 segment.current_offset = segment.start_offset + last_index.relative_offset as u64;
-                segment.time_indexes = Some(time_indexes);
+                segment.time_indices = Some(time_indexes);
             }
 
             info!(
                 "Loaded {} time indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-                segment.time_indexes.as_ref().unwrap().len(),
+                segment.time_indices.as_ref().unwrap().len(),
                 segment.start_offset,
                 segment.partition_id,
                 segment.topic_id,

@@ -22,7 +22,7 @@ impl Stream {
         }
 
         let name = text::to_lowercase_non_whitespace(name);
-        if self.topics_ids.contains_key(&name) {
+        if self.topic_ids.contains_key(&name) {
             return Err(Error::TopicNameAlreadyExists(name, self.stream_id));
         }
 
@@ -40,7 +40,7 @@ impl Stream {
             "Created topic: {} with ID: {}, partitions: {}",
             name, id, partitions_count
         );
-        self.topics_ids.insert(name, id);
+        self.topic_ids.insert(name, id);
         self.topics.insert(id, topic);
 
         Ok(())
@@ -61,7 +61,7 @@ impl Stream {
         let updated_name = text::to_lowercase_non_whitespace(name);
 
         {
-            if let Some(topic_id_by_name) = self.topics_ids.get(&updated_name) {
+            if let Some(topic_id_by_name) = self.topic_ids.get(&updated_name) {
                 if *topic_id_by_name != topic_id {
                     return Err(Error::TopicNameAlreadyExists(
                         updated_name.to_string(),
@@ -77,8 +77,8 @@ impl Stream {
         };
 
         {
-            self.topics_ids.remove(&old_topic_name.clone());
-            self.topics_ids.insert(updated_name.clone(), topic_id);
+            self.topic_ids.remove(&old_topic_name.clone());
+            self.topic_ids.insert(updated_name.clone(), topic_id);
             let topic = self.get_topic_mut(id)?;
             topic.name = updated_name;
             topic.message_expiry = message_expiry;
@@ -125,7 +125,7 @@ impl Stream {
     }
 
     fn get_topic_by_name(&self, name: &str) -> Result<&Topic, Error> {
-        let topic_id = self.topics_ids.get(name);
+        let topic_id = self.topic_ids.get(name);
         if topic_id.is_none() {
             return Err(Error::TopicNameNotFound(name.to_string(), self.stream_id));
         }
@@ -143,7 +143,7 @@ impl Stream {
     }
 
     fn get_topic_by_name_mut(&mut self, name: &str) -> Result<&mut Topic, Error> {
-        let topic_id = self.topics_ids.get(name);
+        let topic_id = self.topic_ids.get(name);
         if topic_id.is_none() {
             return Err(Error::TopicNameNotFound(name.to_string(), self.stream_id));
         }
@@ -164,7 +164,7 @@ impl Stream {
         }
 
         let topic = self.topics.remove(&topic_id).unwrap();
-        self.topics_ids.remove(&topic_name);
+        self.topic_ids.remove(&topic_name);
 
         Ok(topic)
     }

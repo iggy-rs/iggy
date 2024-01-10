@@ -41,12 +41,12 @@ impl Partition {
 
         let mut maybe_start_offset = None;
         for segment in self.segments.iter() {
-            if segment.time_indexes.is_none() {
+            if segment.time_indices.is_none() {
                 continue;
             }
 
-            let time_indexes = segment.time_indexes.as_ref().unwrap();
-            if time_indexes.is_empty() {
+            let time_indices = segment.time_indices.as_ref().unwrap();
+            if time_indices.is_empty() {
                 continue;
             }
 

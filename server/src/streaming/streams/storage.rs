@@ -128,7 +128,7 @@ impl Storage<Stream> for FileStreamStorage {
                 continue;
             }
 
-            if stream.topics_ids.contains_key(&topic.name) {
+            if stream.topic_ids.contains_key(&topic.name) {
                 error!(
                     "Topic with name: '{}' already exists for stream with ID: {}.",
                     &topic.name, &stream.stream_id
@@ -136,7 +136,7 @@ impl Storage<Stream> for FileStreamStorage {
                 continue;
             }
 
-            stream.topics_ids.insert(topic.name.clone(), topic.topic_id);
+            stream.topic_ids.insert(topic.name.clone(), topic.topic_id);
             stream.topics.insert(topic.topic_id, topic);
         }
 

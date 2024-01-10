@@ -92,7 +92,7 @@ For the detailed information about current progress, please refer to the [projec
 
 ## CLI
 
-The brand new, rich, interactive CLI is being implemented under the `cmd` project, to provide the best developer experience. This will be a great addition to the Web UI, especially for all the developers who prefer using the console tools.
+The brand new, rich, interactive CLI is being implemented under the `cli` project, to provide the best developer experience. This will be a great addition to the Web UI, especially for all the developers who prefer using the console tools.
 
 ![CLI](assets/cli.png)
 

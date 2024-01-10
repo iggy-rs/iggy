@@ -15,10 +15,7 @@ use args::message::MessageAction;
 use args::partition::PartitionAction;
 use args::user::UserAction;
 use clap::Parser;
-use iggy::cli_command::{CliCommand, PRINT_TARGET};
-use iggy::client_provider::{self, ClientProviderConfig};
-use iggy::clients::client::{IggyClient, IggyClientConfig};
-use iggy::cmd::{
+use iggy::cli::{
     client::{get_client::GetClientCmd, get_clients::GetClientsCmd},
     consumer_group::{
         create_consumer_group::CreateConsumerGroupCmd,
@@ -54,6 +51,9 @@ use iggy::cmd::{
         message_expiry::MessageExpiry, personal_access_token_expiry::PersonalAccessTokenExpiry,
     },
 };
+use iggy::cli_command::{CliCommand, PRINT_TARGET};
+use iggy::client_provider::{self, ClientProviderConfig};
+use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::sync::Arc;
 use tracing::{event, Level};

@@ -42,7 +42,7 @@ pub struct SendMessages {
 /// - `PartitionId` - the partition ID is provided by the client.
 /// - `MessagesKey` - the partition ID is calculated by the server using the hash of the provided messages key.
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct Partitioning {
     /// The kind of partitioning.
     pub kind: PartitioningKind,

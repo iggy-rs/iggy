@@ -13,6 +13,7 @@ use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
+use crate::utils::byte_size::IggyByteSize;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
@@ -380,7 +381,7 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
         id: topic.id,
         created_at: topic.created_at,
         name: topic.name,
-        size_bytes: topic.size_bytes,
+        size: topic.size_bytes,
         messages_count: topic.messages_count,
         message_expiry: topic.message_expiry,
         #[allow(clippy::cast_possible_truncation)]
@@ -399,7 +400,9 @@ fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), Error
         0 => None,
         _ => Some(message_expiry),
     };
-    let size_bytes = u64::from_le_bytes(payload[position + 20..position + 28].try_into()?);
+    let size_bytes = IggyByteSize::from(u64::from_le_bytes(
+        payload[position + 20..position + 28].try_into()?,
+    ));
     let messages_count = u64::from_le_bytes(payload[position + 28..position + 36].try_into()?);
     let name_length = payload[position + 36];
     let name =

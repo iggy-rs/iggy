@@ -1,4 +1,4 @@
-use byte_unit::Byte;
+use iggy::utils::byte_size::IggyByteSize;
 use integration::file::{file_exists, get_root_path};
 use serial_test::serial;
 use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
@@ -53,7 +53,7 @@ async fn validate_custom_env_provider() {
     assert_eq!(config.system.database.path, "awesome_database_path");
     assert_eq!(
         config.quic.datagram_send_buffer_size,
-        "1KB".parse::<Byte>().unwrap()
+        "1KB".parse::<IggyByteSize>().unwrap()
     );
     assert!(!config.quic.certificate.self_signed);
     assert!(!config.http.enabled);

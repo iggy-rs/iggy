@@ -1,9 +1,9 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::system::get_stats::GetStats;
+use crate::utils::byte_size::IggyByteSize;
 use anyhow::Context;
 use async_trait::async_trait;
-use byte_unit::{Byte, UnitType};
 use chrono::{DateTime, Utc};
 use comfy_table::Table;
 use humantime::format_duration;
@@ -53,23 +53,23 @@ impl CliCommand for GetStatsCmd {
         ]);
         table.add_row(vec![
             "Iggy Server Memory Usage",
-            Byte::from_u64(stats.memory_usage)
-                .get_appropriate_unit(UnitType::Binary)
+            IggyByteSize::from(stats.memory_usage)
+                .as_bytes_u64()
                 .to_string()
                 .as_str(),
         ]);
 
         table.add_row(vec![
             "Total Memory (RAM)",
-            Byte::from_u64(stats.total_memory)
-                .get_appropriate_unit(UnitType::Binary)
+            IggyByteSize::from(stats.total_memory)
+                .as_bytes_u64()
                 .to_string()
                 .as_str(),
         ]);
         table.add_row(vec![
             "Available Memory (RAM)",
-            Byte::from_u64(stats.available_memory)
-                .get_appropriate_unit(UnitType::Binary)
+            IggyByteSize::from(stats.available_memory)
+                .as_bytes_u64()
                 .to_string()
                 .as_str(),
         ]);
@@ -89,22 +89,22 @@ impl CliCommand for GetStatsCmd {
 
         table.add_row(vec![
             "Read Bytes",
-            Byte::from_u64(stats.read_bytes)
-                .get_appropriate_unit(UnitType::Binary)
+            IggyByteSize::from(stats.read_bytes)
+                .as_bytes_u64()
                 .to_string()
                 .as_str(),
         ]);
         table.add_row(vec![
             "Written Bytes",
-            Byte::from_u64(stats.written_bytes)
-                .get_appropriate_unit(UnitType::Binary)
+            IggyByteSize::from(stats.written_bytes)
+                .as_bytes_u64()
                 .to_string()
                 .as_str(),
         ]);
         table.add_row(vec![
             "Messages Size Bytes",
-            Byte::from_u64(stats.messages_size_bytes)
-                .get_appropriate_unit(UnitType::Binary)
+            IggyByteSize::from(stats.messages_size_bytes)
+                .as_bytes_u64()
                 .to_string()
                 .as_str(),
         ]);

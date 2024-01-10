@@ -1,13 +1,13 @@
 pub mod args;
 pub mod binary;
 pub mod bytes_serializable;
+#[cfg(feature = "iggy-cli")]
+pub mod cli;
 pub mod cli_command;
 pub mod client;
 pub mod client_error;
 pub mod client_provider;
 pub mod clients;
-#[cfg(feature = "iggy-cmd")]
-pub mod cmd;
 pub mod command;
 pub mod compression;
 pub mod consumer;

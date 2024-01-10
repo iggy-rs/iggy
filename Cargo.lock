@@ -883,24 +883,7 @@ checksum = "702fc72eb24e5a1e48ce58027a675bc24edd52096d5397d4aea7c6dd9eca0bd1"
 
 [[package]]
 name = "cli"
-version = "0.0.1"
-dependencies = [
- "anyhow",
- "bytes",
- "clap",
- "figlet-rs",
- "iggy",
- "quinn",
- "rustls",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "cmd"
-version = "0.14.0"
+version = "0.15.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1859,7 +1842,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "aes-gcm",
  "anyhow",

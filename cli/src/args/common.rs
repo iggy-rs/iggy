@@ -1,10 +1,10 @@
 use clap::ValueEnum;
-use iggy::cmd::client::get_clients::GetClientsOutput;
-use iggy::cmd::consumer_group::get_consumer_groups::GetConsumerGroupsOutput;
-use iggy::cmd::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokensOutput;
-use iggy::cmd::streams::get_streams::GetStreamsOutput;
-use iggy::cmd::topics::get_topics::GetTopicsOutput;
-use iggy::cmd::users::get_users::GetUsersOutput;
+use iggy::cli::client::get_clients::GetClientsOutput;
+use iggy::cli::consumer_group::get_consumer_groups::GetConsumerGroupsOutput;
+use iggy::cli::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokensOutput;
+use iggy::cli::streams::get_streams::GetStreamsOutput;
+use iggy::cli::topics::get_topics::GetTopicsOutput;
+use iggy::cli::users::get_users::GetUsersOutput;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 pub(crate) enum ListMode {

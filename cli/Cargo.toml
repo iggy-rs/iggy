@@ -1,21 +1,26 @@
 [package]
 name = "cli"
-version = "0.0.1"
+version = "0.15.0"
 edition = "2021"
+authors = ["bartosz.ciesla@gmail.com"]
+repository = "https://github.com/iggy-rs/iggy"
+homepage = "https://iggy.rs"
 
 [dependencies]
 anyhow = "1.0.79"
-bytes = "1.4.0"
+async-trait = "0.1.77"
 clap = { version = "4.4.13", features = ["derive"] }
+clap_complete = "4.4.6"
 figlet-rs = "0.1.5"
-iggy = { path = "../iggy" }
-quinn = { version = "0.10.2" }
-rustls = { version = "0.21.10" }
+iggy = { path = "../iggy", features = ["iggy-cli"] }
+keyring = "2.3.1"
+passterm = "2.0.1"
 thiserror = "1.0.56"
 tokio = { version = "1.28.2", features = ["full"] }
-tracing = { version = "0.1.37" }
-tracing-subscriber = { version = "0.3.16" }
+tracing = "0.1.37"
+tracing-appender = "0.2.2"
+tracing-subscriber = { version = "0.3.17" }
 
 [[bin]]
-name = "iggy-cli"
+name = "iggy"
 path = "src/main.rs"

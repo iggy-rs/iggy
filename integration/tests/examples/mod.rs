@@ -3,6 +3,7 @@ mod test_getting_started;
 mod test_message_envelope;
 mod test_message_headers;
 
+use assert_cmd::cargo::CommandCargoExt;
 use assert_cmd::Command;
 use iggy::client::Client;
 use iggy::client::StreamClient;
@@ -146,7 +147,6 @@ impl<'a> IggyExampleTest<'a> {
             self.server.is_started(),
             "Server is not running, make sure it has been started with IggyExampleTest::setup()"
         );
-        self.build_executables();
         let (producer_stdout, consumer_stdout) = self
             .spawn_executables(test_case.protocol(&self.server))
             .await;
@@ -158,36 +158,24 @@ impl<'a> IggyExampleTest<'a> {
 }
 
 impl<'a> IggyExampleTest<'a> {
-    fn build_executables(&mut self) {
-        let mut root_dir = get_root_path();
-        root_dir.pop();
-
-        for bin in [
-            format!("{}-producer", self.module).as_str(),
-            format!("{}-consumer", self.module).as_str(),
-        ] {
-            let binary_path = root_dir.join("target/debug/examples/").join(bin);
-            match file_exists(&binary_path) {
-                true => println!("Binary exists, {}", bin),
-                _ => {
-                    match StdCommand::new("cargo")
-                        .args(["build", "--example", bin])
-                        .current_dir(root_dir.clone())
-                        .status()
-                    {
-                        Ok(_) => println!("Successfully built {}", bin),
-                        Err(_) => println!("Failed to build {}", bin),
-                    }
-                }
-            }
-        }
-    }
-
     async fn spawn_executables(&mut self, tcp_server_address: Vec<String>) -> (String, String) {
-        let mut producer_cmd = Command::cargo_bin(format!("examples/{}-producer", self.module))
+        let producer_binary = StdCommand::cargo_bin(format!("examples/{}-producer", self.module))
             .unwrap_or_else(|_| panic!("Failed to find {}-producer", self.module));
-        let mut consumer_cmd = Command::cargo_bin(format!("examples/{}-consumer", self.module))
+        let consumer_binary = StdCommand::cargo_bin(format!("examples/{}-consumer", self.module))
             .unwrap_or_else(|_| panic!("Failed to find {}-consumer", self.module));
+
+        let mut producer_cmd = Command::new(producer_binary.get_program().to_str().unwrap());
+        let mut consumer_cmd = Command::new(consumer_binary.get_program().to_str().unwrap());
+
+        if let Ok(runner) = std::env::var("QEMU_RUNNER") {
+            let mut producer_runner_command = Command::new(runner.clone());
+            let mut consumer_runner_command = Command::new(runner);
+            producer_runner_command.arg(producer_binary.get_program().to_str().unwrap());
+            consumer_runner_command.arg(consumer_binary.get_program().to_str().unwrap());
+            producer_cmd = producer_runner_command;
+            consumer_cmd = consumer_runner_command
+        };
+
         let tcp_server_address_clone = tcp_server_address.clone();
         let producer_handle = tokio::spawn(async move {
             let producer_assert = producer_cmd

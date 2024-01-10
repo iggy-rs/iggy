@@ -20,7 +20,6 @@ use iggy::tcp::config::TcpClientConfig;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
-use integration::file::*;
 use integration::test_server::TestServer;
 use regex::Regex;
 use std::collections::HashMap;
@@ -147,7 +146,6 @@ impl<'a> IggyExampleTest<'a> {
             self.server.is_started(),
             "Server is not running, make sure it has been started with IggyExampleTest::setup()"
         );
-        self.build_executables();
         let (producer_stdout, consumer_stdout) = self
             .spawn_executables(test_case.protocol(&self.server))
             .await;
@@ -159,31 +157,6 @@ impl<'a> IggyExampleTest<'a> {
 }
 
 impl<'a> IggyExampleTest<'a> {
-    fn build_executables(&mut self) {
-        let mut root_dir = get_root_path();
-        root_dir.pop();
-
-        for bin in [
-            format!("{}-producer", self.module).as_str(),
-            format!("{}-consumer", self.module).as_str(),
-        ] {
-            let binary_path = root_dir.join("target/debug/examples/").join(bin);
-            match file_exists(&binary_path) {
-                true => println!("Binary exists, {}", bin),
-                _ => {
-                    match StdCommand::new("cargo")
-                        .args(["build", "--example", bin])
-                        .current_dir(root_dir.clone())
-                        .status()
-                    {
-                        Ok(_) => println!("Successfully built {}", bin),
-                        Err(_) => println!("Failed to build {}", bin),
-                    }
-                }
-            }
-        }
-    }
-
     async fn spawn_executables(&mut self, tcp_server_address: Vec<String>) -> (String, String) {
         let producer_binary = StdCommand::cargo_bin(format!("examples/{}-producer", self.module))
             .unwrap_or_else(|_| panic!("Failed to find {}-producer", self.module));

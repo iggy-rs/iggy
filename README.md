@@ -92,7 +92,7 @@ For the detailed information about current progress, please refer to the [projec
 
 ## CLI
 
-The brand new, rich, interactive CLI is being implemented under the `cmd` project, to provide the best developer experience. This will be a great addition to the Web UI, especially for all the developers who prefer using the console tools.
+The brand new, rich, interactive CLI is being implemented under the `cli` project, to provide the best developer experience. This will be a great addition to the Web UI, especially for all the developers who prefer using the console tools.
 
 ![CLI](assets/cli.png)
 
@@ -140,7 +140,7 @@ Start the server:
 
 `cargo r --bin iggy-server`
 
-*Please note that all commands below are using `iggy` binary, which is part of release (`cmd` sub-crate).*
+*Please note that all commands below are using `iggy` binary, which is part of release (`cli` sub-crate).*
 
 Create a stream with ID 1 named `dev` using default credentials and `tcp` transport (available transports: `quic`, `tcp`, `http`, default `tcp`):
 

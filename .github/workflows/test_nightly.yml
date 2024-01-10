@@ -1,5 +1,6 @@
 name: test_nightly
 on:
+  pull_request: # For testing purposes
   workflow_dispatch:
   schedule:
     - cron: '0 8 * * *'  # At 8:00 AM UTC, which is 9:00 AM CET

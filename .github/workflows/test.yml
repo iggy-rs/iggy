@@ -42,6 +42,7 @@ jobs:
             target: x86_64-unknown-linux-musl
             bin:
               - iggy-server
+              - iggy
             name: iggy-Linux-x86_64-musl.tar.gz
             cargo_command: cargo
             docker_arch: linux/amd64
@@ -52,6 +53,7 @@ jobs:
             target: aarch64-apple-darwin
             bin:
               - iggy-server
+              - iggy
             name: iggy-Darwin-aarch64.tar.gz
             skip_tests: true
             cross: false
@@ -61,6 +63,7 @@ jobs:
             target: x86_64-pc-windows-msvc
             bin:
               - iggy-server
+              - iggy
             name: iggy-Windows-x86_64.zip
             skip_tests: true
             cross: false

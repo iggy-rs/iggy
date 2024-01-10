@@ -37,7 +37,7 @@ jobs:
         run: source <(cargo llvm-cov show-env --export-prefix) && cargo test
 
       - name: Generate code coverage
-        run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --codecov --output-path codecov.json --ignore-filename-regex '(bench\/|cli\/|integration\/|tools\/)'
+        run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --codecov --output-path codecov.json --ignore-filename-regex '(bench\/|integration\/|tools\/)'
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

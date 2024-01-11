@@ -1,5 +1,5 @@
 mod bench;
-mod cmd;
+mod cli;
 mod config_provider;
 mod examples;
 mod server;

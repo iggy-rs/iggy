@@ -1,8 +1,6 @@
-use crate::streaming::storage::SegmentStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::Error;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 impl Topic {
@@ -41,11 +39,11 @@ impl Topic {
         self.storage.topic.delete(self).await
     }
 
-    pub async fn persist_messages(&self, storage: Arc<dyn SegmentStorage>) -> Result<(), Error> {
+    pub async fn persist_messages(&self) -> Result<(), Error> {
         for partition in self.get_partitions() {
             let mut partition = partition.write().await;
             for segment in partition.get_segments_mut() {
-                segment.persist_messages(storage.clone()).await?;
+                segment.persist_messages().await?;
             }
         }
 

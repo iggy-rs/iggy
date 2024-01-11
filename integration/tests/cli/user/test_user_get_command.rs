@@ -1,0 +1,290 @@
+use std::collections::HashMap;
+
+use crate::cli::common::{
+    IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, TestUserId, CLAP_INDENT,
+    USAGE_PREFIX,
+};
+use assert_cmd::assert::Assert;
+use async_trait::async_trait;
+use iggy::identifier::Identifier;
+use iggy::models::permissions::{Permissions, StreamPermissions, TopicPermissions};
+use iggy::models::user_info::UserId;
+use iggy::models::user_status::UserStatus;
+use iggy::users::delete_user::DeleteUser;
+use iggy::users::get_user::GetUser;
+use iggy::{client::Client, users::create_user::CreateUser};
+use predicates::str::{is_match, starts_with};
+use serial_test::parallel;
+
+enum TestUser<'a> {
+    Existing(&'a str),
+    New(&'a str),
+    NewWithGlobalPerms(&'a str),
+    NewWithStreamPerms(&'a str, u32),
+    NewWithStreamAndTopicPerms(&'a str, u32, u32),
+}
+
+struct TestUserGetCmd {
+    username: String,
+    status: UserStatus,
+    user_id: Option<UserId>,
+    using_user_id: TestUserId,
+    create_user: bool,
+    check_global_perms: bool,
+    check_stream_perms: Option<u32>,
+    check_topic_perms: Option<u32>,
+}
+
+impl TestUserGetCmd {
+    fn new(test_user: TestUser, status: UserStatus, using_user_id: TestUserId) -> Self {
+        let (username, create_user, check_global_perms, check_stream_perms, check_topic_perms) =
+            match test_user {
+                TestUser::Existing(username) => (username.into(), false, true, None, None),
+                TestUser::New(username) => (username.into(), true, false, None, None),
+                TestUser::NewWithGlobalPerms(username) => (username.into(), true, true, None, None),
+                TestUser::NewWithStreamPerms(username, stream_id) => {
+                    (username.into(), true, true, Some(stream_id), None)
+                }
+                TestUser::NewWithStreamAndTopicPerms(username, stream_id, topic_id) => {
+                    (username.into(), true, true, Some(stream_id), Some(topic_id))
+                }
+            };
+
+        Self {
+            username,
+            status,
+            user_id: None,
+            using_user_id,
+            create_user,
+            check_global_perms,
+            check_stream_perms,
+            check_topic_perms,
+        }
+    }
+
+    fn get_user_id(&self) -> String {
+        match self.using_user_id {
+            TestUserId::Named => self.username.clone(),
+            TestUserId::Numeric => format!("{}", self.user_id.unwrap()),
+        }
+    }
+
+    fn get_permissions(&self) -> Option<Permissions> {
+        if self.check_global_perms {
+            let mut permissions = Permissions::default();
+
+            if let Some(stream_id) = self.check_stream_perms {
+                let mut stream_perms = StreamPermissions::default();
+
+                if let Some(topic_id) = self.check_topic_perms {
+                    stream_perms.topics =
+                        Some(HashMap::from([(topic_id, TopicPermissions::default())]));
+                };
+
+                permissions.streams = Some(HashMap::from([(stream_id, stream_perms)]));
+            }
+
+            Some(permissions)
+        } else {
+            None
+        }
+    }
+}
+
+#[async_trait]
+impl IggyCmdTestCase for TestUserGetCmd {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
+        if self.create_user {
+            let create_user = client
+                .create_user(&CreateUser {
+                    username: self.username.clone(),
+                    status: self.status,
+                    permissions: self.get_permissions(),
+                    ..Default::default()
+                })
+                .await;
+            assert!(create_user.is_ok());
+        }
+        let user = client
+            .get_user(&GetUser {
+                user_id: Identifier::from_str_value(self.username.as_str()).unwrap(),
+            })
+            .await;
+        assert!(user.is_ok());
+        self.user_id = Some(user.unwrap().id);
+    }
+
+    fn get_command(&self) -> IggyCmdCommand {
+        IggyCmdCommand::new()
+            .arg("user")
+            .arg("get")
+            .arg(self.get_user_id())
+            .with_env_credentials()
+    }
+
+    fn verify_command(&self, command_state: Assert) {
+        let user_id = self.get_user_id();
+
+        let assert = command_state
+            .success()
+            .stdout(starts_with(format!(
+                "Executing get user with ID: {}",
+                user_id
+            )))
+            .stdout(is_match(format!("| Username[ ]+| {}", self.username)).unwrap())
+            .stdout(is_match(format!("| Status[ ]+| {}", self.status)).unwrap());
+
+        // Check global permissions
+        let assert = if self.check_global_perms {
+            assert.stdout(is_match("Global[ ]+|[ ]+Permission[ ]+| Value").unwrap())
+        } else {
+            assert
+        };
+
+        // Check stream permissions
+        let assert = if let Some(stream_id) = self.check_stream_perms {
+            assert.stdout(
+                is_match(format!(
+                    "Stream: {}[ ]+|[ ]+Permission[ ]+| Value",
+                    stream_id
+                ))
+                .unwrap(),
+            )
+        } else {
+            assert
+        };
+
+        // Check topic permissions
+        if let Some(topic_id) = self.check_topic_perms {
+            assert.stdout(
+                is_match(format!("Topic: {}[ ]+|[ ]+Permission[ ]+| Value", topic_id)).unwrap(),
+            );
+        }
+    }
+
+    async fn verify_server_state(&self, client: &dyn Client) {
+        if self.create_user {
+            let deleted = client
+                .delete_user(&DeleteUser {
+                    user_id: Identifier::from_str_value(self.username.as_str()).unwrap(),
+                })
+                .await;
+            assert!(deleted.is_ok());
+        }
+    }
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_be_successful() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test.setup().await;
+    iggy_cmd_test
+        .execute_test(TestUserGetCmd::new(
+            TestUser::New("producer"),
+            UserStatus::Active,
+            TestUserId::Named,
+        ))
+        .await;
+    iggy_cmd_test
+        .execute_test(TestUserGetCmd::new(
+            TestUser::New("testing"),
+            UserStatus::Inactive,
+            TestUserId::Named,
+        ))
+        .await;
+    iggy_cmd_test
+        .execute_test(TestUserGetCmd::new(
+            TestUser::NewWithGlobalPerms("misc"),
+            UserStatus::Active,
+            TestUserId::Numeric,
+        ))
+        .await;
+    iggy_cmd_test
+        .execute_test(TestUserGetCmd::new(
+            TestUser::NewWithStreamPerms("tools", 3),
+            UserStatus::Active,
+            TestUserId::Named,
+        ))
+        .await;
+    iggy_cmd_test
+        .execute_test(TestUserGetCmd::new(
+            TestUser::NewWithStreamAndTopicPerms("limited", 1, 3),
+            UserStatus::Active,
+            TestUserId::Named,
+        ))
+        .await;
+    iggy_cmd_test
+        .execute_test(TestUserGetCmd::new(
+            TestUser::Existing("iggy"),
+            UserStatus::Active,
+            TestUserId::Numeric,
+        ))
+        .await;
+    iggy_cmd_test
+        .execute_test(TestUserGetCmd::new(
+            TestUser::Existing("iggy"),
+            UserStatus::Active,
+            TestUserId::Named,
+        ))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["user", "get", "--help"],
+            format!(
+                r#"Get details of a single user with given ID
+
+The user ID can be specified as either a username or an ID
+
+Examples:
+ iggy user get 2
+ iggy user get testuser
+
+{USAGE_PREFIX} user get <USER_ID>
+
+Arguments:
+  <USER_ID>
+          User ID to get
+{CLAP_INDENT}
+          The user ID can be specified as either a username or an ID
+
+Options:
+  -h, --help
+          Print help (see a summary with '-h')
+"#,
+            ),
+        ))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_short_help_match() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test
+        .execute_test_for_help_command(TestHelpCmd::new(
+            vec!["user", "get", "-h"],
+            format!(
+                r#"Get details of a single user with given ID
+
+{USAGE_PREFIX} user get <USER_ID>
+
+Arguments:
+  <USER_ID>  User ID to get
+
+Options:
+  -h, --help  Print help (see more with '--help')
+"#,
+            ),
+        ))
+        .await;
+}

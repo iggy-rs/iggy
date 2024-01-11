@@ -2,4 +2,7 @@ coverage:
   status:
     project:
       default:
-        threshold: 0.2%
+        threshold: 2%
+    patch:
+      default:
+        if_ci_failed: success

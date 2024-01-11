@@ -3548,6 +3548,7 @@ dependencies = [
  "bytes",
  "chrono",
  "clap",
+ "dashmap",
  "figlet-rs",
  "figment",
  "flume",

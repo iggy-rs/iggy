@@ -1,8 +1,8 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::polling_consumer::PollingConsumer;
+use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::error::Error;
-use std::collections::HashMap;
 use tracing::trace;
 
 impl Partition {
@@ -16,15 +16,13 @@ impl Partition {
 
         match consumer {
             PollingConsumer::Consumer(consumer_id, _) => {
-                let consumer_offsets = self.consumer_offsets.read().await;
-                let consumer_offset = consumer_offsets.get(&consumer_id);
+                let consumer_offset = self.consumer_offsets.get(&consumer_id);
                 if let Some(consumer_offset) = consumer_offset {
                     return Ok(consumer_offset.offset);
                 }
             }
             PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
-                let consumer_offsets = self.consumer_group_offsets.read().await;
-                let consumer_offset = consumer_offsets.get(&consumer_group_id);
+                let consumer_offset = self.consumer_offsets.get(&consumer_group_id);
                 if let Some(consumer_offset) = consumer_offset {
                     return Ok(consumer_offset.offset);
                 }
@@ -52,24 +50,12 @@ impl Partition {
 
         match consumer {
             PollingConsumer::Consumer(consumer_id, _) => {
-                let mut consumer_offsets = self.consumer_offsets.write().await;
-                self.store_offset(
-                    ConsumerKind::Consumer,
-                    consumer_id,
-                    offset,
-                    &mut consumer_offsets,
-                )
-                .await?;
+                self.store_offset(ConsumerKind::Consumer, consumer_id, offset)
+                    .await?;
             }
             PollingConsumer::ConsumerGroup(consumer_id, _) => {
-                let mut consumer_offsets = self.consumer_group_offsets.write().await;
-                self.store_offset(
-                    ConsumerKind::ConsumerGroup,
-                    consumer_id,
-                    offset,
-                    &mut consumer_offsets,
-                )
-                .await?;
+                self.store_offset(ConsumerKind::ConsumerGroup, consumer_id, offset)
+                    .await?;
             }
         };
 
@@ -81,13 +67,18 @@ impl Partition {
         kind: ConsumerKind,
         consumer_id: u32,
         offset: u64,
-        consumer_offsets: &mut HashMap<u32, ConsumerOffset>,
     ) -> Result<(), Error> {
-        if let Some(consumer_offset) = consumer_offsets.get_mut(&consumer_id) {
-            consumer_offset.offset = offset;
+        let consumer_offsets = self.get_consumer_offsets(kind);
+        let consumer_offset = consumer_offsets
+            .get_mut(&consumer_id)
+            .map(|mut consumer_offset| {
+                consumer_offset.offset = offset;
+                consumer_offset.clone()
+            });
+        if let Some(consumer_offset) = consumer_offset {
             self.storage
                 .partition
-                .save_consumer_offset(consumer_offset)
+                .save_consumer_offset(&consumer_offset)
                 .await?;
             return Ok(());
         }
@@ -127,15 +118,19 @@ impl Partition {
             .partition
             .load_consumer_offsets(kind, self.stream_id, self.topic_id, self.partition_id)
             .await?;
-        let mut consumer_offsets = match kind {
-            ConsumerKind::Consumer => self.consumer_offsets.write().await,
-            ConsumerKind::ConsumerGroup => self.consumer_group_offsets.write().await,
-        };
+        let consumer_offsets = self.get_consumer_offsets(kind);
         for consumer_offset in loaded_consumer_offsets {
             self.log_consumer_offset(&consumer_offset);
             consumer_offsets.insert(consumer_offset.consumer_id, consumer_offset);
         }
         Ok(())
+    }
+
+    fn get_consumer_offsets(&self, kind: ConsumerKind) -> &DashMap<u32, ConsumerOffset> {
+        match kind {
+            ConsumerKind::Consumer => &self.consumer_offsets,
+            ConsumerKind::ConsumerGroup => &self.consumer_group_offsets,
+        }
     }
 
     fn log_consumer_offset(&self, consumer_offset: &ConsumerOffset) {

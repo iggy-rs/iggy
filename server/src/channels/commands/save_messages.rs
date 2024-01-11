@@ -1,13 +1,10 @@
 use crate::channels::server_command::ServerCommand;
 use crate::configs::server::MessageSaverConfig;
 use crate::configs::server::ServerConfig;
-use crate::streaming::persistence::persister::*;
-use crate::streaming::segments::storage::FileSegmentStorage;
 use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use iggy::utils::duration::IggyDuration;
-use std::sync::Arc;
 use tokio::time;
 use tracing::{error, info, warn};
 
@@ -63,17 +60,10 @@ impl MessagesSaver {
 
 #[async_trait]
 impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
-    async fn execute(&mut self, system: &SharedSystem, command: SaveMessagesCommand) {
-        let persister: Arc<dyn Persister> = if command.enforce_fsync {
-            Arc::new(FileWithSyncPersister)
-        } else {
-            Arc::new(FilePersister)
-        };
-
-        let storage = Arc::new(FileSegmentStorage::new(persister));
+    async fn execute(&mut self, system: &SharedSystem, _command: SaveMessagesCommand) {
         system
             .write()
-            .persist_messages(storage)
+            .persist_messages()
             .await
             .unwrap_or_else(|error| {
                 error!("Couldn't save buffered messages on disk. Error: {}", error);

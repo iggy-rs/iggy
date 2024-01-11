@@ -384,9 +384,7 @@ impl Partition {
                     last_segment.start_offset,
                     self.partition_id
                 );
-                last_segment
-                    .persist_messages(self.storage.segment.clone())
-                    .await?;
+                last_segment.persist_messages().await?;
                 self.unsaved_messages_count = 0;
             }
         }

@@ -1,7 +1,6 @@
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
-use crate::streaming::storage::SegmentStorage;
 use iggy::error::Error;
 use iggy::models::messages::Message;
 use std::sync::Arc;
@@ -252,10 +251,8 @@ impl Segment {
         Ok(())
     }
 
-    pub async fn persist_messages(
-        &mut self,
-        storage: Arc<dyn SegmentStorage>,
-    ) -> Result<(), Error> {
+    pub async fn persist_messages(&mut self) -> Result<(), Error> {
+        let storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
             return Ok(());
         }

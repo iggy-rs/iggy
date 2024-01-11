@@ -12,11 +12,9 @@ use server::http::http_server;
 use server::logging::Logging;
 use server::quic::quic_server;
 use server::server_error::ServerError;
-use server::streaming::persistence::persister::FileWithSyncPersister;
-use server::streaming::segments::storage::FileSegmentStorage;
+
 use server::streaming::systems::system::{SharedSystem, System};
 use server::tcp::tcp_server;
-use std::sync::Arc;
 use tokio::time::Instant;
 use tracing::info;
 
@@ -109,9 +107,7 @@ async fn main() -> Result<(), ServerError> {
 
     let shutdown_timestamp = Instant::now();
     let mut system = system.write();
-    let persister = Arc::new(FileWithSyncPersister);
-    let storage = Arc::new(FileSegmentStorage::new(persister));
-    system.shutdown(storage).await?;
+    system.shutdown().await?;
     let elapsed_time = shutdown_timestamp.elapsed();
 
     info!(

@@ -4,12 +4,11 @@ use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
+use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::TimeStamp;
-use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct Partition {
@@ -25,14 +24,14 @@ pub struct Partition {
     pub should_increment_offset: bool,
     pub created_at: u64,
     pub(crate) message_expiry: Option<u32>,
-    pub(crate) consumer_offsets: RwLock<HashMap<u32, ConsumerOffset>>,
-    pub(crate) consumer_group_offsets: RwLock<HashMap<u32, ConsumerOffset>>,
+    pub(crate) consumer_offsets: DashMap<u32, ConsumerOffset>,
+    pub(crate) consumer_group_offsets: DashMap<u32, ConsumerOffset>,
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ConsumerOffset {
     pub kind: ConsumerKind,
     pub consumer_id: u32,
@@ -118,8 +117,8 @@ impl Partition {
             current_offset: 0,
             unsaved_messages_count: 0,
             should_increment_offset: false,
-            consumer_offsets: RwLock::new(HashMap::new()),
-            consumer_group_offsets: RwLock::new(HashMap::new()),
+            consumer_offsets: DashMap::new(),
+            consumer_group_offsets: DashMap::new(),
             config,
             storage,
             created_at: TimeStamp::now().to_micros(),
@@ -186,7 +185,7 @@ mod tests {
         assert!(partition.cache.is_some());
         assert!(!partition.should_increment_offset);
         assert!(partition.cache.as_ref().unwrap().is_empty());
-        let consumer_offsets = partition.consumer_offsets.blocking_read();
+        let consumer_offsets = partition.consumer_offsets;
         assert_eq!(partition.message_expiry, message_expiry);
         assert!(consumer_offsets.is_empty());
     }

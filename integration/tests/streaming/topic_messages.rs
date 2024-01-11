@@ -204,6 +204,8 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         setup.config.clone(),
         setup.storage.clone(),
         None,
+        None,
+        1,
     )
     .unwrap();
     topic.persist().await.unwrap();

@@ -6,6 +6,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::Error;
+use iggy::utils::byte_size::IggyByteSize;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
@@ -71,10 +72,7 @@ impl TopicStorage for FileTopicStorage {
     }
 
     async fn load_consumer_groups(&self, topic: &Topic) -> Result<Vec<ConsumerGroup>, Error> {
-        info!(
-            "Loading consumer groups for topic with ID: {} for stream with ID: {} from disk...",
-            topic.topic_id, topic.stream_id
-        );
+        info!("Loading consumer groups for topic {} from disk...", topic);
 
         let key_prefix = get_consumer_groups_key_prefix(topic.stream_id, topic.topic_id);
         let mut consumer_groups = Vec::new();
@@ -147,15 +145,14 @@ struct TopicData {
     name: String,
     created_at: u64,
     message_expiry: Option<u32>,
+    max_topic_size: Option<IggyByteSize>,
+    replication_factor: u8,
 }
 
 #[async_trait]
 impl Storage<Topic> for FileTopicStorage {
     async fn load(&self, topic: &mut Topic) -> Result<(), Error> {
-        info!(
-            "Loading topic with ID: {} for stream with ID: {} from disk...",
-            topic.topic_id, topic.stream_id
-        );
+        info!("Loading topic {} from disk...", topic);
         if !Path::new(&topic.path).exists() {
             return Err(Error::TopicIdNotFound(topic.topic_id, topic.stream_id));
         }
@@ -187,9 +184,11 @@ impl Storage<Topic> for FileTopicStorage {
         topic.name = topic_data.name;
         topic.created_at = topic_data.created_at;
         topic.message_expiry = topic_data.message_expiry;
+        topic.max_topic_size = topic_data.max_topic_size;
+        topic.replication_factor = topic_data.replication_factor;
 
         let dir_entries = fs::read_dir(&topic.partitions_path).await
-            .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} for topic with ID: {} and path: {}", 
+            .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} for topic with ID: {} and path: {}",
             topic.topic_id, topic.stream_id, topic.topic_id, &topic.partitions_path));
         if let Err(err) = dir_entries {
             return Err(Error::CannotReadPartitions(err));
@@ -236,8 +235,8 @@ impl Storage<Topic> for FileTopicStorage {
                     }
                     Err(error) => {
                         error!(
-                            "Failed to load partition with ID: {} for stream with ID: {} and topic with ID: {}. Error: {}",
-                            partition.partition_id, stream_id, topic_id, error);
+                            "Failed to load partition with ID: {} for stream with ID: {stream_id} and topic with ID: {topic_id}. Error: {error}",
+                            partition.partition_id);
                     }
                 }
             });
@@ -254,10 +253,7 @@ impl Storage<Topic> for FileTopicStorage {
         self.load_consumer_groups(topic).await?;
         topic.load_messages_from_disk_to_cache().await?;
 
-        info!(
-            "Loaded topic: '{}' with ID: {} for stream with ID: {} from disk. Message expiry: {:?}",
-            &topic.name, &topic.topic_id, topic.stream_id, topic.message_expiry
-        );
+        info!("Loaded topic {topic}");
 
         Ok(())
     }
@@ -285,14 +281,16 @@ impl Storage<Topic> for FileTopicStorage {
             name: topic.name.clone(),
             created_at: topic.created_at,
             message_expiry: topic.message_expiry,
+            max_topic_size: topic.max_topic_size,
+            replication_factor: topic.replication_factor,
         })
-        .with_context(|| format!("Failed to serialize topic with key: {}", key))
+        .with_context(|| format!("Failed to serialize topic with key: {key}"))
         {
             Ok(data) => {
                 if let Err(err) = self
                     .db
                     .insert(&key, data)
-                    .with_context(|| format!("Failed to insert topic with key: {}", key))
+                    .with_context(|| format!("Failed to insert topic with key: {key}"))
                 {
                     return Err(Error::CannotSaveResource(err));
                 }
@@ -303,35 +301,26 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         info!(
-            "Saving {} partition(s) for topic with ID: {} and stream with ID: {}...",
-            topic.partitions.len(),
-            topic.topic_id,
-            topic.stream_id
+            "Saving {} partition(s) for topic {topic}...",
+            topic.partitions.len()
         );
         for (_, partition) in topic.partitions.iter() {
             let partition = partition.write().await;
             partition.persist().await?;
         }
 
-        info!(
-            "Saved topic with ID: {} for stream with ID: {}, path: {}",
-            topic.topic_id, topic.stream_id, topic.path
-        );
+        info!("Saved topic {topic}");
 
         Ok(())
     }
 
     async fn delete(&self, topic: &Topic) -> Result<(), Error> {
-        info!(
-            "Deleting topic with ID: {} for stream with ID: {}...",
-            topic.topic_id, topic.stream_id
-        );
+        info!("Deleting topic {topic}...");
         let key = get_topic_key(topic.stream_id, topic.topic_id);
-        //I END HERE
         if let Err(err) = self
             .db
             .remove(&key)
-            .with_context(|| format!("Failed to delete topic with key: {}", key))
+            .with_context(|| format!("Failed to delete topic with key: {key}"))
         {
             return Err(Error::CannotDeleteResource(err));
         }
@@ -362,12 +351,11 @@ fn get_topic_key(stream_id: u32, topic_id: u32) -> String {
 
 fn get_consumer_group_key(stream_id: u32, topic_id: u32, consumer_group_id: u32) -> String {
     format!(
-        "{}:{}",
-        get_consumer_groups_key_prefix(stream_id, topic_id),
-        consumer_group_id
+        "{}:{consumer_group_id}",
+        get_consumer_groups_key_prefix(stream_id, topic_id)
     )
 }
 
 fn get_consumer_groups_key_prefix(stream_id: u32, topic_id: u32) -> String {
-    format!("streams:{}:topics:{}:consumer_groups", stream_id, topic_id)
+    format!("streams:{stream_id}:topics:{topic_id}:consumer_groups")
 }

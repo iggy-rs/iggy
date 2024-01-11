@@ -382,6 +382,17 @@ mod tests {
         let name = "test";
         let config = Arc::new(SystemConfig::default());
 
-        Topic::create(stream_id, id, name, partitions_count, config, storage, None).unwrap()
+        Topic::create(
+            stream_id,
+            id,
+            name,
+            partitions_count,
+            config,
+            storage,
+            None,
+            None,
+            1,
+        )
+        .unwrap()
     }
 }

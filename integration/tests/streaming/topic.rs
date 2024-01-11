@@ -23,6 +23,8 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            None,
+            1,
         )
         .unwrap();
 
@@ -54,6 +56,8 @@ async fn should_load_existing_topic_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            None,
+            1,
         )
         .unwrap();
         topic.persist().await.unwrap();
@@ -97,6 +101,8 @@ async fn should_delete_existing_topic_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            None,
+            1,
         )
         .unwrap();
         topic.persist().await.unwrap();
@@ -130,6 +136,8 @@ async fn should_purge_existing_topic_on_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            None,
+            1,
         )
         .unwrap();
         topic.persist().await.unwrap();

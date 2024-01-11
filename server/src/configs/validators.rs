@@ -49,9 +49,9 @@ impl Validatable<ServerError> for CacheConfig {
         let free_memory = sys.free_memory();
         let cache_percentage = (limit_bytes as f64 / total_memory as f64) * 100.0;
 
-        let pretty_cache_limit = IggyByteSize::from(limit_bytes).to_human_string();
-        let pretty_total_memory = IggyByteSize::from(total_memory).to_human_string();
-        let pretty_free_memory = IggyByteSize::from(free_memory).to_human_string();
+        let pretty_cache_limit = IggyByteSize::from(limit_bytes).as_human_string();
+        let pretty_total_memory = IggyByteSize::from(total_memory).as_human_string();
+        let pretty_free_memory = IggyByteSize::from(free_memory).as_human_string();
 
         if limit_bytes > total_memory {
             return Err(ServerError::CacheConfigValidationFailure(format!(

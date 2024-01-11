@@ -4,10 +4,11 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use humantime::format_duration;
 use humantime::Duration as HumanDuration;
+use iggy::cli::utils::message_expiry::MessageExpiry;
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::get_topic::GetTopic;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
@@ -20,10 +21,13 @@ struct TestTopicCreateCmd {
     topic_name: String,
     partitions_count: u32,
     message_expiry: Option<Vec<String>>,
+    max_topic_size: Option<IggyByteSize>,
+    replication_factor: u8,
     using_identifier: TestStreamId,
 }
 
 impl TestTopicCreateCmd {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         stream_id: u32,
         stream_name: String,
@@ -31,6 +35,8 @@ impl TestTopicCreateCmd {
         topic_name: String,
         partitions_count: u32,
         message_expiry: Option<Vec<String>>,
+        max_topic_size: Option<IggyByteSize>,
+        replication_factor: u8,
         using_identifier: TestStreamId,
     ) -> Self {
         Self {
@@ -40,6 +46,8 @@ impl TestTopicCreateCmd {
             topic_name,
             partitions_count,
             message_expiry,
+            max_topic_size,
+            replication_factor,
             using_identifier,
         }
     }
@@ -80,23 +88,33 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
     }
 
     fn verify_command(&self, command_state: Assert) {
-        let message_expiry_text = match self.message_expiry {
-            Some(ref message_expiry) => {
-                let duration: Duration =
-                    *message_expiry.join(" ").parse::<HumanDuration>().unwrap();
-
-                format!("and message expire time: {}", format_duration(duration))
-            }
-            None => String::from("and without message expire time"),
-        };
-
         let stream_id = match self.using_identifier {
             TestStreamId::Numeric => format!("{}", self.stream_id),
             TestStreamId::Named => self.stream_name.clone(),
         };
+        let partitions_count = self.partitions_count;
+        let topic_id = &self.topic_id;
+        let topic_name = &self.topic_name;
+        let message_expiry = (match &self.message_expiry {
+            Some(value) => value.join(" "),
+            None => MessageExpiry::NeverExpire.to_string(),
+        })
+        .to_string();
 
-        let message = format!("Executing create topic with ID: {}, name: {}, partitions count: {} {} in stream with ID: {}\nTopic with ID: {}, name: {}, partitions count: {} {} created in stream with ID: {}\n",
-            self.topic_id, self.topic_name, self.partitions_count, message_expiry_text, stream_id, self.topic_id, self.topic_name, self.partitions_count, message_expiry_text, stream_id);
+        let max_topic_size = (match &self.max_topic_size {
+            Some(value) => value.as_human_string_with_zero_as_unlimited(),
+            None => IggyByteSize::default().as_human_string_with_zero_as_unlimited(),
+        })
+        .to_string();
+
+        let replication_factor = self.replication_factor;
+
+        let message = format!(
+            "Executing create topic with ID: {topic_id}, name: {topic_name}, message expiry: {message_expiry}, \
+            max topic size: {max_topic_size}, replication factor: {replication_factor} in stream with ID: {stream_id}\n\
+            Topic with ID: {topic_id}, name: {topic_name}, partitions count: {partitions_count}, message expiry: {message_expiry}, \
+            max topic size: {max_topic_size}, replication factor: {replication_factor} created in stream with ID: {stream_id}\n",
+        );
 
         command_state.success().stdout(diff(message));
     }
@@ -145,6 +163,8 @@ pub async fn should_be_successful() {
             String::from("sync"),
             1,
             None,
+            None,
+            1,
             TestStreamId::Numeric,
         ))
         .await;
@@ -156,6 +176,8 @@ pub async fn should_be_successful() {
             String::from("topic"),
             5,
             None,
+            None,
+            1,
             TestStreamId::Named,
         ))
         .await;
@@ -167,6 +189,8 @@ pub async fn should_be_successful() {
             String::from("named"),
             1,
             Some(vec![String::from("3days"), String::from("5s")]),
+            None,
+            1,
             TestStreamId::Named,
         ))
         .await;
@@ -179,10 +203,12 @@ pub async fn should_be_successful() {
             2,
             Some(vec![
                 String::from("1day"),
-                String::from("1hour"),
-                String::from("1min"),
-                String::from("1sec"),
+                String::from("1h"),
+                String::from("1m"),
+                String::from("1s"),
             ]),
+            None,
+            1,
             TestStreamId::Numeric,
         ))
         .await;
@@ -207,7 +233,7 @@ Examples
  iggy topic create prod 2 2 sensor2
  iggy topic create test 3 2 debugs 1day 1hour 1min 1sec
 
-{USAGE_PREFIX} topic create <STREAM_ID> <TOPIC_ID> <PARTITIONS_COUNT> <NAME> [MESSAGE_EXPIRY]...
+{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <TOPIC_ID> <PARTITIONS_COUNT> <NAME> [MESSAGE_EXPIRY]...
 
 Arguments:
   <STREAM_ID>
@@ -225,14 +251,28 @@ Arguments:
           Name of the topic
 
   [MESSAGE_EXPIRY]...
-          Message expiry time in human readable format like 15days 2min 2s ("none" or skipping parameter disables message expiry functionality in topic)
+          Message expiry time in human readable format like 15days 2min 2s
+{CLAP_INDENT}
+          ("unlimited" or skipping parameter disables message expiry functionality in topic)
 
 Options:
+  -m, --max-topic-size <MAX_TOPIC_SIZE>
+          Max topic size
+{CLAP_INDENT}
+          ("unlimited" or skipping parameter disables max topic size functionality in topic)
+          Can't be lower than segment size in the config.
+{CLAP_INDENT}
+          [default: unlimited]
+
+  -r, --replication-factor <REPLICATION_FACTOR>
+          Replication factor for the topic
+{CLAP_INDENT}
+          [default: 1]
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
-            ),
-        ))
+        )))
         .await;
 }
 
@@ -248,17 +288,19 @@ pub async fn should_short_help_match() {
                 r#"Create topic with given ID, name, number of partitions
 and expiry time for given stream ID
 
-{USAGE_PREFIX} topic create <STREAM_ID> <TOPIC_ID> <PARTITIONS_COUNT> <NAME> [MESSAGE_EXPIRY]...
+{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <TOPIC_ID> <PARTITIONS_COUNT> <NAME> [MESSAGE_EXPIRY]...
 
 Arguments:
   <STREAM_ID>          Stream ID to create topic
   <TOPIC_ID>           Topic ID to create
   <PARTITIONS_COUNT>   Number of partitions inside the topic
   <NAME>               Name of the topic
-  [MESSAGE_EXPIRY]...  Message expiry time in human readable format like 15days 2min 2s ("none" or skipping parameter disables message expiry functionality in topic)
+  [MESSAGE_EXPIRY]...  Message expiry time in human readable format like 15days 2min 2s
 
 Options:
-  -h, --help  Print help (see more with '--help')
+  -m, --max-topic-size <MAX_TOPIC_SIZE>          Max topic size [default: unlimited]
+  -r, --replication-factor <REPLICATION_FACTOR>  Replication factor for the topic [default: 1]
+  -h, --help                                     Print help (see more with '--help')
 "#,
             ),
         ))

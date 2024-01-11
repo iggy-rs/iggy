@@ -2,7 +2,7 @@ use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::get_topic::GetTopic;
-use crate::utils::timestamp::TimeStamp;
+use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -46,7 +46,7 @@ impl CliCommand for GetTopicCmd {
         table.add_row(vec!["Topic id", format!("{}", topic.id).as_str()]);
         table.add_row(vec![
             "Created",
-            TimeStamp::from(topic.created_at)
+            IggyTimestamp::from(topic.created_at)
                 .to_string("%Y-%m-%d %H:%M:%S")
                 .as_str(),
         ]);
@@ -56,7 +56,15 @@ impl CliCommand for GetTopicCmd {
             "Message expiry",
             match topic.message_expiry {
                 Some(value) => format!("{}", value),
-                None => String::from("None"),
+                None => String::from("unlimited"),
+            }
+            .as_str(),
+        ]);
+        table.add_row(vec![
+            "Max topic size",
+            match topic.max_topic_size {
+                Some(value) => format!("{}", value),
+                None => String::from("unlimited"),
             }
             .as_str(),
         ]);

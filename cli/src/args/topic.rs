@@ -2,6 +2,7 @@ use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
 use iggy::cli::utils::message_expiry::MessageExpiry;
 use iggy::identifier::Identifier;
+use iggy::utils::byte_size::IggyByteSize;
 use std::convert::From;
 
 #[derive(Debug, Clone, Subcommand)]
@@ -78,10 +79,20 @@ pub(crate) struct TopicCreateArgs {
     pub(crate) partitions_count: u32,
     /// Name of the topic
     pub(crate) name: String,
+    /// Max topic size
+    ///
+    /// ("unlimited" or skipping parameter disables max topic size functionality in topic)
+    /// Can't be lower than segment size in the config.
+    #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
+    pub(crate) max_topic_size: IggyByteSize,
+    /// Replication factor for the topic
+    #[arg(short, long, default_value = "1")]
+    pub(crate) replication_factor: u8,
     /// Message expiry time in human readable format like 15days 2min 2s
-    /// ("none" or skipping parameter disables message expiry functionality in topic)
-    #[arg(value_parser = clap::value_parser!(MessageExpiry))]
-    pub(crate) message_expiry: Option<Vec<MessageExpiry>>,
+    ///
+    /// ("unlimited" or skipping parameter disables message expiry functionality in topic)
+    #[arg(value_parser = clap::value_parser!(MessageExpiry), verbatim_doc_comment)]
+    pub(crate) message_expiry: Vec<MessageExpiry>,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -112,10 +123,20 @@ pub(crate) struct TopicUpdateArgs {
     pub(crate) topic_id: Identifier,
     /// New name for the topic
     pub(crate) name: String,
+    /// New max topic size
+    ///
+    /// ("unlimited" or skipping parameter causes removal of max topic size parameter in topic)
+    /// Can't be lower than segment size in the config.
+    #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
+    pub(crate) max_topic_size: IggyByteSize,
+    #[arg(short, long, default_value = "1")]
+    /// New replication factor for the topic
+    pub(crate) replication_factor: u8,
     /// New message expiry time in human readable format like 15days 2min 2s
-    /// ("none" or skipping parameter causes removal of expiry parameter in topic)
-    #[arg(value_parser = clap::value_parser!(MessageExpiry))]
-    pub(crate) message_expiry: Option<Vec<MessageExpiry>>,
+    ///
+    /// ("unlimited" or skipping parameter causes removal of expiry parameter in topic)
+    #[arg(value_parser = clap::value_parser!(MessageExpiry), verbatim_doc_comment)]
+    pub(crate) message_expiry: Vec<MessageExpiry>,
 }
 
 #[derive(Debug, Clone, Args)]

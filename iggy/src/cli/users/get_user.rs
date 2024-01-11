@@ -3,7 +3,7 @@ use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::models::permissions::{GlobalPermissions, StreamPermissions, TopicPermissions};
 use crate::users::get_user::GetUser;
-use crate::utils::timestamp::TimeStamp;
+use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::presets::ASCII_NO_BORDERS;
@@ -148,7 +148,7 @@ impl CliCommand for GetUserCmd {
         table.add_row(vec!["User ID", format!("{}", user.id).as_str()]);
         table.add_row(vec![
             "Created",
-            TimeStamp::from(user.created_at)
+            IggyTimestamp::from(user.created_at)
                 .to_local("%Y-%m-%d %H:%M:%S")
                 .as_str(),
         ]);

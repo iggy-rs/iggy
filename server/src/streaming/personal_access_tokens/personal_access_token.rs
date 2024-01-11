@@ -49,11 +49,11 @@ impl PersonalAccessToken {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iggy::utils::timestamp::TimeStamp;
+    use iggy::utils::timestamp::IggyTimestamp;
     #[test]
     fn personal_access_token_should_be_created_with_random_secure_value_and_hashed_successfully() {
         let user_id = 1;
-        let now = TimeStamp::now().to_micros();
+        let now = IggyTimestamp::now().to_micros();
         let name = "test_token";
         let (personal_access_token, raw_token) = PersonalAccessToken::new(user_id, name, now, None);
         assert_eq!(personal_access_token.name, name);
@@ -69,7 +69,7 @@ mod tests {
     #[test]
     fn personal_access_token_should_be_expired_given_passed_expiry() {
         let user_id = 1;
-        let now = TimeStamp::now().to_micros();
+        let now = IggyTimestamp::now().to_micros();
         let expiry = 1;
         let name = "test_token";
         let (personal_access_token, _) = PersonalAccessToken::new(user_id, name, now, Some(expiry));

@@ -381,9 +381,11 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, Error> {
         id: topic.id,
         created_at: topic.created_at,
         name: topic.name,
-        size: topic.size_bytes,
+        size: topic.size,
         messages_count: topic.messages_count,
         message_expiry: topic.message_expiry,
+        max_topic_size: topic.max_topic_size,
+        replication_factor: topic.replication_factor,
         #[allow(clippy::cast_possible_truncation)]
         partitions_count: partitions.len() as u32,
         partitions,
@@ -395,28 +397,36 @@ fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), Error
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
     let partitions_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
-    let message_expiry = u32::from_le_bytes(payload[position + 16..position + 20].try_into()?);
-    let message_expiry = match message_expiry {
+    let message_expiry = match u32::from_le_bytes(payload[position + 16..position + 20].try_into()?)
+    {
         0 => None,
-        _ => Some(message_expiry),
+        message_expiry => Some(message_expiry),
     };
+    let max_topic_size = match u64::from_le_bytes(payload[position + 20..position + 28].try_into()?)
+    {
+        0 => None,
+        max_topic_size => Some(IggyByteSize::from(max_topic_size)),
+    };
+    let replication_factor = payload[position + 28];
     let size_bytes = IggyByteSize::from(u64::from_le_bytes(
-        payload[position + 20..position + 28].try_into()?,
+        payload[position + 29..position + 37].try_into()?,
     ));
-    let messages_count = u64::from_le_bytes(payload[position + 28..position + 36].try_into()?);
-    let name_length = payload[position + 36];
+    let messages_count = u64::from_le_bytes(payload[position + 37..position + 45].try_into()?);
+    let name_length = payload[position + 45];
     let name =
-        from_utf8(&payload[position + 37..position + 37 + name_length as usize])?.to_string();
-    let read_bytes = 4 + 8 + 4 + 4 + 8 + 8 + 1 + name_length as usize;
+        from_utf8(&payload[position + 46..position + 46 + name_length as usize])?.to_string();
+    let read_bytes = 4 + 8 + 4 + 4 + 8 + 8 + 8 + 1 + 1 + name_length as usize;
     Ok((
         Topic {
             id,
             created_at,
             name,
             partitions_count,
-            size_bytes,
+            size: size_bytes,
             messages_count,
             message_expiry,
+            max_topic_size,
+            replication_factor,
         },
         read_bytes,
     ))

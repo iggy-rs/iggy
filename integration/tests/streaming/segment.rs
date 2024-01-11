@@ -1,7 +1,7 @@
 use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
 use iggy::models::messages::{Message, MessageState};
-use iggy::utils::{checksum, timestamp::TimeStamp};
+use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
 use std::sync::Arc;
@@ -126,7 +126,7 @@ async fn should_persist_and_load_segment_with_messages() {
     .await;
     let messages_count = 10;
     for i in 0..messages_count {
-        let message = create_message(i, "test", TimeStamp::now().to_micros());
+        let message = create_message(i, "test", IggyTimestamp::now().to_micros());
         segment.append_messages(&[Arc::new(message)]).await.unwrap();
     }
 
@@ -179,7 +179,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     )
     .await;
     let messages_count = 10;
-    let now = TimeStamp::now().to_micros();
+    let now = IggyTimestamp::now().to_micros();
     let message_expiry = message_expiry as u64;
     let mut expired_timestamp = now - (1000 * 2 * message_expiry);
     for i in 0..messages_count {
@@ -223,7 +223,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         start_offset,
     )
     .await;
-    let now = TimeStamp::now().to_micros();
+    let now = IggyTimestamp::now().to_micros();
     let message_expiry = message_expiry as u64;
     let expired_timestamp = now - (1000 * 2 * message_expiry);
     let not_expired_timestamp = now - (1000 * message_expiry) + 1;

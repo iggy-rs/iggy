@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::streams::get_streams::GetStreams;
-use crate::utils::timestamp::TimeStamp;
+use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -67,7 +67,7 @@ impl CliCommand for GetStreamsCmd {
                 streams.iter().for_each(|stream| {
                     table.add_row(vec![
                         format!("{}", stream.id),
-                        TimeStamp::from(stream.created_at).to_string("%Y-%m-%d %H:%M:%S"),
+                        IggyTimestamp::from(stream.created_at).to_string("%Y-%m-%d %H:%M:%S"),
                         stream.name.clone(),
                         format!("{}", stream.size_bytes),
                         format!("{}", stream.messages_count),
@@ -82,7 +82,7 @@ impl CliCommand for GetStreamsCmd {
                     event!(target: PRINT_TARGET, Level::INFO,
                         "{}|{}|{}|{}|{}|{}",
                         stream.id,
-                        TimeStamp::from(stream.created_at).to_string("%Y-%m-%d %H:%M:%S"),
+                        IggyTimestamp::from(stream.created_at).to_string("%Y-%m-%d %H:%M:%S"),
                         stream.name,
                         stream.size_bytes,
                         stream.messages_count,

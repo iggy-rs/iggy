@@ -3,6 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::topics::MAX_NAME_LENGTH;
+use crate::utils::byte_size::IggyByteSize;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -14,7 +15,10 @@ use std::str::from_utf8;
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
-/// - `message_expiry` - message expiry in seconds (optional), if `None` then messages will never expire.
+/// - `message_expiry` - optional message expiry in seconds, if `None` then messages will never expire.
+/// - `max_topic_size` - optional maximum size of the topic in bytes, if `None` then topic size is unlimited.
+///                      Can't be lower than segment size in the config.
+/// - `replication_factor` - replication factor for the topic.
 /// - `name` - unique topic name, max length is 255 characters.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct UpdateTopic {
@@ -24,8 +28,13 @@ pub struct UpdateTopic {
     /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
-    /// Message expiry in seconds (optional), if `None` then messages will never expire.
+    /// Optional message expiry in seconds, if `None` then messages will never expire.
     pub message_expiry: Option<u32>,
+    /// Optional max topic size, if `None` then topic size is unlimited.
+    /// Can't be lower than segment size in the config.
+    pub max_topic_size: Option<IggyByteSize>,
+    /// Replication factor for the topic.
+    pub replication_factor: u8,
     /// Unique topic name, max length is 255 characters.
     pub name: String,
 }
@@ -38,6 +47,8 @@ impl Default for UpdateTopic {
             stream_id: Identifier::default(),
             topic_id: Identifier::default(),
             message_expiry: None,
+            max_topic_size: None,
+            replication_factor: 1,
             name: "topic".to_string(),
         }
     }
@@ -53,6 +64,10 @@ impl Validatable<Error> for UpdateTopic {
             return Err(Error::InvalidTopicName);
         }
 
+        if self.replication_factor == 0 {
+            return Err(Error::InvalidReplicationFactor);
+        }
+
         Ok(())
     }
 }
@@ -62,13 +77,18 @@ impl BytesSerializable for UpdateTopic {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
         let mut bytes =
-            Vec::with_capacity(5 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len());
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+            Vec::with_capacity(13 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len());
+        bytes.extend(stream_id_bytes.clone());
+        bytes.extend(topic_id_bytes.clone());
         match self.message_expiry {
             Some(message_expiry) => bytes.put_u32_le(message_expiry),
             None => bytes.put_u32_le(0),
         }
+        match self.max_topic_size {
+            Some(max_topic_size) => bytes.put_u64_le(max_topic_size.as_bytes_u64()),
+            None => bytes.put_u64_le(0),
+        }
+        bytes.put_u8(self.replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
@@ -79,7 +99,6 @@ impl BytesSerializable for UpdateTopic {
         if bytes.len() < 12 {
             return Err(Error::InvalidCommand);
         }
-
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes)?;
         position += stream_id.get_size_bytes() as usize;
@@ -90,9 +109,15 @@ impl BytesSerializable for UpdateTopic {
             0 => None,
             _ => Some(message_expiry),
         };
-        let name_length = bytes[position + 4];
+        let max_topic_size =
+            match u64::from_le_bytes(bytes[position + 4..position + 12].try_into()?) {
+                0 => None,
+                size => Some(IggyByteSize::from(size)),
+            };
+        let replication_factor = bytes[position + 12];
+        let name_length = bytes[position + 13];
         let name =
-            from_utf8(&bytes[position + 5..position + 5 + name_length as usize])?.to_string();
+            from_utf8(&bytes[position + 14..(position + 14 + name_length as usize)])?.to_string();
         if name.len() != name_length as usize {
             return Err(Error::InvalidCommand);
         }
@@ -100,6 +125,8 @@ impl BytesSerializable for UpdateTopic {
             stream_id,
             topic_id,
             message_expiry,
+            max_topic_size,
+            replication_factor,
             name,
         };
         command.validate()?;
@@ -109,13 +136,19 @@ impl BytesSerializable for UpdateTopic {
 
 impl Display for UpdateTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let max_topic_size = match self.max_topic_size {
+            Some(max_topic_size) => max_topic_size.to_string(),
+            None => String::from("unlimited"),
+        };
         write!(
             f,
-            "{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}",
             self.stream_id,
             self.topic_id,
             self.message_expiry.unwrap_or(0),
-            self.name
+            max_topic_size,
+            self.replication_factor,
+            self.name,
         )
     }
 }
@@ -131,6 +164,8 @@ mod tests {
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(2).unwrap(),
             message_expiry: Some(10),
+            max_topic_size: Some(IggyByteSize::from(100)),
+            replication_factor: 1,
             name: "test".to_string(),
         };
 
@@ -145,8 +180,14 @@ mod tests {
             0 => None,
             _ => Some(message_expiry),
         };
-        let name_length = bytes[position + 4];
-        let name = from_utf8(&bytes[position + 5..position + 5 + name_length as usize])
+        let max_topic_size =
+            match u64::from_le_bytes(bytes[position + 4..position + 12].try_into().unwrap()) {
+                0 => None,
+                size => Some(IggyByteSize::from(size)),
+            };
+        let replication_factor = bytes[position + 12];
+        let name_length = bytes[position + 13];
+        let name = from_utf8(&bytes[position + 14..position + 14 + name_length as usize])
             .unwrap()
             .to_string();
 
@@ -154,6 +195,8 @@ mod tests {
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
         assert_eq!(message_expiry, command.message_expiry);
+        assert_eq!(max_topic_size, command.max_topic_size);
+        assert_eq!(replication_factor, command.replication_factor);
         assert_eq!(name.len() as u8, command.name.len() as u8);
         assert_eq!(name, command.name);
     }
@@ -164,6 +207,8 @@ mod tests {
         let topic_id = Identifier::numeric(2).unwrap();
         let name = "test".to_string();
         let message_expiry = 10;
+        let max_topic_size = IggyByteSize::from(100);
+        let replication_factor = 1;
 
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
@@ -172,6 +217,9 @@ mod tests {
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
         bytes.put_u32_le(message_expiry);
+        bytes.put_u64_le(max_topic_size.as_bytes_u64());
+        bytes.put_u8(replication_factor);
+
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
@@ -183,6 +231,7 @@ mod tests {
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
         assert_eq!(command.message_expiry, Some(message_expiry));
-        assert_eq!(command.name, name);
+        assert_eq!(command.stream_id, stream_id);
+        assert_eq!(command.topic_id, topic_id);
     }
 }

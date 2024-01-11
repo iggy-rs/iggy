@@ -81,6 +81,8 @@ async fn init_topic(setup: &TestSetup) -> Topic {
         setup.config.clone(),
         setup.storage.clone(),
         None,
+        None,
+        1,
     )
     .unwrap();
     topic.persist().await.unwrap();

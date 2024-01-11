@@ -3,6 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::Error;
 use crate::identifier::Identifier;
 use crate::topics::{MAX_NAME_LENGTH, MAX_PARTITIONS_COUNT};
+use crate::utils::byte_size::IggyByteSize;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -15,7 +16,10 @@ use std::str::from_utf8;
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric).
 /// - `partitions_count` - number of partitions in the topic, max value is 1000.
-/// - `message_expiry` - message expiry in seconds (optional), if `None` then messages will not expire.
+/// - `message_expiry` - optional message expiry in seconds, if `None` then messages will never expire.
+/// - `max_topic_size` - optional maximum size of the topic, if `None` then topic size is unlimited.
+///                      Can't be lower than segment size in the config.
+/// - `replication_factor` - replication factor for the topic.
 /// - `name` - unique topic name, max length is 255 characters.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateTopic {
@@ -26,8 +30,12 @@ pub struct CreateTopic {
     pub topic_id: u32,
     /// Number of partitions in the topic, max value is 1000.
     pub partitions_count: u32,
-    /// Message expiry in seconds (optional), if `None` then messages will never expire.
+    /// Optional message expiry in seconds, if `None` then messages will never expire.
     pub message_expiry: Option<u32>,
+    /// The optional maximum size of the topic.
+    pub max_topic_size: Option<IggyByteSize>,
+    /// Replication factor for the topic.
+    pub replication_factor: u8,
     /// Unique topic name, max length is 255 characters.
     pub name: String,
 }
@@ -41,6 +49,8 @@ impl Default for CreateTopic {
             topic_id: 1,
             partitions_count: 1,
             message_expiry: None,
+            max_topic_size: None,
+            replication_factor: 1,
             name: "topic".to_string(),
         }
     }
@@ -64,6 +74,10 @@ impl Validatable<Error> for CreateTopic {
             return Err(Error::TooManyPartitions);
         }
 
+        if self.replication_factor == 0 {
+            return Err(Error::InvalidReplicationFactor);
+        }
+
         Ok(())
     }
 }
@@ -71,7 +85,7 @@ impl Validatable<Error> for CreateTopic {
 impl BytesSerializable for CreateTopic {
     fn as_bytes(&self) -> Vec<u8> {
         let stream_id_bytes = self.stream_id.as_bytes();
-        let mut bytes = Vec::with_capacity(13 + stream_id_bytes.len() + self.name.len());
+        let mut bytes = Vec::with_capacity(22 + stream_id_bytes.len() + self.name.len());
         bytes.extend(stream_id_bytes);
         bytes.put_u32_le(self.topic_id);
         bytes.put_u32_le(self.partitions_count);
@@ -79,6 +93,11 @@ impl BytesSerializable for CreateTopic {
             Some(message_expiry) => bytes.put_u32_le(message_expiry),
             None => bytes.put_u32_le(0),
         }
+        match self.max_topic_size {
+            Some(max_topic_size) => bytes.put_u64_le(max_topic_size.as_bytes_u64()),
+            None => bytes.put_u64_le(0),
+        }
+        bytes.put_u8(self.replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
@@ -86,23 +105,28 @@ impl BytesSerializable for CreateTopic {
     }
 
     fn from_bytes(bytes: &[u8]) -> std::result::Result<CreateTopic, Error> {
-        if bytes.len() < 17 {
+        if bytes.len() < 18 {
             return Err(Error::InvalidCommand);
         }
-
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes)?;
         position += stream_id.get_size_bytes() as usize;
         let topic_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let partitions_count = u32::from_le_bytes(bytes[position + 4..position + 8].try_into()?);
-        let message_expiry = u32::from_le_bytes(bytes[position + 8..position + 12].try_into()?);
-        let message_expiry = match message_expiry {
-            0 => None,
-            _ => Some(message_expiry),
-        };
-        let name_length = bytes[position + 12];
+        let message_expiry =
+            match u32::from_le_bytes(bytes[position + 8..position + 12].try_into()?) {
+                0 => None,
+                size => Some(size),
+            };
+        let max_topic_size =
+            match u64::from_le_bytes(bytes[position + 12..position + 20].try_into()?) {
+                0 => None,
+                size => Some(IggyByteSize::from(size)),
+            };
+        let replication_factor = bytes[position + 20];
+        let name_length = bytes[position + 21];
         let name =
-            from_utf8(&bytes[position + 13..position + 13 + name_length as usize])?.to_string();
+            from_utf8(&bytes[position + 22..(position + 22 + name_length as usize)])?.to_string();
         if name.len() != name_length as usize {
             return Err(Error::InvalidCommand);
         }
@@ -111,6 +135,8 @@ impl BytesSerializable for CreateTopic {
             topic_id,
             partitions_count,
             message_expiry,
+            max_topic_size,
+            replication_factor,
             name,
         };
         command.validate()?;
@@ -120,13 +146,19 @@ impl BytesSerializable for CreateTopic {
 
 impl Display for CreateTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let max_topic_size = match self.max_topic_size {
+            Some(max_topic_size) => max_topic_size.to_string(),
+            None => "unlimited".to_string(),
+        };
         write!(
             f,
-            "{}|{}|{}|{}|{}",
+            "{}|{}|{}|{}|{}|{}|{}",
             self.stream_id,
             self.topic_id,
             self.partitions_count,
             self.message_expiry.unwrap_or(0),
+            max_topic_size,
+            self.replication_factor,
             self.name
         )
     }
@@ -144,9 +176,10 @@ mod tests {
             topic_id: 2,
             partitions_count: 3,
             message_expiry: Some(10),
+            max_topic_size: Some(IggyByteSize::from(100)),
+            replication_factor: 1,
             name: "test".to_string(),
         };
-
         let bytes = command.as_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(&bytes).unwrap();
@@ -155,13 +188,18 @@ mod tests {
         let partitions_count =
             u32::from_le_bytes(bytes[position + 4..position + 8].try_into().unwrap());
         let message_expiry =
-            u32::from_le_bytes(bytes[position + 8..position + 12].try_into().unwrap());
-        let message_expiry = match message_expiry {
-            0 => None,
-            _ => Some(message_expiry),
-        };
-        let name_length = bytes[position + 12];
-        let name = from_utf8(&bytes[position + 13..position + 13 + name_length as usize])
+            match u32::from_le_bytes(bytes[position + 8..position + 12].try_into().unwrap()) {
+                0 => None,
+                secs => Some(secs),
+            };
+        let max_topic_size =
+            match u64::from_le_bytes(bytes[position + 12..position + 20].try_into().unwrap()) {
+                0 => None,
+                size => Some(IggyByteSize::from(size)),
+            };
+        let replication_factor = bytes[position + 20];
+        let name_length = bytes[position + 21];
+        let name = from_utf8(&bytes[position + 22..(position + 22 + name_length as usize)])
             .unwrap()
             .to_string();
 
@@ -170,6 +208,8 @@ mod tests {
         assert_eq!(topic_id, command.topic_id);
         assert_eq!(partitions_count, command.partitions_count);
         assert_eq!(message_expiry, command.message_expiry);
+        assert_eq!(max_topic_size, command.max_topic_size);
+        assert_eq!(replication_factor, command.replication_factor);
         assert_eq!(name.len() as u8, command.name.len() as u8);
         assert_eq!(name, command.name);
     }
@@ -181,13 +221,16 @@ mod tests {
         let partitions_count = 3u32;
         let name = "test".to_string();
         let message_expiry = 10;
-
+        let max_topic_size = IggyByteSize::from(100);
+        let replication_factor = 1;
         let stream_id_bytes = stream_id.as_bytes();
-        let mut bytes = Vec::with_capacity(13 + stream_id_bytes.len() + name.len());
+        let mut bytes = Vec::with_capacity(14 + stream_id_bytes.len() + name.len());
         bytes.extend(stream_id_bytes);
         bytes.put_u32_le(topic_id);
         bytes.put_u32_le(partitions_count);
         bytes.put_u32_le(message_expiry);
+        bytes.put_u64_le(max_topic_size.as_bytes_u64());
+        bytes.put_u8(replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
@@ -200,6 +243,7 @@ mod tests {
         assert_eq!(command.topic_id, topic_id);
         assert_eq!(command.partitions_count, partitions_count);
         assert_eq!(command.message_expiry, Some(message_expiry));
-        assert_eq!(command.name, name);
+        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.partitions_count, partitions_count);
     }
 }

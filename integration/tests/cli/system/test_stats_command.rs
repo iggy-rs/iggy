@@ -27,6 +27,8 @@ impl IggyCmdTestCase for TestStatsCmd {
                 stream_id,
                 partitions_count: 5,
                 message_expiry: None,
+                max_topic_size: None,
+                replication_factor: 1,
                 name: String::from("topic"),
             })
             .await;

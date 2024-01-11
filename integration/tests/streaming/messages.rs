@@ -2,7 +2,7 @@ use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::models::messages::{Message, MessageState};
-use iggy::utils::{checksum, timestamp::TimeStamp};
+use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::configs::system::{PartitionConfig, SystemConfig};
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;
@@ -39,7 +39,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     for i in 1..=messages_count {
         let offset = (i - 1) as u64;
         let state = MessageState::Available;
-        let timestamp = TimeStamp::now().to_micros();
+        let timestamp = IggyTimestamp::now().to_micros();
         let id = i as u128;
         let payload = Bytes::from(format!("message {}", i));
         let checksum = checksum::calculate(&payload);

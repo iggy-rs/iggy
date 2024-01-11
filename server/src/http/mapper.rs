@@ -55,10 +55,12 @@ pub async fn map_topics(topics: &[&Topic]) -> Vec<iggy::models::topic::Topic> {
             id: topic.topic_id,
             created_at: topic.created_at,
             name: topic.name.clone(),
-            size_bytes: topic.get_size().await,
+            size: topic.get_size().await,
             partitions_count: topic.get_partitions().len() as u32,
             messages_count: topic.get_messages_count().await,
             message_expiry: topic.message_expiry,
+            max_topic_size: topic.max_topic_size,
+            replication_factor: topic.replication_factor,
         };
         topics_data.push(topic);
     }
@@ -76,6 +78,8 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
         partitions_count: topic.get_partitions().len() as u32,
         partitions: Vec::new(),
         message_expiry: topic.message_expiry,
+        max_topic_size: topic.max_topic_size,
+        replication_factor: topic.replication_factor,
     };
     for partition in topic.get_partitions() {
         let partition = partition.read().await;

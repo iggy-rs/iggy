@@ -1,11 +1,11 @@
 use crate::streaming::common::test_setup::TestSetup;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use server::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 
 #[tokio::test]
 async fn many_personal_access_tokens_should_be_saved_and_loaded() {
     let setup = TestSetup::init().await;
-    let now = TimeStamp::now().to_micros();
+    let now = IggyTimestamp::now().to_micros();
     let (pat1, raw_token1) = PersonalAccessToken::new(1, "test1", now, None);
     let (pat2, raw_token2) = PersonalAccessToken::new(2, "test2", now, Some(1000));
     let (pat3, raw_token3) = PersonalAccessToken::new(3, "test3", now, Some(100_000));
@@ -101,7 +101,7 @@ fn assert_pat(personal_access_token: &PersonalAccessToken, loaded_pat: &Personal
 async fn personal_access_token_should_be_deleted() {
     let setup = TestSetup::init().await;
     let user_id = 1;
-    let now = TimeStamp::now().to_micros();
+    let now = IggyTimestamp::now().to_micros();
     let (personal_access_token, _) = PersonalAccessToken::new(user_id, "test", now, None);
     setup
         .storage

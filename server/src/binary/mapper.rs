@@ -213,6 +213,11 @@ async fn extend_topic(topic: &Topic, bytes: &mut Vec<u8>) {
         Some(message_expiry) => bytes.put_u32_le(message_expiry),
         None => bytes.put_u32_le(0),
     };
+    match topic.max_topic_size {
+        Some(max_topic_size) => bytes.put_u64_le(max_topic_size.as_bytes_u64()),
+        None => bytes.put_u64_le(0),
+    };
+    bytes.put_u8(topic.replication_factor);
     bytes.put_u64_le(topic.get_size().await.as_bytes_u64());
     bytes.put_u64_le(topic.get_messages_count().await);
     bytes.put_u8(topic.name.len() as u8);

@@ -73,6 +73,8 @@ impl IggyCmdTestCase for TestTopicGetCmd {
                 partitions_count: 1,
                 name: self.topic_name.clone(),
                 message_expiry: None,
+                max_topic_size: None,
+                replication_factor: 1,
             })
             .await;
         assert!(topic.is_ok());
@@ -111,7 +113,8 @@ impl IggyCmdTestCase for TestTopicGetCmd {
                 self.topic_name
             )))
             .stdout(contains("Topic size          | 0"))
-            .stdout(contains("Message expiry      | None"))
+            .stdout(contains("Message expiry      | unlimited"))
+            .stdout(contains("Max topic size      | unlimited"))
             .stdout(contains("Topic message count | 0"))
             .stdout(contains("Partitions count    | 1"));
     }

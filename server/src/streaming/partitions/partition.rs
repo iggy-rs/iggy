@@ -7,7 +7,7 @@ use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::models::messages::Message;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -121,7 +121,7 @@ impl Partition {
             consumer_group_offsets: DashMap::new(),
             config,
             storage,
-            created_at: TimeStamp::now().to_micros(),
+            created_at: IggyTimestamp::now().to_micros(),
         };
 
         if with_segment {

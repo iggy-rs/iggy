@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use flume::Sender;
 use iggy::error::Error;
 use iggy::utils::duration::IggyDuration;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use tokio::time;
 use tracing::{error, info};
 
@@ -63,7 +63,7 @@ impl MessagesCleaner {
 #[async_trait]
 impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: CleanMessagesCommand) {
-        let now = TimeStamp::now().to_micros();
+        let now = IggyTimestamp::now().to_micros();
         let system_read = system.read();
         let streams = system_read.get_streams();
         for stream in streams {

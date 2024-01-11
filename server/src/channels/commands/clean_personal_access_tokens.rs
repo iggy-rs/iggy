@@ -4,7 +4,7 @@ use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::Sender;
 use iggy::utils::duration::IggyDuration;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use tokio::time;
 use tracing::{debug, error, info};
 
@@ -78,7 +78,7 @@ impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessToke
             return;
         }
 
-        let now = TimeStamp::now().to_micros();
+        let now = IggyTimestamp::now().to_micros();
         let expired_tokens = tokens
             .into_iter()
             .filter(|token| token.is_expired(now))

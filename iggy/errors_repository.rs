@@ -813,6 +813,14 @@ pub fn load_errors() -> Vec<ErrorRepositoryEntry> {
             template: "Cannot read topics for stream with ID: {0}".to_string(),
         },
         ErrorRepositoryEntry {
+            snake_case_name: "invalid_replication_factor".to_string(),
+            code: 2018,
+            signature: "".to_string(),
+            converts_from: "".to_string(),
+            source: "".to_string(),
+            template: "Invalid replication factor".to_string(),
+        },
+        ErrorRepositoryEntry {
             snake_case_name: "cannot_create_partition".to_string(),
             code: 3000,
             signature: "u32, u32, u32".to_string(),

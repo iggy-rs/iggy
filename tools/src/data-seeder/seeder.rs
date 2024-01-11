@@ -54,6 +54,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
                 name: "orders".to_string(),
                 partitions_count: 1,
                 message_expiry: None,
+                max_topic_size: None,
+                replication_factor: 1,
             })
             .await?;
 
@@ -64,6 +66,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
                 name: "users".to_string(),
                 partitions_count: 2,
                 message_expiry: None,
+                max_topic_size: None,
+                replication_factor: 1,
             })
             .await?;
 
@@ -74,6 +78,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
                 name: "notifications".to_string(),
                 partitions_count: 3,
                 message_expiry: None,
+                max_topic_size: None,
+                replication_factor: 1,
             })
             .await?;
 
@@ -84,6 +90,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
                 name: "payments".to_string(),
                 partitions_count: 2,
                 message_expiry: None,
+                max_topic_size: None,
+                replication_factor: 1,
             })
             .await?;
 
@@ -94,6 +102,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
                 name: "deliveries".to_string(),
                 partitions_count: 1,
                 message_expiry: None,
+                max_topic_size: None,
+                replication_factor: 1,
             })
             .await?;
     }

@@ -2,7 +2,7 @@ use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::streams::get_stream::GetStream;
-use crate::utils::timestamp::TimeStamp;
+use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -40,7 +40,7 @@ impl CliCommand for GetStreamCmd {
         table.add_row(vec!["Stream ID", format!("{}", stream.id).as_str()]);
         table.add_row(vec![
             "Created",
-            TimeStamp::from(stream.created_at)
+            IggyTimestamp::from(stream.created_at)
                 .to_string("%Y-%m-%d %H:%M:%S")
                 .as_str(),
         ]);

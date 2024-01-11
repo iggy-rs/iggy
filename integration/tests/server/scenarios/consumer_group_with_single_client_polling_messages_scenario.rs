@@ -57,6 +57,8 @@ async fn init_system(client: &IggyClient) {
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
         message_expiry: None,
+        max_topic_size: None,
+        replication_factor: 1,
     };
     client.create_topic(&create_topic).await.unwrap();
 

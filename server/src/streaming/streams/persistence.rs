@@ -1,7 +1,5 @@
-use crate::streaming::storage::SegmentStorage;
 use crate::streaming::streams::stream::Stream;
 use iggy::error::Error;
-use std::sync::Arc;
 
 impl Stream {
     pub async fn load(&mut self) -> Result<(), Error> {
@@ -21,9 +19,9 @@ impl Stream {
         self.storage.stream.delete(self).await
     }
 
-    pub async fn persist_messages(&self, storage: Arc<dyn SegmentStorage>) -> Result<(), Error> {
+    pub async fn persist_messages(&self) -> Result<(), Error> {
         for topic in self.get_topics() {
-            topic.persist_messages(storage.clone()).await?;
+            topic.persist_messages().await?;
         }
 
         Ok(())

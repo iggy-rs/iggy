@@ -5,7 +5,7 @@ use crate::streaming::clients::client_manager::ClientManager;
 use crate::streaming::diagnostics::metrics::Metrics;
 use crate::streaming::persistence::persister::*;
 use crate::streaming::session::Session;
-use crate::streaming::storage::{SegmentStorage, SystemStorage};
+use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::permissioner::Permissioner;
 use iggy::error::Error;
@@ -158,15 +158,15 @@ impl System {
         Ok(())
     }
 
-    pub async fn shutdown(&mut self, storage: Arc<dyn SegmentStorage>) -> Result<(), Error> {
-        self.persist_messages(storage.clone()).await?;
+    pub async fn shutdown(&mut self) -> Result<(), Error> {
+        self.persist_messages().await?;
         Ok(())
     }
 
-    pub async fn persist_messages(&self, storage: Arc<dyn SegmentStorage>) -> Result<(), Error> {
+    pub async fn persist_messages(&self) -> Result<(), Error> {
         trace!("Saving buffered messages on disk...");
         for stream in self.streams.values() {
-            stream.persist_messages(storage.clone()).await?;
+            stream.persist_messages().await?;
         }
 
         Ok(())

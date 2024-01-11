@@ -130,10 +130,7 @@ async fn should_persist_and_load_segment_with_messages() {
         segment.append_messages(&[Arc::new(message)]).await.unwrap();
     }
 
-    segment
-        .persist_messages(setup.storage.segment.clone())
-        .await
-        .unwrap();
+    segment.persist_messages().await.unwrap();
 
     let mut loaded_segment = segment::Segment::create(
         stream_id,
@@ -191,10 +188,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         segment.append_messages(&[Arc::new(message)]).await.unwrap();
     }
 
-    segment
-        .persist_messages(setup.storage.segment.clone())
-        .await
-        .unwrap();
+    segment.persist_messages().await.unwrap();
 
     let is_expired = segment.is_expired(now).await;
     assert!(is_expired);
@@ -244,10 +238,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         .append_messages(&[Arc::new(not_expired_message)])
         .await
         .unwrap();
-    segment
-        .persist_messages(setup.storage.segment.clone())
-        .await
-        .unwrap();
+    segment.persist_messages().await.unwrap();
 
     let is_expired = segment.is_expired(now).await;
     assert!(!is_expired);

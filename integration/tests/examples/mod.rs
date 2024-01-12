@@ -22,7 +22,6 @@ use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use integration::test_server::{IpAddrKind, TestServer};
 use regex::Regex;
-use std::collections::HashMap;
 use std::process::Command as StdCommand;
 use std::sync::Arc;
 use std::time::Duration;
@@ -91,8 +90,8 @@ pub(crate) trait IggyExampleTestCase {
 }
 
 impl<'a> IggyExampleTest<'a> {
-    pub(crate) fn new(module: &'a str, tcp_env: Option<HashMap<String, String>>) -> Self {
-        let mut server = TestServer::new(tcp_env, true, None, IpAddrKind::V4);
+    pub(crate) fn new(module: &'a str) -> Self {
+        let mut server = TestServer::new(None, true, None, IpAddrKind::V4);
         server.start();
 
         let tcp_client_config = TcpClientConfig {
@@ -175,22 +174,28 @@ impl<'a> IggyExampleTest<'a> {
             consumer_cmd = consumer_runner_command
         };
 
-        let tcp_server_address_clone = tcp_server_address.clone();
+        let mut args: Vec<String> = tcp_server_address.clone();
+        args.push("--message-batches-limit".into());
+        args.push("1".into());
+        let args_clone = args.clone();
         let producer_handle = tokio::spawn(async move {
             let producer_assert = producer_cmd
-                .args(tcp_server_address)
-                .timeout(Duration::from_secs(1))
-                .assert();
+                .args(args_clone.clone())
+                .timeout(Duration::from_secs(10))
+                .assert()
+                .success();
             let producer_output = producer_assert.get_output();
             String::from_utf8_lossy(&producer_output.stdout)
                 .as_ref()
                 .to_string()
         });
+        let args_clone = args.clone();
         let consumer_handle = tokio::spawn(async move {
             let consumer_assert = consumer_cmd
-                .args(tcp_server_address_clone)
-                .timeout(Duration::from_secs(1))
-                .assert();
+                .args(args_clone)
+                .timeout(Duration::from_secs(10))
+                .assert()
+                .success();
             let consumer_output = consumer_assert.get_output();
             String::from_utf8_lossy(&consumer_output.stdout)
                 .as_ref()
@@ -200,13 +205,5 @@ impl<'a> IggyExampleTest<'a> {
             producer_handle.await.unwrap(),
             consumer_handle.await.unwrap(),
         )
-    }
-}
-
-impl<'a> Default for IggyExampleTest<'a> {
-    fn default() -> Self {
-        let mut tcp_env: HashMap<String, String> = HashMap::new();
-        tcp_env.insert("IGGY_TCP_ADDRESS".to_string(), "127.0.0.1:8090".to_string());
-        Self::new("getting-started", Some(tcp_env))
     }
 }

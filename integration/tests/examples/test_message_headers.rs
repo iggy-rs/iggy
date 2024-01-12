@@ -34,7 +34,7 @@ impl<'a> IggyExampleTestCase for TestMessageMeaders<'a> {
 #[tokio::test]
 #[parallel]
 async fn should_successfully_execute() {
-    let mut iggy_example_test = IggyExampleTest::new("message-headers", None);
+    let mut iggy_example_test = IggyExampleTest::new("message-headers");
     iggy_example_test.setup(false).await;
 
     iggy_example_test

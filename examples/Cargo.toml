@@ -38,7 +38,7 @@ path = "src/message-headers/producer/main.rs"
 [dependencies]
 anyhow = "1.0.79"
 bytes = "1.4.0"
-clap = { version = "4.4.15", features = ["derive"] }
+clap = { version = "4.4.16", features = ["derive"] }
 iggy = { path = "../iggy" }
 rand = "0.8.5"
 serde = { version = "1.0.194", features = ["derive", "rc"] }

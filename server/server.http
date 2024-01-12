@@ -228,7 +228,7 @@ Authorization: Bearer {{access_token}}
 Content-Type: application/json
 
 {
-  "topic_id": "{{topic_id}}",
+  "topic_id": {{topic_id}},
   "name": "topic1",
   "partitions_count": 3,
   "message_expiry": 0

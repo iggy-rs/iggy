@@ -4,6 +4,7 @@ use axum::Json;
 use iggy::error::Error;
 use serde::Serialize;
 use thiserror::Error;
+use tracing::error;
 
 #[derive(Debug, Error)]
 pub enum CustomError {
@@ -23,6 +24,7 @@ impl IntoResponse for CustomError {
     fn into_response(self) -> Response {
         match self {
             CustomError::Error(error) => {
+                error!("There was an error: {error}");
                 let status_code = match error {
                     Error::StreamIdNotFound(_) => StatusCode::NOT_FOUND,
                     Error::TopicIdNotFound(_, _) => StatusCode::NOT_FOUND,

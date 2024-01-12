@@ -22,7 +22,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use iggy::command::Command;
 use iggy::error::Error;
-use tracing::debug;
+use tracing::{debug, error};
 
 pub async fn handle(
     command: &Command,
@@ -37,7 +37,7 @@ pub async fn handle(
     }
 
     let error = result.err().unwrap();
-    debug!("Command was not handled successfully, session: {session}, error: {error}.",);
+    error!("Command was not handled successfully, session: {session}, error: {error}",);
     sender.send_error_response(error).await?;
     Ok(())
 }

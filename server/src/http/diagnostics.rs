@@ -9,7 +9,7 @@ use axum::{
 };
 use std::net::SocketAddr;
 use tokio::time::Instant;
-use tracing::debug;
+use tracing::{debug, error};
 
 pub async fn request_diagnostics(
     ConnectInfo(ip_address): ConnectInfo<SocketAddr>,
@@ -33,6 +33,12 @@ pub async fn request_diagnostics(
     });
     let now = Instant::now();
     let result = Ok(next.run(request).await);
+    if let Ok(response) = &result {
+        let status = response.status();
+        if status != StatusCode::OK {
+            error!("Returning invalid status code: {status}, IP address: {ip_address}, request ID: {request_id}");
+        }
+    }
     let elapsed = now.elapsed();
     debug!(
         "Processed a request with ID: {request_id} from client with IP address: {ip_address} in {} ms.",

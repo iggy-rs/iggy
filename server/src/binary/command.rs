@@ -30,16 +30,16 @@ pub async fn handle(
     session: &mut Session,
     system: SharedSystem,
 ) -> Result<(), Error> {
-    let result = try_handle(command, sender, session, &system).await;
-    if result.is_ok() {
-        debug!("Command was handled successfully, session: {session}.",);
-        return Ok(());
+    match try_handle(command, sender, session, &system).await {
+        Ok(_) => {
+            debug!("Command was handled successfully, session: {session}.");
+            Ok(())
+        }
+        Err(error) => {
+            error!("Command was not handled successfully, session: {session}, error: {error}");
+            sender.send_error_response(error).await
+        }
     }
-
-    let error = result.err().unwrap();
-    error!("Command was not handled successfully, session: {session}, error: {error}",);
-    sender.send_error_response(error).await?;
-    Ok(())
 }
 
 async fn try_handle(

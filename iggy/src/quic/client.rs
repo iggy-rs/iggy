@@ -157,8 +157,16 @@ impl QuicClient {
 
     /// Create a new QUIC client for the provided configuration.
     pub fn create(config: Arc<QuicClientConfig>) -> Result<Self, Error> {
-        let client_address = config.client_address.parse::<SocketAddr>()?;
         let server_address = config.server_address.parse::<SocketAddr>()?;
+        let client_address = if server_address.is_ipv6()
+            && config.client_address == QuicClientConfig::default().client_address
+        {
+            "[::1]:0"
+        } else {
+            &config.client_address
+        }
+        .parse::<SocketAddr>()?;
+
         let quic_config = configure(&config)?;
         let endpoint = Endpoint::client(client_address);
         if endpoint.is_err() {

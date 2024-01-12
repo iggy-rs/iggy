@@ -1,19 +1,14 @@
 use super::verify_stdout_contains_expected_logs;
 use crate::examples::{IggyExampleTest, IggyExampleTestCase};
-use serial_test::serial;
+use serial_test::parallel;
 
-static EXPECTED_CONSUMER_OUTPUT: [&str; 11] = [
+static EXPECTED_CONSUMER_OUTPUT: [&str; 6] = [
     "Messages will be consumed from stream: 1, topic: 1, partition: 1 with interval 500 ms.",
     "Handling message at offset: 0, payload: message-1...",
     "Handling message at offset: 1, payload: message-2...",
     "Handling message at offset: 2, payload: message-3...",
     "Handling message at offset: 3, payload: message-4...",
     "Handling message at offset: 4, payload: message-5...",
-    "Handling message at offset: 5, payload: message-6...",
-    "Handling message at offset: 6, payload: message-7...",
-    "Handling message at offset: 7, payload: message-8...",
-    "Handling message at offset: 8, payload: message-9...",
-    "Handling message at offset: 9, payload: message-10...",
 ];
 
 struct TestGettingStarted<'a> {
@@ -35,9 +30,9 @@ impl<'a> IggyExampleTestCase for TestGettingStarted<'a> {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 async fn should_succeed_with_no_existing_stream_or_topic() {
-    let mut iggy_example_test = IggyExampleTest::default();
+    let mut iggy_example_test = IggyExampleTest::new("getting-started");
     iggy_example_test.setup(false).await;
 
     iggy_example_test
@@ -54,9 +49,9 @@ async fn should_succeed_with_no_existing_stream_or_topic() {
 }
 
 #[tokio::test]
-#[serial]
+#[parallel]
 async fn should_succeed_with_preexisting_stream_and_topic() {
-    let mut iggy_example_test = IggyExampleTest::default();
+    let mut iggy_example_test = IggyExampleTest::new("getting-started");
     iggy_example_test.setup(true).await;
 
     iggy_example_test

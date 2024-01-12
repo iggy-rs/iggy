@@ -35,7 +35,7 @@ impl<'a> IggyExampleTestCase for TestBasic<'a> {
 #[tokio::test]
 #[parallel]
 async fn should_successfully_execute() {
-    let mut iggy_example_test = IggyExampleTest::new("basic", None);
+    let mut iggy_example_test = IggyExampleTest::new("basic");
     iggy_example_test.setup(false).await;
 
     iggy_example_test

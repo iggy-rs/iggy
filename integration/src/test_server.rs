@@ -28,9 +28,15 @@ use uuid::Uuid;
 pub const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
 pub const TEST_VERBOSITY_ENV_VAR: &str = "IGGY_TEST_VERBOSE";
 const USER_PASSWORD: &str = "secret";
-const MAX_PORT_WAIT_DURATION_S: u64 = 120;
 const SLEEP_INTERVAL_MS: u64 = 20;
 const LOCAL_DATA_PREFIX: &str = "local_data_";
+
+// When running action from github CI, binary needs to be started via QEMU.
+// This is why we sometimes have to wait for longer time for server to bind to ports.
+#[cfg(env = "IGGY_CI_BUILD")]
+const MAX_PORT_WAIT_DURATION_S: u64 = 120;
+#[cfg(not(env = "IGGY_CI_BUILD"))]
+const MAX_PORT_WAIT_DURATION_S: u64 = 5;
 
 pub enum IpAddrKind {
     V4,

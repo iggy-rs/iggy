@@ -1,12 +1,16 @@
 use iggy::client::{Client, UserClient};
-use iggy::clients::client::IggyClient;
+use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
+use iggy::tcp::client::TcpClient;
+use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
+use std::env;
 use std::error::Error;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::info;
@@ -14,12 +18,22 @@ use tracing::info;
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
 const PARTITION_ID: u32 = 1;
-const BATCHES_LIMIT: u32 = 10;
+const BATCHES_LIMIT: u32 = 5;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let client = IggyClient::default();
+    let tcp_client_config = TcpClientConfig {
+        server_address: get_tcp_server_addr(),
+        ..TcpClientConfig::default()
+    };
+    let tcp_client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
+    let client = IggyClient::create(tcp_client, IggyClientConfig::default(), None, None, None);
+
+    // Or, instead of above lines, you can just use below code, which will create a Iggy
+    // TCP client with default config (default server address for TCP is 127.0.0.1:8090):
+    // let client = IggyClient::default();
+
     client.connect().await?;
     client
         .login_user(&LoginUser {
@@ -27,6 +41,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             password: DEFAULT_ROOT_PASSWORD.to_string(),
         })
         .await?;
+
     consume_messages(&client).await
 }
 
@@ -83,4 +98,33 @@ fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
         message.offset, payload
     );
     Ok(())
+}
+
+fn get_tcp_server_addr() -> String {
+    let default_server_addr = "127.0.0.1:8090".to_string();
+    let argument_name = env::args().nth(1);
+    let tcp_server_addr = env::args().nth(2);
+
+    if argument_name.is_none() && tcp_server_addr.is_none() {
+        default_server_addr
+    } else {
+        let argument_name = argument_name.unwrap();
+        if argument_name != "--tcp-server-address" {
+            panic!(
+                "Invalid argument {}! Usage: {} --tcp-server-address <server-address>",
+                argument_name,
+                env::args().next().unwrap()
+            );
+        }
+        let tcp_server_addr = tcp_server_addr.unwrap();
+        if tcp_server_addr.parse::<std::net::SocketAddr>().is_err() {
+            panic!(
+                "Invalid server address {}! Usage: {} --tcp-server-address <server-address>",
+                tcp_server_addr,
+                env::args().next().unwrap()
+            );
+        }
+        info!("Using server address: {}", tcp_server_addr);
+        tcp_server_addr
+    }
 }

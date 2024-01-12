@@ -33,7 +33,7 @@ impl<'a> IggyExampleTestCase for TestMessageEnvelope<'a> {
 #[tokio::test]
 #[parallel]
 async fn should_successfully_execute() {
-    let mut iggy_example_test = IggyExampleTest::new("message-envelope", None);
+    let mut iggy_example_test = IggyExampleTest::new("message-envelope");
     iggy_example_test.setup(false).await;
 
     iggy_example_test

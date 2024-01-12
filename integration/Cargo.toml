@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-assert_cmd = "2.0.12"
+assert_cmd = "2.0.13"
 async-trait = "0.1.77"
 byte-unit = { version = "5.1.2", default-features = false, features = [
     "serde",

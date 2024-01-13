@@ -11,6 +11,7 @@ fn http_ipv4_bench() {
     run_bench_and_wait_for_finish(&server_addr, Transport::Http);
 }
 
+#[cfg_attr(feature = "ci-qemu", ignore)]
 #[test]
 #[parallel]
 fn http_ipv6_bench() {

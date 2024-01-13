@@ -11,6 +11,7 @@ fn tcp_ipv4_bench() {
     run_bench_and_wait_for_finish(&server_addr, Transport::Tcp);
 }
 
+#[cfg_attr(feature = "ci-qemu", ignore)]
 #[test]
 #[parallel]
 fn tcp_ipv6_bench() {

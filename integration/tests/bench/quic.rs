@@ -11,6 +11,7 @@ fn quic_ipv4_bench() {
     run_bench_and_wait_for_finish(&server_addr, Transport::Quic);
 }
 
+#[cfg_attr(feature = "ci-qemu", ignore)]
 #[test]
 #[parallel]
 fn quic_ipv6_bench() {

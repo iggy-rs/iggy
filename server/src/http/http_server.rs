@@ -50,7 +50,9 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
     app = app.layer(middleware::from_fn(request_diagnostics));
 
     if !config.tls.enabled {
-        let listener = tokio::net::TcpListener::bind(config.address).await.unwrap();
+        let listener = tokio::net::TcpListener::bind(config.address.clone())
+            .await
+            .unwrap_or_else(|_| panic!("Failed to bind to HTTP address {}", config.address));
         let address = listener
             .local_addr()
             .expect("Failed to get local address for HTTP server");

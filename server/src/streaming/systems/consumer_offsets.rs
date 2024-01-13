@@ -18,7 +18,7 @@ impl System {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner.store_consumer_offset(
-            session.user_id,
+            session.get_user_id(),
             stream.stream_id,
             topic.topic_id,
         )?;
@@ -36,8 +36,11 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
-        self.permissioner
-            .get_consumer_offset(session.user_id, stream.stream_id, topic.topic_id)?;
+        self.permissioner.get_consumer_offset(
+            session.get_user_id(),
+            stream.stream_id,
+            topic.topic_id,
+        )?;
 
         topic.get_consumer_offset(consumer).await
     }

@@ -16,8 +16,11 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
-        self.permissioner
-            .get_consumer_group(session.user_id, stream.stream_id, topic.topic_id)?;
+        self.permissioner.get_consumer_group(
+            session.get_user_id(),
+            stream.stream_id,
+            topic.topic_id,
+        )?;
 
         topic.get_consumer_group(consumer_group_id)
     }
@@ -31,8 +34,11 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
-        self.permissioner
-            .get_consumer_groups(session.user_id, stream.stream_id, topic.topic_id)?;
+        self.permissioner.get_consumer_groups(
+            session.get_user_id(),
+            stream.stream_id,
+            topic.topic_id,
+        )?;
 
         Ok(topic.get_consumer_groups())
     }
@@ -50,7 +56,7 @@ impl System {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
             self.permissioner.create_consumer_group(
-                session.user_id,
+                session.get_user_id(),
                 stream.stream_id,
                 topic.topic_id,
             )?;
@@ -75,7 +81,7 @@ impl System {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
             self.permissioner.delete_consumer_group(
-                session.user_id,
+                session.get_user_id(),
                 stream.stream_id,
                 topic.topic_id,
             )?;
@@ -121,7 +127,7 @@ impl System {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
             self.permissioner.join_consumer_group(
-                session.user_id,
+                session.get_user_id(),
                 stream.stream_id,
                 topic.topic_id,
             )?;
@@ -164,7 +170,7 @@ impl System {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
             self.permissioner.leave_consumer_group(
-                session.user_id,
+                session.get_user_id(),
                 stream.stream_id,
                 topic.topic_id,
             )?;

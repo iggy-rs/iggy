@@ -8,7 +8,7 @@ const PROCESS_NAME: &str = "iggy-server";
 impl System {
     pub async fn get_stats(&self, session: &Session) -> Result<Stats, Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_stats(session.user_id)?;
+        self.permissioner.get_stats(session.get_user_id())?;
         let mut sys = sysinfo::System::new_all();
         sys.refresh_all();
 

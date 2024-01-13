@@ -15,7 +15,7 @@ impl System {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
-            .get_topic(session.user_id, stream.stream_id, topic.topic_id)?;
+            .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)?;
         Ok(topic)
     }
 
@@ -27,7 +27,7 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         self.permissioner
-            .get_topics(session.user_id, stream.stream_id)?;
+            .get_topics(session.get_user_id(), stream.stream_id)?;
         Ok(stream.get_topics())
     }
 
@@ -44,7 +44,7 @@ impl System {
         {
             let stream = self.get_stream(stream_id)?;
             self.permissioner
-                .create_topic(session.user_id, stream.stream_id)?;
+                .create_topic(session.get_user_id(), stream.stream_id)?;
         }
 
         self.get_stream_mut(stream_id)?
@@ -68,8 +68,11 @@ impl System {
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
-            self.permissioner
-                .update_topic(session.user_id, stream.stream_id, topic.topic_id)?;
+            self.permissioner.update_topic(
+                session.get_user_id(),
+                stream.stream_id,
+                topic.topic_id,
+            )?;
         }
 
         self.get_stream_mut(stream_id)?
@@ -89,8 +92,11 @@ impl System {
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
-            self.permissioner
-                .delete_topic(session.user_id, stream.stream_id, topic.topic_id)?;
+            self.permissioner.delete_topic(
+                session.get_user_id(),
+                stream.stream_id,
+                topic.topic_id,
+            )?;
             stream_id_value = stream.stream_id;
         }
 
@@ -121,7 +127,7 @@ impl System {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
-            .purge_topic(session.user_id, stream.stream_id, topic.topic_id)?;
+            .purge_topic(session.get_user_id(), stream.stream_id, topic.topic_id)?;
         topic.purge().await
     }
 }

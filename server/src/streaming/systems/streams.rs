@@ -90,7 +90,7 @@ impl System {
 
     pub fn find_streams(&self, session: &Session) -> Result<Vec<&Stream>, Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_streams(session.user_id)?;
+        self.permissioner.get_streams(session.get_user_id())?;
         Ok(self.get_streams())
     }
 
@@ -102,7 +102,7 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(identifier)?;
         self.permissioner
-            .get_stream(session.user_id, stream.stream_id)?;
+            .get_stream(session.get_user_id(), stream.stream_id)?;
         Ok(stream)
     }
 
@@ -168,7 +168,7 @@ impl System {
         name: &str,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.create_stream(session.user_id)?;
+        self.permissioner.create_stream(session.get_user_id())?;
         if self.streams.contains_key(&stream_id) {
             return Err(Error::StreamIdAlreadyExists(stream_id));
         }
@@ -201,7 +201,7 @@ impl System {
         }
 
         self.permissioner
-            .update_stream(session.user_id, stream_id)?;
+            .update_stream(session.get_user_id(), stream_id)?;
         let updated_name = text::to_lowercase_non_whitespace(name);
 
         {
@@ -241,7 +241,7 @@ impl System {
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
         self.permissioner
-            .delete_stream(session.user_id, stream_id)?;
+            .delete_stream(session.get_user_id(), stream_id)?;
         let stream_name = stream.name.clone();
         if stream.delete().await.is_err() {
             return Err(Error::CannotDeleteStream(stream_id));
@@ -272,7 +272,7 @@ impl System {
     ) -> Result<(), Error> {
         let stream = self.get_stream(stream_id)?;
         self.permissioner
-            .purge_stream(session.user_id, stream.stream_id)?;
+            .purge_stream(session.get_user_id(), stream.stream_id)?;
         stream.purge().await
     }
 }

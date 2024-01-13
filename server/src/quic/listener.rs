@@ -44,10 +44,10 @@ async fn handle_connection(
     let address = connection.remote_address();
     info!("Client has connected: {address}");
     let client_id = system.read().add_client(&address, Transport::Quic).await;
-    let mut session = Session::from_client_id(client_id, address);
+    let session = Session::from_client_id(client_id, address);
 
     while let Some(stream) = accept_stream(&connection, &system, &address).await? {
-        if let Err(err) = handle_stream(stream, &system, &mut session).await {
+        if let Err(err) = handle_stream(stream, &system, &session).await {
             error!("Error when handling QUIC stream: {:?}", err)
         }
     }
@@ -79,7 +79,7 @@ async fn accept_stream(
 async fn handle_stream(
     stream: BiStream,
     system: &SharedSystem,
-    session: &mut Session,
+    session: &Session,
 ) -> anyhow::Result<()> {
     let (send_stream, mut recv_stream) = stream;
     let request = recv_stream

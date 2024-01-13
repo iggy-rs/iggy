@@ -19,7 +19,7 @@ pub(crate) async fn handle_connection(
 ) -> Result<(), ServerError> {
     let client_id = system.read().add_client(&address, Transport::Tcp).await;
 
-    let mut session = Session::from_client_id(client_id, address);
+    let session = Session::from_client_id(client_id, address);
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
     loop {
         let read_length = sender.read(&mut initial_buffer).await?;
@@ -36,7 +36,7 @@ pub(crate) async fn handle_connection(
         sender.read(&mut command_buffer).await?;
         let command = Command::from_bytes(&command_buffer)?;
         debug!("Received a TCP command: {command}, payload size: {length}");
-        let result = command::handle(&command, sender, &mut session, system.clone()).await;
+        let result = command::handle(&command, sender, &session, system.clone()).await;
         if result.is_err() {
             error!("Error when handling the TCP request: {:?}", result.err());
             continue;

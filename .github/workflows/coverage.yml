@@ -42,6 +42,7 @@ jobs:
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
+        if: github.event_name == 'push'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: codecov.json
@@ -63,4 +64,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BOT_CONTEXT_STRING: "codecov coverage reporting job"
         with:
-          filename: .github/ISSUE_TEMPLATE.md
+          filename: .github/BOT_ISSUE_TEMPLATE.md

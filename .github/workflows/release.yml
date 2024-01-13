@@ -303,4 +303,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_BOT_CONTEXT_STRING: "build and release to dockerhub"
         with:
-          filename: .github/ISSUE_TEMPLATE.md
+          filename: .github/BOT_ISSUE_TEMPLATE.md

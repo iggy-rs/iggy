@@ -5,8 +5,27 @@
 #
 # Commands:
 
-test:
-  cargo build && cargo test
+alias b := build
+alias t := test
+alias c := tests
+alias n := nextest
+alias s := nextests
+
+build:
+  cargo build
+
+test: build
+  cargo test
+
+tests TEST: build
+  cargo test {{TEST}}
+
+nextest: build
+  cargo nextest run
+
+nextests TEST: build
+  cargo nextest run --nocapture -- {{TEST}}
 
 server:
   cargo run --bin iggy-server
+

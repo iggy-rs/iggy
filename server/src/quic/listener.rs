@@ -1,4 +1,5 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use crate::binary::command;
 use crate::quic::quic_sender::QuicSender;
@@ -44,12 +45,18 @@ async fn handle_connection(
     let address = connection.remote_address();
     info!("Client has connected: {address}");
     let client_id = system.read().add_client(&address, Transport::Quic).await;
-    let session = Session::from_client_id(client_id, address);
+    let session = Arc::new(Session::from_client_id(client_id, address));
 
     while let Some(stream) = accept_stream(&connection, &system, &address).await? {
-        if let Err(err) = handle_stream(stream, &system, &session).await {
-            error!("Error when handling QUIC stream: {:?}", err)
-        }
+        let system = system.clone();
+        let session = session.clone();
+
+        let handle_stream_task = async move {
+            if let Err(err) = handle_stream(stream, system, session).await {
+                error!("Error when handling QUIC stream: {:?}", err)
+            }
+        };
+        let _handle = tokio::spawn(handle_stream_task);
     }
     Ok(())
 }
@@ -78,8 +85,8 @@ async fn accept_stream(
 
 async fn handle_stream(
     stream: BiStream,
-    system: &SharedSystem,
-    session: &Session,
+    system: SharedSystem,
+    session: impl AsRef<Session>,
 ) -> anyhow::Result<()> {
     let (send_stream, mut recv_stream) = stream;
     let request = recv_stream
@@ -95,8 +102,10 @@ async fn handle_stream(
     }
 
     debug!("Trying to read command...");
-    let length = &request[..INITIAL_BYTES_LENGTH];
-    let length = u32::from_le_bytes(length.try_into().unwrap_or([0; 4]));
+    let length = request[..INITIAL_BYTES_LENGTH]
+        .try_into()
+        .map(u32::from_le_bytes)
+        .unwrap_or_default();
     let command = Command::from_bytes(&request[INITIAL_BYTES_LENGTH..])
         .with_context(|| "Error when reading the QUIC request command.")?;
 
@@ -106,7 +115,7 @@ async fn handle_stream(
         send: send_stream,
         recv: recv_stream,
     };
-    command::handle(&command, &mut sender, session, system.clone())
+    command::handle(&command, &mut sender, session.as_ref(), system.clone())
         .await
         .with_context(|| "Error when handling the QUIC request.")
 }

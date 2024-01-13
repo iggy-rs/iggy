@@ -26,3 +26,8 @@ tokio = { version = "1.28.2", features = ["full"] }
 toml = "0.8.8"
 uuid = { version = "1.3.3", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.8", features = ["xxh32"] }
+
+# Some tests are failing in CI due to lack of IPv6 interfaces
+# inside the docker container. This is a temporary workaround (hopefully).
+[features]
+ci-qemu = []

@@ -7,7 +7,6 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `DeletePartitions` command is used to delete partitions from a topic.
 /// It has additional payload:
@@ -45,27 +44,6 @@ impl Validatable<Error> for DeletePartitions {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for DeletePartitions {
-    type Err = Error;
-    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 3 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let stream_id = parts[0].parse::<Identifier>()?;
-        let topic_id = parts[1].parse::<Identifier>()?;
-        let partitions_count = parts[2].parse::<u32>()?;
-        let command = DeletePartitions {
-            stream_id,
-            topic_id,
-            partitions_count,
-        };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -151,21 +129,6 @@ mod tests {
         bytes.extend(topic_id_bytes);
         bytes.put_u32_le(partitions_count);
         let command = DeletePartitions::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.partitions_count, partitions_count);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let topic_id = Identifier::numeric(2).unwrap();
-        let partitions_count = 3u32;
-        let input = format!("{stream_id}|{topic_id}|{partitions_count}");
-        let command = DeletePartitions::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

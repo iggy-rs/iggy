@@ -5,7 +5,6 @@ use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `LeaveConsumerGroup` command leaves the consumer group by currently authenticated user.
 /// It has additional payload:
@@ -30,27 +29,6 @@ impl CommandPayload for LeaveConsumerGroup {}
 impl Validatable<Error> for LeaveConsumerGroup {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for LeaveConsumerGroup {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 3 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let stream_id = parts[0].parse::<Identifier>()?;
-        let topic_id = parts[1].parse::<Identifier>()?;
-        let consumer_group_id = parts[2].parse::<Identifier>()?;
-        let command = LeaveConsumerGroup {
-            stream_id,
-            topic_id,
-            consumer_group_id,
-        };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -140,21 +118,6 @@ mod tests {
         bytes.extend(topic_id_bytes);
         bytes.extend(consumer_group_id_bytes);
         let command = LeaveConsumerGroup::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.consumer_group_id, consumer_group_id);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let topic_id = Identifier::numeric(2).unwrap();
-        let consumer_group_id = Identifier::numeric(3).unwrap();
-        let input = format!("{stream_id}|{topic_id}|{consumer_group_id}");
-        let command = LeaveConsumerGroup::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

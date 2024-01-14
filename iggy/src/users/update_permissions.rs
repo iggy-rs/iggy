@@ -7,7 +7,6 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `UpdatePermissions` command is used to update a user's permissions.
 /// It has additional payload:
@@ -27,25 +26,6 @@ impl CommandPayload for UpdatePermissions {}
 impl Validatable<Error> for UpdatePermissions {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for UpdatePermissions {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() > 2 {
-            return Err(Error::InvalidCommand);
-        }
-
-        // No support for permissions yet
-        let user_id = parts[0].parse::<Identifier>()?;
-        let command = UpdatePermissions {
-            user_id,
-            permissions: None,
-        };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -155,17 +135,6 @@ mod tests {
         let command = command.unwrap();
         assert_eq!(command.user_id, user_id);
         assert_eq!(command.permissions.unwrap(), permissions);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let user_id = Identifier::numeric(1).unwrap();
-        let input = user_id.to_string();
-        let command = UpdatePermissions::from_str(&input);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.user_id, user_id);
     }
 
     fn get_permissions() -> Permissions {

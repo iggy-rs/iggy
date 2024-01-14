@@ -6,7 +6,6 @@ use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `Consumer` represents the type of consumer that is consuming a message.
 /// It can be either a `Consumer` or a `ConsumerGroup`.
@@ -112,33 +111,6 @@ impl ConsumerKind {
         match code {
             1 => Ok(ConsumerKind::Consumer),
             2 => Ok(ConsumerKind::ConsumerGroup),
-            _ => Err(Error::InvalidCommand),
-        }
-    }
-}
-
-impl FromStr for Consumer {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 2 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let kind = parts[0].parse::<ConsumerKind>()?;
-        let id = parts[1].parse::<Identifier>()?;
-        let consumer = Consumer { kind, id };
-        consumer.validate()?;
-        Ok(consumer)
-    }
-}
-
-impl FromStr for ConsumerKind {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        match input {
-            "c" | "consumer" => Ok(ConsumerKind::Consumer),
-            "g" | "consumer_group" => Ok(ConsumerKind::ConsumerGroup),
             _ => Err(Error::InvalidCommand),
         }
     }

@@ -225,53 +225,6 @@ impl Display for PollingKind {
     }
 }
 
-impl FromStr for PollMessages {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() < 8 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let consumer_kind = ConsumerKind::from_str(parts[0])?;
-        let consumer_id = parts[1].parse::<Identifier>()?;
-        let consumer = Consumer {
-            kind: consumer_kind,
-            id: consumer_id,
-        };
-        let stream_id = parts[2].parse::<Identifier>()?;
-        let topic_id = parts[3].parse::<Identifier>()?;
-        let partition_id = parts[4].parse::<u32>()?;
-        let polling_kind = PollingKind::from_str(parts[5])?;
-        let value = parts[6].parse::<u64>()?;
-        let strategy = PollingStrategy {
-            kind: polling_kind,
-            value,
-        };
-        let count = parts[7].parse::<u32>()?;
-        let auto_commit = match parts.get(8) {
-            Some(auto_commit) => match *auto_commit {
-                "a" | "auto_commit" => true,
-                "n" | "no_commit" => false,
-                _ => return Err(Error::InvalidCommand),
-            },
-            None => false,
-        };
-
-        let command = PollMessages {
-            consumer,
-            stream_id,
-            topic_id,
-            partition_id: Some(partition_id),
-            strategy,
-            count,
-            auto_commit,
-        };
-        command.validate()?;
-        Ok(command)
-    }
-}
-
 impl BytesSerializable for PollMessages {
     fn as_bytes(&self) -> Vec<u8> {
         let consumer_bytes = self.consumer.as_bytes();
@@ -479,35 +432,6 @@ mod tests {
         bytes.put_u8(auto_commit);
 
         let command = PollMessages::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let auto_commit = matches!(auto_commit, 1);
-
-        let command = command.unwrap();
-        assert_eq!(command.consumer, consumer);
-        assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.partition_id, Some(partition_id));
-        assert_eq!(command.strategy, strategy);
-        assert_eq!(command.count, count);
-        assert_eq!(command.auto_commit, auto_commit);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let consumer = Consumer::new(Identifier::numeric(1).unwrap());
-        let stream_id = Identifier::numeric(2).unwrap();
-        let topic_id = Identifier::numeric(3).unwrap();
-        let partition_id = 4u32;
-        let strategy = PollingStrategy::timestamp(2);
-        let count = 3u32;
-        let auto_commit = 1u8;
-        let auto_commit_str = "auto_commit";
-
-        let input = format!(
-            "{consumer}|{stream_id}|{topic_id}|{partition_id}|{strategy}|{count}|{auto_commit_str}",
-        );
-        let command = PollMessages::from_str(&input);
         assert!(command.is_ok());
 
         let auto_commit = matches!(auto_commit, 1);

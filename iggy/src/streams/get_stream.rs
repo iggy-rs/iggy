@@ -5,7 +5,6 @@ use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `GetStream` command is used to retrieve the information about a stream by unique ID.
 /// It has additional payload:
@@ -22,21 +21,6 @@ impl CommandPayload for GetStream {}
 impl Validatable<Error> for GetStream {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for GetStream {
-    type Err = Error;
-    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 1 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let stream_id = parts[0].parse::<Identifier>()?;
-        let command = GetStream { stream_id };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -85,17 +69,6 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let bytes = stream_id.as_bytes();
         let command = GetStream::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.stream_id, stream_id);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let input = stream_id.to_string();
-        let command = GetStream::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

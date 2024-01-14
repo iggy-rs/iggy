@@ -7,7 +7,7 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 
 /// `LoginUser` command is used to login a user by username and password.
 /// It has additional payload:
@@ -53,22 +53,6 @@ impl Validatable<Error> for LoginUser {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for LoginUser {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 2 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let username = parts[0].to_string();
-        let password = parts[1].to_string();
-        let command = LoginUser { username, password };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -155,19 +139,6 @@ mod tests {
         bytes.put_u8(password.len() as u8);
         bytes.extend(password.as_bytes());
         let command = LoginUser::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.username, username);
-        assert_eq!(command.password, password);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let username = "user";
-        let password = "secret".to_string();
-        let input = format!("{}|{}", username, password);
-        let command = LoginUser::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

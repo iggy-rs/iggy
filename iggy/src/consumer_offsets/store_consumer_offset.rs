@@ -7,7 +7,6 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `StoreConsumerOffset` command stores the offset of a consumer for a given partition on the server.
 /// It has additional payload:
@@ -50,36 +49,6 @@ impl CommandPayload for StoreConsumerOffset {}
 impl Validatable<Error> for StoreConsumerOffset {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for StoreConsumerOffset {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 6 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let consumer_kind = ConsumerKind::from_str(parts[0])?;
-        let consumer_id = parts[1].parse::<Identifier>()?;
-        let consumer = Consumer {
-            kind: consumer_kind,
-            id: consumer_id,
-        };
-        let stream_id = parts[2].parse::<Identifier>()?;
-        let topic_id = parts[3].parse::<Identifier>()?;
-        let partition_id = parts[4].parse::<u32>()?;
-        let offset = parts[5].parse::<u64>()?;
-        let command = StoreConsumerOffset {
-            consumer,
-            stream_id,
-            topic_id,
-            partition_id: Some(partition_id),
-            offset,
-        };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -212,25 +181,6 @@ mod tests {
         bytes.put_u64_le(offset);
 
         let command = StoreConsumerOffset::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.consumer, consumer);
-        assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.partition_id, Some(partition_id));
-        assert_eq!(command.offset, offset);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let consumer = Consumer::new(Identifier::numeric(1).unwrap());
-        let stream_id = Identifier::numeric(2).unwrap();
-        let topic_id = Identifier::numeric(3).unwrap();
-        let partition_id = 4u32;
-        let offset = 5u64;
-        let input = format!("{consumer}|{stream_id}|{topic_id}|{partition_id}|{offset}");
-        let command = StoreConsumerOffset::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

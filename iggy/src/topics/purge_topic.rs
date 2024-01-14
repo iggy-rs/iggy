@@ -5,7 +5,6 @@ use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `PurgeTopic` command is used to purge topic data (its messages in all the partitions) from a stream.
 /// It has additional payload:
@@ -26,25 +25,6 @@ impl CommandPayload for PurgeTopic {}
 impl Validatable<Error> for PurgeTopic {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for PurgeTopic {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 2 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let stream_id = parts[0].parse::<Identifier>()?;
-        let topic_id = parts[1].parse::<Identifier>()?;
-        let command = PurgeTopic {
-            stream_id,
-            topic_id,
-        };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -110,19 +90,6 @@ mod tests {
         let topic_id = Identifier::numeric(2).unwrap();
         let bytes = [stream_id.as_bytes(), topic_id.as_bytes()].concat();
         let command = PurgeTopic::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.topic_id, topic_id);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let topic_id = Identifier::numeric(2).unwrap();
-        let input = format!("{stream_id}|{topic_id}");
-        let command = PurgeTopic::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

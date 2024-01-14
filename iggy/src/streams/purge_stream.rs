@@ -5,7 +5,6 @@ use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `PurgeStream` command is used to purge stream data (all the messages from its topics).
 /// It has additional payload:
@@ -22,21 +21,6 @@ impl CommandPayload for PurgeStream {}
 impl Validatable<Error> for PurgeStream {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for PurgeStream {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 1 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let stream_id = parts[0].parse::<Identifier>()?;
-        let command = PurgeStream { stream_id };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -88,17 +72,6 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let bytes = stream_id.as_bytes();
         let command = PurgeStream::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.stream_id, stream_id);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let input = format!("{stream_id}");
-        let command = PurgeStream::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

@@ -7,7 +7,7 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 
 /// `CreatePersonalAccessToken` command is used to create a new personal access token for the authenticated user.
 /// It has additional payload:
@@ -46,32 +46,6 @@ impl Validatable<Error> for CreatePersonalAccessToken {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for CreatePersonalAccessToken {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.is_empty() || parts.len() > 2 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let name = parts[0].to_string();
-        let expiry = match parts.get(1) {
-            Some(expiry) => {
-                let expiry = expiry.parse::<u32>()?;
-                match expiry {
-                    0 => None,
-                    _ => Some(expiry),
-                }
-            }
-            None => None,
-        };
-
-        let command = CreatePersonalAccessToken { name, expiry };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -155,19 +129,6 @@ mod tests {
         bytes.put_u32_le(expiry);
 
         let command = CreatePersonalAccessToken::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.name, name);
-        assert_eq!(command.expiry, Some(expiry));
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let name = "test";
-        let expiry = 100;
-        let input = format!("{name}|{expiry}");
-        let command = CreatePersonalAccessToken::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

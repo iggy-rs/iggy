@@ -5,7 +5,6 @@ use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `DeleteUser` command is used to delete a user by unique ID.
 /// It has additional payload:
@@ -22,21 +21,6 @@ impl CommandPayload for DeleteUser {}
 impl Validatable<Error> for DeleteUser {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for DeleteUser {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 1 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let user_id = parts[0].parse::<Identifier>()?;
-        let command = DeleteUser { user_id };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -85,17 +69,6 @@ mod tests {
         let user_id = Identifier::numeric(1).unwrap();
         let bytes = user_id.as_bytes();
         let command = DeleteUser::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.user_id, user_id);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let user_id = Identifier::numeric(1).unwrap();
-        let input = user_id.to_string();
-        let command = DeleteUser::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

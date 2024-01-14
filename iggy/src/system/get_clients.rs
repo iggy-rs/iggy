@@ -4,7 +4,6 @@ use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `GetClients` command is used to get the information about all connected clients.
 /// It has no additional payload.
@@ -16,19 +15,6 @@ impl CommandPayload for GetClients {}
 impl Validatable<Error> for GetClients {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for GetClients {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        if !input.is_empty() {
-            return Err(Error::InvalidCommand);
-        }
-
-        let command = GetClients {};
-        command.validate()?;
-        Ok(GetClients {})
     }
 }
 
@@ -76,20 +62,6 @@ mod tests {
     fn should_not_be_deserialized_from_empty_bytes() {
         let bytes: Vec<u8> = vec![0];
         let command = GetClients::from_bytes(&bytes);
-        assert!(command.is_err());
-    }
-
-    #[test]
-    fn should_be_read_from_empty_string() {
-        let input = "";
-        let command = GetClients::from_str(input);
-        assert!(command.is_ok());
-    }
-
-    #[test]
-    fn should_not_be_read_from_non_empty_string() {
-        let input = " ";
-        let command = GetClients::from_str(input);
         assert!(command.is_err());
     }
 }

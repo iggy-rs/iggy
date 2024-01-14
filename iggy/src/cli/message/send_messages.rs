@@ -5,7 +5,6 @@ use crate::messages::send_messages::{Message, Partitioning, SendMessages};
 use anyhow::Context;
 use async_trait::async_trait;
 use std::io::{self, Read};
-use std::str::FromStr;
 use std::vec::Vec;
 use tracing::{event, Level};
 
@@ -66,15 +65,15 @@ impl CliCommand for SendMessagesCmd {
         let messages = match &self.messages {
             Some(messages) => messages
                 .iter()
-                .filter_map(|s| Message::from_str(s).ok())
+                .map(|s| Message::new(None, s.clone().into(), None))
                 .collect::<Vec<_>>(),
             None => {
                 let input = self.read_message_from_stdin()?;
 
                 input
                     .lines()
-                    .map(Message::from_str)
-                    .collect::<Result<Vec<_>, _>>()?
+                    .map(|m| Message::new(None, String::from(m).into(), None))
+                    .collect()
             }
         };
 

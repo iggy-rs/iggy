@@ -7,7 +7,7 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 
 /// `DeletePersonalAccessToken` command is used to delete a personal access token for the authenticated user.
 /// It has additional payload:
@@ -42,21 +42,6 @@ impl Validatable<Error> for DeletePersonalAccessToken {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for DeletePersonalAccessToken {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 1 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let name = parts[0].to_string();
-        let command = DeletePersonalAccessToken { name };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -118,17 +103,6 @@ mod tests {
         bytes.extend(name.as_bytes());
 
         let command = DeletePersonalAccessToken::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.name, name);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let name = "test";
-        let input = name;
-        let command = DeletePersonalAccessToken::from_str(input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

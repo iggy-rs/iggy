@@ -4,7 +4,6 @@ use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `Ping` command is used to check if the server is alive.
 /// It has no additional payload.
@@ -16,19 +15,6 @@ impl CommandPayload for Ping {}
 impl Validatable<Error> for Ping {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for Ping {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        if !input.is_empty() {
-            return Err(Error::InvalidCommand);
-        }
-
-        let command = Ping {};
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -76,20 +62,6 @@ mod tests {
     fn should_not_be_deserialized_from_empty_bytes() {
         let bytes: Vec<u8> = vec![0];
         let command = Ping::from_bytes(&bytes);
-        assert!(command.is_err());
-    }
-
-    #[test]
-    fn should_be_read_from_empty_string() {
-        let input = "";
-        let command = Ping::from_str(input);
-        assert!(command.is_ok());
-    }
-
-    #[test]
-    fn should_not_be_read_from_non_empty_string() {
-        let input = " ";
-        let command = Ping::from_str(input);
         assert!(command.is_err());
     }
 }

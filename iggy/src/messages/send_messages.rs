@@ -251,18 +251,6 @@ impl PartitioningKind {
     }
 }
 
-impl FromStr for PartitioningKind {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        match input {
-            "b" | "balanced" => Ok(PartitioningKind::Balanced),
-            "p" | "partition_id" => Ok(PartitioningKind::PartitionId),
-            "k" | "messages_key" => Ok(PartitioningKind::MessagesKey),
-            _ => Err(Error::InvalidCommand),
-        }
-    }
-}
-
 impl Message {
     /// Create a new message with the optional ID, payload and headers.
     pub fn new(
@@ -395,15 +383,8 @@ impl BytesSerializable for Message {
 impl FromStr for Message {
     type Err = Error;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        let (id, payload) = match parts.len() {
-            1 => (0, Bytes::from(parts[0].as_bytes().to_vec())),
-            2 => (
-                parts[0].parse::<u128>()?,
-                Bytes::from(parts[1].as_bytes().to_vec()),
-            ),
-            _ => return Err(Error::InvalidCommand),
-        };
+        let id = default_message_id();
+        let payload = Bytes::from(input.as_bytes().to_vec());
         let length = payload.len() as u32;
         if length == 0 {
             return Err(Error::EmptyMessagePayload);
@@ -415,54 +396,6 @@ impl FromStr for Message {
             payload,
             headers: None,
         })
-    }
-}
-
-impl FromStr for SendMessages {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 6 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let stream_id = parts[0].parse::<Identifier>()?;
-        let topic_id = parts[1].parse::<Identifier>()?;
-        let key_kind = parts[2];
-        let key_kind = PartitioningKind::from_str(key_kind)?;
-        let (key_value, key_length) = match key_kind {
-            PartitioningKind::Balanced => (EMPTY_KEY_VALUE, 0),
-            PartitioningKind::PartitionId => (parts[3].parse::<u32>()?.to_le_bytes().to_vec(), 4),
-            PartitioningKind::MessagesKey => {
-                let key_value = parts[3].as_bytes().to_vec();
-                #[allow(clippy::cast_possible_truncation)]
-                let key_length = parts[3].len() as u8;
-                (key_value, key_length)
-            }
-        };
-        let message_id = parts[4].parse::<u128>()?;
-        let payload = Bytes::from(parts[5].as_bytes().to_vec());
-
-        // For now, we only support a single payload.
-        let message = Message {
-            id: message_id,
-            length: payload.len() as u32,
-            payload,
-            headers: None,
-        };
-
-        let command = SendMessages {
-            stream_id,
-            topic_id,
-            partitioning: Partitioning {
-                kind: key_kind,
-                length: key_length,
-                value: key_value,
-            },
-            messages: vec![message],
-        };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -573,8 +506,8 @@ mod tests {
     #[test]
     fn should_be_serialized_as_bytes() {
         let message_1 = Message::from_str("hello 1").unwrap();
-        let message_2 = Message::from_str("2|hello 2").unwrap();
-        let message_3 = Message::from_str("3|hello 3").unwrap();
+        let message_2 = Message::new(Some(2), "hello 2".into(), None);
+        let message_3 = Message::new(Some(3), "hello 3".into(), None);
         let messages = vec![message_1, message_2, message_3];
         let command = SendMessages {
             stream_id: Identifier::numeric(1).unwrap(),
@@ -614,8 +547,8 @@ mod tests {
         let key = Partitioning::partition_id(4);
 
         let message_1 = Message::from_str("hello 1").unwrap();
-        let message_2 = Message::from_str("2|hello 2").unwrap();
-        let message_3 = Message::from_str("3|hello 3").unwrap();
+        let message_2 = Message::new(Some(2), "hello 2".into(), None);
+        let message_3 = Message::new(Some(3), "hello 3".into(), None);
         let messages = [
             message_1.as_bytes(),
             message_2.as_bytes(),
@@ -655,29 +588,6 @@ mod tests {
             assert_eq!(command_message.length, message.length);
             assert_eq!(command_message.payload, message.payload);
         }
-    }
-
-    // For now, we only support a single payload.
-    #[test]
-    fn should_be_read_from_string() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let topic_id = Identifier::numeric(2).unwrap();
-        let key = Partitioning::partition_id(4);
-        let message_id = 1u128;
-        let payload = "hello";
-        let input = format!("{stream_id}|{topic_id}|{key}|{message_id}|{payload}");
-
-        let command = SendMessages::from_str(&input);
-
-        assert!(command.is_ok());
-        let command = command.unwrap();
-        let message = &command.messages[0];
-        assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.partitioning, key);
-        assert_eq!(message.id, message_id);
-        assert_eq!(message.length, payload.len() as u32);
-        assert_eq!(message.payload, payload.as_bytes());
     }
 
     #[test]

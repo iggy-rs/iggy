@@ -9,7 +9,7 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 
 /// `CreateUser` command is used to create a new user.
 /// It has additional payload:
@@ -63,33 +63,6 @@ impl Validatable<Error> for CreateUser {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for CreateUser {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        // No support for permissions yet
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() < 2 || parts.len() > 4 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let username = parts[0].to_string();
-        let password = parts[1].to_string();
-        let status = match parts.get(2) {
-            Some(status) => UserStatus::from_str(status)?,
-            None => UserStatus::Active,
-        };
-
-        let command = CreateUser {
-            username,
-            password,
-            status,
-            permissions: None,
-        };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -280,21 +253,5 @@ mod tests {
         assert_eq!(command.status, status);
         assert!(command.permissions.is_some());
         assert_eq!(command.permissions.unwrap(), permissions);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let username = "user";
-        let password = "secret";
-        let status = UserStatus::Active;
-        let input = format!("{username}|{password}|{status}");
-        let command = CreateUser::from_str(&input);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.username, username);
-        assert_eq!(command.password, password);
-        assert_eq!(command.status, status);
-        assert!(command.permissions.is_none());
     }
 }

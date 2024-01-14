@@ -5,7 +5,6 @@ use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `GetTopics` command is used to retrieve the collection of topics from a stream.
 /// It has additional payload:
@@ -22,21 +21,6 @@ impl CommandPayload for GetTopics {}
 impl Validatable<Error> for GetTopics {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for GetTopics {
-    type Err = Error;
-    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 1 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let stream_id = parts[0].parse::<Identifier>()?;
-        let command = GetTopics { stream_id };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -85,17 +69,6 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let bytes = stream_id.as_bytes();
         let command = GetTopics::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.stream_id, stream_id);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let stream_id = Identifier::numeric(1).unwrap();
-        let input = stream_id.to_string();
-        let command = GetTopics::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

@@ -5,7 +5,6 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `GetClient` command is used to get the information about a specific client by unique ID.
 /// It has additional payload:
@@ -31,21 +30,6 @@ impl Validatable<Error> for GetClient {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for GetClient {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 1 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let client_id = parts[0].parse::<u32>()?;
-        let command = GetClient { client_id };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -94,17 +78,6 @@ mod tests {
         let client_id = 1u32;
         let bytes = client_id.to_le_bytes();
         let command = GetClient::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.client_id, client_id);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let client_id = 1u32;
-        let input = client_id.to_string();
-        let command = GetClient::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

@@ -6,7 +6,7 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 
 /// `LoginWithPersonalAccessToken` command is used to login the user with a personal access token, instead of the username and password.
 /// It has additional payload:
@@ -34,21 +34,6 @@ impl Validatable<Error> for LoginWithPersonalAccessToken {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for LoginWithPersonalAccessToken {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 1 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let token = parts[0].to_string();
-        let command = LoginWithPersonalAccessToken { token };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -110,17 +95,6 @@ mod tests {
         bytes.extend(token.as_bytes());
 
         let command = LoginWithPersonalAccessToken::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.token, token);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let token = "test";
-        let input = token;
-        let command = LoginWithPersonalAccessToken::from_str(input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

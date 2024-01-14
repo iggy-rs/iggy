@@ -7,7 +7,7 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 
 /// `CreateStream` command is used to create a new stream.
 /// It has additional payload:
@@ -47,22 +47,6 @@ impl Validatable<Error> for CreateStream {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for CreateStream {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 2 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let stream_id = parts[0].parse::<u32>()?;
-        let name = parts[1].to_string();
-        let command = CreateStream { stream_id, name };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -131,19 +115,6 @@ mod tests {
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
         let command = CreateStream::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.name, name);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let stream_id = 1u32;
-        let name = "test".to_string();
-        let input = format!("{}|{}", stream_id, name);
-        let command = CreateStream::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

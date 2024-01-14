@@ -4,7 +4,6 @@ use crate::error::Error;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::FromStr;
 
 /// `GetPersonalAccessTokens` command is used to get all personal access tokens for the authenticated user.
 /// It has no additional payload.
@@ -16,19 +15,6 @@ impl CommandPayload for GetPersonalAccessTokens {}
 impl Validatable<Error> for GetPersonalAccessTokens {
     fn validate(&self) -> Result<(), Error> {
         Ok(())
-    }
-}
-
-impl FromStr for GetPersonalAccessTokens {
-    type Err = Error;
-    fn from_str(input: &str) -> std::result::Result<Self, Self::Err> {
-        if !input.is_empty() {
-            return Err(Error::InvalidCommand);
-        }
-
-        let command = GetPersonalAccessTokens {};
-        command.validate()?;
-        Ok(GetPersonalAccessTokens {})
     }
 }
 
@@ -76,20 +62,6 @@ mod tests {
     fn should_not_be_deserialized_from_empty_bytes() {
         let bytes: Vec<u8> = vec![0];
         let command = GetPersonalAccessTokens::from_bytes(&bytes);
-        assert!(command.is_err());
-    }
-
-    #[test]
-    fn should_be_read_from_empty_string() {
-        let input = "";
-        let command = GetPersonalAccessTokens::from_str(input);
-        assert!(command.is_ok());
-    }
-
-    #[test]
-    fn should_not_be_read_from_non_empty_string() {
-        let input = " ";
-        let command = GetPersonalAccessTokens::from_str(input);
         assert!(command.is_err());
     }
 }

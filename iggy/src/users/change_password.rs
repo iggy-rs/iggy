@@ -7,7 +7,7 @@ use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 
 /// `ChangePassword` command is used to change a user's password.
 /// It has additional payload:
@@ -54,28 +54,6 @@ impl Validatable<Error> for ChangePassword {
         }
 
         Ok(())
-    }
-}
-
-impl FromStr for ChangePassword {
-    type Err = Error;
-    fn from_str(input: &str) -> Result<Self, Self::Err> {
-        let parts = input.split('|').collect::<Vec<&str>>();
-        if parts.len() != 3 {
-            return Err(Error::InvalidCommand);
-        }
-
-        let user_id = parts[0].parse::<Identifier>()?;
-        let current_password = parts[1].to_string();
-        let new_password = parts[2].to_string();
-
-        let command = ChangePassword {
-            user_id,
-            current_password,
-            new_password,
-        };
-        command.validate()?;
-        Ok(command)
     }
 }
 
@@ -176,21 +154,6 @@ mod tests {
         bytes.extend(new_password.as_bytes());
 
         let command = ChangePassword::from_bytes(&bytes);
-        assert!(command.is_ok());
-
-        let command = command.unwrap();
-        assert_eq!(command.user_id, user_id);
-        assert_eq!(command.current_password, current_password);
-        assert_eq!(command.new_password, new_password);
-    }
-
-    #[test]
-    fn should_be_read_from_string() {
-        let user_id = Identifier::numeric(1).unwrap();
-        let current_password = "secret";
-        let new_password = "topsecret";
-        let input = format!("{user_id}|{current_password}|{new_password}");
-        let command = ChangePassword::from_str(&input);
         assert!(command.is_ok());
 
         let command = command.unwrap();

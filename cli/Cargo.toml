@@ -12,7 +12,7 @@ async-trait = "0.1.77"
 clap = { version = "4.4.16", features = ["derive"] }
 clap_complete = "4.4.6"
 figlet-rs = "0.1.5"
-iggy = { path = "../iggy", features = ["iggy-cli"] }
+iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.1"
 passterm = "2.0.1"
 thiserror = "1.0.56"

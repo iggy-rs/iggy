@@ -11,7 +11,7 @@ path = "src/data-seeder/main.rs"
 anyhow = "1.0.79"
 bytes = "1.4.0"
 clap = { version = "4.4.16", features = ["derive"] }
-iggy = { path = "../iggy" }
+iggy = { path = "../sdk" }
 rand = "0.8.5"
 thiserror = "1.0.56"
 tokio = { version = "1.28.2", features = ["full"] }

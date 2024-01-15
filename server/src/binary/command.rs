@@ -27,7 +27,7 @@ use tracing::{debug, error};
 pub async fn handle(
     command: &Command,
     sender: &mut dyn Sender,
-    session: &mut Session,
+    session: &Session,
     system: SharedSystem,
 ) -> Result<(), Error> {
     match try_handle(command, sender, session, &system).await {
@@ -45,7 +45,7 @@ pub async fn handle(
 async fn try_handle(
     command: &Command,
     sender: &mut dyn Sender,
-    session: &mut Session,
+    session: &Session,
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("Handling command '{command}', session: {session}...");

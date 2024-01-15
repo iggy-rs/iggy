@@ -36,8 +36,9 @@ impl System {
     pub async fn find_user(&self, session: &Session, user_id: &Identifier) -> Result<User, Error> {
         self.ensure_authenticated(session)?;
         let user = self.get_user(user_id).await?;
-        if user.id != session.user_id {
-            self.permissioner.get_user(session.user_id)?;
+        let session_user_id = session.get_user_id();
+        if user.id != session_user_id {
+            self.permissioner.get_user(session_user_id)?;
         }
 
         Ok(user)
@@ -62,7 +63,7 @@ impl System {
 
     pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_users(session.user_id)?;
+        self.permissioner.get_users(session.get_user_id())?;
         self.storage.user.load_all().await
     }
 
@@ -75,7 +76,7 @@ impl System {
         permissions: Option<Permissions>,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.create_user(session.user_id)?;
+        self.permissioner.create_user(session.get_user_id())?;
         let username = text::to_lowercase_non_whitespace(username);
         if self.storage.user.load_by_username(&username).await.is_ok() {
             error!("User: {username} already exists.");
@@ -97,7 +98,7 @@ impl System {
         user_id: &Identifier,
     ) -> Result<User, Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.delete_user(session.user_id)?;
+        self.permissioner.delete_user(session.get_user_id())?;
         let user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot delete the root user.");
@@ -122,7 +123,7 @@ impl System {
         status: Option<UserStatus>,
     ) -> Result<User, Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.update_user(session.user_id)?;
+        self.permissioner.update_user(session.get_user_id())?;
         let mut user = self.get_user(user_id).await?;
         if let Some(username) = username {
             let username = text::to_lowercase_non_whitespace(&username);
@@ -152,7 +153,8 @@ impl System {
         permissions: Option<Permissions>,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.update_permissions(session.user_id)?;
+        self.permissioner
+            .update_permissions(session.get_user_id())?;
         let mut user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot change the root user permissions.");
@@ -183,8 +185,9 @@ impl System {
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
         let mut user = self.get_user(user_id).await?;
-        if user.id != session.user_id {
-            self.permissioner.change_password(session.user_id)?;
+        let session_user_id = session.get_user_id();
+        if user.id != session_user_id {
+            self.permissioner.change_password(session_user_id)?;
         }
 
         if !crypto::verify_password(current_password, &user.password) {
@@ -212,7 +215,7 @@ impl System {
         &self,
         username: &str,
         password: &str,
-        session: Option<&mut Session>,
+        session: Option<&Session>,
     ) -> Result<User, Error> {
         self.login_user_with_credentials(username, Some(password), session)
             .await
@@ -222,7 +225,7 @@ impl System {
         &self,
         username: &str,
         password: Option<&str>,
-        session: Option<&mut Session>,
+        session: Option<&Session>,
     ) -> Result<User, Error> {
         let user = match self.storage.user.load_by_username(username).await {
             Ok(user) => user,
@@ -257,7 +260,8 @@ impl System {
         if session.is_authenticated() {
             warn!(
                 "User: {} with ID: {} was already authenticated, removing the previous session...",
-                user.username, session.user_id
+                user.username,
+                session.get_user_id()
             );
             self.logout_user(session).await?;
         }
@@ -273,7 +277,7 @@ impl System {
     pub async fn logout_user(&self, session: &Session) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
         let user = self
-            .get_user(&Identifier::numeric(session.user_id)?)
+            .get_user(&Identifier::numeric(session.get_user_id())?)
             .await?;
         info!(
             "Logging out user: {} with ID: {}...",

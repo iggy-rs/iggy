@@ -80,14 +80,14 @@ impl System {
         client_id: u32,
     ) -> Result<Arc<RwLock<Client>>, Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_client(session.user_id)?;
+        self.permissioner.get_client(session.get_user_id())?;
         let client_manager = self.client_manager.read().await;
         client_manager.get_client_by_id(client_id)
     }
 
     pub async fn get_clients(&self, session: &Session) -> Result<Vec<Arc<RwLock<Client>>>, Error> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_clients(session.user_id)?;
+        self.permissioner.get_clients(session.get_user_id())?;
         let client_manager = self.client_manager.read().await;
         Ok(client_manager.get_clients())
     }

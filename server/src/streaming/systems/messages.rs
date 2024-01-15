@@ -30,7 +30,7 @@ impl System {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
-            .poll_messages(session.user_id, stream.stream_id, topic.topic_id)?;
+            .poll_messages(session.get_user_id(), stream.stream_id, topic.topic_id)?;
 
         if !topic.has_partitions() {
             return Err(Error::NoPartitions(topic.topic_id, topic.stream_id));
@@ -105,8 +105,11 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
-        self.permissioner
-            .append_messages(session.user_id, stream.stream_id, topic.topic_id)?;
+        self.permissioner.append_messages(
+            session.get_user_id(),
+            stream.stream_id,
+            topic.topic_id,
+        )?;
 
         let mut received_messages = Vec::with_capacity(messages.len());
         let mut batch_size_bytes = 0u64;

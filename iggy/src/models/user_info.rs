@@ -1,9 +1,13 @@
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::AtomicU32;
 
 /// `UserId` represents the unique identifier (numeric) of the user.
 pub type UserId = u32;
+/// `AtomicUserId` represents the unique identifier (numeric) of the user
+/// which can be safely modified concurrently across threads
+pub type AtomicUserId = AtomicU32;
 
 /// `UserInfo` represents the basic information about the user.
 /// It consists of the following fields:

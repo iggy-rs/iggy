@@ -10,7 +10,7 @@ use tracing::debug;
 pub async fn handle(
     command: &LoginWithPersonalAccessToken,
     sender: &mut dyn Sender,
-    session: &mut Session,
+    session: &Session,
     system: &SharedSystem,
 ) -> Result<(), Error> {
     debug!("session: {session}, command: {command}");

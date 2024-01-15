@@ -16,7 +16,7 @@ impl System {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
             self.permissioner.create_partitons(
-                session.user_id,
+                session.get_user_id(),
                 stream.stream_id,
                 topic.topic_id,
             )?;
@@ -42,7 +42,7 @@ impl System {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
             self.permissioner.delete_partitions(
-                session.user_id,
+                session.get_user_id(),
                 stream.stream_id,
                 topic.topic_id,
             )?;

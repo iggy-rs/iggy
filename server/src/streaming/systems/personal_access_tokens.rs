@@ -13,7 +13,7 @@ impl System {
         session: &Session,
     ) -> Result<Vec<PersonalAccessToken>, Error> {
         self.ensure_authenticated(session)?;
-        let user_id = session.user_id;
+        let user_id = session.get_user_id();
         info!("Loading personal access tokens for user with ID: {user_id}...",);
         let personal_access_tokens = self
             .storage
@@ -34,7 +34,7 @@ impl System {
         expiry: Option<u32>,
     ) -> Result<String, Error> {
         self.ensure_authenticated(session)?;
-        let user_id = session.user_id;
+        let user_id = session.get_user_id();
         let max_token_per_user = self.personal_access_token.max_tokens_per_user;
         let name = text::to_lowercase_non_whitespace(name);
         let personal_access_tokens = self
@@ -78,7 +78,7 @@ impl System {
         name: &str,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
-        let user_id = session.user_id;
+        let user_id = session.get_user_id();
         let name = text::to_lowercase_non_whitespace(name);
         info!("Deleting personal access token: {name} for user with ID: {user_id}...");
         self.storage
@@ -92,7 +92,7 @@ impl System {
     pub async fn login_with_personal_access_token(
         &self,
         token: &str,
-        session: Option<&mut Session>,
+        session: Option<&Session>,
     ) -> Result<User, Error> {
         let token_hash = PersonalAccessToken::hash_token(token);
         let personal_access_token = self

@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::users::get_users::GetUsers;
-use crate::utils::timestamp::TimeStamp;
+use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -65,7 +65,7 @@ impl CliCommand for GetUsersCmd {
                 users.iter().for_each(|user| {
                     table.add_row(vec![
                         format!("{}", user.id),
-                        TimeStamp::from(user.created_at).to_local("%Y-%m-%d %H:%M:%S"),
+                        IggyTimestamp::from(user.created_at).to_local("%Y-%m-%d %H:%M:%S"),
                         user.status.clone().to_string(),
                         user.username.clone(),
                     ]);
@@ -78,7 +78,7 @@ impl CliCommand for GetUsersCmd {
                     event!(target: PRINT_TARGET, Level::INFO,
                         "{}|{}|{}|{}",
                         user.id,
-                        TimeStamp::from(user.created_at).to_local("%Y-%m-%d %H:%M:%S"),
+                        IggyTimestamp::from(user.created_at).to_local("%Y-%m-%d %H:%M:%S"),
                         user.status.clone().to_string(),
                         user.username.clone(),
                     );

@@ -3,7 +3,7 @@ use iggy::models::permissions::{
     GlobalPermissions, Permissions, StreamPermissions, TopicPermissions,
 };
 use iggy::models::user_status::UserStatus;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use server::streaming::users::user::User;
 use std::collections::HashMap;
 
@@ -158,7 +158,7 @@ fn create_user(id: u32) -> User {
         id,
         username: format!("user{}", id),
         password: "secret".to_string(),
-        created_at: TimeStamp::now().to_micros(),
+        created_at: IggyTimestamp::now().to_micros(),
         status: UserStatus::Active,
         permissions: Some(Permissions {
             global: GlobalPermissions {

@@ -47,9 +47,7 @@ use iggy::cli::{
         update_permissions::UpdatePermissionsCmd,
         update_user::{UpdateUserCmd, UpdateUserType},
     },
-    utils::{
-        message_expiry::MessageExpiry, personal_access_token_expiry::PersonalAccessTokenExpiry,
-    },
+    utils::personal_access_token_expiry::PersonalAccessTokenExpiry,
 };
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider::{self, ClientProviderConfig};
@@ -79,7 +77,9 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
                 args.topic_id,
                 args.partitions_count,
                 args.name.clone(),
-                MessageExpiry::new(args.message_expiry.clone()),
+                args.message_expiry.clone().into(),
+                args.max_topic_size,
+                args.replication_factor,
             )),
             TopicAction::Delete(args) => Box::new(DeleteTopicCmd::new(
                 args.stream_id.clone(),
@@ -89,7 +89,9 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
                 args.stream_id.clone(),
                 args.topic_id.clone(),
                 args.name.clone(),
-                MessageExpiry::new(args.message_expiry.clone()),
+                args.message_expiry.clone().into(),
+                args.max_topic_size,
+                args.replication_factor,
             )),
             TopicAction::Get(args) => Box::new(GetTopicCmd::new(
                 args.stream_id.clone(),

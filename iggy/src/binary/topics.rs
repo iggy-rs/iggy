@@ -18,6 +18,7 @@ pub async fn get_topic(
     client: &dyn BinaryClient,
     command: &GetTopic,
 ) -> Result<TopicDetails, Error> {
+    fail_if_not_authenticated(client).await?;
     let response = client
         .send_with_response(GET_TOPIC_CODE, &command.as_bytes())
         .await?;

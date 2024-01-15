@@ -2,6 +2,7 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::text;
 use tracing::info;
 
@@ -16,6 +17,8 @@ impl Stream {
         name: &str,
         partitions_count: u32,
         message_expiry: Option<u32>,
+        max_topic_size: Option<IggyByteSize>,
+        replication_factor: u8,
     ) -> Result<(), Error> {
         if self.topics.contains_key(&id) {
             return Err(Error::TopicIdAlreadyExists(id, self.stream_id));
@@ -26,6 +29,8 @@ impl Stream {
             return Err(Error::TopicNameAlreadyExists(name, self.stream_id));
         }
 
+        // TODO: check if max_topic_size is not lower than system.segment.size
+
         let topic = Topic::create(
             self.stream_id,
             id,
@@ -34,12 +39,11 @@ impl Stream {
             self.config.clone(),
             self.storage.clone(),
             message_expiry,
+            max_topic_size,
+            replication_factor,
         )?;
         topic.persist().await?;
-        info!(
-            "Created topic: {} with ID: {}, partitions: {}",
-            name, id, partitions_count
-        );
+        info!("Created topic {}", topic);
         self.topics_ids.insert(name, id);
         self.topics.insert(id, topic);
 
@@ -51,6 +55,8 @@ impl Stream {
         id: &Identifier,
         name: &str,
         message_expiry: Option<u32>,
+        max_topic_size: Option<IggyByteSize>,
+        replication_factor: u8,
     ) -> Result<(), Error> {
         let topic_id;
         {
@@ -89,9 +95,11 @@ impl Stream {
                     segment.message_expiry = message_expiry;
                 }
             }
+            topic.max_topic_size = max_topic_size;
+            topic.replication_factor = replication_factor;
 
             topic.persist().await?;
-            info!("Updated topic: {} with ID: {}", topic.name, id);
+            info!("Updated topic: {topic}");
         }
 
         Ok(())
@@ -184,11 +192,12 @@ mod tests {
         let topic_id = 2;
         let topic_name = "test_topic";
         let message_expiry = Some(10);
+        let max_topic_size = Some(IggyByteSize::from(100));
         let config = Arc::new(SystemConfig::default());
         let storage = Arc::new(get_test_system_storage());
         let mut stream = Stream::create(stream_id, stream_name, config, storage);
         stream
-            .create_topic(topic_id, topic_name, 1, message_expiry)
+            .create_topic(topic_id, topic_name, 1, message_expiry, max_topic_size, 1)
             .await
             .unwrap();
 

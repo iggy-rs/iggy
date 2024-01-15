@@ -258,13 +258,20 @@ size = "4GB"
 
 # Data retention policy configuration.
 [system.retention_policy]
-# Configures the message expiry setting.
+# Configures the message time-based expiry setting.
 # "disabled" means messages are kept indefinitely.
 # A time value in human-readable format determines the lifespan of messages.
 # Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
 message_expiry = "disabled"
 
-# Maximum size of a topic, e.g., "10 GB".
+# Configures the topic size-based expiry setting.
+# "unlimited" or "0" means topics are kept indefinitely.
+# A size value in human-readable format determines the maximum size of a topic.
+# When a topic reaches this size, the oldest messages are deleted to make room for new ones.
+# Messages are removed in full segments, so if segment size is 1 GB and the topic size is 10 GB,
+# the oldest segment will be deleted upon reaching 10 GB.
+# Example: `max_topic_size = "10 GB"` means oldest messages in topics will be deleted when they reach 10 GB.
+# Note: this setting can be overwritten with CreateTopic and UpdateTopic requests.
 max_topic_size = "10 GB"
 
 # Encryption configuration
@@ -350,5 +357,3 @@ enabled = false
 max_entries = 1000
 # Maximum age of ID entries in the deduplication cache in human-readable format.
 expiry = "1m"
-
-

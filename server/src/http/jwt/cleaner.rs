@@ -1,5 +1,5 @@
 use crate::http::shared::AppState;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{error, info};
@@ -10,7 +10,7 @@ pub fn start_expired_tokens_cleaner(app_state: Arc<AppState>) {
         loop {
             interval_timer.tick().await;
             info!("Deleting expired tokens...");
-            let now = TimeStamp::now().to_secs();
+            let now = IggyTimestamp::now().to_secs();
             app_state
                 .jwt_manager
                 .delete_expired_revoked_tokens(now)

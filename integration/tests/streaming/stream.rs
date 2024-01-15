@@ -94,7 +94,7 @@ async fn should_purge_existing_stream_on_disk() {
 
         let topic_id = 1;
         stream
-            .create_topic(topic_id, "test", 1, None)
+            .create_topic(topic_id, "test", 1, None, None, 1)
             .await
             .unwrap();
 

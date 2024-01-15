@@ -157,9 +157,9 @@ impl Display for RetentionPolicyConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ message_expiry: {}, max_topic_size: {} }}",
-            self.message_expiry,
-            self.max_topic_size.to_human_string_with_special_zero()
+            "{{ message_expiry {}, max_topic_size: {} }}",
+            self.message_expiry.as_secs(),
+            self.max_topic_size.as_human_string_with_zero_as_unlimited()
         )
     }
 }
@@ -222,7 +222,7 @@ impl Display for LoggingConfig {
             "{{ path: {}, level: {}, max_size: {}, retention: {} }}",
             self.path,
             self.level,
-            self.max_size.to_human_string_with_special_zero(),
+            self.max_size.as_human_string_with_zero_as_unlimited(),
             self.retention
         )
     }

@@ -3,7 +3,7 @@ use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
 use iggy::models::messages::Message;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 
 pub const LOG_EXTENSION: &str = "log";
@@ -76,7 +76,7 @@ impl Segment {
             return true;
         }
 
-        self.is_expired(TimeStamp::now().to_micros()).await
+        self.is_expired(IggyTimestamp::now().to_micros()).await
     }
 
     pub async fn is_expired(&self, now: u64) -> bool {

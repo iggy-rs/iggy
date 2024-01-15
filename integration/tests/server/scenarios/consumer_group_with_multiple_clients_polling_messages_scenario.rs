@@ -70,6 +70,8 @@ async fn init_system(
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
         message_expiry: None,
+        max_topic_size: None,
+        replication_factor: 1,
     };
     system_client.create_topic(&create_topic).await.unwrap();
 

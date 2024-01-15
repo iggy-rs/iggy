@@ -24,6 +24,14 @@ impl IggyDuration {
         self.duration.as_secs() as u32
     }
 
+    pub fn as_secs_f64(&self) -> f64 {
+        self.duration.as_secs_f64()
+    }
+
+    pub fn as_micros(&self) -> u64 {
+        self.duration.as_micros() as u64
+    }
+
     pub fn get_duration(&self) -> Duration {
         self.duration
     }
@@ -37,7 +45,8 @@ impl FromStr for IggyDuration {
     type Err = humantime::DurationError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if s == "0" || s == "unlimited" || s == "disabled" || s == "None" || s == "none" {
+        let s = &s.to_lowercase();
+        if s == "0" || s == "unlimited" || s == "disabled" || s == "none" {
             Ok(IggyDuration {
                 duration: Duration::new(0, 0),
             })

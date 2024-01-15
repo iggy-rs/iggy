@@ -4,7 +4,7 @@ use crate::messages::send_messages;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use crate::sizeable::Sizeable;
-use crate::utils::{checksum, timestamp::TimeStamp};
+use crate::utils::{checksum, timestamp::IggyTimestamp};
 use bytes::{BufMut, Bytes};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -132,7 +132,7 @@ impl Sizeable for Arc<Message> {
 impl Message {
     /// Creates a new message from the `Message` struct being part of `SendMessages` command.
     pub fn from_message(message: &send_messages::Message) -> Self {
-        let timestamp = TimeStamp::now().to_micros();
+        let timestamp = IggyTimestamp::now().to_micros();
         let checksum = checksum::calculate(&message.payload);
         let headers = message.headers.as_ref().cloned();
 

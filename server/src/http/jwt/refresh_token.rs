@@ -44,12 +44,12 @@ impl RefreshToken {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iggy::utils::timestamp::TimeStamp;
+    use iggy::utils::timestamp::IggyTimestamp;
 
     #[test]
     fn refresh_token_should_be_created_with_random_secure_value_and_hashed_successfully() {
         let user_id = 1;
-        let now = TimeStamp::now().to_secs();
+        let now = IggyTimestamp::now().to_secs();
         let expiry = 10;
         let (refresh_token, raw_token) = RefreshToken::new(user_id, now, expiry);
         assert_eq!(refresh_token.user_id, user_id);
@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn refresh_access_token_should_be_expired_given_passed_expiry() {
         let user_id = 1;
-        let now = TimeStamp::now().to_secs();
+        let now = IggyTimestamp::now().to_secs();
         let expiry = 1;
         let (refresh_token, _) = RefreshToken::new(user_id, now, expiry);
         assert!(refresh_token.is_expired(now + expiry + 1));

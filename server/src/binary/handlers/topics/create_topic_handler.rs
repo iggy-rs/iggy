@@ -22,6 +22,8 @@ pub async fn handle(
             &command.name,
             command.partitions_count,
             command.message_expiry,
+            command.max_topic_size,
+            command.replication_factor,
         )
         .await?;
     sender.send_empty_ok_response().await?;

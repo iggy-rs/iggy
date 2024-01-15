@@ -134,6 +134,8 @@ impl<'a> IggyExampleTest<'a> {
                     partitions_count: 1,
                     name: "sample-topic".to_string(),
                     message_expiry: None,
+                    max_topic_size: None,
+                    replication_factor: 1,
                 })
                 .await
                 .unwrap();

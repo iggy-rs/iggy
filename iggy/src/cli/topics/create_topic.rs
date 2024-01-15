@@ -3,13 +3,17 @@ use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::create_topic::CreateTopic;
+use crate::utils::byte_size::IggyByteSize;
 use anyhow::Context;
 use async_trait::async_trait;
+use core::fmt;
 use tracing::{event, Level};
 
 pub struct CreateTopicCmd {
     create_topic: CreateTopic,
-    message_expiry: Option<MessageExpiry>,
+    message_expiry: MessageExpiry,
+    max_topic_size: IggyByteSize,
+    replication_factor: u8,
 }
 
 impl CreateTopicCmd {
@@ -18,7 +22,9 @@ impl CreateTopicCmd {
         topic_id: u32,
         partitions_count: u32,
         name: String,
-        message_expiry: Option<MessageExpiry>,
+        message_expiry: MessageExpiry,
+        max_topic_size: IggyByteSize,
+        replication_factor: u8,
     ) -> Self {
         Self {
             create_topic: CreateTopic {
@@ -26,12 +32,13 @@ impl CreateTopicCmd {
                 topic_id,
                 partitions_count,
                 name,
-                message_expiry: match &message_expiry {
-                    None => None,
-                    Some(value) => value.into(),
-                },
+                message_expiry: message_expiry.clone().into(),
+                max_topic_size: Some(max_topic_size),
+                replication_factor,
             },
             message_expiry,
+            max_topic_size,
+            replication_factor,
         }
     }
 }
@@ -39,18 +46,7 @@ impl CreateTopicCmd {
 #[async_trait]
 impl CliCommand for CreateTopicCmd {
     fn explain(&self) -> String {
-        let expiry_text = match &self.message_expiry {
-            Some(value) => format!("message expire time: {}", value),
-            None => String::from("without message expire time"),
-        };
-        format!(
-            "create topic with ID: {}, name: {}, partitions count: {} and {} in stream with ID: {}",
-            self.create_topic.topic_id,
-            self.create_topic.name,
-            self.create_topic.partitions_count,
-            expiry_text,
-            self.create_topic.stream_id
-        )
+        format!("{}", self)
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
@@ -65,17 +61,33 @@ impl CliCommand for CreateTopicCmd {
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
-            "Topic with ID: {}, name: {}, partitions count: {} and {} created in stream with ID: {}",
+            "Topic with ID: {}, name: {}, partitions count: {}, message expiry: {}, max topic size: {}, replication factor: {} created in stream with ID: {}",
             self.create_topic.topic_id,
             self.create_topic.name,
             self.create_topic.partitions_count,
-            match &self.message_expiry {
-                Some(value) => format!("message expire time: {}", value),
-                None => String::from("without message expire time"),
-            },
+            self.message_expiry,
+            self.max_topic_size.as_human_string_with_zero_as_unlimited(),
+            self.replication_factor,
             self.create_topic.stream_id,
         );
 
         Ok(())
+    }
+}
+
+impl fmt::Display for CreateTopicCmd {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        let topic_id = &self.create_topic.topic_id;
+        let topic_name = &self.create_topic.name;
+        let message_expiry = &self.message_expiry;
+        let max_topic_size = &self.max_topic_size.as_human_string_with_zero_as_unlimited();
+        let replication_factor = self.replication_factor;
+        let stream_id = &self.create_topic.stream_id;
+
+        write!(
+            f,
+            "create topic with ID: {topic_id}, name: {topic_name}, message expiry: {message_expiry}, \
+            max topic size: {max_topic_size}, replication factor: {replication_factor} in stream with ID: {stream_id}",
+        )
     }
 }

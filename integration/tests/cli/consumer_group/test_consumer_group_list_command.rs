@@ -87,6 +87,8 @@ impl IggyCmdTestCase for TestConsumerGroupListCmd {
                 partitions_count: 0,
                 name: self.topic_name.clone(),
                 message_expiry: None,
+                max_topic_size: None,
+                replication_factor: 1,
             })
             .await;
         assert!(topic.is_ok());

@@ -37,6 +37,7 @@ use iggy::topics::purge_topic::PurgeTopic;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
+use iggy::utils::byte_size::IggyByteSize;
 use integration::test_server::{assert_clean_system, ClientFactory};
 
 const STREAM_ID: u32 = 1;
@@ -131,6 +132,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
         message_expiry: None,
+        max_topic_size: None,
+        replication_factor: 1,
     };
     client.create_topic(&create_topic).await.unwrap();
 
@@ -146,9 +149,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
-    assert_eq!(topic.size_bytes, 0);
+    assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
     assert_eq!(topic.message_expiry, None);
+    assert_eq!(topic.max_topic_size, None);
+    assert_eq!(topic.replication_factor, 1);
 
     // 11. Get topic details by ID
     let topic = client
@@ -201,7 +206,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream_topic.id, topic.id);
     assert_eq!(stream_topic.name, topic.name);
     assert_eq!(stream_topic.partitions_count, topic.partitions_count);
-    assert_eq!(stream_topic.size_bytes, 0);
+    assert_eq!(stream_topic.size, 0);
     assert_eq!(stream_topic.messages_count, 0);
 
     // 15. Try to create the topic with the same ID but the different name and validate that it fails
@@ -581,6 +586,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 36. Update the existing topic and ensure it's updated
     let updated_topic_name = format!("{}-updated", TOPIC_NAME);
     let updated_message_expiry = 1000;
+    let updated_max_topic_size = IggyByteSize::from(0x1337);
+    let updated_replication_factor = 5;
 
     client
         .update_topic(&UpdateTopic {
@@ -588,6 +595,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             name: updated_topic_name.clone(),
             message_expiry: Some(updated_message_expiry),
+            max_topic_size: Some(updated_max_topic_size),
+            replication_factor: updated_replication_factor,
         })
         .await
         .unwrap();
@@ -602,6 +611,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert_eq!(updated_topic.name, updated_topic_name);
     assert_eq!(updated_topic.message_expiry, Some(updated_message_expiry));
+    assert_eq!(updated_topic.max_topic_size, Some(updated_max_topic_size));
+    assert_eq!(updated_topic.replication_factor, updated_replication_factor);
 
     // 37. Purge the existing topic and ensure it has no messages
     client

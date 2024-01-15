@@ -4,7 +4,7 @@ use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
 use iggy::error::Error;
 use iggy::utils::text;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use tracing::{error, info};
 
 impl System {
@@ -63,7 +63,7 @@ impl System {
 
         info!("Creating personal access token: {name} for user with ID: {user_id}...");
         let (personal_access_token, token) =
-            PersonalAccessToken::new(user_id, &name, TimeStamp::now().to_micros(), expiry);
+            PersonalAccessToken::new(user_id, &name, IggyTimestamp::now().to_micros(), expiry);
         self.storage
             .personal_access_token
             .save(&personal_access_token)
@@ -100,7 +100,7 @@ impl System {
             .personal_access_token
             .load_by_token(&token_hash)
             .await?;
-        if personal_access_token.is_expired(TimeStamp::now().to_micros()) {
+        if personal_access_token.is_expired(IggyTimestamp::now().to_micros()) {
             error!(
                 "Personal access token: {} for user with ID: {} has expired.",
                 personal_access_token.name, personal_access_token.user_id

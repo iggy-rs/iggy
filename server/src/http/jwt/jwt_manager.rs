@@ -5,7 +5,7 @@ use crate::http::jwt::storage::TokenStorage;
 use iggy::error::Error;
 use iggy::models::user_info::UserId;
 use iggy::utils::duration::IggyDuration;
-use iggy::utils::timestamp::TimeStamp;
+use iggy::utils::timestamp::IggyTimestamp;
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use sled::Db;
 use std::collections::HashMap;
@@ -165,7 +165,7 @@ impl JwtManager {
 
     pub fn generate(&self, user_id: UserId) -> Result<GeneratedTokens, Error> {
         let header = Header::new(self.issuer.algorithm);
-        let now = TimeStamp::now().to_secs();
+        let now = IggyTimestamp::now().to_secs();
         let iat = now;
         let exp = iat + self.issuer.access_token_expiry.as_secs() as u64;
         let nbf = iat + self.issuer.not_before.as_secs() as u64;
@@ -202,7 +202,7 @@ impl JwtManager {
     }
 
     pub fn refresh_token(&self, refresh_token: &str) -> Result<GeneratedTokens, Error> {
-        let now = TimeStamp::now().to_secs();
+        let now = IggyTimestamp::now().to_secs();
         if refresh_token.is_empty() {
             return Err(Error::InvalidRefreshToken);
         }

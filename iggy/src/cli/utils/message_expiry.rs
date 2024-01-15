@@ -66,7 +66,7 @@ impl FromStr for MessageExpiry {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let result = match s {
-            "none" => MessageExpiry::NeverExpire,
+            "unlimited" | "none" | "None" | "Unlimited" => MessageExpiry::NeverExpire,
             value => {
                 let duration = value.parse::<HumanDuration>().map_err(|e| format!("{e}"))?;
 
@@ -82,6 +82,25 @@ impl FromStr for MessageExpiry {
         };
 
         Ok(result)
+    }
+}
+
+impl From<MessageExpiry> for Option<u32> {
+    fn from(val: MessageExpiry) -> Self {
+        match val {
+            MessageExpiry::ExpireDuration(value) => Some(value.as_secs() as u32),
+            MessageExpiry::NeverExpire => None,
+        }
+    }
+}
+
+impl From<Vec<MessageExpiry>> for MessageExpiry {
+    fn from(values: Vec<MessageExpiry>) -> Self {
+        let mut result = MessageExpiry::NeverExpire;
+        for value in values {
+            result = result + value;
+        }
+        result
     }
 }
 

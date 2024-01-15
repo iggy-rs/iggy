@@ -4,7 +4,7 @@ use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::text;
-use tracing::info;
+use tracing::{debug, info};
 
 impl Stream {
     pub fn get_topics_count(&self) -> u32 {
@@ -105,75 +105,86 @@ impl Stream {
         Ok(())
     }
 
+    pub fn remove_topic(&mut self, identifier: &Identifier) -> Result<Topic, Error> {
+        match identifier.kind {
+            IdKind::Numeric => self.remove_topic_by_id(identifier.get_u32_value()?),
+            IdKind::String => self.remove_topic_by_name(identifier.get_string_value()?),
+        }
+    }
+
     pub fn get_topics(&self) -> Vec<&Topic> {
         self.topics.values().collect()
     }
 
     pub fn get_topic(&self, identifier: &Identifier) -> Result<&Topic, Error> {
         match identifier.kind {
-            IdKind::Numeric => self.get_topic_by_id(identifier.get_u32_value().unwrap()),
-            IdKind::String => self.get_topic_by_name(&identifier.get_string_value().unwrap()),
+            IdKind::Numeric => self.get_topic_by_id(identifier.get_u32_value()?),
+            IdKind::String => self.get_topic_by_name(&identifier.get_string_value()?),
         }
     }
 
     pub fn get_topic_mut(&mut self, identifier: &Identifier) -> Result<&mut Topic, Error> {
         match identifier.kind {
-            IdKind::Numeric => self.get_topic_by_id_mut(identifier.get_u32_value().unwrap()),
-            IdKind::String => self.get_topic_by_name_mut(&identifier.get_string_value().unwrap()),
+            IdKind::Numeric => self.get_topic_by_id_mut(identifier.get_u32_value()?),
+            IdKind::String => self.get_topic_by_name_mut(&identifier.get_string_value()?),
         }
     }
 
     fn get_topic_by_id(&self, id: u32) -> Result<&Topic, Error> {
-        let topic = self.topics.get(&id);
-        if topic.is_none() {
-            return Err(Error::TopicIdNotFound(id, self.stream_id));
-        }
-
-        Ok(topic.unwrap())
+        self.topics
+            .get(&id)
+            .ok_or(Error::TopicIdNotFound(id, self.stream_id))
     }
 
     fn get_topic_by_name(&self, name: &str) -> Result<&Topic, Error> {
-        let topic_id = self.topics_ids.get(name);
-        if topic_id.is_none() {
-            return Err(Error::TopicNameNotFound(name.to_string(), self.stream_id));
-        }
-
-        self.get_topic_by_id(*topic_id.unwrap())
+        self.topics_ids
+            .get(name)
+            .map(|topic_id| self.get_topic_by_id(*topic_id))
+            .ok_or_else(|| Error::TopicNameNotFound(name.to_string(), self.stream_id))?
     }
 
     fn get_topic_by_id_mut(&mut self, id: u32) -> Result<&mut Topic, Error> {
-        let topic = self.topics.get_mut(&id);
-        if topic.is_none() {
-            return Err(Error::TopicIdNotFound(id, self.stream_id));
-        }
-
-        Ok(topic.unwrap())
+        self.topics
+            .get_mut(&id)
+            .ok_or(Error::TopicIdNotFound(id, self.stream_id))
     }
 
     fn get_topic_by_name_mut(&mut self, name: &str) -> Result<&mut Topic, Error> {
-        let topic_id = self.topics_ids.get(name);
-        if topic_id.is_none() {
-            return Err(Error::TopicNameNotFound(name.to_string(), self.stream_id));
-        }
+        self.topics_ids
+            .get(name)
+            .and_then(|topic_id| self.topics.get_mut(topic_id))
+            .ok_or_else(|| Error::TopicNameNotFound(name.to_string(), self.stream_id))
+    }
 
-        Ok(self.topics.get_mut(topic_id.unwrap()).unwrap())
+    fn remove_topic_by_id(&mut self, id: u32) -> Result<Topic, Error> {
+        let topic = self
+            .topics
+            .remove(&id)
+            .ok_or_else(|| Error::TopicIdNotFound(id, self.stream_id))?;
+
+        self.topics_ids
+            .remove(&topic.name)
+            .ok_or_else(|| Error::TopicNameNotFound(topic.name.clone(), self.stream_id))?;
+        Ok(topic)
+    }
+
+    fn remove_topic_by_name(&mut self, name: String) -> Result<Topic, Error> {
+        let topic_id = self
+            .topics_ids
+            .remove(&name)
+            .ok_or_else(|| Error::TopicNameNotFound(name, self.stream_id))?;
+
+        self.topics
+            .remove(&topic_id)
+            .ok_or_else(|| Error::TopicIdNotFound(topic_id, self.stream_id))
     }
 
     pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, Error> {
-        let topic_id;
-        let topic_name;
-        {
-            let topic = self.get_topic(id)?;
-            topic_id = topic.topic_id;
-            topic_name = topic.name.clone();
-            if topic.delete().await.is_err() {
-                return Err(Error::CannotDeleteTopic(topic.topic_id, self.stream_id));
-            }
-        }
-
-        let topic = self.topics.remove(&topic_id).unwrap();
-        self.topics_ids.remove(&topic_name);
-
+        let topic = self.remove_topic(id)?;
+        topic.delete().await.map_err(|err| {
+            debug!("Delete topic failed: {}", err);
+            Error::CannotDeleteTopic(topic.topic_id, self.stream_id)
+        })?;
         Ok(topic)
     }
 }

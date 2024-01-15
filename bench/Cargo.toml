@@ -13,7 +13,7 @@ figlet-rs = "0.1.5"
 futures = "0.3.30"
 human_bytes = "0.4.3"
 human_format = "1.0.3"
-iggy = { path = "../iggy" }
+iggy = { path = "../sdk" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
 quinn = { version = "0.10.2" }

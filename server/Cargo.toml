@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 build = "src/build.rs"
 
@@ -29,7 +29,7 @@ figlet-rs = "0.1.5"
 figment = { version = "0.10.13", features = ["json", "toml", "env"] }
 flume = "0.11.0"
 futures = "0.3.30"
-iggy = { path = "../iggy" }
+iggy = { path = "../sdk" }
 jsonwebtoken = "9.2.0"
 keepcalm = "0.3.5"
 moka = { version = "0.12.3", features = ["future"] }

@@ -3,5 +3,5 @@ target*
 .vscode/
 .DS_Store
 local_data*
-/iggy/errors_table/
+/sdk/errors_table/
 /rust-clippy-results.sarif

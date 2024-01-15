@@ -39,7 +39,7 @@ path = "src/message-headers/producer/main.rs"
 anyhow = "1.0.79"
 bytes = "1.4.0"
 clap = { version = "4.4.16", features = ["derive"] }
-iggy = { path = "../iggy" }
+iggy = { path = "../sdk" }
 rand = "0.8.5"
 serde = { version = "1.0.194", features = ["derive", "rc"] }
 serde_json = "1.0.111"

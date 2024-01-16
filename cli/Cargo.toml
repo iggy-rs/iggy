@@ -9,7 +9,7 @@ homepage = "https://iggy.rs"
 [dependencies]
 anyhow = "1.0.79"
 async-trait = "0.1.77"
-clap = { version = "4.4.16", features = ["derive"] }
+clap = { version = "4.4.17", features = ["derive"] }
 clap_complete = "4.4.7"
 figlet-rs = "0.1.5"
 iggy = { path = "../sdk", features = ["iggy-cli"] }

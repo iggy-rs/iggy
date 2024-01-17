@@ -8,6 +8,7 @@ use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::IggyTimestamp;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -23,6 +24,12 @@ pub struct Partition {
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
     pub created_at: u64,
+    pub messages_count_of_parent_stream: Arc<AtomicU64>,
+    pub messages_count_of_parent_topic: Arc<AtomicU64>,
+    pub messages_count: Arc<AtomicU64>,
+    pub size_of_parent_stream: Arc<AtomicU64>,
+    pub size_of_parent_topic: Arc<AtomicU64>,
+    pub size_bytes: Arc<AtomicU64>,
     pub(crate) message_expiry: Option<u32>,
     pub(crate) consumer_offsets: DashMap<u32, ConsumerOffset>,
     pub(crate) consumer_group_offsets: DashMap<u32, ConsumerOffset>,
@@ -70,6 +77,7 @@ impl ConsumerOffset {
 }
 
 impl Partition {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         stream_id: u32,
         topic_id: u32,
@@ -78,6 +86,10 @@ impl Partition {
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: Option<u32>,
+        messages_count_of_parent_stream: Arc<AtomicU64>,
+        messages_count_of_parent_topic: Arc<AtomicU64>,
+        size_of_parent_stream: Arc<AtomicU64>,
+        size_of_parent_topic: Arc<AtomicU64>,
     ) -> Partition {
         let path = config.get_partition_path(stream_id, topic_id, partition_id);
         let (cached_memory_tracker, messages) = match config.cache.enabled {
@@ -122,6 +134,12 @@ impl Partition {
             config,
             storage,
             created_at: IggyTimestamp::now().to_micros(),
+            size_of_parent_stream,
+            size_of_parent_topic,
+            size_bytes: Arc::new(AtomicU64::new(0)),
+            messages_count_of_parent_stream,
+            messages_count_of_parent_topic,
+            messages_count: Arc::new(AtomicU64::new(0)),
         };
 
         if with_segment {
@@ -133,6 +151,12 @@ impl Partition {
                 partition.config.clone(),
                 partition.storage.clone(),
                 partition.message_expiry,
+                partition.size_of_parent_stream.clone(),
+                partition.size_of_parent_topic.clone(),
+                partition.size_bytes.clone(),
+                partition.messages_count_of_parent_stream.clone(),
+                partition.messages_count_of_parent_topic.clone(),
+                partition.messages_count.clone(),
             );
             partition.segments.push(segment);
         }
@@ -141,10 +165,7 @@ impl Partition {
     }
 
     pub fn get_size_bytes(&self) -> u64 {
-        self.segments
-            .iter()
-            .map(|segment| segment.current_size_bytes as u64)
-            .sum()
+        self.size_bytes.load(std::sync::atomic::Ordering::SeqCst)
     }
 }
 
@@ -153,6 +174,7 @@ mod tests {
     use crate::configs::system::{CacheConfig, SystemConfig};
     use crate::streaming::partitions::partition::Partition;
     use crate::streaming::storage::tests::get_test_system_storage;
+    use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
     #[test]
@@ -173,6 +195,10 @@ mod tests {
             config,
             storage,
             message_expiry,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
 
         assert_eq!(partition.stream_id, stream_id);
@@ -207,6 +233,10 @@ mod tests {
             }),
             storage,
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
         assert!(partition.cache.is_none());
     }
@@ -223,6 +253,10 @@ mod tests {
             Arc::new(SystemConfig::default()),
             storage,
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
         assert!(partition.segments.is_empty());
     }

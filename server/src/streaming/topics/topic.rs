@@ -7,7 +7,7 @@ use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -18,6 +18,10 @@ pub struct Topic {
     pub name: String,
     pub path: String,
     pub partitions_path: String,
+    pub(crate) size_bytes: Arc<AtomicU64>,
+    pub(crate) size_of_parent_stream: Arc<AtomicU64>,
+    pub(crate) messages_count_of_parent_stream: Arc<AtomicU64>,
+    pub(crate) messages_count: Arc<AtomicU64>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) partitions: HashMap<u32, Arc<RwLock<Partition>>>,
     pub(crate) storage: Arc<SystemStorage>,
@@ -37,7 +41,20 @@ impl Topic {
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Topic {
-        Topic::create(stream_id, topic_id, "", 0, config, storage, None, None, 1).unwrap()
+        Topic::create(
+            stream_id,
+            topic_id,
+            "",
+            0,
+            config,
+            storage,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            None,
+            None,
+            1,
+        )
+        .unwrap()
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -48,13 +65,15 @@ impl Topic {
         partitions_count: u32,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
+        size_of_parent_stream: Arc<AtomicU64>,
+        messages_count_of_parent_stream: Arc<AtomicU64>,
         message_expiry: Option<u32>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<Topic, IggyError> {
         let path = config.get_topic_path(stream_id, topic_id);
         let partitions_path = config.get_partitions_path(stream_id, topic_id);
-        let mut topic: Topic = Topic {
+        let mut topic = Topic {
             stream_id,
             topic_id,
             name: name.to_string(),
@@ -62,6 +81,10 @@ impl Topic {
             path,
             partitions_path,
             storage,
+            size_bytes: Arc::new(AtomicU64::new(0)),
+            size_of_parent_stream,
+            messages_count_of_parent_stream,
+            messages_count: Arc::new(AtomicU64::new(0)),
             consumer_groups: HashMap::new(),
             consumer_groups_ids: HashMap::new(),
             current_partition_id: AtomicU32::new(1),
@@ -85,13 +108,8 @@ impl Topic {
         Ok(topic)
     }
 
-    pub async fn get_size(&self) -> IggyByteSize {
-        let mut size_bytes = 0;
-        for partition in self.get_partitions() {
-            let partition = partition.read().await;
-            size_bytes += partition.get_size_bytes();
-        }
-        IggyByteSize::from(size_bytes)
+    pub fn get_size(&self) -> IggyByteSize {
+        IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
     }
 
     pub fn get_partitions(&self) -> Vec<Arc<RwLock<Partition>>> {
@@ -146,6 +164,8 @@ mod tests {
         let replication_factor = 1;
         let config = Arc::new(SystemConfig::default());
         let path = config.get_topic_path(stream_id, topic_id);
+        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
 
         let topic = Topic::create(
             stream_id,
@@ -154,6 +174,8 @@ mod tests {
             partitions_count,
             config,
             storage,
+            messages_count_of_parent_stream,
+            size_of_parent_stream,
             Some(message_expiry),
             Some(max_topic_size),
             replication_factor,

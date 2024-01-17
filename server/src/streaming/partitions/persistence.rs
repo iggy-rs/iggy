@@ -13,6 +13,9 @@ impl Partition {
     }
 
     pub async fn delete(&self) -> Result<(), IggyError> {
+        for segment in &self.segments {
+            self.storage.segment.delete(segment).await?;
+        }
         self.storage.partition.delete(self).await
     }
 
@@ -46,6 +49,7 @@ impl Partition {
             )
             .await?;
         self.add_persisted_segment(0).await?;
+
         Ok(())
     }
 }

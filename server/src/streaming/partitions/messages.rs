@@ -317,10 +317,9 @@ impl Partition {
         messages
     }
 
-    pub async fn append_messages(&mut self, mut messages: Vec<Message>) -> Result<(), Error> {
+    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {
         {
             let last_segment = self.segments.last_mut().ok_or(Error::SegmentNotFound)?;
-
             if last_segment.is_closed {
                 let start_offset = last_segment.end_offset + 1;
                 trace!(
@@ -331,46 +330,55 @@ impl Partition {
             }
         }
 
-        for message in &mut messages {
-            if message.id == 0 {
-                message.id = random_id::get_uuid();
-            }
-        }
-
+        let mut appendable_messages = Vec::with_capacity(messages.len());
         if let Some(message_deduplicator) = &mut self.message_deduplicator {
-            let mut deduplicated_messages = Vec::with_capacity(messages.len());
-            for message in messages {
-                if message_deduplicator.try_insert(&message.id).await {
-                    deduplicated_messages.push(message);
-                } else {
+            for mut message in messages {
+                if message.id == 0 {
+                    message.id = random_id::get_uuid();
+                }
+
+                if !message_deduplicator.try_insert(&message.id).await {
                     warn!(
                         "Ignored the duplicated message ID: {} for partition with ID: {}.",
                         message.id, self.partition_id
                     );
+                    continue;
                 }
-            }
 
-            messages = deduplicated_messages;
+                if self.should_increment_offset {
+                    self.current_offset += 1;
+                } else {
+                    self.should_increment_offset = true;
+                }
+
+                message.offset = self.current_offset;
+                appendable_messages.push(Arc::new(message));
+            }
+        } else {
+            for mut message in messages {
+                if message.id == 0 {
+                    message.id = random_id::get_uuid();
+                }
+
+                if self.should_increment_offset {
+                    self.current_offset += 1;
+                } else {
+                    self.should_increment_offset = true;
+                }
+
+                message.offset = self.current_offset;
+                appendable_messages.push(Arc::new(message));
+            }
         }
 
-        let messages_count = messages.len() as u32;
-        for message in &mut messages {
-            if self.should_increment_offset {
-                self.current_offset += 1;
-            } else {
-                self.should_increment_offset = true;
-            }
-            message.offset = self.current_offset;
-        }
-
-        let messages = messages.into_iter().map(Arc::new).collect::<Vec<_>>();
         {
             let last_segment = self.segments.last_mut().ok_or(Error::SegmentNotFound)?;
-            last_segment.append_messages(&messages).await?;
+            last_segment.append_messages(&appendable_messages).await?;
         }
 
+        let messages_count = appendable_messages.len() as u32;
         if let Some(cache) = &mut self.cache {
-            cache.extend(messages);
+            cache.extend(appendable_messages);
         }
 
         self.unsaved_messages_count += messages_count;

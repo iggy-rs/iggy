@@ -64,8 +64,9 @@ jobs:
   check-commit-message:
     name: Validate commit messages
     runs-on: ubuntu-latest
+    # This action isn't working with workflow_dispatch, so we need to skip it
+    if: github.event_name != 'workflow_dispatch'
     steps:
-
       - name: Check subject line length
         uses: gsactions/commit-message-checker@v2
         with:

@@ -1,13 +1,12 @@
 use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::system::System;
-use futures::future::join_all;
+use futures::future::try_join_all;
 use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::text;
-use std::sync::Arc;
+use std::cell::RefCell;
 use tokio::fs::read_dir;
-use tokio::sync::Mutex;
 use tracing::{error, info};
 
 impl System {
@@ -34,28 +33,18 @@ impl System {
             unloaded_streams.push(stream);
         }
 
-        let loaded_streams = Arc::new(Mutex::new(Vec::new()));
-        let mut load_streams = Vec::new();
-        for mut stream in unloaded_streams {
-            let loaded_streams = loaded_streams.clone();
-            let load_stream = tokio::spawn(async move {
-                match stream.load().await {
-                    Ok(_) => {
-                        loaded_streams.lock().await.push(stream);
-                    }
-                    Err(error) => {
-                        error!(
-                            "Failed to load stream with ID: {}. Error: {}",
-                            stream.stream_id, error
-                        );
-                    }
-                }
-            });
-            load_streams.push(load_stream);
-        }
+        let loaded_streams = RefCell::new(Vec::new());
+        let load_stream_tasks = unloaded_streams.into_iter().map(|mut stream| {
+            let load_stream_task = async {
+                stream.load().await?;
+                loaded_streams.borrow_mut().push(stream);
+                Result::<(), Error>::Ok(())
+            };
+            load_stream_task
+        });
+        try_join_all(load_stream_tasks).await?;
 
-        join_all(load_streams).await;
-        for stream in loaded_streams.lock().await.drain(..) {
+        for stream in loaded_streams.take() {
             if self.streams.contains_key(&stream.stream_id) {
                 error!("Stream with ID: '{}' already exists.", &stream.stream_id);
                 continue;
@@ -284,7 +273,10 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
-    use std::net::{Ipv4Addr, SocketAddr};
+    use std::{
+        net::{Ipv4Addr, SocketAddr},
+        sync::Arc,
+    };
 
     #[tokio::test]
     async fn should_get_stream_by_id_and_name() {

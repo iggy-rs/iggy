@@ -26,8 +26,8 @@ pub struct CreateTopic {
     /// Unique stream ID (numeric or name).
     #[serde(skip)]
     pub stream_id: Identifier,
-    /// Unique topic ID (numeric).
-    pub topic_id: u32,
+    /// Unique topic ID (numeric), if None is provided then the server will automatically assign it.
+    pub topic_id: Option<u32>,
     /// Number of partitions in the topic, max value is 1000.
     pub partitions_count: u32,
     /// Optional message expiry in seconds, if `None` then messages will never expire.
@@ -46,7 +46,7 @@ impl Default for CreateTopic {
     fn default() -> Self {
         CreateTopic {
             stream_id: Identifier::default(),
-            topic_id: 1,
+            topic_id: Some(1),
             partitions_count: 1,
             message_expiry: None,
             max_topic_size: None,
@@ -58,8 +58,10 @@ impl Default for CreateTopic {
 
 impl Validatable<Error> for CreateTopic {
     fn validate(&self) -> Result<(), Error> {
-        if self.topic_id == 0 {
-            return Err(Error::InvalidTopicId);
+        if let Some(topic_id) = self.topic_id {
+            if topic_id == 0 {
+                return Err(Error::InvalidTopicId);
+            }
         }
 
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
@@ -87,7 +89,7 @@ impl BytesSerializable for CreateTopic {
         let stream_id_bytes = self.stream_id.as_bytes();
         let mut bytes = Vec::with_capacity(22 + stream_id_bytes.len() + self.name.len());
         bytes.extend(stream_id_bytes);
-        bytes.put_u32_le(self.topic_id);
+        bytes.put_u32_le(self.topic_id.unwrap_or(0));
         bytes.put_u32_le(self.partitions_count);
         match self.message_expiry {
             Some(message_expiry) => bytes.put_u32_le(message_expiry),
@@ -112,6 +114,7 @@ impl BytesSerializable for CreateTopic {
         let stream_id = Identifier::from_bytes(bytes)?;
         position += stream_id.get_size_bytes() as usize;
         let topic_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let topic_id = if topic_id == 0 { None } else { Some(topic_id) };
         let partitions_count = u32::from_le_bytes(bytes[position + 4..position + 8].try_into()?);
         let message_expiry =
             match u32::from_le_bytes(bytes[position + 8..position + 12].try_into()?) {
@@ -154,7 +157,7 @@ impl Display for CreateTopic {
             f,
             "{}|{}|{}|{}|{}|{}|{}",
             self.stream_id,
-            self.topic_id,
+            self.topic_id.unwrap_or(0),
             self.partitions_count,
             self.message_expiry.unwrap_or(0),
             max_topic_size,
@@ -173,7 +176,7 @@ mod tests {
     fn should_be_serialized_as_bytes() {
         let command = CreateTopic {
             stream_id: Identifier::numeric(1).unwrap(),
-            topic_id: 2,
+            topic_id: Some(2),
             partitions_count: 3,
             message_expiry: Some(10),
             max_topic_size: Some(IggyByteSize::from(100)),
@@ -205,7 +208,7 @@ mod tests {
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
-        assert_eq!(topic_id, command.topic_id);
+        assert_eq!(topic_id, command.topic_id.unwrap());
         assert_eq!(partitions_count, command.partitions_count);
         assert_eq!(message_expiry, command.message_expiry);
         assert_eq!(max_topic_size, command.max_topic_size);
@@ -240,10 +243,12 @@ mod tests {
 
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
-        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.topic_id.unwrap(), topic_id);
+        assert_eq!(command.name, name);
         assert_eq!(command.partitions_count, partitions_count);
         assert_eq!(command.message_expiry, Some(message_expiry));
-        assert_eq!(command.topic_id, topic_id);
+        assert_eq!(command.max_topic_size, Some(max_topic_size));
+        assert_eq!(command.replication_factor, replication_factor);
         assert_eq!(command.partitions_count, partitions_count);
     }
 }

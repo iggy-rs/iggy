@@ -75,7 +75,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 3. Create the stream
     let mut create_stream = CreateStream {
-        stream_id: STREAM_ID,
+        stream_id: Some(STREAM_ID),
         name: STREAM_NAME.to_string(),
     };
     client.create_stream(&create_stream).await.unwrap();
@@ -120,7 +120,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert!(create_stream_result.is_err());
 
     // 8. Try to create the stream with the same name but the different ID and validate that it fails
-    create_stream.stream_id = STREAM_ID + 1;
+    create_stream.stream_id = Some(STREAM_ID + 1);
     create_stream.name = STREAM_NAME.to_string();
     let create_stream_result = client.create_stream(&create_stream).await;
     assert!(create_stream_result.is_err());
@@ -128,7 +128,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 9. Create the topic
     let mut create_topic = CreateTopic {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: TOPIC_ID,
+        topic_id: Some(TOPIC_ID),
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
         message_expiry: None,
@@ -215,7 +215,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert!(create_topic_result.is_err());
 
     // 16. Try to create the topic with the different ID but the same name and validate that it fails
-    create_topic.topic_id = TOPIC_ID + 1;
+    create_topic.topic_id = Some(TOPIC_ID + 1);
     create_topic.name = TOPIC_NAME.to_string();
     let create_topic_result = client.create_topic(&create_topic).await;
     assert!(create_topic_result.is_err());
@@ -684,17 +684,68 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert!(topics.is_empty());
 
-    // 41. Delete the existing stream and ensure it doesn't exist anymore
-    client
-        .delete_stream(&DeleteStream {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
+    // 41. Create the stream with automatically generated ID on the server
+    let stream_name = format!("{}-auto", STREAM_NAME);
+    let stream_id = STREAM_ID + 1;
+    let create_stream = CreateStream {
+        stream_id: None,
+        name: stream_name.clone(),
+    };
+    client.create_stream(&create_stream).await.unwrap();
+
+    let stream = client
+        .get_stream(&GetStream {
+            stream_id: Identifier::numeric(stream_id).unwrap(),
         })
         .await
         .unwrap();
+
+    assert_eq!(stream.id, stream_id);
+    assert_eq!(stream.name, stream_name);
+
+    // 42. Create the topic with automatically generated ID on the server
+    let topic_name = format!("{}-auto", TOPIC_NAME);
+    let topic_id = 1;
+    let create_topic = CreateTopic {
+        stream_id: Identifier::numeric(stream_id).unwrap(),
+        topic_id: None,
+        partitions_count: PARTITIONS_COUNT,
+        name: topic_name.clone(),
+        message_expiry: None,
+        max_topic_size: None,
+        replication_factor: 1,
+    };
+
+    client.create_topic(&create_topic).await.unwrap();
+
+    let topic = client
+        .get_topic(&GetTopic {
+            stream_id: Identifier::numeric(stream_id).unwrap(),
+            topic_id: Identifier::numeric(topic_id).unwrap(),
+        })
+        .await
+        .unwrap();
+
+    assert_eq!(topic.id, topic_id);
+    assert_eq!(topic.name, topic_name);
+
+    // 43. Delete the existing streams and ensure there's no streams left
+    let streams = client.get_streams(&GetStreams {}).await.unwrap();
+    assert_eq!(streams.len(), 2);
+
+    for stream in streams {
+        client
+            .delete_stream(&DeleteStream {
+                stream_id: Identifier::numeric(stream.id).unwrap(),
+            })
+            .await
+            .unwrap();
+    }
+
     let streams = client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
-    // 42. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 44. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
     let clients = client.get_clients(&GetClients {}).await.unwrap();
 
     assert!(clients.len() <= 1);

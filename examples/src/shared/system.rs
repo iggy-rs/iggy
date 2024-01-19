@@ -79,14 +79,14 @@ pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), Er
     info!("Stream does not exist, creating...");
     client
         .create_stream(&CreateStream {
-            stream_id: args.stream_id,
+            stream_id: Some(args.stream_id),
             name: "sample".to_string(),
         })
         .await?;
     client
         .create_topic(&CreateTopic {
             stream_id: Identifier::numeric(args.stream_id).unwrap(),
-            topic_id: args.topic_id,
+            topic_id: Some(args.topic_id),
             partitions_count: args.partitions_count,
             name: "orders".to_string(),
             message_expiry: None,

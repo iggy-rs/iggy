@@ -6,8 +6,11 @@ use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::text;
 use std::cell::RefCell;
+use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::fs::read_dir;
 use tracing::{error, info};
+
+static CURRENT_STREAM_ID: AtomicU32 = AtomicU32::new(1);
 
 impl System {
     pub(crate) async fn load_streams(&mut self) -> Result<(), Error> {
@@ -153,23 +156,40 @@ impl System {
     pub async fn create_stream(
         &mut self,
         session: &Session,
-        stream_id: u32,
+        stream_id: Option<u32>,
         name: &str,
     ) -> Result<(), Error> {
         self.ensure_authenticated(session)?;
         self.permissioner.create_stream(session.get_user_id())?;
-        if self.streams.contains_key(&stream_id) {
-            return Err(Error::StreamIdAlreadyExists(stream_id));
-        }
-
         let name = text::to_lowercase_non_whitespace(name);
         if self.streams_ids.contains_key(&name) {
             return Err(Error::StreamNameAlreadyExists(name.to_string()));
         }
 
-        let stream = Stream::create(stream_id, &name, self.config.clone(), self.storage.clone());
+        let mut id;
+        if stream_id.is_none() {
+            id = CURRENT_STREAM_ID.fetch_add(1, Ordering::SeqCst);
+            loop {
+                if self.streams.contains_key(&id) {
+                    if id == u32::MAX {
+                        return Err(Error::StreamIdAlreadyExists(id));
+                    }
+                    id = CURRENT_STREAM_ID.fetch_add(1, Ordering::SeqCst);
+                } else {
+                    break;
+                }
+            }
+        } else {
+            id = stream_id.unwrap();
+        }
+
+        if self.streams.contains_key(&id) {
+            return Err(Error::StreamIdAlreadyExists(id));
+        }
+
+        let stream = Stream::create(id, &name, self.config.clone(), self.storage.clone());
         stream.persist().await?;
-        info!("Created stream with ID: {}, name: '{}'.", stream_id, name);
+        info!("Created stream with ID: {id}, name: '{name}'.");
         self.streams_ids.insert(name, stream.stream_id);
         self.streams.insert(stream.stream_id, stream);
         self.metrics.increment_streams(1);
@@ -294,7 +314,7 @@ mod tests {
         );
         system.permissioner.init_permissions_for_user(root);
         system
-            .create_stream(&session, stream_id, stream_name)
+            .create_stream(&session, Some(stream_id), stream_name)
             .await
             .unwrap();
 

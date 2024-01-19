@@ -29,7 +29,7 @@ impl CreateTopicCmd {
         Self {
             create_topic: CreateTopic {
                 stream_id,
-                topic_id,
+                topic_id: Some(topic_id),
                 partitions_count,
                 name,
                 message_expiry: message_expiry.clone().into(),
@@ -56,13 +56,13 @@ impl CliCommand for CreateTopicCmd {
             .with_context(|| {
                 format!(
                     "Problem creating topic (ID: {}, name: {}, partitions count: {}) in stream with ID: {}",
-                    self.create_topic.topic_id, self.create_topic.name, self.create_topic.partitions_count, self.create_topic.stream_id
+                    self.create_topic.topic_id.unwrap_or(0), self.create_topic.name, self.create_topic.partitions_count, self.create_topic.stream_id
                 )
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
             "Topic with ID: {}, name: {}, partitions count: {}, message expiry: {}, max topic size: {}, replication factor: {} created in stream with ID: {}",
-            self.create_topic.topic_id,
+            self.create_topic.topic_id.unwrap_or(0),
             self.create_topic.name,
             self.create_topic.partitions_count,
             self.message_expiry,
@@ -77,7 +77,7 @@ impl CliCommand for CreateTopicCmd {
 
 impl fmt::Display for CreateTopicCmd {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        let topic_id = &self.create_topic.topic_id;
+        let topic_id = &self.create_topic.topic_id.unwrap_or(0);
         let topic_name = &self.create_topic.name;
         let message_expiry = &self.message_expiry;
         let max_topic_size = &self.max_topic_size.as_human_string_with_zero_as_unlimited();

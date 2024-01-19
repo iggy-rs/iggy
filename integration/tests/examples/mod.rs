@@ -122,7 +122,7 @@ impl<'a> IggyExampleTest<'a> {
         if existing_stream_and_topic {
             self.client
                 .create_stream(&CreateStream {
-                    stream_id: 1,
+                    stream_id: Some(1),
                     name: "sample-stream".to_string(),
                 })
                 .await
@@ -130,7 +130,7 @@ impl<'a> IggyExampleTest<'a> {
             self.client
                 .create_topic(&CreateTopic {
                     stream_id: Identifier::numeric(1).unwrap(),
-                    topic_id: 1,
+                    topic_id: Some(1),
                     partitions_count: 1,
                     name: "sample-topic".to_string(),
                     message_expiry: None,

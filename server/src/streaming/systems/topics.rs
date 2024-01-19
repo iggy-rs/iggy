@@ -37,7 +37,7 @@ impl System {
         &mut self,
         session: &Session,
         stream_id: &Identifier,
-        topic_id: u32,
+        topic_id: Option<u32>,
         name: &str,
         partitions_count: u32,
         message_expiry: Option<u32>,

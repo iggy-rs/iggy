@@ -70,7 +70,10 @@ pub trait Benchmarkable {
                 info!("Creating the test stream {}", stream_id);
                 let name = format!("stream {}", stream_id);
                 client
-                    .create_stream(&CreateStream { stream_id, name })
+                    .create_stream(&CreateStream {
+                        stream_id: Some(stream_id),
+                        name,
+                    })
                     .await?;
 
                 info!(
@@ -81,7 +84,7 @@ pub trait Benchmarkable {
                 client
                     .create_topic(&CreateTopic {
                         stream_id: Identifier::numeric(stream_id)?,
-                        topic_id,
+                        topic_id: Some(topic_id),
                         partitions_count,
                         name,
                         message_expiry: None,

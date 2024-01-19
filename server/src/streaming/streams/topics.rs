@@ -4,6 +4,7 @@ use iggy::error::Error;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::text;
+use std::sync::atomic::Ordering;
 use tracing::{debug, info};
 
 impl Stream {
@@ -13,24 +14,40 @@ impl Stream {
 
     pub async fn create_topic(
         &mut self,
-        id: u32,
+        topic_id: Option<u32>,
         name: &str,
         partitions_count: u32,
         message_expiry: Option<u32>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), Error> {
-        if self.topics.contains_key(&id) {
-            return Err(Error::TopicIdAlreadyExists(id, self.stream_id));
-        }
-
         let name = text::to_lowercase_non_whitespace(name);
         if self.topics_ids.contains_key(&name) {
             return Err(Error::TopicNameAlreadyExists(name, self.stream_id));
         }
 
-        // TODO: check if max_topic_size is not lower than system.segment.size
+        let mut id;
+        if topic_id.is_none() {
+            id = self.current_topic_id.fetch_add(1, Ordering::SeqCst);
+            loop {
+                if self.topics.contains_key(&id) {
+                    if id == u32::MAX {
+                        return Err(Error::TopicIdAlreadyExists(id, self.stream_id));
+                    }
+                    id = self.current_topic_id.fetch_add(1, Ordering::SeqCst);
+                } else {
+                    break;
+                }
+            }
+        } else {
+            id = topic_id.unwrap();
+        }
 
+        if self.topics.contains_key(&id) {
+            return Err(Error::TopicIdAlreadyExists(id, self.stream_id));
+        }
+
+        // TODO: check if max_topic_size is not lower than system.segment.size
         let topic = Topic::create(
             self.stream_id,
             id,
@@ -208,7 +225,14 @@ mod tests {
         let storage = Arc::new(get_test_system_storage());
         let mut stream = Stream::create(stream_id, stream_name, config, storage);
         stream
-            .create_topic(topic_id, topic_name, 1, message_expiry, max_topic_size, 1)
+            .create_topic(
+                Some(topic_id),
+                topic_name,
+                1,
+                message_expiry,
+                max_topic_size,
+                1,
+            )
             .await
             .unwrap();
 

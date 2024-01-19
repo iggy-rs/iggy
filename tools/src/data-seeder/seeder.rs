@@ -25,19 +25,19 @@ pub async fn seed(client: &IggyClient) -> Result<(), Error> {
 async fn create_streams(client: &IggyClient) -> Result<(), Error> {
     client
         .create_stream(&CreateStream {
-            stream_id: PROD_STREAM_ID,
+            stream_id: Some(PROD_STREAM_ID),
             name: "prod".to_string(),
         })
         .await?;
     client
         .create_stream(&CreateStream {
-            stream_id: TEST_STREAM_ID,
+            stream_id: Some(TEST_STREAM_ID),
             name: "test".to_string(),
         })
         .await?;
     client
         .create_stream(&CreateStream {
-            stream_id: DEV_STREAM_ID,
+            stream_id: Some(DEV_STREAM_ID),
             name: "dev".to_string(),
         })
         .await?;
@@ -50,7 +50,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
         client
             .create_topic(&CreateTopic {
                 stream_id: Identifier::numeric(stream_id)?,
-                topic_id: 1,
+                topic_id: Some(1),
                 name: "orders".to_string(),
                 partitions_count: 1,
                 message_expiry: None,
@@ -62,7 +62,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
         client
             .create_topic(&CreateTopic {
                 stream_id: Identifier::numeric(stream_id)?,
-                topic_id: 2,
+                topic_id: Some(2),
                 name: "users".to_string(),
                 partitions_count: 2,
                 message_expiry: None,
@@ -74,7 +74,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
         client
             .create_topic(&CreateTopic {
                 stream_id: Identifier::numeric(stream_id)?,
-                topic_id: 3,
+                topic_id: Some(3),
                 name: "notifications".to_string(),
                 partitions_count: 3,
                 message_expiry: None,
@@ -86,7 +86,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
         client
             .create_topic(&CreateTopic {
                 stream_id: Identifier::numeric(stream_id)?,
-                topic_id: 4,
+                topic_id: Some(4),
                 name: "payments".to_string(),
                 partitions_count: 2,
                 message_expiry: None,
@@ -98,7 +98,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
         client
             .create_topic(&CreateTopic {
                 stream_id: Identifier::numeric(stream_id)?,
-                topic_id: 5,
+                topic_id: Some(5),
                 name: "deliveries".to_string(),
                 partitions_count: 1,
                 message_expiry: None,

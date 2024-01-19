@@ -70,7 +70,7 @@ impl IggyCmdTestCase for TestPartitionDeleteCmd {
     async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream = client
             .create_stream(&CreateStream {
-                stream_id: self.stream_id,
+                stream_id: Some(self.stream_id),
                 name: self.stream_name.clone(),
             })
             .await;
@@ -79,7 +79,7 @@ impl IggyCmdTestCase for TestPartitionDeleteCmd {
         let topic = client
             .create_topic(&CreateTopic {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: self.topic_id,
+                topic_id: Some(self.topic_id),
                 partitions_count: self.partitions_count,
                 name: self.topic_name.clone(),
                 message_expiry: None,

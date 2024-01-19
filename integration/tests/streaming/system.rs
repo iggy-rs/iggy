@@ -44,7 +44,28 @@ async fn should_create_and_persist_stream() {
     system.init().await.unwrap();
 
     system
-        .create_stream(&session, stream_id, stream_name)
+        .create_stream(&session, Some(stream_id), stream_name)
+        .await
+        .unwrap();
+
+    assert_persisted_stream(&setup.config.get_streams_path(), stream_id).await;
+}
+
+#[tokio::test]
+async fn should_create_and_persist_stream_with_automatically_generated_id() {
+    let setup = TestSetup::init().await;
+    let mut system = System::new(
+        setup.config.clone(),
+        Some(setup.db.clone()),
+        PersonalAccessTokenConfig::default(),
+    );
+    let stream_id = 1;
+    let stream_name = "test";
+    let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));
+    system.init().await.unwrap();
+
+    system
+        .create_stream(&session, None, stream_name)
         .await
         .unwrap();
 
@@ -64,7 +85,7 @@ async fn should_delete_persisted_stream() {
     let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));
     system.init().await.unwrap();
     system
-        .create_stream(&session, stream_id, stream_name)
+        .create_stream(&session, Some(stream_id), stream_name)
         .await
         .unwrap();
     assert_persisted_stream(&setup.config.get_streams_path(), stream_id).await;

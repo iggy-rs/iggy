@@ -4,6 +4,7 @@ use crate::streaming::topics::topic::Topic;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
+use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -13,6 +14,7 @@ pub struct Stream {
     pub path: String,
     pub topics_path: String,
     pub created_at: u64,
+    pub current_topic_id: AtomicU32,
     pub(crate) topics: HashMap<u32, Topic>,
     pub(crate) topics_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
@@ -39,6 +41,7 @@ impl Stream {
             path,
             topics_path,
             config,
+            current_topic_id: AtomicU32::new(1),
             topics: HashMap::new(),
             topics_ids: HashMap::new(),
             storage,

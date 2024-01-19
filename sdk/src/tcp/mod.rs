@@ -1,6 +1,5 @@
 pub mod client;
 pub mod config;
-pub mod messages;
 pub mod partitions;
 pub mod personal_access_tokens;
 pub mod streams;

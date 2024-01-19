@@ -1,6 +1,7 @@
-use crate::error::Error;
 use thiserror::Error;
 use tokio::io;
+
+use crate::error::Error;
 
 /// The error type for the client.
 #[derive(Debug, Error)]

@@ -50,7 +50,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 async fn init_system(client: &IggyClient) {
     match client
         .create_stream(&CreateStream {
-            stream_id: STREAM_ID,
+            stream_id: Some(STREAM_ID),
             name: "sample-stream".to_string(),
         })
         .await
@@ -62,7 +62,7 @@ async fn init_system(client: &IggyClient) {
     match client
         .create_topic(&CreateTopic {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-            topic_id: TOPIC_ID,
+            topic_id: Some(TOPIC_ID),
             partitions_count: 1,
             name: "sample-topic".to_string(),
             message_expiry: None,

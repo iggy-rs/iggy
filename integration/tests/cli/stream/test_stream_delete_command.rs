@@ -38,7 +38,7 @@ impl IggyCmdTestCase for TestStreamDeleteCmd {
     async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream = client
             .create_stream(&CreateStream {
-                stream_id: self.stream_id,
+                stream_id: Some(self.stream_id),
                 name: self.name.clone(),
             })
             .await;

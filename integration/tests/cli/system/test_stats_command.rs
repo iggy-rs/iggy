@@ -15,7 +15,7 @@ impl IggyCmdTestCase for TestStatsCmd {
         let stream_id = Identifier::from_str_value("logs").unwrap();
         let stream = client
             .create_stream(&CreateStream {
-                stream_id: 1,
+                stream_id: Some(1),
                 name: stream_id.as_string(),
             })
             .await;
@@ -23,7 +23,7 @@ impl IggyCmdTestCase for TestStatsCmd {
 
         let topic = client
             .create_topic(&CreateTopic {
-                topic_id: 1,
+                topic_id: Some(1),
                 stream_id,
                 partitions_count: 5,
                 message_expiry: None,

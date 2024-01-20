@@ -34,7 +34,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 1. Create the stream
     let create_stream = CreateStream {
-        stream_id: STREAM_ID,
+        stream_id: Some(STREAM_ID),
         name: STREAM_NAME.to_string(),
     };
     system_client.create_stream(&create_stream).await.unwrap();
@@ -42,7 +42,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 2. Create the topic
     let create_topic = CreateTopic {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: TOPIC_ID,
+        topic_id: Some(TOPIC_ID),
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
         message_expiry: None,

@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.1.9"
+version = "0.2.0"
 edition = "2021"
 build = "src/build.rs"
 
@@ -62,7 +62,7 @@ tracing = { version = "0.1.40" }
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
 ulid = "1.1.0"
-uuid = { version = "1.6.1", features = ["v4", "fast-rng", "zerocopy"] }
+uuid = { version = "1.7.0", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.8", features = ["xxh32"] }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]

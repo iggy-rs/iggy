@@ -870,9 +870,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.4.7"
+version = "4.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfb0d4825b75ff281318c393e8e1b80c4da9fb75a6b1d98547d389d6fe1f48d2"
+checksum = "eaf7dcb7c21d8ca1a2482ee0f1d341f437c9a7af6ca6da359dc5e1b164e98215"
 dependencies = [
  "clap",
 ]
@@ -1856,7 +1856,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.1.8"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -1895,7 +1895,7 @@ dependencies = [
 
 [[package]]
 name = "iggy_examples"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "anyhow",
  "bytes",
@@ -3538,7 +3538,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.1.9"
+version = "0.2.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -4375,9 +4375,9 @@ checksum = "711b9620af191e0cdc7468a8d14e709c3dcdb115b36f838e601583af800a370a"
 
 [[package]]
 name = "uuid"
-version = "1.6.1"
+version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e395fcf16a7a3d8127ec99782007af141946b4795001f876d54fb0d55978560"
+checksum = "f00cc9702ca12d3c81455259621e676d0f7251cec66a21e98fe2e9a37db93b2a"
 dependencies = [
  "getrandom",
  "rand",

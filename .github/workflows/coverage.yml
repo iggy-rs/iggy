@@ -2,9 +2,7 @@ name: coverage
 on:
   workflow_dispatch:
   workflow_call:
-  push:
-    branches:
-      - master
+
 env:
   CARGO_TERM_COLOR: always
   GITHUB_BOT_CONTEXT_STRING: "codecov coverage reporting job"

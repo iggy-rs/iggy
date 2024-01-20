@@ -9,7 +9,7 @@ use thiserror::Error;
     derive(FromRepr, IntoStaticStr),
     strum(serialize_all = "snake_case")
 )]
-pub enum Error {
+pub enum IggyError {
     #[error("Error")]
     Error = 1,
     #[error("Invalid configuration")]
@@ -306,7 +306,7 @@ pub enum Error {
     CannotDeleteConsumerGroupInfo(u32, u32, u32) = 5008,
 }
 
-impl Error {
+impl IggyError {
     pub fn as_code(&self) -> u32 {
         // SAFETY: SdkError specifies #[repr(u32)] representation.
         // https://doc.rust-lang.org/reference/items/enumerations.html#pointer-casting
@@ -318,7 +318,7 @@ impl Error {
     }
 
     pub fn from_code_as_string(code: u32) -> &'static str {
-        ErrorDiscriminants::from_repr(code)
+        IggyErrorDiscriminants::from_repr(code)
             .map(|discriminant| discriminant.into())
             .unwrap_or("unknown error code")
     }
@@ -334,11 +334,11 @@ mod tests {
     fn derived_sdk_error_disciminant_keeps_codes() {
         assert_eq!(
             GROUP_NAME_ERROR_CODE,
-            Error::InvalidConsumerGroupName.as_code()
+            IggyError::InvalidConsumerGroupName.as_code()
         );
         assert_eq!(
             GROUP_NAME_ERROR_CODE,
-            ErrorDiscriminants::InvalidConsumerGroupName as u32
+            IggyErrorDiscriminants::InvalidConsumerGroupName as u32
         );
     }
 
@@ -346,15 +346,15 @@ mod tests {
     fn static_str_uses_kebab_case() {
         assert_eq!(
             "invalid_consumer_group_name",
-            Error::InvalidConsumerGroupName.as_string()
+            IggyError::InvalidConsumerGroupName.as_string()
         )
     }
 
     #[test]
     fn gets_string_from_code() {
         assert_eq!(
-            Error::InvalidConsumerGroupName.as_string(),
-            Error::from_code_as_string(GROUP_NAME_ERROR_CODE)
+            IggyError::InvalidConsumerGroupName.as_string(),
+            IggyError::from_code_as_string(GROUP_NAME_ERROR_CODE)
         )
     }
 }

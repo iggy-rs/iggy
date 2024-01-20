@@ -1,7 +1,7 @@
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::messages::Message;
 use std::sync::Arc;
 use tracing::trace;
@@ -21,7 +21,7 @@ impl Segment {
         &self,
         mut offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         if count == 0 {
             return Ok(EMPTY_MESSAGES);
         }
@@ -62,7 +62,7 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn get_all_messages(&self) -> Result<Vec<Arc<Message>>, Error> {
+    pub async fn get_all_messages(&self) -> Result<Vec<Arc<Message>>, IggyError> {
         self.get_messages(self.start_offset, self.get_messages_count() as u32)
             .await
     }
@@ -70,7 +70,7 @@ impl Segment {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         let messages = self
             .storage
             .segment
@@ -94,7 +94,7 @@ impl Segment {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         trace!(
             "Loading messages from disk, segment start offset: {}, end offset: {}, current offset: {}...",
             start_offset,
@@ -160,7 +160,7 @@ impl Segment {
     async fn load_messages_from_segment_file(
         &self,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         let messages = self
             .storage
             .segment
@@ -176,9 +176,12 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn append_messages(&mut self, messages: &[Arc<Message>]) -> Result<(), Error> {
+    pub async fn append_messages(&mut self, messages: &[Arc<Message>]) -> Result<(), IggyError> {
         if self.is_closed {
-            return Err(Error::SegmentClosed(self.start_offset, self.partition_id));
+            return Err(IggyError::SegmentClosed(
+                self.start_offset,
+                self.partition_id,
+            ));
         }
 
         let len = messages.len();
@@ -251,7 +254,7 @@ impl Segment {
         Ok(())
     }
 
-    pub async fn persist_messages(&mut self) -> Result<(), Error> {
+    pub async fn persist_messages(&mut self) -> Result<(), IggyError> {
         let storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
             return Ok(());

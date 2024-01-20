@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::users::defaults::*;
 use crate::validatable::Validatable;
@@ -37,20 +37,20 @@ impl Default for ChangePassword {
     }
 }
 
-impl Validatable<Error> for ChangePassword {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for ChangePassword {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.current_password.is_empty()
             || self.current_password.len() > MAX_PASSWORD_LENGTH
             || self.current_password.len() < MIN_PASSWORD_LENGTH
         {
-            return Err(Error::InvalidPassword);
+            return Err(IggyError::InvalidPassword);
         }
 
         if self.new_password.is_empty()
             || self.new_password.len() > MAX_PASSWORD_LENGTH
             || self.new_password.len() < MIN_PASSWORD_LENGTH
         {
-            return Err(Error::InvalidPassword);
+            return Err(IggyError::InvalidPassword);
         }
 
         Ok(())
@@ -71,9 +71,9 @@ impl BytesSerializable for ChangePassword {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<ChangePassword, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<ChangePassword, IggyError> {
         if bytes.len() < 9 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let user_id = Identifier::from_bytes(bytes)?;

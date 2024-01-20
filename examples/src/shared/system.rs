@@ -1,7 +1,7 @@
 use crate::shared::args::Args;
 use iggy::client::Client;
 use iggy::consumer::{Consumer, ConsumerKind};
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
@@ -66,7 +66,7 @@ pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
     }
 }
 
-pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), Error> {
+pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), IggyError> {
     let stream = client
         .get_stream(&GetStream {
             stream_id: Identifier::numeric(args.stream_id)?,

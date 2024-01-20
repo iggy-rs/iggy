@@ -4,7 +4,7 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
@@ -21,10 +21,10 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         args: PollingArgs,
-    ) -> Result<PolledMessages, Error> {
+    ) -> Result<PolledMessages, IggyError> {
         self.ensure_authenticated(session)?;
         if args.count == 0 {
-            return Err(Error::InvalidMessagesCount);
+            return Err(IggyError::InvalidMessagesCount);
         }
 
         let stream = self.get_stream(stream_id)?;
@@ -33,7 +33,7 @@ impl System {
             .poll_messages(session.get_user_id(), stream.stream_id, topic.topic_id)?;
 
         if !topic.has_partitions() {
-            return Err(Error::NoPartitions(topic.topic_id, topic.stream_id));
+            return Err(IggyError::NoPartitions(topic.topic_id, topic.stream_id));
         }
 
         let partition_id = match consumer {
@@ -85,7 +85,7 @@ impl System {
                 Err(error) => {
                     // Not sure if we should do this
                     error!("Cannot decrypt the message. Error: {}", error);
-                    return Err(Error::CannotDecryptData);
+                    return Err(IggyError::CannotDecryptData);
                 }
             }
         }
@@ -101,7 +101,7 @@ impl System {
         topic_id: &Identifier,
         partitioning: &Partitioning,
         messages: &Vec<send_messages::Message>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;

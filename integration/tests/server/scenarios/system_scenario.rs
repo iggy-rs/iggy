@@ -13,7 +13,7 @@ use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
@@ -518,7 +518,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             assert_eq!(me.consumer_groups_count, 0);
             assert!(me.consumer_groups.is_empty());
         }
-        Err(e) => assert_eq!(e.as_code(), Error::FeatureUnavailable.as_code()),
+        Err(e) => assert_eq!(e.as_code(), IggyError::FeatureUnavailable.as_code()),
     }
 
     // 32. Get the stats and validate that there is one stream

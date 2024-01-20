@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
@@ -23,10 +23,10 @@ impl Default for GetClient {
     }
 }
 
-impl Validatable<Error> for GetClient {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for GetClient {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.client_id == 0 {
-            return Err(Error::InvalidClientId);
+            return Err(IggyError::InvalidClientId);
         }
 
         Ok(())
@@ -40,9 +40,9 @@ impl BytesSerializable for GetClient {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetClient, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<GetClient, IggyError> {
         if bytes.len() != 4 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let client_id = u32::from_le_bytes(bytes.try_into()?);

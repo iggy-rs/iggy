@@ -5,7 +5,7 @@ use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use serde::{Deserialize, Serialize};
 use sled::Db;
@@ -42,7 +42,7 @@ impl TopicStorage for FileTopicStorage {
         &self,
         topic: &Topic,
         consumer_group: &ConsumerGroup,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let key = get_consumer_group_key(
             topic.stream_id,
             topic.topic_id,
@@ -60,18 +60,18 @@ impl TopicStorage for FileTopicStorage {
                     .insert(&key, data)
                     .with_context(|| format!("Failed to insert consumer group with key: {}", key))
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
 
         Ok(())
     }
 
-    async fn load_consumer_groups(&self, topic: &Topic) -> Result<Vec<ConsumerGroup>, Error> {
+    async fn load_consumer_groups(&self, topic: &Topic) -> Result<Vec<ConsumerGroup>, IggyError> {
         info!("Loading consumer groups for topic {} from disk...", topic);
 
         let key_prefix = get_consumer_groups_key_prefix(topic.stream_id, topic.topic_id);
@@ -92,11 +92,11 @@ impl TopicStorage for FileTopicStorage {
                     }) {
                     Ok(user) => user,
                     Err(err) => {
-                        return Err(Error::CannotDeserializeResource(err));
+                        return Err(IggyError::CannotDeserializeResource(err));
                     }
                 },
                 Err(err) => {
-                    return Err(Error::CannotLoadResource(err));
+                    return Err(IggyError::CannotLoadResource(err));
                 }
             };
             let consumer_group = ConsumerGroup::new(
@@ -115,7 +115,7 @@ impl TopicStorage for FileTopicStorage {
         &self,
         topic: &Topic,
         consumer_group: &ConsumerGroup,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let key = get_consumer_group_key(
             topic.stream_id,
             topic.topic_id,
@@ -134,7 +134,7 @@ impl TopicStorage for FileTopicStorage {
                 Ok(())
             }
             Err(err) => {
-                return Err(Error::CannotDeleteResource(err));
+                return Err(IggyError::CannotDeleteResource(err));
             }
         }
     }
@@ -151,10 +151,10 @@ struct TopicData {
 
 #[async_trait]
 impl Storage<Topic> for FileTopicStorage {
-    async fn load(&self, topic: &mut Topic) -> Result<(), Error> {
+    async fn load(&self, topic: &mut Topic) -> Result<(), IggyError> {
         info!("Loading topic {} from disk...", topic);
         if !Path::new(&topic.path).exists() {
-            return Err(Error::TopicIdNotFound(topic.topic_id, topic.stream_id));
+            return Err(IggyError::TopicIdNotFound(topic.topic_id, topic.stream_id));
         }
 
         let key = get_topic_key(topic.stream_id, topic.topic_id);
@@ -168,16 +168,16 @@ impl Storage<Topic> for FileTopicStorage {
                     let topic_data = rmp_serde::from_slice::<TopicData>(&topic_data)
                         .with_context(|| format!("Failed to deserialize topic with key: {}", key));
                     if let Err(err) = topic_data {
-                        return Err(Error::CannotDeserializeResource(err));
+                        return Err(IggyError::CannotDeserializeResource(err));
                     } else {
                         topic_data.unwrap()
                     }
                 } else {
-                    return Err(Error::ResourceNotFound(key));
+                    return Err(IggyError::ResourceNotFound(key));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotLoadResource(err));
+                return Err(IggyError::CannotLoadResource(err));
             }
         };
 
@@ -191,7 +191,7 @@ impl Storage<Topic> for FileTopicStorage {
             .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} for topic with ID: {} and path: {}",
             topic.topic_id, topic.stream_id, topic.topic_id, &topic.partitions_path));
         if let Err(err) = dir_entries {
-            return Err(Error::CannotReadPartitions(err));
+            return Err(IggyError::CannotReadPartitions(err));
         }
 
         let mut unloaded_partitions = Vec::new();
@@ -258,9 +258,9 @@ impl Storage<Topic> for FileTopicStorage {
         Ok(())
     }
 
-    async fn save(&self, topic: &Topic) -> Result<(), Error> {
+    async fn save(&self, topic: &Topic) -> Result<(), IggyError> {
         if !Path::new(&topic.path).exists() && create_dir(&topic.path).await.is_err() {
-            return Err(Error::CannotCreateTopicDirectory(
+            return Err(IggyError::CannotCreateTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
                 topic.path.clone(),
@@ -270,7 +270,7 @@ impl Storage<Topic> for FileTopicStorage {
         if !Path::new(&topic.partitions_path).exists()
             && create_dir(&topic.partitions_path).await.is_err()
         {
-            return Err(Error::CannotCreatePartitionsDirectory(
+            return Err(IggyError::CannotCreatePartitionsDirectory(
                 topic.stream_id,
                 topic.topic_id,
             ));
@@ -292,11 +292,11 @@ impl Storage<Topic> for FileTopicStorage {
                     .insert(&key, data)
                     .with_context(|| format!("Failed to insert topic with key: {key}"))
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
 
@@ -314,7 +314,7 @@ impl Storage<Topic> for FileTopicStorage {
         Ok(())
     }
 
-    async fn delete(&self, topic: &Topic) -> Result<(), Error> {
+    async fn delete(&self, topic: &Topic) -> Result<(), IggyError> {
         info!("Deleting topic {topic}...");
         let key = get_topic_key(topic.stream_id, topic.topic_id);
         if let Err(err) = self
@@ -322,14 +322,14 @@ impl Storage<Topic> for FileTopicStorage {
             .remove(&key)
             .with_context(|| format!("Failed to delete topic with key: {key}"))
         {
-            return Err(Error::CannotDeleteResource(err));
+            return Err(IggyError::CannotDeleteResource(err));
         }
         for consumer_group in topic.consumer_groups.values() {
             let consumer_group = consumer_group.read().await;
             self.delete_consumer_group(topic, &consumer_group).await?;
         }
         if fs::remove_dir_all(&topic.path).await.is_err() {
-            return Err(Error::CannotDeleteTopicDirectory(
+            return Err(IggyError::CannotDeleteTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
                 topic.path.clone(),

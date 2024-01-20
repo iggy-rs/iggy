@@ -3,7 +3,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use tracing::debug;
 
 pub async fn handle(
@@ -11,7 +11,7 @@ pub async fn handle(
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
-) -> Result<(), Error> {
+) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read();
     system

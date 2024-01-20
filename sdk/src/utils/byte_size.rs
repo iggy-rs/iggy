@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::error::IggyError;
 use byte_unit::{Byte, UnitType};
 use core::fmt;
 use serde::{Deserialize, Serialize};
@@ -90,7 +90,7 @@ impl From<Option<u64>> for IggyByteSize {
 }
 
 impl FromStr for IggyByteSize {
-    type Err = Error;
+    type Err = IggyError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if matches!(s, "0" | "unlimited" | "Unlimited" | "none" | "None") {

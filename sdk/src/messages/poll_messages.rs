@@ -1,7 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::consumer::{Consumer, ConsumerKind};
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -126,8 +126,8 @@ fn default_count() -> u32 {
     10
 }
 
-impl Validatable<Error> for PollMessages {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for PollMessages {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -187,20 +187,20 @@ impl PollingKind {
     }
 
     /// Returns polling kind from the specified code.
-    pub fn from_code(code: u8) -> Result<Self, Error> {
+    pub fn from_code(code: u8) -> Result<Self, IggyError> {
         match code {
             1 => Ok(PollingKind::Offset),
             2 => Ok(PollingKind::Timestamp),
             3 => Ok(PollingKind::First),
             4 => Ok(PollingKind::Last),
             5 => Ok(PollingKind::Next),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }
 
 impl FromStr for PollingKind {
-    type Err = Error;
+    type Err = IggyError;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
             "o" | "offset" => Ok(PollingKind::Offset),
@@ -208,7 +208,7 @@ impl FromStr for PollingKind {
             "f" | "first" => Ok(PollingKind::First),
             "l" | "last" => Ok(PollingKind::Last),
             "n" | "next" => Ok(PollingKind::Next),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }
@@ -256,9 +256,9 @@ impl BytesSerializable for PollMessages {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError> {
         if bytes.len() < 29 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;
@@ -340,9 +340,9 @@ impl BytesSerializable for PollingStrategy {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError> {
         if bytes.len() != 9 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let kind = PollingKind::from_code(bytes[0])?;

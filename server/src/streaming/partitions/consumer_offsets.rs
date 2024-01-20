@@ -2,11 +2,11 @@ use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::polling_consumer::PollingConsumer;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use tracing::trace;
 
 impl Partition {
-    pub async fn get_consumer_offset(&self, consumer: PollingConsumer) -> Result<u64, Error> {
+    pub async fn get_consumer_offset(&self, consumer: PollingConsumer) -> Result<u64, IggyError> {
         trace!(
             "Getting consumer offset for {}, partition: {}, current: {}...",
             consumer,
@@ -36,7 +36,7 @@ impl Partition {
         &self,
         consumer: PollingConsumer,
         offset: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         trace!(
             "Storing offset: {} for {}, partition: {}, current: {}...",
             offset,
@@ -45,7 +45,7 @@ impl Partition {
             self.current_offset
         );
         if offset > self.current_offset {
-            return Err(Error::InvalidOffset(offset));
+            return Err(IggyError::InvalidOffset(offset));
         }
 
         match consumer {
@@ -67,7 +67,7 @@ impl Partition {
         kind: ConsumerKind,
         consumer_id: u32,
         offset: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let consumer_offsets = self.get_consumer_offsets(kind);
         let consumer_offset = consumer_offsets
             .get_mut(&consumer_id)
@@ -99,7 +99,7 @@ impl Partition {
         Ok(())
     }
 
-    pub async fn load_consumer_offsets(&mut self) -> Result<(), Error> {
+    pub async fn load_consumer_offsets(&mut self) -> Result<(), IggyError> {
         trace!(
                 "Loading consumer offsets for partition with ID: {} for topic with ID: {} and stream with ID: {}...",
                 self.partition_id,
@@ -112,7 +112,10 @@ impl Partition {
             .await
     }
 
-    async fn load_consumer_offsets_from_storage(&self, kind: ConsumerKind) -> Result<(), Error> {
+    async fn load_consumer_offsets_from_storage(
+        &self,
+        kind: ConsumerKind,
+    ) -> Result<(), IggyError> {
         let loaded_consumer_offsets = self
             .storage
             .partition

@@ -1,6 +1,6 @@
 use crate::binary::binary_client::{BinaryClient, ClientState};
 use crate::client::Client;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
 use bytes::BufMut;
@@ -40,7 +40,7 @@ impl Default for QuicClient {
 
 #[async_trait]
 impl Client for QuicClient {
-    async fn connect(&self) -> Result<(), Error> {
+    async fn connect(&self) -> Result<(), IggyError> {
         if self.get_state().await == ClientState::Connected {
             return Ok(());
         }
@@ -76,7 +76,7 @@ impl Client for QuicClient {
                     continue;
                 }
 
-                return Err(Error::NotConnected);
+                return Err(IggyError::NotConnected);
             }
 
             connection = connection_result.unwrap();
@@ -89,7 +89,7 @@ impl Client for QuicClient {
         Ok(())
     }
 
-    async fn disconnect(&self) -> Result<(), Error> {
+    async fn disconnect(&self) -> Result<(), IggyError> {
         if self.get_state().await == ClientState::Disconnected {
             return Ok(());
         }
@@ -113,9 +113,9 @@ impl BinaryClient for QuicClient {
         *self.state.lock().await = state;
     }
 
-    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, Error> {
+    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, IggyError> {
         if self.get_state().await == ClientState::Disconnected {
-            return Err(Error::NotConnected);
+            return Err(IggyError::NotConnected);
         }
 
         let connection = self.connection.lock().await;
@@ -134,7 +134,7 @@ impl BinaryClient for QuicClient {
         }
 
         error!("Cannot send data. Client is not connected.");
-        Err(Error::NotConnected)
+        Err(IggyError::NotConnected)
     }
 }
 
@@ -145,7 +145,7 @@ impl QuicClient {
         server_address: &str,
         server_name: &str,
         validate_certificate: bool,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, IggyError> {
         Self::create(Arc::new(QuicClientConfig {
             client_address: client_address.to_string(),
             server_address: server_address.to_string(),
@@ -156,7 +156,7 @@ impl QuicClient {
     }
 
     /// Create a new QUIC client for the provided configuration.
-    pub fn create(config: Arc<QuicClientConfig>) -> Result<Self, Error> {
+    pub fn create(config: Arc<QuicClientConfig>) -> Result<Self, IggyError> {
         let server_address = config.server_address.parse::<SocketAddr>()?;
         let client_address = if server_address.is_ipv6()
             && config.client_address == QuicClientConfig::default().client_address
@@ -171,7 +171,7 @@ impl QuicClient {
         let endpoint = Endpoint::client(client_address);
         if endpoint.is_err() {
             error!("Cannot create client endpoint");
-            return Err(Error::CannotCreateEndpoint);
+            return Err(IggyError::CannotCreateEndpoint);
         }
 
         let mut endpoint = endpoint.unwrap();
@@ -186,12 +186,12 @@ impl QuicClient {
         })
     }
 
-    async fn handle_response(&self, recv: &mut RecvStream) -> Result<Vec<u8>, Error> {
+    async fn handle_response(&self, recv: &mut RecvStream) -> Result<Vec<u8>, IggyError> {
         let buffer = recv
             .read_to_end(self.config.response_buffer_size as usize)
             .await?;
         if buffer.is_empty() {
-            return Err(Error::EmptyResponse);
+            return Err(IggyError::EmptyResponse);
         }
 
         let status = u32::from_le_bytes(buffer[..4].try_into().unwrap());
@@ -199,9 +199,9 @@ impl QuicClient {
             error!(
                 "Received an invalid response with status: {} ({}).",
                 status,
-                Error::from_code_as_string(status)
+                IggyError::from_code_as_string(status)
             );
-            return Err(Error::InvalidResponse(status));
+            return Err(IggyError::InvalidResponse(status));
         }
 
         let length =
@@ -218,20 +218,20 @@ impl QuicClient {
     }
 }
 
-fn configure(config: &QuicClientConfig) -> Result<ClientConfig, Error> {
+fn configure(config: &QuicClientConfig) -> Result<ClientConfig, IggyError> {
     let max_concurrent_bidi_streams = VarInt::try_from(config.max_concurrent_bidi_streams);
     if max_concurrent_bidi_streams.is_err() {
         error!(
             "Invalid 'max_concurrent_bidi_streams': {}",
             config.max_concurrent_bidi_streams
         );
-        return Err(Error::InvalidConfiguration);
+        return Err(IggyError::InvalidConfiguration);
     }
 
     let receive_window = VarInt::try_from(config.receive_window);
     if receive_window.is_err() {
         error!("Invalid 'receive_window': {}", config.receive_window);
-        return Err(Error::InvalidConfiguration);
+        return Err(IggyError::InvalidConfiguration);
     }
 
     let mut transport = quinn::TransportConfig::default();
@@ -248,7 +248,7 @@ fn configure(config: &QuicClientConfig) -> Result<ClientConfig, Error> {
             IdleTimeout::try_from(Duration::from_millis(config.max_idle_timeout));
         if max_idle_timeout.is_err() {
             error!("Invalid 'max_idle_timeout': {}", config.max_idle_timeout);
-            return Err(Error::InvalidConfiguration);
+            return Err(IggyError::InvalidConfiguration);
         }
         transport.max_idle_timeout(Some(max_idle_timeout.unwrap()));
     }

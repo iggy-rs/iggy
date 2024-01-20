@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
 use crate::models::header;
@@ -129,10 +129,10 @@ impl Partitioning {
     }
 
     /// Partition the messages using the provided messages key.
-    pub fn messages_key(value: &[u8]) -> Result<Self, Error> {
+    pub fn messages_key(value: &[u8]) -> Result<Self, IggyError> {
         let length = value.len();
         if length == 0 || length > 255 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         Ok(Partitioning {
@@ -144,7 +144,7 @@ impl Partitioning {
     }
 
     /// Partition the messages using the provided messages key as str.
-    pub fn messages_key_str(value: &str) -> Result<Self, Error> {
+    pub fn messages_key_str(value: &str) -> Result<Self, IggyError> {
         Self::messages_key(value.as_bytes())
     }
 
@@ -192,17 +192,17 @@ impl Partitioning {
 
 impl CommandPayload for SendMessages {}
 
-impl Validatable<Error> for SendMessages {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for SendMessages {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.messages.is_empty() {
-            return Err(Error::InvalidMessagesCount);
+            return Err(IggyError::InvalidMessagesCount);
         }
 
         let key_value_length = self.partitioning.value.len();
         if key_value_length > 255
             || (self.partitioning.kind != PartitioningKind::Balanced && key_value_length == 0)
         {
-            return Err(Error::InvalidKeyValueLength);
+            return Err(IggyError::InvalidKeyValueLength);
         }
 
         let mut headers_size = 0;
@@ -212,18 +212,18 @@ impl Validatable<Error> for SendMessages {
                 for value in headers.values() {
                     headers_size += value.value.len() as u32;
                     if headers_size > MAX_HEADERS_SIZE {
-                        return Err(Error::TooBigHeadersPayload);
+                        return Err(IggyError::TooBigHeadersPayload);
                     }
                 }
             }
             payload_size += message.payload.len() as u32;
             if payload_size > MAX_PAYLOAD_SIZE {
-                return Err(Error::TooBigMessagePayload);
+                return Err(IggyError::TooBigMessagePayload);
             }
         }
 
         if payload_size == 0 {
-            return Err(Error::EmptyMessagePayload);
+            return Err(IggyError::EmptyMessagePayload);
         }
 
         Ok(())
@@ -241,12 +241,12 @@ impl PartitioningKind {
     }
 
     /// Get the partitioning kind from the provided code.
-    pub fn from_code(code: u8) -> Result<Self, Error> {
+    pub fn from_code(code: u8) -> Result<Self, IggyError> {
         match code {
             1 => Ok(PartitioningKind::Balanced),
             2 => Ok(PartitioningKind::PartitionId),
             3 => Ok(PartitioningKind::MessagesKey),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }
@@ -301,19 +301,19 @@ impl BytesSerializable for Partitioning {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
     where
         Self: Sized,
     {
         if bytes.len() < 3 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let kind = PartitioningKind::from_code(bytes[0])?;
         let length = bytes[1];
         let value = bytes[2..2 + length as usize].to_vec();
         if value.len() != length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         Ok(Partitioning {
@@ -340,9 +340,9 @@ impl BytesSerializable for Message {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError> {
         if bytes.len() < 24 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let id = u128::from_le_bytes(bytes[..16].try_into()?);
@@ -359,7 +359,7 @@ impl BytesSerializable for Message {
             bytes[20 + headers_length as usize..24 + headers_length as usize].try_into()?,
         );
         if payload_length == 0 {
-            return Err(Error::EmptyMessagePayload);
+            return Err(IggyError::EmptyMessagePayload);
         }
 
         let payload = Bytes::from(
@@ -368,7 +368,7 @@ impl BytesSerializable for Message {
                 .to_vec(),
         );
         if payload.len() != payload_length as usize {
-            return Err(Error::InvalidMessagePayloadLength);
+            return Err(IggyError::InvalidMessagePayloadLength);
         }
 
         Ok(Message {
@@ -381,13 +381,13 @@ impl BytesSerializable for Message {
 }
 
 impl FromStr for Message {
-    type Err = Error;
+    type Err = IggyError;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         let id = default_message_id();
         let payload = Bytes::from(input.as_bytes().to_vec());
         let length = payload.len() as u32;
         if length == 0 {
-            return Err(Error::EmptyMessagePayload);
+            return Err(IggyError::EmptyMessagePayload);
         }
 
         Ok(Message {
@@ -423,9 +423,9 @@ impl BytesSerializable for SendMessages {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<SendMessages, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<SendMessages, IggyError> {
         if bytes.len() < 11 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;

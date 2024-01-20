@@ -1,6 +1,6 @@
 use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::IggyClient;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::models::header::{HeaderKey, HeaderValue};
@@ -15,14 +15,14 @@ const PROD_STREAM_ID: u32 = 1;
 const TEST_STREAM_ID: u32 = 2;
 const DEV_STREAM_ID: u32 = 3;
 
-pub async fn seed(client: &IggyClient) -> Result<(), Error> {
+pub async fn seed(client: &IggyClient) -> Result<(), IggyError> {
     create_streams(client).await?;
     create_topics(client).await?;
     send_messages(client).await?;
     Ok(())
 }
 
-async fn create_streams(client: &IggyClient) -> Result<(), Error> {
+async fn create_streams(client: &IggyClient) -> Result<(), IggyError> {
     client
         .create_stream(&CreateStream {
             stream_id: Some(PROD_STREAM_ID),
@@ -44,7 +44,7 @@ async fn create_streams(client: &IggyClient) -> Result<(), Error> {
     Ok(())
 }
 
-async fn create_topics(client: &IggyClient) -> Result<(), Error> {
+async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
     let streams = [PROD_STREAM_ID, TEST_STREAM_ID, DEV_STREAM_ID];
     for stream_id in streams {
         client
@@ -110,7 +110,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), Error> {
     Ok(())
 }
 
-async fn send_messages(client: &IggyClient) -> Result<(), Error> {
+async fn send_messages(client: &IggyClient) -> Result<(), IggyError> {
     let mut rng = rand::thread_rng();
     let streams = [PROD_STREAM_ID, TEST_STREAM_ID, DEV_STREAM_ID];
     for stream_id in streams {

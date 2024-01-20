@@ -12,7 +12,7 @@ use futures::Future;
 use iggy::{
     client::{StreamClient, TopicClient},
     clients::client::{IggyClient, IggyClientConfig},
-    error::Error,
+    error::IggyError,
     identifier::Identifier,
     streams::{create_stream::CreateStream, get_streams::GetStreams},
     topics::create_topic::CreateTopic,
@@ -21,8 +21,10 @@ use integration::test_server::{login_root, ClientFactory};
 use std::{pin::Pin, sync::Arc};
 use tracing::info;
 
-pub type BenchmarkFutures =
-    Result<Vec<Pin<Box<dyn Future<Output = Result<BenchmarkResult, Error>> + Send>>>, Error>;
+pub type BenchmarkFutures = Result<
+    Vec<Pin<Box<dyn Future<Output = Result<BenchmarkResult, IggyError>> + Send>>>,
+    IggyError,
+>;
 
 impl From<IggyBenchArgs> for Box<dyn Benchmarkable> {
     fn from(args: IggyBenchArgs) -> Self {
@@ -55,7 +57,7 @@ pub trait Benchmarkable {
 
     /// Initializes the streams and topics for the benchmark.
     /// This method is called before the benchmark is executed.
-    async fn init_streams(&self) -> Result<(), Error> {
+    async fn init_streams(&self) -> Result<(), IggyError> {
         let start_stream_id = self.args().start_stream_id();
         let number_of_streams = self.args().number_of_streams();
         let topic_id: u32 = 1;
@@ -97,7 +99,7 @@ pub trait Benchmarkable {
         Ok(())
     }
 
-    async fn check_streams(&self) -> Result<(), Error> {
+    async fn check_streams(&self) -> Result<(), IggyError> {
         let start_stream_id = self.args().start_stream_id();
         let number_of_streams = self.args().number_of_streams();
         let client = self.client_factory().create_client().await;
@@ -107,7 +109,7 @@ pub trait Benchmarkable {
         for i in 1..=number_of_streams {
             let stream_id = start_stream_id + i;
             if streams.iter().all(|s| s.id != stream_id) {
-                return Err(Error::ResourceNotFound(format!(
+                return Err(IggyError::ResourceNotFound(format!(
                     "Streams for testing are not properly initialized. Stream with id: {} is missing.",
                     stream_id
                 )));

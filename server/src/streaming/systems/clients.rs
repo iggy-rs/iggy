@@ -1,7 +1,7 @@
 use crate::streaming::clients::client_manager::{Client, Transport};
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -78,14 +78,17 @@ impl System {
         &self,
         session: &Session,
         client_id: u32,
-    ) -> Result<Arc<RwLock<Client>>, Error> {
+    ) -> Result<Arc<RwLock<Client>>, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_client(session.get_user_id())?;
         let client_manager = self.client_manager.read().await;
         client_manager.get_client_by_id(client_id)
     }
 
-    pub async fn get_clients(&self, session: &Session) -> Result<Vec<Arc<RwLock<Client>>>, Error> {
+    pub async fn get_clients(
+        &self,
+        session: &Session,
+    ) -> Result<Vec<Arc<RwLock<Client>>>, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_clients(session.get_user_id())?;
         let client_manager = self.client_manager.read().await;

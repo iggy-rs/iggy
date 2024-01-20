@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::send_messages::{Message, Partitioning};
 use std::fmt::Debug;
@@ -12,5 +12,5 @@ pub trait Partitioner: Send + Sync + Debug {
         topic_id: &Identifier,
         partitioning: &Partitioning,
         messages: &[Message],
-    ) -> Result<u32, Error>;
+    ) -> Result<u32, IggyError>;
 }

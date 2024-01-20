@@ -1,6 +1,6 @@
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::text;
 use tokio::sync::RwLock;
@@ -30,7 +30,7 @@ impl Topic {
     pub fn get_consumer_group(
         &self,
         identifier: &Identifier,
-    ) -> Result<&RwLock<ConsumerGroup>, Error> {
+    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_consumer_group_by_id(identifier.get_u32_value().unwrap()),
             IdKind::String => {
@@ -39,10 +39,13 @@ impl Topic {
         }
     }
 
-    pub fn get_consumer_group_by_name(&self, name: &str) -> Result<&RwLock<ConsumerGroup>, Error> {
+    pub fn get_consumer_group_by_name(
+        &self,
+        name: &str,
+    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         let consumer_group_id = self.consumer_groups_ids.get(name);
         if consumer_group_id.is_none() {
-            return Err(Error::ConsumerGroupNameNotFound(
+            return Err(IggyError::ConsumerGroupNameNotFound(
                 name.to_string(),
                 self.topic_id,
             ));
@@ -51,23 +54,26 @@ impl Topic {
         self.get_consumer_group_by_id(*consumer_group_id.unwrap())
     }
 
-    pub fn get_consumer_group_by_id(&self, id: u32) -> Result<&RwLock<ConsumerGroup>, Error> {
+    pub fn get_consumer_group_by_id(&self, id: u32) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         let consumer_group = self.consumer_groups.get(&id);
         if consumer_group.is_none() {
-            return Err(Error::ConsumerGroupIdNotFound(id, self.topic_id));
+            return Err(IggyError::ConsumerGroupIdNotFound(id, self.topic_id));
         }
 
         Ok(consumer_group.unwrap())
     }
 
-    pub async fn create_consumer_group(&mut self, id: u32, name: &str) -> Result<(), Error> {
+    pub async fn create_consumer_group(&mut self, id: u32, name: &str) -> Result<(), IggyError> {
         if self.consumer_groups.contains_key(&id) {
-            return Err(Error::ConsumerGroupIdAlreadyExists(id, self.topic_id));
+            return Err(IggyError::ConsumerGroupIdAlreadyExists(id, self.topic_id));
         }
 
         let name = text::to_lowercase_non_whitespace(name);
         if self.consumer_groups_ids.contains_key(&name) {
-            return Err(Error::ConsumerGroupNameAlreadyExists(name, self.topic_id));
+            return Err(IggyError::ConsumerGroupNameAlreadyExists(
+                name,
+                self.topic_id,
+            ));
         }
 
         let consumer_group =
@@ -90,7 +96,7 @@ impl Topic {
     pub async fn delete_consumer_group(
         &mut self,
         id: &Identifier,
-    ) -> Result<RwLock<ConsumerGroup>, Error> {
+    ) -> Result<RwLock<ConsumerGroup>, IggyError> {
         let consumer_group_id;
         {
             let consumer_group = self.get_consumer_group(id)?;
@@ -115,7 +121,7 @@ impl Topic {
             return Ok(consumer_group);
         }
 
-        Err(Error::ConsumerGroupIdNotFound(
+        Err(IggyError::ConsumerGroupIdNotFound(
             consumer_group_id,
             self.topic_id,
         ))
@@ -125,7 +131,7 @@ impl Topic {
         &self,
         consumer_group_id: &Identifier,
         member_id: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let consumer_group = self.get_consumer_group(consumer_group_id)?;
         let mut consumer_group = consumer_group.write().await;
         consumer_group.add_member(member_id).await;
@@ -140,7 +146,7 @@ impl Topic {
         &self,
         consumer_group_id: &Identifier,
         member_id: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let consumer_group = self.get_consumer_group(consumer_group_id)?;
         let mut consumer_group = consumer_group.write().await;
         consumer_group.delete_member(member_id).await;
@@ -192,7 +198,7 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
-        assert!(matches!(err, Error::ConsumerGroupIdAlreadyExists(_, _)));
+        assert!(matches!(err, IggyError::ConsumerGroupIdAlreadyExists(_, _)));
     }
 
     #[tokio::test]
@@ -208,7 +214,10 @@ mod tests {
         assert!(result.is_err());
         assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
-        assert!(matches!(err, Error::ConsumerGroupNameAlreadyExists(_, _)));
+        assert!(matches!(
+            err,
+            IggyError::ConsumerGroupNameAlreadyExists(_, _)
+        ));
     }
 
     #[tokio::test]

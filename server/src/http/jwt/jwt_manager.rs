@@ -2,7 +2,7 @@ use crate::configs::http::HttpJwtConfig;
 use crate::http::jwt::json_web_token::{GeneratedTokens, JwtClaims, RevokedAccessToken};
 use crate::http::jwt::refresh_token::RefreshToken;
 use crate::http::jwt::storage::TokenStorage;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -43,7 +43,7 @@ impl JwtManager {
         issuer: IssuerOptions,
         validator: ValidatorOptions,
         db: Arc<Db>,
-    ) -> Result<Self, Error> {
+    ) -> Result<Self, IggyError> {
         let validation = JwtManager::create_validation(
             issuer.algorithm,
             &validator.valid_issuers,
@@ -60,7 +60,7 @@ impl JwtManager {
         })
     }
 
-    pub fn from_config(config: &HttpJwtConfig, db: Arc<Db>) -> Result<Self, Error> {
+    pub fn from_config(config: &HttpJwtConfig, db: Arc<Db>) -> Result<Self, IggyError> {
         let algorithm = config.get_algorithm()?;
         let issuer = IssuerOptions {
             issuer: config.issuer.clone(),
@@ -93,7 +93,7 @@ impl JwtManager {
         validator
     }
 
-    pub async fn load_revoked_tokens(&self) -> Result<(), Error> {
+    pub async fn load_revoked_tokens(&self) -> Result<(), IggyError> {
         let revoked_tokens = self.tokens_storage.load_all_revoked_access_tokens()?;
         let mut tokens = self.revoked_tokens.write().await;
         for token in revoked_tokens {
@@ -102,7 +102,7 @@ impl JwtManager {
         Ok(())
     }
 
-    pub async fn delete_expired_revoked_tokens(&self, now: u64) -> Result<(), Error> {
+    pub async fn delete_expired_revoked_tokens(&self, now: u64) -> Result<(), IggyError> {
         let mut tokens_to_delete = Vec::new();
         let revoked_tokens = self.revoked_tokens.read().await;
         for (id, expiry) in revoked_tokens.iter() {
@@ -134,7 +134,7 @@ impl JwtManager {
         Ok(())
     }
 
-    pub async fn delete_expired_refresh_tokens(&self, now: u64) -> Result<(), Error> {
+    pub async fn delete_expired_refresh_tokens(&self, now: u64) -> Result<(), IggyError> {
         let mut tokens_to_delete = Vec::new();
         let refresh_tokens = self.tokens_storage.load_all_refresh_tokens()?;
         for token in refresh_tokens {
@@ -163,7 +163,7 @@ impl JwtManager {
         Ok(())
     }
 
-    pub fn generate(&self, user_id: UserId) -> Result<GeneratedTokens, Error> {
+    pub fn generate(&self, user_id: UserId) -> Result<GeneratedTokens, IggyError> {
         let header = Header::new(self.issuer.algorithm);
         let now = IggyTimestamp::now().to_secs();
         let iat = now;
@@ -182,7 +182,7 @@ impl JwtManager {
         let access_token = encode::<JwtClaims>(&header, &claims, &self.issuer.key);
         if let Err(err) = access_token {
             error!("Cannot generate JWT token. Error: {}", err);
-            return Err(Error::CannotGenerateJwt);
+            return Err(IggyError::CannotGenerateJwt);
         }
 
         let (refresh_token, raw_refresh_token) = RefreshToken::new(
@@ -201,39 +201,43 @@ impl JwtManager {
         })
     }
 
-    pub fn refresh_token(&self, refresh_token: &str) -> Result<GeneratedTokens, Error> {
+    pub fn refresh_token(&self, refresh_token: &str) -> Result<GeneratedTokens, IggyError> {
         let now = IggyTimestamp::now().to_secs();
         if refresh_token.is_empty() {
-            return Err(Error::InvalidRefreshToken);
+            return Err(IggyError::InvalidRefreshToken);
         }
 
         let token_hash = RefreshToken::hash_token(refresh_token);
         let refresh_token = self.tokens_storage.load_refresh_token(&token_hash);
         if refresh_token.is_err() {
-            return Err(Error::InvalidRefreshToken);
+            return Err(IggyError::InvalidRefreshToken);
         }
 
         let refresh_token = refresh_token.unwrap();
         self.tokens_storage.delete_refresh_token(&token_hash)?;
         if refresh_token.expiry < now {
-            return Err(Error::RefreshTokenExpired);
+            return Err(IggyError::RefreshTokenExpired);
         }
 
         self.generate(refresh_token.user_id)
     }
 
-    pub fn decode(&self, token: &str, algorithm: Algorithm) -> Result<TokenData<JwtClaims>, Error> {
+    pub fn decode(
+        &self,
+        token: &str,
+        algorithm: Algorithm,
+    ) -> Result<TokenData<JwtClaims>, IggyError> {
         let validation = self.validations.get(&algorithm);
         if validation.is_none() {
-            return Err(Error::InvalidJwtAlgorithm(Self::map_algorithm_to_string(
-                algorithm,
-            )));
+            return Err(IggyError::InvalidJwtAlgorithm(
+                Self::map_algorithm_to_string(algorithm),
+            ));
         }
 
         let validation = validation.unwrap();
         match jsonwebtoken::decode::<JwtClaims>(token, &self.validator.key, validation) {
             Ok(claims) => Ok(claims),
-            _ => Err(Error::Unauthenticated),
+            _ => Err(IggyError::Unauthenticated),
         }
     }
 
@@ -250,7 +254,7 @@ impl JwtManager {
         .to_string()
     }
 
-    pub async fn revoke_token(&self, token_id: &str, expiry: u64) -> Result<(), Error> {
+    pub async fn revoke_token(&self, token_id: &str, expiry: u64) -> Result<(), IggyError> {
         let mut revoked_tokens = self.revoked_tokens.write().await;
         revoked_tokens.insert(token_id.to_string(), expiry);
         self.tokens_storage

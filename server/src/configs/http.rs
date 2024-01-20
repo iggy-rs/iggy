@@ -1,4 +1,4 @@
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::utils::duration::IggyDuration;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
@@ -67,7 +67,7 @@ pub struct HttpTlsConfig {
 }
 
 impl HttpJwtConfig {
-    pub fn get_algorithm(&self) -> Result<Algorithm, Error> {
+    pub fn get_algorithm(&self) -> Result<Algorithm, IggyError> {
         match self.algorithm.as_str() {
             "HS256" => Ok(Algorithm::HS256),
             "HS384" => Ok(Algorithm::HS384),
@@ -75,7 +75,7 @@ impl HttpJwtConfig {
             "RS256" => Ok(Algorithm::RS256),
             "RS384" => Ok(Algorithm::RS384),
             "RS512" => Ok(Algorithm::RS512),
-            _ => Err(Error::InvalidJwtAlgorithm(self.algorithm.clone())),
+            _ => Err(IggyError::InvalidJwtAlgorithm(self.algorithm.clone())),
         }
     }
 
@@ -87,28 +87,28 @@ impl HttpJwtConfig {
         self.get_secret(&self.encoding_secret)
     }
 
-    pub fn get_decoding_key(&self) -> Result<DecodingKey, Error> {
+    pub fn get_decoding_key(&self) -> Result<DecodingKey, IggyError> {
         if self.decoding_secret.is_empty() {
-            return Err(Error::InvalidJwtSecret);
+            return Err(IggyError::InvalidJwtSecret);
         }
 
         Ok(match self.get_decoding_secret() {
             JwtSecret::Default(ref secret) => DecodingKey::from_secret(secret.as_ref()),
             JwtSecret::Base64(ref secret) => {
-                DecodingKey::from_base64_secret(secret).map_err(|_| Error::InvalidJwtSecret)?
+                DecodingKey::from_base64_secret(secret).map_err(|_| IggyError::InvalidJwtSecret)?
             }
         })
     }
 
-    pub fn get_encoding_key(&self) -> Result<EncodingKey, Error> {
+    pub fn get_encoding_key(&self) -> Result<EncodingKey, IggyError> {
         if self.encoding_secret.is_empty() {
-            return Err(Error::InvalidJwtSecret);
+            return Err(IggyError::InvalidJwtSecret);
         }
 
         Ok(match self.get_encoding_secret() {
             JwtSecret::Default(ref secret) => EncodingKey::from_secret(secret.as_ref()),
             JwtSecret::Base64(ref secret) => {
-                EncodingKey::from_base64_secret(secret).map_err(|_| Error::InvalidJwtSecret)?
+                EncodingKey::from_base64_secret(secret).map_err(|_| IggyError::InvalidJwtSecret)?
             }
         })
     }

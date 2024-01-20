@@ -1,6 +1,6 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 
 impl System {
@@ -10,7 +10,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitions_count: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id)?;
@@ -36,7 +36,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitions_count: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id)?;

@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::error::Error;
+use crate::error::IggyError;
 use bytes::{Buf, BufMut};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -251,7 +251,7 @@ impl BytesSerializable for Permissions {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
     where
         Self: Sized,
     {

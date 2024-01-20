@@ -7,7 +7,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::error::Error;
+use crate::error::IggyError;
 
 // for now only those, in the future will add snappy, lz4, zstd (same as in confluent kafka) in addition to that
 // we should consider brotli as well.
@@ -36,11 +36,11 @@ impl CompressionAlgorithm {
         }
     }
 
-    pub fn from_code(code: u8) -> Result<Self, Error> {
+    pub fn from_code(code: u8) -> Result<Self, IggyError> {
         match code {
             1 => Ok(CompressionAlgorithm::None),
             2 => Ok(CompressionAlgorithm::Gzip),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }

@@ -1,6 +1,6 @@
 use crate::binary::binary_client::{BinaryClient, ClientState};
 use crate::client::Client;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use bytes::BufMut;
@@ -37,8 +37,8 @@ unsafe impl Sync for TcpClient {}
 
 #[async_trait]
 pub(crate) trait ConnectionStream: Debug + Sync + Send {
-    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error>;
-    async fn write(&mut self, buf: &[u8]) -> Result<(), Error>;
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError>;
+    async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]
@@ -59,19 +59,19 @@ unsafe impl Sync for TcpTlsConnectionStream {}
 
 #[async_trait]
 impl ConnectionStream for TcpConnectionStream {
-    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
         let result = self.stream.read_exact(buf).await;
         if let Err(error) = result {
-            return Err(Error::from(error));
+            return Err(IggyError::from(error));
         }
 
         Ok(result.unwrap())
     }
 
-    async fn write(&mut self, buf: &[u8]) -> Result<(), Error> {
+    async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
         let result = self.stream.write_all(buf).await;
         if let Err(error) = result {
-            return Err(Error::from(error));
+            return Err(IggyError::from(error));
         }
 
         Ok(())
@@ -80,19 +80,19 @@ impl ConnectionStream for TcpConnectionStream {
 
 #[async_trait]
 impl ConnectionStream for TcpTlsConnectionStream {
-    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Error> {
+    async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
         let result = self.stream.read_exact(buf).await;
         if let Err(error) = result {
-            return Err(Error::from(error));
+            return Err(IggyError::from(error));
         }
 
         Ok(result.unwrap())
     }
 
-    async fn write(&mut self, buf: &[u8]) -> Result<(), Error> {
+    async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
         let result = self.stream.write_all(buf).await;
         if let Err(error) = result {
-            return Err(Error::from(error));
+            return Err(IggyError::from(error));
         }
 
         Ok(())
@@ -107,7 +107,7 @@ impl Default for TcpClient {
 
 #[async_trait]
 impl Client for TcpClient {
-    async fn connect(&self) -> Result<(), Error> {
+    async fn connect(&self) -> Result<(), IggyError> {
         if self.get_state().await == ClientState::Connected {
             return Ok(());
         }
@@ -141,7 +141,7 @@ impl Client for TcpClient {
                     continue;
                 }
 
-                return Err(Error::NotConnected);
+                return Err(IggyError::NotConnected);
             }
 
             let stream = connection.unwrap();
@@ -176,7 +176,7 @@ impl Client for TcpClient {
         Ok(())
     }
 
-    async fn disconnect(&self) -> Result<(), Error> {
+    async fn disconnect(&self) -> Result<(), IggyError> {
         if self.get_state().await == ClientState::Disconnected {
             return Ok(());
         }
@@ -199,9 +199,9 @@ impl BinaryClient for TcpClient {
         *self.state.lock().await = state;
     }
 
-    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, Error> {
+    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, IggyError> {
         if self.get_state().await == ClientState::Disconnected {
-            return Err(Error::NotConnected);
+            return Err(IggyError::NotConnected);
         }
 
         let mut stream = self.stream.lock().await;
@@ -221,7 +221,7 @@ impl BinaryClient for TcpClient {
             let read_bytes = stream.read(&mut response_buffer).await?;
             if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
                 error!("Received an invalid or empty response.");
-                return Err(Error::EmptyResponse);
+                return Err(IggyError::EmptyResponse);
             }
 
             let status = u32::from_le_bytes(response_buffer[..4].try_into().unwrap());
@@ -230,13 +230,13 @@ impl BinaryClient for TcpClient {
         }
 
         error!("Cannot send data. Client is not connected.");
-        Err(Error::NotConnected)
+        Err(IggyError::NotConnected)
     }
 }
 
 impl TcpClient {
     /// Create a new TCP client for the provided server address.
-    pub fn new(server_address: &str) -> Result<Self, Error> {
+    pub fn new(server_address: &str) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
             ..Default::default()
@@ -244,7 +244,7 @@ impl TcpClient {
     }
 
     /// Create a new TCP client for the provided server address using TLS.
-    pub fn new_tls(server_address: &str, domain: &str) -> Result<Self, Error> {
+    pub fn new_tls(server_address: &str, domain: &str) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
             tls_enabled: true,
@@ -254,7 +254,7 @@ impl TcpClient {
     }
 
     /// Create a new TCP client based on the provided configuration.
-    pub fn create(config: Arc<TcpClientConfig>) -> Result<Self, Error> {
+    pub fn create(config: Arc<TcpClientConfig>) -> Result<Self, IggyError> {
         let server_address = config.server_address.parse::<SocketAddr>()?;
 
         Ok(Self {
@@ -270,14 +270,14 @@ impl TcpClient {
         status: u32,
         length: u32,
         stream: &mut dyn ConnectionStream,
-    ) -> Result<Vec<u8>, Error> {
+    ) -> Result<Vec<u8>, IggyError> {
         if status != 0 {
             error!(
                 "Received an invalid response with status: {} ({}).",
                 status,
-                Error::from_code_as_string(status)
+                IggyError::from_code_as_string(status)
             );
-            return Err(Error::InvalidResponse(status));
+            return Err(IggyError::InvalidResponse(status));
         }
 
         trace!("Status: OK. Response length: {}", length);

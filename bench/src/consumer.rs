@@ -3,7 +3,7 @@ use crate::benchmark_result::BenchmarkResult;
 use iggy::client::MessageClient;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer as IggyConsumer;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use integration::test_server::{login_root, ClientFactory};
@@ -37,7 +37,7 @@ impl Consumer {
         }
     }
 
-    pub async fn run(&self) -> Result<BenchmarkResult, Error> {
+    pub async fn run(&self) -> Result<BenchmarkResult, IggyError> {
         let topic_id: u32 = 1;
         let partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;

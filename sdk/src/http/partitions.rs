@@ -1,5 +1,5 @@
 use crate::client::PartitionClient;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
@@ -7,7 +7,7 @@ use async_trait::async_trait;
 
 #[async_trait]
 impl PartitionClient for HttpClient {
-    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), Error> {
+    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), IggyError> {
         self.post(
             &get_path(
                 &command.stream_id.as_string(),
@@ -19,7 +19,7 @@ impl PartitionClient for HttpClient {
         Ok(())
     }
 
-    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), Error> {
+    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), IggyError> {
         self.delete_with_query(
             &get_path(
                 &command.stream_id.as_string(),

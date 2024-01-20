@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -18,8 +18,8 @@ pub struct GetTopics {
 
 impl CommandPayload for GetTopics {}
 
-impl Validatable<Error> for GetTopics {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for GetTopics {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -29,9 +29,9 @@ impl BytesSerializable for GetTopics {
         self.stream_id.as_bytes()
     }
 
-    fn from_bytes(bytes: &[u8]) -> std::result::Result<GetTopics, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<GetTopics, IggyError> {
         if bytes.len() < 3 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let stream_id = Identifier::from_bytes(bytes)?;

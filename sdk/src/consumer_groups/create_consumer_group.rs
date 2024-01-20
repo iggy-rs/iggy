@@ -1,7 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::consumer_groups::MAX_NAME_LENGTH;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::utils::text;
 use crate::validatable::Validatable;
@@ -43,18 +43,18 @@ impl Default for CreateConsumerGroup {
     }
 }
 
-impl Validatable<Error> for CreateConsumerGroup {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for CreateConsumerGroup {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.consumer_group_id == 0 {
-            return Err(Error::InvalidConsumerGroupId);
+            return Err(IggyError::InvalidConsumerGroupId);
         }
 
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidConsumerGroupName);
+            return Err(IggyError::InvalidConsumerGroupName);
         }
 
         if !text::is_resource_name_valid(&self.name) {
-            return Err(Error::InvalidConsumerGroupName);
+            return Err(IggyError::InvalidConsumerGroupName);
         }
 
         Ok(())
@@ -76,9 +76,9 @@ impl BytesSerializable for CreateConsumerGroup {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreateConsumerGroup, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<CreateConsumerGroup, IggyError> {
         if bytes.len() < 10 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;

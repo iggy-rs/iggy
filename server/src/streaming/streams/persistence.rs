@@ -1,17 +1,17 @@
 use crate::streaming::streams::stream::Stream;
-use iggy::error::Error;
+use iggy::error::IggyError;
 
 impl Stream {
-    pub async fn load(&mut self) -> Result<(), Error> {
+    pub async fn load(&mut self) -> Result<(), IggyError> {
         let storage = self.storage.clone();
         storage.stream.load(self).await
     }
 
-    pub async fn persist(&self) -> Result<(), Error> {
+    pub async fn persist(&self) -> Result<(), IggyError> {
         self.storage.stream.save(self).await
     }
 
-    pub async fn delete(&self) -> Result<(), Error> {
+    pub async fn delete(&self) -> Result<(), IggyError> {
         for topic in self.get_topics() {
             topic.delete().await?;
         }
@@ -19,7 +19,7 @@ impl Stream {
         self.storage.stream.delete(self).await
     }
 
-    pub async fn persist_messages(&self) -> Result<(), Error> {
+    pub async fn persist_messages(&self) -> Result<(), IggyError> {
         for topic in self.get_topics() {
             topic.persist_messages().await?;
         }
@@ -27,7 +27,7 @@ impl Stream {
         Ok(())
     }
 
-    pub async fn purge(&self) -> Result<(), Error> {
+    pub async fn purge(&self) -> Result<(), IggyError> {
         for topic in self.get_topics() {
             topic.purge().await?;
         }

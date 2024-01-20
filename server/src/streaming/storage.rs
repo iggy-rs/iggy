@@ -18,7 +18,7 @@ use crate::streaming::users::storage::FileUserStorage;
 use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::messages::Message;
 use iggy::models::user_info::UserId;
 use sled::Db;
@@ -27,9 +27,9 @@ use std::sync::Arc;
 
 #[async_trait]
 pub trait Storage<T>: Sync + Send {
-    async fn load(&self, component: &mut T) -> Result<(), Error>;
-    async fn save(&self, component: &T) -> Result<(), Error>;
-    async fn delete(&self, component: &T) -> Result<(), Error>;
+    async fn load(&self, component: &mut T) -> Result<(), IggyError>;
+    async fn save(&self, component: &T) -> Result<(), IggyError>;
+    async fn delete(&self, component: &T) -> Result<(), IggyError>;
 }
 
 #[async_trait]
@@ -37,19 +37,22 @@ pub trait SystemInfoStorage: Storage<SystemInfo> {}
 
 #[async_trait]
 pub trait UserStorage: Storage<User> {
-    async fn load_by_id(&self, id: UserId) -> Result<User, Error>;
-    async fn load_by_username(&self, username: &str) -> Result<User, Error>;
-    async fn load_all(&self) -> Result<Vec<User>, Error>;
+    async fn load_by_id(&self, id: UserId) -> Result<User, IggyError>;
+    async fn load_by_username(&self, username: &str) -> Result<User, IggyError>;
+    async fn load_all(&self) -> Result<Vec<User>, IggyError>;
 }
 
 #[async_trait]
 pub trait PersonalAccessTokenStorage: Storage<PersonalAccessToken> {
-    async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, Error>;
-    async fn load_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, Error>;
-    async fn load_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error>;
-    async fn load_by_name(&self, user_id: UserId, name: &str)
-        -> Result<PersonalAccessToken, Error>;
-    async fn delete_for_user(&self, user_id: UserId, name: &str) -> Result<(), Error>;
+    async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, IggyError>;
+    async fn load_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, IggyError>;
+    async fn load_by_token(&self, token: &str) -> Result<PersonalAccessToken, IggyError>;
+    async fn load_by_name(
+        &self,
+        user_id: UserId,
+        name: &str,
+    ) -> Result<PersonalAccessToken, IggyError>;
+    async fn delete_for_user(&self, user_id: UserId, name: &str) -> Result<(), IggyError>;
 }
 
 #[async_trait]
@@ -61,32 +64,32 @@ pub trait TopicStorage: Storage<Topic> {
         &self,
         topic: &Topic,
         consumer_group: &ConsumerGroup,
-    ) -> Result<(), Error>;
-    async fn load_consumer_groups(&self, topic: &Topic) -> Result<Vec<ConsumerGroup>, Error>;
+    ) -> Result<(), IggyError>;
+    async fn load_consumer_groups(&self, topic: &Topic) -> Result<Vec<ConsumerGroup>, IggyError>;
     async fn delete_consumer_group(
         &self,
         topic: &Topic,
         consumer_group: &ConsumerGroup,
-    ) -> Result<(), Error>;
+    ) -> Result<(), IggyError>;
 }
 
 #[async_trait]
 pub trait PartitionStorage: Storage<Partition> {
-    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), Error>;
+    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError>;
     async fn load_consumer_offsets(
         &self,
         kind: ConsumerKind,
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
-    ) -> Result<Vec<ConsumerOffset>, Error>;
+    ) -> Result<Vec<ConsumerOffset>, IggyError>;
     async fn delete_consumer_offsets(
         &self,
         kind: ConsumerKind,
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
-    ) -> Result<(), Error>;
+    ) -> Result<(), IggyError>;
 }
 
 #[async_trait]
@@ -95,40 +98,41 @@ pub trait SegmentStorage: Storage<Segment> {
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, Error>;
+    ) -> Result<Vec<Arc<Message>>, IggyError>;
     async fn load_newest_messages_by_size(
         &self,
         segment: &Segment,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, Error>;
+    ) -> Result<Vec<Arc<Message>>, IggyError>;
     async fn save_messages(
         &self,
         segment: &Segment,
         messages: &[Arc<Message>],
-    ) -> Result<u32, Error>;
-    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, Error>;
-    async fn load_checksums(&self, segment: &Segment) -> Result<(), Error>;
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, Error>;
+    ) -> Result<u32, IggyError>;
+    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
+    async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
+    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
     async fn load_index_range(
         &self,
         segment: &Segment,
         segment_start_offset: u64,
         index_start_offset: u64,
         index_end_offset: u64,
-    ) -> Result<Option<IndexRange>, Error>;
+    ) -> Result<Option<IndexRange>, IggyError>;
     async fn save_index(
         &self,
         segment: &Segment,
         current_position: u32,
         messages: &[Arc<Message>],
-    ) -> Result<(), Error>;
-    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, Error>;
-    async fn load_last_time_index(&self, segment: &Segment) -> Result<Option<TimeIndex>, Error>;
+    ) -> Result<(), IggyError>;
+    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
+    async fn load_last_time_index(&self, segment: &Segment)
+        -> Result<Option<TimeIndex>, IggyError>;
     async fn save_time_index(
         &self,
         segment: &Segment,
         messages: &[Arc<Message>],
-    ) -> Result<(), Error>;
+    ) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]
@@ -221,15 +225,15 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl Storage<SystemInfo> for TestSystemInfoStorage {
-        async fn load(&self, _system_info: &mut SystemInfo) -> Result<(), Error> {
+        async fn load(&self, _system_info: &mut SystemInfo) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn save(&self, _system_info: &SystemInfo) -> Result<(), Error> {
+        async fn save(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn delete(&self, _system_info: &SystemInfo) -> Result<(), Error> {
+        async fn delete(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
             Ok(())
         }
     }
@@ -239,30 +243,30 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl Storage<User> for TestUserStorage {
-        async fn load(&self, _user: &mut User) -> Result<(), Error> {
+        async fn load(&self, _user: &mut User) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn save(&self, _user: &User) -> Result<(), Error> {
+        async fn save(&self, _user: &User) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn delete(&self, _user: &User) -> Result<(), Error> {
+        async fn delete(&self, _user: &User) -> Result<(), IggyError> {
             Ok(())
         }
     }
 
     #[async_trait]
     impl UserStorage for TestUserStorage {
-        async fn load_by_id(&self, _id: UserId) -> Result<User, Error> {
+        async fn load_by_id(&self, _id: UserId) -> Result<User, IggyError> {
             Ok(User::default())
         }
 
-        async fn load_by_username(&self, _username: &str) -> Result<User, Error> {
+        async fn load_by_username(&self, _username: &str) -> Result<User, IggyError> {
             Ok(User::default())
         }
 
-        async fn load_all(&self) -> Result<Vec<User>, Error> {
+        async fn load_all(&self) -> Result<Vec<User>, IggyError> {
             Ok(vec![])
         }
     }
@@ -272,30 +276,39 @@ pub(crate) mod tests {
         async fn load(
             &self,
             _personal_access_token: &mut PersonalAccessToken,
-        ) -> Result<(), Error> {
+        ) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn save(&self, _personal_access_token: &PersonalAccessToken) -> Result<(), Error> {
+        async fn save(
+            &self,
+            _personal_access_token: &PersonalAccessToken,
+        ) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn delete(&self, _personal_access_token: &PersonalAccessToken) -> Result<(), Error> {
+        async fn delete(
+            &self,
+            _personal_access_token: &PersonalAccessToken,
+        ) -> Result<(), IggyError> {
             Ok(())
         }
     }
 
     #[async_trait]
     impl PersonalAccessTokenStorage for TestPersonalAccessTokenStorage {
-        async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, Error> {
+        async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, IggyError> {
             Ok(vec![])
         }
 
-        async fn load_for_user(&self, _user_id: UserId) -> Result<Vec<PersonalAccessToken>, Error> {
+        async fn load_for_user(
+            &self,
+            _user_id: UserId,
+        ) -> Result<Vec<PersonalAccessToken>, IggyError> {
             Ok(vec![])
         }
 
-        async fn load_by_token(&self, _token: &str) -> Result<PersonalAccessToken, Error> {
+        async fn load_by_token(&self, _token: &str) -> Result<PersonalAccessToken, IggyError> {
             Ok(PersonalAccessToken::default())
         }
 
@@ -303,26 +316,26 @@ pub(crate) mod tests {
             &self,
             _user_id: UserId,
             _name: &str,
-        ) -> Result<PersonalAccessToken, Error> {
+        ) -> Result<PersonalAccessToken, IggyError> {
             Ok(PersonalAccessToken::default())
         }
 
-        async fn delete_for_user(&self, _user_id: UserId, _name: &str) -> Result<(), Error> {
+        async fn delete_for_user(&self, _user_id: UserId, _name: &str) -> Result<(), IggyError> {
             Ok(())
         }
     }
 
     #[async_trait]
     impl Storage<Stream> for TestStreamStorage {
-        async fn load(&self, _stream: &mut Stream) -> Result<(), Error> {
+        async fn load(&self, _stream: &mut Stream) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn save(&self, _stream: &Stream) -> Result<(), Error> {
+        async fn save(&self, _stream: &Stream) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn delete(&self, _stream: &Stream) -> Result<(), Error> {
+        async fn delete(&self, _stream: &Stream) -> Result<(), IggyError> {
             Ok(())
         }
     }
@@ -331,15 +344,15 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl Storage<Topic> for TestTopicStorage {
-        async fn load(&self, _topic: &mut Topic) -> Result<(), Error> {
+        async fn load(&self, _topic: &mut Topic) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn save(&self, _topic: &Topic) -> Result<(), Error> {
+        async fn save(&self, _topic: &Topic) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn delete(&self, _topic: &Topic) -> Result<(), Error> {
+        async fn delete(&self, _topic: &Topic) -> Result<(), IggyError> {
             Ok(())
         }
     }
@@ -350,11 +363,14 @@ pub(crate) mod tests {
             &self,
             _topic: &Topic,
             _consumer_group: &ConsumerGroup,
-        ) -> Result<(), Error> {
+        ) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn load_consumer_groups(&self, _topic: &Topic) -> Result<Vec<ConsumerGroup>, Error> {
+        async fn load_consumer_groups(
+            &self,
+            _topic: &Topic,
+        ) -> Result<Vec<ConsumerGroup>, IggyError> {
             Ok(vec![])
         }
 
@@ -362,29 +378,29 @@ pub(crate) mod tests {
             &self,
             _topic: &Topic,
             _consumer_group: &ConsumerGroup,
-        ) -> Result<(), Error> {
+        ) -> Result<(), IggyError> {
             Ok(())
         }
     }
 
     #[async_trait]
     impl Storage<Partition> for TestPartitionStorage {
-        async fn load(&self, _partition: &mut Partition) -> Result<(), Error> {
+        async fn load(&self, _partition: &mut Partition) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn save(&self, _partition: &Partition) -> Result<(), Error> {
+        async fn save(&self, _partition: &Partition) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn delete(&self, _partition: &Partition) -> Result<(), Error> {
+        async fn delete(&self, _partition: &Partition) -> Result<(), IggyError> {
             Ok(())
         }
     }
 
     #[async_trait]
     impl PartitionStorage for TestPartitionStorage {
-        async fn save_consumer_offset(&self, _offset: &ConsumerOffset) -> Result<(), Error> {
+        async fn save_consumer_offset(&self, _offset: &ConsumerOffset) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -394,7 +410,7 @@ pub(crate) mod tests {
             _stream_id: u32,
             _topic_id: u32,
             _partition_id: u32,
-        ) -> Result<Vec<ConsumerOffset>, Error> {
+        ) -> Result<Vec<ConsumerOffset>, IggyError> {
             Ok(vec![])
         }
 
@@ -404,22 +420,22 @@ pub(crate) mod tests {
             _stream_id: u32,
             _topic_id: u32,
             _partition_id: u32,
-        ) -> Result<(), Error> {
+        ) -> Result<(), IggyError> {
             Ok(())
         }
     }
 
     #[async_trait]
     impl Storage<Segment> for TestSegmentStorage {
-        async fn load(&self, _segment: &mut Segment) -> Result<(), Error> {
+        async fn load(&self, _segment: &mut Segment) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn save(&self, _segment: &Segment) -> Result<(), Error> {
+        async fn save(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn delete(&self, _segment: &Segment) -> Result<(), Error> {
+        async fn delete(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
     }
@@ -430,7 +446,7 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _index_range: &IndexRange,
-        ) -> Result<Vec<Arc<Message>>, Error> {
+        ) -> Result<Vec<Arc<Message>>, IggyError> {
             Ok(vec![])
         }
 
@@ -438,7 +454,7 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _size: u64,
-        ) -> Result<Vec<Arc<Message>>, Error> {
+        ) -> Result<Vec<Arc<Message>>, IggyError> {
             Ok(vec![])
         }
 
@@ -446,19 +462,19 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _messages: &[Arc<Message>],
-        ) -> Result<u32, Error> {
+        ) -> Result<u32, IggyError> {
             Ok(0)
         }
 
-        async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, Error> {
+        async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {
             Ok(vec![])
         }
 
-        async fn load_checksums(&self, _segment: &Segment) -> Result<(), Error> {
+        async fn load_checksums(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn load_all_indexes(&self, _segment: &Segment) -> Result<Vec<Index>, Error> {
+        async fn load_all_indexes(&self, _segment: &Segment) -> Result<Vec<Index>, IggyError> {
             Ok(vec![])
         }
 
@@ -468,7 +484,7 @@ pub(crate) mod tests {
             _segment_start_offset: u64,
             _index_start_offset: u64,
             _index_end_offset: u64,
-        ) -> Result<Option<IndexRange>, Error> {
+        ) -> Result<Option<IndexRange>, IggyError> {
             Ok(None)
         }
 
@@ -477,18 +493,21 @@ pub(crate) mod tests {
             _segment: &Segment,
             _current_position: u32,
             _messages: &[Arc<Message>],
-        ) -> Result<(), Error> {
+        ) -> Result<(), IggyError> {
             Ok(())
         }
 
-        async fn load_all_time_indexes(&self, _segment: &Segment) -> Result<Vec<TimeIndex>, Error> {
+        async fn load_all_time_indexes(
+            &self,
+            _segment: &Segment,
+        ) -> Result<Vec<TimeIndex>, IggyError> {
             Ok(vec![])
         }
 
         async fn load_last_time_index(
             &self,
             _segment: &Segment,
-        ) -> Result<Option<TimeIndex>, Error> {
+        ) -> Result<Option<TimeIndex>, IggyError> {
             Ok(None)
         }
 
@@ -496,7 +515,7 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _messages: &[Arc<Message>],
-        ) -> Result<(), Error> {
+        ) -> Result<(), IggyError> {
             Ok(())
         }
     }

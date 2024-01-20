@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::BufMut;
 use serde::{Deserialize, Serialize};
@@ -47,23 +47,23 @@ impl Default for Identifier {
     }
 }
 
-impl Validatable<Error> for Identifier {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for Identifier {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.length == 0 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         if self.value.is_empty() {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         #[allow(clippy::cast_possible_truncation)]
         if self.length != self.value.len() as u8 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         if self.kind == IdKind::Numeric && self.length != 4 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         Ok(())
@@ -72,22 +72,22 @@ impl Validatable<Error> for Identifier {
 
 impl Identifier {
     /// Returns the numeric value of the identifier.
-    pub fn get_u32_value(&self) -> Result<u32, Error> {
+    pub fn get_u32_value(&self) -> Result<u32, IggyError> {
         if self.kind != IdKind::Numeric {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         if self.length != 4 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         Ok(u32::from_le_bytes(self.value.clone().try_into().unwrap()))
     }
 
     /// Returns the string value of the identifier.
-    pub fn get_string_value(&self) -> Result<String, Error> {
+    pub fn get_string_value(&self) -> Result<String, IggyError> {
         if self.kind != IdKind::String {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         Ok(String::from_utf8_lossy(&self.value).to_string())
@@ -116,10 +116,10 @@ impl Identifier {
     }
 
     /// Creates a new identifier from the given string value, either numeric or string.
-    pub fn from_str_value(value: &str) -> Result<Self, Error> {
+    pub fn from_str_value(value: &str) -> Result<Self, IggyError> {
         let length = value.len();
         if length == 0 || length > 255 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         match value.parse::<u32>() {
@@ -129,9 +129,9 @@ impl Identifier {
     }
 
     /// Creates a new identifier from the given numeric value.
-    pub fn numeric(value: u32) -> Result<Self, Error> {
+    pub fn numeric(value: u32) -> Result<Self, IggyError> {
         if value == 0 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         Ok(Self {
@@ -142,10 +142,10 @@ impl Identifier {
     }
 
     /// Creates a new identifier from the given string value.
-    pub fn named(value: &str) -> Result<Self, Error> {
+    pub fn named(value: &str) -> Result<Self, IggyError> {
         let length = value.len();
         if length == 0 || length > 255 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         Ok(Self {
@@ -166,19 +166,19 @@ impl BytesSerializable for Identifier {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
     where
         Self: Sized,
     {
         if bytes.len() < 3 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let kind = IdKind::from_code(bytes[0])?;
         let length = bytes[1];
         let value = bytes[2..2 + length as usize].to_vec();
         if value.len() != length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let identifier = Identifier {
@@ -201,28 +201,28 @@ impl IdKind {
     }
 
     /// Returns the identifier kind from the code.
-    pub fn from_code(code: u8) -> Result<Self, Error> {
+    pub fn from_code(code: u8) -> Result<Self, IggyError> {
         match code {
             1 => Ok(IdKind::Numeric),
             2 => Ok(IdKind::String),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }
 
 impl FromStr for IdKind {
-    type Err = Error;
+    type Err = IggyError;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input {
             "n" | "numeric" => Ok(IdKind::Numeric),
             "s" | "string" => Ok(IdKind::String),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }
 
 impl FromStr for Identifier {
-    type Err = Error;
+    type Err = IggyError;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         if let Ok(value) = input.parse::<u32>() {
             return Identifier::numeric(value);

@@ -2,7 +2,7 @@ use crate::streaming::storage::{Storage, UserStorage};
 use crate::streaming::users::user::User;
 use anyhow::Context;
 use async_trait::async_trait;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::sync::Arc;
@@ -26,13 +26,13 @@ unsafe impl Sync for FileUserStorage {}
 
 #[async_trait]
 impl UserStorage for FileUserStorage {
-    async fn load_by_id(&self, id: UserId) -> Result<User, Error> {
+    async fn load_by_id(&self, id: UserId) -> Result<User, IggyError> {
         let mut user = User::empty(id);
         self.load(&mut user).await?;
         Ok(user)
     }
 
-    async fn load_by_username(&self, username: &str) -> Result<User, Error> {
+    async fn load_by_username(&self, username: &str) -> Result<User, IggyError> {
         let user_id_key = get_id_key(username);
         let user_id = self.db.get(&user_id_key).with_context(|| {
             format!(
@@ -48,14 +48,14 @@ impl UserStorage for FileUserStorage {
                     self.load(&mut user).await?;
                     Ok(user)
                 } else {
-                    Err(Error::ResourceNotFound(user_id_key))
+                    Err(IggyError::ResourceNotFound(user_id_key))
                 }
             }
-            Err(err) => Err(Error::CannotLoadResource(err)),
+            Err(err) => Err(IggyError::CannotLoadResource(err)),
         }
     }
 
-    async fn load_all(&self) -> Result<Vec<User>, Error> {
+    async fn load_all(&self) -> Result<Vec<User>, IggyError> {
         let mut users = Vec::new();
         for data in self.db.scan_prefix(format!("{}:", KEY_PREFIX)) {
             let user = match data.with_context(|| {
@@ -72,11 +72,11 @@ impl UserStorage for FileUserStorage {
                 }) {
                     Ok(user) => user,
                     Err(err) => {
-                        return Err(Error::CannotDeserializeResource(err));
+                        return Err(IggyError::CannotDeserializeResource(err));
                     }
                 },
                 Err(err) => {
-                    return Err(Error::CannotLoadResource(err));
+                    return Err(IggyError::CannotLoadResource(err));
                 }
             };
             users.push(user);
@@ -88,7 +88,7 @@ impl UserStorage for FileUserStorage {
 
 #[async_trait]
 impl Storage<User> for FileUserStorage {
-    async fn load(&self, user: &mut User) -> Result<(), Error> {
+    async fn load(&self, user: &mut User) -> Result<(), IggyError> {
         let key = get_key(user.id);
         let user_data = match self.db.get(&key).with_context(|| {
             format!(
@@ -100,11 +100,11 @@ impl Storage<User> for FileUserStorage {
                 if let Some(user_data) = data {
                     user_data
                 } else {
-                    return Err(Error::ResourceNotFound(key));
+                    return Err(IggyError::ResourceNotFound(key));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotLoadResource(err));
+                return Err(IggyError::CannotLoadResource(err));
             }
         };
 
@@ -120,12 +120,12 @@ impl Storage<User> for FileUserStorage {
                 Ok(())
             }
             Err(err) => {
-                return Err(Error::CannotDeserializeResource(err));
+                return Err(IggyError::CannotDeserializeResource(err));
             }
         }
     }
 
-    async fn save(&self, user: &User) -> Result<(), Error> {
+    async fn save(&self, user: &User) -> Result<(), IggyError> {
         let key = get_key(user.id);
         match rmp_serde::to_vec(&user)
             .with_context(|| format!("Failed to serialize user with key: {}", key))
@@ -136,7 +136,7 @@ impl Storage<User> for FileUserStorage {
                     .insert(&key, data)
                     .with_context(|| format!("Failed to insert user with key: {}", key))
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
                 if let Err(err) = self
                     .db
@@ -149,11 +149,11 @@ impl Storage<User> for FileUserStorage {
                         )
                     })
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
 
@@ -161,7 +161,7 @@ impl Storage<User> for FileUserStorage {
         Ok(())
     }
 
-    async fn delete(&self, user: &User) -> Result<(), Error> {
+    async fn delete(&self, user: &User) -> Result<(), IggyError> {
         info!("Deleting user with ID: {}...", user.id);
         let key = get_key(user.id);
         if let Err(err) = self
@@ -169,13 +169,13 @@ impl Storage<User> for FileUserStorage {
             .remove(&key)
             .with_context(|| format!("Failed to delete user with ID: {}, key: {}", user.id, key))
         {
-            return Err(Error::CannotDeleteResource(err));
+            return Err(IggyError::CannotDeleteResource(err));
         } else {
             let key = get_id_key(&user.username);
             if let Err(err) = self.db.remove(&key).with_context(|| {
                 format!("Failed to delete user with ID: {}, key : {}", user.id, key)
             }) {
-                return Err(Error::CannotDeleteResource(err));
+                return Err(IggyError::CannotDeleteResource(err));
             } else {
                 info!("Deleted user with ID: {}.", user.id);
                 Ok(())

@@ -1,7 +1,7 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use tokio::sync::RwLock;
 
@@ -10,7 +10,7 @@ impl Topic {
         &self,
         consumer: PollingConsumer,
         offset: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let partition = self.resolve_partition(consumer).await?;
         let partition = partition.read().await;
         partition.store_consumer_offset(consumer, offset).await
@@ -19,7 +19,7 @@ impl Topic {
     pub async fn get_consumer_offset(
         &self,
         consumer: PollingConsumer,
-    ) -> Result<ConsumerOffsetInfo, Error> {
+    ) -> Result<ConsumerOffsetInfo, IggyError> {
         let partition = self.resolve_partition(consumer).await?;
         let partition = partition.read().await;
         let offset = partition.get_consumer_offset(consumer).await?;
@@ -33,7 +33,7 @@ impl Topic {
     async fn resolve_partition(
         &self,
         consumer: PollingConsumer,
-    ) -> Result<&RwLock<Partition>, Error> {
+    ) -> Result<&RwLock<Partition>, IggyError> {
         let partition_id = match consumer {
             PollingConsumer::Consumer(_, partition_id) => Ok(partition_id),
             PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
@@ -47,7 +47,7 @@ impl Topic {
 
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
-            return Err(Error::PartitionNotFound(
+            return Err(IggyError::PartitionNotFound(
                 partition_id,
                 self.stream_id,
                 self.stream_id,

@@ -1,5 +1,5 @@
 use crate::client::TopicClient;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::models::topic::{Topic, TopicDetails};
 use crate::topics::create_topic::CreateTopic;
@@ -12,7 +12,7 @@ use async_trait::async_trait;
 
 #[async_trait]
 impl TopicClient for HttpClient {
-    async fn get_topic(&self, command: &GetTopic) -> Result<TopicDetails, Error> {
+    async fn get_topic(&self, command: &GetTopic) -> Result<TopicDetails, IggyError> {
         let response = self
             .get(&format!(
                 "{}/{}",
@@ -24,19 +24,19 @@ impl TopicClient for HttpClient {
         Ok(topic)
     }
 
-    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error> {
+    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, IggyError> {
         let response = self.get(&get_path(&command.stream_id.as_string())).await?;
         let topics = response.json().await?;
         Ok(topics)
     }
 
-    async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error> {
+    async fn create_topic(&self, command: &CreateTopic) -> Result<(), IggyError> {
         self.post(&get_path(&command.stream_id.as_string()), &command)
             .await?;
         Ok(())
     }
 
-    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), Error> {
+    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), IggyError> {
         self.put(
             &get_details_path(
                 &command.stream_id.as_string(),
@@ -48,7 +48,7 @@ impl TopicClient for HttpClient {
         Ok(())
     }
 
-    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
+    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), IggyError> {
         self.delete(&get_details_path(
             &command.stream_id.as_string(),
             &command.topic_id.as_string(),
@@ -57,7 +57,7 @@ impl TopicClient for HttpClient {
         Ok(())
     }
 
-    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), Error> {
+    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), IggyError> {
         self.delete(&format!(
             "{}/purge",
             &get_details_path(

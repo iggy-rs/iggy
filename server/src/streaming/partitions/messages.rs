@@ -2,7 +2,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::utils::random_id;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::messages::Message;
 use std::sync::Arc;
 use tracing::{trace, warn};
@@ -29,7 +29,7 @@ impl Partition {
         &self,
         timestamp: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         trace!(
             "Getting messages by timestamp: {} for partition: {}...",
             timestamp,
@@ -86,7 +86,7 @@ impl Partition {
         &self,
         start_offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         trace!(
             "Getting messages for start offset: {} for partition: {}...",
             start_offset,
@@ -114,11 +114,11 @@ impl Partition {
         }
     }
 
-    pub async fn get_first_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, Error> {
+    pub async fn get_first_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, IggyError> {
         self.get_messages_by_offset(0, count).await
     }
 
-    pub async fn get_last_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, Error> {
+    pub async fn get_last_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, IggyError> {
         let mut count = count as u64;
         if count > self.current_offset + 1 {
             count = self.current_offset + 1
@@ -133,7 +133,7 @@ impl Partition {
         &self,
         consumer: PollingConsumer,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         let (consumer_offsets, consumer_id) = match consumer {
             PollingConsumer::Consumer(consumer_id, _) => (&self.consumer_offsets, consumer_id),
             PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
@@ -199,7 +199,7 @@ impl Partition {
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
             let segment_messages = segment.get_messages(offset, count).await?;
@@ -238,7 +238,7 @@ impl Partition {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u32,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         trace!(
             "Getting messages for size: {} bytes for partition: {}...",
             size_bytes,
@@ -317,9 +317,9 @@ impl Partition {
         messages
     }
 
-    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), Error> {
+    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), IggyError> {
         {
-            let last_segment = self.segments.last_mut().ok_or(Error::SegmentNotFound)?;
+            let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             if last_segment.is_closed {
                 let start_offset = last_segment.end_offset + 1;
                 trace!(
@@ -372,7 +372,7 @@ impl Partition {
         }
 
         {
-            let last_segment = self.segments.last_mut().ok_or(Error::SegmentNotFound)?;
+            let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             last_segment.append_messages(&appendable_messages).await?;
         }
 
@@ -383,7 +383,7 @@ impl Partition {
 
         self.unsaved_messages_count += messages_count;
         {
-            let last_segment = self.segments.last_mut().ok_or(Error::SegmentNotFound)?;
+            let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             if self.unsaved_messages_count >= self.config.partition.messages_required_to_save
                 || last_segment.is_full().await
             {

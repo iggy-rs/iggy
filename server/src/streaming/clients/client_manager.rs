@@ -1,5 +1,5 @@
 use crate::streaming::utils::hash;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
@@ -58,10 +58,10 @@ impl ClientManager {
         id
     }
 
-    pub async fn set_user_id(&mut self, client_id: u32, user_id: UserId) -> Result<(), Error> {
+    pub async fn set_user_id(&mut self, client_id: u32, user_id: UserId) -> Result<(), IggyError> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
-            return Err(Error::ClientNotFound(client_id));
+            return Err(IggyError::ClientNotFound(client_id));
         }
 
         let mut client = client.unwrap().write().await;
@@ -69,10 +69,10 @@ impl ClientManager {
         Ok(())
     }
 
-    pub async fn clear_user_id(&mut self, client_id: u32) -> Result<(), Error> {
+    pub async fn clear_user_id(&mut self, client_id: u32) -> Result<(), IggyError> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
-            return Err(Error::ClientNotFound(client_id));
+            return Err(IggyError::ClientNotFound(client_id));
         }
 
         let mut client = client.unwrap().write().await;
@@ -83,15 +83,15 @@ impl ClientManager {
     pub fn get_client_by_address(
         &self,
         address: &SocketAddr,
-    ) -> Result<Arc<RwLock<Client>>, Error> {
+    ) -> Result<Arc<RwLock<Client>>, IggyError> {
         let id = hash::calculate_32(address.to_string().as_bytes());
         self.get_client_by_id(id)
     }
 
-    pub fn get_client_by_id(&self, client_id: u32) -> Result<Arc<RwLock<Client>>, Error> {
+    pub fn get_client_by_id(&self, client_id: u32) -> Result<Arc<RwLock<Client>>, IggyError> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
-            return Err(Error::ClientNotFound(client_id));
+            return Err(IggyError::ClientNotFound(client_id));
         }
 
         Ok(client.unwrap().clone())
@@ -101,7 +101,7 @@ impl ClientManager {
         self.clients.values().cloned().collect()
     }
 
-    pub async fn delete_clients_for_user(&mut self, user_id: UserId) -> Result<(), Error> {
+    pub async fn delete_clients_for_user(&mut self, user_id: UserId) -> Result<(), IggyError> {
         let mut clients_to_remove = Vec::new();
         for client in self.clients.values() {
             let client = client.read().await;
@@ -130,10 +130,10 @@ impl ClientManager {
         stream_id: u32,
         topic_id: u32,
         consumer_group_id: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
-            return Err(Error::ClientNotFound(client_id));
+            return Err(IggyError::ClientNotFound(client_id));
         }
 
         let mut client = client.unwrap().write().await;
@@ -159,10 +159,10 @@ impl ClientManager {
         stream_id: u32,
         topic_id: u32,
         consumer_group_id: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
-            return Err(Error::ClientNotFound(client_id));
+            return Err(IggyError::ClientNotFound(client_id));
         }
         let mut client = client.unwrap().write().await;
         for (index, consumer_group) in client.consumer_groups.iter().enumerate() {

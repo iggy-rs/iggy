@@ -1,5 +1,5 @@
 use crate::client::Client;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::http::config::HttpClientConfig;
 use crate::models::identity_info::IdentityInfo;
 use async_trait::async_trait;
@@ -32,10 +32,10 @@ pub struct HttpClient {
 
 #[async_trait]
 impl Client for HttpClient {
-    async fn connect(&self) -> Result<(), Error> {
+    async fn connect(&self) -> Result<(), IggyError> {
         Ok(())
     }
-    async fn disconnect(&self) -> Result<(), Error> {
+    async fn disconnect(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -51,7 +51,7 @@ impl Default for HttpClient {
 
 impl HttpClient {
     /// Create a new HTTP client for interacting with the Iggy API using the provided API URL.
-    pub fn new(api_url: &str) -> Result<Self, Error> {
+    pub fn new(api_url: &str) -> Result<Self, IggyError> {
         Self::create(Arc::new(HttpClientConfig {
             api_url: api_url.to_string(),
             ..Default::default()
@@ -59,10 +59,10 @@ impl HttpClient {
     }
 
     /// Create a new HTTP client for interacting with the Iggy API using the provided configuration.
-    pub fn create(config: Arc<HttpClientConfig>) -> Result<Self, Error> {
+    pub fn create(config: Arc<HttpClientConfig>) -> Result<Self, IggyError> {
         let api_url = Url::parse(&config.api_url);
         if api_url.is_err() {
-            return Err(Error::CannotParseUrl);
+            return Err(IggyError::CannotParseUrl);
         }
         let api_url = api_url.unwrap();
         let retry_policy = ExponentialBackoff::builder().build_with_max_retries(config.retries);
@@ -79,7 +79,7 @@ impl HttpClient {
     }
 
     /// Invoke HTTP GET request to the Iggy API.
-    pub async fn get(&self, path: &str) -> Result<Response, Error> {
+    pub async fn get(&self, path: &str) -> Result<Response, IggyError> {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
@@ -92,7 +92,7 @@ impl HttpClient {
         &self,
         path: &str,
         query: &T,
-    ) -> Result<Response, Error> {
+    ) -> Result<Response, IggyError> {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
@@ -111,7 +111,7 @@ impl HttpClient {
         &self,
         path: &str,
         payload: &T,
-    ) -> Result<Response, Error> {
+    ) -> Result<Response, IggyError> {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
@@ -130,7 +130,7 @@ impl HttpClient {
         &self,
         path: &str,
         payload: &T,
-    ) -> Result<Response, Error> {
+    ) -> Result<Response, IggyError> {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
@@ -145,7 +145,7 @@ impl HttpClient {
     }
 
     /// Invoke HTTP DELETE request to the Iggy API.
-    pub async fn delete(&self, path: &str) -> Result<Response, Error> {
+    pub async fn delete(&self, path: &str) -> Result<Response, IggyError> {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
@@ -158,7 +158,7 @@ impl HttpClient {
         &self,
         path: &str,
         query: &T,
-    ) -> Result<Response, Error> {
+    ) -> Result<Response, IggyError> {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
@@ -173,8 +173,10 @@ impl HttpClient {
     }
 
     /// Get full URL for the provided path.
-    pub fn get_url(&self, path: &str) -> Result<Url, Error> {
-        self.api_url.join(path).map_err(|_| Error::CannotParseUrl)
+    pub fn get_url(&self, path: &str) -> Result<Url, IggyError> {
+        self.api_url
+            .join(path)
+            .map_err(|_| IggyError::CannotParseUrl)
     }
 
     /// Returns true if the client is authenticated.
@@ -204,14 +206,14 @@ impl HttpClient {
     }
 
     /// Set the access token and refresh token from the provided identity.
-    pub async fn set_tokens_from_identity(&self, identity: &IdentityInfo) -> Result<(), Error> {
+    pub async fn set_tokens_from_identity(&self, identity: &IdentityInfo) -> Result<(), IggyError> {
         if identity.tokens.is_none() {
-            return Err(Error::JwtMissing);
+            return Err(IggyError::JwtMissing);
         }
 
         let tokens = identity.tokens.as_ref().unwrap();
         if tokens.access_token.token.is_empty() {
-            return Err(Error::JwtMissing);
+            return Err(IggyError::JwtMissing);
         }
 
         self.set_access_token(Some(tokens.access_token.token.clone()))
@@ -222,27 +224,27 @@ impl HttpClient {
     }
 
     /// Refresh the access token using the provided refresh token.
-    pub async fn refresh_access_token_using_current_refresh_token(&self) -> Result<(), Error> {
+    pub async fn refresh_access_token_using_current_refresh_token(&self) -> Result<(), IggyError> {
         let refresh_token = self.refresh_token.read().await;
         self.refresh_access_token(&refresh_token).await
     }
 
-    async fn handle_response(response: Response) -> Result<Response, Error> {
+    async fn handle_response(response: Response) -> Result<Response, IggyError> {
         match response.status().is_success() {
             true => Ok(response),
-            false => Err(Error::HttpResponseError(
+            false => Err(IggyError::HttpResponseError(
                 response.status().as_u16(),
                 response.text().await.unwrap_or("error".to_string()),
             )),
         }
     }
 
-    async fn fail_if_not_authenticated(&self, path: &str) -> Result<(), Error> {
+    async fn fail_if_not_authenticated(&self, path: &str) -> Result<(), IggyError> {
         if UNAUTHORIZED_PATHS.contains(&path) {
             return Ok(());
         }
         if !self.is_authenticated().await {
-            return Err(Error::Unauthenticated);
+            return Err(IggyError::Unauthenticated);
         }
         Ok(())
     }

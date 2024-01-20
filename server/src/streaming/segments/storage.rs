@@ -8,7 +8,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
 use iggy::bytes_serializable::BytesSerializable;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::messages::{Message, MessageState};
 use iggy::utils::checksum;
 use std::collections::HashMap;
@@ -41,7 +41,7 @@ unsafe impl Sync for FileSegmentStorage {}
 // TODO: Split into smaller components.
 #[async_trait]
 impl Storage<Segment> for FileSegmentStorage {
-    async fn load(&self, segment: &mut Segment) -> Result<(), Error> {
+    async fn load(&self, segment: &mut Segment) -> Result<(), IggyError> {
         info!(
             "Loading segment from disk for start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {} ...",
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id
@@ -104,7 +104,7 @@ impl Storage<Segment> for FileSegmentStorage {
         Ok(())
     }
 
-    async fn save(&self, segment: &Segment) -> Result<(), Error> {
+    async fn save(&self, segment: &Segment) -> Result<(), IggyError> {
         info!("Saving segment with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id);
         if !Path::new(&segment.log_path).exists()
@@ -114,7 +114,9 @@ impl Storage<Segment> for FileSegmentStorage {
                 .await
                 .is_err()
         {
-            return Err(Error::CannotCreateSegmentLogFile(segment.log_path.clone()));
+            return Err(IggyError::CannotCreateSegmentLogFile(
+                segment.log_path.clone(),
+            ));
         }
 
         if !Path::new(&segment.time_index_path).exists()
@@ -124,7 +126,7 @@ impl Storage<Segment> for FileSegmentStorage {
                 .await
                 .is_err()
         {
-            return Err(Error::CannotCreateSegmentTimeIndexFile(
+            return Err(IggyError::CannotCreateSegmentTimeIndexFile(
                 segment.time_index_path.clone(),
             ));
         }
@@ -136,7 +138,7 @@ impl Storage<Segment> for FileSegmentStorage {
                 .await
                 .is_err()
         {
-            return Err(Error::CannotCreateSegmentIndexFile(
+            return Err(IggyError::CannotCreateSegmentIndexFile(
                 segment.index_path.clone(),
             ));
         }
@@ -147,7 +149,7 @@ impl Storage<Segment> for FileSegmentStorage {
         Ok(())
     }
 
-    async fn delete(&self, segment: &Segment) -> Result<(), Error> {
+    async fn delete(&self, segment: &Segment) -> Result<(), IggyError> {
         info!(
             "Deleting segment with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
             segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
@@ -169,7 +171,7 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         let mut messages = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
@@ -186,7 +188,7 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, Error> {
+    ) -> Result<Vec<Arc<Message>>, IggyError> {
         let mut messages = Vec::new();
         let mut total_size_bytes = 0;
         load_messages_by_size(segment, size_bytes, |message: Message| {
@@ -207,7 +209,7 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         messages: &[Arc<Message>],
-    ) -> Result<u32, Error> {
+    ) -> Result<u32, IggyError> {
         let messages_size = messages
             .iter()
             .map(|message| message.get_size_bytes())
@@ -224,13 +226,13 @@ impl SegmentStorage for FileSegmentStorage {
             .await
             .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
         {
-            return Err(Error::CannotSaveMessagesToSegment(err));
+            return Err(IggyError::CannotSaveMessagesToSegment(err));
         }
 
         Ok(messages_size)
     }
 
-    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, Error> {
+    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
         let mut message_ids = Vec::new();
         load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
             message_ids.push(message.id);
@@ -241,7 +243,7 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(message_ids)
     }
 
-    async fn load_checksums(&self, segment: &Segment) -> Result<(), Error> {
+    async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError> {
         load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
             let calculated_checksum = checksum::calculate(&message.payload);
             trace!(
@@ -251,7 +253,7 @@ impl SegmentStorage for FileSegmentStorage {
                 message.checksum
             );
             if calculated_checksum != message.checksum {
-                return Err(Error::InvalidMessageChecksum(
+                return Err(IggyError::InvalidMessageChecksum(
                     calculated_checksum,
                     message.checksum,
                     message.offset,
@@ -263,7 +265,7 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(())
     }
 
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, Error> {
+    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError> {
         trace!("Loading indexes from file...");
         let file = file::open(&segment.index_path).await?;
         let file_size = file.metadata().await?.len() as usize;
@@ -312,7 +314,7 @@ impl SegmentStorage for FileSegmentStorage {
         segment_start_offset: u64,
         mut index_start_offset: u64,
         index_end_offset: u64,
-    ) -> Result<Option<IndexRange>, Error> {
+    ) -> Result<Option<IndexRange>, IggyError> {
         trace!(
             "Loading index range for offsets: {} to {}, segment starts at: {}",
             index_start_offset,
@@ -398,7 +400,7 @@ impl SegmentStorage for FileSegmentStorage {
         segment: &Segment,
         mut current_position: u32,
         messages: &[Arc<Message>],
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let mut bytes = Vec::with_capacity(messages.len() * 4);
         for message in messages {
             trace!("Persisting index for position: {}", current_position);
@@ -412,13 +414,13 @@ impl SegmentStorage for FileSegmentStorage {
             .await
             .with_context(|| format!("Failed to save index to segment: {}", segment.index_path))
         {
-            return Err(Error::CannotSaveIndexToSegment(err));
+            return Err(IggyError::CannotSaveIndexToSegment(err));
         }
 
         Ok(())
     }
 
-    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, Error> {
+    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError> {
         trace!("Loading time indexes from file...");
         let file = file::open(&segment.time_index_path).await?;
         let file_size = file.metadata().await?.len() as usize;
@@ -461,7 +463,10 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(indexes)
     }
 
-    async fn load_last_time_index(&self, segment: &Segment) -> Result<Option<TimeIndex>, Error> {
+    async fn load_last_time_index(
+        &self,
+        segment: &Segment,
+    ) -> Result<Option<TimeIndex>, IggyError> {
         trace!("Loading last time index from file...");
         let mut file = file::open(&segment.time_index_path).await?;
         let file_size = file.metadata().await?.len() as usize;
@@ -488,7 +493,7 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         messages: &[Arc<Message>],
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let mut bytes = Vec::with_capacity(messages.len() * 8);
         for message in messages {
             bytes.put_u64_le(message.timestamp);
@@ -505,7 +510,7 @@ impl SegmentStorage for FileSegmentStorage {
                 )
             })
         {
-            return Err(Error::CannotSaveTimeIndexToSegment(err));
+            return Err(IggyError::CannotSaveTimeIndexToSegment(err));
         }
 
         Ok(())
@@ -515,8 +520,8 @@ impl SegmentStorage for FileSegmentStorage {
 async fn load_messages_by_range(
     segment: &Segment,
     index_range: &IndexRange,
-    mut on_message: impl FnMut(Message) -> Result<(), Error>,
-) -> Result<(), Error> {
+    mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
+) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
     if file_size == 0 {
@@ -544,28 +549,28 @@ async fn load_messages_by_range(
 
         let state = reader.read_u8().await;
         if state.is_err() {
-            return Err(Error::CannotReadMessageState);
+            return Err(IggyError::CannotReadMessageState);
         }
 
         let state = MessageState::from_code(state.unwrap())?;
         let timestamp = reader.read_u64_le().await;
         if timestamp.is_err() {
-            return Err(Error::CannotReadMessageTimestamp);
+            return Err(IggyError::CannotReadMessageTimestamp);
         }
 
         let id = reader.read_u128_le().await;
         if id.is_err() {
-            return Err(Error::CannotReadMessageId);
+            return Err(IggyError::CannotReadMessageId);
         }
 
         let checksum = reader.read_u32_le().await;
         if checksum.is_err() {
-            return Err(Error::CannotReadMessageChecksum);
+            return Err(IggyError::CannotReadMessageChecksum);
         }
 
         let headers_length = reader.read_u32_le().await;
         if headers_length.is_err() {
-            return Err(Error::CannotReadHeadersLength);
+            return Err(IggyError::CannotReadHeadersLength);
         }
 
         let headers_length = headers_length.unwrap();
@@ -574,7 +579,7 @@ async fn load_messages_by_range(
             _ => {
                 let mut headers_payload = vec![0; headers_length as usize];
                 if reader.read_exact(&mut headers_payload).await.is_err() {
-                    return Err(Error::CannotReadHeadersPayload);
+                    return Err(IggyError::CannotReadHeadersPayload);
                 }
 
                 let headers = HashMap::from_bytes(&headers_payload)?;
@@ -584,12 +589,12 @@ async fn load_messages_by_range(
 
         let payload_length = reader.read_u32_le().await;
         if payload_length.is_err() {
-            return Err(Error::CannotReadMessageLength);
+            return Err(IggyError::CannotReadMessageLength);
         }
 
         let mut payload = vec![0; payload_length.unwrap() as usize];
         if reader.read_exact(&mut payload).await.is_err() {
-            return Err(Error::CannotReadMessagePayload);
+            return Err(IggyError::CannotReadMessagePayload);
         }
 
         let offset = offset.unwrap();
@@ -615,8 +620,8 @@ async fn load_messages_by_range(
 async fn load_messages_by_size(
     segment: &Segment,
     size_bytes: u64,
-    mut on_message: impl FnMut(Message) -> Result<(), Error>,
-) -> Result<(), Error> {
+    mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
+) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
     if file_size == 0 {
@@ -635,28 +640,28 @@ async fn load_messages_by_size(
 
         let state = reader.read_u8().await;
         if state.is_err() {
-            return Err(Error::CannotReadMessageState);
+            return Err(IggyError::CannotReadMessageState);
         }
 
         let state = MessageState::from_code(state.unwrap())?;
         let timestamp = reader.read_u64_le().await;
         if timestamp.is_err() {
-            return Err(Error::CannotReadMessageTimestamp);
+            return Err(IggyError::CannotReadMessageTimestamp);
         }
 
         let id = reader.read_u128_le().await;
         if id.is_err() {
-            return Err(Error::CannotReadMessageId);
+            return Err(IggyError::CannotReadMessageId);
         }
 
         let checksum = reader.read_u32_le().await;
         if checksum.is_err() {
-            return Err(Error::CannotReadMessageChecksum);
+            return Err(IggyError::CannotReadMessageChecksum);
         }
 
         let headers_length = reader.read_u32_le().await;
         if headers_length.is_err() {
-            return Err(Error::CannotReadHeadersLength);
+            return Err(IggyError::CannotReadHeadersLength);
         }
 
         let headers_length = headers_length.unwrap();
@@ -665,7 +670,7 @@ async fn load_messages_by_size(
             _ => {
                 let mut headers_payload = vec![0; headers_length as usize];
                 if reader.read_exact(&mut headers_payload).await.is_err() {
-                    return Err(Error::CannotReadHeadersPayload);
+                    return Err(IggyError::CannotReadHeadersPayload);
                 }
 
                 let headers = HashMap::from_bytes(&headers_payload)?;
@@ -675,12 +680,12 @@ async fn load_messages_by_size(
 
         let payload_length = reader.read_u32_le().await;
         if payload_length.is_err() {
-            return Err(Error::CannotReadMessageLength);
+            return Err(IggyError::CannotReadMessageLength);
         }
 
         let mut payload = vec![0; payload_length.unwrap() as usize];
         if reader.read_exact(&mut payload).await.is_err() {
-            return Err(Error::CannotReadMessagePayload);
+            return Err(IggyError::CannotReadMessagePayload);
         }
 
         let offset = offset.unwrap();

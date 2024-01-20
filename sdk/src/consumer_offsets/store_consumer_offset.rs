@@ -1,7 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::consumer::{Consumer, ConsumerKind};
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -46,8 +46,8 @@ impl Default for StoreConsumerOffset {
 
 impl CommandPayload for StoreConsumerOffset {}
 
-impl Validatable<Error> for StoreConsumerOffset {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for StoreConsumerOffset {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -72,9 +72,9 @@ impl BytesSerializable for StoreConsumerOffset {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<StoreConsumerOffset, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<StoreConsumerOffset, IggyError> {
         if bytes.len() < 23 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;

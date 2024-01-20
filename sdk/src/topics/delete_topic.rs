@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -22,8 +22,8 @@ pub struct DeleteTopic {
 
 impl CommandPayload for DeleteTopic {}
 
-impl Validatable<Error> for DeleteTopic {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for DeleteTopic {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -38,9 +38,9 @@ impl BytesSerializable for DeleteTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> std::result::Result<DeleteTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<DeleteTopic, IggyError> {
         if bytes.len() < 10 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;

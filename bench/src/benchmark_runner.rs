@@ -3,7 +3,7 @@ use crate::benchmark_result::BenchmarkResults;
 use crate::benchmarks::benchmark::Benchmarkable;
 use crate::server_starter::start_server_if_needed;
 use futures::future::select_all;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use integration::test_server::TestServer;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -22,7 +22,7 @@ impl BenchmarkRunner {
         }
     }
 
-    pub async fn run(&mut self) -> Result<(), Error> {
+    pub async fn run(&mut self) -> Result<(), IggyError> {
         let mut args = self.args.take().unwrap();
         self.test_server = start_server_if_needed(&mut args).await;
 

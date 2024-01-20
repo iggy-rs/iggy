@@ -1,6 +1,6 @@
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::text;
@@ -20,10 +20,10 @@ impl Stream {
         message_expiry: Option<u32>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let name = text::to_lowercase_non_whitespace(name);
         if self.topics_ids.contains_key(&name) {
-            return Err(Error::TopicNameAlreadyExists(name, self.stream_id));
+            return Err(IggyError::TopicNameAlreadyExists(name, self.stream_id));
         }
 
         let mut id;
@@ -32,7 +32,7 @@ impl Stream {
             loop {
                 if self.topics.contains_key(&id) {
                     if id == u32::MAX {
-                        return Err(Error::TopicIdAlreadyExists(id, self.stream_id));
+                        return Err(IggyError::TopicIdAlreadyExists(id, self.stream_id));
                     }
                     id = self.current_topic_id.fetch_add(1, Ordering::SeqCst);
                 } else {
@@ -44,7 +44,7 @@ impl Stream {
         }
 
         if self.topics.contains_key(&id) {
-            return Err(Error::TopicIdAlreadyExists(id, self.stream_id));
+            return Err(IggyError::TopicIdAlreadyExists(id, self.stream_id));
         }
 
         // TODO: check if max_topic_size is not lower than system.segment.size
@@ -74,7 +74,7 @@ impl Stream {
         message_expiry: Option<u32>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let topic_id;
         {
             let topic = self.get_topic(id)?;
@@ -86,7 +86,7 @@ impl Stream {
         {
             if let Some(topic_id_by_name) = self.topics_ids.get(&updated_name) {
                 if *topic_id_by_name != topic_id {
-                    return Err(Error::TopicNameAlreadyExists(
+                    return Err(IggyError::TopicNameAlreadyExists(
                         updated_name.to_string(),
                         self.stream_id,
                     ));
@@ -122,7 +122,7 @@ impl Stream {
         Ok(())
     }
 
-    pub fn remove_topic(&mut self, identifier: &Identifier) -> Result<Topic, Error> {
+    pub fn remove_topic(&mut self, identifier: &Identifier) -> Result<Topic, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.remove_topic_by_id(identifier.get_u32_value()?),
             IdKind::String => self.remove_topic_by_name(identifier.get_string_value()?),
@@ -133,74 +133,74 @@ impl Stream {
         self.topics.values().collect()
     }
 
-    pub fn get_topic(&self, identifier: &Identifier) -> Result<&Topic, Error> {
+    pub fn get_topic(&self, identifier: &Identifier) -> Result<&Topic, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_topic_by_id(identifier.get_u32_value()?),
             IdKind::String => self.get_topic_by_name(&identifier.get_string_value()?),
         }
     }
 
-    pub fn get_topic_mut(&mut self, identifier: &Identifier) -> Result<&mut Topic, Error> {
+    pub fn get_topic_mut(&mut self, identifier: &Identifier) -> Result<&mut Topic, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_topic_by_id_mut(identifier.get_u32_value()?),
             IdKind::String => self.get_topic_by_name_mut(&identifier.get_string_value()?),
         }
     }
 
-    fn get_topic_by_id(&self, id: u32) -> Result<&Topic, Error> {
+    fn get_topic_by_id(&self, id: u32) -> Result<&Topic, IggyError> {
         self.topics
             .get(&id)
-            .ok_or(Error::TopicIdNotFound(id, self.stream_id))
+            .ok_or(IggyError::TopicIdNotFound(id, self.stream_id))
     }
 
-    fn get_topic_by_name(&self, name: &str) -> Result<&Topic, Error> {
+    fn get_topic_by_name(&self, name: &str) -> Result<&Topic, IggyError> {
         self.topics_ids
             .get(name)
             .map(|topic_id| self.get_topic_by_id(*topic_id))
-            .ok_or_else(|| Error::TopicNameNotFound(name.to_string(), self.stream_id))?
+            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_string(), self.stream_id))?
     }
 
-    fn get_topic_by_id_mut(&mut self, id: u32) -> Result<&mut Topic, Error> {
+    fn get_topic_by_id_mut(&mut self, id: u32) -> Result<&mut Topic, IggyError> {
         self.topics
             .get_mut(&id)
-            .ok_or(Error::TopicIdNotFound(id, self.stream_id))
+            .ok_or(IggyError::TopicIdNotFound(id, self.stream_id))
     }
 
-    fn get_topic_by_name_mut(&mut self, name: &str) -> Result<&mut Topic, Error> {
+    fn get_topic_by_name_mut(&mut self, name: &str) -> Result<&mut Topic, IggyError> {
         self.topics_ids
             .get(name)
             .and_then(|topic_id| self.topics.get_mut(topic_id))
-            .ok_or_else(|| Error::TopicNameNotFound(name.to_string(), self.stream_id))
+            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_string(), self.stream_id))
     }
 
-    fn remove_topic_by_id(&mut self, id: u32) -> Result<Topic, Error> {
+    fn remove_topic_by_id(&mut self, id: u32) -> Result<Topic, IggyError> {
         let topic = self
             .topics
             .remove(&id)
-            .ok_or_else(|| Error::TopicIdNotFound(id, self.stream_id))?;
+            .ok_or_else(|| IggyError::TopicIdNotFound(id, self.stream_id))?;
 
         self.topics_ids
             .remove(&topic.name)
-            .ok_or_else(|| Error::TopicNameNotFound(topic.name.clone(), self.stream_id))?;
+            .ok_or_else(|| IggyError::TopicNameNotFound(topic.name.clone(), self.stream_id))?;
         Ok(topic)
     }
 
-    fn remove_topic_by_name(&mut self, name: String) -> Result<Topic, Error> {
+    fn remove_topic_by_name(&mut self, name: String) -> Result<Topic, IggyError> {
         let topic_id = self
             .topics_ids
             .remove(&name)
-            .ok_or_else(|| Error::TopicNameNotFound(name, self.stream_id))?;
+            .ok_or_else(|| IggyError::TopicNameNotFound(name, self.stream_id))?;
 
         self.topics
             .remove(&topic_id)
-            .ok_or_else(|| Error::TopicIdNotFound(topic_id, self.stream_id))
+            .ok_or_else(|| IggyError::TopicIdNotFound(topic_id, self.stream_id))
     }
 
-    pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, Error> {
+    pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, IggyError> {
         let topic = self.remove_topic(id)?;
         topic.delete().await.map_err(|err| {
             debug!("Delete topic failed: {}", err);
-            Error::CannotDeleteTopic(topic.topic_id, self.stream_id)
+            IggyError::CannotDeleteTopic(topic.topic_id, self.stream_id)
         })?;
         Ok(topic)
     }

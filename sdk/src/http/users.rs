@@ -1,5 +1,5 @@
 use crate::client::UserClient;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
@@ -19,54 +19,54 @@ const PATH: &str = "/users";
 
 #[async_trait]
 impl UserClient for HttpClient {
-    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, Error> {
+    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, IggyError> {
         let response = self.get(&format!("{PATH}/{}", command.user_id)).await?;
         let user = response.json().await?;
         Ok(user)
     }
 
-    async fn get_users(&self, _command: &GetUsers) -> Result<Vec<UserInfo>, Error> {
+    async fn get_users(&self, _command: &GetUsers) -> Result<Vec<UserInfo>, IggyError> {
         let response = self.get(PATH).await?;
         let users = response.json().await?;
         Ok(users)
     }
 
-    async fn create_user(&self, command: &CreateUser) -> Result<(), Error> {
+    async fn create_user(&self, command: &CreateUser) -> Result<(), IggyError> {
         self.post(PATH, &command).await?;
         Ok(())
     }
 
-    async fn delete_user(&self, command: &DeleteUser) -> Result<(), Error> {
+    async fn delete_user(&self, command: &DeleteUser) -> Result<(), IggyError> {
         self.delete(&format!("{PATH}/{}", command.user_id)).await?;
         Ok(())
     }
 
-    async fn update_user(&self, command: &UpdateUser) -> Result<(), Error> {
+    async fn update_user(&self, command: &UpdateUser) -> Result<(), IggyError> {
         self.put(&format!("{PATH}/{}", command.user_id), &command)
             .await?;
         Ok(())
     }
 
-    async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), Error> {
+    async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), IggyError> {
         self.put(&format!("{PATH}/{}/permissions", command.user_id), &command)
             .await?;
         Ok(())
     }
 
-    async fn change_password(&self, command: &ChangePassword) -> Result<(), Error> {
+    async fn change_password(&self, command: &ChangePassword) -> Result<(), IggyError> {
         self.put(&format!("{PATH}/{}/password", command.user_id), &command)
             .await?;
         Ok(())
     }
 
-    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error> {
+    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, IggyError> {
         let response = self.post(&format!("{PATH}/login"), &command).await?;
         let identity_info: IdentityInfo = response.json().await?;
         self.set_tokens_from_identity(&identity_info).await?;
         Ok(identity_info)
     }
 
-    async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
+    async fn logout_user(&self, command: &LogoutUser) -> Result<(), IggyError> {
         self.post(&format!("{PATH}/logout"), &command).await?;
         self.set_access_token(None).await;
         self.set_refresh_token(None).await;
@@ -75,9 +75,9 @@ impl UserClient for HttpClient {
 }
 
 impl HttpClient {
-    pub async fn refresh_access_token(&self, refresh_token: &str) -> Result<(), Error> {
+    pub async fn refresh_access_token(&self, refresh_token: &str) -> Result<(), IggyError> {
         if refresh_token.is_empty() {
-            return Err(Error::RefreshTokenMissing);
+            return Err(IggyError::RefreshTokenMissing);
         }
 
         let command = RefreshToken {
@@ -88,7 +88,7 @@ impl HttpClient {
             .await?;
         let identity_info: IdentityInfo = response.json().await?;
         if identity_info.tokens.is_none() {
-            return Err(Error::JwtMissing);
+            return Err(IggyError::JwtMissing);
         }
 
         self.set_tokens_from_identity(&identity_info).await?;

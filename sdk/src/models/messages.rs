@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::messages::send_messages;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
@@ -88,13 +88,13 @@ impl MessageState {
     }
 
     /// Returns the message state from the code.
-    pub fn from_code(code: u8) -> Result<Self, Error> {
+    pub fn from_code(code: u8) -> Result<Self, IggyError> {
         match code {
             1 => Ok(MessageState::Available),
             10 => Ok(MessageState::Unavailable),
             20 => Ok(MessageState::Poisoned),
             30 => Ok(MessageState::MarkedForDeletion),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }
@@ -111,14 +111,14 @@ impl Display for MessageState {
 }
 
 impl FromStr for MessageState {
-    type Err = Error;
+    type Err = IggyError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "available" => Ok(MessageState::Available),
             "unavailable" => Ok(MessageState::Unavailable),
             "poisoned" => Ok(MessageState::Poisoned),
             "marked_for_deletion" => Ok(MessageState::MarkedForDeletion),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }

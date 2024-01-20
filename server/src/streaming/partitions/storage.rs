@@ -4,7 +4,7 @@ use crate::streaming::storage::{PartitionStorage, Storage};
 use anyhow::Context;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
@@ -29,7 +29,7 @@ unsafe impl Sync for FilePartitionStorage {}
 
 #[async_trait]
 impl PartitionStorage for FilePartitionStorage {
-    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), Error> {
+    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError> {
         // The stored value is just the offset, so we don't need to serialize the whole struct.
         // It should be as fast and lightweight as possible.
         // As described in the docs, sled works better with big-endian byte order.
@@ -43,7 +43,7 @@ impl PartitionStorage for FilePartitionStorage {
                 )
             })
         {
-            return Err(Error::CannotSaveResource(err));
+            return Err(IggyError::CannotSaveResource(err));
         }
 
         trace!(
@@ -61,7 +61,7 @@ impl PartitionStorage for FilePartitionStorage {
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
-    ) -> Result<Vec<ConsumerOffset>, Error> {
+    ) -> Result<Vec<ConsumerOffset>, IggyError> {
         let mut consumer_offsets = Vec::new();
         let key_prefix = format!(
             "{}:",
@@ -86,7 +86,7 @@ impl PartitionStorage for FilePartitionStorage {
                     }
                 }
                 Err(err) => {
-                    return Err(Error::CannotLoadResource(err));
+                    return Err(IggyError::CannotLoadResource(err));
                 }
             };
             consumer_offsets.push(consumer_offset);
@@ -102,7 +102,7 @@ impl PartitionStorage for FilePartitionStorage {
         stream_id: u32,
         topic_id: u32,
         partition_id: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let consumer_offset_key_prefix = format!(
             "{}:",
             ConsumerOffset::get_key_prefix(kind, stream_id, topic_id, partition_id)
@@ -119,11 +119,11 @@ impl PartitionStorage for FilePartitionStorage {
                     if let Err(err) = self.db.remove(&key).with_context(|| {
                         format!("Failed to delete consumer offset, key: {:?}", key)
                     }) {
-                        return Err(Error::CannotLoadResource(err));
+                        return Err(IggyError::CannotLoadResource(err));
                     }
                 }
                 Err(err) => {
-                    return Err(Error::CannotLoadResource(err));
+                    return Err(IggyError::CannotLoadResource(err));
                 }
             }
         }
@@ -139,7 +139,7 @@ struct PartitionData {
 
 #[async_trait]
 impl Storage<Partition> for FilePartitionStorage {
-    async fn load(&self, partition: &mut Partition) -> Result<(), Error> {
+    async fn load(&self, partition: &mut Partition) -> Result<(), IggyError> {
         info!(
             "Loading partition with ID: {} for stream with ID: {} and topic with ID: {}, for path: {} from disk...",
             partition.partition_id, partition.stream_id, partition.topic_id, partition.path
@@ -149,7 +149,7 @@ impl Storage<Partition> for FilePartitionStorage {
             .await
             .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}", partition.partition_id, partition.stream_id, partition.topic_id, partition.path))
         {
-            return Err(Error::CannotReadPartitions(err));
+            return Err(IggyError::CannotReadPartitions(err));
         }
 
         let key = get_partition_key(
@@ -169,16 +169,16 @@ impl Storage<Partition> for FilePartitionStorage {
                             format!("Failed to deserialize partition with key: {}", key)
                         });
                     if let Err(err) = partition_data {
-                        return Err(Error::CannotDeserializeResource(err));
+                        return Err(IggyError::CannotDeserializeResource(err));
                     } else {
                         partition_data.unwrap()
                     }
                 } else {
-                    return Err(Error::ResourceNotFound(key));
+                    return Err(IggyError::ResourceNotFound(key));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotLoadResource(err));
+                return Err(IggyError::CannotLoadResource(err));
             }
         };
 
@@ -285,13 +285,13 @@ impl Storage<Partition> for FilePartitionStorage {
         Ok(())
     }
 
-    async fn save(&self, partition: &Partition) -> Result<(), Error> {
+    async fn save(&self, partition: &Partition) -> Result<(), IggyError> {
         info!(
             "Saving partition with start ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id
         );
         if !Path::new(&partition.path).exists() && create_dir(&partition.path).await.is_err() {
-            return Err(Error::CannotCreatePartitionDirectory(
+            return Err(IggyError::CannotCreatePartitionDirectory(
                 partition.partition_id,
                 partition.stream_id,
                 partition.topic_id,
@@ -314,11 +314,11 @@ impl Storage<Partition> for FilePartitionStorage {
                     .insert(&key, data)
                     .with_context(|| format!("Failed to insert partition with key: {}", key))
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
 
@@ -333,7 +333,7 @@ impl Storage<Partition> for FilePartitionStorage {
             )
             .with_context(|| format!("Failed to insert partition with key: {}", key))
         {
-            return Err(Error::CannotSaveResource(err));
+            return Err(IggyError::CannotSaveResource(err));
         }
 
         for segment in partition.get_segments() {
@@ -345,7 +345,7 @@ impl Storage<Partition> for FilePartitionStorage {
         Ok(())
     }
 
-    async fn delete(&self, partition: &Partition) -> Result<(), Error> {
+    async fn delete(&self, partition: &Partition) -> Result<(), IggyError> {
         info!(
             "Deleting partition with ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id,
@@ -359,7 +359,7 @@ impl Storage<Partition> for FilePartitionStorage {
             ))
             .is_err()
         {
-            return Err(Error::CannotDeletePartition(
+            return Err(IggyError::CannotDeletePartition(
                 partition.partition_id,
                 partition.topic_id,
                 partition.stream_id,
@@ -376,7 +376,7 @@ impl Storage<Partition> for FilePartitionStorage {
             .await
         {
             error!("Cannot delete consumer offsets for partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
-            return Err(Error::CannotDeletePartition(
+            return Err(IggyError::CannotDeletePartition(
                 partition.partition_id,
                 partition.topic_id,
                 partition.stream_id,
@@ -393,7 +393,7 @@ impl Storage<Partition> for FilePartitionStorage {
             .await
         {
             error!("Cannot delete consumer group offsets for partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
-            return Err(Error::CannotDeletePartition(
+            return Err(IggyError::CannotDeletePartition(
                 partition.partition_id,
                 partition.topic_id,
                 partition.stream_id,
@@ -402,7 +402,7 @@ impl Storage<Partition> for FilePartitionStorage {
 
         if fs::remove_dir_all(&partition.path).await.is_err() {
             error!("Cannot delete partition directory: {} for partition with ID: {} for topic with ID: {} for stream with ID: {}.", partition.path, partition.partition_id, partition.topic_id, partition.stream_id);
-            return Err(Error::CannotDeletePartitionDirectory(
+            return Err(IggyError::CannotDeletePartitionDirectory(
                 partition.partition_id,
                 partition.stream_id,
                 partition.topic_id,

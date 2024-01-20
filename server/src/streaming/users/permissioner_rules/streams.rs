@@ -1,8 +1,8 @@
 use crate::streaming::users::permissioner::Permissioner;
-use iggy::error::Error;
+use iggy::error::IggyError;
 
 impl Permissioner {
-    pub fn get_stream(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
+    pub fn get_stream(&self, user_id: u32, stream_id: u32) -> Result<(), IggyError> {
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_streams || global_permissions.read_streams {
                 return Ok(());
@@ -16,42 +16,42 @@ impl Permissioner {
             }
         }
 
-        Err(Error::Unauthorized)
+        Err(IggyError::Unauthorized)
     }
 
-    pub fn get_streams(&self, user_id: u32) -> Result<(), Error> {
+    pub fn get_streams(&self, user_id: u32) -> Result<(), IggyError> {
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_streams || global_permissions.read_streams {
                 return Ok(());
             }
         }
 
-        Err(Error::Unauthorized)
+        Err(IggyError::Unauthorized)
     }
 
-    pub fn create_stream(&self, user_id: u32) -> Result<(), Error> {
+    pub fn create_stream(&self, user_id: u32) -> Result<(), IggyError> {
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_streams {
                 return Ok(());
             }
         }
 
-        Err(Error::Unauthorized)
+        Err(IggyError::Unauthorized)
     }
 
-    pub fn update_stream(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
+    pub fn update_stream(&self, user_id: u32, stream_id: u32) -> Result<(), IggyError> {
         self.manage_stream(user_id, stream_id)
     }
 
-    pub fn delete_stream(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
+    pub fn delete_stream(&self, user_id: u32, stream_id: u32) -> Result<(), IggyError> {
         self.manage_stream(user_id, stream_id)
     }
 
-    pub fn purge_stream(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
+    pub fn purge_stream(&self, user_id: u32, stream_id: u32) -> Result<(), IggyError> {
         self.manage_stream(user_id, stream_id)
     }
 
-    fn manage_stream(&self, user_id: u32, stream_id: u32) -> Result<(), Error> {
+    fn manage_stream(&self, user_id: u32, stream_id: u32) -> Result<(), IggyError> {
         if let Some(global_permissions) = self.users_permissions.get(&user_id) {
             if global_permissions.manage_streams {
                 return Ok(());
@@ -65,6 +65,6 @@ impl Permissioner {
             }
         }
 
-        Err(Error::Unauthorized)
+        Err(IggyError::Unauthorized)
     }
 }

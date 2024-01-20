@@ -10,11 +10,11 @@ mod server_starter;
 use crate::{args::common::IggyBenchArgs, benchmark_runner::BenchmarkRunner};
 use clap::Parser;
 use figlet_rs::FIGfont;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use tracing::{error, info};
 
 #[tokio::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<(), IggyError> {
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Bench");
     println!("{}", figure.unwrap());

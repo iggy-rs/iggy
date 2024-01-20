@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -22,8 +22,8 @@ pub struct PurgeTopic {
 
 impl CommandPayload for PurgeTopic {}
 
-impl Validatable<Error> for PurgeTopic {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for PurgeTopic {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -38,9 +38,9 @@ impl BytesSerializable for PurgeTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<PurgeTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<PurgeTopic, IggyError> {
         if bytes.len() < 10 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;

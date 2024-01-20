@@ -3,7 +3,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::{channels::server_command::ServerCommand, configs::server::MessageCleanerConfig};
 use async_trait::async_trait;
 use flume::Sender;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use tokio::time;
@@ -121,7 +121,7 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
 async fn delete_expired_segments(
     topic: &Topic,
     now: u64,
-) -> Result<Option<DeletedSegments>, Error> {
+) -> Result<Option<DeletedSegments>, IggyError> {
     let expired_segments = topic
         .get_expired_segments_start_offsets_per_partition(now)
         .await;

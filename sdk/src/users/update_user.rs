@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::user_status::UserStatus;
 use crate::users::defaults::*;
@@ -26,8 +26,8 @@ pub struct UpdateUser {
 
 impl CommandPayload for UpdateUser {}
 
-impl Validatable<Error> for UpdateUser {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for UpdateUser {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.username.is_none() {
             return Ok(());
         }
@@ -37,11 +37,11 @@ impl Validatable<Error> for UpdateUser {
             || username.len() > MAX_USERNAME_LENGTH
             || username.len() < MIN_USERNAME_LENGTH
         {
-            return Err(Error::InvalidUsername);
+            return Err(IggyError::InvalidUsername);
         }
 
         if !text::is_resource_name_valid(username) {
-            return Err(Error::InvalidUsername);
+            return Err(IggyError::InvalidUsername);
         }
 
         Ok(())
@@ -71,16 +71,16 @@ impl BytesSerializable for UpdateUser {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<UpdateUser, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<UpdateUser, IggyError> {
         if bytes.len() < 5 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let user_id = Identifier::from_bytes(bytes)?;
         let mut position = user_id.get_size_bytes() as usize;
         let has_username = bytes[position];
         if has_username > 1 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         position += 1;
@@ -97,7 +97,7 @@ impl BytesSerializable for UpdateUser {
 
         let has_status = bytes[position];
         if has_status > 1 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let status = if has_status == 1 {

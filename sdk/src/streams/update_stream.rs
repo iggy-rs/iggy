@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::streams::MAX_NAME_LENGTH;
 use crate::utils::text;
@@ -34,14 +34,14 @@ impl Default for UpdateStream {
     }
 }
 
-impl Validatable<Error> for UpdateStream {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for UpdateStream {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidStreamName);
+            return Err(IggyError::InvalidStreamName);
         }
 
         if !text::is_resource_name_valid(&self.name) {
-            return Err(Error::InvalidStreamName);
+            return Err(IggyError::InvalidStreamName);
         }
 
         Ok(())
@@ -59,9 +59,9 @@ impl BytesSerializable for UpdateStream {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> std::result::Result<UpdateStream, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<UpdateStream, IggyError> {
         if bytes.len() < 5 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;
@@ -71,7 +71,7 @@ impl BytesSerializable for UpdateStream {
         let name =
             from_utf8(&bytes[position + 1..position + 1 + name_length as usize])?.to_string();
         if name.len() != name_length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let command = UpdateStream { stream_id, name };

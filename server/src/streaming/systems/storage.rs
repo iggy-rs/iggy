@@ -2,7 +2,7 @@ use crate::streaming::storage::{Storage, SystemInfoStorage};
 use crate::streaming::systems::info::SystemInfo;
 use anyhow::Context;
 use async_trait::async_trait;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use sled::Db;
 use std::sync::Arc;
 use tracing::info;
@@ -27,7 +27,7 @@ impl SystemInfoStorage for FileSystemInfoStorage {}
 
 #[async_trait]
 impl Storage<SystemInfo> for FileSystemInfoStorage {
-    async fn load(&self, system_info: &mut SystemInfo) -> Result<(), Error> {
+    async fn load(&self, system_info: &mut SystemInfo) -> Result<(), IggyError> {
         let data = match self
             .db
             .get(KEY)
@@ -38,16 +38,16 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
                     let data = rmp_serde::from_slice::<SystemInfo>(&data)
                         .with_context(|| "Failed to deserialize system info");
                     if let Err(err) = data {
-                        return Err(Error::CannotDeserializeResource(err));
+                        return Err(IggyError::CannotDeserializeResource(err));
                     } else {
                         data.unwrap()
                     }
                 } else {
-                    return Err(Error::ResourceNotFound(KEY.to_string()));
+                    return Err(IggyError::ResourceNotFound(KEY.to_string()));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotLoadResource(err));
+                return Err(IggyError::CannotLoadResource(err));
             }
         };
 
@@ -56,7 +56,7 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
         Ok(())
     }
 
-    async fn save(&self, system_info: &SystemInfo) -> Result<(), Error> {
+    async fn save(&self, system_info: &SystemInfo) -> Result<(), IggyError> {
         match rmp_serde::to_vec(&system_info).with_context(|| "Failed to serialize system info") {
             Ok(data) => {
                 if let Err(err) = self
@@ -64,11 +64,11 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
                     .insert(KEY, data)
                     .with_context(|| "Failed to save system info")
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
 
@@ -76,13 +76,13 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
         Ok(())
     }
 
-    async fn delete(&self, _: &SystemInfo) -> Result<(), Error> {
+    async fn delete(&self, _: &SystemInfo) -> Result<(), IggyError> {
         if let Err(err) = self
             .db
             .remove(KEY)
             .with_context(|| "Failed to delete system info")
         {
-            return Err(Error::CannotDeleteResource(err));
+            return Err(IggyError::CannotDeleteResource(err));
         }
 
         info!("Deleted system info");

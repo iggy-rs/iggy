@@ -18,16 +18,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if iggy/Cargo.toml and Cargo.lock are changed
+      - name: Check if sdk/Cargo.toml and Cargo.lock are changed
         uses: tj-actions/changed-files@v41
         id: all_changed_files
         with:
           files: |
             Cargo.lock
-            iggy/Cargo.toml
+            sdk/Cargo.toml
 
       - name: Extract iggy version from Cargo.toml
-        if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock iggy/Cargo.toml' }}
+        if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock sdk/Cargo.toml' }}
         id: extract_version
         run: |
           version=$(cargo pkgid -p iggy | cut -d# -f2 | cut -d: -f2)
@@ -36,7 +36,7 @@ jobs:
 
       - name: Check if version is a Git tag
         uses: mukunku/tag-exists-action@v1.5.0
-        if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock iggy/Cargo.toml' }}
+        if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock sdk/Cargo.toml' }}
         id: check_git_tag
         with:
           tag: "iggy-${{ steps.extract_version.outputs.iggy_version }}"

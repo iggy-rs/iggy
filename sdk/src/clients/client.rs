@@ -11,7 +11,7 @@ use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::message_handler::MessageHandler;
 use crate::messages::poll_messages::{PollMessages, PollingKind};
@@ -365,7 +365,7 @@ impl IggyClient {
         &self,
         command: &mut SendMessages,
         partitioner: &dyn Partitioner,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let partition_id = partitioner.calculate_partition_id(
             &command.stream_id,
             &command.topic_id,
@@ -494,39 +494,39 @@ impl IggyClient {
 
 #[async_trait]
 impl UserClient for IggyClient {
-    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, Error> {
+    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, IggyError> {
         self.client.read().await.get_user(command).await
     }
 
-    async fn get_users(&self, command: &GetUsers) -> Result<Vec<UserInfo>, Error> {
+    async fn get_users(&self, command: &GetUsers) -> Result<Vec<UserInfo>, IggyError> {
         self.client.read().await.get_users(command).await
     }
 
-    async fn create_user(&self, command: &CreateUser) -> Result<(), Error> {
+    async fn create_user(&self, command: &CreateUser) -> Result<(), IggyError> {
         self.client.read().await.create_user(command).await
     }
 
-    async fn delete_user(&self, command: &DeleteUser) -> Result<(), Error> {
+    async fn delete_user(&self, command: &DeleteUser) -> Result<(), IggyError> {
         self.client.read().await.delete_user(command).await
     }
 
-    async fn update_user(&self, command: &UpdateUser) -> Result<(), Error> {
+    async fn update_user(&self, command: &UpdateUser) -> Result<(), IggyError> {
         self.client.read().await.update_user(command).await
     }
 
-    async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), Error> {
+    async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), IggyError> {
         self.client.read().await.update_permissions(command).await
     }
 
-    async fn change_password(&self, command: &ChangePassword) -> Result<(), Error> {
+    async fn change_password(&self, command: &ChangePassword) -> Result<(), IggyError> {
         self.client.read().await.change_password(command).await
     }
 
-    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, Error> {
+    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, IggyError> {
         self.client.read().await.login_user(command).await
     }
 
-    async fn logout_user(&self, command: &LogoutUser) -> Result<(), Error> {
+    async fn logout_user(&self, command: &LogoutUser) -> Result<(), IggyError> {
         self.client.read().await.logout_user(command).await
     }
 }
@@ -536,7 +536,7 @@ impl PersonalAccessTokenClient for IggyClient {
     async fn get_personal_access_tokens(
         &self,
         command: &GetPersonalAccessTokens,
-    ) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
+    ) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         self.client
             .read()
             .await
@@ -547,7 +547,7 @@ impl PersonalAccessTokenClient for IggyClient {
     async fn create_personal_access_token(
         &self,
         command: &CreatePersonalAccessToken,
-    ) -> Result<RawPersonalAccessToken, Error> {
+    ) -> Result<RawPersonalAccessToken, IggyError> {
         self.client
             .read()
             .await
@@ -558,7 +558,7 @@ impl PersonalAccessTokenClient for IggyClient {
     async fn delete_personal_access_token(
         &self,
         command: &DeletePersonalAccessToken,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.client
             .read()
             .await
@@ -569,7 +569,7 @@ impl PersonalAccessTokenClient for IggyClient {
     async fn login_with_personal_access_token(
         &self,
         command: &LoginWithPersonalAccessToken,
-    ) -> Result<IdentityInfo, Error> {
+    ) -> Result<IdentityInfo, IggyError> {
         self.client
             .read()
             .await
@@ -580,106 +580,106 @@ impl PersonalAccessTokenClient for IggyClient {
 
 #[async_trait]
 impl Client for IggyClient {
-    async fn connect(&self) -> Result<(), Error> {
+    async fn connect(&self) -> Result<(), IggyError> {
         self.client.read().await.connect().await
     }
 
-    async fn disconnect(&self) -> Result<(), Error> {
+    async fn disconnect(&self) -> Result<(), IggyError> {
         self.client.read().await.disconnect().await
     }
 }
 
 #[async_trait]
 impl SystemClient for IggyClient {
-    async fn get_stats(&self, command: &GetStats) -> Result<Stats, Error> {
+    async fn get_stats(&self, command: &GetStats) -> Result<Stats, IggyError> {
         self.client.read().await.get_stats(command).await
     }
 
-    async fn get_me(&self, command: &GetMe) -> Result<ClientInfoDetails, Error> {
+    async fn get_me(&self, command: &GetMe) -> Result<ClientInfoDetails, IggyError> {
         self.client.read().await.get_me(command).await
     }
 
-    async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, Error> {
+    async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, IggyError> {
         self.client.read().await.get_client(command).await
     }
 
-    async fn get_clients(&self, command: &GetClients) -> Result<Vec<ClientInfo>, Error> {
+    async fn get_clients(&self, command: &GetClients) -> Result<Vec<ClientInfo>, IggyError> {
         self.client.read().await.get_clients(command).await
     }
 
-    async fn ping(&self, command: &Ping) -> Result<(), Error> {
+    async fn ping(&self, command: &Ping) -> Result<(), IggyError> {
         self.client.read().await.ping(command).await
     }
 }
 
 #[async_trait]
 impl StreamClient for IggyClient {
-    async fn get_stream(&self, command: &GetStream) -> Result<StreamDetails, Error> {
+    async fn get_stream(&self, command: &GetStream) -> Result<StreamDetails, IggyError> {
         self.client.read().await.get_stream(command).await
     }
 
-    async fn get_streams(&self, command: &GetStreams) -> Result<Vec<Stream>, Error> {
+    async fn get_streams(&self, command: &GetStreams) -> Result<Vec<Stream>, IggyError> {
         self.client.read().await.get_streams(command).await
     }
 
-    async fn create_stream(&self, command: &CreateStream) -> Result<(), Error> {
+    async fn create_stream(&self, command: &CreateStream) -> Result<(), IggyError> {
         self.client.read().await.create_stream(command).await
     }
 
-    async fn update_stream(&self, command: &UpdateStream) -> Result<(), Error> {
+    async fn update_stream(&self, command: &UpdateStream) -> Result<(), IggyError> {
         self.client.read().await.update_stream(command).await
     }
 
-    async fn delete_stream(&self, command: &DeleteStream) -> Result<(), Error> {
+    async fn delete_stream(&self, command: &DeleteStream) -> Result<(), IggyError> {
         self.client.read().await.delete_stream(command).await
     }
 
-    async fn purge_stream(&self, command: &PurgeStream) -> Result<(), Error> {
+    async fn purge_stream(&self, command: &PurgeStream) -> Result<(), IggyError> {
         self.client.read().await.purge_stream(command).await
     }
 }
 
 #[async_trait]
 impl TopicClient for IggyClient {
-    async fn get_topic(&self, command: &GetTopic) -> Result<TopicDetails, Error> {
+    async fn get_topic(&self, command: &GetTopic) -> Result<TopicDetails, IggyError> {
         self.client.read().await.get_topic(command).await
     }
 
-    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, Error> {
+    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, IggyError> {
         self.client.read().await.get_topics(command).await
     }
 
-    async fn create_topic(&self, command: &CreateTopic) -> Result<(), Error> {
+    async fn create_topic(&self, command: &CreateTopic) -> Result<(), IggyError> {
         self.client.read().await.create_topic(command).await
     }
 
-    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), Error> {
+    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), IggyError> {
         self.client.read().await.update_topic(command).await
     }
 
-    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), Error> {
+    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), IggyError> {
         self.client.read().await.delete_topic(command).await
     }
 
-    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), Error> {
+    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), IggyError> {
         self.client.read().await.purge_topic(command).await
     }
 }
 
 #[async_trait]
 impl PartitionClient for IggyClient {
-    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), Error> {
+    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), IggyError> {
         self.client.read().await.create_partitions(command).await
     }
 
-    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), Error> {
+    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), IggyError> {
         self.client.read().await.delete_partitions(command).await
     }
 }
 
 #[async_trait]
 impl MessageClient for IggyClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, Error> {
+    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, IggyError> {
         let mut polled_messages = self.client.read().await.poll_messages(command).await?;
         if let Some(ref encryptor) = self.encryptor {
             for message in &mut polled_messages.messages {
@@ -690,7 +690,7 @@ impl MessageClient for IggyClient {
         Ok(polled_messages)
     }
 
-    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), Error> {
+    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
         if command.messages.is_empty() {
             return Ok(());
         }
@@ -747,7 +747,7 @@ impl MessageClient for IggyClient {
 
 #[async_trait]
 impl ConsumerOffsetClient for IggyClient {
-    async fn store_consumer_offset(&self, command: &StoreConsumerOffset) -> Result<(), Error> {
+    async fn store_consumer_offset(&self, command: &StoreConsumerOffset) -> Result<(), IggyError> {
         self.client
             .read()
             .await
@@ -758,7 +758,7 @@ impl ConsumerOffsetClient for IggyClient {
     async fn get_consumer_offset(
         &self,
         command: &GetConsumerOffset,
-    ) -> Result<ConsumerOffsetInfo, Error> {
+    ) -> Result<ConsumerOffsetInfo, IggyError> {
         self.client.read().await.get_consumer_offset(command).await
     }
 }
@@ -768,18 +768,18 @@ impl ConsumerGroupClient for IggyClient {
     async fn get_consumer_group(
         &self,
         command: &GetConsumerGroup,
-    ) -> Result<ConsumerGroupDetails, Error> {
+    ) -> Result<ConsumerGroupDetails, IggyError> {
         self.client.read().await.get_consumer_group(command).await
     }
 
     async fn get_consumer_groups(
         &self,
         command: &GetConsumerGroups,
-    ) -> Result<Vec<ConsumerGroup>, Error> {
+    ) -> Result<Vec<ConsumerGroup>, IggyError> {
         self.client.read().await.get_consumer_groups(command).await
     }
 
-    async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), Error> {
+    async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), IggyError> {
         self.client
             .read()
             .await
@@ -787,7 +787,7 @@ impl ConsumerGroupClient for IggyClient {
             .await
     }
 
-    async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), Error> {
+    async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), IggyError> {
         self.client
             .read()
             .await
@@ -795,11 +795,11 @@ impl ConsumerGroupClient for IggyClient {
             .await
     }
 
-    async fn join_consumer_group(&self, command: &JoinConsumerGroup) -> Result<(), Error> {
+    async fn join_consumer_group(&self, command: &JoinConsumerGroup) -> Result<(), IggyError> {
         self.client.read().await.join_consumer_group(command).await
     }
 
-    async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), Error> {
+    async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), IggyError> {
         self.client.read().await.leave_consumer_group(command).await
     }
 }

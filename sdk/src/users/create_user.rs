@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
 use crate::users::defaults::*;
@@ -42,24 +42,24 @@ impl Default for CreateUser {
     }
 }
 
-impl Validatable<Error> for CreateUser {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for CreateUser {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.username.is_empty()
             || self.username.len() > MAX_USERNAME_LENGTH
             || self.username.len() < MIN_USERNAME_LENGTH
         {
-            return Err(Error::InvalidUsername);
+            return Err(IggyError::InvalidUsername);
         }
 
         if !text::is_resource_name_valid(&self.username) {
-            return Err(Error::InvalidUsername);
+            return Err(IggyError::InvalidUsername);
         }
 
         if self.password.is_empty()
             || self.password.len() > MAX_PASSWORD_LENGTH
             || self.password.len() < MIN_PASSWORD_LENGTH
         {
-            return Err(Error::InvalidPassword);
+            return Err(IggyError::InvalidPassword);
         }
 
         Ok(())
@@ -88,15 +88,15 @@ impl BytesSerializable for CreateUser {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreateUser, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<CreateUser, IggyError> {
         if bytes.len() < 10 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let username_length = bytes[0];
         let username = from_utf8(&bytes[1..1 + username_length as usize])?.to_string();
         if username.len() != username_length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 1 + username_length as usize;
@@ -105,7 +105,7 @@ impl BytesSerializable for CreateUser {
         let password =
             from_utf8(&bytes[position..position + password_length as usize])?.to_string();
         if password.len() != password_length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         position += password_length as usize;
@@ -113,7 +113,7 @@ impl BytesSerializable for CreateUser {
         position += 1;
         let has_permissions = bytes[position];
         if has_permissions > 1 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         position += 1;

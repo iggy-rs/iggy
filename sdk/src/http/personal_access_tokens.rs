@@ -1,5 +1,5 @@
 use crate::client::PersonalAccessTokenClient;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
@@ -16,7 +16,7 @@ impl PersonalAccessTokenClient for HttpClient {
     async fn get_personal_access_tokens(
         &self,
         _command: &GetPersonalAccessTokens,
-    ) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
+    ) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         let response = self.get(PATH).await?;
         let personal_access_tokens = response.json().await?;
         Ok(personal_access_tokens)
@@ -25,7 +25,7 @@ impl PersonalAccessTokenClient for HttpClient {
     async fn create_personal_access_token(
         &self,
         command: &CreatePersonalAccessToken,
-    ) -> Result<RawPersonalAccessToken, Error> {
+    ) -> Result<RawPersonalAccessToken, IggyError> {
         let response = self.post(PATH, &command).await?;
         let personal_access_token: RawPersonalAccessToken = response.json().await?;
         Ok(personal_access_token)
@@ -34,7 +34,7 @@ impl PersonalAccessTokenClient for HttpClient {
     async fn delete_personal_access_token(
         &self,
         command: &DeletePersonalAccessToken,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.delete(&format!("{PATH}/{}", command.name)).await?;
         Ok(())
     }
@@ -42,7 +42,7 @@ impl PersonalAccessTokenClient for HttpClient {
     async fn login_with_personal_access_token(
         &self,
         command: &LoginWithPersonalAccessToken,
-    ) -> Result<IdentityInfo, Error> {
+    ) -> Result<IdentityInfo, IggyError> {
         let response = self.post(&format!("{PATH}/login"), &command).await?;
         let identity_info: IdentityInfo = response.json().await?;
         self.set_tokens_from_identity(&identity_info).await?;

@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::topics::{MAX_NAME_LENGTH, MAX_PARTITIONS_COUNT};
 use crate::utils::byte_size::IggyByteSize;
@@ -56,28 +56,28 @@ impl Default for CreateTopic {
     }
 }
 
-impl Validatable<Error> for CreateTopic {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for CreateTopic {
+    fn validate(&self) -> Result<(), IggyError> {
         if let Some(topic_id) = self.topic_id {
             if topic_id == 0 {
-                return Err(Error::InvalidTopicId);
+                return Err(IggyError::InvalidTopicId);
             }
         }
 
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidTopicName);
+            return Err(IggyError::InvalidTopicName);
         }
 
         if !text::is_resource_name_valid(&self.name) {
-            return Err(Error::InvalidTopicName);
+            return Err(IggyError::InvalidTopicName);
         }
 
         if !(0..=MAX_PARTITIONS_COUNT).contains(&self.partitions_count) {
-            return Err(Error::TooManyPartitions);
+            return Err(IggyError::TooManyPartitions);
         }
 
         if self.replication_factor == 0 {
-            return Err(Error::InvalidReplicationFactor);
+            return Err(IggyError::InvalidReplicationFactor);
         }
 
         Ok(())
@@ -106,9 +106,9 @@ impl BytesSerializable for CreateTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> std::result::Result<CreateTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<CreateTopic, IggyError> {
         if bytes.len() < 18 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes)?;
@@ -131,7 +131,7 @@ impl BytesSerializable for CreateTopic {
         let name =
             from_utf8(&bytes[position + 22..(position + 22 + name_length as usize)])?.to_string();
         if name.len() != name_length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
         let command = CreateTopic {
             stream_id,

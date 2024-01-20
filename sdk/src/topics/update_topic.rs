@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::topics::MAX_NAME_LENGTH;
 use crate::utils::byte_size::IggyByteSize;
@@ -54,18 +54,18 @@ impl Default for UpdateTopic {
     }
 }
 
-impl Validatable<Error> for UpdateTopic {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for UpdateTopic {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidTopicName);
+            return Err(IggyError::InvalidTopicName);
         }
 
         if !text::is_resource_name_valid(&self.name) {
-            return Err(Error::InvalidTopicName);
+            return Err(IggyError::InvalidTopicName);
         }
 
         if self.replication_factor == 0 {
-            return Err(Error::InvalidReplicationFactor);
+            return Err(IggyError::InvalidReplicationFactor);
         }
 
         Ok(())
@@ -95,9 +95,9 @@ impl BytesSerializable for UpdateTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<UpdateTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<UpdateTopic, IggyError> {
         if bytes.len() < 12 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes)?;
@@ -119,7 +119,7 @@ impl BytesSerializable for UpdateTopic {
         let name =
             from_utf8(&bytes[position + 14..(position + 14 + name_length as usize)])?.to_string();
         if name.len() != name_length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
         let command = UpdateTopic {
             stream_id,

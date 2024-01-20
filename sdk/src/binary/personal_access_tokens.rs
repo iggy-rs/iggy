@@ -3,7 +3,7 @@ use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::PersonalAccessTokenClient;
 use crate::command::*;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
@@ -16,7 +16,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
     async fn get_personal_access_tokens(
         &self,
         command: &GetPersonalAccessTokens,
-    ) -> Result<Vec<PersonalAccessTokenInfo>, Error> {
+    ) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
             .send_with_response(GET_PERSONAL_ACCESS_TOKENS_CODE, &command.as_bytes())
@@ -27,7 +27,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
     async fn create_personal_access_token(
         &self,
         command: &CreatePersonalAccessToken,
-    ) -> Result<RawPersonalAccessToken, Error> {
+    ) -> Result<RawPersonalAccessToken, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
             .send_with_response(CREATE_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
@@ -38,7 +38,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
     async fn delete_personal_access_token(
         &self,
         command: &DeletePersonalAccessToken,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
         self.send_with_response(DELETE_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
             .await?;
@@ -48,7 +48,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
     async fn login_with_personal_access_token(
         &self,
         command: &LoginWithPersonalAccessToken,
-    ) -> Result<IdentityInfo, Error> {
+    ) -> Result<IdentityInfo, IggyError> {
         let response = self
             .send_with_response(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
             .await?;

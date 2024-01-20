@@ -7,7 +7,7 @@ use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::messages::poll_messages::PollMessages;
 use crate::messages::send_messages::SendMessages;
 use crate::partitions::create_partitions::CreatePartitions;
@@ -257,7 +257,7 @@ impl BytesSerializable for Command {
         }
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError> {
         let command = u32::from_le_bytes(bytes[..4].try_into()?);
         let payload = &bytes[4..];
         match command {
@@ -335,7 +335,7 @@ impl BytesSerializable for Command {
             LEAVE_CONSUMER_GROUP_CODE => Ok(Command::LeaveConsumerGroup(
                 LeaveConsumerGroup::from_bytes(payload)?,
             )),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }

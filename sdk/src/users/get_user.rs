@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -18,8 +18,8 @@ pub struct GetUser {
 
 impl CommandPayload for GetUser {}
 
-impl Validatable<Error> for GetUser {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for GetUser {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -29,9 +29,9 @@ impl BytesSerializable for GetUser {
         self.user_id.as_bytes()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetUser, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<GetUser, IggyError> {
         if bytes.len() < 3 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let user_id = Identifier::from_bytes(bytes)?;

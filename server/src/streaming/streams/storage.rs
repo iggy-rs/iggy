@@ -4,7 +4,7 @@ use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
@@ -38,10 +38,10 @@ struct StreamData {
 
 #[async_trait]
 impl Storage<Stream> for FileStreamStorage {
-    async fn load(&self, stream: &mut Stream) -> Result<(), Error> {
+    async fn load(&self, stream: &mut Stream) -> Result<(), IggyError> {
         info!("Loading stream with ID: {} from disk...", stream.stream_id);
         if !Path::new(&stream.path).exists() {
-            return Err(Error::StreamIdNotFound(stream.stream_id));
+            return Err(IggyError::StreamIdNotFound(stream.stream_id));
         }
 
         let key = get_key(stream.stream_id);
@@ -63,15 +63,15 @@ impl Storage<Stream> for FileStreamStorage {
                     match stream_data {
                         Ok(stream_data) => stream_data,
                         Err(err) => {
-                            return Err(Error::CannotDeserializeResource(err));
+                            return Err(IggyError::CannotDeserializeResource(err));
                         }
                     }
                 } else {
-                    return Err(Error::ResourceNotFound(key));
+                    return Err(IggyError::ResourceNotFound(key));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotLoadResource(err));
+                return Err(IggyError::CannotLoadResource(err));
             }
         };
 
@@ -80,7 +80,7 @@ impl Storage<Stream> for FileStreamStorage {
         let mut unloaded_topics = Vec::new();
         let dir_entries = fs::read_dir(&stream.topics_path).await;
         if dir_entries.is_err() {
-            return Err(Error::CannotReadTopics(stream.stream_id));
+            return Err(IggyError::CannotReadTopics(stream.stream_id));
         }
 
         let mut dir_entries = dir_entries.unwrap();
@@ -148,9 +148,9 @@ impl Storage<Stream> for FileStreamStorage {
         Ok(())
     }
 
-    async fn save(&self, stream: &Stream) -> Result<(), Error> {
+    async fn save(&self, stream: &Stream) -> Result<(), IggyError> {
         if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
-            return Err(Error::CannotCreateStreamDirectory(
+            return Err(IggyError::CannotCreateStreamDirectory(
                 stream.stream_id,
                 stream.path.clone(),
             ));
@@ -159,7 +159,7 @@ impl Storage<Stream> for FileStreamStorage {
         if !Path::new(&stream.topics_path).exists()
             && create_dir(&stream.topics_path).await.is_err()
         {
-            return Err(Error::CannotCreateTopicsDirectory(
+            return Err(IggyError::CannotCreateTopicsDirectory(
                 stream.stream_id,
                 stream.topics_path.clone(),
             ));
@@ -178,11 +178,11 @@ impl Storage<Stream> for FileStreamStorage {
                     .insert(&key, data)
                     .with_context(|| format!("Failed to insert stream with key: {}", key))
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
 
@@ -191,7 +191,7 @@ impl Storage<Stream> for FileStreamStorage {
         Ok(())
     }
 
-    async fn delete(&self, stream: &Stream) -> Result<(), Error> {
+    async fn delete(&self, stream: &Stream) -> Result<(), IggyError> {
         info!("Deleting stream with ID: {}...", stream.stream_id);
         let key = get_key(stream.stream_id);
         if let Err(err) = self
@@ -199,10 +199,10 @@ impl Storage<Stream> for FileStreamStorage {
             .remove(&key)
             .with_context(|| format!("Failed to delete stream with key: {}", key))
         {
-            return Err(Error::CannotDeleteResource(err));
+            return Err(IggyError::CannotDeleteResource(err));
         }
         if fs::remove_dir_all(&stream.path).await.is_err() {
-            return Err(Error::CannotDeleteStreamDirectory(stream.stream_id));
+            return Err(IggyError::CannotDeleteStreamDirectory(stream.stream_id));
         }
         info!("Deleted stream with ID: {}.", stream.stream_id);
         Ok(())

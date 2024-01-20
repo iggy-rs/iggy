@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::streams::MAX_NAME_LENGTH;
 use crate::utils::text;
 use crate::validatable::Validatable;
@@ -32,20 +32,20 @@ impl Default for CreateStream {
     }
 }
 
-impl Validatable<Error> for CreateStream {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for CreateStream {
+    fn validate(&self) -> Result<(), IggyError> {
         if let Some(stream_id) = self.stream_id {
             if stream_id == 0 {
-                return Err(Error::InvalidStreamId);
+                return Err(IggyError::InvalidStreamId);
             }
         }
 
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
-            return Err(Error::InvalidStreamName);
+            return Err(IggyError::InvalidStreamName);
         }
 
         if !text::is_resource_name_valid(&self.name) {
-            return Err(Error::InvalidStreamName);
+            return Err(IggyError::InvalidStreamName);
         }
 
         Ok(())
@@ -62,9 +62,9 @@ impl BytesSerializable for CreateStream {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreateStream, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<CreateStream, IggyError> {
         if bytes.len() < 6 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let stream_id = u32::from_le_bytes(bytes[..4].try_into()?);
@@ -76,7 +76,7 @@ impl BytesSerializable for CreateStream {
         let name_length = bytes[4];
         let name = from_utf8(&bytes[5..5 + name_length as usize])?.to_string();
         if name.len() != name_length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let command = CreateStream { stream_id, name };

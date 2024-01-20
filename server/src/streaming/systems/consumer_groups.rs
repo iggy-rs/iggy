@@ -1,7 +1,7 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use tokio::sync::RwLock;
 
@@ -12,7 +12,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         consumer_group_id: &Identifier,
-    ) -> Result<&RwLock<ConsumerGroup>, Error> {
+    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -30,7 +30,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<Vec<&RwLock<ConsumerGroup>>, Error> {
+    ) -> Result<Vec<&RwLock<ConsumerGroup>>, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -50,7 +50,7 @@ impl System {
         topic_id: &Identifier,
         consumer_group_id: u32,
         name: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id)?;
@@ -73,7 +73,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         consumer_group_id: &Identifier,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream_id_value;
         let topic_id_value;
@@ -119,7 +119,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         consumer_group_id: &Identifier,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream_id_value;
         let topic_id_value;
@@ -164,7 +164,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         consumer_group_id: &Identifier,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id)?;
@@ -191,7 +191,7 @@ impl System {
         topic_id: &Identifier,
         consumer_group_id: &Identifier,
         client_id: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let stream_id_value;
         let topic_id_value;
         let group_id;

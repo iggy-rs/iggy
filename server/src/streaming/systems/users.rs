@@ -2,7 +2,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
 use crate::streaming::utils::crypto;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
@@ -14,7 +14,7 @@ use tracing::{info, warn};
 static USER_ID: AtomicU32 = AtomicU32::new(1);
 
 impl System {
-    pub(crate) async fn load_users(&mut self) -> Result<(), Error> {
+    pub(crate) async fn load_users(&mut self) -> Result<(), IggyError> {
         info!("Loading users...");
         let mut users = self.storage.user.load_all().await?;
         if users.is_empty() {
@@ -33,7 +33,11 @@ impl System {
         Ok(())
     }
 
-    pub async fn find_user(&self, session: &Session, user_id: &Identifier) -> Result<User, Error> {
+    pub async fn find_user(
+        &self,
+        session: &Session,
+        user_id: &Identifier,
+    ) -> Result<User, IggyError> {
         self.ensure_authenticated(session)?;
         let user = self.get_user(user_id).await?;
         let session_user_id = session.get_user_id();
@@ -44,7 +48,7 @@ impl System {
         Ok(user)
     }
 
-    pub async fn get_user(&self, user_id: &Identifier) -> Result<User, Error> {
+    pub async fn get_user(&self, user_id: &Identifier) -> Result<User, IggyError> {
         Ok(match user_id.kind {
             IdKind::Numeric => {
                 self.storage
@@ -61,7 +65,7 @@ impl System {
         })
     }
 
-    pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, Error> {
+    pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_users(session.get_user_id())?;
         self.storage.user.load_all().await
@@ -74,13 +78,13 @@ impl System {
         password: &str,
         status: UserStatus,
         permissions: Option<Permissions>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.create_user(session.get_user_id())?;
         let username = text::to_lowercase_non_whitespace(username);
         if self.storage.user.load_by_username(&username).await.is_ok() {
             error!("User: {username} already exists.");
-            return Err(Error::UserAlreadyExists);
+            return Err(IggyError::UserAlreadyExists);
         }
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
@@ -96,13 +100,13 @@ impl System {
         &mut self,
         session: &Session,
         user_id: &Identifier,
-    ) -> Result<User, Error> {
+    ) -> Result<User, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.delete_user(session.get_user_id())?;
         let user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot delete the root user.");
-            return Err(Error::CannotDeleteUser(user.id));
+            return Err(IggyError::CannotDeleteUser(user.id));
         }
 
         info!("Deleting user: {} with ID: {user_id}...", user.username);
@@ -121,7 +125,7 @@ impl System {
         user_id: &Identifier,
         username: Option<String>,
         status: Option<UserStatus>,
-    ) -> Result<User, Error> {
+    ) -> Result<User, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.update_user(session.get_user_id())?;
         let mut user = self.get_user(user_id).await?;
@@ -130,7 +134,7 @@ impl System {
             let existing_user = self.storage.user.load_by_username(&username).await;
             if existing_user.is_ok() && existing_user.unwrap().id != user.id {
                 error!("User: {username} already exists.");
-                return Err(Error::UserAlreadyExists);
+                return Err(IggyError::UserAlreadyExists);
             }
             self.storage.user.delete(&user).await?;
             user.username = username;
@@ -151,14 +155,14 @@ impl System {
         session: &Session,
         user_id: &Identifier,
         permissions: Option<Permissions>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner
             .update_permissions(session.get_user_id())?;
         let mut user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot change the root user permissions.");
-            return Err(Error::CannotChangePermissions(user.id));
+            return Err(IggyError::CannotChangePermissions(user.id));
         }
 
         user.permissions = permissions;
@@ -182,7 +186,7 @@ impl System {
         user_id: &Identifier,
         current_password: &str,
         new_password: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let mut user = self.get_user(user_id).await?;
         let session_user_id = session.get_user_id();
@@ -195,7 +199,7 @@ impl System {
                 "Invalid current password for user: {} with ID: {user_id}.",
                 user.username
             );
-            return Err(Error::InvalidCredentials);
+            return Err(IggyError::InvalidCredentials);
         }
 
         info!(
@@ -216,7 +220,7 @@ impl System {
         username: &str,
         password: &str,
         session: Option<&Session>,
-    ) -> Result<User, Error> {
+    ) -> Result<User, IggyError> {
         self.login_user_with_credentials(username, Some(password), session)
             .await
     }
@@ -226,19 +230,19 @@ impl System {
         username: &str,
         password: Option<&str>,
         session: Option<&Session>,
-    ) -> Result<User, Error> {
+    ) -> Result<User, IggyError> {
         let user = match self.storage.user.load_by_username(username).await {
             Ok(user) => user,
             Err(_) => {
                 error!("Cannot login user: {username} (not found).");
-                return Err(Error::InvalidCredentials);
+                return Err(IggyError::InvalidCredentials);
             }
         };
 
         info!("Logging in user: {username} with ID: {}...", user.id);
         if !user.is_active() {
             warn!("User: {username} with ID: {} is inactive.", user.id);
-            return Err(Error::UserInactive);
+            return Err(IggyError::UserInactive);
         }
 
         if let Some(password) = password {
@@ -247,7 +251,7 @@ impl System {
                     "Invalid password for user: {username} with ID: {}.",
                     user.id
                 );
-                return Err(Error::InvalidCredentials);
+                return Err(IggyError::InvalidCredentials);
             }
         }
 
@@ -274,7 +278,7 @@ impl System {
         Ok(user)
     }
 
-    pub async fn logout_user(&self, session: &Session) -> Result<(), Error> {
+    pub async fn logout_user(&self, session: &Session) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let user = self
             .get_user(&Identifier::numeric(session.get_user_id())?)

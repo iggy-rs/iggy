@@ -3,7 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
@@ -51,7 +51,7 @@ impl Topic {
         message_expiry: Option<u32>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
-    ) -> Result<Topic, Error> {
+    ) -> Result<Topic, IggyError> {
         let path = config.get_topic_path(stream_id, topic_id);
         let partitions_path = config.get_partitions_path(stream_id, topic_id);
         let mut topic: Topic = Topic {
@@ -98,10 +98,10 @@ impl Topic {
         self.partitions.values().map(Arc::clone).collect()
     }
 
-    pub fn get_partition(&self, partition_id: u32) -> Result<Arc<RwLock<Partition>>, Error> {
+    pub fn get_partition(&self, partition_id: u32) -> Result<Arc<RwLock<Partition>>, IggyError> {
         match self.partitions.get(&partition_id) {
             Some(partition_arc) => Ok(partition_arc.clone()),
-            None => Err(Error::PartitionNotFound(
+            None => Err(IggyError::PartitionNotFound(
                 partition_id,
                 self.topic_id,
                 self.stream_id,

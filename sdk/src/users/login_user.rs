@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
 use crate::validatable::Validatable;
@@ -32,24 +32,24 @@ impl Default for LoginUser {
     }
 }
 
-impl Validatable<Error> for LoginUser {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for LoginUser {
+    fn validate(&self) -> Result<(), IggyError> {
         if self.username.is_empty()
             || self.username.len() > MAX_USERNAME_LENGTH
             || self.username.len() < MIN_USERNAME_LENGTH
         {
-            return Err(Error::InvalidUsername);
+            return Err(IggyError::InvalidUsername);
         }
 
         if !text::is_resource_name_valid(&self.username) {
-            return Err(Error::InvalidUsername);
+            return Err(IggyError::InvalidUsername);
         }
 
         if self.password.is_empty()
             || self.password.len() > MAX_PASSWORD_LENGTH
             || self.password.len() < MIN_PASSWORD_LENGTH
         {
-            return Err(Error::InvalidPassword);
+            return Err(IggyError::InvalidPassword);
         }
 
         Ok(())
@@ -68,15 +68,15 @@ impl BytesSerializable for LoginUser {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<LoginUser, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<LoginUser, IggyError> {
         if bytes.len() < 4 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let username_length = bytes[0];
         let username = from_utf8(&bytes[1..=(username_length as usize)])?.to_string();
         if username.len() != username_length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let password_length = bytes[1 + username_length as usize];
@@ -86,7 +86,7 @@ impl BytesSerializable for LoginUser {
         )?
         .to_string();
         if password.len() != password_length as usize {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let command = LoginUser { username, password };

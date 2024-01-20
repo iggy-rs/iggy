@@ -1,6 +1,6 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::segments::segment::Segment;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use tracing::info;
 
 pub struct DeletedSegment {
@@ -33,7 +33,7 @@ impl Partition {
         expired_segments
     }
 
-    pub async fn add_persisted_segment(&mut self, start_offset: u64) -> Result<(), Error> {
+    pub async fn add_persisted_segment(&mut self, start_offset: u64) -> Result<(), IggyError> {
         info!(
             "Creating the new segment for partition with ID: {}, stream with ID: {}, topic with ID: {}...",
             self.partition_id, self.stream_id, self.topic_id
@@ -52,7 +52,7 @@ impl Partition {
         Ok(())
     }
 
-    pub async fn delete_segment(&mut self, start_offset: u64) -> Result<DeletedSegment, Error> {
+    pub async fn delete_segment(&mut self, start_offset: u64) -> Result<DeletedSegment, IggyError> {
         let deleted_segment;
         {
             let segment = self
@@ -60,7 +60,7 @@ impl Partition {
                 .iter()
                 .find(|s| s.start_offset == start_offset);
             if segment.is_none() {
-                return Err(Error::SegmentNotFound);
+                return Err(IggyError::SegmentNotFound);
             }
 
             let segment = segment.unwrap();

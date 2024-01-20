@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::permissions::Permissions;
 use crate::validatable::Validatable;
@@ -23,8 +23,8 @@ pub struct UpdatePermissions {
 
 impl CommandPayload for UpdatePermissions {}
 
-impl Validatable<Error> for UpdatePermissions {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for UpdatePermissions {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -45,16 +45,16 @@ impl BytesSerializable for UpdatePermissions {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<UpdatePermissions, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<UpdatePermissions, IggyError> {
         if bytes.len() < 4 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let user_id = Identifier::from_bytes(bytes)?;
         let mut position = user_id.get_size_bytes() as usize;
         let has_permissions = bytes[position];
         if has_permissions > 1 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         position += 1;

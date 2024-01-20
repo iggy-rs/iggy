@@ -2,7 +2,7 @@ use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::system::System;
 use futures::future::try_join_all;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::text;
 use std::cell::RefCell;
@@ -13,13 +13,13 @@ use tracing::{error, info};
 static CURRENT_STREAM_ID: AtomicU32 = AtomicU32::new(1);
 
 impl System {
-    pub(crate) async fn load_streams(&mut self) -> Result<(), Error> {
+    pub(crate) async fn load_streams(&mut self) -> Result<(), IggyError> {
         info!("Loading streams from disk...");
         let mut unloaded_streams = Vec::new();
         let dir_entries = read_dir(&self.config.get_streams_path()).await;
         if let Err(error) = dir_entries {
             error!("Cannot read streams directory: {}", error);
-            return Err(Error::CannotReadStreams);
+            return Err(IggyError::CannotReadStreams);
         }
 
         let mut dir_entries = dir_entries.unwrap();
@@ -41,7 +41,7 @@ impl System {
             let load_stream_task = async {
                 stream.load().await?;
                 loaded_streams.borrow_mut().push(stream);
-                Result::<(), Error>::Ok(())
+                Result::<(), IggyError>::Ok(())
             };
             load_stream_task
         });
@@ -80,7 +80,7 @@ impl System {
         self.streams.values().collect()
     }
 
-    pub fn find_streams(&self, session: &Session) -> Result<Vec<&Stream>, Error> {
+    pub fn find_streams(&self, session: &Session) -> Result<Vec<&Stream>, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_streams(session.get_user_id())?;
         Ok(self.get_streams())
@@ -90,7 +90,7 @@ impl System {
         &self,
         session: &Session,
         identifier: &Identifier,
-    ) -> Result<&Stream, Error> {
+    ) -> Result<&Stream, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(identifier)?;
         self.permissioner
@@ -98,44 +98,44 @@ impl System {
         Ok(stream)
     }
 
-    pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, Error> {
+    pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_stream_by_id(identifier.get_u32_value().unwrap()),
             IdKind::String => self.get_stream_by_name(&identifier.get_string_value().unwrap()),
         }
     }
 
-    pub fn get_stream_mut(&mut self, identifier: &Identifier) -> Result<&mut Stream, Error> {
+    pub fn get_stream_mut(&mut self, identifier: &Identifier) -> Result<&mut Stream, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_stream_by_id_mut(identifier.get_u32_value().unwrap()),
             IdKind::String => self.get_stream_by_name_mut(&identifier.get_string_value().unwrap()),
         }
     }
 
-    fn get_stream_by_name(&self, name: &str) -> Result<&Stream, Error> {
+    fn get_stream_by_name(&self, name: &str) -> Result<&Stream, IggyError> {
         let stream_id = self.streams_ids.get(name);
         if stream_id.is_none() {
-            return Err(Error::StreamNameNotFound(name.to_string()));
+            return Err(IggyError::StreamNameNotFound(name.to_string()));
         }
 
         self.get_stream_by_id(*stream_id.unwrap())
     }
 
-    fn get_stream_by_id(&self, stream_id: u32) -> Result<&Stream, Error> {
+    fn get_stream_by_id(&self, stream_id: u32) -> Result<&Stream, IggyError> {
         let stream = self.streams.get(&stream_id);
         if stream.is_none() {
-            return Err(Error::StreamIdNotFound(stream_id));
+            return Err(IggyError::StreamIdNotFound(stream_id));
         }
 
         Ok(stream.unwrap())
     }
 
-    fn get_stream_by_name_mut(&mut self, name: &str) -> Result<&mut Stream, Error> {
+    fn get_stream_by_name_mut(&mut self, name: &str) -> Result<&mut Stream, IggyError> {
         let stream_id;
         {
             let id = self.streams_ids.get_mut(name);
             if id.is_none() {
-                return Err(Error::StreamNameNotFound(name.to_string()));
+                return Err(IggyError::StreamNameNotFound(name.to_string()));
             }
 
             stream_id = *id.unwrap();
@@ -144,10 +144,10 @@ impl System {
         self.get_stream_by_id_mut(stream_id)
     }
 
-    fn get_stream_by_id_mut(&mut self, stream_id: u32) -> Result<&mut Stream, Error> {
+    fn get_stream_by_id_mut(&mut self, stream_id: u32) -> Result<&mut Stream, IggyError> {
         let stream = self.streams.get_mut(&stream_id);
         if stream.is_none() {
-            return Err(Error::StreamIdNotFound(stream_id));
+            return Err(IggyError::StreamIdNotFound(stream_id));
         }
 
         Ok(stream.unwrap())
@@ -158,12 +158,12 @@ impl System {
         session: &Session,
         stream_id: Option<u32>,
         name: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.create_stream(session.get_user_id())?;
         let name = text::to_lowercase_non_whitespace(name);
         if self.streams_ids.contains_key(&name) {
-            return Err(Error::StreamNameAlreadyExists(name.to_string()));
+            return Err(IggyError::StreamNameAlreadyExists(name.to_string()));
         }
 
         let mut id;
@@ -172,7 +172,7 @@ impl System {
             loop {
                 if self.streams.contains_key(&id) {
                     if id == u32::MAX {
-                        return Err(Error::StreamIdAlreadyExists(id));
+                        return Err(IggyError::StreamIdAlreadyExists(id));
                     }
                     id = CURRENT_STREAM_ID.fetch_add(1, Ordering::SeqCst);
                 } else {
@@ -184,7 +184,7 @@ impl System {
         }
 
         if self.streams.contains_key(&id) {
-            return Err(Error::StreamIdAlreadyExists(id));
+            return Err(IggyError::StreamIdAlreadyExists(id));
         }
 
         let stream = Stream::create(id, &name, self.config.clone(), self.storage.clone());
@@ -201,7 +201,7 @@ impl System {
         session: &Session,
         id: &Identifier,
         name: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream_id;
         {
@@ -216,7 +216,7 @@ impl System {
         {
             if let Some(stream_id_by_name) = self.streams_ids.get(&updated_name) {
                 if *stream_id_by_name != stream_id {
-                    return Err(Error::StreamNameAlreadyExists(updated_name.clone()));
+                    return Err(IggyError::StreamNameAlreadyExists(updated_name.clone()));
                 }
             }
         }
@@ -245,7 +245,7 @@ impl System {
         &mut self,
         session: &Session,
         id: &Identifier,
-    ) -> Result<u32, Error> {
+    ) -> Result<u32, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
@@ -253,7 +253,7 @@ impl System {
             .delete_stream(session.get_user_id(), stream_id)?;
         let stream_name = stream.name.clone();
         if stream.delete().await.is_err() {
-            return Err(Error::CannotDeleteStream(stream_id));
+            return Err(IggyError::CannotDeleteStream(stream_id));
         }
 
         self.metrics.decrement_streams(1);
@@ -278,7 +278,7 @@ impl System {
         &self,
         session: &Session,
         stream_id: &Identifier,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let stream = self.get_stream(stream_id)?;
         self.permissioner
             .purge_stream(session.get_user_id(), stream.stream_id)?;

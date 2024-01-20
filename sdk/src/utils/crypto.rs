@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::utils::text;
 use aes_gcm::aead::generic_array::GenericArray;
 use aes_gcm::aead::{Aead, OsRng};
@@ -6,8 +6,8 @@ use aes_gcm::{AeadCore, Aes256Gcm, KeyInit};
 use std::fmt::Debug;
 
 pub trait Encryptor: Send + Sync + Debug {
-    fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Error>;
-    fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Error>;
+    fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, IggyError>;
+    fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, IggyError>;
 }
 
 pub struct Aes256GcmEncryptor {
@@ -24,36 +24,36 @@ impl Debug for Aes256GcmEncryptor {
 }
 
 impl Aes256GcmEncryptor {
-    pub fn new(key: &[u8]) -> Result<Self, Error> {
+    pub fn new(key: &[u8]) -> Result<Self, IggyError> {
         if key.len() != 32 {
-            return Err(Error::InvalidEncryptionKey);
+            return Err(IggyError::InvalidEncryptionKey);
         }
         Ok(Self {
             cipher: Aes256Gcm::new(GenericArray::from_slice(key)),
         })
     }
 
-    pub fn from_base64_key(key: &str) -> Result<Self, Error> {
+    pub fn from_base64_key(key: &str) -> Result<Self, IggyError> {
         Self::new(&text::from_base64_as_bytes(key)?)
     }
 }
 
 impl Encryptor for Aes256GcmEncryptor {
-    fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, Error> {
+    fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>, IggyError> {
         let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
         let encrypted_data = self.cipher.encrypt(&nonce, data);
         if encrypted_data.is_err() {
-            return Err(Error::CannotEncryptData);
+            return Err(IggyError::CannotEncryptData);
         }
         let payload = [&nonce, encrypted_data.unwrap().as_slice()].concat();
         Ok(payload)
     }
 
-    fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, Error> {
+    fn decrypt(&self, data: &[u8]) -> Result<Vec<u8>, IggyError> {
         let nonce = GenericArray::from_slice(&data[0..12]);
         let payload = self.cipher.decrypt(nonce, &data[12..]);
         if payload.is_err() {
-            return Err(Error::CannotDecryptData);
+            return Err(IggyError::CannotDecryptData);
         }
         Ok(payload.unwrap())
     }
@@ -90,6 +90,6 @@ mod tests {
         let decrypted_data = second_encryptor.decrypt(&encrypted_data);
         assert!(decrypted_data.is_err());
         let error = decrypted_data.err().unwrap();
-        assert_eq!(error.as_code(), Error::CannotDecryptData.as_code());
+        assert_eq!(error.as_code(), IggyError::CannotDecryptData.as_code());
     }
 }

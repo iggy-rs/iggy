@@ -1,7 +1,7 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::utils::byte_size::IggyByteSize;
 
@@ -11,7 +11,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<&Topic, Error> {
+    ) -> Result<&Topic, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -24,7 +24,7 @@ impl System {
         &self,
         session: &Session,
         stream_id: &Identifier,
-    ) -> Result<Vec<&Topic>, Error> {
+    ) -> Result<Vec<&Topic>, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         self.permissioner
@@ -43,7 +43,7 @@ impl System {
         message_expiry: Option<u32>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id)?;
@@ -77,7 +77,7 @@ impl System {
         message_expiry: Option<u32>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id)?;
@@ -110,7 +110,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream_id_value;
         {
@@ -147,7 +147,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner

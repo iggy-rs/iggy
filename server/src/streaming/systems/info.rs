@@ -1,5 +1,5 @@
 use crate::streaming::systems::system::System;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use serde::{Deserialize, Serialize};
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::Display;
@@ -37,12 +37,12 @@ pub struct SemanticVersion {
 }
 
 impl System {
-    pub(crate) async fn load_version(&mut self) -> Result<(), Error> {
+    pub(crate) async fn load_version(&mut self) -> Result<(), IggyError> {
         info!("Loading system info...");
         let mut system_info = SystemInfo::default();
         if let Err(err) = self.storage.info.load(&mut system_info).await {
             match err {
-                Error::ResourceNotFound(_) => {
+                IggyError::ResourceNotFound(_) => {
                     info!("System info not found, creating...");
                     self.update_system_info(&mut system_info).await?;
                 }
@@ -66,7 +66,7 @@ impl System {
         Ok(())
     }
 
-    async fn update_system_info(&self, system_info: &mut SystemInfo) -> Result<(), Error> {
+    async fn update_system_info(&self, system_info: &mut SystemInfo) -> Result<(), IggyError> {
         system_info.update_version(VERSION);
         self.storage.info.save(system_info).await?;
         Ok(())
@@ -110,7 +110,7 @@ impl Display for SystemInfo {
 }
 
 impl FromStr for SemanticVersion {
-    type Err = Error;
+    type Err = IggyError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut version = s.split('.');
         let major = version.next().unwrap().parse::<u32>()?;

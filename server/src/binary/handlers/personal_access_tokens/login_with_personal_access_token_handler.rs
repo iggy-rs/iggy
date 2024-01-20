@@ -3,7 +3,7 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use tracing::debug;
 
@@ -12,7 +12,7 @@ pub async fn handle(
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
-) -> Result<(), Error> {
+) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read();
     let user = system

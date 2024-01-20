@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -12,8 +12,8 @@ pub struct GetMe {}
 
 impl CommandPayload for GetMe {}
 
-impl Validatable<Error> for GetMe {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for GetMe {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -23,9 +23,9 @@ impl BytesSerializable for GetMe {
         Vec::with_capacity(0)
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetMe, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<GetMe, IggyError> {
         if !bytes.is_empty() {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let command = GetMe {};

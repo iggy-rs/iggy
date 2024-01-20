@@ -1,6 +1,6 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::topics::topic::Topic;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -15,14 +15,14 @@ impl Topic {
         self.partitions.len() as u32
     }
 
-    pub fn add_partitions(&mut self, count: u32) -> Result<Vec<u32>, Error> {
+    pub fn add_partitions(&mut self, count: u32) -> Result<Vec<u32>, IggyError> {
         if count == 0 {
             return Ok(vec![]);
         }
 
         let current_partitions_count = self.partitions.len() as u32;
         if current_partitions_count + count > MAX_PARTITIONS_COUNT {
-            return Err(Error::TooManyPartitions);
+            return Err(IggyError::TooManyPartitions);
         }
 
         let mut partition_ids = Vec::with_capacity(count as usize);
@@ -44,7 +44,7 @@ impl Topic {
         Ok(partition_ids)
     }
 
-    pub async fn add_persisted_partitions(&mut self, count: u32) -> Result<Vec<u32>, Error> {
+    pub async fn add_persisted_partitions(&mut self, count: u32) -> Result<Vec<u32>, IggyError> {
         let partition_ids = self.add_partitions(count)?;
         for partition_id in &partition_ids {
             let partition = self.partitions.get(partition_id).unwrap();
@@ -57,7 +57,7 @@ impl Topic {
     pub async fn delete_persisted_partitions(
         &mut self,
         mut count: u32,
-    ) -> Result<Option<DeletedPartitions>, Error> {
+    ) -> Result<Option<DeletedPartitions>, IggyError> {
         if count == 0 {
             return Ok(None);
         }

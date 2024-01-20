@@ -1,7 +1,7 @@
 use crate::http::jwt::json_web_token::RevokedAccessToken;
 use crate::http::jwt::refresh_token::RefreshToken;
 use anyhow::Context;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use sled::Db;
 use std::str::from_utf8;
 use std::sync::Arc;
@@ -20,26 +20,26 @@ impl TokenStorage {
         Self { db }
     }
 
-    pub fn load_refresh_token(&self, token_hash: &str) -> Result<RefreshToken, Error> {
+    pub fn load_refresh_token(&self, token_hash: &str) -> Result<RefreshToken, IggyError> {
         let key = Self::get_refresh_token_key(token_hash);
         let token_data = self
             .db
             .get(&key)
             .with_context(|| format!("Failed to load refresh token, key: {}", key));
         if let Err(err) = token_data {
-            return Err(Error::CannotLoadResource(err));
+            return Err(IggyError::CannotLoadResource(err));
         }
 
         let token_data = token_data.unwrap();
         if token_data.is_none() {
-            return Err(Error::ResourceNotFound(key));
+            return Err(IggyError::ResourceNotFound(key));
         }
 
         let token_data = token_data.unwrap();
         let token_data = rmp_serde::from_slice::<RefreshToken>(&token_data)
             .with_context(|| format!("Failed to deserialize refresh token, key: {}", key));
         if let Err(err) = token_data {
-            return Err(Error::CannotDeserializeResource(err));
+            return Err(IggyError::CannotDeserializeResource(err));
         }
 
         let mut token_data = token_data.unwrap();
@@ -47,9 +47,9 @@ impl TokenStorage {
         Ok(token_data)
     }
 
-    pub fn load_all_refresh_tokens(&self) -> Result<Vec<RefreshToken>, Error> {
+    pub fn load_all_refresh_tokens(&self) -> Result<Vec<RefreshToken>, IggyError> {
         let key = format!("{REFRESH_TOKENS_KEY_PREFIX}:");
-        let refresh_tokens: Result<Vec<RefreshToken>, Error> = self
+        let refresh_tokens: Result<Vec<RefreshToken>, IggyError> = self
             .db
             .scan_prefix(&key)
             .map(|data| {
@@ -60,7 +60,7 @@ impl TokenStorage {
                             key
                         )
                     })
-                    .map_err(Error::CannotLoadResource)?;
+                    .map_err(IggyError::CannotLoadResource)?;
 
                 let mut token = rmp_serde::from_slice::<RefreshToken>(&value)
                     .with_context(|| {
@@ -69,11 +69,11 @@ impl TokenStorage {
                             key
                         )
                     })
-                    .map_err(Error::CannotDeserializeResource)?;
+                    .map_err(IggyError::CannotDeserializeResource)?;
 
                 token.token_hash = from_utf8(&hash)
                     .with_context(|| "Failed to convert hash to UTF-8 string")
-                    .map_err(Error::CannotDeserializeResource)?
+                    .map_err(IggyError::CannotDeserializeResource)?
                     .to_string();
                 Ok(token)
             })
@@ -84,9 +84,9 @@ impl TokenStorage {
         Ok(refresh_tokens)
     }
 
-    pub fn load_all_revoked_access_tokens(&self) -> Result<Vec<RevokedAccessToken>, Error> {
+    pub fn load_all_revoked_access_tokens(&self) -> Result<Vec<RevokedAccessToken>, IggyError> {
         let key = format!("{REVOKED_ACCESS_TOKENS_KEY_PREFIX}:");
-        let revoked_tokens: Result<Vec<RevokedAccessToken>, Error> = self
+        let revoked_tokens: Result<Vec<RevokedAccessToken>, IggyError> = self
             .db
             .scan_prefix(&key)
             .map(|data| {
@@ -97,7 +97,7 @@ impl TokenStorage {
                             key
                         )
                     })
-                    .map_err(Error::CannotLoadResource)?;
+                    .map_err(IggyError::CannotLoadResource)?;
 
                 let token = rmp_serde::from_slice::<RevokedAccessToken>(&value)
                     .with_context(|| {
@@ -106,7 +106,7 @@ impl TokenStorage {
                             key
                         )
                     })
-                    .map_err(Error::CannotDeserializeResource)?;
+                    .map_err(IggyError::CannotDeserializeResource)?;
                 Ok(token)
             })
             .collect();
@@ -116,7 +116,7 @@ impl TokenStorage {
         Ok(revoked_tokens)
     }
 
-    pub fn save_revoked_access_token(&self, token: &RevokedAccessToken) -> Result<(), Error> {
+    pub fn save_revoked_access_token(&self, token: &RevokedAccessToken) -> Result<(), IggyError> {
         let key = Self::get_revoked_token_key(&token.id);
         match rmp_serde::to_vec(&token)
             .with_context(|| format!("Failed to serialize revoked access token, key: {}", key))
@@ -127,17 +127,17 @@ impl TokenStorage {
                     .insert(&key, data)
                     .with_context(|| "Failed to save revoked access token")
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
         Ok(())
     }
 
-    pub fn save_refresh_token(&self, token: &RefreshToken) -> Result<(), Error> {
+    pub fn save_refresh_token(&self, token: &RefreshToken) -> Result<(), IggyError> {
         let key = Self::get_refresh_token_key(&token.token_hash);
         match rmp_serde::to_vec(&token)
             .with_context(|| format!("Failed to serialize refresh token, key: {}", key))
@@ -148,29 +148,29 @@ impl TokenStorage {
                     .insert(&key, data)
                     .with_context(|| format!("Failed to save refresh token, key: {}", key))
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
         Ok(())
     }
 
-    pub fn delete_revoked_access_token(&self, id: &str) -> Result<(), Error> {
+    pub fn delete_revoked_access_token(&self, id: &str) -> Result<(), IggyError> {
         let key = Self::get_revoked_token_key(id);
         if let Err(err) = self
             .db
             .remove(&key)
             .with_context(|| format!("Failed to delete revoked access token, key: {}", key))
         {
-            return Err(Error::CannotDeleteResource(err));
+            return Err(IggyError::CannotDeleteResource(err));
         }
         Ok(())
     }
 
-    pub fn delete_refresh_token(&self, token_hash: &str) -> Result<(), Error> {
+    pub fn delete_refresh_token(&self, token_hash: &str) -> Result<(), IggyError> {
         let key = Self::get_refresh_token_key(token_hash);
         if let Err(err) = self
             .db
@@ -178,7 +178,7 @@ impl TokenStorage {
             .with_context(|| format!("Failed to delete refresh token, key: {}", key))
         {
             error!("Cannot delete refresh token. Error: {err}");
-            return Err(Error::CannotDeleteResource(err));
+            return Err(IggyError::CannotDeleteResource(err));
         }
         Ok(())
     }

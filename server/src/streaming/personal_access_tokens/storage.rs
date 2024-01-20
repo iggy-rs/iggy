@@ -2,7 +2,7 @@ use crate::streaming::personal_access_tokens::personal_access_token::PersonalAcc
 use crate::streaming::storage::{PersonalAccessTokenStorage, Storage};
 use anyhow::Context;
 use async_trait::async_trait;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::str::from_utf8;
@@ -27,7 +27,7 @@ unsafe impl Sync for FilePersonalAccessTokenStorage {}
 
 #[async_trait]
 impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
-    async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, Error> {
+    async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, IggyError> {
         let mut personal_access_tokens = Vec::new();
         for data in self.db.scan_prefix(format!("{}:token:", KEY_PREFIX)) {
             let personal_access_token = match data
@@ -36,11 +36,11 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
                     .with_context(|| format!("Failed to deserialize personal access token, when searching by key: {}", KEY_PREFIX)){
                     Ok(personal_access_token) => personal_access_token,
                     Err(err) => {
-                        return Err(Error::CannotDeserializeResource(err));
+                        return Err(IggyError::CannotDeserializeResource(err));
                     }
                 },
                 Err(err) => {
-                    return Err(Error::CannotLoadResource(err));
+                    return Err(IggyError::CannotLoadResource(err));
                 }
             };
             personal_access_tokens.push(personal_access_token);
@@ -49,7 +49,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
         Ok(personal_access_tokens)
     }
 
-    async fn load_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, Error> {
+    async fn load_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, IggyError> {
         let mut personal_access_tokens = Vec::new();
         let key = format!("{}:user:{}:", KEY_PREFIX, user_id);
         for data in self.db.scan_prefix(&key) {
@@ -65,7 +65,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
                     personal_access_tokens.push(personal_access_token);
                 }
                 Err(err) => {
-                    return Err(Error::CannotLoadResource(err));
+                    return Err(IggyError::CannotLoadResource(err));
                 }
             };
         }
@@ -73,7 +73,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
         Ok(personal_access_tokens)
     }
 
-    async fn load_by_token(&self, token: &str) -> Result<PersonalAccessToken, Error> {
+    async fn load_by_token(&self, token: &str) -> Result<PersonalAccessToken, IggyError> {
         let key = get_key(token);
         return match self
             .db
@@ -86,15 +86,15 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
                         rmp_serde::from_slice::<PersonalAccessToken>(&personal_access_token)
                             .with_context(|| "Failed to deserialize personal access token");
                     if let Err(err) = personal_access_token {
-                        Err(Error::CannotDeserializeResource(err))
+                        Err(IggyError::CannotDeserializeResource(err))
                     } else {
                         Ok(personal_access_token.unwrap())
                     }
                 } else {
-                    Err(Error::ResourceNotFound(key))
+                    Err(IggyError::ResourceNotFound(key))
                 }
             }
-            Err(err) => Err(Error::CannotLoadResource(err)),
+            Err(err) => Err(IggyError::CannotLoadResource(err)),
         };
     }
 
@@ -102,7 +102,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
         &self,
         user_id: UserId,
         name: &str,
-    ) -> Result<PersonalAccessToken, Error> {
+    ) -> Result<PersonalAccessToken, IggyError> {
         let key = get_name_key(user_id, name);
         return match self.db.get(&key).with_context(|| {
             format!(
@@ -115,19 +115,19 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
                     let token = from_utf8(&token)
                         .with_context(|| "Failed to deserialize personal access token");
                     if let Err(err) = token {
-                        Err(Error::CannotDeserializeResource(err))
+                        Err(IggyError::CannotDeserializeResource(err))
                     } else {
                         Ok(self.load_by_token(token.unwrap()).await?)
                     }
                 } else {
-                    Err(Error::ResourceNotFound(key))
+                    Err(IggyError::ResourceNotFound(key))
                 }
             }
-            Err(err) => Err(Error::CannotLoadResource(err)),
+            Err(err) => Err(IggyError::CannotLoadResource(err)),
         };
     }
 
-    async fn delete_for_user(&self, user_id: UserId, name: &str) -> Result<(), Error> {
+    async fn delete_for_user(&self, user_id: UserId, name: &str) -> Result<(), IggyError> {
         let personal_access_token = self.load_by_name(user_id, name).await?;
         info!("Deleting personal access token with name: {name} for user with ID: {user_id}...");
         let key = get_name_key(user_id, name);
@@ -136,7 +136,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
             .remove(key)
             .with_context(|| "Failed to delete personal access token")
         {
-            return Err(Error::CannotDeleteResource(err));
+            return Err(IggyError::CannotDeleteResource(err));
         }
         let key = get_key(&personal_access_token.token);
         if let Err(err) = self
@@ -144,7 +144,7 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
             .remove(key)
             .with_context(|| "Failed to delete personal access token")
         {
-            return Err(Error::CannotDeleteResource(err));
+            return Err(IggyError::CannotDeleteResource(err));
         }
         info!("Deleted personal access token with name: {name} for user with ID: {user_id}.");
         Ok(())
@@ -153,13 +153,13 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
 
 #[async_trait]
 impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
-    async fn load(&self, personal_access_token: &mut PersonalAccessToken) -> Result<(), Error> {
+    async fn load(&self, personal_access_token: &mut PersonalAccessToken) -> Result<(), IggyError> {
         self.load_by_name(personal_access_token.user_id, &personal_access_token.name)
             .await?;
         Ok(())
     }
 
-    async fn save(&self, personal_access_token: &PersonalAccessToken) -> Result<(), Error> {
+    async fn save(&self, personal_access_token: &PersonalAccessToken) -> Result<(), IggyError> {
         let key = get_key(&personal_access_token.token);
         match rmp_serde::to_vec(&personal_access_token)
             .with_context(|| "Failed to serialize personal access token")
@@ -170,7 +170,7 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
                     .insert(key, data)
                     .with_context(|| "Failed to save personal access token")
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
                 if let Err(err) = self
                     .db
@@ -180,11 +180,11 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
                     )
                     .with_context(|| "Failed to save personal access token")
                 {
-                    return Err(Error::CannotSaveResource(err));
+                    return Err(IggyError::CannotSaveResource(err));
                 }
             }
             Err(err) => {
-                return Err(Error::CannotSerializeResource(err));
+                return Err(IggyError::CannotSerializeResource(err));
             }
         }
 
@@ -195,7 +195,7 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
         Ok(())
     }
 
-    async fn delete(&self, personal_access_token: &PersonalAccessToken) -> Result<(), Error> {
+    async fn delete(&self, personal_access_token: &PersonalAccessToken) -> Result<(), IggyError> {
         self.delete_for_user(personal_access_token.user_id, &personal_access_token.name)
             .await
     }

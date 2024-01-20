@@ -1,5 +1,5 @@
 use crate::binary::binary_client::{BinaryClient, ClientState};
-use crate::error::Error;
+use crate::error::IggyError;
 
 pub mod binary_client;
 pub mod consumer_groups;
@@ -13,9 +13,9 @@ pub mod system;
 pub mod topics;
 pub mod users;
 
-async fn fail_if_not_authenticated(client: &dyn BinaryClient) -> Result<(), Error> {
+async fn fail_if_not_authenticated(client: &dyn BinaryClient) -> Result<(), IggyError> {
     if client.get_state().await != ClientState::Authenticated {
-        return Err(Error::Unauthenticated);
+        return Err(IggyError::Unauthenticated);
     }
     Ok(())
 }

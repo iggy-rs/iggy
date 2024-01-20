@@ -1,4 +1,4 @@
-use iggy::error::Error;
+use iggy::error::IggyError;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 use tracing::trace;
@@ -45,24 +45,24 @@ impl ConsumerGroup {
         self.assign_partitions().await;
     }
 
-    pub async fn calculate_partition_id(&self, member_id: u32) -> Result<u32, Error> {
+    pub async fn calculate_partition_id(&self, member_id: u32) -> Result<u32, IggyError> {
         let member = self.members.get(&member_id);
         if let Some(member) = member {
             return Ok(member.write().await.calculate_partition_id());
         }
-        Err(Error::ConsumerGroupMemberNotFound(
+        Err(IggyError::ConsumerGroupMemberNotFound(
             member_id,
             self.consumer_group_id,
             self.topic_id,
         ))
     }
 
-    pub async fn get_current_partition_id(&self, member_id: u32) -> Result<u32, Error> {
+    pub async fn get_current_partition_id(&self, member_id: u32) -> Result<u32, IggyError> {
         let member = self.members.get(&member_id);
         if let Some(member) = member {
             return Ok(member.read().await.current_partition_id);
         }
-        Err(Error::ConsumerGroupMemberNotFound(
+        Err(IggyError::ConsumerGroupMemberNotFound(
             member_id,
             self.consumer_group_id,
             self.topic_id,

@@ -1,12 +1,12 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::models::stats::Stats;
 
 const PROCESS_NAME: &str = "iggy-server";
 
 impl System {
-    pub async fn get_stats(&self, session: &Session) -> Result<Stats, Error> {
+    pub async fn get_stats(&self, session: &Session) -> Result<Stats, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_stats(session.get_user_id())?;
         let mut sys = sysinfo::System::new_all();

@@ -8,7 +8,7 @@ use crate::streaming::session::Session;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::permissioner::Permissioner;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use sled::Db;
 use std::collections::HashMap;
@@ -125,25 +125,25 @@ impl System {
         }
     }
 
-    pub async fn init(&mut self) -> Result<(), Error> {
+    pub async fn init(&mut self) -> Result<(), IggyError> {
         let system_path = self.config.get_system_path();
 
         if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
-            return Err(Error::CannotCreateBaseDirectory(system_path));
+            return Err(IggyError::CannotCreateBaseDirectory(system_path));
         }
 
         let streams_path = self.config.get_streams_path();
         if !Path::new(&streams_path).exists() && create_dir(&streams_path).await.is_err() {
-            return Err(Error::CannotCreateStreamsDirectory(streams_path));
+            return Err(IggyError::CannotCreateStreamsDirectory(streams_path));
         }
 
         let runtime_path = self.config.get_runtime_path();
         if Path::new(&runtime_path).exists() && remove_dir_all(&runtime_path).await.is_err() {
-            return Err(Error::CannotRemoveRuntimeDirectory(runtime_path));
+            return Err(IggyError::CannotRemoveRuntimeDirectory(runtime_path));
         }
 
         if create_dir(&runtime_path).await.is_err() {
-            return Err(Error::CannotCreateRuntimeDirectory(runtime_path));
+            return Err(IggyError::CannotCreateRuntimeDirectory(runtime_path));
         }
 
         info!(
@@ -158,12 +158,12 @@ impl System {
         Ok(())
     }
 
-    pub async fn shutdown(&mut self) -> Result<(), Error> {
+    pub async fn shutdown(&mut self) -> Result<(), IggyError> {
         self.persist_messages().await?;
         Ok(())
     }
 
-    pub async fn persist_messages(&self) -> Result<(), Error> {
+    pub async fn persist_messages(&self) -> Result<(), IggyError> {
         trace!("Saving buffered messages on disk...");
         for stream in self.streams.values() {
             stream.persist_messages().await?;
@@ -172,10 +172,10 @@ impl System {
         Ok(())
     }
 
-    pub fn ensure_authenticated(&self, session: &Session) -> Result<(), Error> {
+    pub fn ensure_authenticated(&self, session: &Session) -> Result<(), IggyError> {
         match session.is_authenticated() {
             true => Ok(()),
-            false => Err(Error::Unauthenticated),
+            false => Err(IggyError::Unauthenticated),
         }
     }
 

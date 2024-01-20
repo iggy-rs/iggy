@@ -21,7 +21,7 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use iggy::command::Command;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use tracing::{debug, error};
 
 pub async fn handle(
@@ -29,7 +29,7 @@ pub async fn handle(
     sender: &mut dyn Sender,
     session: &Session,
     system: SharedSystem,
-) -> Result<(), Error> {
+) -> Result<(), IggyError> {
     match try_handle(command, sender, session, &system).await {
         Ok(_) => {
             debug!("Command was handled successfully, session: {session}.");
@@ -47,7 +47,7 @@ async fn try_handle(
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
-) -> Result<(), Error> {
+) -> Result<(), IggyError> {
     debug!("Handling command '{command}', session: {session}...");
     match command {
         Command::Ping(command) => ping_handler::handle(command, sender, session).await,

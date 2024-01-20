@@ -1,5 +1,5 @@
 use crate::streaming::users::permissioner::Permissioner;
-use iggy::error::Error;
+use iggy::error::IggyError;
 
 impl Permissioner {
     pub fn create_partitons(
@@ -7,7 +7,7 @@ impl Permissioner {
         user_id: u32,
         stream_id: u32,
         topic_id: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.update_topic(user_id, stream_id, topic_id)
     }
 
@@ -16,7 +16,7 @@ impl Permissioner {
         user_id: u32,
         stream_id: u32,
         topic_id: u32,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.update_topic(user_id, stream_id, topic_id)
     }
 }

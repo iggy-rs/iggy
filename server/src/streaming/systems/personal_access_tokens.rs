@@ -2,7 +2,7 @@ use crate::streaming::personal_access_tokens::personal_access_token::PersonalAcc
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::utils::text;
 use iggy::utils::timestamp::IggyTimestamp;
 use tracing::{error, info};
@@ -11,7 +11,7 @@ impl System {
     pub async fn get_personal_access_tokens(
         &self,
         session: &Session,
-    ) -> Result<Vec<PersonalAccessToken>, Error> {
+    ) -> Result<Vec<PersonalAccessToken>, IggyError> {
         self.ensure_authenticated(session)?;
         let user_id = session.get_user_id();
         info!("Loading personal access tokens for user with ID: {user_id}...",);
@@ -32,7 +32,7 @@ impl System {
         session: &Session,
         name: &str,
         expiry: Option<u32>,
-    ) -> Result<String, Error> {
+    ) -> Result<String, IggyError> {
         self.ensure_authenticated(session)?;
         let user_id = session.get_user_id();
         let max_token_per_user = self.personal_access_token.max_tokens_per_user;
@@ -47,7 +47,7 @@ impl System {
                 "User with ID: {} has reached the maximum number of personal access tokens: {}.",
                 user_id, max_token_per_user,
             );
-            return Err(Error::PersonalAccessTokensLimitReached(
+            return Err(IggyError::PersonalAccessTokensLimitReached(
                 user_id,
                 max_token_per_user,
             ));
@@ -58,7 +58,7 @@ impl System {
             .any(|personal_access_token| personal_access_token.name == name)
         {
             error!("Personal access token: {name} for user with ID: {user_id} already exists.");
-            return Err(Error::PersonalAccessTokenAlreadyExists(name, user_id));
+            return Err(IggyError::PersonalAccessTokenAlreadyExists(name, user_id));
         }
 
         info!("Creating personal access token: {name} for user with ID: {user_id}...");
@@ -76,7 +76,7 @@ impl System {
         &self,
         session: &Session,
         name: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let user_id = session.get_user_id();
         let name = text::to_lowercase_non_whitespace(name);
@@ -93,7 +93,7 @@ impl System {
         &self,
         token: &str,
         session: Option<&Session>,
-    ) -> Result<User, Error> {
+    ) -> Result<User, IggyError> {
         let token_hash = PersonalAccessToken::hash_token(token);
         let personal_access_token = self
             .storage
@@ -105,7 +105,7 @@ impl System {
                 "Personal access token: {} for user with ID: {} has expired.",
                 personal_access_token.name, personal_access_token.user_id
             );
-            return Err(Error::PersonalAccessTokenExpired(
+            return Err(IggyError::PersonalAccessTokenExpired(
                 personal_access_token.name,
                 personal_access_token.user_id,
             ));

@@ -5,7 +5,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::messages::poll_messages::PollMessages;
 use tracing::debug;
 
@@ -14,7 +14,7 @@ pub async fn handle(
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
-) -> Result<(), Error> {
+) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let consumer =
         PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);

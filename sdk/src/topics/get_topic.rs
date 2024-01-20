@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -22,8 +22,8 @@ pub struct GetTopic {
 
 impl CommandPayload for GetTopic {}
 
-impl Validatable<Error> for GetTopic {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for GetTopic {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -38,9 +38,9 @@ impl BytesSerializable for GetTopic {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> std::result::Result<GetTopic, Error> {
+    fn from_bytes(bytes: &[u8]) -> std::result::Result<GetTopic, IggyError> {
         if bytes.len() < 6 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;

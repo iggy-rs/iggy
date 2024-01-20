@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use bytes::BufMut;
@@ -39,8 +39,8 @@ fn default_id() -> Identifier {
     Identifier::numeric(1).unwrap()
 }
 
-impl Validatable<Error> for Consumer {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for Consumer {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -80,12 +80,12 @@ impl BytesSerializable for Consumer {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
     where
         Self: Sized,
     {
         if bytes.len() < 4 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let kind = ConsumerKind::from_code(bytes[0])?;
@@ -107,11 +107,11 @@ impl ConsumerKind {
     }
 
     /// Creates a new `ConsumerKind` from the code.
-    pub fn from_code(code: u8) -> Result<Self, Error> {
+    pub fn from_code(code: u8) -> Result<Self, IggyError> {
         match code {
             1 => Ok(ConsumerKind::Consumer),
             2 => Ok(ConsumerKind::ConsumerGroup),
-            _ => Err(Error::InvalidCommand),
+            _ => Err(IggyError::InvalidCommand),
         }
     }
 }

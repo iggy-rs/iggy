@@ -1,22 +1,22 @@
 use crate::streaming::partitions::partition::Partition;
 use iggy::consumer::ConsumerKind;
-use iggy::error::Error;
+use iggy::error::IggyError;
 
 impl Partition {
-    pub async fn load(&mut self) -> Result<(), Error> {
+    pub async fn load(&mut self) -> Result<(), IggyError> {
         let storage = self.storage.clone();
         storage.partition.load(self).await
     }
 
-    pub async fn persist(&self) -> Result<(), Error> {
+    pub async fn persist(&self) -> Result<(), IggyError> {
         self.storage.partition.save(self).await
     }
 
-    pub async fn delete(&self) -> Result<(), Error> {
+    pub async fn delete(&self) -> Result<(), IggyError> {
         self.storage.partition.delete(self).await
     }
 
-    pub async fn purge(&mut self) -> Result<(), Error> {
+    pub async fn purge(&mut self) -> Result<(), IggyError> {
         self.current_offset = 0;
         self.unsaved_messages_count = 0;
         self.should_increment_offset = false;

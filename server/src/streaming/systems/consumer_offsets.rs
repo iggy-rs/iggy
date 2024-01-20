@@ -1,7 +1,7 @@
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
-use iggy::error::Error;
+use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 
@@ -13,7 +13,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         offset: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -32,7 +32,7 @@ impl System {
         consumer: PollingConsumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<ConsumerOffsetInfo, Error> {
+    ) -> Result<ConsumerOffsetInfo, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;

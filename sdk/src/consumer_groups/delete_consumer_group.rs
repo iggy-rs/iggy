@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
 use serde::{Deserialize, Serialize};
@@ -26,8 +26,8 @@ pub struct DeleteConsumerGroup {
 
 impl CommandPayload for DeleteConsumerGroup {}
 
-impl Validatable<Error> for DeleteConsumerGroup {
-    fn validate(&self) -> Result<(), Error> {
+impl Validatable<IggyError> for DeleteConsumerGroup {
+    fn validate(&self) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -46,9 +46,9 @@ impl BytesSerializable for DeleteConsumerGroup {
         bytes
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<DeleteConsumerGroup, Error> {
+    fn from_bytes(bytes: &[u8]) -> Result<DeleteConsumerGroup, IggyError> {
         if bytes.len() < 9 {
-            return Err(Error::InvalidCommand);
+            return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;

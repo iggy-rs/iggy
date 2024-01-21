@@ -308,6 +308,12 @@ impl TestServer {
 
             for _ in 0..max_attempts {
                 if !Path::new(&config_path).exists() {
+                    if let Some(exit_status) = self.child_handle.as_mut().unwrap().try_wait().unwrap() {
+                        panic!(
+                            "Server process has exited with status {}!",
+                            exit_status
+                        );
+                    }
                     sleep(Duration::from_millis(SLEEP_INTERVAL_MS));
                     continue;
                 }

@@ -20,6 +20,7 @@ Commands:
   update  Update stream name for given stream ID [aliases: u]
   get     Get details of a single stream with given ID [aliases: g]
   list    List all streams [aliases: l]
+  purge   Purge all topics in given stream ID [aliases: p]
   help    Print this message or the help of the given subcommand(s)
 
 Options:

@@ -3762,7 +3762,7 @@ checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
 [[package]]
 name = "strum"
 version = "0.25.0"
-source = "git+https://github.com/Peternator7/strum#a155e813707f02cdf15a97cbea5a4b645cfa7722"
+source = "git+https://github.com/Peternator7/strum#83bcb984e6e69fb6a7438580a3d642b276376977"
 dependencies = [
  "strum_macros 0.25.3 (git+https://github.com/Peternator7/strum)",
 ]
@@ -3783,7 +3783,7 @@ dependencies = [
 [[package]]
 name = "strum_macros"
 version = "0.25.3"
-source = "git+https://github.com/Peternator7/strum#a155e813707f02cdf15a97cbea5a4b645cfa7722"
+source = "git+https://github.com/Peternator7/strum#83bcb984e6e69fb6a7438580a3d642b276376977"
 dependencies = [
  "heck",
  "proc-macro2",

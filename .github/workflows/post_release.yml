@@ -1,15 +1,14 @@
 name: post_release
 on:
-  [pull_request]
-  # workflow_run:
-  #   workflows: ["release"]
-  #   types:
-  #     - completed
+  workflow_run:
+    workflows: ["release"]
+    types:
+      - completed
 
 jobs:
   post_release:
     runs-on: ubuntu-latest
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
       - name: Cache cargo & target directories

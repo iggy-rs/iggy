@@ -42,8 +42,7 @@ rustls = { version = "0.21.10", features = ["dangerous_configuration"] }
 serde = { version = "1.0.194", features = ["derive", "rc"] }
 serde_json = "1.0.111"
 serde_with = { version = "3.5.1", features = ["base64"] }
-# TEMP: until https://github.com/Peternator7/strum/pull/288 gets released.
-strum = { git = "https://github.com/Peternator7/strum", features = ["derive"] }
+strum = { version = "0.26.0", features = ["derive"] }
 thiserror = "1.0.56"
 tokio = { version = "1.33.0", features = ["full"] }
 tokio-native-tls = "0.3.1"

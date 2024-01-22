@@ -937,8 +937,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c64043d6c7b7a4c58e39e7efccfdea7b93d885a795d0c054a69dbbf4dd52686"
 dependencies = [
  "crossterm",
- "strum 0.25.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "strum_macros 0.25.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "strum 0.25.0",
+ "strum_macros 0.25.3",
  "unicode-width",
 ]
 
@@ -1887,7 +1887,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "serde_with",
- "strum 0.25.0 (git+https://github.com/Peternator7/strum)",
+ "strum 0.26.0",
  "thiserror",
  "tokio",
  "tokio-native-tls",
@@ -3761,10 +3761,11 @@ checksum = "290d54ea6f91c969195bdbcd7442c8c2a2ba87da8bf60a7ee86a235d4bc1e125"
 
 [[package]]
 name = "strum"
-version = "0.25.0"
-source = "git+https://github.com/Peternator7/strum#a155e813707f02cdf15a97cbea5a4b645cfa7722"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "117c413ac8a6cc19c773939932477a341e416eff7f0e84db42f091d85d7c6e0e"
 dependencies = [
- "strum_macros 0.25.3 (git+https://github.com/Peternator7/strum)",
+ "strum_macros 0.26.0",
 ]
 
 [[package]]
@@ -3782,8 +3783,9 @@ dependencies = [
 
 [[package]]
 name = "strum_macros"
-version = "0.25.3"
-source = "git+https://github.com/Peternator7/strum#a155e813707f02cdf15a97cbea5a4b645cfa7722"
+version = "0.26.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e91a9c241fae207f533499d25bd2b22cee10f20b5e6aa0074dc4ebc2e23fe14"
 dependencies = [
  "heck",
  "proc-macro2",

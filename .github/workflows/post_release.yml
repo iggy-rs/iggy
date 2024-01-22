@@ -41,7 +41,7 @@ jobs:
           expected_send_poll_lines=("${expected_send_lines[@]}"
                                     "${expected_poll_lines[@]}")
 
-          # Check for successful timeout
+          # Verify processes successfully timed out with exit code 124
           exit_codes=($send_code $poll_code $send_poll_code)
           for code in "${exit_codes[@]}"; do
             if [ "${code:-0}" -ne 124 ]; then

@@ -198,6 +198,12 @@ impl Stream {
 
     pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, IggyError> {
         let topic = self.remove_topic(id)?;
+        let topic_id = topic.topic_id;
+        let current_topic_id = self.current_topic_id.load(Ordering::SeqCst);
+        if current_topic_id > topic_id {
+            self.current_topic_id.store(topic_id, Ordering::SeqCst);
+        }
+
         topic.delete().await.map_err(|err| {
             debug!("Delete topic failed: {}", err);
             IggyError::CannotDeleteTopic(topic.topic_id, self.stream_id)

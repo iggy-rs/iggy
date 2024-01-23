@@ -267,6 +267,11 @@ impl System {
 
         self.streams.remove(&stream_id);
         self.streams_ids.remove(&stream_name);
+        let current_stream_id = CURRENT_STREAM_ID.load(Ordering::SeqCst);
+        if current_stream_id > stream_id {
+            CURRENT_STREAM_ID.store(stream_id, Ordering::SeqCst);
+        }
+
         let client_manager = self.client_manager.read().await;
         client_manager
             .delete_consumer_groups_for_stream(stream_id)

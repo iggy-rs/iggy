@@ -17,7 +17,7 @@ axum = "0.7.4"
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }
 bcrypt = "0.15.0"
 blake3 = "1.5.0"
-byte-unit = { version = "5.1.2", default-features = false, features = [
+byte-unit = { version = "5.1.4", default-features = false, features = [
     "serde",
     "byte",
 ] }

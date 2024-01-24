@@ -62,7 +62,7 @@ impl MessagesSaver {
 impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: SaveMessagesCommand) {
         system
-            .write()
+            .read()
             .persist_messages()
             .await
             .unwrap_or_else(|error| {

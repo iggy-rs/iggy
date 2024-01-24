@@ -30,7 +30,7 @@ jobs:
         if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock sdk/Cargo.toml' }}
         id: extract_version
         run: |
-          version=$(cargo pkgid -p iggy | cut -d# -f2 | cut -d: -f2)
+          version=$(cargo pkgid -p iggy | cut -d@ -f2)
           echo "iggy_version=$version" >> "$GITHUB_OUTPUT"
           echo "::notice ::Version from Cargo.toml $version"
 

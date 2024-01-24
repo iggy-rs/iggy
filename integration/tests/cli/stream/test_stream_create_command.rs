@@ -1,23 +1,33 @@
 use crate::cli::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::streams::delete_stream::DeleteStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
 
 struct TestStreamCreateCmd {
-    stream_id: u32,
+    stream_id: Option<u32>,
     name: String,
 }
 
 impl TestStreamCreateCmd {
-    fn new(stream_id: u32, name: String) -> Self {
+    fn new(stream_id: Option<u32>, name: String) -> Self {
         Self { stream_id, name }
     }
 
     fn to_args(&self) -> Vec<String> {
-        vec![format!("{}", self.stream_id), self.name.clone()]
+        let mut args = Vec::new();
+
+        if let Some(stream_id) = self.stream_id {
+            args.push("-s".to_string());
+            args.push(format!("{}", stream_id));
+        }
+
+        args.push(self.name.clone());
+
+        args
     }
 }
 
@@ -34,33 +44,54 @@ impl IggyCmdTestCase for TestStreamCreateCmd {
     }
 
     fn verify_command(&self, command_state: Assert) {
-        command_state
-            .success()
-            .stdout(diff(format!("Executing create stream with ID: {} and name: {}\nStream with ID: {} and name: {} created\n", self.stream_id, self.name, self.stream_id, self.name)));
+        let stream_id = match self.stream_id {
+            Some(stream_id) => format!("ID: {}", stream_id),
+            None => "ID auto incremented".to_string(),
+        };
+
+        let message = format!(
+            "Executing create stream with name: {} and {}\nStream with name: {} and {} created\n",
+            self.name, stream_id, self.name, stream_id
+        );
+
+        command_state.success().stdout(diff(message));
     }
 
     async fn verify_server_state(&self, client: &dyn Client) {
         let stream = client
             .get_stream(&GetStream {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
+                stream_id: Identifier::named(self.name.as_str()).unwrap(),
             })
             .await;
         assert!(stream.is_ok());
         let stream = stream.unwrap();
         assert_eq!(stream.name, self.name);
-        assert_eq!(stream.id, self.stream_id);
+        if let Some(stream_id) = self.stream_id {
+            assert_eq!(stream.id, stream_id);
+        }
+
+        let delete = client
+            .delete_stream(&DeleteStream {
+                stream_id: Identifier::named(self.name.as_str()).unwrap(),
+            })
+            .await;
+        assert!(delete.is_ok());
     }
 }
 
 #[tokio::test]
 #[parallel]
 pub async fn should_be_successful() {
-    let stream_id = 123;
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;
     iggy_cmd_test
-        .execute_test(TestStreamCreateCmd::new(stream_id, String::from("main")))
+        .execute_test(TestStreamCreateCmd::new(Some(123), String::from("main")))
+        .await;
+
+    iggy_cmd_test.setup().await;
+    iggy_cmd_test
+        .execute_test(TestStreamCreateCmd::new(None, String::from("prod")))
         .await;
 }
 
@@ -73,22 +104,24 @@ pub async fn should_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["stream", "create", "--help"],
             format!(
-                r#"Create stream with given ID and name
+                r#"Create stream with given name
+
+If stream ID is not provided then the server will automatically assign it
 
 Examples:
- iggy stream create 1 prod
- iggy stream create 2 test
+ iggy stream create prod
+ iggy stream create -s 1 test
 
-{USAGE_PREFIX} stream create <STREAM_ID> <NAME>
+{USAGE_PREFIX} stream create [OPTIONS] <NAME>
 
 Arguments:
-  <STREAM_ID>
-          Stream ID to create topic
-
   <NAME>
           Name of the stream
 
 Options:
+  -s, --stream-id <STREAM_ID>
+          Stream ID to create
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -106,16 +139,16 @@ pub async fn should_short_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["stream", "create", "-h"],
             format!(
-                r#"Create stream with given ID and name
+                r#"Create stream with given name
 
-{USAGE_PREFIX} stream create <STREAM_ID> <NAME>
+{USAGE_PREFIX} stream create [OPTIONS] <NAME>
 
 Arguments:
-  <STREAM_ID>  Stream ID to create topic
-  <NAME>       Name of the stream
+  <NAME>  Name of the stream
 
 Options:
-  -h, --help  Print help (see more with '--help')
+  -s, --stream-id <STREAM_ID>  Stream ID to create
+  -h, --help                   Print help (see more with '--help')
 "#,
             ),
         ))

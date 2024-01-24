@@ -7,15 +7,16 @@ use std::convert::From;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum TopicAction {
-    /// Create topic with given ID, name, number of partitions
-    /// and expiry time for given stream ID
+    /// Create topic with given name, number of partitions and expiry time for given stream ID
     ///
     /// Stream ID can be specified as a stream name or ID
+    /// If topic ID is not provided then the server will automatically assign it
     ///
     /// Examples
-    ///  iggy topic create 1 1 2 sensor1 15days
-    ///  iggy topic create prod 2 2 sensor2
-    ///  iggy topic create test 3 2 debugs 1day 1hour 1min 1sec
+    ///  iggy topic create 1 sensor1 2 15days
+    ///  iggy topic create prod sensor2 2
+    ///  iggy topic create test debugs 2 1day 1hour 1min 1sec
+    ///  iggy topic create -t 3 1 sensor3 2 unlimited
     #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(TopicCreateArgs),
     /// Delete topic with given ID in given stream ID
@@ -86,12 +87,13 @@ pub(crate) struct TopicCreateArgs {
     /// Stream ID can be specified as a stream name or ID
     #[arg(value_parser = clap::value_parser!(Identifier))]
     pub(crate) stream_id: Identifier,
-    /// Topic ID to create
-    pub(crate) topic_id: u32,
-    /// Number of partitions inside the topic
-    pub(crate) partitions_count: u32,
     /// Name of the topic
     pub(crate) name: String,
+    /// Topic ID to create
+    #[clap(short, long)]
+    pub(crate) topic_id: Option<u32>,
+    /// Number of partitions inside the topic
+    pub(crate) partitions_count: u32,
     /// Max topic size
     ///
     /// ("unlimited" or skipping parameter disables max topic size functionality in topic)

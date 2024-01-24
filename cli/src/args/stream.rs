@@ -4,11 +4,13 @@ use iggy::identifier::Identifier;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum StreamAction {
-    /// Create stream with given ID and name
+    /// Create stream with given name
+    ///
+    /// If stream ID is not provided then the server will automatically assign it
     ///
     /// Examples:
-    ///  iggy stream create 1 prod
-    ///  iggy stream create 2 test
+    ///  iggy stream create prod
+    ///  iggy stream create -s 1 test
     #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(StreamCreateArgs),
     /// Delete stream with given ID
@@ -60,8 +62,9 @@ pub(crate) enum StreamAction {
 
 #[derive(Debug, Clone, Args)]
 pub(crate) struct StreamCreateArgs {
-    /// Stream ID to create topic
-    pub(crate) stream_id: u32,
+    /// Stream ID to create
+    #[clap(short, long)]
+    pub(crate) stream_id: Option<u32>,
     /// Name of the stream
     pub(crate) name: String,
 }

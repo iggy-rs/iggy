@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 assert_cmd = "2.0.13"
 async-trait = "0.1.77"
-byte-unit = { version = "5.1.2", default-features = false, features = [
+byte-unit = { version = "5.1.4", default-features = false, features = [
     "serde",
     "byte",
 ] }
@@ -18,7 +18,7 @@ iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.1"
 libc = "0.2.147"
 predicates = "3.1.0"
-regex = "1.10.2"
+regex = "1.10.3"
 serial_test = "3.0.0"
 server = { path = "../server" }
 sled = "0.34.7"

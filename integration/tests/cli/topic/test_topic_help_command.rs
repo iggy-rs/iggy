@@ -21,6 +21,7 @@ Commands:
   update  Update topic name an message expiry time for given topic ID in given stream ID [aliases: u]
   get     Get topic detail for given topic ID and stream ID [aliases: g]
   list    List all topics in given stream ID [aliases: l]
+  purge   Purge topic with given ID in given stream ID [aliases: p]
   help    Print this message or the help of the given subcommand(s)
 
 Options:

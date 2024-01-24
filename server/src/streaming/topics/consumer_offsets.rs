@@ -49,7 +49,7 @@ impl Topic {
         if partition.is_none() {
             return Err(IggyError::PartitionNotFound(
                 partition_id,
-                self.stream_id,
+                self.topic_id,
                 self.stream_id,
             ));
         }

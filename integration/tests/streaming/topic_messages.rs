@@ -1,4 +1,5 @@
 use crate::streaming::common::test_setup::TestSetup;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
@@ -69,7 +70,7 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
         sent_messages.push(get_message(from_utf8(&message.payload).unwrap()))
     }
     topic
-        .append_messages(&partitioning, messages)
+        .append_messages(&partitioning, CompressionAlgorithm::None, messages)
         .await
         .unwrap();
 
@@ -109,7 +110,11 @@ async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
         topic
-            .append_messages(&partitioning, vec![get_message(&payload)])
+            .append_messages(
+                &partitioning,
+                CompressionAlgorithm::None,
+                vec![get_message(&payload)],
+            )
             .await
             .unwrap();
     }
@@ -129,7 +134,11 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
         topic
-            .append_messages(&partitioning, vec![get_message(&payload)])
+            .append_messages(
+                &partitioning,
+                CompressionAlgorithm::None,
+                vec![get_message(&payload)],
+            )
             .await
             .unwrap();
     }
@@ -153,7 +162,11 @@ async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_pa
         let payload = get_payload(entity_id);
         let partitioning = Partitioning::messages_key_u32(entity_id);
         topic
-            .append_messages(&partitioning, vec![get_message(&payload)])
+            .append_messages(
+                &partitioning,
+                CompressionAlgorithm::None,
+                vec![get_message(&payload)],
+            )
             .await
             .unwrap();
     }
@@ -202,6 +215,7 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         name,
         partitions_count,
         setup.config.clone(),
+        CompressionAlgorithm::None,
         setup.storage.clone(),
         None,
         None,

@@ -17,6 +17,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::storage::FileUserStorage;
 use crate::streaming::users::user::User;
 use async_trait::async_trait;
+use iggy::batching::messages_batch::MessagesBatch;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
@@ -97,21 +98,21 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn load_messages(
         &self,
         segment: &Segment,
-        index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, IggyError>;
+        index_range: IndexRange,
+    ) -> Result<Vec<Arc<MessagesBatch>>, IggyError>;
     async fn load_newest_messages_by_size(
         &self,
         segment: &Segment,
-        size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError>;
+        size_bytes: u32,
+    ) -> Result<Vec<Arc<MessagesBatch>>, IggyError>;
     async fn save_messages(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages_batches: &[Arc<MessagesBatch>],
     ) -> Result<u32, IggyError>;
-    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
-    async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
+    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, Error>;
+    async fn load_checksums(&self, segment: &Segment) -> Result<(), Error>;
+    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, Error>;
     async fn load_index_range(
         &self,
         segment: &Segment,
@@ -119,20 +120,10 @@ pub trait SegmentStorage: Storage<Segment> {
         index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(
-        &self,
-        segment: &Segment,
-        current_position: u32,
-        messages: &[Arc<Message>],
-    ) -> Result<(), IggyError>;
-    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
-    async fn load_last_time_index(&self, segment: &Segment)
-        -> Result<Option<TimeIndex>, IggyError>;
-    async fn save_time_index(
-        &self,
-        segment: &Segment,
-        messages: &[Arc<Message>],
-    ) -> Result<(), IggyError>;
+    async fn save_index(&self, segment: &Segment) -> Result<(), Error>;
+    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, Error>;
+    async fn load_last_time_index(&self, segment: &Segment) -> Result<Option<TimeIndex>, Error>;
+    async fn save_time_index(&self, segment: &Segment) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -212,7 +203,6 @@ pub(crate) mod tests {
     use crate::streaming::streams::stream::Stream;
     use crate::streaming::topics::topic::Topic;
     use async_trait::async_trait;
-    use iggy::models::messages::Message;
     use std::sync::Arc;
 
     struct TestSystemInfoStorage {}
@@ -445,23 +435,23 @@ pub(crate) mod tests {
         async fn load_messages(
             &self,
             _segment: &Segment,
-            _index_range: &IndexRange,
-        ) -> Result<Vec<Arc<Message>>, IggyError> {
+            _index_range: IndexRange,
+        ) -> Result<Vec<Arc<MessagesBatch>>, IggyError> {
             Ok(vec![])
         }
 
         async fn load_newest_messages_by_size(
             &self,
             _segment: &Segment,
-            _size: u64,
-        ) -> Result<Vec<Arc<Message>>, IggyError> {
+            _size: u32,
+        ) -> Result<Vec<Arc<MessagesBatch>>, IggyError> {
             Ok(vec![])
         }
 
         async fn save_messages(
             &self,
             _segment: &Segment,
-            _messages: &[Arc<Message>],
+            _messages_batches: &[Arc<MessagesBatch>],
         ) -> Result<u32, IggyError> {
             Ok(0)
         }
@@ -488,12 +478,7 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_index(
-            &self,
-            _segment: &Segment,
-            _current_position: u32,
-            _messages: &[Arc<Message>],
-        ) -> Result<(), IggyError> {
+        async fn save_index(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -511,11 +496,7 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_time_index(
-            &self,
-            _segment: &Segment,
-            _messages: &[Arc<Message>],
-        ) -> Result<(), IggyError> {
+        async fn save_time_index(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
     }

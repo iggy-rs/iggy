@@ -1,5 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
@@ -104,7 +105,11 @@ async fn should_purge_existing_stream_on_disk() {
             .get_topic(&Identifier::numeric(topic_id).unwrap())
             .unwrap();
         topic
-            .append_messages(&Partitioning::partition_id(1), messages)
+            .append_messages(
+                &Partitioning::partition_id(1),
+                CompressionAlgorithm::None,
+                messages,
+            )
             .await
             .unwrap();
         let loaded_messages = topic

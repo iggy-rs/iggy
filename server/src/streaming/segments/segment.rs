@@ -2,7 +2,7 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
-use iggy::models::messages::Message;
+use iggy::batching::messages_batch::MessagesBatch;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 
@@ -17,17 +17,21 @@ pub struct Segment {
     pub topic_id: u32,
     pub partition_id: u32,
     pub start_offset: u64,
+    // TODO (numinex): turn this to end_offset_delta
     pub end_offset: u64,
     pub current_offset: u64,
+    pub current_timestamp: u64,
     pub index_path: String,
     pub log_path: String,
     pub time_index_path: String,
     pub current_size_bytes: u32,
     pub is_closed: bool,
     pub(crate) message_expiry: Option<u32>,
-    pub(crate) unsaved_messages: Option<Vec<Arc<Message>>>,
+    pub(crate) unsaved_messages: Option<Vec<Arc<MessagesBatch>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
+    pub(crate) unsaved_indexes: Vec<u8>,
+    pub(crate) unsaved_timestamps: Vec<u8>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,
     pub(crate) storage: Arc<SystemStorage>,
 }
@@ -51,6 +55,7 @@ impl Segment {
             start_offset,
             end_offset: 0,
             current_offset: start_offset,
+            current_timestamp: 0,
             log_path: Self::get_log_path(&path),
             index_path: Self::get_index_path(&path),
             time_index_path: Self::get_time_index_path(&path),
@@ -60,10 +65,12 @@ impl Segment {
                 true => Some(Vec::new()),
                 false => None,
             },
+            unsaved_indexes: Vec::with_capacity(1024),
             time_indexes: match config.segment.cache_time_indexes {
                 true => Some(Vec::new()),
                 false => None,
             },
+            unsaved_timestamps: Vec::with_capacity(1024),
             unsaved_messages: None,
             is_closed: false,
             config,
@@ -94,7 +101,7 @@ impl Segment {
             return false;
         }
 
-        let last_message = last_messages[0].as_ref();
+        let last_message = &last_messages[0];
         let message_expiry = (self.message_expiry.unwrap() * 1000) as u64;
         (last_message.timestamp + message_expiry) <= now
     }

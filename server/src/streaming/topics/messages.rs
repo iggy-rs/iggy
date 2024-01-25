@@ -3,6 +3,8 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
+use iggy::batching::messages_batch::MessagesBatch;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
@@ -54,7 +56,7 @@ impl Topic {
         }?;
 
         Ok(PolledMessages {
-            messages,
+            messages: messages.into_iter().map(Arc::new).collect::<Vec<_>>(),
             partition_id,
             current_offset: partition.current_offset,
         })
@@ -63,6 +65,7 @@ impl Topic {
     pub async fn append_messages(
         &self,
         partitioning: &Partitioning,
+        compression_algorithm: CompressionAlgorithm,
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
@@ -83,27 +86,24 @@ impl Topic {
             }
         };
 
-        self.append_messages_to_partition(partition_id, messages)
+        self.append_messages_to_partition(partition_id, compression_algorithm, messages)
             .await
     }
 
     async fn append_messages_to_partition(
         &self,
         partition_id: u32,
+        compression_algorithm: CompressionAlgorithm,
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
-        if partition.is_none() {
-            return Err(IggyError::PartitionNotFound(
-                partition_id,
-                self.topic_id,
-                self.stream_id,
-            ));
-        }
+        partition
+            .ok_or_else(|| IggyError::PartitionNotFound(partition_id, self.stream_id, self.stream_id))?
+            .write()
+            .await
+            .append_messages(compression_algorithm, messages)
+            .await?;
 
-        let partition = partition.unwrap();
-        let mut partition = partition.write().await;
-        partition.append_messages(messages).await?;
         Ok(())
     }
 
@@ -175,6 +175,7 @@ impl Topic {
             let size_to_fetch_from_disk = (cache_limit_bytes as f64
                 * (partition_size_bytes as f64 / total_size_on_disk_bytes as f64))
                 as u64;
+
             let messages = partition
                 .get_newest_messages_by_size(size_to_fetch_from_disk as u32)
                 .await?;
@@ -205,32 +206,19 @@ impl Topic {
         Ok(())
     }
 
-    fn cache_integrity_check(cache: &[Arc<Message>]) -> bool {
+    fn cache_integrity_check(cache: &[Arc<MessagesBatch>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;
         }
 
-        let first_offset = cache[0].offset;
-        let last_offset = cache[cache.len() - 1].offset;
-
         for i in 1..cache.len() {
-            if cache[i].offset != cache[i - 1].offset + 1 {
-                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}", i, cache[i].offset, i-1, cache[i-1].offset);
+            if cache[i].get_last_offset() <= cache[i - 1].get_last_offset() {
+                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}",
+                        i, cache[i].get_last_offset(), i-1, cache[i-1].get_last_offset());
                 return false;
             }
         }
-
-        let expected_messages_count: u64 = last_offset - first_offset + 1;
-        if cache.len() != expected_messages_count as usize {
-            warn!(
-                "Messages count is in cache ({}) not equal to expected messages count ({})",
-                cache.len(),
-                expected_messages_count
-            );
-            return false;
-        }
-
         true
     }
 
@@ -283,7 +271,7 @@ mod tests {
                 None,
             )];
             topic
-                .append_messages(&partitioning, messages)
+                .append_messages(&partitioning, CompressionAlgorithm::None, messages)
                 .await
                 .unwrap();
         }
@@ -319,7 +307,7 @@ mod tests {
                 None,
             )];
             topic
-                .append_messages(&partitioning, messages)
+                .append_messages(&partitioning, CompressionAlgorithm::None, messages)
                 .await
                 .unwrap();
         }
@@ -388,6 +376,7 @@ mod tests {
             name,
             partitions_count,
             config,
+            CompressionAlgorithm::None,
             storage,
             None,
             None,

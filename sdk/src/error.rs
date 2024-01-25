@@ -5,7 +5,7 @@ use thiserror::Error;
 #[repr(u32)]
 #[strum(serialize_all = "snake_case")]
 #[strum_discriminants(
-    vis(pub(self)),
+    vis(pub(crate)),
     derive(FromRepr, IntoStaticStr),
     strum(serialize_all = "snake_case")
 )]

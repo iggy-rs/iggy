@@ -1,4 +1,4 @@
-use crate::error::Error;
+use crate::error::IggyError;
 use flate2::read::GzDecoder;
 use flate2::write::GzEncoder;
 use flate2::Compression;
@@ -11,12 +11,12 @@ pub trait Compressor {
         &self,
         data: &'a [u8],
         compression_buffer: &'a mut Vec<u8>,
-    ) -> Result<(), Error>;
+    ) -> Result<(), IggyError>;
     fn decompress<'a>(
         &self,
         data: &'a [u8],
         decompression_buffer: &'a mut Vec<u8>,
-    ) -> Result<(), Error>;
+    ) -> Result<(), IggyError>;
 }
 #[derive(Default)]
 pub struct ZstdCompressor {}
@@ -26,7 +26,7 @@ impl Compressor for ZstdCompressor {
         &self,
         data: &'a [u8],
         compression_buffer: &'a mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         zstd::stream::copy_encode(data, compression_buffer, zstd::DEFAULT_COMPRESSION_LEVEL)?;
         Ok(())
     }
@@ -35,7 +35,7 @@ impl Compressor for ZstdCompressor {
         &self,
         data: &'a [u8],
         decompression_buffer: &'a mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         zstd::stream::copy_decode(data, decompression_buffer)?;
         Ok(())
     }
@@ -48,7 +48,7 @@ impl Compressor for Lz4Compressor {
         &self,
         data: &'a [u8],
         compression_buffer: &'a mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let pref = Preferences::default();
         lz4f::compress_to_vec(data, compression_buffer, &pref)?;
         Ok(())
@@ -58,7 +58,7 @@ impl Compressor for Lz4Compressor {
         &self,
         data: &'a [u8],
         decompression_buffer: &'a mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         lz4f::decompress_to_vec(data, decompression_buffer)?;
         Ok(())
     }
@@ -71,7 +71,7 @@ impl Compressor for GzCompressor {
         &self,
         data: &'a [u8],
         compression_buffer: &'a mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let mut encoder = GzEncoder::new(compression_buffer, Compression::default());
         encoder.write_all(data)?;
         encoder.finish()?;
@@ -81,7 +81,7 @@ impl Compressor for GzCompressor {
         &self,
         data: &'a [u8],
         decompression_buffer: &'a mut Vec<u8>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), IggyError> {
         let mut decoder = GzDecoder::new(data);
         decoder.read_to_end(decompression_buffer)?;
         Ok(())

@@ -1,6 +1,6 @@
 use crate::streaming::segments::segment::Segment;
-use iggy::error::Error;
-use iggy::error::Error::InvalidOffset;
+use iggy::error::IggyError;
+use iggy::error::IggyError::InvalidOffset;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Index {
@@ -18,7 +18,7 @@ impl Segment {
         &self,
         start_offset: u32,
         end_offset: u32,
-    ) -> Result<IndexRange, Error> {
+    ) -> Result<IndexRange, IggyError> {
         let indices = self.indexes.as_ref().unwrap();
         let starting_offset_idx = binary_search_index(indices, start_offset);
         let ending_offset_idx = binary_search_index(indices, end_offset);

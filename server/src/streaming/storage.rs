@@ -20,7 +20,6 @@ use async_trait::async_trait;
 use iggy::batching::messages_batch::MessagesBatch;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::models::messages::Message;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::fmt::{Debug, Formatter};
@@ -110,9 +109,9 @@ pub trait SegmentStorage: Storage<Segment> {
         segment: &Segment,
         messages_batches: &[Arc<MessagesBatch>],
     ) -> Result<u32, IggyError>;
-    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, Error>;
-    async fn load_checksums(&self, segment: &Segment) -> Result<(), Error>;
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, Error>;
+    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
+    async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
+    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
     async fn load_index_range(
         &self,
         segment: &Segment,
@@ -120,10 +119,11 @@ pub trait SegmentStorage: Storage<Segment> {
         index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(&self, segment: &Segment) -> Result<(), Error>;
-    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, Error>;
-    async fn load_last_time_index(&self, segment: &Segment) -> Result<Option<TimeIndex>, Error>;
-    async fn save_time_index(&self, segment: &Segment) -> Result<(), Error>;
+    async fn save_index(&self, segment: &Segment) -> Result<(), IggyError>;
+    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
+    async fn load_last_time_index(&self, segment: &Segment)
+        -> Result<Option<TimeIndex>, IggyError>;
+    async fn save_time_index(&self, segment: &Segment) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]

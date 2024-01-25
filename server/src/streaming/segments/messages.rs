@@ -20,7 +20,11 @@ impl Segment {
         self.current_offset - self.start_offset + 1
     }
 
-    pub async fn get_messages(&self, mut offset: u64, count: u32) -> Result<Vec<Message>, IggyError> {
+    pub async fn get_messages(
+        &self,
+        mut offset: u64,
+        count: u32,
+    ) -> Result<Vec<Message>, IggyError> {
         if count == 0 {
             return Ok(EMPTY_MESSAGES);
         }
@@ -62,7 +66,7 @@ impl Segment {
         self.get_messages(self.start_offset, self.get_messages_count() as u32)
             .await
     }
-    pub async fn get_all_batches(&self) -> Result<Vec<Arc<MessagesBatch>>, Error> {
+    pub async fn get_all_batches(&self) -> Result<Vec<Arc<MessagesBatch>>, IggyError> {
         self.storage
             .segment
             .load_messages(self, IndexRange::max_range())
@@ -86,7 +90,7 @@ impl Segment {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Message>, Error> {
+    ) -> Result<Vec<Message>, IggyError> {
         let relative_start_offset = start_offset - self.start_offset;
         let relative_end_offset = end_offset - self.start_offset;
 

@@ -98,7 +98,9 @@ impl Topic {
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
         partition
-            .ok_or_else(|| IggyError::PartitionNotFound(partition_id, self.stream_id, self.stream_id))?
+            .ok_or_else(|| {
+                IggyError::PartitionNotFound(partition_id, self.stream_id, self.stream_id)
+            })?
             .write()
             .await
             .append_messages(compression_algorithm, messages)

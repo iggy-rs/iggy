@@ -213,7 +213,7 @@ impl BytesSerializable for Message {
         self.extend(&mut buffer);
         buffer
     }
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Error>
+    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
     where
         Self: Sized,
     {

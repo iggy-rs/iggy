@@ -3,7 +3,7 @@ use crate::batching::METADATA_BYTES_LEN;
 use crate::bytes_serializable::BytesSerializable;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::compression::compressor::{Compressor, GzCompressor, Lz4Compressor, ZstdCompressor};
-use crate::error::Error;
+use crate::error::IggyError;
 use crate::models::messages::{Message, MessageState};
 use crate::sizeable::Sizeable;
 use bytes::{Buf, BufMut, Bytes};
@@ -86,7 +86,7 @@ where
         self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Message>, Error> {
+    ) -> Result<Vec<Message>, IggyError> {
         Ok(self
             .into_iter()
             .map(|batch| batch.into_messages())
@@ -99,7 +99,7 @@ where
 }
 
 impl Itemizer<Message> for Arc<MessagesBatch> {
-    fn into_messages(self) -> Result<impl IntoIterator<Item = Message>, Error> {
+    fn into_messages(self) -> Result<impl IntoIterator<Item = Message>, IggyError> {
         let compression_algorithm = self.get_compression_algorithm()?;
         let mut messages = Vec::new();
         let buffer = &self.messages;
@@ -169,7 +169,7 @@ impl Batcher<Message, Arc<MessagesBatch>> for Vec<Message> {
         base_offset: u64,
         last_offset_delta: u32,
         attributes: u8,
-    ) -> Result<Arc<MessagesBatch>, Error> {
+    ) -> Result<Arc<MessagesBatch>, IggyError> {
         let ca_code = MessagesBatchAttributes::get_compression_algorithm_code(&attributes);
         let compression_algorithm = CompressionAlgorithm::from_code(ca_code)?;
         let mut attributes = attributes;
@@ -240,7 +240,7 @@ impl MessagesBatch {
         }
     }
 
-    pub fn get_compression_algorithm(&self) -> Result<CompressionAlgorithm, Error> {
+    pub fn get_compression_algorithm(&self) -> Result<CompressionAlgorithm, IggyError> {
         let compression_algorithm =
             MessagesBatchAttributes::get_compression_algorithm_code(&self.attributes);
         CompressionAlgorithm::from_code(compression_algorithm)

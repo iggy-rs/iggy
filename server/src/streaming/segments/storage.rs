@@ -268,7 +268,7 @@ impl SegmentStorage for FileSegmentStorage {
                         message.checksum
                     );
                     if calculated_checksum != message.checksum {
-                        return Err(Error::InvalidMessageChecksum(
+                        return Err(IggyError::InvalidMessageChecksum(
                             calculated_checksum,
                             message.checksum,
                             message.offset,
@@ -523,7 +523,7 @@ async fn load_messages_by_range(
     segment: &Segment,
     index_range: IndexRange,
     mut on_batch: impl FnMut(Arc<MessagesBatch>) -> Result<(), IggyError>,
-) -> Result<(), Error> {
+) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
     if file_size == 0 {
@@ -583,7 +583,7 @@ async fn load_messages_by_size(
     segment: &Segment,
     size_bytes: u32,
     mut on_batch: impl FnMut(MessagesBatch) -> Result<(), IggyError>,
-) -> Result<(), Error> {
+) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
     if file_size == 0 {

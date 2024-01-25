@@ -3,11 +3,11 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::utils::random_id;
-use iggy::error::IggyError;
 use iggy::batching::batcher::Batcher;
 use iggy::batching::batches_filter::BatchesFilter;
 use iggy::batching::messages_batch::{MessagesBatch, MessagesBatchAttributes};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use iggy::error::IggyError;
 use iggy::models::messages::Message;
 use std::sync::Arc;
 use tracing::{trace, warn};
@@ -278,7 +278,7 @@ impl Partition {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Message>, Error> {
+    ) -> Result<Vec<Message>, IggyError> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,

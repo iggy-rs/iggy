@@ -87,14 +87,16 @@ where
         start_offset: u64,
         end_offset: u64,
     ) -> Result<Vec<Message>, IggyError> {
-        Ok(self
-            .into_iter()
-            .map(|batch| batch.into_messages())
-            .collect::<Result<Vec<_>, _>>()?
-            .into_iter()
-            .flatten()
-            .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
-            .collect())
+        self 
+        .into_iter()
+        .try_fold(Vec::new(), |mut messages, batch| {
+            messages.extend(batch
+                .into_messages()?
+                .into_iter()
+                .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
+                .collect::<Vec<_>>());
+            Ok(messages)
+        })
     }
 }
 
@@ -122,7 +124,6 @@ impl Itemizer<Message> for Arc<MessagesBatch> {
                 // In the future, we can look into moving this closer to I/O layer,
                 // flate2 encoders can take advantage of BufRead
                 // https://docs.rs/flate2/latest/flate2/bufread/struct.GzEncoder.html
-                // As well as introduce buffer pooling.
                 compressor.decompress(buffer.as_ref(), &mut decompression_buffer)?;
                 Bytes::from(decompression_buffer)
             }

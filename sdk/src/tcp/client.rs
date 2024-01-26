@@ -1,6 +1,6 @@
 use crate::binary::binary_client::{BinaryClient, ClientState};
 use crate::client::Client;
-use crate::error::IggyError;
+use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use bytes::BufMut;
@@ -272,11 +272,29 @@ impl TcpClient {
         stream: &mut dyn ConnectionStream,
     ) -> Result<Vec<u8>, IggyError> {
         if status != 0 {
-            error!(
-                "Received an invalid response with status: {} ({}).",
-                status,
-                IggyError::from_code_as_string(status)
-            );
+            // TEMP: See https://github.com/iggy-rs/iggy/pull/604 for context.
+            if status == IggyErrorDiscriminants::TopicIdAlreadyExists as u32
+                || status == IggyErrorDiscriminants::TopicNameAlreadyExists as u32
+                || status == IggyErrorDiscriminants::StreamIdAlreadyExists as u32
+                || status == IggyErrorDiscriminants::StreamNameAlreadyExists as u32
+                || status == IggyErrorDiscriminants::UserAlreadyExists as u32
+                || status == IggyErrorDiscriminants::PersonalAccessTokenAlreadyExists as u32
+                || status == IggyErrorDiscriminants::ConsumerGroupIdAlreadyExists as u32
+                || status == IggyErrorDiscriminants::ConsumerGroupNameAlreadyExists as u32
+            {
+                tracing::debug!(
+                    "Recieved a server resource already exists response: {} ({})",
+                    status,
+                    IggyError::from_code_as_string(status)
+                )
+            } else {
+                error!(
+                    "Received an invalid response with status: {} ({}).",
+                    status,
+                    IggyError::from_code_as_string(status)
+                );
+            }
+
             return Err(IggyError::InvalidResponse(status));
         }
 

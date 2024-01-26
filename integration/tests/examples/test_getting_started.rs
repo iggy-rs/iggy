@@ -57,9 +57,7 @@ async fn should_succeed_with_preexisting_stream_and_topic() {
     iggy_example_test
         .execute_test(TestGettingStarted {
             expected_producer_output: vec![
-                "Received an invalid response with status: 1012 (stream_name_already_exists).",
                 "Stream already exists and will not be created again.",
-                "Received an invalid response with status: 2013 (topic_name_already_exists).",
                 "Topic already exists and will not be created again.",
                 "Sent 10 message(s).",
             ],

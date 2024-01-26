@@ -115,8 +115,8 @@ impl Itemizer<Message> for Arc<MessagesBatch> {
                     _ => unreachable!("Unsupported compression algorithm"),
                 };
 
-                let compression_rate = 0.75;
-                let buffer_size = (buffer.len() as f64 / compression_rate) as usize;
+                let compression_ratio = 1.4;
+                let buffer_size = (buffer.len() as f64 * compression_ratio) as usize;
                 let mut decompression_buffer = Vec::with_capacity(buffer_size);
 
                 // In the future, we can look into moving this closer to I/O layer,
@@ -187,8 +187,8 @@ impl Batcher<Message, Arc<MessagesBatch>> for Vec<Message> {
                         // Let's use this simple heuristic for now,
                         // Later on, once we have proper compression metrics
                         // We can employ statistical analysis
-                        let compression_ratio = 0.75;
-                        let buffer_size = (payload.len() as f64 * compression_ratio) as usize;
+                        let compression_ratio = 1.4;
+                        let buffer_size = (payload.len() as f64 / compression_ratio) as usize;
                         let mut compression_buffer = Vec::with_capacity(buffer_size);
 
                         match compression_algorithm {

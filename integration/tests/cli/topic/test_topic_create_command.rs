@@ -7,6 +7,8 @@ use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
 use iggy::cli::utils::message_expiry::MessageExpiry;
 use iggy::streams::create_stream::CreateStream;
+use iggy::streams::delete_stream::DeleteStream;
+use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::{client::Client, identifier::Identifier};
@@ -17,7 +19,7 @@ use std::time::Duration;
 struct TestTopicCreateCmd {
     stream_id: u32,
     stream_name: String,
-    topic_id: u32,
+    topic_id: Option<u32>,
     topic_name: String,
     partitions_count: u32,
     message_expiry: Option<Vec<String>>,
@@ -31,7 +33,7 @@ impl TestTopicCreateCmd {
     fn new(
         stream_id: u32,
         stream_name: String,
-        topic_id: u32,
+        topic_id: Option<u32>,
         topic_name: String,
         partitions_count: u32,
         message_expiry: Option<Vec<String>>,
@@ -53,17 +55,23 @@ impl TestTopicCreateCmd {
     }
 
     fn to_args(&self) -> Vec<String> {
-        let mut command = match self.using_identifier {
-            TestStreamId::Numeric => vec![format!("{}", self.stream_id)],
-            TestStreamId::Named => vec![self.stream_name.clone()],
+        let mut args = Vec::new();
+
+        if let Some(topic_id) = self.topic_id {
+            args.push("-t".to_string());
+            args.push(format!("{}", topic_id));
         };
 
-        command.push(format!("{}", self.topic_id));
-        command.push(format!("{}", self.partitions_count));
-        command.push(self.topic_name.clone());
-        command.extend(self.message_expiry.clone().unwrap_or_default());
+        match self.using_identifier {
+            TestStreamId::Numeric => args.extend(vec![format!("{}", self.stream_id)]),
+            TestStreamId::Named => args.extend(vec![self.stream_name.clone()]),
+        };
 
-        command
+        args.push(self.topic_name.clone());
+        args.push(format!("{}", self.partitions_count));
+        args.extend(self.message_expiry.clone().unwrap_or_default());
+
+        args
     }
 }
 
@@ -93,7 +101,10 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
             TestStreamId::Named => self.stream_name.clone(),
         };
         let partitions_count = self.partitions_count;
-        let topic_id = &self.topic_id;
+        let topic_id = match self.topic_id {
+            Some(topic_id) => format!("ID: {}", topic_id),
+            None => "ID auto incremented".to_string(),
+        };
         let topic_name = &self.topic_name;
         let message_expiry = (match &self.message_expiry {
             Some(value) => value.join(" "),
@@ -110,9 +121,9 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
         let replication_factor = self.replication_factor;
 
         let message = format!(
-            "Executing create topic with ID: {topic_id}, name: {topic_name}, message expiry: {message_expiry}, \
+            "Executing create topic with name: {topic_name}, {topic_id}, message expiry: {message_expiry}, \
             max topic size: {max_topic_size}, replication factor: {replication_factor} in stream with ID: {stream_id}\n\
-            Topic with ID: {topic_id}, name: {topic_name}, partitions count: {partitions_count}, message expiry: {message_expiry}, \
+            Topic with name: {topic_name}, {topic_id}, partitions count: {partitions_count}, message expiry: {message_expiry}, \
             max topic size: {max_topic_size}, replication factor: {replication_factor} created in stream with ID: {stream_id}\n",
         );
 
@@ -122,16 +133,18 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
     async fn verify_server_state(&self, client: &dyn Client) {
         let topic = client
             .get_topic(&GetTopic {
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
+                topic_id: Identifier::named(self.topic_name.as_str()).unwrap(),
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
             })
             .await;
         assert!(topic.is_ok());
         let topic_details = topic.unwrap();
         assert_eq!(topic_details.name, self.topic_name);
-        assert_eq!(topic_details.id, self.topic_id);
         assert_eq!(topic_details.partitions_count, self.partitions_count);
         assert_eq!(topic_details.messages_count, 0);
+        if let Some(topic_id) = self.topic_id {
+            assert_eq!(topic_details.id, topic_id);
+        }
 
         if self.message_expiry.is_some() {
             let duration: Duration = *self
@@ -146,6 +159,21 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
                 Some(duration.as_secs() as u32)
             );
         }
+
+        let delete_topic = client
+            .delete_topic(&DeleteTopic {
+                topic_id: Identifier::named(self.topic_name.as_str()).unwrap(),
+                stream_id: Identifier::numeric(self.stream_id).unwrap(),
+            })
+            .await;
+        assert!(delete_topic.is_ok());
+
+        let delete_stream = client
+            .delete_stream(&DeleteStream {
+                stream_id: Identifier::numeric(self.stream_id).unwrap(),
+            })
+            .await;
+        assert!(delete_stream.is_ok());
     }
 }
 
@@ -159,7 +187,7 @@ pub async fn should_be_successful() {
         .execute_test(TestTopicCreateCmd::new(
             1,
             String::from("main"),
-            1,
+            None,
             String::from("sync"),
             1,
             None,
@@ -172,7 +200,7 @@ pub async fn should_be_successful() {
         .execute_test(TestTopicCreateCmd::new(
             2,
             String::from("testing"),
-            2,
+            Some(2),
             String::from("topic"),
             5,
             None,
@@ -185,7 +213,7 @@ pub async fn should_be_successful() {
         .execute_test(TestTopicCreateCmd::new(
             3,
             String::from("prod"),
-            1,
+            None,
             String::from("named"),
             1,
             Some(vec![String::from("3days"), String::from("5s")]),
@@ -198,7 +226,7 @@ pub async fn should_be_successful() {
         .execute_test(TestTopicCreateCmd::new(
             4,
             String::from("big"),
-            1,
+            Some(1),
             String::from("probe"),
             2,
             Some(vec![
@@ -223,17 +251,18 @@ pub async fn should_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "create", "--help"],
             format!(
-                r#"Create topic with given ID, name, number of partitions
-and expiry time for given stream ID
+                r#"Create topic with given name, number of partitions and expiry time for given stream ID
 
 Stream ID can be specified as a stream name or ID
+If topic ID is not provided then the server will automatically assign it
 
 Examples
- iggy topic create 1 1 2 sensor1 15days
- iggy topic create prod 2 2 sensor2
- iggy topic create test 3 2 debugs 1day 1hour 1min 1sec
+ iggy topic create 1 sensor1 2 15days
+ iggy topic create prod sensor2 2
+ iggy topic create test debugs 2 1day 1hour 1min 1sec
+ iggy topic create -t 3 1 sensor3 2 unlimited
 
-{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <TOPIC_ID> <PARTITIONS_COUNT> <NAME> [MESSAGE_EXPIRY]...
+{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> [MESSAGE_EXPIRY]...
 
 Arguments:
   <STREAM_ID>
@@ -241,14 +270,11 @@ Arguments:
 {CLAP_INDENT}
           Stream ID can be specified as a stream name or ID
 
-  <TOPIC_ID>
-          Topic ID to create
+  <NAME>
+          Name of the topic
 
   <PARTITIONS_COUNT>
           Number of partitions inside the topic
-
-  <NAME>
-          Name of the topic
 
   [MESSAGE_EXPIRY]...
           Message expiry time in human readable format like 15days 2min 2s
@@ -256,6 +282,9 @@ Arguments:
           ("unlimited" or skipping parameter disables message expiry functionality in topic)
 
 Options:
+  -t, --topic-id <TOPIC_ID>
+          Topic ID to create
+
   -m, --max-topic-size <MAX_TOPIC_SIZE>
           Max topic size
 {CLAP_INDENT}
@@ -285,19 +314,18 @@ pub async fn should_short_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "create", "-h"],
             format!(
-                r#"Create topic with given ID, name, number of partitions
-and expiry time for given stream ID
+                r#"Create topic with given name, number of partitions and expiry time for given stream ID
 
-{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <TOPIC_ID> <PARTITIONS_COUNT> <NAME> [MESSAGE_EXPIRY]...
+{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> [MESSAGE_EXPIRY]...
 
 Arguments:
   <STREAM_ID>          Stream ID to create topic
-  <TOPIC_ID>           Topic ID to create
-  <PARTITIONS_COUNT>   Number of partitions inside the topic
   <NAME>               Name of the topic
+  <PARTITIONS_COUNT>   Number of partitions inside the topic
   [MESSAGE_EXPIRY]...  Message expiry time in human readable format like 15days 2min 2s
 
 Options:
+  -t, --topic-id <TOPIC_ID>                      Topic ID to create
   -m, --max-topic-size <MAX_TOPIC_SIZE>          Max topic size [default: unlimited]
   -r, --replication-factor <REPLICATION_FACTOR>  Replication factor for the topic [default: 1]
   -h, --help                                     Print help (see more with '--help')

@@ -7,11 +7,12 @@ use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{Buf, Bytes};
-use iggy::batching::batcher::Itemizer;
-use iggy::batching::messages_batch::MessagesBatch;
+use iggy::batching::batcher::BatchItemizer;
+use iggy::batching::messages_batch::MessageBatch;
 use iggy::batching::METADATA_BYTES_LEN;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
+use iggy::sizeable::Sizeable;
 use iggy::utils::checksum;
 use std::io::SeekFrom;
 use std::path::Path;
@@ -168,31 +169,34 @@ impl Storage<Segment> for FileSegmentStorage {
 
 #[async_trait]
 impl SegmentStorage for FileSegmentStorage {
-    async fn load_messages(
+    async fn load_message_batches(
         &self,
         segment: &Segment,
         index_range: IndexRange,
-    ) -> Result<Vec<Arc<MessagesBatch>>, IggyError> {
+    ) -> Result<Vec<Arc<MessageBatch>>, IggyError> {
         let mut batches = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
-        load_messages_by_range(segment, index_range, |batch| {
+        load_message_batches_by_range(segment, index_range, |batch| {
             batches.push(batch);
             Ok(())
         })
         .await?;
-        trace!("Loaded {} messages from disk.", batches.len());
+        trace!(
+            "Loaded {} messages from disk.",
+            batches.iter().map(|b| b.last_offset_delta).sum::<u32>()
+        );
         Ok(batches)
     }
 
-    async fn load_newest_messages_by_size(
+    async fn load_newest_message_batches_by_size(
         &self,
         segment: &Segment,
         size_bytes: u32,
-    ) -> Result<Vec<Arc<MessagesBatch>>, IggyError> {
+    ) -> Result<Vec<Arc<MessageBatch>>, IggyError> {
         let mut batches = Vec::new();
         let mut total_size_bytes = 0;
-        load_messages_by_size(segment, size_bytes, |batch: MessagesBatch| {
+        load_message_batches_by_size(segment, size_bytes, |batch: MessageBatch| {
             total_size_bytes += batch.get_size_bytes() as u64;
             batches.push(Arc::new(batch));
             Ok(())
@@ -206,10 +210,10 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(batches)
     }
 
-    async fn save_messages(
+    async fn save_message_batches(
         &self,
         segment: &Segment,
-        messages_batches: &[Arc<MessagesBatch>],
+        messages_batches: &[Arc<MessageBatch>],
     ) -> Result<u32, IggyError> {
         let messages_size = messages_batches
             .iter()
@@ -235,10 +239,10 @@ impl SegmentStorage for FileSegmentStorage {
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
         let mut message_ids = Vec::new();
-        load_messages_by_range(
+        load_message_batches_by_range(
             segment,
             IndexRange::max_range(),
-            |batch: Arc<MessagesBatch>| {
+            |batch: Arc<MessageBatch>| {
                 message_ids.extend(
                     batch
                         .into_messages()?
@@ -254,10 +258,10 @@ impl SegmentStorage for FileSegmentStorage {
     }
 
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError> {
-        load_messages_by_range(
+        load_message_batches_by_range(
             segment,
             IndexRange::max_range(),
-            |batch: Arc<MessagesBatch>| {
+            |batch: Arc<MessageBatch>| {
                 let messages = batch.into_messages()?;
                 for message in messages {
                     let calculated_checksum = checksum::calculate(&message.payload);
@@ -519,10 +523,10 @@ impl SegmentStorage for FileSegmentStorage {
     }
 }
 
-async fn load_messages_by_range(
+async fn load_message_batches_by_range(
     segment: &Segment,
     index_range: IndexRange,
-    mut on_batch: impl FnMut(Arc<MessagesBatch>) -> Result<(), IggyError>,
+    mut on_batch: impl FnMut(Arc<MessageBatch>) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
@@ -567,7 +571,7 @@ async fn load_messages_by_range(
             .await
             .map_err(|_| IggyError::CannotReadBatchPayload)?;
 
-        let batch = MessagesBatch::new(
+        let batch = MessageBatch::new(
             batch_base_offset,
             batch_length,
             last_offset_delta,
@@ -579,10 +583,10 @@ async fn load_messages_by_range(
     Ok(())
 }
 
-async fn load_messages_by_size(
+async fn load_message_batches_by_size(
     segment: &Segment,
     size_bytes: u32,
-    mut on_batch: impl FnMut(MessagesBatch) -> Result<(), IggyError>,
+    mut on_batch: impl FnMut(MessageBatch) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
@@ -619,7 +623,7 @@ async fn load_messages_by_size(
             .await
             .map_err(|_| IggyError::CannotReadBatchPayload)?;
 
-        let batch = MessagesBatch::new(
+        let batch = MessageBatch::new(
             batch_base_offset,
             batch_length,
             last_offset_delta,

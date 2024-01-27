@@ -3,7 +3,6 @@ use crate::error::IggyError;
 use crate::messages::send_messages;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::sizeable::Sizeable;
 use crate::utils::{checksum, timestamp::IggyTimestamp};
 use bytes::{BufMut, Bytes};
 use serde::{Deserialize, Serialize};
@@ -12,7 +11,6 @@ use serde_with::serde_as;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use std::sync::Arc;
 
 /// The wrapper on top of the collection of messages that are polled from the partition.
 /// It consists of the following fields:
@@ -40,7 +38,7 @@ pub struct PolledMessages {
 /// - `length`: the length of the payload.
 /// - `payload`: the binary payload of the message.
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Message {
     /// The offset of the message.
     pub offset: u64,
@@ -120,12 +118,6 @@ impl FromStr for MessageState {
             "marked_for_deletion" => Ok(MessageState::MarkedForDeletion),
             _ => Err(IggyError::InvalidCommand),
         }
-    }
-}
-
-impl Sizeable for Arc<Message> {
-    fn get_size_bytes(&self) -> u32 {
-        self.as_ref().get_size_bytes()
     }
 }
 

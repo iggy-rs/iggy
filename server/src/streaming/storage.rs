@@ -17,7 +17,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::storage::FileUserStorage;
 use crate::streaming::users::user::User;
 use async_trait::async_trait;
-use iggy::batching::messages_batch::MessagesBatch;
+use iggy::batching::messages_batch::MessageBatch;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
@@ -94,20 +94,20 @@ pub trait PartitionStorage: Storage<Partition> {
 
 #[async_trait]
 pub trait SegmentStorage: Storage<Segment> {
-    async fn load_messages(
+    async fn load_message_batches(
         &self,
         segment: &Segment,
         index_range: IndexRange,
-    ) -> Result<Vec<Arc<MessagesBatch>>, IggyError>;
-    async fn load_newest_messages_by_size(
+    ) -> Result<Vec<Arc<MessageBatch>>, IggyError>;
+    async fn load_newest_message_batches_by_size(
         &self,
         segment: &Segment,
         size_bytes: u32,
-    ) -> Result<Vec<Arc<MessagesBatch>>, IggyError>;
-    async fn save_messages(
+    ) -> Result<Vec<Arc<MessageBatch>>, IggyError>;
+    async fn save_message_batches(
         &self,
         segment: &Segment,
-        messages_batches: &[Arc<MessagesBatch>],
+        messages_batches: &[Arc<MessageBatch>],
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -432,26 +432,26 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl SegmentStorage for TestSegmentStorage {
-        async fn load_messages(
+        async fn load_message_batches(
             &self,
             _segment: &Segment,
             _index_range: IndexRange,
-        ) -> Result<Vec<Arc<MessagesBatch>>, IggyError> {
+        ) -> Result<Vec<Arc<MessageBatch>>, IggyError> {
             Ok(vec![])
         }
 
-        async fn load_newest_messages_by_size(
+        async fn load_newest_message_batches_by_size(
             &self,
             _segment: &Segment,
             _size: u32,
-        ) -> Result<Vec<Arc<MessagesBatch>>, IggyError> {
+        ) -> Result<Vec<Arc<MessageBatch>>, IggyError> {
             Ok(vec![])
         }
 
-        async fn save_messages(
+        async fn save_message_batches(
             &self,
             _segment: &Segment,
-            _messages_batches: &[Arc<MessagesBatch>],
+            _messages_batches: &[Arc<MessageBatch>],
         ) -> Result<u32, IggyError> {
             Ok(0)
         }

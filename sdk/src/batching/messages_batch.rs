@@ -1,4 +1,4 @@
-use crate::batching::batches_filter::BatchesFilter;
+use crate::batching::batches_converter::BatchesConverter;
 use crate::batching::METADATA_BYTES_LEN;
 use crate::bytes_serializable::BytesSerializable;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
@@ -10,47 +10,85 @@ use bytes::{Buf, BufMut, Bytes};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::batcher::{Batcher, Itemizer};
+use super::batcher::{Batcher, BatchItemizer};
 
 /*
  Attributes Byte Structure:
  | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
  ---------------------------------
- |CA |CA| CA | U | U | U | U | U |
+ | CA | CA | CA | U | U | U | U | U |
 
  Legend:
  CA - Compression Algorithm (Bits 0 to 3)
  U  - Unused (Bits 3 to 7)
 */
 const COMPRESSION_ALGORITHM_SHIFT: u8 = 5;
-const COMPRESSION_ALGORITHM_MASK: u8 = 0xE0;
+const COMPRESSION_ALGORITHM_MASK: u8 = 0b11100000;
 
 #[derive(Debug, Clone)]
-pub struct MessagesBatch {
+pub struct MessageBatch {
     pub base_offset: u64,
-    //TODO(numinex) - change this to u64
     pub length: u32,
     pub last_offset_delta: u32,
     attributes: u8,
     pub messages: Bytes,
 }
-pub struct MessagesBatchAttributes {
+
+impl MessageBatch {
+    pub fn new(
+        base_offset: u64,
+        length: u32,
+        last_offset_delta: u32,
+        attributes: u8,
+        messages: Bytes,
+    ) -> Self {
+        Self {
+            base_offset,
+            length,
+            last_offset_delta,
+            attributes,
+            messages,
+        }
+    }
+
+    pub fn get_compression_algorithm(&self) -> Result<CompressionAlgorithm, IggyError> {
+        let compression_algorithm =
+            MessageBatchAttributes::get_compression_algorithm_code(&self.attributes);
+        CompressionAlgorithm::from_code(compression_algorithm)
+    }
+
+    pub fn is_contained_or_overlapping_within_offset_range(
+        &self,
+        start_offset: u64,
+        end_offset: u64,
+    ) -> bool {
+        (self.base_offset <= end_offset && self.get_last_offset() >= end_offset)
+            || (self.base_offset <= start_offset && self.get_last_offset() <= end_offset)
+            || (self.base_offset <= end_offset && self.get_last_offset() >= start_offset)
+    }
+
+    pub fn extend(&self, bytes: &mut Vec<u8>) {
+        bytes.put_u64_le(self.base_offset);
+        bytes.put_u32_le(self.length);
+        bytes.put_u32_le(self.last_offset_delta);
+        bytes.put_u8(self.attributes);
+        bytes.extend(&self.messages);
+    }
+
+    pub fn get_last_offset(&self) -> u64 {
+        self.base_offset + self.last_offset_delta as u64
+    }
+}
+
+pub struct MessageBatchAttributes {
     pub compression_algorithm: CompressionAlgorithm,
 }
-impl MessagesBatchAttributes {
+
+impl MessageBatchAttributes {
     pub fn new(compression_algorithm: CompressionAlgorithm) -> Self {
         Self {
             compression_algorithm,
         }
-    }
-    pub fn create(&self) -> u8 {
-        let mut attributes: u8 = 0;
-        let compression_bits = (self.compression_algorithm.as_code()
-            << COMPRESSION_ALGORITHM_SHIFT)
-            & COMPRESSION_ALGORITHM_MASK;
-
-        attributes |= compression_bits;
-        attributes
     }
 
     fn change_compression_algorithm(
@@ -71,39 +109,59 @@ impl MessagesBatchAttributes {
     }
 }
 
-impl Sizeable for Arc<MessagesBatch> {
+impl From<MessageBatchAttributes> for u8 {
+    fn from(attributes: MessageBatchAttributes) -> Self {
+        let mut attributes_byte: u8 = 0;
+        let compression_bits = (attributes.compression_algorithm.as_code()
+            << COMPRESSION_ALGORITHM_SHIFT)
+            & COMPRESSION_ALGORITHM_MASK;
+
+        attributes_byte |= compression_bits;
+        attributes_byte
+    }
+}
+
+impl Sizeable for Arc<MessageBatch> {
     fn get_size_bytes(&self) -> u32 {
         METADATA_BYTES_LEN + self.messages.len() as u32
     }
 }
 
-impl<T, U> BatchesFilter<Message, U, T> for T
+impl Sizeable for MessageBatch {
+    fn get_size_bytes(&self) -> u32 {
+        METADATA_BYTES_LEN + self.messages.len() as u32
+    }
+}
+
+impl<T, U> BatchesConverter<Message, U, T> for T
 where
     T: IntoIterator<Item = U>,
-    U: Itemizer<Message>,
+    U: BatchItemizer<Message>,
 {
-    fn filter_by_offset_range(
+    fn convert_and_filter_by_offset_range(
         self,
         start_offset: u64,
         end_offset: u64,
     ) -> Result<Vec<Message>, IggyError> {
-        self 
-        .into_iter()
-        .try_fold(Vec::new(), |mut messages, batch| {
-            messages.extend(batch
-                .into_messages()?
-                .into_iter()
-                .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
-                .collect::<Vec<_>>());
-            Ok(messages)
-        })
+        self.into_iter()
+            .try_fold(Vec::new(), |mut messages, batch| {
+                messages.extend(
+                    batch
+                        .into_messages()?
+                        .into_iter()
+                        .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
+                        .collect::<Vec<_>>(),
+                );
+                Ok(messages)
+            })
     }
 }
 
-impl Itemizer<Message> for Arc<MessagesBatch> {
+impl BatchItemizer<Message> for Arc<MessageBatch> {
     fn into_messages(self) -> Result<impl IntoIterator<Item = Message>, IggyError> {
         let compression_algorithm = self.get_compression_algorithm()?;
-        let mut messages = Vec::new();
+        let messages_count = self.last_offset_delta + 1;
+        let mut messages = Vec::with_capacity(messages_count as usize);
         let buffer = &self.messages;
 
         let mut decompressed = match compression_algorithm {
@@ -139,15 +197,14 @@ impl Itemizer<Message> for Arc<MessagesBatch> {
 
             let headers_len = decompressed.get_u32_le();
             let headers = if headers_len > 0 {
-                let headers_payload = decompressed.copy_to_bytes(headers_len as usize).to_vec();
-                Some(HashMap::from_bytes(&headers_payload)?)
+                let headers_payload = decompressed.copy_to_bytes(headers_len as usize);
+                Some(HashMap::from_bytes(headers_payload.as_ref())?)
             } else {
                 None
             };
 
             let length = decompressed.get_u32_le();
             let payload = decompressed.copy_to_bytes(length as usize);
-
             messages.push(Message {
                 offset,
                 state,
@@ -164,14 +221,14 @@ impl Itemizer<Message> for Arc<MessagesBatch> {
     }
 }
 
-impl Batcher<Message, Arc<MessagesBatch>> for Vec<Message> {
+impl Batcher<Message, Arc<MessageBatch>> for Vec<Message> {
     fn into_batch(
         self,
         base_offset: u64,
         last_offset_delta: u32,
         attributes: u8,
-    ) -> Result<Arc<MessagesBatch>, IggyError> {
-        let ca_code = MessagesBatchAttributes::get_compression_algorithm_code(&attributes);
+    ) -> Result<Arc<MessageBatch>, IggyError> {
+        let ca_code = MessageBatchAttributes::get_compression_algorithm_code(&attributes);
         let compression_algorithm = CompressionAlgorithm::from_code(ca_code)?;
         let mut attributes = attributes;
 
@@ -204,7 +261,7 @@ impl Batcher<Message, Arc<MessagesBatch>> for Vec<Message> {
                         compression_buffer
                     } else {
                         // Need to change attributes, to include the fact that no compression is applied
-                        attributes = MessagesBatchAttributes::change_compression_algorithm(
+                        attributes = MessageBatchAttributes::change_compression_algorithm(
                             attributes,
                             CompressionAlgorithm::None,
                         );
@@ -214,7 +271,7 @@ impl Batcher<Message, Arc<MessagesBatch>> for Vec<Message> {
             };
 
         let len = METADATA_BYTES_LEN + payload.len() as u32;
-        Ok(Arc::new(MessagesBatch::new(
+        Ok(Arc::new(MessageBatch::new(
             base_offset,
             len,
             last_offset_delta,
@@ -224,61 +281,23 @@ impl Batcher<Message, Arc<MessagesBatch>> for Vec<Message> {
     }
 }
 
-impl MessagesBatch {
-    pub fn new(
-        base_offset: u64,
-        length: u32,
-        last_offset_delta: u32,
-        attributes: u8,
-        messages: Bytes,
-    ) -> Self {
-        Self {
-            base_offset,
-            length,
-            last_offset_delta,
-            attributes,
-            messages,
-        }
-    }
-
-    pub fn get_compression_algorithm(&self) -> Result<CompressionAlgorithm, IggyError> {
-        let compression_algorithm =
-            MessagesBatchAttributes::get_compression_algorithm_code(&self.attributes);
-        CompressionAlgorithm::from_code(compression_algorithm)
-    }
-
-    pub fn is_contained_or_overlapping_within_offset_range(
-        &self,
-        start_offset: u64,
-        end_offset: u64,
-    ) -> bool {
-        (self.base_offset <= end_offset && self.get_last_offset() >= end_offset)
-            || (self.base_offset <= start_offset && self.get_last_offset() <= end_offset)
-            || (self.base_offset <= end_offset && self.get_last_offset() >= start_offset)
-    }
-    pub fn get_size_bytes(&self) -> u32 {
-        METADATA_BYTES_LEN + self.messages.len() as u32
-    }
-    pub fn extend(&self, bytes: &mut Vec<u8>) {
-        bytes.put_u64_le(self.base_offset);
-        bytes.put_u32_le(self.length);
-        bytes.put_u32_le(self.last_offset_delta);
-        bytes.put_u8(self.attributes);
-        bytes.extend(&self.messages);
-    }
-    pub fn get_last_offset(&self) -> u64 {
-        self.base_offset + self.last_offset_delta as u64
-    }
-}
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
     fn should_create_attributes_with_gzip_compression_algorithm() {
-        let attributes = MessagesBatchAttributes::new(CompressionAlgorithm::Gzip).create();
-        let messages_batch = MessagesBatch::new(1337, 69, 420, attributes, Bytes::new());
+        let attributes = MessageBatchAttributes::new(CompressionAlgorithm::Gzip).into();
+        let messages_batch = MessageBatch::new(1337, 69, 420, attributes, Bytes::new());
         let compression_algorithm = messages_batch.get_compression_algorithm().unwrap();
 
         assert_eq!(compression_algorithm, CompressionAlgorithm::Gzip);
+    }
+    #[test]
+    fn should_create_attributes_with_no_compression_algorithm() {
+        let attributes = MessageBatchAttributes::new(CompressionAlgorithm::None).into();
+        let messages_batch = MessageBatch::new(1337, 69, 420, attributes, Bytes::new());
+        let compression_algorithm = messages_batch.get_compression_algorithm().unwrap();
+
+        assert_eq!(compression_algorithm, CompressionAlgorithm::None);
     }
 }

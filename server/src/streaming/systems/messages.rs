@@ -11,6 +11,8 @@ use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::Message;
 use std::sync::Arc;
 use tracing::{error, trace};
+use iggy::batching::METADATA_BYTES_LEN;
+use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 
 impl System {
     pub async fn poll_messages(
@@ -108,7 +110,7 @@ impl System {
             topic.topic_id,
         )?;
 
-        let mut _batch_size_bytes: u64 = 0;
+        let mut batch_size_bytes: u64 = 0;
         let mut received_messages = Vec::with_capacity(messages.len());
         // For large batches it would be better to use par_iter() from rayon.
         for message in messages {
@@ -126,7 +128,7 @@ impl System {
                 }
                 None => message,
             };
-            _batch_size_bytes += message.get_size_bytes() as u64;
+            batch_size_bytes += message.get_size_bytes() as u64;
             received_messages.push(Message::from_message(message));
         }
 
@@ -135,7 +137,16 @@ impl System {
         } else {
             topic.compression_algorithm
         };
-
+        batch_size_bytes += 20 + METADATA_BYTES_LEN as u64;
+        // If there's enough space in cache, do nothing.
+        // Otherwise, clean the cache.
+        /*
+        if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
+            if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
+                self.clean_cache(batch_size_bytes).await;
+            }
+        }
+         */
         topic
             .append_messages(partitioning, compression_algorithm, received_messages)
             .await?;

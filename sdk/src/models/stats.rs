@@ -1,3 +1,4 @@
+use crate::utils::byte_size::IggyByteSize;
 use serde::{Deserialize, Serialize};
 
 /// `Stats` represents the statistics and details of the server and running process.
@@ -8,21 +9,21 @@ pub struct Stats {
     /// The CPU usage of the process.
     pub cpu_usage: f32,
     /// The memory usage of the process.
-    pub memory_usage: u64,
+    pub memory_usage: IggyByteSize,
     /// The total memory of the system.
-    pub total_memory: u64,
+    pub total_memory: IggyByteSize,
     /// The available memory of the system.
-    pub available_memory: u64,
+    pub available_memory: IggyByteSize,
     /// The run time of the process.
     pub run_time: u64,
     /// The start time of the process.
     pub start_time: u64,
     /// The total number of bytes read.
-    pub read_bytes: u64,
+    pub read_bytes: IggyByteSize,
     /// The total number of bytes written.
-    pub written_bytes: u64,
+    pub written_bytes: IggyByteSize,
     /// The total size of the messages in bytes.
-    pub messages_size_bytes: u64,
+    pub messages_size_bytes: IggyByteSize,
     /// The total number of streams.
     pub streams_count: u32,
     /// The total number of topics.

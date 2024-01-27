@@ -3,12 +3,13 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
-use iggy::batching::messages_batch::MessagesBatch;
+use iggy::batching::messages_batch::MessageBatch;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
 use iggy::models::messages::Message;
+use iggy::sizeable::Sizeable;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -208,7 +209,7 @@ impl Topic {
         Ok(())
     }
 
-    fn cache_integrity_check(cache: &[Arc<MessagesBatch>]) -> bool {
+    fn cache_integrity_check(cache: &[Arc<MessageBatch>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;

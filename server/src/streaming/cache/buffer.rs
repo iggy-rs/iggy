@@ -55,6 +55,14 @@ where
         self.buffer.push_back(element);
     }
 
+    /// Pushes an element to the buffer, ignoring the memory limit.
+    pub fn push(&mut self, element: T) {
+        let element_size = element.get_size_bytes() as u64;
+        self.memory_tracker.increment_used_memory(element_size);
+        self.current_size += element_size;
+        self.buffer.push_back(element);
+    }
+
     /// Removes the oldest elements until there's enough space for the new element.
     pub fn evict_by_size(&mut self, size_to_remove: u64) {
         let mut removed_size = 0;

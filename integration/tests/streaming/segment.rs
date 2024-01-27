@@ -1,7 +1,7 @@
 use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
 use iggy::batching::batcher::Batcher;
-use iggy::batching::messages_batch::MessagesBatchAttributes;
+use iggy::batching::messages_batch::MessageBatchAttributes;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::models::messages::{Message, MessageState};
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
@@ -133,12 +133,12 @@ async fn should_persist_and_load_segment_with_messages() {
         messages.push(message);
     }
     let last_timestamp = messages[..].last().unwrap().timestamp;
-    let attributes = MessagesBatchAttributes::new(CompressionAlgorithm::None).create();
+    let attributes = MessageBatchAttributes::new(CompressionAlgorithm::None).into();
     let messages_batch = messages
         .into_batch(0, (messages_count - 1) as u32, attributes)
         .unwrap();
     segment
-        .append_messages(messages_batch, messages_count - 1, last_timestamp)
+        .append_message_batches(messages_batch, messages_count - 1, last_timestamp)
         .await
         .unwrap();
 
@@ -200,13 +200,13 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         messages.push(message);
         expired_timestamp += 1;
     }
-    let attributes = MessagesBatchAttributes::new(CompressionAlgorithm::None).create();
+    let attributes = MessageBatchAttributes::new(CompressionAlgorithm::None).into();
     let last_timestamp = messages[..].last().unwrap().timestamp;
     let message_batch = messages
         .into_batch(0, (messages_count - 1) as u32, attributes)
         .unwrap();
     segment
-        .append_messages(message_batch, messages_count - 1, last_timestamp)
+        .append_message_batches(message_batch, messages_count - 1, last_timestamp)
         .await
         .unwrap();
 
@@ -255,16 +255,16 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let expired_messages = vec![expired_message];
     let not_expired_messages = vec![not_expired_message];
 
-    let attributes = MessagesBatchAttributes::new(CompressionAlgorithm::None).create();
+    let attributes = MessageBatchAttributes::new(CompressionAlgorithm::None).into();
     let expired_message_batch = expired_messages.into_batch(0, 1, attributes).unwrap();
     let not_expired_message_batch = not_expired_messages.into_batch(1, 2, attributes).unwrap();
 
     segment
-        .append_messages(expired_message_batch, 1, 0)
+        .append_message_batches(expired_message_batch, 1, 0)
         .await
         .unwrap();
     segment
-        .append_messages(not_expired_message_batch, 2, 0)
+        .append_message_batches(not_expired_message_batch, 2, 0)
         .await
         .unwrap();
     segment.persist_messages().await.unwrap();

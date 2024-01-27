@@ -5,7 +5,7 @@ use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
-use iggy::batching::messages_batch::MessagesBatch;
+use iggy::batching::messages_batch::MessageBatch;
 use iggy::consumer::ConsumerKind;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
@@ -17,7 +17,7 @@ pub struct Partition {
     pub partition_id: u32,
     pub path: String,
     pub current_offset: u64,
-    pub cache: Option<SmartCache<Arc<MessagesBatch>>>,
+    pub cache: Option<SmartCache<Arc<MessageBatch>>>,
     pub cached_memory_tracker: Option<Arc<CacheMemoryTracker>>,
     pub message_deduplicator: Option<MessageDeduplicator>,
     pub unsaved_messages_count: u32,

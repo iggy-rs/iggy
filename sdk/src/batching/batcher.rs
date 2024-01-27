@@ -1,7 +1,7 @@
 use crate::error::IggyError;
 // Making those traits generic , in case if in the future
 // there would be more message formats
-pub trait Batcher<T, U: Itemizer<T>>: IntoIterator<Item = T> {
+pub trait Batcher<T, U: BatchItemizer<T>>: IntoIterator<Item = T> {
     fn into_batch(
         self,
         base_offset: u64,
@@ -9,6 +9,6 @@ pub trait Batcher<T, U: Itemizer<T>>: IntoIterator<Item = T> {
         attributes: u8,
     ) -> Result<U, IggyError>;
 }
-pub trait Itemizer<T> {
+pub trait BatchItemizer<T> {
     fn into_messages(self) -> Result<impl IntoIterator<Item = T>, IggyError>;
 }

@@ -4,8 +4,8 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::utils::random_id;
 use iggy::batching::batcher::Batcher;
-use iggy::batching::batches_filter::BatchesFilter;
-use iggy::batching::messages_batch::{MessagesBatch, MessagesBatchAttributes};
+use iggy::batching::batches_converter::BatchesConverter;
+use iggy::batching::messages_batch::{MessageBatch, MessageBatchAttributes};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<Message> = vec![];
-const EMPTY_BATCHES: Vec<MessagesBatch> = vec![];
+const EMPTY_BATCHES: Vec<MessageBatch> = vec![];
 
 impl Partition {
     pub fn get_messages_count(&self) -> u64 {
@@ -237,7 +237,7 @@ impl Partition {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u32,
-    ) -> Result<Vec<Arc<MessagesBatch>>, IggyError> {
+    ) -> Result<Vec<Arc<MessageBatch>>, IggyError> {
         trace!(
             "Getting messages for size: {} bytes for partition: {}...",
             size_bytes,
@@ -257,7 +257,7 @@ impl Partition {
             }
             if segment_size_bytes > remaining_size {
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
-                let partial_messages = segment.get_newest_messages_by_size(remaining_size).await?;
+                let partial_messages = segment.get_newest_message_batches_by_size(remaining_size).await?;
                 batches.splice(..0, partial_messages);
                 break;
             }
@@ -311,7 +311,7 @@ impl Partition {
                     None
                 }
             })
-            .filter_by_offset_range(start_offset, end_offset)?;
+            .convert_and_filter_by_offset_range(start_offset, end_offset)?;
 
         let expected_messages_count = (end_offset - start_offset + 1) as usize;
         if messages.len() != expected_messages_count {
@@ -405,16 +405,16 @@ impl Partition {
         }
         let last_offset_delta = (last_offset - begin_offset) as u32;
 
-        let attributes = MessagesBatchAttributes::new(compression_algorithm).create();
+        let attributes = MessageBatchAttributes::new(compression_algorithm).into();
         let batch = appendable_messages.into_batch(begin_offset, last_offset_delta, attributes)?;
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             last_segment
-                .append_messages(batch.clone(), last_offset, max_timestamp)
+                .append_message_batches(batch.clone(), last_offset, max_timestamp)
                 .await?;
         }
         if let Some(cache) = &mut self.cache {
-            cache.push_safe(batch.clone());
+            cache.push(batch.clone());
         }
 
         self.unsaved_messages_count += messages_count;

@@ -2,7 +2,7 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
-use iggy::batching::messages_batch::MessagesBatch;
+use iggy::batching::messages_batch::MessageBatch;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 
@@ -27,7 +27,7 @@ pub struct Segment {
     pub current_size_bytes: u32,
     pub is_closed: bool,
     pub(crate) message_expiry: Option<u32>,
-    pub(crate) unsaved_messages: Option<Vec<Arc<MessagesBatch>>>,
+    pub(crate) unsaved_message_batches: Option<Vec<Arc<MessageBatch>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) unsaved_indexes: Vec<u8>,
@@ -71,7 +71,7 @@ impl Segment {
                 false => None,
             },
             unsaved_timestamps: Vec::with_capacity(1024),
-            unsaved_messages: None,
+            unsaved_message_batches: None,
             is_closed: false,
             config,
             storage,
@@ -160,7 +160,7 @@ mod tests {
         assert_eq!(segment.index_path, index_path);
         assert_eq!(segment.time_index_path, time_index_path);
         assert_eq!(segment.message_expiry, message_expiry);
-        assert!(segment.unsaved_messages.is_none());
+        assert!(segment.unsaved_message_batches.is_none());
         assert!(segment.indexes.is_some());
         assert!(segment.time_indexes.is_some());
         assert!(!segment.is_closed);

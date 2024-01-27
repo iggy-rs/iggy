@@ -1,7 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::system::get_stats::GetStats;
-use crate::utils::byte_size::IggyByteSize;
 use anyhow::Context;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -53,25 +52,16 @@ impl CliCommand for GetStatsCmd {
         ]);
         table.add_row(vec![
             "Iggy Server Memory Usage",
-            IggyByteSize::from(stats.memory_usage)
-                .as_bytes_u64()
-                .to_string()
-                .as_str(),
+            stats.memory_usage.as_bytes_u64().to_string().as_str(),
         ]);
 
         table.add_row(vec![
             "Total Memory (RAM)",
-            IggyByteSize::from(stats.total_memory)
-                .as_bytes_u64()
-                .to_string()
-                .as_str(),
+            stats.total_memory.as_bytes_u64().to_string().as_str(),
         ]);
         table.add_row(vec![
             "Available Memory (RAM)",
-            IggyByteSize::from(stats.available_memory)
-                .as_bytes_u64()
-                .to_string()
-                .as_str(),
+            stats.available_memory.as_bytes_u64().to_string().as_str(),
         ]);
 
         table.add_row(vec![
@@ -89,21 +79,16 @@ impl CliCommand for GetStatsCmd {
 
         table.add_row(vec![
             "Read Bytes",
-            IggyByteSize::from(stats.read_bytes)
-                .as_bytes_u64()
-                .to_string()
-                .as_str(),
+            stats.read_bytes.as_bytes_u64().to_string().as_str(),
         ]);
         table.add_row(vec![
             "Written Bytes",
-            IggyByteSize::from(stats.written_bytes)
-                .as_bytes_u64()
-                .to_string()
-                .as_str(),
+            stats.written_bytes.as_bytes_u64().to_string().as_str(),
         ]);
         table.add_row(vec![
             "Messages Size Bytes",
-            IggyByteSize::from(stats.messages_size_bytes)
+            stats
+                .messages_size_bytes
                 .as_bytes_u64()
                 .to_string()
                 .as_str(),

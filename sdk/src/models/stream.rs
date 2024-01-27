@@ -1,4 +1,5 @@
 use crate::models::topic::Topic;
+use crate::utils::byte_size::IggyByteSize;
 use serde::{Deserialize, Serialize};
 
 /// `Stream` represents the highest level of logical separation of data.
@@ -18,7 +19,7 @@ pub struct Stream {
     /// The unique name of the stream.
     pub name: String,
     /// The total size of the stream in bytes.
-    pub size_bytes: u64,
+    pub size_bytes: IggyByteSize,
     /// The total number of messages in the stream.
     pub messages_count: u64,
     /// The total number of topics in the stream.
@@ -43,7 +44,7 @@ pub struct StreamDetails {
     /// The unique name of the stream.
     pub name: String,
     /// The total size of the stream in bytes.
-    pub size_bytes: u64,
+    pub size_bytes: IggyByteSize,
     /// The total number of messages in the stream.
     pub messages_count: u64,
     /// The total number of topics in the stream.

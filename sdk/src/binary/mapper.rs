@@ -29,14 +29,14 @@ const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
 pub fn map_stats(payload: &[u8]) -> Result<Stats, IggyError> {
     let process_id = u32::from_le_bytes(payload[..4].try_into()?);
     let cpu_usage = f32::from_le_bytes(payload[4..8].try_into()?);
-    let memory_usage = u64::from_le_bytes(payload[8..16].try_into()?);
-    let total_memory = u64::from_le_bytes(payload[16..24].try_into()?);
-    let available_memory = u64::from_le_bytes(payload[24..32].try_into()?);
+    let memory_usage = u64::from_le_bytes(payload[8..16].try_into()?).into();
+    let total_memory = u64::from_le_bytes(payload[16..24].try_into()?).into();
+    let available_memory = u64::from_le_bytes(payload[24..32].try_into()?).into();
     let run_time = u64::from_le_bytes(payload[32..40].try_into()?);
     let start_time = u64::from_le_bytes(payload[40..48].try_into()?);
-    let read_bytes = u64::from_le_bytes(payload[48..56].try_into()?);
-    let written_bytes = u64::from_le_bytes(payload[56..64].try_into()?);
-    let total_size_bytes = u64::from_le_bytes(payload[64..72].try_into()?);
+    let read_bytes = u64::from_le_bytes(payload[48..56].try_into()?).into();
+    let written_bytes = u64::from_le_bytes(payload[56..64].try_into()?).into();
+    let total_size_bytes = u64::from_le_bytes(payload[64..72].try_into()?).into();
     let streams_count = u32::from_le_bytes(payload[72..76].try_into()?);
     let topics_count = u32::from_le_bytes(payload[76..80].try_into()?);
     let partitions_count = u32::from_le_bytes(payload[80..84].try_into()?);
@@ -332,7 +332,7 @@ fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), Igg
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
     let topics_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
-    let size_bytes = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
+    let size_bytes = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?).into();
     let messages_count = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?);
     let name_length = payload[position + 32];
     let name =
@@ -439,7 +439,7 @@ fn map_to_partition(payload: &[u8], position: usize) -> Result<(Partition, usize
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
     let segments_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
     let current_offset = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
-    let size_bytes = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?);
+    let size_bytes = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?).into();
     let messages_count = u64::from_le_bytes(payload[position + 32..position + 40].try_into()?);
     let read_bytes = 4 + 8 + 4 + 8 + 8 + 8;
     Ok((

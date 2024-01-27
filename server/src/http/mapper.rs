@@ -22,7 +22,7 @@ pub async fn map_stream(stream: &Stream) -> StreamDetails {
         created_at: stream.created_at,
         name: stream.name.clone(),
         topics_count: topics.len() as u32,
-        size_bytes: stream.get_size().await.as_bytes_u64(),
+        size_bytes: stream.get_size().await,
         messages_count: stream.get_messages_count().await,
         topics,
     };
@@ -37,7 +37,7 @@ pub async fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Strea
             id: stream.stream_id,
             created_at: stream.created_at,
             name: stream.name.clone(),
-            size_bytes: stream.get_size().await.as_bytes_u64(),
+            size_bytes: stream.get_size().await,
             topics_count: stream.get_topics().len() as u32,
             messages_count: stream.get_messages_count().await,
         };
@@ -90,7 +90,7 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
                 created_at: partition.created_at,
                 segments_count: partition.get_segments().len() as u32,
                 current_offset: partition.current_offset,
-                size_bytes: partition.get_size_bytes(),
+                size_bytes: partition.get_size_bytes().into(),
                 messages_count: partition.get_messages_count(),
             });
     }

@@ -1,3 +1,4 @@
+use crate::utils::byte_size::IggyByteSize;
 use serde::{Deserialize, Serialize};
 
 /// `Partition` represents the information about a partition.
@@ -19,7 +20,7 @@ pub struct Partition {
     /// The current offset of the partition.
     pub current_offset: u64,
     /// The size of the partition in bytes.
-    pub size_bytes: u64,
+    pub size_bytes: IggyByteSize,
     /// The number of messages in the partition.
     pub messages_count: u64,
 }

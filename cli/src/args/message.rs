@@ -64,17 +64,17 @@ pub(crate) struct SendMessagesArgs {
 #[derive(Debug, Clone, Args)]
 #[command(group = ArgGroup::new("polling_strategy").required(true))]
 pub(crate) struct PollMessagesArgs {
-    /// Stream ID to create topic
+    /// ID of the stream from which message will be polled
     ///
     /// Stream ID can be specified as a stream name or ID
     #[arg(value_parser = clap::value_parser!(Identifier))]
     pub(crate) stream_id: Identifier,
-    /// Topic ID to create partitions
+    /// ID of the topic from which message will be polled
     ///
     /// Topic ID can be specified as a topic name or ID
     #[arg(value_parser = clap::value_parser!(Identifier))]
     pub(crate) topic_id: Identifier,
-    /// Partitions count to be created
+    /// Partition ID from which message will be polled
     #[arg(value_parser = clap::value_parser!(u32).range(1..))]
     pub(crate) partition_id: u32,
     /// Number of messages to poll

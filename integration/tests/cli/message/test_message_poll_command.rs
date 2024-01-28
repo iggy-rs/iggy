@@ -316,17 +316,17 @@ Examples:
 
 Arguments:
   <STREAM_ID>
-          Stream ID to create topic
+          ID of the stream from which message will be polled
 {CLAP_INDENT}
           Stream ID can be specified as a stream name or ID
 
   <TOPIC_ID>
-          Topic ID to create partitions
+          ID of the topic from which message will be polled
 {CLAP_INDENT}
           Topic ID can be specified as a topic name or ID
 
   <PARTITION_ID>
-          Partitions count to be created
+          Partition ID from which message will be polled
 
 Options:
   -m, --message-count <MESSAGE_COUNT>
@@ -386,9 +386,9 @@ pub async fn should_short_help_match() {
 {USAGE_PREFIX} message poll [OPTIONS] <--offset <OFFSET>|--first|--last|--next> <STREAM_ID> <TOPIC_ID> <PARTITION_ID>
 
 Arguments:
-  <STREAM_ID>     Stream ID to create topic
-  <TOPIC_ID>      Topic ID to create partitions
-  <PARTITION_ID>  Partitions count to be created
+  <STREAM_ID>     ID of the stream from which message will be polled
+  <TOPIC_ID>      ID of the topic from which message will be polled
+  <PARTITION_ID>  Partition ID from which message will be polled
 
 Options:
   -m, --message-count <MESSAGE_COUNT>  Number of messages to poll [default: 1]

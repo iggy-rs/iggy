@@ -1,5 +1,5 @@
 use crate::batching::batches_converter::BatchesConverter;
-use crate::batching::METADATA_BYTES_LEN;
+use crate::batching::BATCH_METADATA_BYTES_LEN;
 use crate::bytes_serializable::BytesSerializable;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::compression::compressor::{Compressor, GzCompressor, Lz4Compressor, ZstdCompressor};
@@ -10,7 +10,7 @@ use bytes::{Buf, BufMut, Bytes};
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use super::batcher::{Batcher, BatchItemizer};
+use super::batcher::{BatchItemizer, Batcher};
 
 /*
  Attributes Byte Structure:
@@ -123,13 +123,13 @@ impl From<MessageBatchAttributes> for u8 {
 
 impl Sizeable for Arc<MessageBatch> {
     fn get_size_bytes(&self) -> u32 {
-        METADATA_BYTES_LEN + self.messages.len() as u32
+        BATCH_METADATA_BYTES_LEN + self.messages.len() as u32
     }
 }
 
 impl Sizeable for MessageBatch {
     fn get_size_bytes(&self) -> u32 {
-        METADATA_BYTES_LEN + self.messages.len() as u32
+        BATCH_METADATA_BYTES_LEN + self.messages.len() as u32
     }
 }
 
@@ -270,7 +270,7 @@ impl Batcher<Message, Arc<MessageBatch>> for Vec<Message> {
                 }
             };
 
-        let len = METADATA_BYTES_LEN + payload.len() as u32;
+        let len = BATCH_METADATA_BYTES_LEN + payload.len() as u32;
         Ok(Arc::new(MessageBatch::new(
             base_offset,
             len,

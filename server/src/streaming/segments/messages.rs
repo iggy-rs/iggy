@@ -128,7 +128,6 @@ impl Segment {
             end_offset,
             self.current_offset
         );
-        println!("{}", self.current_offset);
 
         if start_offset > end_offset || end_offset > self.current_offset {
             trace!(

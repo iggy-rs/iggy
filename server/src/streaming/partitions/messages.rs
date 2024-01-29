@@ -257,7 +257,9 @@ impl Partition {
             }
             if segment_size_bytes > remaining_size {
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
-                let partial_messages = segment.get_newest_message_batches_by_size(remaining_size).await?;
+                let partial_messages = segment
+                    .get_newest_message_batches_by_size(remaining_size)
+                    .await?;
                 batches.splice(..0, partial_messages);
                 break;
             }
@@ -414,7 +416,7 @@ impl Partition {
                 .await?;
         }
         if let Some(cache) = &mut self.cache {
-            cache.push(batch.clone());
+            cache.extend(vec![batch.clone()]);
         }
 
         self.unsaved_messages_count += messages_count;

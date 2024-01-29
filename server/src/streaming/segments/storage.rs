@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use bytes::{Buf, Bytes};
 use iggy::batching::batcher::BatchItemizer;
 use iggy::batching::messages_batch::MessageBatch;
-use iggy::batching::METADATA_BYTES_LEN;
+use iggy::batching::BATCH_METADATA_BYTES_LEN;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
 use iggy::sizeable::Sizeable;
@@ -564,7 +564,7 @@ async fn load_message_batches_by_range(
         let index_last_offset = index_range.end.relative_offset as u64 + segment.start_offset;
         last_batch_to_read = last_offset == index_last_offset;
 
-        let payload_len = (batch_length - METADATA_BYTES_LEN) as usize;
+        let payload_len = (batch_length - BATCH_METADATA_BYTES_LEN) as usize;
         let mut payload = vec![0; payload_len];
         reader
             .read_exact(&mut payload)
@@ -616,7 +616,7 @@ async fn load_message_batches_by_size(
             .await
             .map_err(|_| IggyError::CannotReadAttributes)?;
 
-        let payload_len = (batch_length - METADATA_BYTES_LEN) as usize;
+        let payload_len = (batch_length - BATCH_METADATA_BYTES_LEN) as usize;
         let mut payload = vec![0; payload_len];
         reader
             .read_exact(&mut payload)

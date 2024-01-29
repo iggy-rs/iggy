@@ -1,8 +1,10 @@
+use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
+use iggy::batching::BATCH_METADATA_BYTES_LEN;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -11,8 +13,6 @@ use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::Message;
 use std::sync::Arc;
 use tracing::{error, trace};
-use iggy::batching::METADATA_BYTES_LEN;
-use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 
 impl System {
     pub async fn poll_messages(
@@ -137,16 +137,16 @@ impl System {
         } else {
             topic.compression_algorithm
         };
-        batch_size_bytes += 20 + METADATA_BYTES_LEN as u64;
+        // With compression metrics, we should be able to approximate the amount of memory to free.
+        batch_size_bytes += BATCH_METADATA_BYTES_LEN as u64;
         // If there's enough space in cache, do nothing.
         // Otherwise, clean the cache.
-        /*
         if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
             if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
                 self.clean_cache(batch_size_bytes).await;
             }
         }
-         */
+
         topic
             .append_messages(partitioning, compression_algorithm, received_messages)
             .await?;

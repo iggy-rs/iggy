@@ -1,7 +1,7 @@
 use iggy::client::{Client, StreamClient, TopicClient, UserClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use iggy::streams::create_stream::CreateStream;
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
@@ -99,11 +99,11 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
         for _ in 0..messages_per_batch {
             current_id += 1;
             let payload = format!("message-{current_id}");
-            let message = Message::from_str(&payload)?;
+            let message = AppendableMessage::from_str(&payload)?;
             messages.push(message);
         }
         client
-            .send_messages(&mut SendMessages {
+            .send_messages(&mut AppendMessages {
                 stream_id: Identifier::numeric(STREAM_ID)?,
                 topic_id: Identifier::numeric(TOPIC_ID)?,
                 partitioning: Partitioning::partition_id(PARTITION_ID),

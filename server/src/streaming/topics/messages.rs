@@ -4,9 +4,9 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
 use iggy::error::IggyError;
+use iggy::messages::append_messages::{Partitioning, PartitioningKind};
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
-use iggy::messages::send_messages::{Partitioning, PartitioningKind};
-use iggy::models::messages::Message;
+use iggy::models::polled_messages::PolledMessage;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -63,7 +63,7 @@ impl Topic {
     pub async fn append_messages(
         &self,
         partitioning: &Partitioning,
-        messages: Vec<Message>,
+        messages: Vec<PolledMessage>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
@@ -90,7 +90,7 @@ impl Topic {
     async fn append_messages_to_partition(
         &self,
         partition_id: u32,
-        messages: Vec<Message>,
+        messages: Vec<PolledMessage>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
@@ -205,7 +205,7 @@ impl Topic {
         Ok(())
     }
 
-    fn cache_integrity_check(cache: &[Arc<Message>]) -> bool {
+    fn cache_integrity_check(cache: &[Arc<PolledMessage>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;
@@ -261,7 +261,7 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
-    use iggy::models::messages::MessageState;
+    use iggy::models::polled_messages::MessageState;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -274,7 +274,7 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let payload = Bytes::from("test");
-            let messages = vec![Message::empty(
+            let messages = vec![PolledMessage::empty(
                 1,
                 MessageState::Available,
                 entity_id as u128,
@@ -310,7 +310,7 @@ mod tests {
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
             let payload = Bytes::from("test");
-            let messages = vec![Message::empty(
+            let messages = vec![PolledMessage::empty(
                 1,
                 MessageState::Available,
                 entity_id as u128,

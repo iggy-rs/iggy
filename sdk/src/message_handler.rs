@@ -1,7 +1,7 @@
-use crate::models::messages::Message;
+use crate::models::polled_messages::PolledMessage;
 use std::fmt::Debug;
 
 /// The trait represent the logic responsible for handling the message and is used by the `IggyClient`.
 pub trait MessageHandler: Send + Sync + Debug {
-    fn handle(&self, message: Message);
+    fn handle(&self, message: PolledMessage);
 }

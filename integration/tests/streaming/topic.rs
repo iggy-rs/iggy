@@ -1,7 +1,7 @@
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use iggy::messages::append_messages::Partitioning;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::messages::send_messages::Partitioning;
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
 use tokio::fs;

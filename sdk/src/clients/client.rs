@@ -14,14 +14,14 @@ use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::message_handler::MessageHandler;
+use crate::messages::append_messages::{AppendMessages, Partitioning, PartitioningKind};
 use crate::messages::poll_messages::{PollMessages, PollingKind};
-use crate::messages::send_messages::{Partitioning, PartitioningKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
-use crate::models::messages::{Message, PolledMessages};
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use crate::models::polled_messages::{PolledMessage, PolledMessages};
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -84,7 +84,7 @@ pub struct IggyClient {
     partitioner: Option<Box<dyn Partitioner>>,
     encryptor: Option<Box<dyn Encryptor>>,
     message_handler: Option<Arc<Box<dyn MessageHandler>>>,
-    message_channel_sender: Option<Arc<Sender<Message>>>,
+    message_channel_sender: Option<Arc<Sender<PolledMessage>>>,
 }
 
 /// The builder for the `IggyClient` instance, which allows to configure and provide custom implementations for the partitioner, encryptor or message handler.
@@ -134,7 +134,7 @@ impl IggyClientBuilder {
 
 #[derive(Debug)]
 struct SendMessagesBatch {
-    pub commands: VecDeque<SendMessages>,
+    pub commands: VecDeque<AppendMessages>,
 }
 
 /// The optional configuration for the `IggyClient` instance, consisting of the optional configuration for sending and polling the messages in the background.
@@ -265,7 +265,7 @@ impl IggyClient {
     }
 
     /// Returns the channel receiver for the messages which are polled in the background. This will only work if the `start_polling_messages` method is called.
-    pub fn subscribe_to_polled_messages(&mut self) -> Receiver<Message> {
+    pub fn subscribe_to_polled_messages(&mut self) -> Receiver<PolledMessage> {
         let (sender, receiver) = flume::unbounded();
         self.message_channel_sender = Some(Arc::new(sender));
         receiver
@@ -279,7 +279,7 @@ impl IggyClient {
         config_override: Option<PollMessagesConfig>,
     ) -> JoinHandle<()>
     where
-        F: Fn(Message) + Send + Sync + 'static,
+        F: Fn(PolledMessage) + Send + Sync + 'static,
     {
         let client = self.client.clone();
         let mut interval = Duration::from_millis(100);
@@ -363,7 +363,7 @@ impl IggyClient {
     /// Sends the provided messages in the background using the custom partitioner implementation.
     pub async fn send_messages_using_partitioner(
         &self,
-        command: &mut SendMessages,
+        command: &mut AppendMessages,
         partitioner: &dyn Partitioner,
     ) -> Result<(), IggyError> {
         let partition_id = partitioner.calculate_partition_id(
@@ -462,7 +462,7 @@ impl IggyClient {
                 }
 
                 while let Some(messages) = batches.pop_front() {
-                    let mut send_messages = SendMessages {
+                    let mut send_messages = AppendMessages {
                         stream_id: Identifier::from_identifier(&stream_id),
                         topic_id: Identifier::from_identifier(&topic_id),
                         partitioning: Partitioning {
@@ -690,7 +690,7 @@ impl MessageClient for IggyClient {
         Ok(polled_messages)
     }
 
-    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
+    async fn send_messages(&self, command: &mut AppendMessages) -> Result<(), IggyError> {
         if command.messages.is_empty() {
             return Ok(());
         }
@@ -724,7 +724,7 @@ impl MessageClient for IggyClient {
 
         let mut messages = Vec::with_capacity(command.messages.len());
         for message in &command.messages {
-            let message = crate::messages::send_messages::Message {
+            let message = crate::messages::append_messages::AppendableMessage {
                 id: message.id,
                 length: message.length,
                 payload: message.payload.clone(),
@@ -732,7 +732,7 @@ impl MessageClient for IggyClient {
             };
             messages.push(message);
         }
-        let send_messages = SendMessages {
+        let send_messages = AppendMessages {
             stream_id: Identifier::from_identifier(&command.stream_id),
             topic_id: Identifier::from_identifier(&command.topic_id),
             partitioning: Partitioning::from_partitioning(&command.partitioning),

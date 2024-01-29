@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
-use iggy::models::messages::{Message, MessageState};
+use iggy::models::polled_messages::{MessageState, PolledMessage};
 use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::io::SeekFrom;
@@ -171,11 +171,11 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         let mut messages = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
-        load_messages_by_range(segment, index_range, |message: Message| {
+        load_messages_by_range(segment, index_range, |message: PolledMessage| {
             messages.push(Arc::new(message));
             Ok(())
         })
@@ -188,10 +188,10 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         let mut messages = Vec::new();
         let mut total_size_bytes = 0;
-        load_messages_by_size(segment, size_bytes, |message: Message| {
+        load_messages_by_size(segment, size_bytes, |message: PolledMessage| {
             total_size_bytes += message.get_size_bytes() as u64;
             messages.push(Arc::new(message));
             Ok(())
@@ -208,7 +208,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_messages(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages: &[Arc<PolledMessage>],
     ) -> Result<u32, IggyError> {
         let messages_size = messages
             .iter()
@@ -234,33 +234,41 @@ impl SegmentStorage for FileSegmentStorage {
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
         let mut message_ids = Vec::new();
-        load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
-            message_ids.push(message.id);
-            Ok(())
-        })
+        load_messages_by_range(
+            segment,
+            &IndexRange::max_range(),
+            |message: PolledMessage| {
+                message_ids.push(message.id);
+                Ok(())
+            },
+        )
         .await?;
         trace!("Loaded {} message IDs from disk.", message_ids.len());
         Ok(message_ids)
     }
 
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError> {
-        load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
-            let calculated_checksum = checksum::calculate(&message.payload);
-            trace!(
-                "Loaded message for offset: {}, checksum: {}, expected: {}",
-                message.offset,
-                calculated_checksum,
-                message.checksum
-            );
-            if calculated_checksum != message.checksum {
-                return Err(IggyError::InvalidMessageChecksum(
-                    calculated_checksum,
-                    message.checksum,
+        load_messages_by_range(
+            segment,
+            &IndexRange::max_range(),
+            |message: PolledMessage| {
+                let calculated_checksum = checksum::calculate(&message.payload);
+                trace!(
+                    "Loaded message for offset: {}, checksum: {}, expected: {}",
                     message.offset,
-                ));
-            }
-            Ok(())
-        })
+                    calculated_checksum,
+                    message.checksum
+                );
+                if calculated_checksum != message.checksum {
+                    return Err(IggyError::InvalidMessageChecksum(
+                        calculated_checksum,
+                        message.checksum,
+                        message.offset,
+                    ));
+                }
+                Ok(())
+            },
+        )
         .await?;
         Ok(())
     }
@@ -399,7 +407,7 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         mut current_position: u32,
-        messages: &[Arc<Message>],
+        messages: &[Arc<PolledMessage>],
     ) -> Result<(), IggyError> {
         let mut bytes = Vec::with_capacity(messages.len() * 4);
         for message in messages {
@@ -492,7 +500,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_time_index(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages: &[Arc<PolledMessage>],
     ) -> Result<(), IggyError> {
         let mut bytes = Vec::with_capacity(messages.len() * 8);
         for message in messages {
@@ -520,7 +528,7 @@ impl SegmentStorage for FileSegmentStorage {
 async fn load_messages_by_range(
     segment: &Segment,
     index_range: &IndexRange,
-    mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
+    mut on_message: impl FnMut(PolledMessage) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
@@ -602,7 +610,7 @@ async fn load_messages_by_range(
         let id = id.unwrap();
         let checksum = checksum.unwrap();
 
-        let message = Message::create(
+        let message = PolledMessage::create(
             offset,
             state,
             timestamp,
@@ -620,7 +628,7 @@ async fn load_messages_by_range(
 async fn load_messages_by_size(
     segment: &Segment,
     size_bytes: u64,
-    mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
+    mut on_message: impl FnMut(PolledMessage) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
@@ -693,7 +701,7 @@ async fn load_messages_by_size(
         let id = id.unwrap();
         let checksum = checksum.unwrap();
 
-        let message = Message::create(
+        let message = PolledMessage::create(
             offset,
             state,
             timestamp,

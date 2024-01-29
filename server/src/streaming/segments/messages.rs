@@ -2,11 +2,11 @@ use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use iggy::error::IggyError;
-use iggy::models::messages::Message;
+use iggy::models::polled_messages::PolledMessage;
 use std::sync::Arc;
 use tracing::trace;
 
-const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
+const EMPTY_MESSAGES: Vec<Arc<PolledMessage>> = vec![];
 
 impl Segment {
     pub fn get_messages_count(&self) -> u64 {
@@ -21,7 +21,7 @@ impl Segment {
         &self,
         mut offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         if count == 0 {
             return Ok(EMPTY_MESSAGES);
         }
@@ -62,7 +62,7 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn get_all_messages(&self) -> Result<Vec<Arc<Message>>, IggyError> {
+    pub async fn get_all_messages(&self) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         self.get_messages(self.start_offset, self.get_messages_count() as u32)
             .await
     }
@@ -70,7 +70,7 @@ impl Segment {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         let messages = self
             .storage
             .segment
@@ -80,21 +80,25 @@ impl Segment {
         Ok(messages)
     }
 
-    fn load_messages_from_unsaved_buffer(&self, offset: u64, end_offset: u64) -> Vec<Arc<Message>> {
+    fn load_messages_from_unsaved_buffer(
+        &self,
+        offset: u64,
+        end_offset: u64,
+    ) -> Vec<Arc<PolledMessage>> {
         self.unsaved_messages
             .as_ref()
             .unwrap()
             .iter()
             .filter(|message| message.offset >= offset && message.offset <= end_offset)
             .cloned()
-            .collect::<Vec<Arc<Message>>>()
+            .collect::<Vec<Arc<PolledMessage>>>()
     }
 
     async fn load_messages_from_disk(
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         trace!(
             "Loading messages from disk, segment start offset: {}, end offset: {}, current offset: {}...",
             start_offset,
@@ -160,7 +164,7 @@ impl Segment {
     async fn load_messages_from_segment_file(
         &self,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         let messages = self
             .storage
             .segment
@@ -176,7 +180,10 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn append_messages(&mut self, messages: &[Arc<Message>]) -> Result<(), IggyError> {
+    pub async fn append_messages(
+        &mut self,
+        messages: &[Arc<PolledMessage>],
+    ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
                 self.start_offset,

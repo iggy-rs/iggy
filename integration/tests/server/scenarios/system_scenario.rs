@@ -15,8 +15,8 @@ use iggy::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::streams::create_stream::CreateStream;
@@ -222,7 +222,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 17. Send messages to the specific topic and partition
     let messages = create_messages();
-    let mut send_messages = SendMessages {
+    let mut send_messages = AppendMessages {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partitioning: Partitioning::partition_id(PARTITION_ID),
@@ -649,7 +649,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     // 39. Purge the existing stream and ensure it has no messages
     let messages = create_messages();
-    let mut send_messages = SendMessages {
+    let mut send_messages = AppendMessages {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partitioning: Partitioning::partition_id(PARTITION_ID),
@@ -753,19 +753,19 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_clean_system(&client).await;
 }
 
-fn assert_message(message: &iggy::models::messages::Message, offset: u64) {
+fn assert_message(message: &iggy::models::polled_messages::PolledMessage, offset: u64) {
     let expected_payload = get_message_payload(offset);
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);
     assert_eq!(message.payload, expected_payload);
 }
 
-fn create_messages() -> Vec<Message> {
+fn create_messages() -> Vec<AppendableMessage> {
     let mut messages = Vec::new();
     for offset in 0..MESSAGES_COUNT {
         let id = (offset + 1) as u128;
         let payload = get_message_payload(offset as u64);
-        messages.push(Message {
+        messages.push(AppendableMessage {
             id,
             length: payload.len() as u32,
             payload,

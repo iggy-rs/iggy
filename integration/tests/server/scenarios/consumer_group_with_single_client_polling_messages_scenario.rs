@@ -5,8 +5,8 @@ use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::identifier::Identifier;
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::system::get_me::GetMe;
@@ -104,9 +104,9 @@ async fn init_system(client: &IggyClient) {
 async fn execute_using_messages_key_key(client: &IggyClient) {
     // 1. Send messages to the calculated partition ID on the server side by using entity ID as a key
     for entity_id in 1..=MESSAGES_COUNT {
-        let message = Message::from_str(&get_message_payload(entity_id)).unwrap();
+        let message = AppendableMessage::from_str(&get_message_payload(entity_id)).unwrap();
         let messages = vec![message];
-        let mut send_messages = SendMessages {
+        let mut send_messages = AppendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partitioning: Partitioning::messages_key_u32(entity_id),
@@ -148,9 +148,10 @@ async fn execute_using_none_key(client: &IggyClient) {
         }
 
         let message =
-            Message::from_str(&get_extended_message_payload(partition_id, entity_id)).unwrap();
+            AppendableMessage::from_str(&get_extended_message_payload(partition_id, entity_id))
+                .unwrap();
         let messages = vec![message];
-        let mut send_messages = SendMessages {
+        let mut send_messages = AppendMessages {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             partitioning: Partitioning::balanced(),

@@ -1,8 +1,8 @@
 use crate::streaming::common::test_setup::TestSetup;
+use iggy::messages::append_messages;
+use iggy::messages::append_messages::Partitioning;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::messages::send_messages;
-use iggy::messages::send_messages::Partitioning;
-use iggy::models::messages::Message;
+use iggy::models::polled_messages::PolledMessage;
 use iggy::utils::byte_size::IggyByteSize;
 use server::configs::resource_quota::MemoryResourceQuota;
 use server::configs::system::{CacheConfig, SystemConfig};
@@ -212,8 +212,8 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
     topic
 }
 
-fn get_message(payload: &str) -> Message {
-    Message::from_message(&send_messages::Message::from_str(payload).unwrap())
+fn get_message(payload: &str) -> PolledMessage {
+    PolledMessage::from_message(&append_messages::AppendableMessage::from_str(payload).unwrap())
 }
 
 fn create_payload(size: u32) -> String {

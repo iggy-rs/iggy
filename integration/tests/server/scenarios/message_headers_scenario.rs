@@ -3,8 +3,8 @@ use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
@@ -34,7 +34,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         let id = (offset + 1) as u128;
         let payload = get_message_payload(offset as u64);
         let headers = get_message_headers();
-        messages.push(Message {
+        messages.push(AppendableMessage {
             id,
             length: payload.len() as u32,
             payload,
@@ -42,7 +42,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         });
     }
 
-    let mut send_messages = SendMessages {
+    let mut send_messages = AppendMessages {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
         partitioning: Partitioning::partition_id(PARTITION_ID),

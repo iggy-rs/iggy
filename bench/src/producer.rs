@@ -4,7 +4,7 @@ use iggy::client::MessageClient;
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use integration::test_server::{login_root, ClientFactory};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -54,11 +54,11 @@ impl Producer {
         let payload = Self::create_payload(self.message_size);
         let mut messages = Vec::with_capacity(self.messages_per_batch as usize);
         for _ in 0..self.messages_per_batch {
-            let message = Message::from_str(&payload).unwrap();
+            let message = AppendableMessage::from_str(&payload).unwrap();
             messages.push(message);
         }
 
-        let mut send_messages = SendMessages {
+        let mut send_messages = AppendMessages {
             stream_id: Identifier::numeric(self.stream_id)?,
             topic_id: Identifier::numeric(topic_id)?,
             partitioning: Partitioning::partition_id(partition_id),

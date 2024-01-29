@@ -3,7 +3,7 @@ use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::system;
 use std::error::Error;
@@ -46,12 +46,12 @@ async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
         for _ in 0..args.messages_per_batch {
             current_id += 1;
             let payload = format!("message-{current_id}");
-            let message = Message::from_str(&payload)?;
+            let message = AppendableMessage::from_str(&payload)?;
             messages.push(message);
             sent_messages.push(payload);
         }
         client
-            .send_messages(&mut SendMessages {
+            .send_messages(&mut AppendMessages {
                 stream_id: Identifier::numeric(args.stream_id)?,
                 topic_id: Identifier::numeric(args.topic_id)?,
                 partitioning: Partitioning::partition_id(args.partition_id),

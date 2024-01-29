@@ -10,8 +10,8 @@ use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
+use iggy::messages::append_messages::AppendMessages;
 use iggy::messages::poll_messages::PollMessages;
-use iggy::messages::send_messages::SendMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 
@@ -54,7 +54,7 @@ async fn send_messages(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
-    Json(mut command): Json<SendMessages>,
+    Json(mut command): Json<AppendMessages>,
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;

@@ -7,14 +7,14 @@ use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
+use crate::messages::append_messages::AppendMessages;
 use crate::messages::poll_messages::PollMessages;
-use crate::messages::send_messages::SendMessages;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
-use crate::models::messages::PolledMessages;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use crate::models::polled_messages::PolledMessages;
 use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
@@ -250,7 +250,7 @@ pub trait MessageClient {
     /// Send messages using specified partitioning strategy to the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to send the messages.
-    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError>;
+    async fn send_messages(&self, command: &mut AppendMessages) -> Result<(), IggyError>;
 }
 
 /// This trait defines the methods to interact with the consumer offset module.

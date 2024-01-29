@@ -6,10 +6,10 @@ use crate::streaming::systems::system::System;
 use bytes::Bytes;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::messages::append_messages;
+use iggy::messages::append_messages::Partitioning;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::messages::send_messages;
-use iggy::messages::send_messages::Partitioning;
-use iggy::models::messages::Message;
+use iggy::models::polled_messages::PolledMessage;
 use std::sync::Arc;
 use tracing::{error, trace};
 
@@ -71,7 +71,7 @@ impl System {
             let payload = encryptor.decrypt(&message.payload);
             match payload {
                 Ok(payload) => {
-                    decrypted_messages.push(Arc::new(Message {
+                    decrypted_messages.push(Arc::new(PolledMessage {
                         id: message.id,
                         state: message.state,
                         offset: message.offset,
@@ -100,7 +100,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitioning: &Partitioning,
-        messages: &Vec<send_messages::Message>,
+        messages: &Vec<append_messages::AppendableMessage>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
@@ -120,7 +120,7 @@ impl System {
             let message = match self.encryptor {
                 Some(ref encryptor) => {
                     let payload = encryptor.encrypt(message.payload.as_ref())?;
-                    encrypted_message = send_messages::Message {
+                    encrypted_message = append_messages::AppendableMessage {
                         id: message.id,
                         length: payload.len() as u32,
                         payload: Bytes::from(payload),
@@ -131,7 +131,7 @@ impl System {
                 None => message,
             };
             batch_size_bytes += message.get_size_bytes() as u64;
-            received_messages.push(Message::from_message(message));
+            received_messages.push(PolledMessage::from_message(message));
         }
 
         // If there's enough space in cache, do nothing.

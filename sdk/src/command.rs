@@ -8,8 +8,8 @@ use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
+use crate::messages::append_messages::AppendMessages;
 use crate::messages::poll_messages::PollMessages;
-use crate::messages::send_messages::SendMessages;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
@@ -150,7 +150,7 @@ pub enum Command {
     CreatePersonalAccessToken(CreatePersonalAccessToken),
     DeletePersonalAccessToken(DeletePersonalAccessToken),
     LoginWithPersonalAccessToken(LoginWithPersonalAccessToken),
-    SendMessages(SendMessages),
+    SendMessages(AppendMessages),
     PollMessages(PollMessages),
     GetConsumerOffset(GetConsumerOffset),
     StoreConsumerOffset(StoreConsumerOffset),
@@ -291,7 +291,7 @@ impl BytesSerializable for Command {
             LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE => Ok(Command::LoginWithPersonalAccessToken(
                 LoginWithPersonalAccessToken::from_bytes(payload)?,
             )),
-            SEND_MESSAGES_CODE => Ok(Command::SendMessages(SendMessages::from_bytes(payload)?)),
+            SEND_MESSAGES_CODE => Ok(Command::SendMessages(AppendMessages::from_bytes(payload)?)),
             POLL_MESSAGES_CODE => Ok(Command::PollMessages(PollMessages::from_bytes(payload)?)),
             STORE_CONSUMER_OFFSET_CODE => Ok(Command::StoreConsumerOffset(
                 StoreConsumerOffset::from_bytes(payload)?,
@@ -525,9 +525,9 @@ mod tests {
             &LoginWithPersonalAccessToken::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
-            &Command::SendMessages(SendMessages::default()),
+            &Command::SendMessages(AppendMessages::default()),
             SEND_MESSAGES_CODE,
-            &SendMessages::default(),
+            &AppendMessages::default(),
         );
         assert_serialized_as_bytes_and_deserialized_from_bytes(
             &Command::PollMessages(PollMessages::default()),

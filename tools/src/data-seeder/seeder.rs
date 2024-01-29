@@ -2,7 +2,7 @@ use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
@@ -142,13 +142,13 @@ async fn send_messages(client: &IggyClient) -> Result<(), IggyError> {
                             Some(headers)
                         }
                     };
-                    let mut message = Message::from_str(&payload)?;
+                    let mut message = AppendableMessage::from_str(&payload)?;
                     message.headers = headers;
                     messages.push(message);
                     message_id += 1;
                 }
                 client
-                    .send_messages(&mut SendMessages {
+                    .send_messages(&mut AppendMessages {
                         stream_id: Identifier::numeric(stream_id)?,
                         topic_id: Identifier::numeric(topic.id)?,
                         partitioning: Partitioning::balanced(),

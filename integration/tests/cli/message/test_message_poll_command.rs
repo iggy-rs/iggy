@@ -4,8 +4,8 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
@@ -121,11 +121,11 @@ impl IggyCmdTestCase for TestMessagePollCmd {
         let messages = self
             .messages
             .iter()
-            .filter_map(|s| Message::from_str(s).ok())
+            .filter_map(|s| AppendableMessage::from_str(s).ok())
             .collect::<Vec<_>>();
 
         let send_status = client
-            .send_messages(&mut SendMessages {
+            .send_messages(&mut AppendMessages {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Identifier::numeric(self.topic_id).unwrap(),
                 partitioning: Partitioning::partition_id(self.partition_id),

@@ -19,7 +19,7 @@ use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::models::messages::Message;
+use iggy::models::polled_messages::PolledMessage;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::fmt::{Debug, Formatter};
@@ -98,16 +98,16 @@ pub trait SegmentStorage: Storage<Segment> {
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, IggyError>;
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError>;
     async fn load_newest_messages_by_size(
         &self,
         segment: &Segment,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError>;
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError>;
     async fn save_messages(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages: &[Arc<PolledMessage>],
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -123,7 +123,7 @@ pub trait SegmentStorage: Storage<Segment> {
         &self,
         segment: &Segment,
         current_position: u32,
-        messages: &[Arc<Message>],
+        messages: &[Arc<PolledMessage>],
     ) -> Result<(), IggyError>;
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
     async fn load_last_time_index(&self, segment: &Segment)
@@ -131,7 +131,7 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn save_time_index(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages: &[Arc<PolledMessage>],
     ) -> Result<(), IggyError>;
 }
 
@@ -212,7 +212,7 @@ pub(crate) mod tests {
     use crate::streaming::streams::stream::Stream;
     use crate::streaming::topics::topic::Topic;
     use async_trait::async_trait;
-    use iggy::models::messages::Message;
+    use iggy::models::polled_messages::PolledMessage;
     use std::sync::Arc;
 
     struct TestSystemInfoStorage {}
@@ -446,7 +446,7 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _index_range: &IndexRange,
-        ) -> Result<Vec<Arc<Message>>, IggyError> {
+        ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
             Ok(vec![])
         }
 
@@ -454,14 +454,14 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _size: u64,
-        ) -> Result<Vec<Arc<Message>>, IggyError> {
+        ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
             Ok(vec![])
         }
 
         async fn save_messages(
             &self,
             _segment: &Segment,
-            _messages: &[Arc<Message>],
+            _messages: &[Arc<PolledMessage>],
         ) -> Result<u32, IggyError> {
             Ok(0)
         }
@@ -492,7 +492,7 @@ pub(crate) mod tests {
             &self,
             _segment: &Segment,
             _current_position: u32,
-            _messages: &[Arc<Message>],
+            _messages: &[Arc<PolledMessage>],
         ) -> Result<(), IggyError> {
             Ok(())
         }
@@ -514,7 +514,7 @@ pub(crate) mod tests {
         async fn save_time_index(
             &self,
             _segment: &Segment,
-            _messages: &[Arc<Message>],
+            _messages: &[Arc<PolledMessage>],
         ) -> Result<(), IggyError> {
             Ok(())
         }

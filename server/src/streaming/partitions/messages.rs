@@ -3,11 +3,11 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::utils::random_id;
 use iggy::error::IggyError;
-use iggy::models::messages::Message;
+use iggy::models::polled_messages::PolledMessage;
 use std::sync::Arc;
 use tracing::{trace, warn};
 
-const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
+const EMPTY_MESSAGES: Vec<Arc<PolledMessage>> = vec![];
 
 impl Partition {
     pub fn get_messages_count(&self) -> u64 {
@@ -29,7 +29,7 @@ impl Partition {
         &self,
         timestamp: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         trace!(
             "Getting messages by timestamp: {} for partition: {}...",
             timestamp,
@@ -86,7 +86,7 @@ impl Partition {
         &self,
         start_offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         trace!(
             "Getting messages for start offset: {} for partition: {}...",
             start_offset,
@@ -114,11 +114,17 @@ impl Partition {
         }
     }
 
-    pub async fn get_first_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, IggyError> {
+    pub async fn get_first_messages(
+        &self,
+        count: u32,
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         self.get_messages_by_offset(0, count).await
     }
 
-    pub async fn get_last_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, IggyError> {
+    pub async fn get_last_messages(
+        &self,
+        count: u32,
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         let mut count = count as u64;
         if count > self.current_offset + 1 {
             count = self.current_offset + 1
@@ -133,7 +139,7 @@ impl Partition {
         &self,
         consumer: PollingConsumer,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         let (consumer_offsets, consumer_id) = match consumer {
             PollingConsumer::Consumer(consumer_id, _) => (&self.consumer_offsets, consumer_id),
             PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
@@ -199,7 +205,7 @@ impl Partition {
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
             let segment_messages = segment.get_messages(offset, count).await?;
@@ -215,7 +221,7 @@ impl Partition {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Option<Vec<Arc<Message>>> {
+    ) -> Option<Vec<Arc<PolledMessage>>> {
         let cache = self.cache.as_ref()?;
         if cache.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
             return None;
@@ -238,7 +244,7 @@ impl Partition {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<PolledMessage>>, IggyError> {
         trace!(
             "Getting messages for size: {} bytes for partition: {}...",
             size_bytes,
@@ -272,7 +278,11 @@ impl Partition {
         Ok(messages)
     }
 
-    fn load_messages_from_cache(&self, start_offset: u64, end_offset: u64) -> Vec<Arc<Message>> {
+    fn load_messages_from_cache(
+        &self,
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Vec<Arc<PolledMessage>> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,
@@ -317,7 +327,7 @@ impl Partition {
         messages
     }
 
-    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), IggyError> {
+    pub async fn append_messages(&mut self, messages: Vec<PolledMessage>) -> Result<(), IggyError> {
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             if last_segment.is_closed {

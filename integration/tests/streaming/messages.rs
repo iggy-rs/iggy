@@ -1,7 +1,7 @@
 use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
 use iggy::models::header::{HeaderKey, HeaderValue};
-use iggy::models::messages::{Message, MessageState};
+use iggy::models::polled_messages::{MessageState, PolledMessage};
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::configs::system::{PartitionConfig, SystemConfig};
 use server::streaming::partitions::partition::Partition;
@@ -56,7 +56,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
             HeaderKey::new("key-3").unwrap(),
             HeaderValue::from_uint64(123456).unwrap(),
         );
-        let appended_message = Message::create(
+        let appended_message = PolledMessage::create(
             offset,
             state,
             timestamp,
@@ -65,7 +65,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
             checksum,
             Some(headers.clone()),
         );
-        let message = Message::create(
+        let message = PolledMessage::create(
             offset,
             state,
             timestamp,

@@ -4,9 +4,9 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::client::MessageClient;
 use crate::command::{POLL_MESSAGES_CODE, SEND_MESSAGES_CODE};
 use crate::error::IggyError;
+use crate::messages::append_messages::AppendMessages;
 use crate::messages::poll_messages::PollMessages;
-use crate::messages::send_messages::SendMessages;
-use crate::models::messages::PolledMessages;
+use crate::models::polled_messages::PolledMessages;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> MessageClient for B {
@@ -18,7 +18,7 @@ impl<B: BinaryClient> MessageClient for B {
         mapper::map_polled_messages(&response)
     }
 
-    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
+    async fn send_messages(&self, command: &mut AppendMessages) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
         self.send_with_response(SEND_MESSAGES_CODE, &command.as_bytes())
             .await?;

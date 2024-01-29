@@ -1,9 +1,9 @@
 use crate::client::MessageClient;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
+use crate::messages::append_messages::AppendMessages;
 use crate::messages::poll_messages::PollMessages;
-use crate::messages::send_messages::SendMessages;
-use crate::models::messages::PolledMessages;
+use crate::models::polled_messages::PolledMessages;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -22,7 +22,7 @@ impl MessageClient for HttpClient {
         Ok(messages)
     }
 
-    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
+    async fn send_messages(&self, command: &mut AppendMessages) -> Result<(), IggyError> {
         self.post(
             &get_path(
                 &command.stream_id.as_string(),

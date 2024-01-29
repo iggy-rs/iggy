@@ -1,5 +1,5 @@
 use bytes::Bytes;
-use iggy::models::messages::{Message, MessageState};
+use iggy::models::polled_messages::{MessageState, PolledMessage};
 use iggy::utils::checksum;
 
 pub mod consumer_offsets;
@@ -10,7 +10,7 @@ pub mod segments;
 pub mod storage;
 
 #[allow(dead_code)]
-fn create_messages() -> Vec<Message> {
+fn create_messages() -> Vec<PolledMessage> {
     vec![
         create_message(0, 1, "message 1"),
         create_message(1, 2, "message 2"),
@@ -21,10 +21,10 @@ fn create_messages() -> Vec<Message> {
     ]
 }
 
-fn create_message(offset: u64, id: u128, payload: &str) -> Message {
+fn create_message(offset: u64, id: u128, payload: &str) -> PolledMessage {
     let payload = Bytes::from(payload.to_string());
     let checksum = checksum::calculate(payload.as_ref());
-    Message::create(
+    PolledMessage::create(
         offset,
         MessageState::Available,
         1,

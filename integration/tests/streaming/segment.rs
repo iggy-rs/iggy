@@ -1,6 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
-use iggy::models::messages::{Message, MessageState};
+use iggy::models::polled_messages::{MessageState, PolledMessage};
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
@@ -254,10 +254,10 @@ async fn assert_persisted_segment(partition_path: &str, start_offset: u64) {
     assert!(fs::metadata(&time_index_path).await.is_ok());
 }
 
-fn create_message(offset: u64, payload: &str, timestamp: u64) -> Message {
+fn create_message(offset: u64, payload: &str, timestamp: u64) -> PolledMessage {
     let payload = Bytes::from(payload.to_string());
     let checksum = checksum::calculate(payload.as_ref());
-    Message::create(
+    PolledMessage::create(
         offset,
         MessageState::Available,
         timestamp,

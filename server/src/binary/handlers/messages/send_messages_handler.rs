@@ -3,11 +3,11 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::IggyError;
-use iggy::messages::send_messages::SendMessages;
+use iggy::messages::append_messages::AppendMessages;
 use tracing::debug;
 
 pub async fn handle(
-    command: &SendMessages,
+    command: &AppendMessages,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

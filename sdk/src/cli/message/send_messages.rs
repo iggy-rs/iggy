@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
-use crate::messages::send_messages::{Message, Partitioning, SendMessages};
+use crate::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use anyhow::Context;
 use async_trait::async_trait;
 use std::io::{self, Read};
@@ -65,20 +65,20 @@ impl CliCommand for SendMessagesCmd {
         let messages = match &self.messages {
             Some(messages) => messages
                 .iter()
-                .map(|s| Message::new(None, s.clone().into(), None))
+                .map(|s| AppendableMessage::new(None, s.clone().into(), None))
                 .collect::<Vec<_>>(),
             None => {
                 let input = self.read_message_from_stdin()?;
 
                 input
                     .lines()
-                    .map(|m| Message::new(None, String::from(m).into(), None))
+                    .map(|m| AppendableMessage::new(None, String::from(m).into(), None))
                     .collect()
             }
         };
 
         client
-            .send_messages(&mut SendMessages {
+            .send_messages(&mut AppendMessages {
                 stream_id: self.stream_id.clone(),
                 topic_id: self.topic_id.clone(),
                 partitioning: self.partitioning.clone(),

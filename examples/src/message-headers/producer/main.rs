@@ -6,7 +6,7 @@ use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::IggyClient;
 use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::messages::append_messages::{AppendMessages, AppendableMessage, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::messages_generator::MessagesGenerator;
@@ -62,13 +62,13 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
                 HeaderValue::from_str(message_type).unwrap(),
             );
 
-            let message = Message::new(None, Bytes::from(json), Some(headers));
+            let message = AppendableMessage::new(None, Bytes::from(json), Some(headers));
             messages.push(message);
             // This is used for the logging purposes only.
             serializable_messages.push(serializable_message);
         }
         client
-            .send_messages(&mut SendMessages {
+            .send_messages(&mut AppendMessages {
                 stream_id: Identifier::numeric(args.stream_id)?,
                 topic_id: Identifier::numeric(args.topic_id)?,
                 partitioning: Partitioning::partition_id(args.partition_id),

@@ -6,7 +6,7 @@ use crate::streaming::storage::{SegmentStorage, Storage};
 use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
-use bytes::{BufMut, Bytes};
+use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::models::messages::{Message, MessageState};
@@ -215,7 +215,7 @@ impl SegmentStorage for FileSegmentStorage {
             .map(|message| message.get_size_bytes())
             .sum::<u32>();
 
-        let mut bytes = Vec::with_capacity(messages_size as usize);
+        let mut bytes = BytesMut::with_capacity(messages_size as usize);
         for message in messages {
             message.extend(&mut bytes);
         }
@@ -577,22 +577,21 @@ async fn load_messages_by_range(
         let headers = match headers_length {
             0 => None,
             _ => {
-                let mut headers_payload = vec![0; headers_length as usize];
+                let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
+                headers_payload.put_bytes(0, headers_length as usize);
                 if reader.read_exact(&mut headers_payload).await.is_err() {
                     return Err(IggyError::CannotReadHeadersPayload);
                 }
 
-                let headers = HashMap::from_bytes(&headers_payload)?;
+                let headers = HashMap::from_bytes(headers_payload.freeze())?;
                 Some(headers)
             }
         };
 
-        let payload_length = reader.read_u32_le().await;
-        if payload_length.is_err() {
-            return Err(IggyError::CannotReadMessageLength);
-        }
+        let payload_length = reader.read_u32_le().await?;
 
-        let mut payload = vec![0; payload_length.unwrap() as usize];
+        let mut payload = BytesMut::with_capacity(payload_length as usize);
+        payload.put_bytes(0, payload_length as usize);
         if reader.read_exact(&mut payload).await.is_err() {
             return Err(IggyError::CannotReadMessagePayload);
         }
@@ -607,7 +606,7 @@ async fn load_messages_by_range(
             state,
             timestamp,
             id,
-            Bytes::from(payload),
+            payload.freeze(),
             checksum,
             headers,
         );
@@ -668,12 +667,12 @@ async fn load_messages_by_size(
         let headers = match headers_length {
             0 => None,
             _ => {
-                let mut headers_payload = vec![0; headers_length as usize];
+                let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
                 if reader.read_exact(&mut headers_payload).await.is_err() {
                     return Err(IggyError::CannotReadHeadersPayload);
                 }
 
-                let headers = HashMap::from_bytes(&headers_payload)?;
+                let headers = HashMap::from_bytes(headers_payload.freeze())?;
                 Some(headers)
             }
         };

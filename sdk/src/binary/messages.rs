@@ -13,14 +13,14 @@ impl<B: BinaryClient> MessageClient for B {
     async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(POLL_MESSAGES_CODE, &command.as_bytes())
+            .send_with_response(POLL_MESSAGES_CODE, command.as_bytes())
             .await?;
-        mapper::map_polled_messages(&response)
+        mapper::map_polled_messages(response)
     }
 
     async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(SEND_MESSAGES_CODE, &command.as_bytes())
+        self.send_with_response(SEND_MESSAGES_CODE, command.as_bytes())
             .await?;
         Ok(())
     }

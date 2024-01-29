@@ -11,14 +11,14 @@ use crate::partitions::delete_partitions::DeletePartitions;
 impl<B: BinaryClient> PartitionClient for B {
     async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(CREATE_PARTITIONS_CODE, &command.as_bytes())
+        self.send_with_response(CREATE_PARTITIONS_CODE, command.as_bytes())
             .await?;
         Ok(())
     }
 
     async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(DELETE_PARTITIONS_CODE, &command.as_bytes())
+        self.send_with_response(DELETE_PARTITIONS_CODE, command.as_bytes())
             .await?;
         Ok(())
     }

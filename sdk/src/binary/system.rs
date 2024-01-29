@@ -17,37 +17,37 @@ impl<B: BinaryClient> SystemClient for B {
     async fn get_stats(&self, command: &GetStats) -> Result<Stats, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_STATS_CODE, &command.as_bytes())
+            .send_with_response(GET_STATS_CODE, command.as_bytes())
             .await?;
-        mapper::map_stats(&response)
+        mapper::map_stats(response)
     }
 
     async fn get_me(&self, command: &GetMe) -> Result<ClientInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_ME_CODE, &command.as_bytes())
+            .send_with_response(GET_ME_CODE, command.as_bytes())
             .await?;
-        mapper::map_client(&response)
+        mapper::map_client(response)
     }
 
     async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_CLIENT_CODE, &command.as_bytes())
+            .send_with_response(GET_CLIENT_CODE, command.as_bytes())
             .await?;
-        mapper::map_client(&response)
+        mapper::map_client(response)
     }
 
     async fn get_clients(&self, command: &GetClients) -> Result<Vec<ClientInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_CLIENTS_CODE, &command.as_bytes())
+            .send_with_response(GET_CLIENTS_CODE, command.as_bytes())
             .await?;
-        mapper::map_clients(&response)
+        mapper::map_clients(response)
     }
 
     async fn ping(&self, command: &Ping) -> Result<(), IggyError> {
-        self.send_with_response(PING_CODE, &command.as_bytes())
+        self.send_with_response(PING_CODE, command.as_bytes())
             .await?;
         Ok(())
     }

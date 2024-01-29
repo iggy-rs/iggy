@@ -19,6 +19,6 @@ pub async fn handle(
         .create_personal_access_token(session, &command.name, command.expiry)
         .await?;
     let bytes = mapper::map_raw_pat(&token);
-    sender.send_ok_response(bytes.as_slice()).await?;
+    sender.send_ok_response(&bytes).await?;
     Ok(())
 }

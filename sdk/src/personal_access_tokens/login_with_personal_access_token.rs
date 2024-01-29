@@ -3,7 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::from_utf8;
@@ -38,15 +38,15 @@ impl Validatable<IggyError> for LoginWithPersonalAccessToken {
 }
 
 impl BytesSerializable for LoginWithPersonalAccessToken {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(5 + self.token.len());
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(5 + self.token.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.token.len() as u8);
         bytes.extend(self.token.as_bytes());
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<LoginWithPersonalAccessToken, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<LoginWithPersonalAccessToken, IggyError> {
         if bytes.len() < 4 {
             return Err(IggyError::InvalidCommand);
         }
@@ -89,12 +89,12 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let token = "test";
-        let mut bytes = Vec::new();
+        let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(token.len() as u8);
         bytes.extend(token.as_bytes());
 
-        let command = LoginWithPersonalAccessToken::from_bytes(&bytes);
+        let command = LoginWithPersonalAccessToken::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

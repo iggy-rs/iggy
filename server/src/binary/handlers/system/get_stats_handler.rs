@@ -16,6 +16,6 @@ pub async fn handle(
     let system = system.read();
     let stats = system.get_stats(session).await?;
     let bytes = mapper::map_stats(&stats);
-    sender.send_ok_response(bytes.as_slice()).await?;
+    sender.send_ok_response(&bytes).await?;
     Ok(())
 }

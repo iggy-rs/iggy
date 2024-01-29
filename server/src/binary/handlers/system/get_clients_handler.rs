@@ -16,6 +16,6 @@ pub async fn handle(
     let system = system.read();
     let clients = system.get_clients(session).await?;
     let clients = mapper::map_clients(&clients).await;
-    sender.send_ok_response(clients.as_slice()).await?;
+    sender.send_ok_response(&clients).await?;
     Ok(())
 }

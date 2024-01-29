@@ -6,7 +6,7 @@ use crate::models::user_status::UserStatus;
 use crate::users::defaults::*;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
@@ -67,8 +67,8 @@ impl Validatable<IggyError> for CreateUser {
 }
 
 impl BytesSerializable for CreateUser {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(2 + self.username.len() + self.password.len());
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(2 + self.username.len() + self.password.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.username.len() as u8);
         bytes.extend(self.username.as_bytes());
@@ -85,10 +85,10 @@ impl BytesSerializable for CreateUser {
         } else {
             bytes.put_u8(0);
         }
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreateUser, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<CreateUser, IggyError> {
         if bytes.len() < 10 {
             return Err(IggyError::InvalidCommand);
         }
@@ -121,7 +121,7 @@ impl BytesSerializable for CreateUser {
             let permissions_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
             position += 4;
             Some(Permissions::from_bytes(
-                &bytes[position..position + permissions_length as usize],
+                bytes.slice(position..position + permissions_length as usize),
             )?)
         } else {
             None
@@ -198,7 +198,7 @@ mod tests {
             u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         position += 4;
         let permissions =
-            Permissions::from_bytes(&bytes[position..position + permissions_length as usize])
+            Permissions::from_bytes(bytes.slice(position..position + permissions_length as usize))
                 .unwrap();
 
         assert!(!bytes.is_empty());
@@ -230,7 +230,7 @@ mod tests {
             },
             streams: None,
         };
-        let mut bytes = Vec::new();
+        let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(username.len() as u8);
         bytes.extend(username.as_bytes());
@@ -244,7 +244,7 @@ mod tests {
         bytes.put_u32_le(permissions_bytes.len() as u32);
         bytes.extend(permissions_bytes);
 
-        let command = CreateUser::from_bytes(&bytes);
+        let command = CreateUser::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

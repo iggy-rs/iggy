@@ -23,9 +23,9 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
     ) -> Result<ConsumerGroupDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_CONSUMER_GROUP_CODE, &command.as_bytes())
+            .send_with_response(GET_CONSUMER_GROUP_CODE, command.as_bytes())
             .await?;
-        mapper::map_consumer_group(&response)
+        mapper::map_consumer_group(response)
     }
 
     async fn get_consumer_groups(
@@ -34,35 +34,35 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
     ) -> Result<Vec<ConsumerGroup>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_CONSUMER_GROUPS_CODE, &command.as_bytes())
+            .send_with_response(GET_CONSUMER_GROUPS_CODE, command.as_bytes())
             .await?;
-        mapper::map_consumer_groups(&response)
+        mapper::map_consumer_groups(response)
     }
 
     async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(CREATE_CONSUMER_GROUP_CODE, &command.as_bytes())
+        self.send_with_response(CREATE_CONSUMER_GROUP_CODE, command.as_bytes())
             .await?;
         Ok(())
     }
 
     async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(DELETE_CONSUMER_GROUP_CODE, &command.as_bytes())
+        self.send_with_response(DELETE_CONSUMER_GROUP_CODE, command.as_bytes())
             .await?;
         Ok(())
     }
 
     async fn join_consumer_group(&self, command: &JoinConsumerGroup) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(JOIN_CONSUMER_GROUP_CODE, &command.as_bytes())
+        self.send_with_response(JOIN_CONSUMER_GROUP_CODE, command.as_bytes())
             .await?;
         Ok(())
     }
 
     async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(LEAVE_CONSUMER_GROUP_CODE, &command.as_bytes())
+        self.send_with_response(LEAVE_CONSUMER_GROUP_CODE, command.as_bytes())
             .await?;
         Ok(())
     }

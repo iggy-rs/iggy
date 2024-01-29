@@ -6,7 +6,7 @@ use crate::topics::MAX_NAME_LENGTH;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
@@ -73,11 +73,12 @@ impl Validatable<IggyError> for UpdateTopic {
 }
 
 impl BytesSerializable for UpdateTopic {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
-        let mut bytes =
-            Vec::with_capacity(13 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len());
+        let mut bytes = BytesMut::with_capacity(
+            13 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
+        );
         bytes.extend(stream_id_bytes.clone());
         bytes.extend(topic_id_bytes.clone());
         match self.message_expiry {
@@ -92,17 +93,17 @@ impl BytesSerializable for UpdateTopic {
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<UpdateTopic, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<UpdateTopic, IggyError> {
         if bytes.len() < 12 {
             return Err(IggyError::InvalidCommand);
         }
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(bytes)?;
+        let stream_id = Identifier::from_bytes(bytes.clone())?;
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
         let message_expiry = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let message_expiry = match message_expiry {
@@ -171,9 +172,9 @@ mod tests {
 
         let bytes = command.as_bytes();
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
         let message_expiry = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         let message_expiry = match message_expiry {
@@ -213,7 +214,7 @@ mod tests {
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
         let mut bytes =
-            Vec::with_capacity(5 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
+            BytesMut::with_capacity(5 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
         bytes.put_u32_le(message_expiry);
@@ -224,7 +225,7 @@ mod tests {
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
 
-        let command = UpdateTopic::from_bytes(&bytes);
+        let command = UpdateTopic::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

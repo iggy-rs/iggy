@@ -22,6 +22,6 @@ pub async fn handle(
             bytes = mapper::map_client(&client).await;
         }
     }
-    sender.send_ok_response(bytes.as_slice()).await?;
+    sender.send_ok_response(&bytes).await?;
     Ok(())
 }

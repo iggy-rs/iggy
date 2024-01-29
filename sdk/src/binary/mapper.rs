@@ -26,7 +26,7 @@ const EMPTY_USERS: Vec<UserInfo> = vec![];
 const EMPTY_PERSONAL_ACCESS_TOKENS: Vec<PersonalAccessTokenInfo> = vec![];
 const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
 
-pub fn map_stats(payload: &[u8]) -> Result<Stats, IggyError> {
+pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
     let process_id = u32::from_le_bytes(payload[..4].try_into()?);
     let cpu_usage = f32::from_le_bytes(payload[4..8].try_into()?);
     let memory_usage = u64::from_le_bytes(payload[8..16].try_into()?).into();
@@ -93,7 +93,7 @@ pub fn map_stats(payload: &[u8]) -> Result<Stats, IggyError> {
     })
 }
 
-pub fn map_consumer_offset(payload: &[u8]) -> Result<ConsumerOffsetInfo, IggyError> {
+pub fn map_consumer_offset(payload: Bytes) -> Result<ConsumerOffsetInfo, IggyError> {
     let partition_id = u32::from_le_bytes(payload[..4].try_into()?);
     let current_offset = u64::from_le_bytes(payload[4..12].try_into()?);
     let stored_offset = u64::from_le_bytes(payload[12..20].try_into()?);
@@ -104,13 +104,13 @@ pub fn map_consumer_offset(payload: &[u8]) -> Result<ConsumerOffsetInfo, IggyErr
     })
 }
 
-pub fn map_user(payload: &[u8]) -> Result<UserInfoDetails, IggyError> {
-    let (user, position) = map_to_user_info(payload, 0)?;
+pub fn map_user(payload: Bytes) -> Result<UserInfoDetails, IggyError> {
+    let (user, position) = map_to_user_info(payload.clone(), 0)?;
     let has_permissions = payload[position];
     let permissions = if has_permissions == 1 {
         let permissions_length =
             u32::from_le_bytes(payload[position + 1..position + 5].try_into()?) as usize;
-        let permissions = &payload[position + 5..position + 5 + permissions_length];
+        let permissions = payload.slice(position + 5..position + 5 + permissions_length);
         Some(Permissions::from_bytes(permissions)?)
     } else {
         None
@@ -126,7 +126,7 @@ pub fn map_user(payload: &[u8]) -> Result<UserInfoDetails, IggyError> {
     Ok(user)
 }
 
-pub fn map_users(payload: &[u8]) -> Result<Vec<UserInfo>, IggyError> {
+pub fn map_users(payload: Bytes) -> Result<Vec<UserInfo>, IggyError> {
     if payload.is_empty() {
         return Ok(EMPTY_USERS);
     }
@@ -135,7 +135,7 @@ pub fn map_users(payload: &[u8]) -> Result<Vec<UserInfo>, IggyError> {
     let length = payload.len();
     let mut position = 0;
     while position < length {
-        let (user, read_bytes) = map_to_user_info(payload, position)?;
+        let (user, read_bytes) = map_to_user_info(payload.clone(), position)?;
         users.push(user);
         position += read_bytes;
     }
@@ -144,7 +144,7 @@ pub fn map_users(payload: &[u8]) -> Result<Vec<UserInfo>, IggyError> {
 }
 
 pub fn map_personal_access_tokens(
-    payload: &[u8],
+    payload: Bytes,
 ) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
     if payload.is_empty() {
         return Ok(EMPTY_PERSONAL_ACCESS_TOKENS);
@@ -154,7 +154,7 @@ pub fn map_personal_access_tokens(
     let length = payload.len();
     let mut position = 0;
     while position < length {
-        let (personal_access_token, read_bytes) = map_to_pat_info(payload, position)?;
+        let (personal_access_token, read_bytes) = map_to_pat_info(payload.clone(), position)?;
         personal_access_tokens.push(personal_access_token);
         position += read_bytes;
     }
@@ -162,7 +162,7 @@ pub fn map_personal_access_tokens(
     Ok(personal_access_tokens)
 }
 
-pub fn map_identity_info(payload: &[u8]) -> Result<IdentityInfo, IggyError> {
+pub fn map_identity_info(payload: Bytes) -> Result<IdentityInfo, IggyError> {
     let user_id = u32::from_le_bytes(payload[..4].try_into()?);
     Ok(IdentityInfo {
         user_id,
@@ -170,14 +170,14 @@ pub fn map_identity_info(payload: &[u8]) -> Result<IdentityInfo, IggyError> {
     })
 }
 
-pub fn map_raw_pat(payload: &[u8]) -> Result<RawPersonalAccessToken, IggyError> {
+pub fn map_raw_pat(payload: Bytes) -> Result<RawPersonalAccessToken, IggyError> {
     let token_length = payload[0];
     let token = from_utf8(&payload[1..1 + token_length as usize])?.to_string();
     Ok(RawPersonalAccessToken { token })
 }
 
-pub fn map_client(payload: &[u8]) -> Result<ClientInfoDetails, IggyError> {
-    let (client, mut position) = map_to_client_info(payload, 0)?;
+pub fn map_client(payload: Bytes) -> Result<ClientInfoDetails, IggyError> {
+    let (client, mut position) = map_to_client_info(payload.clone(), 0)?;
     let mut consumer_groups = Vec::new();
     let length = payload.len();
     while position < length {
@@ -208,7 +208,7 @@ pub fn map_client(payload: &[u8]) -> Result<ClientInfoDetails, IggyError> {
     Ok(client)
 }
 
-pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, IggyError> {
+pub fn map_clients(payload: Bytes) -> Result<Vec<ClientInfo>, IggyError> {
     if payload.is_empty() {
         return Ok(EMPTY_CLIENTS);
     }
@@ -217,7 +217,7 @@ pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, IggyError> {
     let length = payload.len();
     let mut position = 0;
     while position < length {
-        let (client, read_bytes) = map_to_client_info(payload, position)?;
+        let (client, read_bytes) = map_to_client_info(payload.clone(), position)?;
         clients.push(client);
         position += read_bytes;
     }
@@ -225,7 +225,7 @@ pub fn map_clients(payload: &[u8]) -> Result<Vec<ClientInfo>, IggyError> {
     Ok(clients)
 }
 
-pub fn map_polled_messages(payload: &[u8]) -> Result<PolledMessages, IggyError> {
+pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> {
     if payload.is_empty() {
         return Ok(PolledMessages {
             messages: EMPTY_MESSAGES,
@@ -249,7 +249,8 @@ pub fn map_polled_messages(payload: &[u8]) -> Result<PolledMessages, IggyError> 
         let checksum = u32::from_le_bytes(payload[position + 33..position + 37].try_into()?);
         let headers_length = u32::from_le_bytes(payload[position + 37..position + 41].try_into()?);
         let headers = if headers_length > 0 {
-            let headers_payload = &payload[position + 41..position + 41 + headers_length as usize];
+            let headers_payload =
+                payload.slice(position + 41..position + 41 + headers_length as usize);
             Some(HashMap::from_bytes(headers_payload)?)
         } else {
             None
@@ -288,7 +289,7 @@ pub fn map_polled_messages(payload: &[u8]) -> Result<PolledMessages, IggyError> 
     })
 }
 
-pub fn map_streams(payload: &[u8]) -> Result<Vec<Stream>, IggyError> {
+pub fn map_streams(payload: Bytes) -> Result<Vec<Stream>, IggyError> {
     if payload.is_empty() {
         return Ok(EMPTY_STREAMS);
     }
@@ -297,7 +298,7 @@ pub fn map_streams(payload: &[u8]) -> Result<Vec<Stream>, IggyError> {
     let length = payload.len();
     let mut position = 0;
     while position < length {
-        let (stream, read_bytes) = map_to_stream(payload, position)?;
+        let (stream, read_bytes) = map_to_stream(payload.clone(), position)?;
         streams.push(stream);
         position += read_bytes;
     }
@@ -305,12 +306,12 @@ pub fn map_streams(payload: &[u8]) -> Result<Vec<Stream>, IggyError> {
     Ok(streams)
 }
 
-pub fn map_stream(payload: &[u8]) -> Result<StreamDetails, IggyError> {
-    let (stream, mut position) = map_to_stream(payload, 0)?;
+pub fn map_stream(payload: Bytes) -> Result<StreamDetails, IggyError> {
+    let (stream, mut position) = map_to_stream(payload.clone(), 0)?;
     let mut topics = Vec::new();
     let length = payload.len();
     while position < length {
-        let (topic, read_bytes) = map_to_topic(payload, position)?;
+        let (topic, read_bytes) = map_to_topic(payload.clone(), position)?;
         topics.push(topic);
         position += read_bytes;
     }
@@ -328,7 +329,7 @@ pub fn map_stream(payload: &[u8]) -> Result<StreamDetails, IggyError> {
     Ok(stream)
 }
 
-fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), IggyError> {
+fn map_to_stream(payload: Bytes, position: usize) -> Result<(Stream, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
     let topics_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
@@ -351,7 +352,7 @@ fn map_to_stream(payload: &[u8], position: usize) -> Result<(Stream, usize), Igg
     ))
 }
 
-pub fn map_topics(payload: &[u8]) -> Result<Vec<Topic>, IggyError> {
+pub fn map_topics(payload: Bytes) -> Result<Vec<Topic>, IggyError> {
     if payload.is_empty() {
         return Ok(EMPTY_TOPICS);
     }
@@ -360,7 +361,7 @@ pub fn map_topics(payload: &[u8]) -> Result<Vec<Topic>, IggyError> {
     let length = payload.len();
     let mut position = 0;
     while position < length {
-        let (topic, read_bytes) = map_to_topic(payload, position)?;
+        let (topic, read_bytes) = map_to_topic(payload.clone(), position)?;
         topics.push(topic);
         position += read_bytes;
     }
@@ -368,12 +369,12 @@ pub fn map_topics(payload: &[u8]) -> Result<Vec<Topic>, IggyError> {
     Ok(topics)
 }
 
-pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, IggyError> {
-    let (topic, mut position) = map_to_topic(payload, 0)?;
+pub fn map_topic(payload: Bytes) -> Result<TopicDetails, IggyError> {
+    let (topic, mut position) = map_to_topic(payload.clone(), 0)?;
     let mut partitions = Vec::new();
     let length = payload.len();
     while position < length {
-        let (partition, read_bytes) = map_to_partition(payload, position)?;
+        let (partition, read_bytes) = map_to_partition(payload.clone(), position)?;
         partitions.push(partition);
         position += read_bytes;
     }
@@ -395,7 +396,7 @@ pub fn map_topic(payload: &[u8]) -> Result<TopicDetails, IggyError> {
     Ok(topic)
 }
 
-fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), IggyError> {
+fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
     let partitions_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
@@ -434,7 +435,7 @@ fn map_to_topic(payload: &[u8], position: usize) -> Result<(Topic, usize), IggyE
     ))
 }
 
-fn map_to_partition(payload: &[u8], position: usize) -> Result<(Partition, usize), IggyError> {
+fn map_to_partition(payload: Bytes, position: usize) -> Result<(Partition, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
     let segments_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
@@ -455,7 +456,7 @@ fn map_to_partition(payload: &[u8], position: usize) -> Result<(Partition, usize
     ))
 }
 
-pub fn map_consumer_groups(payload: &[u8]) -> Result<Vec<ConsumerGroup>, IggyError> {
+pub fn map_consumer_groups(payload: Bytes) -> Result<Vec<ConsumerGroup>, IggyError> {
     if payload.is_empty() {
         return Ok(EMPTY_CONSUMER_GROUPS);
     }
@@ -464,7 +465,7 @@ pub fn map_consumer_groups(payload: &[u8]) -> Result<Vec<ConsumerGroup>, IggyErr
     let length = payload.len();
     let mut position = 0;
     while position < length {
-        let (consumer_group, read_bytes) = map_to_consumer_group(payload, position)?;
+        let (consumer_group, read_bytes) = map_to_consumer_group(payload.clone(), position)?;
         consumer_groups.push(consumer_group);
         position += read_bytes;
     }
@@ -472,12 +473,12 @@ pub fn map_consumer_groups(payload: &[u8]) -> Result<Vec<ConsumerGroup>, IggyErr
     Ok(consumer_groups)
 }
 
-pub fn map_consumer_group(payload: &[u8]) -> Result<ConsumerGroupDetails, IggyError> {
-    let (consumer_group, mut position) = map_to_consumer_group(payload, 0)?;
+pub fn map_consumer_group(payload: Bytes) -> Result<ConsumerGroupDetails, IggyError> {
+    let (consumer_group, mut position) = map_to_consumer_group(payload.clone(), 0)?;
     let mut members = Vec::new();
     let length = payload.len();
     while position < length {
-        let (member, read_bytes) = map_to_consumer_group_member(payload, position)?;
+        let (member, read_bytes) = map_to_consumer_group_member(payload.clone(), position)?;
         members.push(member);
         position += read_bytes;
     }
@@ -493,7 +494,7 @@ pub fn map_consumer_group(payload: &[u8]) -> Result<ConsumerGroupDetails, IggyEr
 }
 
 fn map_to_consumer_group(
-    payload: &[u8],
+    payload: Bytes,
     position: usize,
 ) -> Result<(ConsumerGroup, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
@@ -515,7 +516,7 @@ fn map_to_consumer_group(
 }
 
 fn map_to_consumer_group_member(
-    payload: &[u8],
+    payload: Bytes,
     position: usize,
 ) -> Result<(ConsumerGroupMember, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
@@ -541,7 +542,7 @@ fn map_to_consumer_group_member(
 }
 
 fn map_to_client_info(
-    payload: &[u8],
+    payload: Bytes,
     mut position: usize,
 ) -> Result<(ClientInfo, usize), IggyError> {
     let mut read_bytes;
@@ -579,7 +580,7 @@ fn map_to_client_info(
     ))
 }
 
-fn map_to_user_info(payload: &[u8], position: usize) -> Result<(UserInfo, usize), IggyError> {
+fn map_to_user_info(payload: Bytes, position: usize) -> Result<(UserInfo, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
     let status = payload[position + 12];
@@ -601,7 +602,7 @@ fn map_to_user_info(payload: &[u8], position: usize) -> Result<(UserInfo, usize)
 }
 
 fn map_to_pat_info(
-    payload: &[u8],
+    payload: Bytes,
     position: usize,
 ) -> Result<(PersonalAccessTokenInfo, usize), IggyError> {
     let name_length = payload[position];

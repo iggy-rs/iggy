@@ -4,6 +4,7 @@ use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
+use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use std::io::ErrorKind;
@@ -32,9 +33,10 @@ pub(crate) async fn handle_connection(
 
         let length = u32::from_le_bytes(initial_buffer);
         debug!("Received a TCP request, length: {length}");
-        let mut command_buffer = vec![0u8; length as usize];
+        let mut command_buffer = BytesMut::with_capacity(length as usize);
+        command_buffer.put_bytes(0, length as usize);
         sender.read(&mut command_buffer).await?;
-        let command = Command::from_bytes(&command_buffer)?;
+        let command = Command::from_bytes(command_buffer.freeze())?;
         debug!("Received a TCP command: {command}, payload size: {length}");
         let result = command::handle(&command, sender, &session, system.clone()).await;
         if result.is_err() {

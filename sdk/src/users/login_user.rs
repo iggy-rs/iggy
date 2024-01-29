@@ -4,7 +4,7 @@ use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
@@ -57,18 +57,18 @@ impl Validatable<IggyError> for LoginUser {
 }
 
 impl BytesSerializable for LoginUser {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(2 + self.username.len() + self.password.len());
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(2 + self.username.len() + self.password.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.username.len() as u8);
         bytes.extend(self.username.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.password.len() as u8);
         bytes.extend(self.password.as_bytes());
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<LoginUser, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<LoginUser, IggyError> {
         if bytes.len() < 4 {
             return Err(IggyError::InvalidCommand);
         }
@@ -131,14 +131,14 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let username = "user";
         let password = "secret";
-        let mut bytes = Vec::new();
+        let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(username.len() as u8);
         bytes.extend(username.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(password.len() as u8);
         bytes.extend(password.as_bytes());
-        let command = LoginUser::from_bytes(&bytes);
+        let command = LoginUser::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

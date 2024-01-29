@@ -4,7 +4,7 @@ use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::from_utf8;
@@ -46,15 +46,15 @@ impl Validatable<IggyError> for DeletePersonalAccessToken {
 }
 
 impl BytesSerializable for DeletePersonalAccessToken {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(5 + self.name.len());
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(5 + self.name.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.extend(self.name.as_bytes());
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<DeletePersonalAccessToken, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<DeletePersonalAccessToken, IggyError> {
         if bytes.len() < 4 {
             return Err(IggyError::InvalidCommand);
         }
@@ -97,12 +97,12 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let name = "test";
-        let mut bytes = Vec::new();
+        let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.extend(name.as_bytes());
 
-        let command = DeletePersonalAccessToken::from_bytes(&bytes);
+        let command = DeletePersonalAccessToken::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

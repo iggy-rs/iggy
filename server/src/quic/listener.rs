@@ -8,6 +8,7 @@ use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::{anyhow, Context};
+use bytes::Bytes;
 use iggy::command::Command;
 use iggy::{bytes_serializable::BytesSerializable, messages::MAX_PAYLOAD_SIZE};
 use quinn::{Connection, Endpoint, RecvStream, SendStream};
@@ -89,6 +90,7 @@ async fn handle_stream(
     session: impl AsRef<Session>,
 ) -> anyhow::Result<()> {
     let (send_stream, mut recv_stream) = stream;
+    // TODO: read to BytesMut instead of Vec<u8>
     let request = recv_stream
         .read_to_end(MAX_PAYLOAD_SIZE as usize)
         .await
@@ -106,7 +108,7 @@ async fn handle_stream(
         .try_into()
         .map(u32::from_le_bytes)
         .unwrap_or_default();
-    let command = Command::from_bytes(&request[INITIAL_BYTES_LENGTH..])
+    let command = Command::from_bytes(Bytes::copy_from_slice(&request[INITIAL_BYTES_LENGTH..]))
         .with_context(|| "Error when reading the QUIC request command.")?;
 
     debug!("Received a QUIC command: {command}, payload size: {length}");

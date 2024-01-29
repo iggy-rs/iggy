@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -8,8 +8,6 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;
-
-const EMPTY_BYTES: Vec<u8> = vec![];
 
 /// Represents a header key with a unique name. The name is case-insensitive and wraps a string.
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
@@ -532,12 +530,12 @@ impl HeaderValue {
 }
 
 impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         if self.is_empty() {
-            return EMPTY_BYTES;
+            return Bytes::new();
         }
 
-        let mut bytes = vec![];
+        let mut bytes = BytesMut::new();
         for (key, value) in self {
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(key.0.len() as u32);
@@ -548,10 +546,10 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
             bytes.extend(&value.value);
         }
 
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
     where
         Self: Sized,
     {
@@ -872,7 +870,7 @@ mod tests {
             HeaderValue::from_bool(true).unwrap(),
         );
 
-        let mut bytes = vec![];
+        let mut bytes = BytesMut::new();
         for (key, value) in &headers {
             bytes.put_u32_le(key.0.len() as u32);
             bytes.extend(key.0.as_bytes());
@@ -881,7 +879,7 @@ mod tests {
             bytes.extend(&value.value);
         }
 
-        let deserialized_headers = HashMap::<HeaderKey, HeaderValue>::from_bytes(&bytes);
+        let deserialized_headers = HashMap::<HeaderKey, HeaderValue>::from_bytes(bytes.freeze());
 
         assert!(deserialized_headers.is_ok());
         let deserialized_headers = deserialized_headers.unwrap();

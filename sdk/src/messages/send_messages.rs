@@ -6,7 +6,7 @@ use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use crate::validatable::Validatable;
-use bytes::{BufMut, Bytes};
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -293,15 +293,15 @@ impl Display for Message {
 }
 
 impl BytesSerializable for Partitioning {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(2 + self.length as usize);
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
         bytes.put_u8(self.length);
         bytes.extend(&self.value);
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
     where
         Self: Sized,
     {
@@ -325,8 +325,8 @@ impl BytesSerializable for Partitioning {
 }
 
 impl BytesSerializable for Message {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(self.get_size_bytes() as usize);
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(self.get_size_bytes() as usize);
         bytes.put_u128_le(self.id);
         if let Some(headers) = &self.headers {
             let headers_bytes = headers.as_bytes();
@@ -337,10 +337,10 @@ impl BytesSerializable for Message {
         }
         bytes.put_u32_le(self.length);
         bytes.extend(&self.payload);
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
         if bytes.len() < 24 {
             return Err(IggyError::InvalidCommand);
         }
@@ -349,7 +349,7 @@ impl BytesSerializable for Message {
         let headers_length = u32::from_le_bytes(bytes[16..20].try_into()?);
         let headers = if headers_length > 0 {
             Some(HashMap::from_bytes(
-                &bytes[20..20 + headers_length as usize],
+                bytes.slice(20..20 + headers_length as usize),
             )?)
         } else {
             None
@@ -362,10 +362,8 @@ impl BytesSerializable for Message {
             return Err(IggyError::EmptyMessagePayload);
         }
 
-        let payload = Bytes::from(
-            bytes[24 + headers_length as usize
-                ..24 + headers_length as usize + payload_length as usize]
-                .to_vec(),
+        let payload = bytes.slice(
+            24 + headers_length as usize..24 + headers_length as usize + payload_length as usize,
         );
         if payload.len() != payload_length as usize {
             return Err(IggyError::InvalidMessagePayloadLength);
@@ -400,7 +398,7 @@ impl FromStr for Message {
 }
 
 impl BytesSerializable for SendMessages {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let messages_size = self
             .messages
             .iter()
@@ -410,7 +408,7 @@ impl BytesSerializable for SendMessages {
         let key_bytes = self.partitioning.as_bytes();
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
-        let mut bytes = Vec::with_capacity(
+        let mut bytes = BytesMut::with_capacity(
             stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages_size as usize,
         );
         bytes.extend(stream_id_bytes);
@@ -420,26 +418,26 @@ impl BytesSerializable for SendMessages {
             bytes.extend(message.as_bytes());
         }
 
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<SendMessages, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<SendMessages, IggyError> {
         if bytes.len() < 11 {
             return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(bytes)?;
+        let stream_id = Identifier::from_bytes(bytes.clone())?;
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
-        let key = Partitioning::from_bytes(&bytes[position..])?;
+        let key = Partitioning::from_bytes(bytes.slice(position..))?;
         position += key.get_size_bytes() as usize;
-        let messages_payloads = &bytes[position..];
+        let messages_payloads = bytes.slice(position..);
         position = 0;
         let mut messages = Vec::new();
         while position < messages_payloads.len() {
-            let message = Message::from_bytes(&messages_payloads[position..])?;
+            let message = Message::from_bytes(messages_payloads.slice(position..))?;
             position += message.get_size_bytes() as usize;
             messages.push(message);
         }
@@ -519,19 +517,21 @@ mod tests {
         let bytes = command.as_bytes();
 
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
-        let key = Partitioning::from_bytes(&bytes[position..]).unwrap();
+        let key = Partitioning::from_bytes(bytes.slice(position..)).unwrap();
         position += key.get_size_bytes() as usize;
-        let messages = &bytes[position..];
-        let command_messages = &command
+        let messages = bytes.slice(position..);
+        let command_messages = command
             .messages
             .iter()
-            .map(|message| message.as_bytes())
-            .collect::<Vec<Vec<u8>>>()
-            .concat();
+            .fold(BytesMut::new(), |mut bytes_mut, message| {
+                bytes_mut.put(message.as_bytes());
+                bytes_mut
+            })
+            .freeze();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -560,20 +560,20 @@ mod tests {
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
         let current_position = stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len();
-        let mut bytes = Vec::with_capacity(current_position);
+        let mut bytes = BytesMut::with_capacity(current_position);
         bytes.extend(stream_id_bytes);
         bytes.extend(topic_id_bytes);
         bytes.extend(key_bytes);
         bytes.extend(messages);
-
-        let command = SendMessages::from_bytes(&bytes);
+        let bytes = bytes.freeze();
+        let command = SendMessages::from_bytes(bytes.clone());
         assert!(command.is_ok());
 
-        let messages_payloads = &bytes[current_position..];
+        let messages_payloads = bytes.slice(current_position..);
         let mut position = 0;
         let mut messages = Vec::new();
         while position < messages_payloads.len() {
-            let message = Message::from_bytes(&messages_payloads[position..]).unwrap();
+            let message = Message::from_bytes(messages_payloads.slice(position..)).unwrap();
             position += message.get_size_bytes() as usize;
             messages.push(message);
         }

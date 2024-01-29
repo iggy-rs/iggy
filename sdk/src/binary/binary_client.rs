@@ -1,6 +1,7 @@
 use crate::client::Client;
 use crate::error::IggyError;
 use async_trait::async_trait;
+use bytes::Bytes;
 
 /// The state of the client.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -21,5 +22,5 @@ pub trait BinaryClient: Client {
     /// Sets the state of the client.
     async fn set_state(&self, state: ClientState);
     /// Sends a command and returns the response.
-    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, IggyError>;
+    async fn send_with_response(&self, command: u32, payload: Bytes) -> Result<Bytes, IggyError>;
 }

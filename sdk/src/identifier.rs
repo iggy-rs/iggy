@@ -1,7 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -158,15 +158,15 @@ impl Identifier {
 }
 
 impl BytesSerializable for Identifier {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(2 + self.length as usize);
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
         bytes.put_u8(self.length);
         bytes.extend(&self.value);
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
     where
         Self: Sized,
     {

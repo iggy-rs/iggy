@@ -19,6 +19,6 @@ pub async fn handle(
         .login_with_personal_access_token(&command.token, Some(session))
         .await?;
     let identity_info = mapper::map_identity_info(user.id);
-    sender.send_ok_response(identity_info.as_slice()).await?;
+    sender.send_ok_response(&identity_info).await?;
     Ok(())
 }

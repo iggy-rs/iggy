@@ -4,7 +4,7 @@ use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -54,11 +54,11 @@ impl Validatable<IggyError> for GetConsumerOffset {
 }
 
 impl BytesSerializable for GetConsumerOffset {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let consumer_bytes = self.consumer.as_bytes();
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
-        let mut bytes = Vec::with_capacity(
+        let mut bytes = BytesMut::with_capacity(
             4 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
         );
         bytes.extend(consumer_bytes);
@@ -69,25 +69,25 @@ impl BytesSerializable for GetConsumerOffset {
         } else {
             bytes.put_u32_le(0);
         }
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetConsumerOffset, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<GetConsumerOffset, IggyError> {
         if bytes.len() < 15 {
             return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0])?;
-        let consumer_id = Identifier::from_bytes(&bytes[1..])?;
+        let consumer_id = Identifier::from_bytes(bytes.slice(1..))?;
         position += 1 + consumer_id.get_size_bytes() as usize;
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
-        let stream_id = Identifier::from_bytes(&bytes[position..])?;
+        let stream_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let partition_id = if partition_id == 0 {
@@ -135,15 +135,15 @@ mod tests {
         let bytes = command.as_bytes();
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
-        let consumer_id = Identifier::from_bytes(&bytes[1..]).unwrap();
+        let consumer_id = Identifier::from_bytes(bytes.slice(1..)).unwrap();
         position += 1 + consumer_id.get_size_bytes() as usize;
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
-        let stream_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let stream_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
 
@@ -164,7 +164,7 @@ mod tests {
         let consumer_bytes = consumer.as_bytes();
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
-        let mut bytes = Vec::with_capacity(
+        let mut bytes = BytesMut::with_capacity(
             4 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
         );
         bytes.extend(consumer_bytes);
@@ -172,7 +172,7 @@ mod tests {
         bytes.extend(topic_id_bytes);
         bytes.put_u32_le(partition_id);
 
-        let command = GetConsumerOffset::from_bytes(&bytes);
+        let command = GetConsumerOffset::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

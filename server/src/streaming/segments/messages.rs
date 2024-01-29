@@ -292,28 +292,29 @@ impl Segment {
             self.partition_id
         );
 
-        let saved_bytes = storage.save_messages(self, unsaved_messages).await?;
-        let current_position = self.size_bytes - saved_bytes;
-        storage
-            .save_index(self, current_position, unsaved_messages)
-            .await?;
-        storage.save_time_index(self, unsaved_messages).await?;
-
-        trace!(
-            "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
-            unsaved_messages.len(),
-            self.start_offset,
-            self.partition_id,
-            saved_bytes
-        );
-
         if self.is_full().await {
             self.end_offset = self.current_offset;
             self.is_closed = true;
-            self.unsaved_messages = None;
-        } else {
-            self.unsaved_messages.as_mut().unwrap().clear();
         }
+
+        let unsaved_messages = self.unsaved_messages.take().unwrap();
+        let unsaved_messages_count = unsaved_messages.len();
+
+        storage.save_to_ssd(self, unsaved_messages).await?;
+
+        if self.is_closed {
+            self.storage
+                .segment
+                .terminate(self.log_path.strip_suffix(".log").unwrap())
+                .await?;
+        }
+
+        trace!(
+            "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}",
+            unsaved_messages_count,
+            self.start_offset,
+            self.partition_id,
+        );
 
         Ok(())
     }

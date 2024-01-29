@@ -148,7 +148,7 @@ impl Storage<Stream> for FileStreamStorage {
         Ok(())
     }
 
-    async fn save(&self, stream: &Stream) -> Result<(), IggyError> {
+    async fn create(&self, stream: &Stream) -> Result<(), IggyError> {
         if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
             return Err(IggyError::CannotCreateStreamDirectory(
                 stream.stream_id,

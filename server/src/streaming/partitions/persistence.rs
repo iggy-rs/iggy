@@ -9,7 +9,7 @@ impl Partition {
     }
 
     pub async fn persist(&self) -> Result<(), IggyError> {
-        self.storage.partition.save(self).await
+        self.storage.partition.create(self).await
     }
 
     pub async fn delete(&self) -> Result<(), IggyError> {

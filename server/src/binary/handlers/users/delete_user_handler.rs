@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
+    let mut system = system.write().await;
     system.delete_user(session, &command.user_id).await?;
     sender.send_empty_ok_response().await?;
     Ok(())

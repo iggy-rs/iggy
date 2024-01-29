@@ -48,7 +48,7 @@ impl Storage<Segment> for FileSegmentStorage {
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id
         );
         let log_file = file::open(&segment.log_path).await?;
-        let file_size = log_file.metadata().await.unwrap().len() as u64;
+        let file_size = log_file.metadata().await.unwrap().len();
         segment.size_bytes = file_size as u32;
         let messages_count = segment.get_messages_count();
 
@@ -101,6 +101,11 @@ impl Storage<Segment> for FileSegmentStorage {
 
         if segment.is_full().await {
             segment.is_closed = true;
+            segment
+                .storage
+                .segment
+                .terminate(segment.log_path.strip_suffix(".log").unwrap())
+                .await?;
         }
 
         segment
@@ -125,13 +130,11 @@ impl Storage<Segment> for FileSegmentStorage {
         Ok(())
     }
 
-    async fn save(&self, segment: &Segment) -> Result<(), IggyError> {
-        info!("Saving segment with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
-            segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id);
+    async fn create(&self, segment: &Segment) -> Result<(), IggyError> {
         if !Path::new(&segment.log_path).exists()
             && self
                 .persister
-                .overwrite(&segment.log_path, &[])
+                .create(segment.log_path.strip_suffix(".log").unwrap())
                 .await
                 .is_err()
         {
@@ -140,31 +143,7 @@ impl Storage<Segment> for FileSegmentStorage {
             ));
         }
 
-        if !Path::new(&segment.time_index_path).exists()
-            && self
-                .persister
-                .overwrite(&segment.time_index_path, &[])
-                .await
-                .is_err()
-        {
-            return Err(IggyError::CannotCreateSegmentTimeIndexFile(
-                segment.time_index_path.clone(),
-            ));
-        }
-
-        if !Path::new(&segment.index_path).exists()
-            && self
-                .persister
-                .overwrite(&segment.index_path, &[])
-                .await
-                .is_err()
-        {
-            return Err(IggyError::CannotCreateSegmentIndexFile(
-                segment.index_path.clone(),
-            ));
-        }
-
-        info!("Saved segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
+        info!("Created new segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id);
 
         Ok(())
@@ -173,10 +152,7 @@ impl Storage<Segment> for FileSegmentStorage {
     async fn delete(&self, segment: &Segment) -> Result<(), IggyError> {
         let segment_size = segment.size_bytes;
         let segment_count_of_messages = segment.get_messages_count();
-        info!(
-            "Deleting segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
-            segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
-        );
+
         self.persister.delete(&segment.log_path).await?;
         self.persister.delete(&segment.index_path).await?;
         self.persister.delete(&segment.time_index_path).await?;
@@ -244,33 +220,6 @@ impl SegmentStorage for FileSegmentStorage {
             total_size_bytes
         );
         Ok(messages)
-    }
-
-    async fn save_messages(
-        &self,
-        segment: &Segment,
-        messages: &[Arc<Message>],
-    ) -> Result<u32, IggyError> {
-        let messages_size = messages
-            .iter()
-            .map(|message| message.get_size_bytes())
-            .sum::<u32>();
-
-        let mut bytes = BytesMut::with_capacity(messages_size as usize);
-        for message in messages {
-            message.extend(&mut bytes);
-        }
-
-        if let Err(err) = self
-            .persister
-            .append(&segment.log_path, &bytes)
-            .await
-            .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
-        {
-            return Err(IggyError::CannotSaveMessagesToSegment(err));
-        }
-
-        Ok(messages_size)
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
@@ -436,31 +385,6 @@ impl SegmentStorage for FileSegmentStorage {
         }))
     }
 
-    async fn save_index(
-        &self,
-        segment: &Segment,
-        mut current_position: u32,
-        messages: &[Arc<Message>],
-    ) -> Result<(), IggyError> {
-        let mut bytes = Vec::with_capacity(messages.len() * 4);
-        for message in messages {
-            trace!("Persisting index for position: {}", current_position);
-            bytes.put_u32_le(current_position);
-            current_position += message.get_size_bytes();
-        }
-
-        if let Err(err) = self
-            .persister
-            .append(&segment.index_path, &bytes)
-            .await
-            .with_context(|| format!("Failed to save index to segment: {}", segment.index_path))
-        {
-            return Err(IggyError::CannotSaveIndexToSegment(err));
-        }
-
-        Ok(())
-    }
-
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError> {
         trace!("Loading time indexes from file...");
         let file = file::open(&segment.time_index_path).await?;
@@ -504,6 +428,16 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(indexes)
     }
 
+    // async fn save_index(
+    //     &self,
+    //     segment: &Segment,
+    //     current_position: u32,
+    //     messages: Arc<Vec<Arc<Message>>>,
+    // ) -> Result<(), IggyError> {
+
+    //     Ok(())
+    // }
+
     async fn load_last_time_index(
         &self,
         segment: &Segment,
@@ -530,29 +464,30 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(Some(index))
     }
 
-    async fn save_time_index(
+    // Save messages, time indices and indices to disk.
+    async fn save_to_ssd(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages: Vec<Arc<Message>>,
     ) -> Result<(), IggyError> {
-        let mut bytes = Vec::with_capacity(messages.len() * 8);
-        for message in messages {
-            bytes.put_u64_le(message.timestamp);
-        }
-
         if let Err(err) = self
             .persister
-            .append(&segment.time_index_path, &bytes)
+            .append(
+                segment.log_path.strip_suffix(".log").unwrap(),
+                messages,
+                segment.size_bytes,
+            )
             .await
-            .with_context(|| {
-                format!(
-                    "Failed to save TimeIndex to segment: {}",
-                    segment.time_index_path
-                )
-            })
+            .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
         {
-            return Err(IggyError::CannotSaveTimeIndexToSegment(err));
+            return Err(IggyError::CannotSaveMessagesToSegment(err));
         }
+
+        Ok(())
+    }
+
+    async fn terminate(&self, path: &str) -> Result<(), IggyError> {
+        self.persister.terminate(path).await;
 
         Ok(())
     }

@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
 
 /// The wrapper on top of the collection of messages that are polled from the partition.
 /// It consists of the following fields:
@@ -204,5 +205,27 @@ impl Message {
         }
         bytes.put_u32_le(self.length);
         bytes.put_slice(&self.payload);
+    }
+
+    pub async fn write_to<T>(&self, writer: &mut T) -> Result<(), IggyError>
+    where
+        T: AsyncWriteExt + Unpin,
+    {
+        writer.write_u64_le(self.offset).await?;
+        writer.write_u8(self.state.as_code()).await?;
+        writer.write_u64_le(self.timestamp).await?;
+        writer.write_u128_le(self.id).await?;
+        writer.write_u32_le(self.checksum).await?;
+        if let Some(headers) = &self.headers {
+            let headers_bytes = headers.as_bytes();
+            #[allow(clippy::cast_possible_truncation)]
+            writer.write_u32_le(headers_bytes.len() as u32).await?;
+            writer.write_all(&headers_bytes).await?;
+        } else {
+            writer.write_u32_le(0u32).await?;
+        }
+        writer.write_u32_le(self.length).await?;
+        writer.write_all(&self.payload).await?;
+        Ok(())
     }
 }

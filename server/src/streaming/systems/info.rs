@@ -68,7 +68,7 @@ impl System {
 
     async fn update_system_info(&self, system_info: &mut SystemInfo) -> Result<(), IggyError> {
         system_info.update_version(VERSION);
-        self.storage.info.save(system_info).await?;
+        self.storage.info.create(system_info).await?;
         Ok(())
     }
 }

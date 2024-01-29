@@ -45,7 +45,11 @@ async fn handle_connection(
     let connection = incoming_connection.await?;
     let address = connection.remote_address();
     info!("Client has connected: {address}");
-    let client_id = system.read().add_client(&address, Transport::Quic).await;
+    let client_id = system
+        .read()
+        .await
+        .add_client(&address, Transport::Quic)
+        .await;
     let session = Arc::new(Session::from_client_id(client_id, address));
 
     while let Some(stream) = accept_stream(&connection, &system, &address).await? {
@@ -72,12 +76,12 @@ async fn accept_stream(
     match connection.accept_bi().await {
         Err(quinn::ConnectionError::ApplicationClosed { .. }) => {
             info!("Connection closed");
-            system.read().delete_client(address).await;
+            system.read().await.delete_client(address).await;
             Ok(None)
         }
         Err(error) => {
             error!("Error when handling QUIC stream: {:?}", error);
-            system.read().delete_client(address).await;
+            system.read().await.delete_client(address).await;
             Err(error.into())
         }
         Ok(stream) => Ok(Some(stream)),

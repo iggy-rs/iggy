@@ -2,6 +2,10 @@
 lto = true
 codegen-units = 1
 
+[profile.release.package."*"]
+opt-level = 3
+codegen-units = 1
+
 [workspace]
 resolver = "2"
 members = ["bench", "cli", "examples", "integration", "sdk", "server", "tools"]

@@ -36,7 +36,7 @@ async fn get_topic(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
 ) -> Result<Json<TopicDetails>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let topic = system.find_topic(
@@ -54,7 +54,7 @@ async fn get_topics(
     Path(stream_id): Path<String>,
 ) -> Result<Json<Vec<Topic>>, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     let topics = system.find_topics(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
@@ -71,7 +71,7 @@ async fn create_topic(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
-    let mut system = state.system.write();
+    let mut system = state.system.write().await;
     system
         .create_topic(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -96,7 +96,7 @@ async fn update_topic(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    let mut system = state.system.write();
+    let mut system = state.system.write().await;
     system
         .update_topic(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -118,7 +118,7 @@ async fn delete_topic(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let mut system = state.system.write();
+    let mut system = state.system.write().await;
     system
         .delete_topic(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -136,7 +136,7 @@ async fn purge_topic(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .purge_topic(
             &Session::stateless(identity.user_id, identity.ip_address),

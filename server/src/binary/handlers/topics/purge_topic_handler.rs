@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let system = system.read().await;
     system
         .purge_topic(session, &command.stream_id, &command.topic_id)
         .await?;

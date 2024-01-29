@@ -106,7 +106,7 @@ async fn main() -> Result<(), ServerError> {
     }
 
     let shutdown_timestamp = Instant::now();
-    let mut system = system.write();
+    let mut system = system.write().await;
     system.shutdown().await?;
     let elapsed_time = shutdown_timestamp.elapsed();
 

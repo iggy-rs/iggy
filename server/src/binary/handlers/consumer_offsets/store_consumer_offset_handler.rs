@@ -14,7 +14,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let system = system.read().await;
     let consumer =
         PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
     system

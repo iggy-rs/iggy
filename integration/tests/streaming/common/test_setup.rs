@@ -22,7 +22,7 @@ impl TestSetup {
 
         let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();
-        let persister = FilePersister {};
+        let persister = FilePersister::new();
         let db = Arc::new(sled::open(config.get_database_path()).unwrap());
         let storage = Arc::new(SystemStorage::new(db.clone(), Arc::new(persister)));
         TestSetup {

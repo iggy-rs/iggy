@@ -1,5 +1,5 @@
 use crate::http::shared::RequestDetails;
-use crate::streaming::utils::random_id;
+use crate::streaming::utils::ulid;
 use axum::body::Body;
 use axum::{
     extract::ConnectInfo,
@@ -16,7 +16,7 @@ pub async fn request_diagnostics(
     mut request: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    let request_id = random_id::get_ulid();
+    let request_id = ulid::get_ulid();
     let path_and_query = request
         .uri()
         .path_and_query()

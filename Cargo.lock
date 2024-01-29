@@ -1293,6 +1293,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "faster-hex"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2a2b11eda1d40935b26cf18f6833c526845ae8c41e58d09af6adeb6f0269183"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3554,6 +3563,7 @@ dependencies = [
  "chrono",
  "clap",
  "dashmap",
+ "faster-hex",
  "figlet-rs",
  "figment",
  "flume",
@@ -3564,6 +3574,7 @@ dependencies = [
  "moka",
  "prometheus-client",
  "quinn",
+ "rand",
  "rcgen",
  "ring 0.17.7",
  "rmp-serde",
@@ -3588,7 +3599,6 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "ulid",
- "uuid",
  "vergen",
  "xxhash-rust",
 ]

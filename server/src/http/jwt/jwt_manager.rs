@@ -2,6 +2,7 @@ use crate::configs::http::HttpJwtConfig;
 use crate::http::jwt::json_web_token::{GeneratedTokens, JwtClaims, RevokedAccessToken};
 use crate::http::jwt::refresh_token::RefreshToken;
 use crate::http::jwt::storage::TokenStorage;
+use crate::streaming::utils::uuid::UuidGenerator;
 use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use iggy::utils::duration::IggyDuration;
@@ -36,6 +37,7 @@ pub struct JwtManager {
     tokens_storage: TokenStorage,
     revoked_tokens: RwLock<HashMap<String, u64>>,
     validations: HashMap<Algorithm, Validation>,
+    uuid_generator: UuidGenerator,
 }
 
 impl JwtManager {
@@ -57,6 +59,7 @@ impl JwtManager {
             validator,
             tokens_storage: TokenStorage::new(db),
             revoked_tokens: RwLock::new(HashMap::new()),
+            uuid_generator: UuidGenerator::new(),
         })
     }
 
@@ -170,7 +173,7 @@ impl JwtManager {
         let exp = iat + self.issuer.access_token_expiry.as_secs() as u64;
         let nbf = iat + self.issuer.not_before.as_secs() as u64;
         let claims = JwtClaims {
-            jti: uuid::Uuid::new_v4().to_string(),
+            jti: self.uuid_generator.hex128_as_string().unwrap(),
             sub: user_id,
             aud: self.issuer.audience.to_string(),
             iss: self.issuer.issuer.to_string(),

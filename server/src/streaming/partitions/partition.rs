@@ -4,6 +4,7 @@ use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
+use crate::streaming::utils::uuid::UuidGenerator;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::models::messages::Message;
@@ -29,6 +30,7 @@ pub struct Partition {
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) uuid_generator: UuidGenerator,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -122,6 +124,7 @@ impl Partition {
             config,
             storage,
             created_at: IggyTimestamp::now().to_micros(),
+            uuid_generator: UuidGenerator::new(),
         };
 
         if with_segment {

@@ -1,7 +1,6 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::utils::random_id;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
 use std::sync::Arc;
@@ -334,7 +333,7 @@ impl Partition {
         if let Some(message_deduplicator) = &mut self.message_deduplicator {
             for mut message in messages {
                 if message.id == 0 {
-                    message.id = random_id::get_uuid();
+                    message.id = self.uuid_generator.hex128();
                 }
 
                 if !message_deduplicator.try_insert(&message.id).await {
@@ -357,7 +356,7 @@ impl Partition {
         } else {
             for mut message in messages {
                 if message.id == 0 {
-                    message.id = random_id::get_uuid();
+                    message.id = self.uuid_generator.hex128();
                 }
 
                 if self.should_increment_offset {

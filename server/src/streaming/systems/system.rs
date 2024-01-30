@@ -14,7 +14,6 @@ use sled::Db;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::fs::{create_dir, remove_dir_all};
 use tokio::sync::RwLock;
 use tokio::time::Instant;
@@ -199,12 +198,6 @@ impl System {
                             / memory_tracker.usage_bytes() as f64
                             * size_to_clean as f64)
                             .ceil() as u64;
-
-                        tokio::time::sleep(Duration::from_nanos(1)).await;
-                        /*
-                        info!("Cache current memory usage: {}, Batch size: {}, calculated size to remove: {}, extended by eviction factor: {}"
-                            ,memory_tracker.usage_bytes(), size_to_clean, size_to_remove, size_to_remove * CACHE_OVER_EVICTION_FACTOR);
-                         */
                         cache.evict_by_size(size_to_remove * CACHE_OVER_EVICTION_FACTOR);
                     });
                 }

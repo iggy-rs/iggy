@@ -416,7 +416,8 @@ impl Partition {
                 .await?;
         }
         if let Some(cache) = &mut self.cache {
-            cache.extend(vec![batch.clone()]);
+            //cache.extend(vec![batch.clone()]);
+            cache.push_safe(batch.clone());
         }
 
         self.unsaved_messages_count += messages_count;

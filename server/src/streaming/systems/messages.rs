@@ -1,4 +1,3 @@
-use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
@@ -110,7 +109,7 @@ impl System {
             topic.topic_id,
         )?;
 
-        let mut batch_size_bytes: u64 = 0;
+        let mut _batch_size_bytes: u64 = 0;
         let mut received_messages = Vec::with_capacity(messages.len());
         // For large batches it would be better to use par_iter() from rayon.
         for message in messages {
@@ -128,7 +127,7 @@ impl System {
                 }
                 None => message,
             };
-            batch_size_bytes += message.get_size_bytes() as u64;
+            _batch_size_bytes += message.get_size_bytes() as u64;
             received_messages.push(Message::from_message(message));
         }
 
@@ -138,15 +137,9 @@ impl System {
             topic.compression_algorithm
         };
         // With compression metrics, we should be able to approximate the amount of memory to free.
-        batch_size_bytes += BATCH_METADATA_BYTES_LEN as u64;
+        _batch_size_bytes += BATCH_METADATA_BYTES_LEN as u64;
         // If there's enough space in cache, do nothing.
         // Otherwise, clean the cache.
-        if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
-            if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
-                self.clean_cache(batch_size_bytes).await;
-            }
-        }
-
         topic
             .append_messages(partitioning, compression_algorithm, received_messages)
             .await?;

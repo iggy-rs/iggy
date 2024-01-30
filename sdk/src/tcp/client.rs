@@ -19,6 +19,7 @@ use tracing::{error, info};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
+const COMMAND_TYPE_BYTES_LENGTH: usize = 4;
 const NAME: &str = "Iggy";
 
 /// TCP client for interacting with the Iggy API.
@@ -68,12 +69,7 @@ impl ConnectionStream for TcpConnectionStream {
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
-        let result = self.stream.write_all(buf).await;
-        if let Err(error) = result {
-            return Err(IggyError::from(error));
-        }
-
-        Ok(())
+        Ok(self.stream.write_all(buf).await?)
     }
 }
 
@@ -205,15 +201,16 @@ impl BinaryClient for TcpClient {
 
         let mut stream = self.stream.lock().await;
         if let Some(stream) = stream.as_mut() {
-            let payload_length = payload.len() + 4;
-            let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
+            let payload_length = payload.len() + COMMAND_TYPE_BYTES_LENGTH;
+            let mut buffer =
+                Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + COMMAND_TYPE_BYTES_LENGTH);
             #[allow(clippy::cast_possible_truncation)]
             buffer.put_u32_le(payload_length as u32);
             buffer.put_u32_le(command);
-            buffer.extend(payload);
 
             trace!("Sending a TCP request...");
             stream.write(&buffer).await?;
+            stream.write(&payload).await?;
             trace!("Sent a TCP request, waiting for a response...");
 
             let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];

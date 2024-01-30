@@ -76,7 +76,7 @@ impl BytesSerializable for Consumer {
         let id_bytes = self.id.as_bytes();
         let mut bytes = BytesMut::with_capacity(1 + id_bytes.len());
         bytes.put_u8(self.kind.as_code());
-        bytes.extend(id_bytes);
+        bytes.put_slice(&id_bytes);
         bytes.freeze()
     }
 

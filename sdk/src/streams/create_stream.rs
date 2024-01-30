@@ -58,7 +58,7 @@ impl BytesSerializable for CreateStream {
         bytes.put_u32_le(self.stream_id.unwrap_or(0));
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.extend(self.name.as_bytes());
+        bytes.put_slice(&self.name.as_bytes());
         bytes.freeze()
     }
 
@@ -120,7 +120,7 @@ mod tests {
         bytes.put_u32_le(stream_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.extend(name.as_bytes());
+        bytes.put_slice(&name.as_bytes());
         let command = CreateStream::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 

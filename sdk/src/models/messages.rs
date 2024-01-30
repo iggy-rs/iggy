@@ -198,11 +198,11 @@ impl Message {
             let headers_bytes = headers.as_bytes();
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(headers_bytes.len() as u32);
-            bytes.extend(&headers_bytes);
+            bytes.put_slice(&headers_bytes);
         } else {
             bytes.put_u32_le(0u32);
         }
         bytes.put_u32_le(self.length);
-        bytes.extend(&self.payload);
+        bytes.put_slice(&self.payload);
     }
 }

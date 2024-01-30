@@ -3,7 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use bytes::{Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -34,8 +34,8 @@ impl BytesSerializable for PurgeTopic {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(stream_id_bytes.len() + topic_id_bytes.len());
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.freeze()
     }
 
@@ -90,8 +90,8 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
         let mut bytes = BytesMut::new();
-        bytes.extend(stream_id.as_bytes());
-        bytes.extend(topic_id.as_bytes());
+        bytes.put_slice(&stream_id.as_bytes());
+        bytes.put_slice(&topic_id.as_bytes());
         let command = PurgeTopic::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 

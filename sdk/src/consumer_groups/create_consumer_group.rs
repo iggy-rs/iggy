@@ -68,12 +68,12 @@ impl BytesSerializable for CreateConsumerGroup {
         let mut bytes = BytesMut::with_capacity(
             4 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
         );
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(self.consumer_group_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.extend(self.name.as_bytes());
+        bytes.put_slice(&self.name.as_bytes());
         bytes.freeze()
     }
 
@@ -153,12 +153,12 @@ mod tests {
         let topic_id_bytes = topic_id.as_bytes();
         let mut bytes =
             BytesMut::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(consumer_group_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.extend(name.as_bytes());
+        bytes.put_slice(&name.as_bytes());
         let command = CreateConsumerGroup::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 

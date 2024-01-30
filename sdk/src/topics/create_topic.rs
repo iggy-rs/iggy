@@ -88,7 +88,7 @@ impl BytesSerializable for CreateTopic {
     fn as_bytes(&self) -> Bytes {
         let stream_id_bytes = self.stream_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(22 + stream_id_bytes.len() + self.name.len());
-        bytes.extend(stream_id_bytes);
+        bytes.put_slice(&stream_id_bytes);
         bytes.put_u32_le(self.topic_id.unwrap_or(0));
         bytes.put_u32_le(self.partitions_count);
         match self.message_expiry {
@@ -102,7 +102,7 @@ impl BytesSerializable for CreateTopic {
         bytes.put_u8(self.replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.extend(self.name.as_bytes());
+        bytes.put_slice(&self.name.as_bytes());
         bytes.freeze()
     }
 
@@ -228,7 +228,7 @@ mod tests {
         let replication_factor = 1;
         let stream_id_bytes = stream_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(14 + stream_id_bytes.len() + name.len());
-        bytes.extend(stream_id_bytes);
+        bytes.put_slice(&stream_id_bytes);
         bytes.put_u32_le(topic_id);
         bytes.put_u32_le(partitions_count);
         bytes.put_u32_le(message_expiry);
@@ -236,7 +236,7 @@ mod tests {
         bytes.put_u8(replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.extend(name.as_bytes());
+        bytes.put_slice(&name.as_bytes());
 
         let command = CreateTopic::from_bytes(bytes.freeze());
         assert!(command.is_ok());

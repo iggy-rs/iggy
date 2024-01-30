@@ -539,11 +539,11 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
         for (key, value) in self {
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(key.0.len() as u32);
-            bytes.extend(key.0.as_bytes());
+            bytes.put_slice(&key.0.as_bytes());
             bytes.put_u8(value.kind.as_code());
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(value.value.len() as u32);
-            bytes.extend(&value.value);
+            bytes.put_slice(&&value.value);
         }
 
         bytes.freeze()
@@ -873,10 +873,10 @@ mod tests {
         let mut bytes = BytesMut::new();
         for (key, value) in &headers {
             bytes.put_u32_le(key.0.len() as u32);
-            bytes.extend(key.0.as_bytes());
+            bytes.put_slice(&key.0.as_bytes());
             bytes.put_u8(value.kind.as_code());
             bytes.put_u32_le(value.value.len() as u32);
-            bytes.extend(&value.value);
+            bytes.put_slice(&&value.value);
         }
 
         let deserialized_headers = HashMap::<HeaderKey, HeaderValue>::from_bytes(bytes.freeze());

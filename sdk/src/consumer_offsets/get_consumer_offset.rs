@@ -61,9 +61,9 @@ impl BytesSerializable for GetConsumerOffset {
         let mut bytes = BytesMut::with_capacity(
             4 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
         );
-        bytes.extend(consumer_bytes);
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&consumer_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         if let Some(partition_id) = self.partition_id {
             bytes.put_u32_le(partition_id);
         } else {
@@ -167,9 +167,9 @@ mod tests {
         let mut bytes = BytesMut::with_capacity(
             4 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
         );
-        bytes.extend(consumer_bytes);
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&consumer_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(partition_id);
 
         let command = GetConsumerOffset::from_bytes(bytes.freeze());

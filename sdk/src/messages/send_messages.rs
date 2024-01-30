@@ -297,7 +297,7 @@ impl BytesSerializable for Partitioning {
         let mut bytes = BytesMut::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
         bytes.put_u8(self.length);
-        bytes.extend(&self.value);
+        bytes.put_slice(&&self.value);
         bytes.freeze()
     }
 
@@ -331,12 +331,12 @@ impl BytesSerializable for Message {
         if let Some(headers) = &self.headers {
             let headers_bytes = headers.as_bytes();
             bytes.put_u32_le(headers_bytes.len() as u32);
-            bytes.extend(&headers_bytes);
+            bytes.put_slice(&&headers_bytes);
         } else {
             bytes.put_u32_le(0);
         }
         bytes.put_u32_le(self.length);
-        bytes.extend(&self.payload);
+        bytes.put_slice(&&self.payload);
         bytes.freeze()
     }
 
@@ -411,11 +411,11 @@ impl BytesSerializable for SendMessages {
         let mut bytes = BytesMut::with_capacity(
             stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages_size as usize,
         );
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
-        bytes.extend(key_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
+        bytes.put_slice(&key_bytes);
         for message in &self.messages {
-            bytes.extend(message.as_bytes());
+            bytes.put_slice(&message.as_bytes());
         }
 
         bytes.freeze()
@@ -561,10 +561,10 @@ mod tests {
         let topic_id_bytes = topic_id.as_bytes();
         let current_position = stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len();
         let mut bytes = BytesMut::with_capacity(current_position);
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
-        bytes.extend(key_bytes);
-        bytes.extend(messages);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
+        bytes.put_slice(&key_bytes);
+        bytes.put_slice(&messages);
         let bytes = bytes.freeze();
         let command = SendMessages::from_bytes(bytes.clone());
         assert!(command.is_ok());

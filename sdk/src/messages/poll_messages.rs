@@ -237,15 +237,15 @@ impl BytesSerializable for PollMessages {
                 + topic_id_bytes.len()
                 + strategy_bytes.len(),
         );
-        bytes.extend(consumer_bytes);
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&consumer_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         if let Some(partition_id) = self.partition_id {
             bytes.put_u32_le(partition_id);
         } else {
             bytes.put_u32_le(0);
         }
-        bytes.extend(strategy_bytes);
+        bytes.put_slice(&strategy_bytes);
         bytes.put_u32_le(self.count);
         if self.auto_commit {
             bytes.put_u8(1);
@@ -423,11 +423,11 @@ mod tests {
                 + topic_id_bytes.len()
                 + strategy_bytes.len(),
         );
-        bytes.extend(consumer_bytes);
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&consumer_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(partition_id);
-        bytes.extend(strategy_bytes);
+        bytes.put_slice(&strategy_bytes);
         bytes.put_u32_le(count);
         bytes.put_u8(auto_commit);
 

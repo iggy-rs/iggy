@@ -52,8 +52,8 @@ impl BytesSerializable for CreatePartitions {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(self.partitions_count);
         bytes.freeze()
     }
@@ -125,8 +125,8 @@ mod tests {
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(partitions_count);
         let command = CreatePartitions::from_bytes(bytes.freeze());
         assert!(command.is_ok());

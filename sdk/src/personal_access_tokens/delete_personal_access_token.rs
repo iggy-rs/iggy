@@ -50,7 +50,7 @@ impl BytesSerializable for DeletePersonalAccessToken {
         let mut bytes = BytesMut::with_capacity(5 + self.name.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.extend(self.name.as_bytes());
+        bytes.put_slice(&self.name.as_bytes());
         bytes.freeze()
     }
 
@@ -100,7 +100,7 @@ mod tests {
         let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.extend(name.as_bytes());
+        bytes.put_slice(&name.as_bytes());
 
         let command = DeletePersonalAccessToken::from_bytes(bytes.freeze());
         assert!(command.is_ok());

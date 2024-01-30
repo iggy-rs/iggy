@@ -33,11 +33,11 @@ impl BytesSerializable for UpdatePermissions {
     fn as_bytes(&self) -> Bytes {
         let user_id_bytes = self.user_id.as_bytes();
         let mut bytes = BytesMut::new();
-        bytes.extend(user_id_bytes);
+        bytes.put_slice(&user_id_bytes);
         if let Some(permissions) = &self.permissions {
             bytes.put_u8(1);
             bytes.put_u32_le(permissions.as_bytes().len() as u32);
-            bytes.extend(permissions.as_bytes());
+            bytes.put_slice(&permissions.as_bytes());
         } else {
             bytes.put_u8(0);
         }
@@ -125,10 +125,10 @@ mod tests {
         let permissions = get_permissions();
         let permissions_bytes = permissions.as_bytes();
         let mut bytes = BytesMut::new();
-        bytes.extend(user_id.as_bytes());
+        bytes.put_slice(&user_id.as_bytes());
         bytes.put_u8(1);
         bytes.put_u32_le(permissions_bytes.len() as u32);
-        bytes.extend(permissions_bytes);
+        bytes.put_slice(&permissions_bytes);
 
         let command = UpdatePermissions::from_bytes(bytes.freeze());
         assert!(command.is_ok());

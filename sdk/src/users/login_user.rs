@@ -61,10 +61,10 @@ impl BytesSerializable for LoginUser {
         let mut bytes = BytesMut::with_capacity(2 + self.username.len() + self.password.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.username.len() as u8);
-        bytes.extend(self.username.as_bytes());
+        bytes.put_slice(&self.username.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.password.len() as u8);
-        bytes.extend(self.password.as_bytes());
+        bytes.put_slice(&self.password.as_bytes());
         bytes.freeze()
     }
 
@@ -134,10 +134,10 @@ mod tests {
         let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(username.len() as u8);
-        bytes.extend(username.as_bytes());
+        bytes.put_slice(&username.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(password.len() as u8);
-        bytes.extend(password.as_bytes());
+        bytes.put_slice(&password.as_bytes());
         let command = LoginUser::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 

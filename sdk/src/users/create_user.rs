@@ -71,17 +71,17 @@ impl BytesSerializable for CreateUser {
         let mut bytes = BytesMut::with_capacity(2 + self.username.len() + self.password.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.username.len() as u8);
-        bytes.extend(self.username.as_bytes());
+        bytes.put_slice(&self.username.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.password.len() as u8);
-        bytes.extend(self.password.as_bytes());
+        bytes.put_slice(&self.password.as_bytes());
         bytes.put_u8(self.status.as_code());
         if let Some(permissions) = &self.permissions {
             bytes.put_u8(1);
             let permissions = permissions.as_bytes();
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(permissions.len() as u32);
-            bytes.extend(permissions);
+            bytes.put_slice(&permissions);
         } else {
             bytes.put_u8(0);
         }
@@ -233,16 +233,16 @@ mod tests {
         let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(username.len() as u8);
-        bytes.extend(username.as_bytes());
+        bytes.put_slice(&username.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(password.len() as u8);
-        bytes.extend(password.as_bytes());
+        bytes.put_slice(&password.as_bytes());
         bytes.put_u8(status.as_code());
         bytes.put_u8(has_permissions);
         let permissions_bytes = permissions.as_bytes();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u32_le(permissions_bytes.len() as u32);
-        bytes.extend(permissions_bytes);
+        bytes.put_slice(&permissions_bytes);
 
         let command = CreateUser::from_bytes(bytes.freeze());
         assert!(command.is_ok());

@@ -343,7 +343,7 @@ impl BytesSerializable for Command {
 fn as_bytes(command: u32, payload: Bytes) -> Bytes {
     let mut bytes = BytesMut::with_capacity(4 + payload.len());
     bytes.put_u32_le(command);
-    bytes.extend(payload);
+    bytes.put_slice(&payload);
     bytes.freeze()
 }
 
@@ -663,7 +663,7 @@ mod tests {
         let payload = payload.as_bytes();
         let mut bytes = BytesMut::with_capacity(4 + payload.len());
         bytes.put_u32_le(command_id);
-        bytes.extend(payload);
+        bytes.put_slice(&payload);
         assert_eq!(command.as_bytes(), bytes);
     }
 
@@ -675,7 +675,7 @@ mod tests {
         let payload = payload.as_bytes();
         let mut bytes = BytesMut::with_capacity(4 + payload.len());
         bytes.put_u32_le(command_id);
-        bytes.extend(payload);
+        bytes.put_slice(&payload);
         let bytes = Bytes::from(bytes);
         assert_eq!(&Command::from_bytes(bytes).unwrap(), command);
     }

@@ -52,12 +52,12 @@ impl BytesSerializable for UpdateUser {
     fn as_bytes(&self) -> Bytes {
         let user_id_bytes = self.user_id.as_bytes();
         let mut bytes = BytesMut::new();
-        bytes.extend(user_id_bytes);
+        bytes.put_slice(&user_id_bytes);
         if let Some(username) = &self.username {
             bytes.put_u8(1);
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u8(username.len() as u8);
-            bytes.extend(username.as_bytes());
+            bytes.put_slice(&username.as_bytes());
         } else {
             bytes.put_u8(0);
         }
@@ -168,10 +168,10 @@ mod tests {
         let username = "user";
         let status = UserStatus::Active;
         let mut bytes = BytesMut::new();
-        bytes.extend(user_id.as_bytes());
+        bytes.put_slice(&user_id.as_bytes());
         bytes.put_u8(1);
         bytes.put_u8(username.len() as u8);
-        bytes.extend(username.as_bytes());
+        bytes.put_slice(&username.as_bytes());
         bytes.put_u8(1);
         bytes.put_u8(status.as_code());
 

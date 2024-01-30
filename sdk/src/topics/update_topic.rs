@@ -92,7 +92,7 @@ impl BytesSerializable for UpdateTopic {
         bytes.put_u8(self.replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.put_slice(&self.name.as_bytes());
+        bytes.put_slice(self.name.as_bytes());
         bytes.freeze()
     }
 
@@ -223,7 +223,7 @@ mod tests {
 
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.put_slice(&name.as_bytes());
+        bytes.put_slice(name.as_bytes());
 
         let command = UpdateTopic::from_bytes(bytes.freeze());
         assert!(command.is_ok());

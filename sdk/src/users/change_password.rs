@@ -64,10 +64,10 @@ impl BytesSerializable for ChangePassword {
         bytes.put_slice(&user_id_bytes);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.current_password.len() as u8);
-        bytes.put_slice(&self.current_password.as_bytes());
+        bytes.put_slice(self.current_password.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.new_password.len() as u8);
-        bytes.put_slice(&self.new_password.as_bytes());
+        bytes.put_slice(self.new_password.as_bytes());
         bytes.freeze()
     }
 
@@ -148,10 +148,10 @@ mod tests {
         bytes.put_slice(&user_id.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(current_password.len() as u8);
-        bytes.put_slice(&current_password.as_bytes());
+        bytes.put_slice(current_password.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(new_password.len() as u8);
-        bytes.put_slice(&new_password.as_bytes());
+        bytes.put_slice(new_password.as_bytes());
 
         let command = ChangePassword::from_bytes(bytes.freeze());
         assert!(command.is_ok());

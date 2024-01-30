@@ -57,7 +57,7 @@ impl BytesSerializable for UpdateUser {
             bytes.put_u8(1);
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u8(username.len() as u8);
-            bytes.put_slice(&username.as_bytes());
+            bytes.put_slice(username.as_bytes());
         } else {
             bytes.put_u8(0);
         }
@@ -171,7 +171,7 @@ mod tests {
         bytes.put_slice(&user_id.as_bytes());
         bytes.put_u8(1);
         bytes.put_u8(username.len() as u8);
-        bytes.put_slice(&username.as_bytes());
+        bytes.put_slice(username.as_bytes());
         bytes.put_u8(1);
         bytes.put_u8(status.as_code());
 

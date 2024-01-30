@@ -34,13 +34,13 @@ pub fn map_stats(stats: &Stats) -> Bytes {
     bytes.put_u32_le(stats.clients_count);
     bytes.put_u32_le(stats.consumer_groups_count);
     bytes.put_u32_le(stats.hostname.len() as u32);
-    bytes.put_slice(&stats.hostname.as_bytes());
+    bytes.put_slice(stats.hostname.as_bytes());
     bytes.put_u32_le(stats.os_name.len() as u32);
-    bytes.put_slice(&stats.os_name.as_bytes());
+    bytes.put_slice(stats.os_name.as_bytes());
     bytes.put_u32_le(stats.os_version.len() as u32);
-    bytes.put_slice(&stats.os_version.as_bytes());
+    bytes.put_slice(stats.os_version.as_bytes());
     bytes.put_u32_le(stats.kernel_version.len() as u32);
-    bytes.put_slice(&stats.kernel_version.as_bytes());
+    bytes.put_slice(stats.kernel_version.as_bytes());
     bytes.freeze()
 }
 
@@ -104,7 +104,7 @@ pub fn map_identity_info(user_id: UserId) -> Bytes {
 pub fn map_raw_pat(token: &str) -> Bytes {
     let mut bytes = BytesMut::with_capacity(1 + token.len());
     bytes.put_u8(token.len() as u8);
-    bytes.put_slice(&token.as_bytes());
+    bytes.put_slice(token.as_bytes());
     bytes.freeze()
 }
 
@@ -202,7 +202,7 @@ async fn extend_stream(stream: &Stream, bytes: &mut BytesMut) {
     bytes.put_u64_le(stream.get_size().await.as_bytes_u64());
     bytes.put_u64_le(stream.get_messages_count().await);
     bytes.put_u8(stream.name.len() as u8);
-    bytes.put_slice(&stream.name.as_bytes());
+    bytes.put_slice(stream.name.as_bytes());
 }
 
 async fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
@@ -221,7 +221,7 @@ async fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
     bytes.put_u64_le(topic.get_size().await.as_bytes_u64());
     bytes.put_u64_le(topic.get_messages_count().await);
     bytes.put_u8(topic.name.len() as u8);
-    bytes.put_slice(&topic.name.as_bytes());
+    bytes.put_slice(topic.name.as_bytes());
 }
 
 fn extend_partition(partition: &Partition, bytes: &mut BytesMut) {
@@ -238,7 +238,7 @@ fn extend_consumer_group(consumer_group: &ConsumerGroup, bytes: &mut BytesMut) {
     bytes.put_u32_le(consumer_group.partitions_count);
     bytes.put_u32_le(consumer_group.get_members().len() as u32);
     bytes.put_u8(consumer_group.name.len() as u8);
-    bytes.put_slice(&consumer_group.name.as_bytes());
+    bytes.put_slice(consumer_group.name.as_bytes());
 }
 
 fn extend_client(client: &Client, bytes: &mut BytesMut) {
@@ -251,7 +251,7 @@ fn extend_client(client: &Client, bytes: &mut BytesMut) {
     bytes.put_u8(transport);
     let address = client.address.to_string();
     bytes.put_u32_le(address.len() as u32);
-    bytes.put_slice(&address.as_bytes());
+    bytes.put_slice(address.as_bytes());
     bytes.put_u32_le(client.consumer_groups.len() as u32);
 }
 
@@ -260,11 +260,11 @@ fn extend_user(user: &User, bytes: &mut BytesMut) {
     bytes.put_u64_le(user.created_at);
     bytes.put_u8(user.status.as_code());
     bytes.put_u8(user.username.len() as u8);
-    bytes.put_slice(&user.username.as_bytes());
+    bytes.put_slice(user.username.as_bytes());
 }
 
 fn extend_pat(personal_access_token: &PersonalAccessToken, bytes: &mut BytesMut) {
     bytes.put_u8(personal_access_token.name.len() as u8);
-    bytes.put_slice(&personal_access_token.name.as_bytes());
+    bytes.put_slice(personal_access_token.name.as_bytes());
     bytes.put_u64_le(personal_access_token.expiry.unwrap_or(0));
 }

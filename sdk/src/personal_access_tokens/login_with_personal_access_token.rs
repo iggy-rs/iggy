@@ -42,7 +42,7 @@ impl BytesSerializable for LoginWithPersonalAccessToken {
         let mut bytes = BytesMut::with_capacity(5 + self.token.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.token.len() as u8);
-        bytes.put_slice(&self.token.as_bytes());
+        bytes.put_slice(self.token.as_bytes());
         bytes.freeze()
     }
 
@@ -92,7 +92,7 @@ mod tests {
         let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(token.len() as u8);
-        bytes.put_slice(&token.as_bytes());
+        bytes.put_slice(token.as_bytes());
 
         let command = LoginWithPersonalAccessToken::from_bytes(bytes.freeze());
         assert!(command.is_ok());

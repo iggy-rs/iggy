@@ -73,7 +73,7 @@ impl BytesSerializable for CreateConsumerGroup {
         bytes.put_u32_le(self.consumer_group_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.put_slice(&self.name.as_bytes());
+        bytes.put_slice(self.name.as_bytes());
         bytes.freeze()
     }
 
@@ -158,7 +158,7 @@ mod tests {
         bytes.put_u32_le(consumer_group_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.put_slice(&name.as_bytes());
+        bytes.put_slice(name.as_bytes());
         let command = CreateConsumerGroup::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 

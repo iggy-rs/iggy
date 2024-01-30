@@ -297,7 +297,7 @@ impl BytesSerializable for Partitioning {
         let mut bytes = BytesMut::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
         bytes.put_u8(self.length);
-        bytes.put_slice(&&self.value);
+        bytes.put_slice(&self.value);
         bytes.freeze()
     }
 
@@ -331,12 +331,12 @@ impl BytesSerializable for Message {
         if let Some(headers) = &self.headers {
             let headers_bytes = headers.as_bytes();
             bytes.put_u32_le(headers_bytes.len() as u32);
-            bytes.put_slice(&&headers_bytes);
+            bytes.put_slice(&headers_bytes);
         } else {
             bytes.put_u32_le(0);
         }
         bytes.put_u32_le(self.length);
-        bytes.put_slice(&&self.payload);
+        bytes.put_slice(&self.payload);
         bytes.freeze()
     }
 

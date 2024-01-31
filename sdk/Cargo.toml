@@ -41,7 +41,7 @@ reqwest-retry = "0.3.0"
 rustls = { version = "0.21.10", features = ["dangerous_configuration"] }
 serde = { version = "1.0.196", features = ["derive", "rc"] }
 serde_json = "1.0.113"
-serde_with = { version = "3.5.1", features = ["base64"] }
+serde_with = { version = "3.6.0", features = ["base64"] }
 strum = { version = "0.26.1", features = ["derive"] }
 thiserror = "1.0.56"
 tokio = { version = "1.33.0", features = ["full"] }

@@ -97,7 +97,7 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn load_message_batches(
         &self,
         segment: &Segment,
-        index_range: IndexRange,
+        index_range: &IndexRange,
     ) -> Result<Vec<Arc<MessageBatch>>, IggyError>;
     async fn load_newest_message_batches_by_size(
         &self,
@@ -435,7 +435,7 @@ pub(crate) mod tests {
         async fn load_message_batches(
             &self,
             _segment: &Segment,
-            _index_range: IndexRange,
+            _index_range: &IndexRange,
         ) -> Result<Vec<Arc<MessageBatch>>, IggyError> {
             Ok(vec![])
         }

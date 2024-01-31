@@ -2,13 +2,13 @@ use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
 use iggy::error::IggyError::InvalidOffset;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Index {
     pub relative_offset: u32,
     pub position: u32,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct IndexRange {
     pub start: Index,
     pub end: Index,
@@ -16,10 +16,10 @@ pub struct IndexRange {
 impl Segment {
     pub fn load_highest_lower_bound_index(
         &self,
+        indices: &[Index],
         start_offset: u32,
         end_offset: u32,
     ) -> Result<IndexRange, IggyError> {
-        let indices = self.indexes.as_ref().unwrap();
         let starting_offset_idx = binary_search_index(indices, start_offset);
         let ending_offset_idx = binary_search_index(indices, end_offset);
 
@@ -123,7 +123,9 @@ mod tests {
     fn should_find_both_indices() {
         let mut segment = create_segment();
         create_test_indices(&mut segment);
-        let result = segment.load_highest_lower_bound_index(15, 45).unwrap();
+        let result = segment
+            .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 15, 45)
+            .unwrap();
 
         assert_eq!(result.start.relative_offset, 20);
         assert_eq!(result.end.relative_offset, 50);
@@ -132,12 +134,16 @@ mod tests {
     fn start_and_end_index_should_be_equal() {
         let mut segment = create_segment();
         create_test_indices(&mut segment);
-        let result_end_range = segment.load_highest_lower_bound_index(65, 100).unwrap();
+        let result_end_range = segment
+            .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 65, 100)
+            .unwrap();
 
         assert_eq!(result_end_range.start.relative_offset, 65);
         assert_eq!(result_end_range.end.relative_offset, 65);
 
-        let result_start_range = segment.load_highest_lower_bound_index(0, 5).unwrap();
+        let result_start_range = segment
+            .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 0, 5)
+            .unwrap();
         assert_eq!(result_start_range.start.relative_offset, 5);
         assert_eq!(result_start_range.end.relative_offset, 5);
     }
@@ -145,7 +151,9 @@ mod tests {
     fn should_clamp_last_index_when_out_of_range() {
         let mut segment = create_segment();
         create_test_indices(&mut segment);
-        let result = segment.load_highest_lower_bound_index(5, 100).unwrap();
+        let result = segment
+            .load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 5, 100)
+            .unwrap();
 
         assert_eq!(result.start.relative_offset, 5);
         assert_eq!(result.end.relative_offset, 65);
@@ -155,7 +163,8 @@ mod tests {
         let mut segment = create_segment();
         create_test_indices(&mut segment);
 
-        let result = segment.load_highest_lower_bound_index(100, 200);
+        let result =
+            segment.load_highest_lower_bound_index(segment.indexes.as_ref().unwrap(), 100, 200);
         assert!(result.is_err());
     }
 }

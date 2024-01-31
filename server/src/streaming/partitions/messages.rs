@@ -52,27 +52,38 @@ impl Partition {
             return Ok(EMPTY_MESSAGES);
         }
 
-        let result = self.segments.iter().rev().find_map(|segment| {
-            segment.time_indexes.as_ref().and_then(|time_indexes| {
-                if time_indexes.is_empty() {
-                    return None;
-                }
+        let result = self
+            .segments
+            .iter()
+            .rev()
+            .find_map(|segment| {
+                segment.time_indexes.as_ref().and_then(|time_indexes| {
+                    if time_indexes.is_empty() {
+                        return None;
+                    }
 
-                time_indexes
-                    .iter()
-                    .rposition(|seg| seg.timestamp <= timestamp)
-                    .map(|idx| {
-                        let offset =
-                            segment.start_offset + time_indexes[idx].relative_offset as u64;
-                        self.get_messages_by_offset(offset, count)
-                    })
-                    .or_else(|| {
-                        let first_time_index = TimeIndex::default();
-                        let offset = first_time_index.relative_offset as u64;
-                        Some(self.get_messages_by_offset(offset, count))
-                    })
+                    time_indexes
+                        .iter()
+                        .rposition(|time_index| time_index.timestamp <= timestamp)
+                        .map(|idx| {
+                            let start_offset =
+                                segment.start_offset + time_indexes[idx].relative_offset as u64;
+                            trace!(
+                                "Found start offset: {} for timestamp: {}.",
+                                start_offset,
+                                timestamp
+                            );
+
+                            //This is problematic because I can't get an accurate start_offset, only an approximation.
+                            self.get_messages_by_offset(start_offset, count)
+                        })
+                })
             })
-        });
+            .or_else(|| {
+                let first_time_index = TimeIndex::default();
+                let offset = first_time_index.relative_offset as u64;
+                Some(self.get_messages_by_offset(offset, count))
+            });
 
         match result {
             Some(res) => res.await,

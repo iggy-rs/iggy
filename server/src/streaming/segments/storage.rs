@@ -23,7 +23,8 @@ use tracing::{error, info};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
-const INDEX_SIZE: u32 = 4;
+const INDEX_SIZE: u32 = 8;
+const TIME_INDEX_SIZE: u32 = 12;
 const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
@@ -172,7 +173,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn load_message_batches(
         &self,
         segment: &Segment,
-        index_range: IndexRange,
+        index_range: &IndexRange,
     ) -> Result<Vec<Arc<MessageBatch>>, IggyError> {
         let mut batches = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
@@ -241,7 +242,7 @@ impl SegmentStorage for FileSegmentStorage {
         let mut message_ids = Vec::new();
         load_message_batches_by_range(
             segment,
-            IndexRange::max_range(),
+            &IndexRange::max_range(),
             |batch: Arc<MessageBatch>| {
                 message_ids.extend(
                     batch
@@ -260,7 +261,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError> {
         load_message_batches_by_range(
             segment,
-            IndexRange::max_range(),
+            &IndexRange::max_range(),
             |batch: Arc<MessageBatch>| {
                 let messages = batch.into_messages()?;
                 for message in messages {
@@ -295,7 +296,7 @@ impl SegmentStorage for FileSegmentStorage {
             return Ok(EMPTY_INDEXES);
         }
 
-        let indexes_count = file_size / 8;
+        let indexes_count = file_size / INDEX_SIZE as usize;
         let mut indexes = Vec::with_capacity(indexes_count);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for idx_num in 0..indexes_count {
@@ -354,7 +355,7 @@ impl SegmentStorage for FileSegmentStorage {
             return Ok(None);
         }
 
-        let mut file = file::open(&segment.index_path).await?;
+        let file = file::open(&segment.index_path).await?;
         let file_length = file.metadata().await?.len() as u32;
         if file_length == 0 {
             trace!("Index file is empty.");
@@ -368,35 +369,40 @@ impl SegmentStorage for FileSegmentStorage {
 
         let relative_start_offset = (index_start_offset - segment_start_offset) as u32;
         let relative_end_offset = (index_end_offset - segment_start_offset) as u32;
-        let start_seek_position = relative_start_offset * INDEX_SIZE;
-        let mut end_seek_position = relative_end_offset * INDEX_SIZE;
-        if end_seek_position >= file_length {
-            end_seek_position = file_length - INDEX_SIZE;
-        }
-
-        if start_seek_position >= end_seek_position {
-            trace!(
-                "Start seek position: {} is greater than or equal to end seek position: {}.",
-                start_seek_position,
-                end_seek_position
-            );
-            return Ok(None);
-        }
+        let start_seek_position = file_length;
 
         trace!(
-            "Seeking to index range: {}...{}, position range: {}...{}",
+            "Seeking to index range: {}...{}",
             relative_start_offset,
             relative_end_offset,
-            start_seek_position,
-            end_seek_position
         );
-        file.seek(SeekFrom::Start(start_seek_position as u64))
+
+        let mut index_range = IndexRange::default();
+        let mut start_position = 0;
+        let mut end_position = 0;
+        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        reader
+            .seek(SeekFrom::End(start_seek_position as i64))
             .await?;
-        let start_position = file.read_u32_le().await?;
-        file.seek(SeekFrom::Start(end_seek_position as u64)).await?;
-        let mut end_position = file.read_u32_le().await?;
-        if end_position == 0 {
-            end_position = file_length;
+        while reader.buffer().has_remaining() {
+            let position = reader.read_u32_le().await?;
+            let relative_offset = reader.read_u32_le().await?;
+            if relative_offset >= relative_end_offset {
+                end_position = position;
+                index_range.end = Index {
+                    relative_offset,
+                    position,
+                }
+            }
+
+            if relative_offset <= relative_start_offset {
+                start_position = position;
+                index_range.end = Index {
+                    relative_offset,
+                    position,
+                };
+                break;
+            }
         }
 
         trace!(
@@ -406,17 +412,7 @@ impl SegmentStorage for FileSegmentStorage {
             start_position,
             end_position
         );
-
-        Ok(Some(IndexRange {
-            start: Index {
-                relative_offset: relative_start_offset,
-                position: start_position,
-            },
-            end: Index {
-                relative_offset: relative_end_offset,
-                position: end_position,
-            },
-        }))
+        Ok(Some(index_range))
     }
 
     async fn save_index(&self, segment: &Segment) -> Result<(), IggyError> {
@@ -442,7 +438,7 @@ impl SegmentStorage for FileSegmentStorage {
             return Ok(EMPTY_TIME_INDEXES);
         }
 
-        let indexes_count = file_size / 12;
+        let indexes_count = file_size / TIME_INDEX_SIZE as usize;
         let mut indexes = Vec::with_capacity(indexes_count);
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for idx_num in 0..indexes_count {
@@ -490,8 +486,8 @@ impl SegmentStorage for FileSegmentStorage {
             return Ok(None);
         }
 
-        let indexes_count = file_size / 8;
-        let last_index_position = file_size - 8;
+        let indexes_count = file_size / TIME_INDEX_SIZE as usize;
+        let last_index_position = file_size - TIME_INDEX_SIZE as usize;
         file.seek(SeekFrom::Start(last_index_position as u64))
             .await?;
         let timestamp = file.read_u64_le().await?;
@@ -525,7 +521,7 @@ impl SegmentStorage for FileSegmentStorage {
 
 async fn load_message_batches_by_range(
     segment: &Segment,
-    index_range: IndexRange,
+    index_range: &IndexRange,
     mut on_batch: impl FnMut(Arc<MessageBatch>) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;

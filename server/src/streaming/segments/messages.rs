@@ -70,7 +70,7 @@ impl Segment {
     pub async fn get_all_batches(&self) -> Result<Vec<Arc<MessageBatch>>, IggyError> {
         self.storage
             .segment
-            .load_message_batches(self, IndexRange::max_range())
+            .load_message_batches(self, &IndexRange::max_range())
             .await
     }
 
@@ -138,11 +138,14 @@ impl Segment {
             return Ok(EMPTY_MESSAGES);
         }
 
-        let relative_start_offset = (start_offset - self.start_offset) as u32;
-        let relative_end_offset = (end_offset - self.start_offset) as u32;
-
-        let index_range =
-            match self.load_highest_lower_bound_index(relative_start_offset, relative_end_offset) {
+        if let Some(indices) = &self.indexes {
+            let relative_start_offset = (start_offset - self.start_offset) as u32;
+            let relative_end_offset = (end_offset - self.start_offset) as u32;
+            let index_range = match self.load_highest_lower_bound_index(
+                indices,
+                relative_start_offset,
+                relative_end_offset,
+            ) {
                 Ok(range) => range,
                 Err(_) => {
                     trace!(
@@ -154,13 +157,28 @@ impl Segment {
                 }
             };
 
-        self.load_messages_from_segment_file(index_range, start_offset, end_offset)
-            .await
+            return self
+                .load_messages_from_segment_file(&index_range, start_offset, end_offset)
+                .await;
+        }
+
+        match self
+            .storage
+            .segment
+            .load_index_range(self, self.start_offset, start_offset, end_offset)
+            .await?
+        {
+            Some(index_range) => {
+                self.load_messages_from_segment_file(&index_range, start_offset, end_offset)
+                    .await
+            }
+            None => Ok(EMPTY_MESSAGES),
+        }
     }
 
     async fn load_messages_from_segment_file(
         &self,
-        index_range: IndexRange,
+        index_range: &IndexRange,
         start_offset: u64,
         end_offset: u64,
     ) -> Result<Vec<Message>, IggyError> {

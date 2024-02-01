@@ -3,7 +3,6 @@ use crate::client::Client;
 use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
-use bytes::BufMut;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
 use rustls::client::{ServerCertVerified, ServerCertVerifier};
 use rustls::{Certificate, ServerName};
@@ -120,16 +119,16 @@ impl BinaryClient for QuicClient {
 
         let connection = self.connection.lock().await;
         if let Some(connection) = connection.as_ref() {
-            let payload_length = payload.len() + 4;
-            let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
-            #[allow(clippy::cast_possible_truncation)]
-            buffer.put_u32_le(payload_length as u32);
-            buffer.put_u32_le(command);
-            buffer.extend(payload);
+            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
 
             let (mut send, mut recv) = connection.open_bi().await?;
-            send.write_all(&buffer).await?;
+            trace!("Sending a QUIC request...");
+            send.write_all(&(payload_length as u32).to_le_bytes())
+                .await?;
+            send.write_all(&command.to_le_bytes()).await?;
+            send.write_all(payload).await?;
             send.finish().await?;
+            trace!("Sent a QUIC request, waiting for a response...");
             return self.handle_response(&mut recv).await;
         }
 

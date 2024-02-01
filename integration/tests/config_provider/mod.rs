@@ -1,4 +1,3 @@
-use iggy::utils::byte_size::IggyByteSize;
 use integration::file::{file_exists, get_root_path};
 use serial_test::serial;
 use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
@@ -36,32 +35,60 @@ async fn validate_server_config_json_from_repository() {
 #[serial]
 #[tokio::test]
 async fn validate_custom_env_provider() {
-    env::set_var("IGGY_SYSTEM_DATABASE_PATH", "awesome_database_path");
-    env::set_var("IGGY_QUIC_DATAGRAM_SEND_BUFFER_SIZE", "1KB");
-    env::set_var("IGGY_QUIC_CERTIFICATE_SELF_SIGNED", "false");
-    env::set_var("IGGY_HTTP_ENABLED", "false");
-    env::set_var("IGGY_SYSTEM_PARTITION_MESSAGES_REQUIRED_TO_SAVE", "42");
+    let expected_database_path = "awesome_database_path";
+    let expected_datagram_send_buffer_size = "1 KB";
+    let expected_quic_certificate_self_signed = false;
+    let expected_http_enabled = false;
+    let expected_tcp_enabled = "false";
+    let expected_message_saver_enabled = false;
+    let expected_message_expiry = "10s";
+
+    env::set_var("IGGY_SYSTEM_DATABASE_PATH", expected_database_path);
+    env::set_var(
+        "IGGY_QUIC_DATAGRAM_SEND_BUFFER_SIZE",
+        expected_datagram_send_buffer_size,
+    );
+    env::set_var(
+        "IGGY_QUIC_CERTIFICATE_SELF_SIGNED",
+        expected_quic_certificate_self_signed.to_string(),
+    );
+    env::set_var("IGGY_HTTP_ENABLED", expected_http_enabled.to_string());
+    env::set_var("IGGY_TCP_ENABLED", expected_tcp_enabled);
+    env::set_var(
+        "IGGY_MESSAGE_SAVER_ENABLED",
+        expected_message_saver_enabled.to_string(),
+    );
+    env::set_var("IGGY_SYSTEM_RETENTION_POLICY_MESSAGE_EXPIRY", "10s");
 
     let config_path = get_root_path().join("../configs/server.toml");
-
     let file_config_provider = FileConfigProvider::new(config_path.as_path().display().to_string());
     let config = file_config_provider
         .load_config()
         .await
         .expect("Failed to load default server.toml config");
 
-    assert_eq!(config.system.database.path, "awesome_database_path");
+    assert_eq!(config.system.database.path, expected_database_path);
     assert_eq!(
-        config.quic.datagram_send_buffer_size,
-        "1KB".parse::<IggyByteSize>().unwrap()
+        config.quic.datagram_send_buffer_size.to_string(),
+        expected_datagram_send_buffer_size
     );
-    assert!(!config.quic.certificate.self_signed);
-    assert!(!config.http.enabled);
-    assert_eq!(config.system.partition.messages_required_to_save, 42);
+    assert_eq!(
+        config.quic.certificate.self_signed,
+        expected_quic_certificate_self_signed
+    );
+    assert_eq!(config.http.enabled, expected_http_enabled);
+    assert_eq!(config.tcp.enabled.to_string(), expected_tcp_enabled);
+    assert_eq!(config.message_saver.enabled, expected_message_saver_enabled);
+    assert_eq!(
+        config.system.retention_policy.message_expiry.to_string(),
+        expected_message_expiry
+    );
 
     env::remove_var("IGGY_SYSTEM_DATABASE_PATH");
     env::remove_var("IGGY_QUIC_DATAGRAM_SEND_BUFFER_SIZE");
     env::remove_var("IGGY_QUIC_CERTIFICATE_SELF_SIGNED");
     env::remove_var("IGGY_HTTP_ENABLED");
-    env::remove_var("IGGY_SYSTEM_PARTITION_MESSAGES_REQUIRED_TO_SAVE");
+    env::remove_var("IGGY_TCP_ENABLED");
+    env::remove_var("IGGY_MESSAGE_SAVER_ENABLED");
+    env::remove_var("IGGY_SYSTEM_RETENTION_POLICY_MESSAGE_EXPIRY");
 }

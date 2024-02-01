@@ -64,8 +64,7 @@ impl System {
                 .increment_partitions(stream.get_partitions_count());
             self.metrics
                 .increment_segments(stream.get_segments_count().await);
-            self.metrics
-                .increment_messages(stream.get_messages_count().await);
+            self.metrics.increment_messages(stream.get_messages_count());
 
             self.streams_ids
                 .insert(stream.name.clone(), stream.stream_id);
@@ -260,8 +259,7 @@ impl System {
         self.metrics.decrement_topics(stream.get_topics_count());
         self.metrics
             .decrement_partitions(stream.get_partitions_count());
-        self.metrics
-            .decrement_messages(stream.get_messages_count().await);
+        self.metrics.decrement_messages(stream.get_messages_count());
         self.metrics
             .decrement_segments(stream.get_segments_count().await);
 

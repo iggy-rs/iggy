@@ -1981,6 +1981,8 @@ dependencies = [
  "sled",
  "tokio",
  "toml",
+ "tracing",
+ "tracing-subscriber",
  "uuid",
  "xxhash-rust",
 ]

@@ -3,6 +3,7 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -10,7 +11,7 @@ const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
 impl Segment {
     pub fn get_messages_count(&self) -> u64 {
-        if self.current_size_bytes == 0 {
+        if self.size_bytes == 0 {
             return 0;
         }
 
@@ -120,7 +121,7 @@ impl Segment {
                 let start_position = start_index.position;
                 let end_position = match end_index {
                     Some(index) => index.position,
-                    None => self.current_size_bytes,
+                    None => self.size_bytes,
                 };
 
                 let index_range = IndexRange {
@@ -184,36 +185,38 @@ impl Segment {
             ));
         }
 
-        let len = messages.len();
+        let messages_count = messages.len();
 
         let unsaved_messages = self.unsaved_messages.get_or_insert_with(Vec::new);
-        unsaved_messages.reserve(len);
+        unsaved_messages.reserve(messages_count);
 
         if let Some(indexes) = &mut self.indexes {
-            indexes.reserve(len);
+            indexes.reserve(messages_count);
         }
 
         if let Some(time_indexes) = &mut self.time_indexes {
-            time_indexes.reserve(len);
+            time_indexes.reserve(messages_count);
         }
 
         // Not the prettiest code. It's done this way to avoid repeatably
         // checking if indexes and time_indexes are Some or None.
+        let mut messages_size = 0;
         if self.indexes.is_some() && self.time_indexes.is_some() {
             for message in messages {
                 let relative_offset = (message.offset - self.start_offset) as u32;
 
                 self.indexes.as_mut().unwrap().push(Index {
                     relative_offset,
-                    position: self.current_size_bytes,
+                    position: self.size_bytes,
                 });
 
                 self.time_indexes.as_mut().unwrap().push(TimeIndex {
                     relative_offset,
                     timestamp: message.timestamp,
                 });
-
-                self.current_size_bytes += message.get_size_bytes();
+                let message_size = message.get_size_bytes();
+                self.size_bytes += message_size;
+                messages_size += message_size;
                 self.current_offset = message.offset;
                 unsaved_messages.push(message.clone());
             }
@@ -223,10 +226,11 @@ impl Segment {
 
                 self.indexes.as_mut().unwrap().push(Index {
                     relative_offset,
-                    position: self.current_size_bytes,
+                    position: self.size_bytes,
                 });
-
-                self.current_size_bytes += message.get_size_bytes();
+                let message_size = message.get_size_bytes();
+                self.size_bytes += message_size;
+                messages_size += message_size;
                 self.current_offset = message.offset;
                 unsaved_messages.push(message.clone());
             }
@@ -238,18 +242,34 @@ impl Segment {
                     relative_offset,
                     timestamp: message.timestamp,
                 });
-
-                self.current_size_bytes += message.get_size_bytes();
+                let message_size = message.get_size_bytes();
+                self.size_bytes += message_size;
+                messages_size += message_size;
                 self.current_offset = message.offset;
                 unsaved_messages.push(message.clone());
             }
         } else {
             for message in messages {
-                self.current_size_bytes += message.get_size_bytes();
+                let message_size = message.get_size_bytes();
+                self.size_bytes += message_size;
+                messages_size += message_size;
                 self.current_offset = message.offset;
                 unsaved_messages.push(message.clone());
             }
         }
+
+        self.size_of_parent_stream
+            .fetch_add(messages_size as u64, Ordering::SeqCst);
+        self.size_of_parent_topic
+            .fetch_add(messages_size as u64, Ordering::SeqCst);
+        self.size_of_parent_partition
+            .fetch_add(messages_size as u64, Ordering::SeqCst);
+        self.messages_count_of_parent_stream
+            .fetch_add(messages_count as u64, Ordering::SeqCst);
+        self.messages_count_of_parent_topic
+            .fetch_add(messages_count as u64, Ordering::SeqCst);
+        self.messages_count_of_parent_partition
+            .fetch_add(messages_count as u64, Ordering::SeqCst);
 
         Ok(())
     }
@@ -273,7 +293,7 @@ impl Segment {
         );
 
         let saved_bytes = storage.save_messages(self, unsaved_messages).await?;
-        let current_position = self.current_size_bytes - saved_bytes;
+        let current_position = self.size_bytes - saved_bytes;
         storage
             .save_index(self, current_position, unsaved_messages)
             .await?;

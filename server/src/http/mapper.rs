@@ -22,8 +22,8 @@ pub async fn map_stream(stream: &Stream) -> StreamDetails {
         created_at: stream.created_at,
         name: stream.name.clone(),
         topics_count: topics.len() as u32,
-        size_bytes: stream.get_size().await,
-        messages_count: stream.get_messages_count().await,
+        size_bytes: stream.get_size(),
+        messages_count: stream.get_messages_count(),
         topics,
     };
     stream_details.topics.sort_by(|a, b| a.id.cmp(&b.id));
@@ -37,9 +37,9 @@ pub async fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Strea
             id: stream.stream_id,
             created_at: stream.created_at,
             name: stream.name.clone(),
-            size_bytes: stream.get_size().await,
+            size_bytes: stream.get_size(),
             topics_count: stream.get_topics().len() as u32,
-            messages_count: stream.get_messages_count().await,
+            messages_count: stream.get_messages_count(),
         };
         streams_data.push(stream);
     }
@@ -55,9 +55,9 @@ pub async fn map_topics(topics: &[&Topic]) -> Vec<iggy::models::topic::Topic> {
             id: topic.topic_id,
             created_at: topic.created_at,
             name: topic.name.clone(),
-            size: topic.get_size().await,
+            size: topic.get_size(),
             partitions_count: topic.get_partitions().len() as u32,
-            messages_count: topic.get_messages_count().await,
+            messages_count: topic.get_messages_count(),
             message_expiry: topic.message_expiry,
             max_topic_size: topic.max_topic_size,
             replication_factor: topic.replication_factor,
@@ -73,8 +73,8 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
         id: topic.topic_id,
         created_at: topic.created_at,
         name: topic.name.clone(),
-        size: topic.get_size().await,
-        messages_count: topic.get_messages_count().await,
+        size: topic.get_size(),
+        messages_count: topic.get_messages_count(),
         partitions_count: topic.get_partitions().len() as u32,
         partitions: Vec::new(),
         message_expiry: topic.message_expiry,

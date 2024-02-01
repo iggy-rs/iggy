@@ -1,4 +1,6 @@
-use crate::server::scenarios::{message_headers_scenario, system_scenario, user_scenario};
+use crate::server::scenarios::{
+    message_headers_scenario, stream_size_validation_scenario, system_scenario, user_scenario,
+};
 use integration::{http_client::HttpClientFactory, test_server::TestServer};
 use serial_test::parallel;
 
@@ -30,4 +32,14 @@ async fn message_headers_scenario_should_be_valid() {
     let server_addr = test_server.get_http_api_addr().unwrap();
     let client_factory = HttpClientFactory { server_addr };
     message_headers_scenario::run(&client_factory).await;
+}
+
+#[tokio::test]
+#[parallel]
+async fn stream_size_validation_scenario_should_be_valid() {
+    let mut test_server = TestServer::default();
+    test_server.start();
+    let server_addr = test_server.get_http_api_addr().unwrap();
+    let client_factory = HttpClientFactory { server_addr };
+    stream_size_validation_scenario::run(&client_factory).await;
 }

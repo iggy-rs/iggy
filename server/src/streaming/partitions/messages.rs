@@ -4,25 +4,14 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::utils::random_id;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
-use std::sync::Arc;
+use std::sync::{atomic::Ordering, Arc};
 use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
 impl Partition {
     pub fn get_messages_count(&self) -> u64 {
-        let first_segment = self.segments.first();
-        if first_segment.is_none() {
-            return 0;
-        }
-
-        let first_segment = first_segment.unwrap();
-        if first_segment.current_size_bytes == 0 {
-            return 0;
-        }
-
-        let last_segment = self.segments.last().unwrap();
-        last_segment.current_offset - first_segment.start_offset + 1
+        self.messages_count.load(Ordering::SeqCst)
     }
 
     pub async fn get_messages_by_timestamp(
@@ -252,7 +241,7 @@ impl Partition {
         let mut remaining_size = size_bytes as u64;
         let mut messages = Vec::new();
         for segment in self.segments.iter().rev() {
-            let segment_size_bytes = segment.current_size_bytes as u64;
+            let segment_size_bytes = segment.size_bytes as u64;
             if segment_size_bytes > remaining_size {
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
                 let partial_messages = segment.get_newest_messages_by_size(remaining_size).await?;
@@ -331,7 +320,7 @@ impl Partition {
         }
 
         let mut appendable_messages = Vec::with_capacity(messages.len());
-        if let Some(message_deduplicator) = &mut self.message_deduplicator {
+        if let Some(message_deduplicator) = &self.message_deduplicator {
             for mut message in messages {
                 if message.id == 0 {
                     message.id = random_id::get_uuid();
@@ -403,6 +392,8 @@ impl Partition {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::AtomicU64;
+
     use super::*;
     use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
     use crate::streaming::partitions::create_messages;
@@ -458,6 +449,10 @@ mod tests {
             config,
             storage,
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         )
     }
 }

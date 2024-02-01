@@ -4,6 +4,7 @@ use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::IggyTimestamp;
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 pub const LOG_EXTENSION: &str = "log";
@@ -22,7 +23,13 @@ pub struct Segment {
     pub index_path: String,
     pub log_path: String,
     pub time_index_path: String,
-    pub current_size_bytes: u32,
+    pub size_bytes: u32,
+    pub size_of_parent_stream: Arc<AtomicU64>,
+    pub size_of_parent_topic: Arc<AtomicU64>,
+    pub size_of_parent_partition: Arc<AtomicU64>,
+    pub messages_count_of_parent_stream: Arc<AtomicU64>,
+    pub messages_count_of_parent_topic: Arc<AtomicU64>,
+    pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
     pub(crate) message_expiry: Option<u32>,
     pub(crate) unsaved_messages: Option<Vec<Arc<Message>>>,
@@ -33,6 +40,7 @@ pub struct Segment {
 }
 
 impl Segment {
+    #[allow(clippy::too_many_arguments)]
     pub fn create(
         stream_id: u32,
         topic_id: u32,
@@ -41,6 +49,12 @@ impl Segment {
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
         message_expiry: Option<u32>,
+        size_of_parent_stream: Arc<AtomicU64>,
+        size_of_parent_topic: Arc<AtomicU64>,
+        size_of_parent_partition: Arc<AtomicU64>,
+        messages_count_of_parent_stream: Arc<AtomicU64>,
+        messages_count_of_parent_topic: Arc<AtomicU64>,
+        messages_count_of_parent_partition: Arc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
 
@@ -54,7 +68,7 @@ impl Segment {
             log_path: Self::get_log_path(&path),
             index_path: Self::get_index_path(&path),
             time_index_path: Self::get_time_index_path(&path),
-            current_size_bytes: 0,
+            size_bytes: 0,
             message_expiry,
             indexes: match config.segment.cache_indexes {
                 true => Some(Vec::new()),
@@ -66,13 +80,19 @@ impl Segment {
             },
             unsaved_messages: None,
             is_closed: false,
+            size_of_parent_stream,
+            size_of_parent_partition,
+            size_of_parent_topic,
+            messages_count_of_parent_stream,
+            messages_count_of_parent_topic,
+            messages_count_of_parent_partition,
             config,
             storage,
         }
     }
 
     pub async fn is_full(&self) -> bool {
-        if self.current_size_bytes >= self.config.segment.size.as_bytes_u64() as u32 {
+        if self.size_bytes >= self.config.segment.size.as_bytes_u64() as u32 {
             return true;
         }
 
@@ -131,6 +151,12 @@ mod tests {
         let index_path = Segment::get_index_path(&path);
         let time_index_path = Segment::get_time_index_path(&path);
         let message_expiry = Some(10);
+        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let size_of_parent_topic = Arc::new(AtomicU64::new(0));
+        let size_of_parent_partition = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_topic = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_partition = Arc::new(AtomicU64::new(0));
 
         let segment = Segment::create(
             stream_id,
@@ -140,6 +166,12 @@ mod tests {
             config,
             storage,
             message_expiry,
+            size_of_parent_stream,
+            size_of_parent_topic,
+            size_of_parent_partition,
+            messages_count_of_parent_stream,
+            messages_count_of_parent_topic,
+            messages_count_of_parent_partition,
         );
 
         assert_eq!(segment.stream_id, stream_id);
@@ -148,7 +180,7 @@ mod tests {
         assert_eq!(segment.start_offset, start_offset);
         assert_eq!(segment.current_offset, 0);
         assert_eq!(segment.end_offset, 0);
-        assert_eq!(segment.current_size_bytes, 0);
+        assert_eq!(segment.size_bytes, 0);
         assert_eq!(segment.log_path, log_path);
         assert_eq!(segment.index_path, index_path);
         assert_eq!(segment.time_index_path, time_index_path);
@@ -174,6 +206,13 @@ mod tests {
             },
             ..Default::default()
         });
+        let message_expiry = None;
+        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let size_of_parent_topic = Arc::new(AtomicU64::new(0));
+        let size_of_parent_partition = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_topic = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_partition = Arc::new(AtomicU64::new(0));
 
         let segment = Segment::create(
             stream_id,
@@ -182,7 +221,13 @@ mod tests {
             start_offset,
             config,
             storage,
-            None,
+            message_expiry,
+            size_of_parent_stream,
+            size_of_parent_topic,
+            size_of_parent_partition,
+            messages_count_of_parent_stream,
+            messages_count_of_parent_topic,
+            messages_count_of_parent_partition,
         );
 
         assert!(segment.indexes.is_none());
@@ -202,6 +247,13 @@ mod tests {
             },
             ..Default::default()
         });
+        let message_expiry = None;
+        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let size_of_parent_topic = Arc::new(AtomicU64::new(0));
+        let size_of_parent_partition = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_topic = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_partition = Arc::new(AtomicU64::new(0));
 
         let segment = Segment::create(
             stream_id,
@@ -210,9 +262,14 @@ mod tests {
             start_offset,
             config,
             storage,
-            None,
+            message_expiry,
+            size_of_parent_stream,
+            size_of_parent_topic,
+            size_of_parent_partition,
+            messages_count_of_parent_stream,
+            messages_count_of_parent_topic,
+            messages_count_of_parent_partition,
         );
-
         assert!(segment.time_indexes.is_none());
     }
 }

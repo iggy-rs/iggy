@@ -174,8 +174,8 @@ impl Storage<Segment> for FileSegmentStorage {
         let segment_size = segment.size_bytes;
         let segment_count_of_messages = segment.get_messages_count();
         info!(
-            "Deleting segment of size {} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
-            segment_size, segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
+            "Deleting segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
+            segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
         );
         self.persister.delete(&segment.log_path).await?;
         self.persister.delete(&segment.index_path).await?;
@@ -199,8 +199,8 @@ impl Storage<Segment> for FileSegmentStorage {
             .messages_count_of_parent_partition
             .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
         info!(
-            "Deleted segment of size {} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-            segment_size, segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
+            "Deleted segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+            segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
         );
         Ok(())
     }

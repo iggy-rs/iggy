@@ -3,7 +3,6 @@ use crate::client::Client;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
-use bytes::BufMut;
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -206,15 +205,11 @@ impl BinaryClient for TcpClient {
 
         let mut stream = self.stream.lock().await;
         if let Some(stream) = stream.as_mut() {
-            let payload_length = payload.len() + 4;
-            let mut buffer = Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + payload_length);
-            #[allow(clippy::cast_possible_truncation)]
-            buffer.put_u32_le(payload_length as u32);
-            buffer.put_u32_le(command);
-            buffer.extend(payload);
-
+            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
             trace!("Sending a TCP request...");
-            stream.write(&buffer).await?;
+            stream.write(&(payload_length as u32).to_le_bytes()).await?;
+            stream.write(&command.to_le_bytes()).await?;
+            stream.write(payload).await?;
             trace!("Sent a TCP request, waiting for a response...");
 
             let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
@@ -283,7 +278,7 @@ impl TcpClient {
                 || status == IggyErrorDiscriminants::ConsumerGroupNameAlreadyExists as u32
             {
                 tracing::debug!(
-                    "Recieved a server resource already exists response: {} ({})",
+                    "Received a server resource already exists response: {} ({})",
                     status,
                     IggyError::from_code_as_string(status)
                 )

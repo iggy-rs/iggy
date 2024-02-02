@@ -218,6 +218,10 @@ impl Storage<Topic> for FileTopicStorage {
                 topic.config.clone(),
                 topic.storage.clone(),
                 topic.message_expiry,
+                topic.messages_count_of_parent_stream.clone(),
+                topic.messages_count.clone(),
+                topic.size_of_parent_stream.clone(),
+                topic.size_bytes.clone(),
             );
             unloaded_partitions.push(partition);
         }

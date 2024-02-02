@@ -55,6 +55,8 @@ impl Stream {
             partitions_count,
             self.config.clone(),
             self.storage.clone(),
+            self.size_bytes.clone(),
+            self.messages_count.clone(),
             message_expiry,
             max_topic_size,
             replication_factor,

@@ -212,6 +212,12 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.config.clone(),
                 partition.storage.clone(),
                 partition.message_expiry,
+                partition.size_of_parent_stream.clone(),
+                partition.size_of_parent_topic.clone(),
+                partition.size_bytes.clone(),
+                partition.messages_count_of_parent_stream.clone(),
+                partition.messages_count_of_parent_topic.clone(),
+                partition.messages_count.clone(),
             );
             segment.load().await?;
             if !segment.is_closed {
@@ -220,7 +226,7 @@ impl Storage<Partition> for FilePartitionStorage {
 
             // If the first segment has at least a single message, we should increment the offset.
             if !partition.should_increment_offset {
-                partition.should_increment_offset = segment.current_size_bytes > 0;
+                partition.should_increment_offset = segment.size_bytes > 0;
             }
 
             if partition.config.partition.validate_checksum {

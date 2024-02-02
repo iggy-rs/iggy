@@ -78,7 +78,7 @@ impl System {
             break;
         }
 
-        let mut message_size_bytes = 0u64;
+        let mut messages_size_bytes = 0u64;
         for stream in self.streams.values() {
             for topic in stream.topics.values() {
                 for partition in topic.partitions.values() {
@@ -86,12 +86,12 @@ impl System {
                     stats.messages_count += partition.get_messages_count();
                     stats.segments_count += partition.segments.len() as u32;
                     for segment in &partition.segments {
-                        message_size_bytes += segment.current_size_bytes as u64;
+                        messages_size_bytes += segment.size_bytes as u64;
                     }
                 }
             }
         }
-        stats.messages_size_bytes = message_size_bytes.into();
+        stats.messages_size_bytes = messages_size_bytes.into();
 
         Ok(stats)
     }

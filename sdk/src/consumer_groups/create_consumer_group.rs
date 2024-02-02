@@ -15,7 +15,7 @@ use std::str::from_utf8;
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
 /// - `consumer_group_id` - unique consumer group ID.
-/// - `name` - unique consumer group name.
+/// - `name` - unique consumer group name, max length is 255 characters. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateConsumerGroup {
     /// Unique stream ID (numeric or name).
@@ -26,7 +26,7 @@ pub struct CreateConsumerGroup {
     pub topic_id: Identifier,
     /// Unique consumer group ID.
     pub consumer_group_id: u32,
-    /// Unique consumer group name.
+    /// Unique consumer group name, max length is 255 characters.
     pub name: String,
 }
 

@@ -11,8 +11,8 @@ impl ConsumerOffsetClient for HttpClient {
     async fn store_consumer_offset(&self, command: &StoreConsumerOffset) -> Result<(), IggyError> {
         self.put(
             &get_path(
-                &command.stream_id.as_string(),
-                &command.topic_id.as_string(),
+                &command.stream_id.as_cow_str(),
+                &command.topic_id.as_cow_str(),
             ),
             &command,
         )
@@ -27,8 +27,8 @@ impl ConsumerOffsetClient for HttpClient {
         let response = self
             .get_with_query(
                 &get_path(
-                    &command.stream_id.as_string(),
-                    &command.topic_id.as_string(),
+                    &command.stream_id.as_cow_str(),
+                    &command.topic_id.as_cow_str(),
                 ),
                 &command,
             )

@@ -20,8 +20,8 @@ impl ConsumerGroupClient for HttpClient {
             .get(&format!(
                 "{}/{}",
                 get_path(
-                    &command.stream_id.as_string(),
-                    &command.topic_id.as_string()
+                    &command.stream_id.as_cow_str(),
+                    &command.topic_id.as_cow_str()
                 ),
                 command.consumer_group_id
             ))
@@ -36,8 +36,8 @@ impl ConsumerGroupClient for HttpClient {
     ) -> Result<Vec<ConsumerGroup>, IggyError> {
         let response = self
             .get(&get_path(
-                &command.stream_id.as_string(),
-                &command.topic_id.as_string(),
+                &command.stream_id.as_cow_str(),
+                &command.topic_id.as_cow_str(),
             ))
             .await?;
         let consumer_groups = response.json().await?;
@@ -47,8 +47,8 @@ impl ConsumerGroupClient for HttpClient {
     async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), IggyError> {
         self.post(
             &get_path(
-                &command.stream_id.as_string(),
-                &command.topic_id.as_string(),
+                &command.stream_id.as_cow_str(),
+                &command.topic_id.as_cow_str(),
             ),
             &command,
         )
@@ -60,8 +60,8 @@ impl ConsumerGroupClient for HttpClient {
         let path = format!(
             "{}/{}",
             get_path(
-                &command.stream_id.as_string(),
-                &command.topic_id.as_string()
+                &command.stream_id.as_cow_str(),
+                &command.topic_id.as_cow_str()
             ),
             command.consumer_group_id
         );

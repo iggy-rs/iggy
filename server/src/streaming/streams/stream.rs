@@ -4,7 +4,7 @@ use crate::streaming::topics::topic::Topic;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -15,6 +15,8 @@ pub struct Stream {
     pub topics_path: String,
     pub created_at: u64,
     pub current_topic_id: AtomicU32,
+    pub size_bytes: Arc<AtomicU64>,
+    pub messages_count: Arc<AtomicU64>,
     pub(crate) topics: HashMap<u32, Topic>,
     pub(crate) topics_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
@@ -42,6 +44,8 @@ impl Stream {
             topics_path,
             config,
             current_topic_id: AtomicU32::new(1),
+            size_bytes: Arc::new(AtomicU64::new(0)),
+            messages_count: Arc::new(AtomicU64::new(0)),
             topics: HashMap::new(),
             topics_ids: HashMap::new(),
             storage,
@@ -49,12 +53,8 @@ impl Stream {
         }
     }
 
-    pub async fn get_size(&self) -> IggyByteSize {
-        let mut size_bytes = 0;
-        for topic in self.topics.values() {
-            size_bytes += topic.get_size().await.as_bytes_u64();
-        }
-        IggyByteSize::from(size_bytes)
+    pub fn get_size(&self) -> IggyByteSize {
+        IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
     }
 }
 

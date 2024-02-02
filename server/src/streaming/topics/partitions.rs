@@ -35,6 +35,10 @@ impl Topic {
                 self.config.clone(),
                 self.storage.clone(),
                 self.message_expiry,
+                self.messages_count_of_parent_stream.clone(),
+                self.messages_count.clone(),
+                self.size_of_parent_stream.clone(),
+                self.size_bytes.clone(),
             );
             self.partitions
                 .insert(partition_id, Arc::new(RwLock::new(partition)));
@@ -72,9 +76,10 @@ impl Topic {
         for partition_id in current_partitions_count - count + 1..=current_partitions_count {
             let partition = self.partitions.remove(&partition_id).unwrap();
             let partition = partition.read().await;
-            partition.delete().await?;
+            let partition_messages_count = partition.get_messages_count();
             segments_count += partition.get_segments_count();
-            messages_count += partition.get_messages_count();
+            messages_count += partition_messages_count;
+            partition.delete().await?;
         }
         Ok(Some(DeletedPartitions {
             segments_count,

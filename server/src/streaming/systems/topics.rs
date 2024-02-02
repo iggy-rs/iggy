@@ -131,8 +131,7 @@ impl System {
         self.metrics.decrement_topics(1);
         self.metrics
             .decrement_partitions(topic.get_partitions_count());
-        self.metrics
-            .decrement_messages(topic.get_messages_count().await);
+        self.metrics.decrement_messages(topic.get_messages_count());
         self.metrics
             .decrement_segments(topic.get_segments_count().await);
         let client_manager = self.client_manager.read().await;

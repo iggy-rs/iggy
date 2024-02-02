@@ -15,7 +15,7 @@ derive_more = "0.99.17"
 futures = "0.3.30"
 humantime = "2.1.0"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
-keyring = "2.3.1"
+keyring = "2.3.2"
 libc = "0.2.147"
 predicates = "3.1.0"
 regex = "1.10.3"
@@ -24,10 +24,12 @@ server = { path = "../server" }
 sled = "0.34.7"
 tokio = { version = "1.28.2", features = ["full"] }
 toml = "0.8.8"
+tracing = "0.1"
+tracing-subscriber = "0.3.18"
 uuid = { version = "1.7.0", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.8", features = ["xxh32"] }
 
 # Some tests are failing in CI due to lack of IPv6 interfaces
-# inside the docker container. This is a temporary workaround (hopefully).
+# inside the docker containers. This is a temporary workaround (hopefully).
 [features]
 ci-qemu = []

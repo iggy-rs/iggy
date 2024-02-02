@@ -1,11 +1,8 @@
 use crate::streaming::streams::stream::Stream;
+use std::sync::atomic::Ordering;
 
 impl Stream {
-    pub async fn get_messages_count(&self) -> u64 {
-        let mut messages_count = 0;
-        for topic in self.topics.values() {
-            messages_count += topic.get_messages_count().await;
-        }
-        messages_count
+    pub fn get_messages_count(&self) -> u64 {
+        self.messages_count.load(Ordering::SeqCst)
     }
 }

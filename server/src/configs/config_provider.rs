@@ -8,7 +8,7 @@ use figment::{
 };
 use std::{env, path::Path};
 use toml::{map::Map, Value as TomlValue};
-use tracing::info;
+use tracing::{debug, info};
 
 const DEFAULT_CONFIG_PROVIDER: &str = "file";
 const DEFAULT_CONFIG_PATH: &str = "configs/server.toml";
@@ -70,35 +70,53 @@ impl CustomEnvProvider {
             return;
         }
 
+        debug!("Keys for env variable: {:?}", keys);
+
         let mut current_source = source;
         let mut current_target = target;
+        let mut combined_keys = Vec::new();
 
-        for i in 0..keys.len() {
-            let combined_keys = keys[i..].join("_");
+        for key in keys.iter() {
+            combined_keys.push(key.clone());
+            let key_to_check = combined_keys.join("_");
+            debug!("Checking key: {}", key_to_check);
 
-            if current_source.contains_key(&combined_keys) {
-                current_target.insert(combined_keys, value.clone());
-                return;
-            }
-
-            let key = &keys[i];
-            match current_source.get(key) {
+            match current_source.get(&key_to_check) {
                 Some(FigmentValue::Dict(_, inner_source_dict)) => {
-                    if !current_target.contains_key(key) {
-                        current_target
-                            .insert(key.clone(), FigmentValue::Dict(Tag::Default, Dict::new()));
+                    if !current_target.contains_key(&key_to_check) {
+                        current_target.insert(
+                            key_to_check.clone(),
+                            FigmentValue::Dict(Tag::Default, Dict::new()),
+                        );
+                        debug!(
+                            "Adding empty Dict for key: {} because it was found in current_source",
+                            key_to_check
+                        );
                     }
 
                     if let Some(FigmentValue::Dict(_, ref mut actual_inner_target_dict)) =
-                        current_target.get_mut(key)
+                        current_target.get_mut(&key_to_check)
                     {
                         current_source = inner_source_dict;
                         current_target = actual_inner_target_dict;
+                        combined_keys.clear();
                     } else {
                         return;
                     }
                 }
-                _ => return,
+                Some(FigmentValue::Bool(_, _))
+                | Some(FigmentValue::String(_, _))
+                | Some(FigmentValue::Num(_, _))
+                | Some(FigmentValue::Array(_, _)) => {
+                    debug!("Overriding key: {} with value {:?}", key_to_check, value);
+                    current_target.insert(key_to_check.clone(), value);
+                    combined_keys.clear();
+                    return;
+                }
+
+                _ => {
+                    continue;
+                }
             }
         }
     }

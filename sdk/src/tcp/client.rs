@@ -19,7 +19,6 @@ use tracing::{error, info};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
-const COMMAND_TYPE_BYTES_LENGTH: usize = 4;
 const NAME: &str = "Iggy";
 
 /// TCP client for interacting with the Iggy API.
@@ -201,15 +200,10 @@ impl BinaryClient for TcpClient {
 
         let mut stream = self.stream.lock().await;
         if let Some(stream) = stream.as_mut() {
-            let payload_length = payload.len() + COMMAND_TYPE_BYTES_LENGTH;
-            let mut buffer =
-                Vec::with_capacity(REQUEST_INITIAL_BYTES_LENGTH + COMMAND_TYPE_BYTES_LENGTH);
-            #[allow(clippy::cast_possible_truncation)]
-            buffer.put_u32_le(payload_length as u32);
-            buffer.put_u32_le(command);
-
+            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
             trace!("Sending a TCP request...");
-            stream.write(&buffer).await?;
+            stream.write(&(payload_length as u32).to_le_bytes()).await?;
+            stream.write(&command.to_le_bytes()).await?;
             stream.write(&payload).await?;
             trace!("Sent a TCP request, waiting for a response...");
 
@@ -279,7 +273,7 @@ impl TcpClient {
                 || status == IggyErrorDiscriminants::ConsumerGroupNameAlreadyExists as u32
             {
                 tracing::debug!(
-                    "Recieved a server resource already exists response: {} ({})",
+                    "Received a server resource already exists response: {} ({})",
                     status,
                     IggyError::from_code_as_string(status)
                 )

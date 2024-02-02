@@ -46,6 +46,12 @@ impl Partition {
             self.config.clone(),
             self.storage.clone(),
             self.message_expiry,
+            self.size_of_parent_stream.clone(),
+            self.size_of_parent_topic.clone(),
+            self.size_bytes.clone(),
+            self.messages_count_of_parent_stream.clone(),
+            self.messages_count_of_parent_topic.clone(),
+            self.messages_count.clone(),
         );
         new_segment.persist().await?;
         self.segments.push(new_segment);
@@ -65,6 +71,7 @@ impl Partition {
 
             let segment = segment.unwrap();
             self.storage.segment.delete(segment).await?;
+
             deleted_segment = DeletedSegment {
                 end_offset: segment.end_offset,
                 messages_count: segment.get_messages_count(),

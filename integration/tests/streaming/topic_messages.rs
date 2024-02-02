@@ -11,6 +11,8 @@ use server::streaming::topics::topic::Topic;
 use server::streaming::utils::hash;
 use std::collections::HashMap;
 use std::str::{from_utf8, FromStr};
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
 
 #[tokio::test]
 async fn given_disabled_cache_all_messages_should_be_polled() {
@@ -203,6 +205,8 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         partitions_count,
         setup.config.clone(),
         setup.storage.clone(),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
         None,
         None,
         1,

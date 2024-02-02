@@ -4,6 +4,7 @@ use iggy::models::messages::{Message, MessageState};
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::fs;
 
@@ -23,6 +24,12 @@ async fn should_persist_segment() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
 
         setup
@@ -55,6 +62,12 @@ async fn should_load_existing_segment_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
         setup
             .create_partition_directory(stream_id, topic_id, partition_id)
@@ -76,6 +89,12 @@ async fn should_load_existing_segment_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
         loaded_segment.load().await.unwrap();
         let loaded_messages = loaded_segment.get_messages(0, 10).await.unwrap();
@@ -84,10 +103,7 @@ async fn should_load_existing_segment_from_disk() {
         assert_eq!(loaded_segment.start_offset, segment.start_offset);
         assert_eq!(loaded_segment.current_offset, segment.current_offset);
         assert_eq!(loaded_segment.end_offset, segment.end_offset);
-        assert_eq!(
-            loaded_segment.current_size_bytes,
-            segment.current_size_bytes
-        );
+        assert_eq!(loaded_segment.size_bytes, segment.size_bytes);
         assert_eq!(loaded_segment.is_closed, segment.is_closed);
         assert_eq!(loaded_segment.log_path, segment.log_path);
         assert_eq!(loaded_segment.index_path, segment.index_path);
@@ -111,6 +127,12 @@ async fn should_persist_and_load_segment_with_messages() {
         setup.config.clone(),
         setup.storage.clone(),
         None,
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
     );
 
     setup
@@ -140,6 +162,12 @@ async fn should_persist_and_load_segment_with_messages() {
         setup.config.clone(),
         setup.storage.clone(),
         None,
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
     );
     loaded_segment.load().await.unwrap();
     let messages = loaded_segment
@@ -165,6 +193,12 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         setup.config.clone(),
         setup.storage.clone(),
         Some(message_expiry),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
     );
 
     setup
@@ -210,6 +244,12 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         setup.config.clone(),
         setup.storage.clone(),
         Some(message_expiry),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU64::new(0)),
     );
 
     setup

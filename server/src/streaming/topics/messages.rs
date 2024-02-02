@@ -13,13 +13,8 @@ use std::sync::Arc;
 use tracing::{info, trace, warn};
 
 impl Topic {
-    pub async fn get_messages_count(&self) -> u64 {
-        let mut messages_count = 0;
-        for partition in self.get_partitions() {
-            let partition = partition.read().await;
-            messages_count += partition.get_messages_count();
-        }
-        messages_count
+    pub fn get_messages_count(&self) -> u64 {
+        self.messages_count.load(Ordering::SeqCst)
     }
 
     pub async fn get_messages(
@@ -262,6 +257,7 @@ mod tests {
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
     use iggy::models::messages::MessageState;
+    use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -381,6 +377,8 @@ mod tests {
         let id = 2;
         let name = "test";
         let config = Arc::new(SystemConfig::default());
+        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
 
         Topic::create(
             stream_id,
@@ -389,6 +387,8 @@ mod tests {
             partitions_count,
             config,
             storage,
+            size_of_parent_stream,
+            messages_count_of_parent_stream,
             None,
             None,
             1,

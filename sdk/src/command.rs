@@ -44,6 +44,7 @@ use crate::users::update_permissions::UpdatePermissions;
 use crate::users::update_user::UpdateUser;
 use bytes::BufMut;
 use std::fmt::{Display, Formatter};
+use strum::EnumString;
 
 pub const PING: &str = "ping";
 pub const PING_CODE: u32 = 1;
@@ -130,7 +131,7 @@ pub const JOIN_CONSUMER_GROUP_CODE: u32 = 604;
 pub const LEAVE_CONSUMER_GROUP: &str = "consumer_group.leave";
 pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 605;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, EnumString)]
 pub enum Command {
     Ping(Ping),
     GetStats(GetStats),

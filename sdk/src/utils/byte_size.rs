@@ -1,10 +1,9 @@
+use super::duration::IggyDuration;
 use crate::error::IggyError;
 use byte_unit::{Byte, UnitType};
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-
-use super::duration::IggyDuration;
+use std::{ops::Add, str::FromStr};
 
 /// A struct for representing byte sizes with various utility functions.
 ///
@@ -116,6 +115,14 @@ impl PartialOrd<u64> for IggyByteSize {
 impl fmt::Display for IggyByteSize {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_human_string())
+    }
+}
+
+impl Add for IggyByteSize {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        IggyByteSize(Byte::from_u64(self.as_bytes_u64() + rhs.as_bytes_u64()))
     }
 }
 

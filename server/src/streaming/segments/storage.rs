@@ -14,6 +14,7 @@ use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::io::SeekFrom;
 use std::path::Path;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::log::{trace, warn};
@@ -47,12 +48,13 @@ impl Storage<Segment> for FileSegmentStorage {
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id
         );
         let log_file = file::open(&segment.log_path).await?;
-        let file_size = log_file.metadata().await.unwrap().len() as u32;
-        segment.current_size_bytes = file_size;
+        let file_size = log_file.metadata().await.unwrap().len() as u64;
+        segment.size_bytes = file_size as u32;
+        let messages_count = segment.get_messages_count();
 
         info!(
-            "Segment log file for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {} has {} bytes of size.",
-            segment.start_offset, segment.current_offset, segment.partition_id, segment.topic_id, segment.stream_id, segment.current_size_bytes
+            "Segment log file of size {} for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
+            segment.size_bytes, segment.start_offset, segment.current_offset, segment.partition_id, segment.topic_id, segment.stream_id
         );
 
         if segment.config.segment.cache_indexes {
@@ -100,6 +102,25 @@ impl Storage<Segment> for FileSegmentStorage {
         if segment.is_full().await {
             segment.is_closed = true;
         }
+
+        segment
+            .size_of_parent_stream
+            .fetch_add(file_size, Ordering::SeqCst);
+        segment
+            .size_of_parent_topic
+            .fetch_add(file_size, Ordering::SeqCst);
+        segment
+            .size_of_parent_partition
+            .fetch_add(file_size, Ordering::SeqCst);
+        segment
+            .messages_count_of_parent_stream
+            .fetch_add(messages_count, Ordering::SeqCst);
+        segment
+            .messages_count_of_parent_topic
+            .fetch_add(messages_count, Ordering::SeqCst);
+        segment
+            .messages_count_of_parent_partition
+            .fetch_add(messages_count, Ordering::SeqCst);
 
         Ok(())
     }
@@ -150,15 +171,35 @@ impl Storage<Segment> for FileSegmentStorage {
     }
 
     async fn delete(&self, segment: &Segment) -> Result<(), IggyError> {
+        let segment_size = segment.size_bytes;
+        let segment_count_of_messages = segment.get_messages_count();
         info!(
-            "Deleting segment with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
+            "Deleting segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
             segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
         );
         self.persister.delete(&segment.log_path).await?;
         self.persister.delete(&segment.index_path).await?;
         self.persister.delete(&segment.time_index_path).await?;
+        segment
+            .size_of_parent_stream
+            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+        segment
+            .size_of_parent_topic
+            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+        segment
+            .size_of_parent_partition
+            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
+        segment
+            .messages_count_of_parent_stream
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
+        segment
+            .messages_count_of_parent_topic
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
+        segment
+            .messages_count_of_parent_partition
+            .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
         info!(
-            "Deleted segment with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+            "Deleted segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
             segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
         );
         Ok(())

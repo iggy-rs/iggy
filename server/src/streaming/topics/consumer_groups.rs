@@ -163,6 +163,7 @@ mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
+    use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -308,6 +309,8 @@ mod tests {
         let name = "test";
         let partitions_count = 3;
         let config = Arc::new(SystemConfig::default());
+        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
 
         Topic::create(
             stream_id,
@@ -316,6 +319,8 @@ mod tests {
             partitions_count,
             config,
             storage,
+            size_of_parent_stream,
+            messages_count_of_parent_stream,
             None,
             None,
             1,

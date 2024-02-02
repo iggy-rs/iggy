@@ -2,6 +2,8 @@ use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
 use server::streaming::partitions::partition::Partition;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
 use tokio::fs;
 
 #[tokio::test]
@@ -21,6 +23,10 @@ async fn should_persist_partition_with_segment() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
 
         partition.persist().await.unwrap();
@@ -46,6 +52,10 @@ async fn should_load_existing_partition_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.path, with_segment).await;
@@ -58,6 +68,10 @@ async fn should_load_existing_partition_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
         loaded_partition.load().await.unwrap();
 
@@ -102,6 +116,10 @@ async fn should_delete_existing_partition_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.path, with_segment).await;
@@ -129,6 +147,10 @@ async fn should_purge_existing_partition_on_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.path, with_segment).await;

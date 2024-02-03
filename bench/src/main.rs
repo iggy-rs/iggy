@@ -1,13 +1,4 @@
-mod args;
-mod benchmark_result;
-mod benchmark_runner;
-mod benchmarks;
-mod client_factory;
-mod consumer;
-mod producer;
-mod server_starter;
-
-use crate::{args::common::IggyBenchArgs, benchmark_runner::BenchmarkRunner};
+use bench::{args::common::IggyBenchArgs, benchmark_runner::BenchmarkRunner};
 use clap::Parser;
 use figlet_rs::FIGfont;
 use iggy::error::IggyError;

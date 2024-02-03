@@ -59,7 +59,7 @@ impl System {
             IdKind::String => {
                 self.storage
                     .user
-                    .load_by_username(&user_id.get_string_value()?)
+                    .load_by_username(&user_id.get_cow_str_value()?)
                     .await?
             }
         })

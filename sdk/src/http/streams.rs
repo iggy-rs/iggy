@@ -16,7 +16,7 @@ const PATH: &str = "/streams";
 impl StreamClient for HttpClient {
     async fn get_stream(&self, command: &GetStream) -> Result<StreamDetails, IggyError> {
         let response = self
-            .get(&get_details_path(&command.stream_id.as_string()))
+            .get(&get_details_path(&command.stream_id.as_cow_str()))
             .await?;
         let stream = response.json().await?;
         Ok(stream)
@@ -34,19 +34,19 @@ impl StreamClient for HttpClient {
     }
 
     async fn update_stream(&self, command: &UpdateStream) -> Result<(), IggyError> {
-        self.put(&get_details_path(&command.stream_id.as_string()), command)
+        self.put(&get_details_path(&command.stream_id.as_cow_str()), command)
             .await?;
         Ok(())
     }
 
     async fn delete_stream(&self, command: &DeleteStream) -> Result<(), IggyError> {
-        let path = format!("{}/{}", PATH, command.stream_id.as_string());
+        let path = format!("{}/{}", PATH, command.stream_id.as_cow_str());
         self.delete(&path).await?;
         Ok(())
     }
 
     async fn purge_stream(&self, command: &PurgeStream) -> Result<(), IggyError> {
-        let path = format!("{}/{}/purge", PATH, command.stream_id.as_string());
+        let path = format!("{}/{}/purge", PATH, command.stream_id.as_cow_str());
         self.delete(&path).await?;
         Ok(())
     }

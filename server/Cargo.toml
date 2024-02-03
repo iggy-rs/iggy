@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 build = "src/build.rs"
 
@@ -47,7 +47,7 @@ sled = "0.34.7"
 strip-ansi-escapes = "0.2.0"
 sysinfo = "0.30.5"
 thiserror = "1.0.56"
-tokio = { version = "1.33.0", features = ["full"] }
+tokio = { version = "1.36.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
 toml = "0.8.9"
 tower = { version = "0.4.13" }

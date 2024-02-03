@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use std::ops::Index;
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SmartCache<T: Sizeable + Debug> {
     current_size: u64,
     buffer: Vc<T>,
@@ -69,7 +69,6 @@ where
             removed_size += elem_size;
         }
     }
-
     pub fn purge(&mut self) {
         self.buffer.clear();
         self.memory_tracker.decrement_used_memory(self.current_size);
@@ -99,6 +98,9 @@ where
     pub fn len(&self) -> usize {
         self.buffer.len()
     }
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.buffer.iter()
+    }
 }
 
 impl<T> Index<usize> for SmartCache<T>
@@ -106,7 +108,6 @@ where
     T: Sizeable + Clone + Debug,
 {
     type Output = T;
-
     fn index(&self, index: usize) -> &Self::Output {
         &self.buffer[index]
     }

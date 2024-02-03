@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
 use server::streaming::polling_consumer::PollingConsumer;
@@ -24,6 +25,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             &name,
             partitions_count,
             setup.config.clone(),
+            CompressionAlgorithm::None,
             setup.storage.clone(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -59,6 +61,7 @@ async fn should_load_existing_topic_from_disk() {
             &name,
             partitions_count,
             setup.config.clone(),
+            CompressionAlgorithm::None,
             setup.storage.clone(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -106,6 +109,7 @@ async fn should_delete_existing_topic_from_disk() {
             &name,
             partitions_count,
             setup.config.clone(),
+            CompressionAlgorithm::None,
             setup.storage.clone(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -143,6 +147,7 @@ async fn should_purge_existing_topic_on_disk() {
             &name,
             partitions_count,
             setup.config.clone(),
+            CompressionAlgorithm::None,
             setup.storage.clone(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -162,7 +167,11 @@ async fn should_purge_existing_topic_on_disk() {
         let messages = create_messages();
         let messages_count = messages.len();
         topic
-            .append_messages(&Partitioning::partition_id(1), messages)
+            .append_messages(
+                &Partitioning::partition_id(1),
+                CompressionAlgorithm::None,
+                messages,
+            )
             .await
             .unwrap();
         let loaded_messages = topic

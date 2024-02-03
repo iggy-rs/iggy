@@ -3,7 +3,6 @@ use crate::error::IggyError;
 use crate::messages::send_messages;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::sizeable::Sizeable;
 use crate::utils::{checksum, timestamp::IggyTimestamp};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -12,7 +11,6 @@ use serde_with::serde_as;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use std::sync::Arc;
 
 /// The wrapper on top of the collection of messages that are polled from the partition.
 /// It consists of the following fields:
@@ -40,7 +38,7 @@ pub struct PolledMessages {
 /// - `length`: the length of the payload.
 /// - `payload`: the binary payload of the message.
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Message {
     /// The offset of the message.
     pub offset: u64,
@@ -123,12 +121,6 @@ impl FromStr for MessageState {
     }
 }
 
-impl Sizeable for Arc<Message> {
-    fn get_size_bytes(&self) -> u32 {
-        self.as_ref().get_size_bytes()
-    }
-}
-
 impl Message {
     /// Creates a new message from the `Message` struct being part of `SendMessages` command.
     pub fn from_message(message: &send_messages::Message) -> Self {
@@ -204,5 +196,45 @@ impl Message {
         }
         bytes.put_u32_le(self.length);
         bytes.put_slice(&self.payload);
+    }
+}
+impl BytesSerializable for Message {
+    fn as_bytes(&self) -> Bytes {
+        let size = self.get_size_bytes() as usize;
+        let mut buffer = BytesMut::with_capacity(size);
+        self.extend(&mut buffer);
+        buffer.freeze()
+    }
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
+    where
+        Self: Sized,
+    {
+        let offset = u64::from_le_bytes(bytes[..8].try_into()?);
+        let state_code = MessageState::from_code(bytes[8])?;
+        let timestamp = u64::from_le_bytes(bytes[9..17].try_into()?);
+        let id = u128::from_le_bytes(bytes[17..33].try_into()?);
+        let checksum = u32::from_le_bytes(bytes[33..37].try_into()?);
+
+        let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);
+        let headers = match headers_length {
+            0 => None,
+            _ => {
+                let headers_payload = bytes[41..41 + headers_length as usize].to_owned();
+                let headers = HashMap::from_bytes(Bytes::from(headers_payload))?;
+                Some(headers)
+            }
+        };
+
+        let payload_length = u32::from_le_bytes(bytes[41 + headers_length as usize..].try_into()?);
+        let payload = vec![0; payload_length as usize];
+        Ok(Self::create(
+            offset,
+            state_code,
+            timestamp,
+            id,
+            Bytes::from(payload),
+            checksum,
+            headers,
+        ))
     }
 }

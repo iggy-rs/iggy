@@ -3,6 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -23,6 +24,7 @@ pub struct Topic {
     pub(crate) messages_count_of_parent_stream: Arc<AtomicU64>,
     pub(crate) messages_count: Arc<AtomicU64>,
     pub(crate) config: Arc<SystemConfig>,
+    pub(crate) compression_algorithm: CompressionAlgorithm,
     pub(crate) partitions: HashMap<u32, Arc<RwLock<Partition>>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
@@ -47,6 +49,7 @@ impl Topic {
             "",
             0,
             config,
+            CompressionAlgorithm::None,
             storage,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -64,6 +67,7 @@ impl Topic {
         name: &str,
         partitions_count: u32,
         config: Arc<SystemConfig>,
+        compression_algorithm: CompressionAlgorithm,
         storage: Arc<SystemStorage>,
         size_of_parent_stream: Arc<AtomicU64>,
         messages_count_of_parent_stream: Arc<AtomicU64>,
@@ -80,6 +84,7 @@ impl Topic {
             partitions: HashMap::new(),
             path,
             partitions_path,
+            compression_algorithm,
             storage,
             size_bytes: Arc::new(AtomicU64::new(0)),
             size_of_parent_stream,
@@ -173,6 +178,7 @@ mod tests {
             name,
             partitions_count,
             config,
+            CompressionAlgorithm::None,
             storage,
             messages_count_of_parent_stream,
             size_of_parent_stream,

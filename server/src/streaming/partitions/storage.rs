@@ -221,7 +221,7 @@ impl Storage<Partition> for FilePartitionStorage {
             );
             segment.load().await?;
             if !segment.is_closed {
-                segment.unsaved_messages = Some(Vec::new())
+                segment.unsaved_message_batches = Some(Vec::new())
             }
 
             // If the first segment has at least a single message, we should increment the offset.

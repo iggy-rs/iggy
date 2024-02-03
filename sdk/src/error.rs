@@ -304,6 +304,18 @@ pub enum IggyError {
     CannotCreateConsumerGroupInfo(u32, u32, u32) = 5007,
     #[error("Failed to delete consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.")]
     CannotDeleteConsumerGroupInfo(u32, u32, u32) = 5008,
+    #[error("Failed to compress using lz4.")]
+    CannotCompressUsingLz4(#[from] lzzzz::lz4f::Error) = 6000,
+    #[error("Cannot read batch base offset")]
+    CannotReadBatchBaseOffset = 7000,
+    #[error("Cannot read batch length")]
+    CannotReadBatchLength = 7001,
+    #[error("Cannot read batch last offset delta")]
+    CannotReadLastOffsetDelta = 7002,
+    #[error("Cannot read batch attributes")]
+    CannotReadAttributes = 7003,
+    #[error("Cannot read batch attributes")]
+    CannotReadBatchPayload = 7004,
 }
 
 impl IggyError {

@@ -158,6 +158,8 @@ impl Topic {
 
 #[cfg(test)]
 mod tests {
+    use iggy::compression::compression_algorithm::CompressionAlgorithm;
+
     use super::*;
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
@@ -316,6 +318,7 @@ mod tests {
             name,
             partitions_count,
             config,
+            CompressionAlgorithm::None,
             storage,
             size_of_parent_stream,
             messages_count_of_parent_stream,

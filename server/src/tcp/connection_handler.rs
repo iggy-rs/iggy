@@ -25,7 +25,7 @@ pub(crate) async fn handle_connection(
     loop {
         let read_length = sender.read(&mut initial_buffer).await?;
         if read_length != INITIAL_BYTES_LENGTH {
-            return Err(ServerError::ParseError(format!(
+            return Err(ServerError::CommandLengthError(format!(
                 "Unable to read the TCP request length, expected: {INITIAL_BYTES_LENGTH} bytes, received: {read_length} bytes."
             )));
         }

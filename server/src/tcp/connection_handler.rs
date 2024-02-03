@@ -25,10 +25,9 @@ pub(crate) async fn handle_connection(
     loop {
         let read_length = sender.read(&mut initial_buffer).await?;
         if read_length != INITIAL_BYTES_LENGTH {
-            error!(
-                "Unable to read the TCP request length, expected: {INITIAL_BYTES_LENGTH} bytes, received: {read_length} bytes.",
-            );
-            continue;
+            return Err(ServerError::ParseError(format!(
+                "Unable to read the TCP request length, expected: {INITIAL_BYTES_LENGTH} bytes, received: {read_length} bytes."
+            )));
         }
 
         let length = u32::from_le_bytes(initial_buffer);
@@ -38,11 +37,7 @@ pub(crate) async fn handle_connection(
         sender.read(&mut command_buffer).await?;
         let command = Command::from_bytes(command_buffer.freeze())?;
         debug!("Received a TCP command: {command}, payload size: {length}");
-        let result = command::handle(&command, sender, &session, system.clone()).await;
-        if result.is_err() {
-            error!("Error when handling the TCP request: {:?}", result.err());
-            continue;
-        }
+        command::handle(&command, sender, &session, system.clone()).await?;
         debug!("Sent a TCP response.");
     }
 }

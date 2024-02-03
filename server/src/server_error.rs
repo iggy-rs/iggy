@@ -31,4 +31,6 @@ pub enum ServerError {
     FileReloadFailure,
     #[error("Cache config validation failure: {0}")]
     CacheConfigValidationFailure(String),
+    #[error("Parse error")]
+    ParseError(String),
 }

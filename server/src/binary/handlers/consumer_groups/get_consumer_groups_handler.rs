@@ -18,6 +18,6 @@ pub async fn handle(
     let consumer_groups =
         system.get_consumer_groups(session, &command.stream_id, &command.topic_id)?;
     let consumer_groups = mapper::map_consumer_groups(&consumer_groups).await;
-    sender.send_ok_response(consumer_groups.as_slice()).await?;
+    sender.send_ok_response(&consumer_groups).await?;
     Ok(())
 }

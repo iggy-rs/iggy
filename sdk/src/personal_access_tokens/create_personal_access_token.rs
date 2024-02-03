@@ -4,7 +4,7 @@ use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::str::from_utf8;
@@ -50,22 +50,22 @@ impl Validatable<IggyError> for CreatePersonalAccessToken {
 }
 
 impl BytesSerializable for CreatePersonalAccessToken {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(5 + self.name.len());
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(5 + self.name.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.extend(self.name.as_bytes());
+        bytes.put_slice(self.name.as_bytes());
         bytes.put_u32_le(self.expiry.unwrap_or(0));
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreatePersonalAccessToken, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<CreatePersonalAccessToken, IggyError> {
         if bytes.len() < 8 {
             return Err(IggyError::InvalidCommand);
         }
 
         let name_length = bytes[0];
-        let name = from_utf8(&bytes[1..1 + name_length as usize])?.to_string();
+        let name = from_utf8(&bytes.slice(1..1 + name_length as usize))?.to_string();
         if name.len() != name_length as usize {
             return Err(IggyError::InvalidCommand);
         }
@@ -122,13 +122,13 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let name = "test";
         let expiry = 100;
-        let mut bytes = Vec::new();
+        let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.extend(name.as_bytes());
+        bytes.put_slice(name.as_bytes());
         bytes.put_u32_le(expiry);
 
-        let command = CreatePersonalAccessToken::from_bytes(&bytes);
+        let command = CreatePersonalAccessToken::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

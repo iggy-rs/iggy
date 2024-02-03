@@ -3,6 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -25,14 +26,14 @@ impl Validatable<IggyError> for PurgeStream {
 }
 
 impl BytesSerializable for PurgeStream {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let stream_id_bytes = self.stream_id.as_bytes();
-        let mut bytes = Vec::with_capacity(stream_id_bytes.len());
-        bytes.extend(stream_id_bytes);
-        bytes
+        let mut bytes = BytesMut::with_capacity(stream_id_bytes.len());
+        bytes.put_slice(&stream_id_bytes);
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<PurgeStream, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<PurgeStream, IggyError> {
         if bytes.len() < 5 {
             return Err(IggyError::InvalidCommand);
         }
@@ -61,7 +62,7 @@ mod tests {
         };
 
         let bytes = command.as_bytes();
-        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -71,7 +72,7 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
         let bytes = stream_id.as_bytes();
-        let command = PurgeStream::from_bytes(&bytes);
+        let command = PurgeStream::from_bytes(bytes);
         assert!(command.is_ok());
 
         let command = command.unwrap();

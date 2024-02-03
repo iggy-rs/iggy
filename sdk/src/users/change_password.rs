@@ -4,7 +4,7 @@ use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::users::defaults::*;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
@@ -58,25 +58,25 @@ impl Validatable<IggyError> for ChangePassword {
 }
 
 impl BytesSerializable for ChangePassword {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let user_id_bytes = self.user_id.as_bytes();
-        let mut bytes = Vec::new();
-        bytes.extend(user_id_bytes);
+        let mut bytes = BytesMut::new();
+        bytes.put_slice(&user_id_bytes);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.current_password.len() as u8);
-        bytes.extend(self.current_password.as_bytes());
+        bytes.put_slice(self.current_password.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.new_password.len() as u8);
-        bytes.extend(self.new_password.as_bytes());
-        bytes
+        bytes.put_slice(self.new_password.as_bytes());
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<ChangePassword, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<ChangePassword, IggyError> {
         if bytes.len() < 9 {
             return Err(IggyError::InvalidCommand);
         }
 
-        let user_id = Identifier::from_bytes(bytes)?;
+        let user_id = Identifier::from_bytes(bytes.clone())?;
         let mut position = user_id.get_size_bytes() as usize;
         let current_password_length = bytes[position];
         position += 1;
@@ -121,7 +121,7 @@ mod tests {
         };
 
         let bytes = command.as_bytes();
-        let user_id = Identifier::from_bytes(&bytes).unwrap();
+        let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
         let mut position = user_id.get_size_bytes() as usize;
         let current_password_length = bytes[position];
         position += 1;
@@ -144,16 +144,16 @@ mod tests {
         let user_id = Identifier::numeric(1).unwrap();
         let current_password = "secret";
         let new_password = "topsecret";
-        let mut bytes = Vec::new();
-        bytes.extend(user_id.as_bytes());
+        let mut bytes = BytesMut::new();
+        bytes.put_slice(&user_id.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(current_password.len() as u8);
-        bytes.extend(current_password.as_bytes());
+        bytes.put_slice(current_password.as_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(new_password.len() as u8);
-        bytes.extend(new_password.as_bytes());
+        bytes.put_slice(new_password.as_bytes());
 
-        let command = ChangePassword::from_bytes(&bytes);
+        let command = ChangePassword::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

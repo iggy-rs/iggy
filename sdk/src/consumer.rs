@@ -2,7 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::fmt::Display;
@@ -72,15 +72,15 @@ impl Consumer {
 }
 
 impl BytesSerializable for Consumer {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let id_bytes = self.id.as_bytes();
-        let mut bytes = Vec::with_capacity(1 + id_bytes.len());
+        let mut bytes = BytesMut::with_capacity(1 + id_bytes.len());
         bytes.put_u8(self.kind.as_code());
-        bytes.extend(id_bytes);
-        bytes
+        bytes.put_slice(&id_bytes);
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
     where
         Self: Sized,
     {
@@ -89,7 +89,7 @@ impl BytesSerializable for Consumer {
         }
 
         let kind = ConsumerKind::from_code(bytes[0])?;
-        let id = Identifier::from_bytes(&bytes[1..])?;
+        let id = Identifier::from_bytes(bytes.slice(1..))?;
         let consumer = Consumer { kind, id };
         consumer.validate()?;
         Ok(consumer)

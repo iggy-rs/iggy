@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::validatable::Validatable;
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -19,11 +20,11 @@ impl Validatable<IggyError> for GetStreams {
 }
 
 impl BytesSerializable for GetStreams {
-    fn as_bytes(&self) -> Vec<u8> {
-        Vec::with_capacity(0)
+    fn as_bytes(&self) -> Bytes {
+        Bytes::new()
     }
 
-    fn from_bytes(bytes: &[u8]) -> std::result::Result<GetStreams, IggyError> {
+    fn from_bytes(bytes: Bytes) -> std::result::Result<GetStreams, IggyError> {
         if !bytes.is_empty() {
             return Err(IggyError::InvalidCommand);
         }
@@ -53,15 +54,13 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_empty_bytes() {
-        let bytes: Vec<u8> = vec![];
-        let command = GetStreams::from_bytes(&bytes);
+        let command = GetStreams::from_bytes(Bytes::new());
         assert!(command.is_ok());
     }
 
     #[test]
     fn should_not_be_deserialized_from_empty_bytes() {
-        let bytes: Vec<u8> = vec![0];
-        let command = GetStreams::from_bytes(&bytes);
+        let command = GetStreams::from_bytes(Bytes::from_static(&[0]));
         assert!(command.is_err());
     }
 }

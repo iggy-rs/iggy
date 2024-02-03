@@ -19,9 +19,9 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
     ) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_PERSONAL_ACCESS_TOKENS_CODE, &command.as_bytes())
+            .send_with_response(GET_PERSONAL_ACCESS_TOKENS_CODE, command.as_bytes())
             .await?;
-        mapper::map_personal_access_tokens(&response)
+        mapper::map_personal_access_tokens(response)
     }
 
     async fn create_personal_access_token(
@@ -30,9 +30,9 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
     ) -> Result<RawPersonalAccessToken, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(CREATE_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
+            .send_with_response(CREATE_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
             .await?;
-        mapper::map_raw_pat(&response)
+        mapper::map_raw_pat(response)
     }
 
     async fn delete_personal_access_token(
@@ -40,7 +40,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
         command: &DeletePersonalAccessToken,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(DELETE_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
+        self.send_with_response(DELETE_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
             .await?;
         Ok(())
     }
@@ -50,9 +50,9 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
         command: &LoginWithPersonalAccessToken,
     ) -> Result<IdentityInfo, IggyError> {
         let response = self
-            .send_with_response(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
+            .send_with_response(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
             .await?;
         self.set_state(ClientState::Authenticated).await;
-        mapper::map_identity_info(&response)
+        mapper::map_identity_info(response)
     }
 }

@@ -6,7 +6,7 @@ use crate::topics::{MAX_NAME_LENGTH, MAX_PARTITIONS_COUNT};
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
@@ -85,10 +85,10 @@ impl Validatable<IggyError> for CreateTopic {
 }
 
 impl BytesSerializable for CreateTopic {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let stream_id_bytes = self.stream_id.as_bytes();
-        let mut bytes = Vec::with_capacity(22 + stream_id_bytes.len() + self.name.len());
-        bytes.extend(stream_id_bytes);
+        let mut bytes = BytesMut::with_capacity(22 + stream_id_bytes.len() + self.name.len());
+        bytes.put_slice(&stream_id_bytes);
         bytes.put_u32_le(self.topic_id.unwrap_or(0));
         bytes.put_u32_le(self.partitions_count);
         match self.message_expiry {
@@ -102,16 +102,16 @@ impl BytesSerializable for CreateTopic {
         bytes.put_u8(self.replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.extend(self.name.as_bytes());
-        bytes
+        bytes.put_slice(self.name.as_bytes());
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> std::result::Result<CreateTopic, IggyError> {
+    fn from_bytes(bytes: Bytes) -> std::result::Result<CreateTopic, IggyError> {
         if bytes.len() < 18 {
             return Err(IggyError::InvalidCommand);
         }
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(bytes)?;
+        let stream_id = Identifier::from_bytes(bytes.clone())?;
         position += stream_id.get_size_bytes() as usize;
         let topic_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let topic_id = if topic_id == 0 { None } else { Some(topic_id) };
@@ -185,7 +185,7 @@ mod tests {
         };
         let bytes = command.as_bytes();
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
         let topic_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         let partitions_count =
@@ -227,8 +227,8 @@ mod tests {
         let max_topic_size = IggyByteSize::from(100);
         let replication_factor = 1;
         let stream_id_bytes = stream_id.as_bytes();
-        let mut bytes = Vec::with_capacity(14 + stream_id_bytes.len() + name.len());
-        bytes.extend(stream_id_bytes);
+        let mut bytes = BytesMut::with_capacity(14 + stream_id_bytes.len() + name.len());
+        bytes.put_slice(&stream_id_bytes);
         bytes.put_u32_le(topic_id);
         bytes.put_u32_le(partitions_count);
         bytes.put_u32_le(message_expiry);
@@ -236,9 +236,9 @@ mod tests {
         bytes.put_u8(replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.extend(name.as_bytes());
+        bytes.put_slice(name.as_bytes());
 
-        let command = CreateTopic::from_bytes(&bytes);
+        let command = CreateTopic::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

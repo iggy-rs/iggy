@@ -16,6 +16,6 @@ pub async fn handle(
     let system = system.read();
     let users = system.get_users(session).await?;
     let users = mapper::map_users(&users);
-    sender.send_ok_response(users.as_slice()).await?;
+    sender.send_ok_response(&users).await?;
     Ok(())
 }

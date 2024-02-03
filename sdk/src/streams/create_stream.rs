@@ -4,7 +4,7 @@ use crate::error::IggyError;
 use crate::streams::MAX_NAME_LENGTH;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
@@ -53,16 +53,16 @@ impl Validatable<IggyError> for CreateStream {
 }
 
 impl BytesSerializable for CreateStream {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(5 + self.name.len());
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(5 + self.name.len());
         bytes.put_u32_le(self.stream_id.unwrap_or(0));
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.extend(self.name.as_bytes());
-        bytes
+        bytes.put_slice(self.name.as_bytes());
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreateStream, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<CreateStream, IggyError> {
         if bytes.len() < 6 {
             return Err(IggyError::InvalidCommand);
         }
@@ -116,12 +116,12 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let stream_id = 1u32;
         let name = "test".to_string();
-        let mut bytes = Vec::new();
+        let mut bytes = BytesMut::new();
         bytes.put_u32_le(stream_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.extend(name.as_bytes());
-        let command = CreateStream::from_bytes(&bytes);
+        bytes.put_slice(name.as_bytes());
+        let command = CreateStream::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::validatable::Validatable;
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -19,11 +20,11 @@ impl Validatable<IggyError> for GetUsers {
 }
 
 impl BytesSerializable for GetUsers {
-    fn as_bytes(&self) -> Vec<u8> {
-        Vec::with_capacity(0)
+    fn as_bytes(&self) -> Bytes {
+        Bytes::new()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetUsers, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<GetUsers, IggyError> {
         if !bytes.is_empty() {
             return Err(IggyError::InvalidCommand);
         }
@@ -42,6 +43,8 @@ impl Display for GetUsers {
 
 #[cfg(test)]
 mod tests {
+    use bytes::Bytes;
+
     use super::*;
 
     #[test]
@@ -53,15 +56,13 @@ mod tests {
 
     #[test]
     fn should_be_deserialized_from_empty_bytes() {
-        let bytes: Vec<u8> = vec![];
-        let command = GetUsers::from_bytes(&bytes);
+        let command = GetUsers::from_bytes(Bytes::new());
         assert!(command.is_ok());
     }
 
     #[test]
     fn should_not_be_deserialized_from_empty_bytes() {
-        let bytes: Vec<u8> = vec![0];
-        let command = GetUsers::from_bytes(&bytes);
+        let command = GetUsers::from_bytes(Bytes::from_static(&[0]));
         assert!(command.is_err());
     }
 }

@@ -3,6 +3,7 @@ use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -33,30 +34,30 @@ impl Validatable<IggyError> for JoinConsumerGroup {
 }
 
 impl BytesSerializable for JoinConsumerGroup {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
         let consumer_group_id_bytes = self.consumer_group_id.as_bytes();
-        let mut bytes = Vec::with_capacity(
+        let mut bytes = BytesMut::with_capacity(
             stream_id_bytes.len() + topic_id_bytes.len() + consumer_group_id_bytes.len(),
         );
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
-        bytes.extend(consumer_group_id_bytes);
-        bytes
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
+        bytes.put_slice(&consumer_group_id_bytes);
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<JoinConsumerGroup, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<JoinConsumerGroup, IggyError> {
         if bytes.len() < 9 {
             return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(bytes)?;
+        let stream_id = Identifier::from_bytes(bytes.clone())?;
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
-        let consumer_group_id = Identifier::from_bytes(&bytes[position..])?;
+        let consumer_group_id = Identifier::from_bytes(bytes.slice(position..))?;
         let command = JoinConsumerGroup {
             stream_id,
             topic_id,
@@ -91,11 +92,11 @@ mod tests {
 
         let bytes = command.as_bytes();
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
-        let consumer_group_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let consumer_group_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
@@ -111,13 +112,13 @@ mod tests {
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
         let consumer_group_id_bytes = consumer_group_id.as_bytes();
-        let mut bytes = Vec::with_capacity(
+        let mut bytes = BytesMut::with_capacity(
             stream_id_bytes.len() + topic_id_bytes.len() + consumer_group_id_bytes.len(),
         );
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
-        bytes.extend(consumer_group_id_bytes);
-        let command = JoinConsumerGroup::from_bytes(&bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
+        bytes.put_slice(&consumer_group_id_bytes);
+        let command = JoinConsumerGroup::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

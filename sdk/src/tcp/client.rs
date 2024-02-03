@@ -3,6 +3,7 @@ use crate::client::Client;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
+use bytes::{BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -18,7 +19,6 @@ use tracing::{error, info};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
-const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
 /// TCP client for interacting with the Iggy API.
@@ -68,12 +68,7 @@ impl ConnectionStream for TcpConnectionStream {
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
-        let result = self.stream.write_all(buf).await;
-        if let Err(error) = result {
-            return Err(IggyError::from(error));
-        }
-
-        Ok(())
+        Ok(self.stream.write_all(buf).await?)
     }
 }
 
@@ -198,7 +193,7 @@ impl BinaryClient for TcpClient {
         *self.state.lock().await = state;
     }
 
-    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, IggyError> {
+    async fn send_with_response(&self, command: u32, payload: Bytes) -> Result<Bytes, IggyError> {
         if self.get_state().await == ClientState::Disconnected {
             return Err(IggyError::NotConnected);
         }
@@ -209,7 +204,7 @@ impl BinaryClient for TcpClient {
             trace!("Sending a TCP request...");
             stream.write(&(payload_length as u32).to_le_bytes()).await?;
             stream.write(&command.to_le_bytes()).await?;
-            stream.write(payload).await?;
+            stream.write(&payload).await?;
             trace!("Sent a TCP request, waiting for a response...");
 
             let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
@@ -265,7 +260,7 @@ impl TcpClient {
         status: u32,
         length: u32,
         stream: &mut dyn ConnectionStream,
-    ) -> Result<Vec<u8>, IggyError> {
+    ) -> Result<Bytes, IggyError> {
         if status != 0 {
             // TEMP: See https://github.com/iggy-rs/iggy/pull/604 for context.
             if status == IggyErrorDiscriminants::TopicIdAlreadyExists as u32
@@ -295,11 +290,12 @@ impl TcpClient {
 
         trace!("Status: OK. Response length: {}", length);
         if length <= 1 {
-            return Ok(EMPTY_RESPONSE);
+            return Ok(Bytes::new());
         }
 
-        let mut response_buffer = vec![0u8; length as usize];
+        let mut response_buffer = BytesMut::with_capacity(length as usize);
+        response_buffer.put_bytes(0, length as usize);
         stream.read(&mut response_buffer).await?;
-        Ok(response_buffer)
+        Ok(response_buffer.freeze())
     }
 }

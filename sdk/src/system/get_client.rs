@@ -2,7 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -34,18 +34,18 @@ impl Validatable<IggyError> for GetClient {
 }
 
 impl BytesSerializable for GetClient {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(4);
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(4);
         bytes.put_u32_le(self.client_id);
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<GetClient, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<GetClient, IggyError> {
         if bytes.len() != 4 {
             return Err(IggyError::InvalidCommand);
         }
 
-        let client_id = u32::from_le_bytes(bytes.try_into()?);
+        let client_id = u32::from_le_bytes(bytes.as_ref().try_into()?);
         let command = GetClient { client_id };
         command.validate()?;
         Ok(command)
@@ -76,8 +76,9 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let client_id = 1u32;
-        let bytes = client_id.to_le_bytes();
-        let command = GetClient::from_bytes(&bytes);
+        let mut bytes = BytesMut::with_capacity(4);
+        bytes.put_u32_le(client_id);
+        let command = GetClient::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

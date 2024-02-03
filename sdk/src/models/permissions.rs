@@ -1,6 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
-use bytes::{Buf, BufMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -194,8 +194,8 @@ impl Display for Permissions {
 }
 
 impl BytesSerializable for Permissions {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::new();
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::new();
         bytes.put_u8(if self.global.manage_servers { 1 } else { 0 });
         bytes.put_u8(if self.global.read_servers { 1 } else { 0 });
         bytes.put_u8(if self.global.manage_users { 1 } else { 0 });
@@ -248,10 +248,10 @@ impl BytesSerializable for Permissions {
         } else {
             bytes.put_u8(0);
         }
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError>
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
     where
         Self: Sized,
     {
@@ -404,7 +404,7 @@ mod tests {
         };
 
         let bytes = permissions.as_bytes();
-        let deserialized_permissions = Permissions::from_bytes(&bytes).unwrap();
+        let deserialized_permissions = Permissions::from_bytes(bytes).unwrap();
 
         assert_eq!(permissions, deserialized_permissions);
     }

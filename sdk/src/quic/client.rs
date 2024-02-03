@@ -3,6 +3,7 @@ use crate::client::Client;
 use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
+use bytes::Bytes;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
 use rustls::client::{ServerCertVerified, ServerCertVerifier};
 use rustls::{Certificate, ServerName};
@@ -15,7 +16,6 @@ use tracing::{error, info, trace};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
-const EMPTY_RESPONSE: Vec<u8> = vec![];
 const NAME: &str = "Iggy";
 
 /// QUIC client for interacting with the Iggy API.
@@ -112,7 +112,7 @@ impl BinaryClient for QuicClient {
         *self.state.lock().await = state;
     }
 
-    async fn send_with_response(&self, command: u32, payload: &[u8]) -> Result<Vec<u8>, IggyError> {
+    async fn send_with_response(&self, command: u32, payload: Bytes) -> Result<Bytes, IggyError> {
         if self.get_state().await == ClientState::Disconnected {
             return Err(IggyError::NotConnected);
         }
@@ -126,7 +126,7 @@ impl BinaryClient for QuicClient {
             send.write_all(&(payload_length as u32).to_le_bytes())
                 .await?;
             send.write_all(&command.to_le_bytes()).await?;
-            send.write_all(payload).await?;
+            send.write_all(&payload).await?;
             send.finish().await?;
             trace!("Sent a QUIC request, waiting for a response...");
             return self.handle_response(&mut recv).await;
@@ -185,7 +185,7 @@ impl QuicClient {
         })
     }
 
-    async fn handle_response(&self, recv: &mut RecvStream) -> Result<Vec<u8>, IggyError> {
+    async fn handle_response(&self, recv: &mut RecvStream) -> Result<Bytes, IggyError> {
         let buffer = recv
             .read_to_end(self.config.response_buffer_size as usize)
             .await?;
@@ -207,13 +207,12 @@ impl QuicClient {
             u32::from_le_bytes(buffer[4..RESPONSE_INITIAL_BYTES_LENGTH].try_into().unwrap());
         trace!("Status: OK. Response length: {}", length);
         if length <= 1 {
-            return Ok(EMPTY_RESPONSE);
+            return Ok(Bytes::new());
         }
 
-        Ok(
-            buffer[RESPONSE_INITIAL_BYTES_LENGTH..RESPONSE_INITIAL_BYTES_LENGTH + length as usize]
-                .to_vec(),
-        )
+        Ok(Bytes::copy_from_slice(
+            &buffer[RESPONSE_INITIAL_BYTES_LENGTH..RESPONSE_INITIAL_BYTES_LENGTH + length as usize],
+        ))
     }
 }
 

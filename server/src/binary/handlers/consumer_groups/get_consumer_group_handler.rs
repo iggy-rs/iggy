@@ -23,6 +23,6 @@ pub async fn handle(
     )?;
     let consumer_group = consumer_group.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;
-    sender.send_ok_response(consumer_group.as_slice()).await?;
+    sender.send_ok_response(&consumer_group).await?;
     Ok(())
 }

@@ -5,7 +5,7 @@ use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::utils::text;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
@@ -62,29 +62,30 @@ impl Validatable<IggyError> for CreateConsumerGroup {
 }
 
 impl BytesSerializable for CreateConsumerGroup {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
-        let mut bytes =
-            Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len());
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        let mut bytes = BytesMut::with_capacity(
+            4 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
+        );
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(self.consumer_group_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
-        bytes.extend(self.name.as_bytes());
-        bytes
+        bytes.put_slice(self.name.as_bytes());
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<CreateConsumerGroup, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<CreateConsumerGroup, IggyError> {
         if bytes.len() < 10 {
             return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(bytes)?;
+        let stream_id = Identifier::from_bytes(bytes.clone())?;
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
         let consumer_group_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let name_length = bytes[position + 4];
@@ -126,9 +127,9 @@ mod tests {
 
         let bytes = command.as_bytes();
         let mut position = 0;
-        let stream_id = Identifier::from_bytes(&bytes).unwrap();
+        let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
         let consumer_group_id =
             u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
@@ -151,14 +152,14 @@ mod tests {
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
         let mut bytes =
-            Vec::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+            BytesMut::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(consumer_group_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
-        bytes.extend(name.as_bytes());
-        let command = CreateConsumerGroup::from_bytes(&bytes);
+        bytes.put_slice(name.as_bytes());
+        let command = CreateConsumerGroup::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

@@ -4,7 +4,7 @@ use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::permissions::Permissions;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
@@ -30,27 +30,27 @@ impl Validatable<IggyError> for UpdatePermissions {
 }
 
 impl BytesSerializable for UpdatePermissions {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let user_id_bytes = self.user_id.as_bytes();
-        let mut bytes = Vec::new();
-        bytes.extend(user_id_bytes);
+        let mut bytes = BytesMut::new();
+        bytes.put_slice(&user_id_bytes);
         if let Some(permissions) = &self.permissions {
             bytes.put_u8(1);
             bytes.put_u32_le(permissions.as_bytes().len() as u32);
-            bytes.extend(permissions.as_bytes());
+            bytes.put_slice(&permissions.as_bytes());
         } else {
             bytes.put_u8(0);
         }
 
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<UpdatePermissions, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<UpdatePermissions, IggyError> {
         if bytes.len() < 4 {
             return Err(IggyError::InvalidCommand);
         }
 
-        let user_id = Identifier::from_bytes(bytes)?;
+        let user_id = Identifier::from_bytes(bytes.clone())?;
         let mut position = user_id.get_size_bytes() as usize;
         let has_permissions = bytes[position];
         if has_permissions > 1 {
@@ -62,8 +62,9 @@ impl BytesSerializable for UpdatePermissions {
             let permissions_length =
                 u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
             position += 4;
-            let permissions =
-                Permissions::from_bytes(&bytes[position..position + permissions_length as usize])?;
+            let permissions = Permissions::from_bytes(
+                bytes.slice(position..position + permissions_length as usize),
+            )?;
             Some(permissions)
         } else {
             None
@@ -101,7 +102,7 @@ mod tests {
             permissions: Some(get_permissions()),
         };
         let bytes = command.as_bytes();
-        let user_id = Identifier::from_bytes(&bytes).unwrap();
+        let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
         let mut position = user_id.get_size_bytes() as usize;
         let has_permissions = bytes[position];
         position += 1;
@@ -109,7 +110,7 @@ mod tests {
             u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         position += 4;
         let permissions =
-            Permissions::from_bytes(&bytes[position..position + permissions_length as usize])
+            Permissions::from_bytes(bytes.slice(position..position + permissions_length as usize))
                 .unwrap();
 
         assert!(!bytes.is_empty());
@@ -123,13 +124,13 @@ mod tests {
         let user_id = Identifier::numeric(1).unwrap();
         let permissions = get_permissions();
         let permissions_bytes = permissions.as_bytes();
-        let mut bytes = Vec::new();
-        bytes.extend(user_id.as_bytes());
+        let mut bytes = BytesMut::new();
+        bytes.put_slice(&user_id.as_bytes());
         bytes.put_u8(1);
         bytes.put_u32_le(permissions_bytes.len() as u32);
-        bytes.extend(permissions_bytes);
+        bytes.put_slice(&permissions_bytes);
 
-        let command = UpdatePermissions::from_bytes(&bytes);
+        let command = UpdatePermissions::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();

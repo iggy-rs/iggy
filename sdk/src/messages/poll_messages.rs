@@ -4,7 +4,7 @@ use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use bytes::BufMut;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use std::fmt::Display;
@@ -226,26 +226,26 @@ impl Display for PollingKind {
 }
 
 impl BytesSerializable for PollMessages {
-    fn as_bytes(&self) -> Vec<u8> {
+    fn as_bytes(&self) -> Bytes {
         let consumer_bytes = self.consumer.as_bytes();
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
         let strategy_bytes = self.strategy.as_bytes();
-        let mut bytes = Vec::with_capacity(
+        let mut bytes = BytesMut::with_capacity(
             9 + consumer_bytes.len()
                 + stream_id_bytes.len()
                 + topic_id_bytes.len()
                 + strategy_bytes.len(),
         );
-        bytes.extend(consumer_bytes);
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&consumer_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         if let Some(partition_id) = self.partition_id {
             bytes.put_u32_le(partition_id);
         } else {
             bytes.put_u32_le(0);
         }
-        bytes.extend(strategy_bytes);
+        bytes.put_slice(&strategy_bytes);
         bytes.put_u32_le(self.count);
         if self.auto_commit {
             bytes.put_u8(1);
@@ -253,25 +253,25 @@ impl BytesSerializable for PollMessages {
             bytes.put_u8(0);
         }
 
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
         if bytes.len() < 29 {
             return Err(IggyError::InvalidCommand);
         }
 
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0])?;
-        let consumer_id = Identifier::from_bytes(&bytes[1..])?;
+        let consumer_id = Identifier::from_bytes(bytes.slice(1..))?;
         position += 1 + consumer_id.get_size_bytes() as usize;
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
-        let stream_id = Identifier::from_bytes(&bytes[position..])?;
+        let stream_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..])?;
+        let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let partition_id = match partition_id {
@@ -333,14 +333,14 @@ fn auto_commit_to_string(auto_commit: bool) -> &'static str {
 }
 
 impl BytesSerializable for PollingStrategy {
-    fn as_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(9);
+    fn as_bytes(&self) -> Bytes {
+        let mut bytes = BytesMut::with_capacity(9);
         bytes.put_u8(self.kind.as_code());
         bytes.put_u64_le(self.value);
-        bytes
+        bytes.freeze()
     }
 
-    fn from_bytes(bytes: &[u8]) -> Result<Self, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
         if bytes.len() != 9 {
             return Err(IggyError::InvalidCommand);
         }
@@ -371,15 +371,15 @@ mod tests {
         let bytes = command.as_bytes();
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
-        let consumer_id = Identifier::from_bytes(&bytes[1..]).unwrap();
+        let consumer_id = Identifier::from_bytes(bytes.slice(1..)).unwrap();
         position += 1 + consumer_id.get_size_bytes() as usize;
         let consumer = Consumer {
             kind: consumer_kind,
             id: consumer_id,
         };
-        let stream_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let stream_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += stream_id.get_size_bytes() as usize;
-        let topic_id = Identifier::from_bytes(&bytes[position..]).unwrap();
+        let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
         let partition_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         let polling_kind = PollingKind::from_code(bytes[position + 4]).unwrap();
@@ -417,21 +417,21 @@ mod tests {
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
         let strategy_bytes = strategy.as_bytes();
-        let mut bytes = Vec::with_capacity(
+        let mut bytes = BytesMut::with_capacity(
             9 + consumer_bytes.len()
                 + stream_id_bytes.len()
                 + topic_id_bytes.len()
                 + strategy_bytes.len(),
         );
-        bytes.extend(consumer_bytes);
-        bytes.extend(stream_id_bytes);
-        bytes.extend(topic_id_bytes);
+        bytes.put_slice(&consumer_bytes);
+        bytes.put_slice(&stream_id_bytes);
+        bytes.put_slice(&topic_id_bytes);
         bytes.put_u32_le(partition_id);
-        bytes.extend(strategy_bytes);
+        bytes.put_slice(&strategy_bytes);
         bytes.put_u32_le(count);
         bytes.put_u8(auto_commit);
 
-        let command = PollMessages::from_bytes(&bytes);
+        let command = PollMessages::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let auto_commit = matches!(auto_commit, 1);

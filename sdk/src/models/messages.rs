@@ -5,7 +5,7 @@ use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use crate::sizeable::Sizeable;
 use crate::utils::{checksum, timestamp::IggyTimestamp};
-use bytes::{BufMut, Bytes};
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -188,7 +188,7 @@ impl Message {
     }
 
     /// Extends the provided bytes with the message.
-    pub fn extend(&self, bytes: &mut Vec<u8>) {
+    pub fn extend(&self, bytes: &mut BytesMut) {
         bytes.put_u64_le(self.offset);
         bytes.put_u8(self.state.as_code());
         bytes.put_u64_le(self.timestamp);
@@ -198,11 +198,11 @@ impl Message {
             let headers_bytes = headers.as_bytes();
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(headers_bytes.len() as u32);
-            bytes.extend(&headers_bytes);
+            bytes.put_slice(&headers_bytes);
         } else {
             bytes.put_u32_le(0u32);
         }
         bytes.put_u32_le(self.length);
-        bytes.extend(&self.payload);
+        bytes.put_slice(&self.payload);
     }
 }

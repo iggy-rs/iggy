@@ -5,6 +5,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
+use std::borrow::Cow;
 use std::fmt::Display;
 use std::str::FromStr;
 
@@ -86,18 +87,28 @@ impl Identifier {
 
     /// Returns the string value of the identifier.
     pub fn get_string_value(&self) -> Result<String, IggyError> {
+        self.get_cow_str_value().map(|cow| cow.to_string())
+    }
+
+    /// Returns the Cow<str> value of the identifier.
+    pub fn get_cow_str_value(&self) -> Result<Cow<str>, IggyError> {
         if self.kind != IdKind::String {
             return Err(IggyError::InvalidCommand);
         }
 
-        Ok(String::from_utf8_lossy(&self.value).to_string())
+        Ok(String::from_utf8_lossy(&self.value))
     }
 
     /// Returns the string representation of the identifier.
     pub fn as_string(&self) -> String {
+        self.as_cow_str().to_string()
+    }
+
+    // Returns the Cow<str> representation of the identifier.
+    pub fn as_cow_str(&self) -> Cow<str> {
         match self.kind {
-            IdKind::Numeric => self.get_u32_value().unwrap().to_string(),
-            IdKind::String => self.get_string_value().unwrap(),
+            IdKind::Numeric => Cow::Owned(self.get_u32_value().unwrap().to_string()),
+            IdKind::String => self.get_cow_str_value().unwrap(),
         }
     }
 
@@ -141,7 +152,7 @@ impl Identifier {
         })
     }
 
-    /// Creates a new identifier from the given string value.
+    /// Creates a new identifier from the given string value. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
     pub fn named(value: &str) -> Result<Self, IggyError> {
         let length = value.len();
         if length == 0 || length > 255 {

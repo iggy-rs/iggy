@@ -13,7 +13,7 @@ use std::str::from_utf8;
 
 /// `CreateUser` command is used to create a new user.
 /// It has additional payload:
-/// - `username` - unique name of the user, must be between 3 and 50 characters long.
+/// - `username` - unique name of the user, must be between 3 and 50 characters long. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
 /// - `password` - password of the user, must be between 3 and 100 characters long.
 /// - `status` - status of the user, can be either `active` or `inactive`.
 /// - `permissions` - optional permissions of the user. If not provided, user will have no permissions.

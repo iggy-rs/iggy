@@ -12,7 +12,7 @@ use std::str::from_utf8;
 /// `CreateStream` command is used to create a new stream.
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric)
-/// - `name` - unique stream name (string), max length is 255 characters.
+/// - `name` - unique stream name (string), max length is 255 characters. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateStream {
     /// Unique stream ID (numeric), if None is provided then the server will automatically assign it.

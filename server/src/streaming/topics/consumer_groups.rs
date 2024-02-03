@@ -33,9 +33,7 @@ impl Topic {
     ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_consumer_group_by_id(identifier.get_u32_value().unwrap()),
-            IdKind::String => {
-                self.get_consumer_group_by_name(&identifier.get_string_value().unwrap())
-            }
+            IdKind::String => self.get_consumer_group_by_name(&identifier.get_cow_str_value()?),
         }
     }
 

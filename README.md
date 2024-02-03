@@ -87,6 +87,7 @@ For the detailed information about current progress, please refer to the [projec
 - [Python](https://github.com/iggy-rs/iggy-python-client)
 - [Java](https://github.com/iggy-rs/iggy-java-client)
 - [C++](https://github.com/iggy-rs/iggy-cpp-client)
+- [Elixir](https://github.com/iggy-rs/iggy-elixir-client)
 
 ---
 

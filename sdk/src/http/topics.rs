@@ -16,7 +16,7 @@ impl TopicClient for HttpClient {
         let response = self
             .get(&format!(
                 "{}/{}",
-                get_path(&command.stream_id.as_string()),
+                get_path(&command.stream_id.as_cow_str()),
                 command.topic_id
             ))
             .await?;
@@ -25,13 +25,13 @@ impl TopicClient for HttpClient {
     }
 
     async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, IggyError> {
-        let response = self.get(&get_path(&command.stream_id.as_string())).await?;
+        let response = self.get(&get_path(&command.stream_id.as_cow_str())).await?;
         let topics = response.json().await?;
         Ok(topics)
     }
 
     async fn create_topic(&self, command: &CreateTopic) -> Result<(), IggyError> {
-        self.post(&get_path(&command.stream_id.as_string()), &command)
+        self.post(&get_path(&command.stream_id.as_cow_str()), &command)
             .await?;
         Ok(())
     }
@@ -39,8 +39,8 @@ impl TopicClient for HttpClient {
     async fn update_topic(&self, command: &UpdateTopic) -> Result<(), IggyError> {
         self.put(
             &get_details_path(
-                &command.stream_id.as_string(),
-                &command.topic_id.as_string(),
+                &command.stream_id.as_cow_str(),
+                &command.topic_id.as_cow_str(),
             ),
             command,
         )
@@ -50,8 +50,8 @@ impl TopicClient for HttpClient {
 
     async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), IggyError> {
         self.delete(&get_details_path(
-            &command.stream_id.as_string(),
-            &command.topic_id.as_string(),
+            &command.stream_id.as_cow_str(),
+            &command.topic_id.as_cow_str(),
         ))
         .await?;
         Ok(())
@@ -61,8 +61,8 @@ impl TopicClient for HttpClient {
         self.delete(&format!(
             "{}/purge",
             &get_details_path(
-                &command.stream_id.as_string(),
-                &command.topic_id.as_string(),
+                &command.stream_id.as_cow_str(),
+                &command.topic_id.as_cow_str(),
             )
         ))
         .await?;

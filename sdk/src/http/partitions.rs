@@ -10,8 +10,8 @@ impl PartitionClient for HttpClient {
     async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), IggyError> {
         self.post(
             &get_path(
-                &command.stream_id.as_string(),
-                &command.topic_id.as_string(),
+                &command.stream_id.as_cow_str(),
+                &command.topic_id.as_cow_str(),
             ),
             &command,
         )
@@ -22,8 +22,8 @@ impl PartitionClient for HttpClient {
     async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), IggyError> {
         self.delete_with_query(
             &get_path(
-                &command.stream_id.as_string(),
-                &command.topic_id.as_string(),
+                &command.stream_id.as_cow_str(),
+                &command.topic_id.as_cow_str(),
             ),
             &command,
         )

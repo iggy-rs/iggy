@@ -127,7 +127,7 @@ impl Stream {
     pub fn remove_topic(&mut self, identifier: &Identifier) -> Result<Topic, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.remove_topic_by_id(identifier.get_u32_value()?),
-            IdKind::String => self.remove_topic_by_name(identifier.get_string_value()?),
+            IdKind::String => self.remove_topic_by_name(&identifier.get_cow_str_value()?),
         }
     }
 
@@ -138,14 +138,14 @@ impl Stream {
     pub fn get_topic(&self, identifier: &Identifier) -> Result<&Topic, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_topic_by_id(identifier.get_u32_value()?),
-            IdKind::String => self.get_topic_by_name(&identifier.get_string_value()?),
+            IdKind::String => self.get_topic_by_name(&identifier.get_cow_str_value()?),
         }
     }
 
     pub fn get_topic_mut(&mut self, identifier: &Identifier) -> Result<&mut Topic, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_topic_by_id_mut(identifier.get_u32_value()?),
-            IdKind::String => self.get_topic_by_name_mut(&identifier.get_string_value()?),
+            IdKind::String => self.get_topic_by_name_mut(&identifier.get_cow_str_value()?),
         }
     }
 
@@ -187,11 +187,11 @@ impl Stream {
         Ok(topic)
     }
 
-    fn remove_topic_by_name(&mut self, name: String) -> Result<Topic, IggyError> {
+    fn remove_topic_by_name(&mut self, name: &str) -> Result<Topic, IggyError> {
         let topic_id = self
             .topics_ids
-            .remove(&name)
-            .ok_or_else(|| IggyError::TopicNameNotFound(name, self.stream_id))?;
+            .remove(name)
+            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_owned(), self.stream_id))?;
 
         self.topics
             .remove(&topic_id)

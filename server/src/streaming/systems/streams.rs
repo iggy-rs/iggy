@@ -99,15 +99,15 @@ impl System {
 
     pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, IggyError> {
         match identifier.kind {
-            IdKind::Numeric => self.get_stream_by_id(identifier.get_u32_value().unwrap()),
-            IdKind::String => self.get_stream_by_name(&identifier.get_string_value().unwrap()),
+            IdKind::Numeric => self.get_stream_by_id(identifier.get_u32_value()?),
+            IdKind::String => self.get_stream_by_name(&identifier.get_cow_str_value()?),
         }
     }
 
     pub fn get_stream_mut(&mut self, identifier: &Identifier) -> Result<&mut Stream, IggyError> {
         match identifier.kind {
-            IdKind::Numeric => self.get_stream_by_id_mut(identifier.get_u32_value().unwrap()),
-            IdKind::String => self.get_stream_by_name_mut(&identifier.get_string_value().unwrap()),
+            IdKind::Numeric => self.get_stream_by_id_mut(identifier.get_u32_value()?),
+            IdKind::String => self.get_stream_by_name_mut(&identifier.get_cow_str_value()?),
         }
     }
 

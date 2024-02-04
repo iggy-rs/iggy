@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use iggy::batching::BATCH_METADATA_BYTES_LEN;
 use iggy::client::{MessageClient, StreamClient, SystemClient, TopicClient, UserClient};
 use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::identifier::Identifier;
@@ -27,7 +28,7 @@ const PARTITION_ID: u32 = 1;
 const MESSAGE_PAYLOAD_SIZE_BYTES: u64 = 57;
 const MSG_SIZE: u64 = 8 + 1 + 8 + 16 + 4 + 4 + 4 + MESSAGE_PAYLOAD_SIZE_BYTES; // number of bytes in a single message
 const MSGS_COUNT: u64 = 117; // number of messages in a single topic after one pass of appending
-const MSGS_SIZE: u64 = MSG_SIZE * MSGS_COUNT; // number of bytes in a single topic after one pass of appending
+const MSGS_SIZE: u64 = MSG_SIZE * MSGS_COUNT + BATCH_METADATA_BYTES_LEN as u64; // number of bytes in a single topic after one pass of appending
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let _ = tracing_subscriber::fmt::try_init();

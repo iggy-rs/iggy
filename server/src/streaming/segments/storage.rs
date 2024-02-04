@@ -576,9 +576,9 @@ async fn load_message_batches_by_range(
         .seek(SeekFrom::Start(index_range.start.position as u64))
         .await?;
 
+    let mut read_bytes: u64 = 0;
     let mut last_batch_to_read = false;
-    // Need second condition, to guard against IndexRange::MAX when loading message_ids and checksums.
-    while !last_batch_to_read || reader.buffer().has_remaining() {
+    while !last_batch_to_read {
         let batch_base_offset = reader
             .read_u64_le()
             .await
@@ -599,7 +599,6 @@ async fn load_message_batches_by_range(
         // This works, but it can be done better.
         let last_offset = batch_base_offset + (last_offset_delta as u64);
         let index_last_offset = index_range.end.relative_offset as u64 + segment.start_offset;
-        last_batch_to_read = last_offset == index_last_offset;
 
         let payload_len = (batch_length - BATCH_METADATA_BYTES_LEN) as usize;
         let mut payload = vec![0; payload_len];
@@ -607,6 +606,8 @@ async fn load_message_batches_by_range(
             .read_exact(&mut payload)
             .await
             .map_err(|_| IggyError::CannotReadBatchPayload)?;
+        read_bytes += 8 + 4 + 4 + 1 + payload_len as u64;
+        last_batch_to_read = read_bytes == file_size || last_offset == index_last_offset;
 
         let batch = MessageBatch::new(
             batch_base_offset,

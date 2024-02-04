@@ -6,8 +6,8 @@ use iggy::batching::batches_converter::BatchesConverter;
 use iggy::batching::messages_batch::MessageBatch;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
-use std::sync::atomic::Ordering;
 use iggy::sizeable::Sizeable;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
 
@@ -291,8 +291,6 @@ impl Segment {
         self.unsaved_indexes.put_u32_le(self.size_bytes);
         self.unsaved_timestamps.put_u32_le(relative_offset);
         self.unsaved_timestamps.put_u64_le(batch_max_timestamp);
-
-
     }
 
     pub async fn persist_messages(&mut self) -> Result<(), IggyError> {

@@ -75,13 +75,14 @@ impl Partition {
                     .first()?
                     .time_indexes
                     .as_ref()
-                    .and_then(|time_indexes| Some(time_indexes.first().unwrap().relative_offset));
+                    .map(|time_indexes| time_indexes.first().unwrap().relative_offset);
 
                 let first_time_index = TimeIndex::default();
                 let start_offset = first_time_index.relative_offset as u64;
 
-                overfetch_value
-                    .map(|overfetch_value| self.get_messages_by_offset(start_offset, count + overfetch_value))
+                overfetch_value.map(|overfetch_value| {
+                    self.get_messages_by_offset(start_offset, count + overfetch_value)
+                })
             });
 
         match result {
@@ -476,7 +477,13 @@ impl Partition {
         Ok(())
     }
 
-    fn update_avg_timestamp_delta(&mut self, avg_timestamp_delta: u32, min_alpha: f64, max_alpha: f64, dynamic_range: f64) {
+    fn update_avg_timestamp_delta(
+        &mut self,
+        avg_timestamp_delta: u32,
+        min_alpha: f64,
+        max_alpha: f64,
+        dynamic_range: f64,
+    ) {
         let diff = self.avg_timestamp_delta.abs_diff(avg_timestamp_delta);
         let alpha = max_alpha.min(min_alpha.max(1.0 - (diff as f64 / dynamic_range)));
         self.avg_timestamp_delta = (alpha * avg_timestamp_delta as f64

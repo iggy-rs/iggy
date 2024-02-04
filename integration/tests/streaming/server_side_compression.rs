@@ -4,8 +4,8 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use serial_test::parallel;
 use server::configs::system::{PartitionConfig, SystemConfig};
 use server::streaming::partitions::partition::Partition;
-use std::sync::Arc;
 use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
 
 #[tokio::test]
 #[parallel]

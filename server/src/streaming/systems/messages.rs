@@ -3,7 +3,6 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
-use iggy::batching::BATCH_METADATA_BYTES_LEN;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -136,10 +135,7 @@ impl System {
         } else {
             topic.compression_algorithm
         };
-        // With compression metrics, we should be able to approximate the amount of memory to free.
-        _batch_size_bytes += BATCH_METADATA_BYTES_LEN as u64;
-        // If there's enough space in cache, do nothing.
-        // Otherwise, clean the cache.
+
         topic
             .append_messages(partitioning, compression_algorithm, received_messages)
             .await?;

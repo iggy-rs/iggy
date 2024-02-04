@@ -68,8 +68,8 @@ mod tests {
     use super::*;
     use crate::configs::system::{SegmentConfig, SystemConfig};
     use crate::streaming::storage::tests::get_test_system_storage;
-    use std::sync::Arc;
     use std::sync::atomic::AtomicU64;
+    use std::sync::Arc;
 
     fn create_segment() -> Segment {
         let storage = Arc::new(get_test_system_storage());

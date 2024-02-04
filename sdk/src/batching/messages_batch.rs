@@ -232,14 +232,17 @@ impl Batcher<Message, Arc<MessageBatch>> for Vec<Message> {
         let compression_algorithm = CompressionAlgorithm::from_code(ca_code)?;
         let mut attributes = attributes;
 
-        let payload: Vec<_> = self
-            .into_iter()
-            .flat_map(|message| message.as_bytes())
-            .collect();
+        let estimated_size = self.iter().map(|message| message.get_size_bytes()).sum::<u32>();
+        let mut payload = Vec::with_capacity(estimated_size as usize);
 
         let payload =
             match compression_algorithm {
-                CompressionAlgorithm::None => payload,
+                CompressionAlgorithm::None => {
+                    for message in self {
+                        payload.extend(message.as_bytes());
+                    }
+                    payload
+                },
                 _ => {
                     if payload.len() > compression_algorithm.min_data_size() {
                         // Let's use this simple heuristic for now,

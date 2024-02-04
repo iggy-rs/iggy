@@ -81,9 +81,11 @@ pub(crate) struct IggyCmdTest {
 }
 
 impl IggyCmdTest {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(start_server: bool) -> Self {
         let mut server = TestServer::default();
-        server.start();
+        if start_server {
+            server.start();
+        }
         let tcp_client_config = TcpClientConfig {
             server_address: server.get_raw_tcp_addr().unwrap(),
             ..TcpClientConfig::default()
@@ -92,6 +94,10 @@ impl IggyCmdTest {
         let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
 
         Self { server, client }
+    }
+
+    pub(crate) fn help_message() -> Self {
+        Self::new(false)
     }
 
     pub(crate) async fn setup(&mut self) {
@@ -232,6 +238,6 @@ impl IggyCmdTest {
 
 impl Default for IggyCmdTest {
     fn default() -> Self {
-        Self::new()
+        Self::new(true)
     }
 }

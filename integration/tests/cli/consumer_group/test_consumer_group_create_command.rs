@@ -205,7 +205,7 @@ pub async fn should_be_successful() {
 #[tokio::test]
 #[parallel]
 pub async fn should_help_match() {
-    let mut iggy_cmd_test = IggyCmdTest::default();
+    let mut iggy_cmd_test = IggyCmdTest::help_message();
 
     iggy_cmd_test
         .execute_test_for_help_command(TestHelpCmd::new(
@@ -253,7 +253,7 @@ Options:
 #[tokio::test]
 #[parallel]
 pub async fn should_short_help_match() {
-    let mut iggy_cmd_test = IggyCmdTest::default();
+    let mut iggy_cmd_test = IggyCmdTest::help_message();
 
     iggy_cmd_test
         .execute_test_for_help_command(TestHelpCmd::new(

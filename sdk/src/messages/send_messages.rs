@@ -421,6 +421,26 @@ impl BytesSerializable for SendMessages {
         bytes.freeze()
     }
 
+    fn as_bytes_vec(&self) -> Vec<Bytes> {
+        const HEADER_LEN: usize = 3;
+        let mut bytes = Vec::with_capacity(HEADER_LEN + self.messages.len());
+
+        // Push the stream ID, topic ID and partitioning as Header.
+        let key_bytes = self.partitioning.as_bytes();
+        let stream_id_bytes = self.stream_id.as_bytes();
+        let topic_id_bytes = self.topic_id.as_bytes();
+        bytes.push(stream_id_bytes);
+        bytes.push(topic_id_bytes);
+        bytes.push(key_bytes);
+
+        // Push the messages.
+        for message in &self.messages {
+            bytes.push(message.as_bytes());
+        }
+
+        bytes
+    }
+
     fn from_bytes(bytes: Bytes) -> Result<SendMessages, IggyError> {
         if bytes.len() < 11 {
             return Err(IggyError::InvalidCommand);

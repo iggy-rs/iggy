@@ -1,3 +1,4 @@
+#![feature(io_slice_advance)]
 pub mod args;
 pub mod binary;
 pub mod bytes_serializable;

@@ -5,6 +5,7 @@ use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
+use std::io::{self, ErrorKind, IoSlice};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -39,6 +40,9 @@ unsafe impl Sync for TcpClient {}
 pub(crate) trait ConnectionStream: Debug + Sync + Send {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError>;
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError>;
+    async fn write_all_vectored(&mut self, _bufs: Vec<Bytes>) -> Result<(), IggyError> {
+        unimplemented!("write_all_vectored not implemented")
+    }
     async fn flush(&mut self) -> Result<(), IggyError>;
 }
 
@@ -84,6 +88,26 @@ impl ConnectionStream for TcpConnectionStream {
         Ok(self.writer.write_all(buf).await?)
     }
 
+    async fn write_all_vectored(&mut self, bufs: Vec<Bytes>) -> Result<(), IggyError> {
+        let mut bufs: Vec<IoSlice> = bufs.iter().map(|b| IoSlice::new(b)).collect();
+        let mut bufs: &mut [IoSlice] = bufs.as_mut();
+
+        while !bufs.is_empty() {
+            match self.writer.write_vectored(&bufs).await {
+                Ok(0) => {
+                    return Err(IggyError::IoError(io::Error::new(
+                        ErrorKind::WriteZero,
+                        "failed to write whole buffer",
+                    )));
+                }
+                Ok(n) => IoSlice::advance_slices(&mut bufs, n),
+                Err(ref e) if e.kind() == ErrorKind::Interrupted => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
+        Ok(())
+    }
+
     async fn flush(&mut self) -> Result<(), IggyError> {
         Ok(self.writer.flush().await?)
     }
@@ -101,7 +125,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
-        let result = self.stream.write_all(buf).await;
+        let result = self.stream.write(buf).await;
         if let Err(error) = result {
             return Err(IggyError::from(error));
         }
@@ -110,7 +134,7 @@ impl ConnectionStream for TcpTlsConnectionStream {
     }
 
     async fn flush(&mut self) -> Result<(), IggyError> {
-        Ok(())
+        Ok(self.stream.flush().await?)
     }
 }
 
@@ -226,6 +250,42 @@ impl BinaryClient for TcpClient {
             stream.write(&(payload_length as u32).to_le_bytes()).await?;
             stream.write(&command.to_le_bytes()).await?;
             stream.write(&payload).await?;
+            stream.flush().await?;
+            trace!("Sent a TCP request, waiting for a response...");
+
+            let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
+            let read_bytes = stream.read(&mut response_buffer).await?;
+            if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
+                error!("Received an invalid or empty response.");
+                return Err(IggyError::EmptyResponse);
+            }
+
+            let status = u32::from_le_bytes(response_buffer[..4].try_into().unwrap());
+            let length = u32::from_le_bytes(response_buffer[4..].try_into().unwrap());
+            return self.handle_response(status, length, stream.as_mut()).await;
+        }
+
+        error!("Cannot send data. Client is not connected.");
+        Err(IggyError::NotConnected)
+    }
+
+    async fn send_vec_with_response(
+        &self,
+        command: u32,
+        payload: Vec<Bytes>,
+    ) -> Result<Bytes, IggyError> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Err(IggyError::NotConnected);
+        }
+
+        let mut stream = self.stream.lock().await;
+        if let Some(stream) = stream.as_mut() {
+            let payload_length =
+                payload.iter().map(|p| p.len()).sum::<usize>() + REQUEST_INITIAL_BYTES_LENGTH;
+            trace!("Sending a TCP request...");
+            stream.write(&(payload_length as u32).to_le_bytes()).await?;
+            stream.write(&command.to_le_bytes()).await?;
+            stream.write_all_vectored(payload).await?;
             stream.flush().await?;
             trace!("Sent a TCP request, waiting for a response...");
 

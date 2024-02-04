@@ -61,6 +61,19 @@ pub struct Message {
     #[serde_as(as = "Base64")]
     pub payload: Bytes,
 }
+pub struct RetainedMessage {
+    pub payload: Bytes,
+}
+impl RetainedMessage {
+    pub fn from_message(message: Message) -> Self {
+        Self {
+            payload: message.as_bytes(),
+        }
+    }
+    pub fn get_id(&self) -> u128 {
+        u128::from_le_bytes(self.payload[17..33].try_into().unwrap())
+    }
+}
 
 /// The state of the message, currently only the `Available` state is used.
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
@@ -145,6 +158,20 @@ impl Message {
             headers,
         )
     }
+    pub fn from_message_with_offset(message: &send_messages::Message, offset: u64) -> Self {
+        let timestamp = IggyTimestamp::now().to_micros();
+        let checksum = checksum::calculate(&message.payload);
+        let headers = message.headers.as_ref().cloned();
+        Self::create(
+            offset,
+            MessageState::Available,
+            timestamp,
+            message.id,
+            message.payload.clone(),
+            checksum,
+            headers,
+        )
+    }
 
     /// Creates a new message without a specified offset.
     pub fn empty(
@@ -204,5 +231,45 @@ impl Message {
         }
         bytes.put_u32_le(self.length);
         bytes.put_slice(&self.payload);
+    }
+}
+impl BytesSerializable for Message {
+    fn as_bytes(&self) -> Bytes {
+        let size = self.get_size_bytes() as usize;
+        let mut buffer = BytesMut::with_capacity(size);
+        self.extend(&mut buffer);
+        buffer.freeze()
+    }
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
+    where
+        Self: Sized,
+    {
+        let offset = u64::from_le_bytes(bytes[..8].try_into()?);
+        let state_code = MessageState::from_code(bytes[8])?;
+        let timestamp = u64::from_le_bytes(bytes[9..17].try_into()?);
+        let id = u128::from_le_bytes(bytes[17..33].try_into()?);
+        let checksum = u32::from_le_bytes(bytes[33..37].try_into()?);
+
+        let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);
+        let headers = match headers_length {
+            0 => None,
+            _ => {
+                let headers_payload = bytes[41..41 + headers_length as usize].to_owned();
+                let headers = HashMap::from_bytes(Bytes::from(headers_payload))?;
+                Some(headers)
+            }
+        };
+
+        let payload_length = u32::from_le_bytes(bytes[41 + headers_length as usize..].try_into()?);
+        let payload = vec![0; payload_length as usize];
+        Ok(Self::create(
+            offset,
+            state_code,
+            timestamp,
+            id,
+            Bytes::from(payload),
+            checksum,
+            headers,
+        ))
     }
 }

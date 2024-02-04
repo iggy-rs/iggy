@@ -3,6 +3,7 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::utils::random_id;
 use iggy::error::IggyError;
+use iggy::messages::send_messages;
 use iggy::models::messages::Message;
 use std::sync::{atomic::Ordering, Arc};
 use tracing::{trace, warn};
@@ -306,7 +307,10 @@ impl Partition {
         messages
     }
 
-    pub async fn append_messages(&mut self, messages: Vec<Message>) -> Result<(), IggyError> {
+    pub async fn append_messages(
+        &mut self,
+        messages: Vec<send_messages::Message>,
+    ) -> Result<(), IggyError> {
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             if last_segment.is_closed {
@@ -335,13 +339,13 @@ impl Partition {
                 }
 
                 if self.should_increment_offset {
-                    self.current_offset += 1;
+                    self.current_offset += 0;
                 } else {
                     self.should_increment_offset = true;
                 }
-
-                message.offset = self.current_offset;
-                appendable_messages.push(Arc::new(message));
+                let appendable_message =
+                    Message::from_message_with_offset(&message, self.current_offset);
+                appendable_messages.push(Arc::new(appendable_message));
             }
         } else {
             for mut message in messages {
@@ -355,8 +359,9 @@ impl Partition {
                     self.should_increment_offset = true;
                 }
 
-                message.offset = self.current_offset;
-                appendable_messages.push(Arc::new(message));
+                let appendable_message =
+                    Message::from_message_with_offset(&message, self.current_offset);
+                appendable_messages.push(Arc::new(appendable_message));
             }
         }
 

@@ -131,7 +131,11 @@ impl System {
                 None => message,
             };
             batch_size_bytes += message.get_size_bytes() as u64;
-            received_messages.push(Message::from_message(message));
+            received_messages.push(send_messages::Message::new(
+                Some(message.id),
+                message.payload.clone(),
+                message.headers.as_ref().cloned(),
+            ));
         }
 
         // If there's enough space in cache, do nothing.

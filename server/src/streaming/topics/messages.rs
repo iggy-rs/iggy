@@ -5,6 +5,7 @@ use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
+use iggy::messages::send_messages;
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
 use iggy::models::messages::Message;
 use std::collections::HashMap;
@@ -58,7 +59,7 @@ impl Topic {
     pub async fn append_messages(
         &self,
         partitioning: &Partitioning,
-        messages: Vec<Message>,
+        messages: Vec<send_messages::Message>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
@@ -85,7 +86,7 @@ impl Topic {
     async fn append_messages_to_partition(
         &self,
         partition_id: u32,
-        messages: Vec<Message>,
+        messages: Vec<send_messages::Message>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {

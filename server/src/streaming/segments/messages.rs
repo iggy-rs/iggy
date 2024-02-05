@@ -72,11 +72,7 @@ impl Segment {
         &self,
         size_bytes: u64,
     ) -> Result<Vec<Arc<Message>>, IggyError> {
-        let messages = self
-            .storage
-            .segment
-            .load_newest_messages_by_size(self, size_bytes)
-            .await?;
+        let messages = self.load_newest_messages_by_size(size_bytes).await?;
 
         Ok(messages)
     }
@@ -140,9 +136,7 @@ impl Segment {
         }
 
         let index_range = self
-            .storage
-            .segment
-            .load_index_range(self, self.start_offset, start_offset, end_offset)
+            .load_index_range(self.start_offset, start_offset, end_offset)
             .await?;
         if index_range.is_none() {
             trace!(
@@ -162,11 +156,7 @@ impl Segment {
         &self,
         index_range: &IndexRange,
     ) -> Result<Vec<Arc<Message>>, IggyError> {
-        let messages = self
-            .storage
-            .segment
-            .load_messages(self, index_range)
-            .await?;
+        let messages = self.load_messages(index_range).await?;
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
             messages.len(),
@@ -275,7 +265,6 @@ impl Segment {
     }
 
     pub async fn persist_messages(&mut self) -> Result<(), IggyError> {
-        let storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
             return Ok(());
         }
@@ -292,12 +281,10 @@ impl Segment {
             self.partition_id
         );
 
-        let saved_bytes = storage.save_messages(self, unsaved_messages).await?;
+        let saved_bytes = self.save_messages(unsaved_messages).await?;
         let current_position = self.size_bytes - saved_bytes;
-        storage
-            .save_index(self, current_position, unsaved_messages)
-            .await?;
-        storage.save_time_index(self, unsaved_messages).await?;
+        self.save_index(current_position, unsaved_messages).await?;
+        self.save_time_index(unsaved_messages).await?;
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

@@ -1,12 +1,7 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
-use crate::streaming::persistence::persister::Persister;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::personal_access_tokens::storage::FilePersonalAccessTokenStorage;
-use crate::streaming::segments::index::{Index, IndexRange};
-use crate::streaming::segments::segment::Segment;
-use crate::streaming::segments::storage::FileSegmentStorage;
-use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::streams::storage::FileStreamStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::info::SystemInfo;
@@ -19,7 +14,6 @@ use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::models::messages::Message;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::fmt::{Debug, Formatter};
@@ -28,7 +22,7 @@ use std::sync::Arc;
 #[async_trait]
 pub trait Storage<T>: Sync + Send {
     async fn load(&self, component: &mut T) -> Result<(), IggyError>;
-    async fn save(&self, component: &T) -> Result<(), IggyError>;
+    async fn create(&self, component: &T) -> Result<(), IggyError>;
     async fn delete(&self, component: &T) -> Result<(), IggyError>;
 }
 
@@ -92,48 +86,48 @@ pub trait PartitionStorage: Storage<Partition> {
     ) -> Result<(), IggyError>;
 }
 
-#[async_trait]
-pub trait SegmentStorage: Storage<Segment> {
-    async fn load_messages(
-        &self,
-        segment: &Segment,
-        index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, IggyError>;
-    async fn load_newest_messages_by_size(
-        &self,
-        segment: &Segment,
-        size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError>;
-    async fn save_messages(
-        &self,
-        segment: &Segment,
-        messages: &[Arc<Message>],
-    ) -> Result<u32, IggyError>;
-    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
-    async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
-    async fn load_index_range(
-        &self,
-        segment: &Segment,
-        segment_start_offset: u64,
-        index_start_offset: u64,
-        index_end_offset: u64,
-    ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(
-        &self,
-        segment: &Segment,
-        current_position: u32,
-        messages: &[Arc<Message>],
-    ) -> Result<(), IggyError>;
-    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
-    async fn load_last_time_index(&self, segment: &Segment)
-        -> Result<Option<TimeIndex>, IggyError>;
-    async fn save_time_index(
-        &self,
-        segment: &Segment,
-        messages: &[Arc<Message>],
-    ) -> Result<(), IggyError>;
-}
+// #[async_trait]
+// pub trait SegmentStorage: Storage<Segment> {
+//     async fn load_messages(
+//         &self,
+//         segment: &Segment,
+//         index_range: &IndexRange,
+//     ) -> Result<Vec<Arc<Message>>, IggyError>;
+//     async fn load_newest_messages_by_size(
+//         &self,
+//         segment: &Segment,
+//         size_bytes: u64,
+//     ) -> Result<Vec<Arc<Message>>, IggyError>;
+//     async fn save_messages(
+//         &self,
+//         segment: &Segment,
+//         messages: &[Arc<Message>],
+//     ) -> Result<u32, IggyError>;
+//     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
+//     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
+//     async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
+//     async fn load_index_range(
+//         &self,
+//         segment: &Segment,
+//         segment_start_offset: u64,
+//         index_start_offset: u64,
+//         index_end_offset: u64,
+//     ) -> Result<Option<IndexRange>, IggyError>;
+//     async fn save_index(
+//         &self,
+//         segment: &Segment,
+//         current_position: u32,
+//         messages: &[Arc<Message>],
+//     ) -> Result<(), IggyError>;
+//     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
+//     async fn load_last_time_index(&self, segment: &Segment)
+//         -> Result<Option<TimeIndex>, IggyError>;
+//     async fn save_time_index(
+//         &self,
+//         segment: &Segment,
+//         messages: &[Arc<Message>],
+//     ) -> Result<(), IggyError>;
+// }
 
 #[derive(Debug)]
 pub struct SystemStorage {
@@ -143,11 +137,11 @@ pub struct SystemStorage {
     pub stream: Arc<dyn StreamStorage>,
     pub topic: Arc<dyn TopicStorage>,
     pub partition: Arc<dyn PartitionStorage>,
-    pub segment: Arc<dyn SegmentStorage>,
+    // pub segment: Arc<dyn SegmentStorage>,
 }
 
 impl SystemStorage {
-    pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
+    pub fn new(db: Arc<Db>) -> Self {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(db.clone())),
             user: Arc::new(FileUserStorage::new(db.clone())),
@@ -155,7 +149,7 @@ impl SystemStorage {
             stream: Arc::new(FileStreamStorage::new(db.clone())),
             topic: Arc::new(FileTopicStorage::new(db.clone())),
             partition: Arc::new(FilePartitionStorage::new(db.clone())),
-            segment: Arc::new(FileSegmentStorage::new(persister.clone())),
+            // segment: Arc::new(FileSegmentStorage::new(persister.clone())),
         }
     }
 }
@@ -196,23 +190,14 @@ impl Debug for dyn PartitionStorage {
     }
 }
 
-impl Debug for dyn SegmentStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SegmentStorage")
-    }
-}
-
 #[cfg(test)]
 pub(crate) mod tests {
     use crate::streaming::partitions::partition::Partition;
-    use crate::streaming::segments::index::{Index, IndexRange};
     use crate::streaming::segments::segment::Segment;
-    use crate::streaming::segments::time_index::TimeIndex;
     use crate::streaming::storage::*;
     use crate::streaming::streams::stream::Stream;
     use crate::streaming::topics::topic::Topic;
     use async_trait::async_trait;
-    use iggy::models::messages::Message;
     use std::sync::Arc;
 
     struct TestSystemInfoStorage {}
@@ -229,7 +214,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
+        async fn create(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -247,7 +232,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _user: &User) -> Result<(), IggyError> {
+        async fn create(&self, _user: &User) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -280,7 +265,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(
+        async fn create(
             &self,
             _personal_access_token: &PersonalAccessToken,
         ) -> Result<(), IggyError> {
@@ -331,7 +316,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _stream: &Stream) -> Result<(), IggyError> {
+        async fn create(&self, _stream: &Stream) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -348,7 +333,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _topic: &Topic) -> Result<(), IggyError> {
+        async fn create(&self, _topic: &Topic) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -389,7 +374,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _partition: &Partition) -> Result<(), IggyError> {
+        async fn create(&self, _partition: &Partition) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -431,91 +416,11 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _segment: &Segment) -> Result<(), IggyError> {
+        async fn create(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
 
         async fn delete(&self, _segment: &Segment) -> Result<(), IggyError> {
-            Ok(())
-        }
-    }
-
-    #[async_trait]
-    impl SegmentStorage for TestSegmentStorage {
-        async fn load_messages(
-            &self,
-            _segment: &Segment,
-            _index_range: &IndexRange,
-        ) -> Result<Vec<Arc<Message>>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn load_newest_messages_by_size(
-            &self,
-            _segment: &Segment,
-            _size: u64,
-        ) -> Result<Vec<Arc<Message>>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn save_messages(
-            &self,
-            _segment: &Segment,
-            _messages: &[Arc<Message>],
-        ) -> Result<u32, IggyError> {
-            Ok(0)
-        }
-
-        async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn load_checksums(&self, _segment: &Segment) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn load_all_indexes(&self, _segment: &Segment) -> Result<Vec<Index>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn load_index_range(
-            &self,
-            _segment: &Segment,
-            _segment_start_offset: u64,
-            _index_start_offset: u64,
-            _index_end_offset: u64,
-        ) -> Result<Option<IndexRange>, IggyError> {
-            Ok(None)
-        }
-
-        async fn save_index(
-            &self,
-            _segment: &Segment,
-            _current_position: u32,
-            _messages: &[Arc<Message>],
-        ) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn load_all_time_indexes(
-            &self,
-            _segment: &Segment,
-        ) -> Result<Vec<TimeIndex>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn load_last_time_index(
-            &self,
-            _segment: &Segment,
-        ) -> Result<Option<TimeIndex>, IggyError> {
-            Ok(None)
-        }
-
-        async fn save_time_index(
-            &self,
-            _segment: &Segment,
-            _messages: &[Arc<Message>],
-        ) -> Result<(), IggyError> {
             Ok(())
         }
     }
@@ -528,7 +433,6 @@ pub(crate) mod tests {
             stream: Arc::new(TestStreamStorage {}),
             topic: Arc::new(TestTopicStorage {}),
             partition: Arc::new(TestPartitionStorage {}),
-            segment: Arc::new(TestSegmentStorage {}),
         }
     }
 }

@@ -56,7 +56,7 @@ impl Storage<SystemInfo> for FileSystemInfoStorage {
         Ok(())
     }
 
-    async fn save(&self, system_info: &SystemInfo) -> Result<(), IggyError> {
+    async fn create(&self, system_info: &SystemInfo) -> Result<(), IggyError> {
         match rmp_serde::to_vec(&system_info).with_context(|| "Failed to serialize system info") {
             Ok(data) => {
                 if let Err(err) = self

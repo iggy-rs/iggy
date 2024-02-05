@@ -1,7 +1,7 @@
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
 use server::streaming::partitions::partition::Partition;
-use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use server::streaming::segments::paths::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::fs;

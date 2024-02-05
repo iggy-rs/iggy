@@ -12,7 +12,7 @@ async fn single_user_should_be_saved_and_loaded() {
     let setup = TestSetup::init().await;
     let user_id = 10;
     let user = create_user(user_id);
-    setup.storage.user.save(&user).await.unwrap();
+    setup.storage.user.create(&user).await.unwrap();
 
     let mut loaded_user = User {
         id: user_id,
@@ -30,9 +30,9 @@ async fn many_users_should_be_saved_and_loaded() {
     let user2 = create_user(2);
     let user3 = create_user(3);
 
-    setup.storage.user.save(&user1).await.unwrap();
-    setup.storage.user.save(&user2).await.unwrap();
-    setup.storage.user.save(&user3).await.unwrap();
+    setup.storage.user.create(&user1).await.unwrap();
+    setup.storage.user.create(&user2).await.unwrap();
+    setup.storage.user.create(&user3).await.unwrap();
 
     let users = setup.storage.user.load_all().await.unwrap();
     assert_eq!(users.len(), 3);
@@ -49,8 +49,8 @@ async fn user_should_be_deleted() {
     let setup = TestSetup::init().await;
     let user1 = create_user(1);
     let user2 = create_user(2);
-    setup.storage.user.save(&user1).await.unwrap();
-    setup.storage.user.save(&user2).await.unwrap();
+    setup.storage.user.create(&user1).await.unwrap();
+    setup.storage.user.create(&user2).await.unwrap();
 
     let users = setup.storage.user.load_all().await.unwrap();
     assert_eq!(users.len(), 2);

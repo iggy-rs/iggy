@@ -2,8 +2,8 @@ use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
 use iggy::models::messages::{Message, MessageState};
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
-use server::streaming::segments::segment;
-use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use server::streaming::segments::paths::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use server::streaming::segments::segment::*;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::fs;
@@ -16,13 +16,12 @@ async fn should_persist_segment() {
     let partition_id = 3;
     let start_offsets = get_start_offsets();
     for start_offset in start_offsets {
-        let segment = segment::Segment::create(
+        let segment = Segment::new(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
             setup.config.clone(),
-            setup.storage.clone(),
             None,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -35,7 +34,7 @@ async fn should_persist_segment() {
         setup
             .create_partition_directory(stream_id, topic_id, partition_id)
             .await;
-        segment.persist().await.unwrap();
+        segment.create().await.unwrap();
         assert_persisted_segment(
             &setup
                 .config
@@ -54,13 +53,12 @@ async fn should_load_existing_segment_from_disk() {
     let partition_id = 3;
     let start_offsets = get_start_offsets();
     for start_offset in start_offsets {
-        let segment = segment::Segment::create(
+        let segment = Segment::new(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
             setup.config.clone(),
-            setup.storage.clone(),
             None,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -72,7 +70,7 @@ async fn should_load_existing_segment_from_disk() {
         setup
             .create_partition_directory(stream_id, topic_id, partition_id)
             .await;
-        segment.persist().await.unwrap();
+        segment.create().await.unwrap();
         assert_persisted_segment(
             &setup
                 .config
@@ -81,13 +79,12 @@ async fn should_load_existing_segment_from_disk() {
         )
         .await;
 
-        let mut loaded_segment = segment::Segment::create(
+        let mut loaded_segment = Segment::new(
             stream_id,
             topic_id,
             partition_id,
             start_offset,
             setup.config.clone(),
-            setup.storage.clone(),
             None,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -119,13 +116,12 @@ async fn should_persist_and_load_segment_with_messages() {
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let mut segment = segment::Segment::create(
+    let mut segment = Segment::new(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         None,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -138,7 +134,7 @@ async fn should_persist_and_load_segment_with_messages() {
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)
         .await;
-    segment.persist().await.unwrap();
+    segment.create().await.unwrap();
     assert_persisted_segment(
         &setup
             .config
@@ -154,13 +150,12 @@ async fn should_persist_and_load_segment_with_messages() {
 
     segment.persist_messages().await.unwrap();
 
-    let mut loaded_segment = segment::Segment::create(
+    let mut loaded_segment = Segment::new(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         None,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -185,13 +180,12 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let partition_id = 3;
     let start_offset = 0;
     let message_expiry = 10;
-    let mut segment = segment::Segment::create(
+    let mut segment = Segment::new(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         Some(message_expiry),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -204,7 +198,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)
         .await;
-    segment.persist().await.unwrap();
+    segment.create().await.unwrap();
     assert_persisted_segment(
         &setup
             .config
@@ -236,13 +230,12 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let partition_id = 3;
     let start_offset = 0;
     let message_expiry = 10;
-    let mut segment = segment::Segment::create(
+    let mut segment = Segment::new(
         stream_id,
         topic_id,
         partition_id,
         start_offset,
         setup.config.clone(),
-        setup.storage.clone(),
         Some(message_expiry),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -255,7 +248,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     setup
         .create_partition_directory(stream_id, topic_id, partition_id)
         .await;
-    segment.persist().await.unwrap();
+    segment.create().await.unwrap();
     assert_persisted_segment(
         &setup
             .config

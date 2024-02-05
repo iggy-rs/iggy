@@ -1,4 +1,5 @@
 use crate::streaming::partitions::partition::Partition;
+use crate::streaming::segments::persistence::SegmentPersister;
 use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
 use tracing::info;
@@ -38,13 +39,12 @@ impl Partition {
             "Creating the new segment for partition with ID: {}, stream with ID: {}, topic with ID: {}...",
             self.partition_id, self.stream_id, self.topic_id
         );
-        let new_segment = Segment::create(
+        let new_segment = Segment::new(
             self.stream_id,
             self.topic_id,
             self.partition_id,
             start_offset,
             self.config.clone(),
-            self.storage.clone(),
             self.message_expiry,
             self.size_of_parent_stream.clone(),
             self.size_of_parent_topic.clone(),
@@ -53,7 +53,7 @@ impl Partition {
             self.messages_count_of_parent_topic.clone(),
             self.messages_count.clone(),
         );
-        new_segment.persist().await?;
+        new_segment.create().await?;
         self.segments.push(new_segment);
         Ok(())
     }
@@ -70,7 +70,7 @@ impl Partition {
             }
 
             let segment = segment.unwrap();
-            self.storage.segment.delete(segment).await?;
+            segment.delete().await?;
 
             deleted_segment = DeletedSegment {
                 end_offset: segment.end_offset,

@@ -1,5 +1,6 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
-use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
+use crate::streaming::segments::paths::LOG_EXTENSION;
+use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::{PartitionStorage, Storage};
 use anyhow::Context;
 use async_trait::async_trait;
@@ -204,13 +205,12 @@ impl Storage<Partition> for FilePartitionStorage {
                 .replace(&format!(".{}", LOG_EXTENSION), "");
 
             let start_offset = log_file_name.parse::<u64>().unwrap();
-            let mut segment = Segment::create(
+            let mut segment = Segment::new(
                 partition.stream_id,
                 partition.topic_id,
                 partition.partition_id,
                 start_offset,
                 partition.config.clone(),
-                partition.storage.clone(),
                 partition.message_expiry,
                 partition.size_of_parent_stream.clone(),
                 partition.size_of_parent_topic.clone(),
@@ -231,7 +231,7 @@ impl Storage<Partition> for FilePartitionStorage {
 
             if partition.config.partition.validate_checksum {
                 info!("Validating messages checksum for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
-                segment.storage.segment.load_checksums(&segment).await?;
+                segment.load_checksums().await?;
                 info!("Validated messages checksum for partition with ID: {} and segment with start offset: {}.", partition.partition_id, segment.start_offset);
             }
 
@@ -239,7 +239,7 @@ impl Storage<Partition> for FilePartitionStorage {
             let mut unique_message_ids_count = 0;
             if let Some(message_deduplicator) = &partition.message_deduplicator {
                 info!("Loading unique message IDs for partition with ID: {} and segment with start offset: {}...", partition.partition_id, segment.start_offset);
-                let message_ids = segment.storage.segment.load_message_ids(&segment).await?;
+                let message_ids = segment.load_message_ids().await?;
                 for message_id in message_ids {
                     if message_deduplicator.try_insert(&message_id).await {
                         unique_message_ids_count += 1;
@@ -291,7 +291,7 @@ impl Storage<Partition> for FilePartitionStorage {
         Ok(())
     }
 
-    async fn save(&self, partition: &Partition) -> Result<(), IggyError> {
+    async fn create(&self, partition: &Partition) -> Result<(), IggyError> {
         info!(
             "Saving partition with start ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id
@@ -343,7 +343,7 @@ impl Storage<Partition> for FilePartitionStorage {
         }
 
         for segment in partition.get_segments() {
-            segment.persist().await?;
+            segment.create().await?;
         }
 
         info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", partition.partition_id, partition.stream_id, partition.topic_id, partition.path);

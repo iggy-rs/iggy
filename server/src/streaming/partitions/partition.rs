@@ -143,13 +143,12 @@ impl Partition {
         };
 
         if with_segment {
-            let segment = Segment::create(
+            let segment = Segment::new(
                 stream_id,
                 topic_id,
                 partition_id,
                 0,
                 partition.config.clone(),
-                partition.storage.clone(),
                 partition.message_expiry,
                 partition.size_of_parent_stream.clone(),
                 partition.size_of_parent_topic.clone(),

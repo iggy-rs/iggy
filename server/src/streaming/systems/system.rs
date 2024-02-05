@@ -3,7 +3,6 @@ use crate::configs::system::SystemConfig;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::clients::client_manager::ClientManager;
 use crate::streaming::diagnostics::metrics::Metrics;
-use crate::streaming::persistence::persister::*;
 use crate::streaming::session::Session;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
@@ -84,16 +83,7 @@ impl System {
                 Arc::new(db.unwrap())
             }
         };
-        let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
-            true => Arc::new(FileWithSyncPersister {}),
-            false => Arc::new(FilePersister {}),
-        };
-        Self::create(
-            config,
-            SystemStorage::new(db.clone(), persister),
-            Some(db),
-            pat_config,
-        )
+        Self::create(config, SystemStorage::new(db.clone()), Some(db), pat_config)
     }
 
     pub fn create(

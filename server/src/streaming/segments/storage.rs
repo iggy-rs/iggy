@@ -1,8 +1,7 @@
-use crate::streaming::persistence::persister::Persister;
+use super::persistence::*;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
-use crate::streaming::storage::{SegmentStorage, Storage};
 use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -13,7 +12,6 @@ use iggy::models::messages::{Message, MessageState};
 use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::io::SeekFrom;
-use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
@@ -26,197 +24,176 @@ const INDEX_SIZE: u32 = 4;
 const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
-pub struct FileSegmentStorage {
-    persister: Arc<dyn Persister>,
+pub enum SegmentStorageVariant {
+    WithSync(StoragePersister<WithSync>),
+    WithoutSync(StoragePersister<WithoutSync>),
 }
 
-impl FileSegmentStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
-        Self { persister }
+impl SegmentStorageVariant {
+    pub fn new(fsync: bool, path: String) -> Self {
+        if fsync {
+            SegmentStorageVariant::WithSync(StoragePersister::new(WithSync {
+                path: path.to_string(),
+            }))
+        } else {
+            SegmentStorageVariant::WithoutSync(StoragePersister::new(WithoutSync {
+                path: path.to_string(),
+            }))
+        }
     }
 }
 
-unsafe impl Send for FileSegmentStorage {}
-unsafe impl Sync for FileSegmentStorage {}
-
-// TODO: Split into smaller components.
 #[async_trait]
-impl Storage<Segment> for FileSegmentStorage {
-    async fn load(&self, segment: &mut Segment) -> Result<(), IggyError> {
-        info!(
-            "Loading segment from disk for start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {} ...",
-            segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id
-        );
-        let log_file = file::open(&segment.log_path).await?;
+impl SegmentPersister for SegmentStorageVariant {
+    async fn append(
+        &self,
+        messages: Arc<Vec<Message>>,
+        current_offset: u64,
+    ) -> Result<(), IggyError> {
+        match self {
+            SegmentStorageVariant::WithSync(persister) => {
+                persister.append(messages, current_offset).await
+            }
+            SegmentStorageVariant::WithoutSync(persister) => {
+                persister.append(messages, current_offset).await
+            }
+        }
+    }
+
+    async fn create(&self) -> Result<(), IggyError> {
+        match self {
+            SegmentStorageVariant::WithSync(persister) => persister.create().await,
+            SegmentStorageVariant::WithoutSync(persister) => persister.create().await,
+        }
+    }
+
+    async fn delete(&self) -> Result<(), IggyError> {
+        match self {
+            SegmentStorageVariant::WithSync(persister) => persister.delete().await,
+            SegmentStorageVariant::WithoutSync(persister) => persister.delete().await,
+        }
+    }
+}
+
+unsafe impl Send for SegmentStorageVariant {}
+unsafe impl Sync for SegmentStorageVariant {}
+
+impl Segment {
+    pub async fn load(&mut self) -> Result<(), IggyError> {
+        let log_file = file::open(&self.log_path).await?;
         let file_size = log_file.metadata().await.unwrap().len() as u64;
-        segment.size_bytes = file_size as u32;
-        let messages_count = segment.get_messages_count();
+        self.size_bytes = file_size as u32;
+        let messages_count = self.get_messages_count();
 
         info!(
-            "Segment log file of size {} for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-            segment.size_bytes, segment.start_offset, segment.current_offset, segment.partition_id, segment.topic_id, segment.stream_id
+            "Loaded segment log file of size {} for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
+            self.size_bytes, self.start_offset, self.current_offset, self.partition_id, self.topic_id, self.stream_id
         );
 
-        if segment.config.segment.cache_indexes {
-            segment.indexes = Some(segment.storage.segment.load_all_indexes(segment).await?);
+        if self.config.segment.cache_indexes {
+            self.indexes = Some(self.load_all_indexes().await?);
             info!(
                 "Loaded {} indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-                segment.indexes.as_ref().unwrap().len(),
-                segment.start_offset,
-                segment.partition_id,
-                segment.topic_id,
-                segment.stream_id
+                self.indexes.as_ref().unwrap().len(),
+                self.start_offset,
+                self.partition_id,
+                self.topic_id,
+                self.stream_id
             );
         }
 
-        if segment.config.segment.cache_time_indexes {
-            let time_indexes = self.load_all_time_indexes(segment).await?;
+        if self.config.segment.cache_time_indexes {
+            let time_indexes = self.load_all_time_indexes().await?;
             if !time_indexes.is_empty() {
                 let last_index = time_indexes.last().unwrap();
-                segment.current_offset = segment.start_offset + last_index.relative_offset as u64;
-                segment.time_indexes = Some(time_indexes);
+                self.current_offset = self.start_offset + last_index.relative_offset as u64;
+                self.time_indexes = Some(time_indexes);
             }
 
             info!(
                 "Loaded {} time indexes for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-                segment.time_indexes.as_ref().unwrap().len(),
-                segment.start_offset,
-                segment.partition_id,
-                segment.topic_id,
-                segment.stream_id
+                self.time_indexes.as_ref().unwrap().len(),
+                self.start_offset,
+                self.partition_id,
+                self.topic_id,
+                self.stream_id
             );
         } else {
-            let last_time_index = self.load_last_time_index(segment).await?;
+            let last_time_index = self.load_last_time_index().await?;
             if let Some(last_index) = last_time_index {
-                segment.current_offset = segment.start_offset + last_index.relative_offset as u64;
+                self.current_offset = self.start_offset + last_index.relative_offset as u64;
                 info!(
                 "Loaded last time index for segment with start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-                segment.start_offset,
-                segment.partition_id,
-                segment.topic_id,
-                segment.stream_id
+                self.start_offset,
+                self.partition_id,
+                self.topic_id,
+                self.stream_id
             );
             }
         }
 
-        if segment.is_full().await {
-            segment.is_closed = true;
+        if self.is_full().await {
+            self.is_closed = true;
         }
 
-        segment
-            .size_of_parent_stream
+        self.size_of_parent_stream
             .fetch_add(file_size, Ordering::SeqCst);
-        segment
-            .size_of_parent_topic
+        self.size_of_parent_topic
             .fetch_add(file_size, Ordering::SeqCst);
-        segment
-            .size_of_parent_partition
+        self.size_of_parent_partition
             .fetch_add(file_size, Ordering::SeqCst);
-        segment
-            .messages_count_of_parent_stream
+        self.messages_count_of_parent_stream
             .fetch_add(messages_count, Ordering::SeqCst);
-        segment
-            .messages_count_of_parent_topic
+        self.messages_count_of_parent_topic
             .fetch_add(messages_count, Ordering::SeqCst);
-        segment
-            .messages_count_of_parent_partition
+        self.messages_count_of_parent_partition
             .fetch_add(messages_count, Ordering::SeqCst);
 
         Ok(())
     }
 
-    async fn save(&self, segment: &Segment) -> Result<(), IggyError> {
-        info!("Saving segment with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
-            segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id);
-        if !Path::new(&segment.log_path).exists()
-            && self
-                .persister
-                .overwrite(&segment.log_path, &[])
-                .await
-                .is_err()
-        {
-            return Err(IggyError::CannotCreateSegmentLogFile(
-                segment.log_path.clone(),
-            ));
-        }
+    pub async fn create(&self) -> Result<(), IggyError> {
+        self.storage.create().await?;
 
-        if !Path::new(&segment.time_index_path).exists()
-            && self
-                .persister
-                .overwrite(&segment.time_index_path, &[])
-                .await
-                .is_err()
-        {
-            return Err(IggyError::CannotCreateSegmentTimeIndexFile(
-                segment.time_index_path.clone(),
-            ));
-        }
-
-        if !Path::new(&segment.index_path).exists()
-            && self
-                .persister
-                .overwrite(&segment.index_path, &[])
-                .await
-                .is_err()
-        {
-            return Err(IggyError::CannotCreateSegmentIndexFile(
-                segment.index_path.clone(),
-            ));
-        }
-
-        info!("Saved segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
-            segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id);
+        info!("Created segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
+        self.start_offset, self.partition_id, self.topic_id, self.stream_id);
 
         Ok(())
     }
 
-    async fn delete(&self, segment: &Segment) -> Result<(), IggyError> {
-        let segment_size = segment.size_bytes;
-        let segment_count_of_messages = segment.get_messages_count();
-        info!(
-            "Deleting segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}...",
-            segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
-        );
-        self.persister.delete(&segment.log_path).await?;
-        self.persister.delete(&segment.index_path).await?;
-        self.persister.delete(&segment.time_index_path).await?;
-        segment
-            .size_of_parent_stream
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
-        segment
-            .size_of_parent_topic
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
-        segment
-            .size_of_parent_partition
-            .fetch_sub(segment.size_bytes as u64, Ordering::SeqCst);
-        segment
-            .messages_count_of_parent_stream
+    pub async fn delete(&self) -> Result<(), IggyError> {
+        let segment_size = self.size_bytes;
+        let segment_count_of_messages = self.get_messages_count();
+
+        self.storage.delete().await?;
+
+        self.size_of_parent_stream
+            .fetch_sub(self.size_bytes as u64, Ordering::SeqCst);
+        self.size_of_parent_topic
+            .fetch_sub(self.size_bytes as u64, Ordering::SeqCst);
+        self.size_of_parent_partition
+            .fetch_sub(self.size_bytes as u64, Ordering::SeqCst);
+        self.messages_count_of_parent_stream
             .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
-        segment
-            .messages_count_of_parent_topic
+        self.messages_count_of_parent_topic
             .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
-        segment
-            .messages_count_of_parent_partition
+        self.messages_count_of_parent_partition
             .fetch_sub(segment_count_of_messages, Ordering::SeqCst);
         info!(
             "Deleted segment of size {segment_size} with start offset: {} for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
-            segment.start_offset, segment.partition_id, segment.stream_id, segment.topic_id,
+            self.start_offset, self.partition_id, self.stream_id, self.topic_id,
         );
         Ok(())
     }
-}
 
-#[async_trait]
-impl SegmentStorage for FileSegmentStorage {
-    async fn load_messages(
+    pub async fn load_messages(
         &self,
-        segment: &Segment,
         index_range: &IndexRange,
     ) -> Result<Vec<Arc<Message>>, IggyError> {
         let mut messages = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
-        load_messages_by_range(segment, index_range, |message: Message| {
+        self.load_messages_by_range(index_range, |message: Message| {
             messages.push(Arc::new(message));
             Ok(())
         })
@@ -225,14 +202,13 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(messages)
     }
 
-    async fn load_newest_messages_by_size(
+    pub async fn load_newest_messages_by_size(
         &self,
-        segment: &Segment,
         size_bytes: u64,
     ) -> Result<Vec<Arc<Message>>, IggyError> {
         let mut messages = Vec::new();
         let mut total_size_bytes = 0;
-        load_messages_by_size(segment, size_bytes, |message: Message| {
+        self.load_messages_by_size(size_bytes, |message: Message| {
             total_size_bytes += message.get_size_bytes() as u64;
             messages.push(Arc::new(message));
             Ok(())
@@ -246,26 +222,16 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(messages)
     }
 
-    async fn save_messages(
-        &self,
-        segment: &Segment,
-        messages: &[Arc<Message>],
-    ) -> Result<u32, IggyError> {
+    pub async fn save_messages(&self, messages: Arc<Vec<Message>>) -> Result<u32, IggyError> {
         let messages_size = messages
             .iter()
             .map(|message| message.get_size_bytes())
             .sum::<u32>();
 
-        let mut bytes = BytesMut::with_capacity(messages_size as usize);
-        for message in messages {
-            message.extend(&mut bytes);
-        }
-
         if let Err(err) = self
-            .persister
-            .append(&segment.log_path, &bytes)
+            .append(messages)
             .await
-            .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
+            .with_context(|| format!("Failed to save messages to segment: {}", self.log_path))
         {
             return Err(IggyError::CannotSaveMessagesToSegment(err));
         }
@@ -273,9 +239,9 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(messages_size)
     }
 
-    async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
+    pub async fn load_message_ids(&self) -> Result<Vec<u128>, IggyError> {
         let mut message_ids = Vec::new();
-        load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
+        self.load_messages_by_range(&IndexRange::max_range(), |message: Message| {
             message_ids.push(message.id);
             Ok(())
         })
@@ -284,8 +250,8 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(message_ids)
     }
 
-    async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError> {
-        load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
+    pub async fn load_checksums(&self) -> Result<(), IggyError> {
+        self.load_messages_by_range(&IndexRange::max_range(), |message: Message| {
             let calculated_checksum = checksum::calculate(&message.payload);
             trace!(
                 "Loaded message for offset: {}, checksum: {}, expected: {}",
@@ -306,9 +272,9 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(())
     }
 
-    async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError> {
+    pub async fn load_all_indexes(&self) -> Result<Vec<Index>, IggyError> {
         trace!("Loading indexes from file...");
-        let file = file::open(&segment.index_path).await?;
+        let file = file::open(&self.index_path).await?;
         let file_size = file.metadata().await?.len() as usize;
         if file_size == 0 {
             trace!("Index file is empty.");
@@ -349,9 +315,8 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(indexes)
     }
 
-    async fn load_index_range(
+    pub async fn load_index_range(
         &self,
-        segment: &Segment,
         segment_start_offset: u64,
         mut index_start_offset: u64,
         index_end_offset: u64,
@@ -371,7 +336,7 @@ impl SegmentStorage for FileSegmentStorage {
             return Ok(None);
         }
 
-        let mut file = file::open(&segment.index_path).await?;
+        let mut file = file::open(&self.index_path).await?;
         let file_length = file.metadata().await?.len() as u32;
         if file_length == 0 {
             trace!("Index file is empty.");
@@ -436,34 +401,32 @@ impl SegmentStorage for FileSegmentStorage {
         }))
     }
 
-    async fn save_index(
-        &self,
-        segment: &Segment,
-        mut current_position: u32,
-        messages: &[Arc<Message>],
-    ) -> Result<(), IggyError> {
-        let mut bytes = Vec::with_capacity(messages.len() * 4);
-        for message in messages {
-            trace!("Persisting index for position: {}", current_position);
-            bytes.put_u32_le(current_position);
-            current_position += message.get_size_bytes();
-        }
+    // pub async fn save_index(
+    //     &self,
+    //     mut current_position: u32,
+    //     messages: &[Arc<Message>],
+    // ) -> Result<(), IggyError> {
+    //     let mut bytes = Vec::with_capacity(messages.len() * 4);
+    //     for message in messages {
+    //         trace!("Persisting index for position: {}", current_position);
+    //         bytes.put_u32_le(current_position);
+    //         current_position += message.get_size_bytes();
+    //     }
 
-        if let Err(err) = self
-            .persister
-            .append(&segment.index_path, &bytes)
-            .await
-            .with_context(|| format!("Failed to save index to segment: {}", segment.index_path))
-        {
-            return Err(IggyError::CannotSaveIndexToSegment(err));
-        }
+    //     if let Err(err) = self
+    //         .append(&bytes)
+    //         .await
+    //         .with_context(|| format!("Failed to save index to segment: {}", self.index_path))
+    //     {
+    //         return Err(IggyError::CannotSaveIndexToSegment(err));
+    //     }
 
-        Ok(())
-    }
+    //     Ok(())
+    // }
 
-    async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError> {
+    pub async fn load_all_time_indexes(&self) -> Result<Vec<TimeIndex>, IggyError> {
         trace!("Loading time indexes from file...");
-        let file = file::open(&segment.time_index_path).await?;
+        let file = file::open(&self.index_path).await?;
         let file_size = file.metadata().await?.len() as usize;
         if file_size == 0 {
             trace!("Time index file is empty.");
@@ -504,12 +467,9 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(indexes)
     }
 
-    async fn load_last_time_index(
-        &self,
-        segment: &Segment,
-    ) -> Result<Option<TimeIndex>, IggyError> {
+    async fn load_last_time_index(&self) -> Result<Option<TimeIndex>, IggyError> {
         trace!("Loading last time index from file...");
-        let mut file = file::open(&segment.time_index_path).await?;
+        let mut file = file::open(&self.index_path).await?;
         let file_size = file.metadata().await?.len() as usize;
         if file_size == 0 {
             trace!("Time index file is empty.");
@@ -530,230 +490,221 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(Some(index))
     }
 
-    async fn save_time_index(
+    // pub async fn save_time_index(&self, messages: &[Arc<Message>]) -> Result<(), IggyError> {
+    //     let mut bytes = Vec::with_capacity(messages.len() * 8);
+    //     for message in messages {
+    //         bytes.put_u64_le(message.timestamp);
+    //     }
+
+    //     if let Err(err) = self.append(&bytes).await.with_context(|| {
+    //         format!(
+    //             "Failed to save TimeIndex to segment: {}",
+    //             self.time_index_path
+    //         )
+    //     }) {
+    //         return Err(IggyError::CannotSaveTimeIndexToSegment(err));
+    //     }
+
+    //     Ok(())
+    // }
+
+    async fn load_messages_by_range(
         &self,
-        segment: &Segment,
-        messages: &[Arc<Message>],
+        index_range: &IndexRange,
+        mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
     ) -> Result<(), IggyError> {
-        let mut bytes = Vec::with_capacity(messages.len() * 8);
-        for message in messages {
-            bytes.put_u64_le(message.timestamp);
+        let file = file::open(&self.log_path).await?;
+        let file_size = file.metadata().await?.len();
+        if file_size == 0 {
+            return Ok(());
         }
 
-        if let Err(err) = self
-            .persister
-            .append(&segment.time_index_path, &bytes)
-            .await
-            .with_context(|| {
-                format!(
-                    "Failed to save TimeIndex to segment: {}",
-                    segment.time_index_path
-                )
-            })
-        {
-            return Err(IggyError::CannotSaveTimeIndexToSegment(err));
+        if index_range.end.position == 0 {
+            return Ok(());
+        }
+
+        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        reader
+            .seek(SeekFrom::Start(index_range.start.position as u64))
+            .await?;
+
+        let mut read_messages = 0;
+        let messages_count =
+            (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
+
+        while read_messages < messages_count {
+            let offset = reader.read_u64_le().await;
+            if offset.is_err() {
+                break;
+            }
+
+            let state = reader.read_u8().await;
+            if state.is_err() {
+                return Err(IggyError::CannotReadMessageState);
+            }
+
+            let state = MessageState::from_code(state.unwrap())?;
+            let timestamp = reader.read_u64_le().await;
+            if timestamp.is_err() {
+                return Err(IggyError::CannotReadMessageTimestamp);
+            }
+
+            let id = reader.read_u128_le().await;
+            if id.is_err() {
+                return Err(IggyError::CannotReadMessageId);
+            }
+
+            let checksum = reader.read_u32_le().await;
+            if checksum.is_err() {
+                return Err(IggyError::CannotReadMessageChecksum);
+            }
+
+            let headers_length = reader.read_u32_le().await;
+            if headers_length.is_err() {
+                return Err(IggyError::CannotReadHeadersLength);
+            }
+
+            let headers_length = headers_length.unwrap();
+            let headers = match headers_length {
+                0 => None,
+                _ => {
+                    let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
+                    headers_payload.put_bytes(0, headers_length as usize);
+                    if reader.read_exact(&mut headers_payload).await.is_err() {
+                        return Err(IggyError::CannotReadHeadersPayload);
+                    }
+
+                    let headers = HashMap::from_bytes(headers_payload.freeze())?;
+                    Some(headers)
+                }
+            };
+
+            let payload_length = reader.read_u32_le().await?;
+
+            let mut payload = BytesMut::with_capacity(payload_length as usize);
+            payload.put_bytes(0, payload_length as usize);
+            if reader.read_exact(&mut payload).await.is_err() {
+                return Err(IggyError::CannotReadMessagePayload);
+            }
+
+            let offset = offset.unwrap();
+            let timestamp = timestamp.unwrap();
+            let id = id.unwrap();
+            let checksum = checksum.unwrap();
+
+            let message = Message::create(
+                offset,
+                state,
+                timestamp,
+                id,
+                payload.freeze(),
+                checksum,
+                headers,
+            );
+            read_messages += 1;
+            on_message(message)?;
+        }
+        Ok(())
+    }
+
+    async fn load_messages_by_size(
+        &self,
+        size_bytes: u64,
+        mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
+    ) -> Result<(), IggyError> {
+        let file = file::open(&self.log_path).await?;
+        let file_size = file.metadata().await?.len();
+        if file_size == 0 {
+            return Ok(());
+        }
+        let threshold = file_size.saturating_sub(size_bytes);
+
+        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        let mut accumulated_size: u64 = 0;
+
+        loop {
+            let offset = reader.read_u64_le().await;
+            if offset.is_err() {
+                break;
+            }
+
+            let state = reader.read_u8().await;
+            if state.is_err() {
+                return Err(IggyError::CannotReadMessageState);
+            }
+
+            let state = MessageState::from_code(state.unwrap())?;
+            let timestamp = reader.read_u64_le().await;
+            if timestamp.is_err() {
+                return Err(IggyError::CannotReadMessageTimestamp);
+            }
+
+            let id = reader.read_u128_le().await;
+            if id.is_err() {
+                return Err(IggyError::CannotReadMessageId);
+            }
+
+            let checksum = reader.read_u32_le().await;
+            if checksum.is_err() {
+                return Err(IggyError::CannotReadMessageChecksum);
+            }
+
+            let headers_length = reader.read_u32_le().await;
+            if headers_length.is_err() {
+                return Err(IggyError::CannotReadHeadersLength);
+            }
+
+            let headers_length = headers_length.unwrap();
+            let headers = match headers_length {
+                0 => None,
+                _ => {
+                    let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
+                    if reader.read_exact(&mut headers_payload).await.is_err() {
+                        return Err(IggyError::CannotReadHeadersPayload);
+                    }
+
+                    let headers = HashMap::from_bytes(headers_payload.freeze())?;
+                    Some(headers)
+                }
+            };
+
+            let payload_length = reader.read_u32_le().await;
+            if payload_length.is_err() {
+                return Err(IggyError::CannotReadMessageLength);
+            }
+
+            let mut payload = vec![0; payload_length.unwrap() as usize];
+            if reader.read_exact(&mut payload).await.is_err() {
+                return Err(IggyError::CannotReadMessagePayload);
+            }
+
+            let offset = offset.unwrap();
+            let timestamp = timestamp.unwrap();
+            let id = id.unwrap();
+            let checksum = checksum.unwrap();
+
+            let message = Message::create(
+                offset,
+                state,
+                timestamp,
+                id,
+                Bytes::from(payload),
+                checksum,
+                headers,
+            );
+            let message_size = message.get_size_bytes() as u64;
+
+            if accumulated_size >= threshold {
+                on_message(message)?;
+            }
+
+            accumulated_size += message_size;
+
+            if accumulated_size >= file_size {
+                break;
+            }
         }
 
         Ok(())
     }
-}
-
-async fn load_messages_by_range(
-    segment: &Segment,
-    index_range: &IndexRange,
-    mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
-) -> Result<(), IggyError> {
-    let file = file::open(&segment.log_path).await?;
-    let file_size = file.metadata().await?.len();
-    if file_size == 0 {
-        return Ok(());
-    }
-
-    if index_range.end.position == 0 {
-        return Ok(());
-    }
-
-    let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-    reader
-        .seek(SeekFrom::Start(index_range.start.position as u64))
-        .await?;
-
-    let mut read_messages = 0;
-    let messages_count =
-        (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
-
-    while read_messages < messages_count {
-        let offset = reader.read_u64_le().await;
-        if offset.is_err() {
-            break;
-        }
-
-        let state = reader.read_u8().await;
-        if state.is_err() {
-            return Err(IggyError::CannotReadMessageState);
-        }
-
-        let state = MessageState::from_code(state.unwrap())?;
-        let timestamp = reader.read_u64_le().await;
-        if timestamp.is_err() {
-            return Err(IggyError::CannotReadMessageTimestamp);
-        }
-
-        let id = reader.read_u128_le().await;
-        if id.is_err() {
-            return Err(IggyError::CannotReadMessageId);
-        }
-
-        let checksum = reader.read_u32_le().await;
-        if checksum.is_err() {
-            return Err(IggyError::CannotReadMessageChecksum);
-        }
-
-        let headers_length = reader.read_u32_le().await;
-        if headers_length.is_err() {
-            return Err(IggyError::CannotReadHeadersLength);
-        }
-
-        let headers_length = headers_length.unwrap();
-        let headers = match headers_length {
-            0 => None,
-            _ => {
-                let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
-                headers_payload.put_bytes(0, headers_length as usize);
-                if reader.read_exact(&mut headers_payload).await.is_err() {
-                    return Err(IggyError::CannotReadHeadersPayload);
-                }
-
-                let headers = HashMap::from_bytes(headers_payload.freeze())?;
-                Some(headers)
-            }
-        };
-
-        let payload_length = reader.read_u32_le().await?;
-
-        let mut payload = BytesMut::with_capacity(payload_length as usize);
-        payload.put_bytes(0, payload_length as usize);
-        if reader.read_exact(&mut payload).await.is_err() {
-            return Err(IggyError::CannotReadMessagePayload);
-        }
-
-        let offset = offset.unwrap();
-        let timestamp = timestamp.unwrap();
-        let id = id.unwrap();
-        let checksum = checksum.unwrap();
-
-        let message = Message::create(
-            offset,
-            state,
-            timestamp,
-            id,
-            payload.freeze(),
-            checksum,
-            headers,
-        );
-        read_messages += 1;
-        on_message(message)?;
-    }
-    Ok(())
-}
-
-async fn load_messages_by_size(
-    segment: &Segment,
-    size_bytes: u64,
-    mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
-) -> Result<(), IggyError> {
-    let file = file::open(&segment.log_path).await?;
-    let file_size = file.metadata().await?.len();
-    if file_size == 0 {
-        return Ok(());
-    }
-    let threshold = file_size.saturating_sub(size_bytes);
-
-    let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-    let mut accumulated_size: u64 = 0;
-
-    loop {
-        let offset = reader.read_u64_le().await;
-        if offset.is_err() {
-            break;
-        }
-
-        let state = reader.read_u8().await;
-        if state.is_err() {
-            return Err(IggyError::CannotReadMessageState);
-        }
-
-        let state = MessageState::from_code(state.unwrap())?;
-        let timestamp = reader.read_u64_le().await;
-        if timestamp.is_err() {
-            return Err(IggyError::CannotReadMessageTimestamp);
-        }
-
-        let id = reader.read_u128_le().await;
-        if id.is_err() {
-            return Err(IggyError::CannotReadMessageId);
-        }
-
-        let checksum = reader.read_u32_le().await;
-        if checksum.is_err() {
-            return Err(IggyError::CannotReadMessageChecksum);
-        }
-
-        let headers_length = reader.read_u32_le().await;
-        if headers_length.is_err() {
-            return Err(IggyError::CannotReadHeadersLength);
-        }
-
-        let headers_length = headers_length.unwrap();
-        let headers = match headers_length {
-            0 => None,
-            _ => {
-                let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
-                if reader.read_exact(&mut headers_payload).await.is_err() {
-                    return Err(IggyError::CannotReadHeadersPayload);
-                }
-
-                let headers = HashMap::from_bytes(headers_payload.freeze())?;
-                Some(headers)
-            }
-        };
-
-        let payload_length = reader.read_u32_le().await;
-        if payload_length.is_err() {
-            return Err(IggyError::CannotReadMessageLength);
-        }
-
-        let mut payload = vec![0; payload_length.unwrap() as usize];
-        if reader.read_exact(&mut payload).await.is_err() {
-            return Err(IggyError::CannotReadMessagePayload);
-        }
-
-        let offset = offset.unwrap();
-        let timestamp = timestamp.unwrap();
-        let id = id.unwrap();
-        let checksum = checksum.unwrap();
-
-        let message = Message::create(
-            offset,
-            state,
-            timestamp,
-            id,
-            Bytes::from(payload),
-            checksum,
-            headers,
-        );
-        let message_size = message.get_size_bytes() as u64;
-
-        if accumulated_size >= threshold {
-            on_message(message)?;
-        }
-
-        accumulated_size += message_size;
-
-        if accumulated_size >= file_size {
-            break;
-        }
-    }
-
-    Ok(())
 }

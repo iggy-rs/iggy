@@ -39,7 +39,7 @@ jobs:
         run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --codecov --output-path codecov.json --ignore-filename-regex '(bench\/|integration\/|tools\/)'
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: codecov.json

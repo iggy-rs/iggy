@@ -37,7 +37,7 @@ jobs:
           echo "::notice ::Version from Cargo.toml $version"
 
       - name: Check if version is a Git tag
-        uses: mukunku/tag-exists-action@v1.5.0
+        uses: mukunku/tag-exists-action@v1.6.0
         if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock server/Cargo.toml' }}
         id: check_git_tag
         with:

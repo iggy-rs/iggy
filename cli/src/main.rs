@@ -4,7 +4,8 @@ mod error;
 mod logging;
 
 use crate::args::{
-    client::ClientAction, consumer_group::ConsumerGroupAction, permissions::PermissionsArgs,
+    client::ClientAction, consumer_group::ConsumerGroupAction,
+    consumer_offset::ConsumerOffsetAction, permissions::PermissionsArgs,
     personal_access_token::PersonalAccessTokenAction, stream::StreamAction, topic::TopicAction,
     Command, IggyConsoleArgs,
 };
@@ -21,6 +22,9 @@ use iggy::cli::{
         create_consumer_group::CreateConsumerGroupCmd,
         delete_consumer_group::DeleteConsumerGroupCmd, get_consumer_group::GetConsumerGroupCmd,
         get_consumer_groups::GetConsumerGroupsCmd,
+    },
+    consumer_offset::{
+        get_consumer_offset::GetConsumerOffsetCmd, set_consumer_offset::SetConsumerOffsetCmd,
     },
     message::{poll_messages::PollMessagesCmd, send_messages::SendMessagesCmd},
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
@@ -228,6 +232,21 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
                 poll_args.last,
                 poll_args.next,
                 poll_args.consumer.clone(),
+            )),
+        },
+        Command::ConsumerOffset(command) => match command {
+            ConsumerOffsetAction::Get(get_args) => Box::new(GetConsumerOffsetCmd::new(
+                get_args.consumer_id.clone(),
+                get_args.stream_id.clone(),
+                get_args.topic_id.clone(),
+                get_args.partition_id,
+            )),
+            ConsumerOffsetAction::Set(set_args) => Box::new(SetConsumerOffsetCmd::new(
+                set_args.consumer_id.clone(),
+                set_args.stream_id.clone(),
+                set_args.topic_id.clone(),
+                set_args.partition_id,
+                set_args.offset,
             )),
         },
     }

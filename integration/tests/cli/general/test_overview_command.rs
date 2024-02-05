@@ -26,18 +26,19 @@ Iggy is the persistent message streaming platform written in Rust, supporting QU
 Usage: iggy [OPTIONS] [COMMAND]
 
 Commands:
-  stream          stream operations [aliases: s]
-  topic           topic operations [aliases: t]
-  partition       partition operations [aliases: p]
-  ping            ping iggy server
-  me              get current client info
-  stats           get iggy server statistics
-  pat             personal access token operations
-  user            user operations [aliases: u]
-  client          client operations [aliases: c]
-  consumer-group  consumer group operations [aliases: g]
-  message         message operations [aliases: m]
-  help            Print this message or the help of the given subcommand(s)
+  stream           stream operations [aliases: s]
+  topic            topic operations [aliases: t]
+  partition        partition operations [aliases: p]
+  ping             ping iggy server
+  me               get current client info
+  stats            get iggy server statistics
+  pat              personal access token operations
+  user             user operations [aliases: u]
+  client           client operations [aliases: c]
+  consumer-group   consumer group operations [aliases: g]
+  consumer-offset  consumer offset operations [aliases: o]
+  message          message operations [aliases: m]
+  help             Print this message or the help of the given subcommand(s)
 
 
 Run 'iggy --help' for full help message.

@@ -2,12 +2,13 @@ use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use iggy::error::IggyError;
-use iggy::models::messages::Message;
+use iggy::models::messages::{Message, RetainedMessage};
+use iggy::sizeable::Sizeable;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
 
-const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
+const EMPTY_MESSAGES: Vec<Arc<RetainedMessage>> = vec![];
 
 impl Segment {
     pub fn get_messages_count(&self) -> u64 {
@@ -22,7 +23,7 @@ impl Segment {
         &self,
         mut offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         if count == 0 {
             return Ok(EMPTY_MESSAGES);
         }
@@ -46,12 +47,12 @@ impl Segment {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let first_offset = unsaved_messages[0].offset;
+        let first_offset = unsaved_messages[0].get_offset();
         if end_offset < first_offset {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let last_offset = unsaved_messages[unsaved_messages.len() - 1].offset;
+        let last_offset = unsaved_messages[unsaved_messages.len() - 1].get_offset();
         if end_offset <= last_offset {
             return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
         }
@@ -63,7 +64,7 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn get_all_messages(&self) -> Result<Vec<Arc<Message>>, IggyError> {
+    pub async fn get_all_messages(&self) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         self.get_messages(self.start_offset, self.get_messages_count() as u32)
             .await
     }
@@ -71,7 +72,7 @@ impl Segment {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let messages = self
             .storage
             .segment
@@ -81,21 +82,25 @@ impl Segment {
         Ok(messages)
     }
 
-    fn load_messages_from_unsaved_buffer(&self, offset: u64, end_offset: u64) -> Vec<Arc<Message>> {
+    fn load_messages_from_unsaved_buffer(
+        &self,
+        offset: u64,
+        end_offset: u64,
+    ) -> Vec<Arc<RetainedMessage>> {
         self.unsaved_messages
             .as_ref()
             .unwrap()
             .iter()
-            .filter(|message| message.offset >= offset && message.offset <= end_offset)
+            .filter(|message| message.get_offset() >= offset && message.get_offset() <= end_offset)
             .cloned()
-            .collect::<Vec<Arc<Message>>>()
+            .collect::<Vec<Arc<RetainedMessage>>>()
     }
 
     async fn load_messages_from_disk(
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Loading messages from disk, segment start offset: {}, end offset: {}, current offset: {}...",
             start_offset,
@@ -161,7 +166,7 @@ impl Segment {
     async fn load_messages_from_segment_file(
         &self,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let messages = self
             .storage
             .segment
@@ -177,7 +182,10 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn append_messages(&mut self, messages: &[Arc<Message>]) -> Result<(), IggyError> {
+    pub async fn append_messages(
+        &mut self,
+        messages: &[Arc<RetainedMessage>],
+    ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
                 self.start_offset,
@@ -203,7 +211,7 @@ impl Segment {
         let mut messages_size = 0;
         if self.indexes.is_some() && self.time_indexes.is_some() {
             for message in messages {
-                let relative_offset = (message.offset - self.start_offset) as u32;
+                let relative_offset = (message.get_offset() - self.start_offset) as u32;
 
                 self.indexes.as_mut().unwrap().push(Index {
                     relative_offset,
@@ -212,17 +220,17 @@ impl Segment {
 
                 self.time_indexes.as_mut().unwrap().push(TimeIndex {
                     relative_offset,
-                    timestamp: message.timestamp,
+                    timestamp: message.get_timestamp(),
                 });
                 let message_size = message.get_size_bytes();
                 self.size_bytes += message_size;
                 messages_size += message_size;
-                self.current_offset = message.offset;
+                self.current_offset = message.get_offset();
                 unsaved_messages.push(message.clone());
             }
         } else if self.indexes.is_some() {
             for message in messages {
-                let relative_offset = (message.offset - self.start_offset) as u32;
+                let relative_offset = (message.get_offset() - self.start_offset) as u32;
 
                 self.indexes.as_mut().unwrap().push(Index {
                     relative_offset,
@@ -231,21 +239,21 @@ impl Segment {
                 let message_size = message.get_size_bytes();
                 self.size_bytes += message_size;
                 messages_size += message_size;
-                self.current_offset = message.offset;
+                self.current_offset = message.get_offset();
                 unsaved_messages.push(message.clone());
             }
         } else if self.time_indexes.is_some() {
             for message in messages {
-                let relative_offset = (message.offset - self.start_offset) as u32;
+                let relative_offset = (message.get_offset() - self.start_offset) as u32;
 
                 self.time_indexes.as_mut().unwrap().push(TimeIndex {
                     relative_offset,
-                    timestamp: message.timestamp,
+                    timestamp: message.get_timestamp(),
                 });
                 let message_size = message.get_size_bytes();
                 self.size_bytes += message_size;
                 messages_size += message_size;
-                self.current_offset = message.offset;
+                self.current_offset = message.get_offset();
                 unsaved_messages.push(message.clone());
             }
         } else {
@@ -253,7 +261,7 @@ impl Segment {
                 let message_size = message.get_size_bytes();
                 self.size_bytes += message_size;
                 messages_size += message_size;
-                self.current_offset = message.offset;
+                self.current_offset = message.get_offset();
                 unsaved_messages.push(message.clone());
             }
         }

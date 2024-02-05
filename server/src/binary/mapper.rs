@@ -11,6 +11,7 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
+use iggy::sizeable::Sizeable;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -129,7 +130,7 @@ pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
     bytes.put_u64_le(polled_messages.current_offset);
     bytes.put_u32_le(messages_count);
     for message in polled_messages.messages.iter() {
-        message.extend(&mut bytes);
+        bytes.extend(&message.payload);
     }
 
     bytes.freeze()

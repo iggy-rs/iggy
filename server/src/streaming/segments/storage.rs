@@ -9,7 +9,8 @@ use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
-use iggy::models::messages::{Message, MessageState};
+use iggy::models::messages::{Message, MessageState, RetainedMessage};
+use iggy::sizeable::Sizeable;
 use iggy::utils::checksum;
 use std::collections::HashMap;
 use std::io::SeekFrom;
@@ -212,11 +213,11 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let mut messages = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
-        load_messages_by_range(segment, index_range, |message: Message| {
+        load_messages_by_range(segment, index_range, |message: RetainedMessage| {
             messages.push(Arc::new(message));
             Ok(())
         })
@@ -229,10 +230,10 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let mut messages = Vec::new();
         let mut total_size_bytes = 0;
-        load_messages_by_size(segment, size_bytes, |message: Message| {
+        load_messages_by_size(segment, size_bytes, |message: RetainedMessage| {
             total_size_bytes += message.get_size_bytes() as u64;
             messages.push(Arc::new(message));
             Ok(())
@@ -249,7 +250,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_messages(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages: &[Arc<RetainedMessage>],
     ) -> Result<u32, IggyError> {
         let messages_size = messages
             .iter()
@@ -258,7 +259,8 @@ impl SegmentStorage for FileSegmentStorage {
 
         let mut bytes = BytesMut::with_capacity(messages_size as usize);
         for message in messages {
-            message.extend(&mut bytes);
+            bytes.put_u32_le(message.length);
+            bytes.extend(&message.payload);
         }
 
         if let Err(err) = self
@@ -275,33 +277,41 @@ impl SegmentStorage for FileSegmentStorage {
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
         let mut message_ids = Vec::new();
-        load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
-            message_ids.push(message.id);
-            Ok(())
-        })
+        load_messages_by_range(
+            segment,
+            &IndexRange::max_range(),
+            |message: RetainedMessage| {
+                message_ids.push(message.get_id());
+                Ok(())
+            },
+        )
         .await?;
         trace!("Loaded {} message IDs from disk.", message_ids.len());
         Ok(message_ids)
     }
 
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError> {
-        load_messages_by_range(segment, &IndexRange::max_range(), |message: Message| {
-            let calculated_checksum = checksum::calculate(&message.payload);
-            trace!(
-                "Loaded message for offset: {}, checksum: {}, expected: {}",
-                message.offset,
-                calculated_checksum,
-                message.checksum
-            );
-            if calculated_checksum != message.checksum {
-                return Err(IggyError::InvalidMessageChecksum(
+        load_messages_by_range(
+            segment,
+            &IndexRange::max_range(),
+            |message: RetainedMessage| {
+                let calculated_checksum = checksum::calculate(&message.get_payload());
+                trace!(
+                    "Loaded message for offset: {}, checksum: {}, expected: {}",
+                    message.get_offset(),
                     calculated_checksum,
-                    message.checksum,
-                    message.offset,
-                ));
-            }
-            Ok(())
-        })
+                    message.get_checksum()
+                );
+                if calculated_checksum != message.get_checksum() {
+                    return Err(IggyError::InvalidMessageChecksum(
+                        calculated_checksum,
+                        message.get_checksum(),
+                        message.get_offset(),
+                    ));
+                }
+                Ok(())
+            },
+        )
         .await?;
         Ok(())
     }
@@ -440,7 +450,7 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         mut current_position: u32,
-        messages: &[Arc<Message>],
+        messages: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
         let mut bytes = Vec::with_capacity(messages.len() * 4);
         for message in messages {
@@ -533,11 +543,11 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_time_index(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
         let mut bytes = Vec::with_capacity(messages.len() * 8);
         for message in messages {
-            bytes.put_u64_le(message.timestamp);
+            bytes.put_u64_le(message.get_timestamp());
         }
 
         if let Err(err) = self
@@ -561,7 +571,7 @@ impl SegmentStorage for FileSegmentStorage {
 async fn load_messages_by_range(
     segment: &Segment,
     index_range: &IndexRange,
-    mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
+    mut on_message: impl FnMut(RetainedMessage) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
@@ -583,74 +593,17 @@ async fn load_messages_by_range(
         (1 + index_range.end.relative_offset - index_range.start.relative_offset) as usize;
 
     while read_messages < messages_count {
-        let offset = reader.read_u64_le().await;
-        if offset.is_err() {
-            break;
-        }
+        let length = reader
+            .read_u32_le()
+            .await
+            .map_err(|_| IggyError::CannotReadMessageLength)?;
+        let mut payload = Vec::with_capacity(length as usize);
+        let _ = reader
+            .read_exact(&mut payload)
+            .await
+            .map_err(|_| IggyError::CannotReadMessagePayload)?;
 
-        let state = reader.read_u8().await;
-        if state.is_err() {
-            return Err(IggyError::CannotReadMessageState);
-        }
-
-        let state = MessageState::from_code(state.unwrap())?;
-        let timestamp = reader.read_u64_le().await;
-        if timestamp.is_err() {
-            return Err(IggyError::CannotReadMessageTimestamp);
-        }
-
-        let id = reader.read_u128_le().await;
-        if id.is_err() {
-            return Err(IggyError::CannotReadMessageId);
-        }
-
-        let checksum = reader.read_u32_le().await;
-        if checksum.is_err() {
-            return Err(IggyError::CannotReadMessageChecksum);
-        }
-
-        let headers_length = reader.read_u32_le().await;
-        if headers_length.is_err() {
-            return Err(IggyError::CannotReadHeadersLength);
-        }
-
-        let headers_length = headers_length.unwrap();
-        let headers = match headers_length {
-            0 => None,
-            _ => {
-                let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
-                headers_payload.put_bytes(0, headers_length as usize);
-                if reader.read_exact(&mut headers_payload).await.is_err() {
-                    return Err(IggyError::CannotReadHeadersPayload);
-                }
-
-                let headers = HashMap::from_bytes(headers_payload.freeze())?;
-                Some(headers)
-            }
-        };
-
-        let payload_length = reader.read_u32_le().await?;
-
-        let mut payload = BytesMut::with_capacity(payload_length as usize);
-        payload.put_bytes(0, payload_length as usize);
-        if reader.read_exact(&mut payload).await.is_err() {
-            return Err(IggyError::CannotReadMessagePayload);
-        }
-
-        let offset = offset.unwrap();
-        let timestamp = timestamp.unwrap();
-        let id = id.unwrap();
-        let checksum = checksum.unwrap();
-
-        let message = Message::create(
-            offset,
-            state,
-            timestamp,
-            id,
-            payload.freeze(),
-            checksum,
-            headers,
-        );
+        let message = RetainedMessage::new(length, Bytes::from(payload));
         read_messages += 1;
         on_message(message)?;
     }
@@ -660,7 +613,7 @@ async fn load_messages_by_range(
 async fn load_messages_by_size(
     segment: &Segment,
     size_bytes: u64,
-    mut on_message: impl FnMut(Message) -> Result<(), IggyError>,
+    mut on_message: impl FnMut(RetainedMessage) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
@@ -673,75 +626,17 @@ async fn load_messages_by_size(
     let mut accumulated_size: u64 = 0;
 
     loop {
-        let offset = reader.read_u64_le().await;
-        if offset.is_err() {
-            break;
-        }
+        let length = reader
+            .read_u32_le()
+            .await
+            .map_err(|_| IggyError::CannotReadMessageLength)?;
+        let mut payload = Vec::with_capacity(length as usize);
+        let _ = reader
+            .read_exact(&mut payload)
+            .await
+            .map_err(|_| IggyError::CannotReadMessagePayload)?;
 
-        let state = reader.read_u8().await;
-        if state.is_err() {
-            return Err(IggyError::CannotReadMessageState);
-        }
-
-        let state = MessageState::from_code(state.unwrap())?;
-        let timestamp = reader.read_u64_le().await;
-        if timestamp.is_err() {
-            return Err(IggyError::CannotReadMessageTimestamp);
-        }
-
-        let id = reader.read_u128_le().await;
-        if id.is_err() {
-            return Err(IggyError::CannotReadMessageId);
-        }
-
-        let checksum = reader.read_u32_le().await;
-        if checksum.is_err() {
-            return Err(IggyError::CannotReadMessageChecksum);
-        }
-
-        let headers_length = reader.read_u32_le().await;
-        if headers_length.is_err() {
-            return Err(IggyError::CannotReadHeadersLength);
-        }
-
-        let headers_length = headers_length.unwrap();
-        let headers = match headers_length {
-            0 => None,
-            _ => {
-                let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
-                if reader.read_exact(&mut headers_payload).await.is_err() {
-                    return Err(IggyError::CannotReadHeadersPayload);
-                }
-
-                let headers = HashMap::from_bytes(headers_payload.freeze())?;
-                Some(headers)
-            }
-        };
-
-        let payload_length = reader.read_u32_le().await;
-        if payload_length.is_err() {
-            return Err(IggyError::CannotReadMessageLength);
-        }
-
-        let mut payload = vec![0; payload_length.unwrap() as usize];
-        if reader.read_exact(&mut payload).await.is_err() {
-            return Err(IggyError::CannotReadMessagePayload);
-        }
-
-        let offset = offset.unwrap();
-        let timestamp = timestamp.unwrap();
-        let id = id.unwrap();
-        let checksum = checksum.unwrap();
-
-        let message = Message::create(
-            offset,
-            state,
-            timestamp,
-            id,
-            Bytes::from(payload),
-            checksum,
-            headers,
-        );
+        let message = RetainedMessage::new(length, Bytes::from(payload));
         let message_size = message.get_size_bytes() as u64;
 
         if accumulated_size >= threshold {

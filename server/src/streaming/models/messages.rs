@@ -1,4 +1,4 @@
-use iggy::models::messages::Message;
+use iggy::models::messages::RetainedMessage;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -7,5 +7,5 @@ use std::sync::Arc;
 pub struct PolledMessages {
     pub partition_id: u32,
     pub current_offset: u64,
-    pub messages: Vec<Arc<Message>>,
+    pub messages: Vec<Arc<RetainedMessage>>,
 }

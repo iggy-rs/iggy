@@ -7,7 +7,8 @@ use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
-use iggy::models::messages::Message;
+use iggy::models::messages::RetainedMessage;
+use iggy::sizeable::Sizeable;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -201,18 +202,18 @@ impl Topic {
         Ok(())
     }
 
-    fn cache_integrity_check(cache: &[Arc<Message>]) -> bool {
+    fn cache_integrity_check(cache: &[Arc<RetainedMessage>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;
         }
 
-        let first_offset = cache[0].offset;
-        let last_offset = cache[cache.len() - 1].offset;
+        let first_offset = cache[0].get_offset();
+        let last_offset = cache[cache.len() - 1].get_offset();
 
         for i in 1..cache.len() {
-            if cache[i].offset != cache[i - 1].offset + 1 {
-                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}", i, cache[i].offset, i-1, cache[i-1].offset);
+            if cache[i].get_offset() != cache[i - 1].get_offset() + 1 {
+                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}", i, cache[i].get_offset(), i-1, cache[i-1].get_offset());
                 return false;
             }
         }
@@ -257,7 +258,6 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
-    use iggy::models::messages::MessageState;
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
@@ -271,14 +271,7 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let payload = Bytes::from("test");
-            let messages = vec![Message::empty(
-                1,
-                MessageState::Available,
-                entity_id as u128,
-                payload,
-                1,
-                None,
-            )];
+            let messages = vec![send_messages::Message::new(Some(128), Bytes::new(), None)];
             topic
                 .append_messages(&partitioning, messages)
                 .await
@@ -307,14 +300,7 @@ mod tests {
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
             let payload = Bytes::from("test");
-            let messages = vec![Message::empty(
-                1,
-                MessageState::Available,
-                entity_id as u128,
-                payload,
-                1,
-                None,
-            )];
+            let messages = vec![send_messages::Message::new(Some(49494), Bytes::new(), None)];
             topic
                 .append_messages(&partitioning, messages)
                 .await

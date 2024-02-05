@@ -4,11 +4,11 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::utils::random_id;
 use iggy::error::IggyError;
 use iggy::messages::send_messages;
-use iggy::models::messages::Message;
+use iggy::models::messages::RetainedMessage;
 use std::sync::{atomic::Ordering, Arc};
 use tracing::{trace, warn};
 
-const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
+const EMPTY_MESSAGES: Vec<Arc<RetainedMessage>> = vec![];
 
 impl Partition {
     pub fn get_messages_count(&self) -> u64 {
@@ -19,7 +19,7 @@ impl Partition {
         &self,
         timestamp: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Getting messages by timestamp: {} for partition: {}...",
             timestamp,
@@ -76,7 +76,7 @@ impl Partition {
         &self,
         start_offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Getting messages for start offset: {} for partition: {}...",
             start_offset,
@@ -104,11 +104,17 @@ impl Partition {
         }
     }
 
-    pub async fn get_first_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, IggyError> {
+    pub async fn get_first_messages(
+        &self,
+        count: u32,
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         self.get_messages_by_offset(0, count).await
     }
 
-    pub async fn get_last_messages(&self, count: u32) -> Result<Vec<Arc<Message>>, IggyError> {
+    pub async fn get_last_messages(
+        &self,
+        count: u32,
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let mut count = count as u64;
         if count > self.current_offset + 1 {
             count = self.current_offset + 1
@@ -123,7 +129,7 @@ impl Partition {
         &self,
         consumer: PollingConsumer,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let (consumer_offsets, consumer_id) = match consumer {
             PollingConsumer::Consumer(consumer_id, _) => (&self.consumer_offsets, consumer_id),
             PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
@@ -189,7 +195,7 @@ impl Partition {
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
             let segment_messages = segment.get_messages(offset, count).await?;
@@ -205,13 +211,13 @@ impl Partition {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Option<Vec<Arc<Message>>> {
+    ) -> Option<Vec<Arc<RetainedMessage>>> {
         let cache = self.cache.as_ref()?;
         if cache.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
             return None;
         }
 
-        let first_buffered_offset = cache[0].offset;
+        let first_buffered_offset = cache[0].get_offset();
         trace!(
             "First buffered offset: {} for partition: {}",
             first_buffered_offset,
@@ -228,7 +234,7 @@ impl Partition {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u32,
-    ) -> Result<Vec<Arc<Message>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Getting messages for size: {} bytes for partition: {}...",
             size_bytes,
@@ -262,7 +268,11 @@ impl Partition {
         Ok(messages)
     }
 
-    fn load_messages_from_cache(&self, start_offset: u64, end_offset: u64) -> Vec<Arc<Message>> {
+    fn load_messages_from_cache(
+        &self,
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Vec<Arc<RetainedMessage>> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,
@@ -278,7 +288,7 @@ impl Partition {
             return EMPTY_MESSAGES;
         }
 
-        let first_offset = cache[0].offset;
+        let first_offset = cache[0].get_offset();
         let start_index = (start_offset - first_offset) as usize;
         let end_index = usize::min(cache.len(), (end_offset - first_offset + 1) as usize);
         let expected_messages_count = end_index - start_index;
@@ -344,7 +354,7 @@ impl Partition {
                     self.should_increment_offset = true;
                 }
                 let appendable_message =
-                    Message::from_message_with_offset(&message, self.current_offset);
+                    RetainedMessage::from_message(self.current_offset, message);
                 appendable_messages.push(Arc::new(appendable_message));
             }
         } else {
@@ -360,7 +370,7 @@ impl Partition {
                 }
 
                 let appendable_message =
-                    Message::from_message_with_offset(&message, self.current_offset);
+                    RetainedMessage::from_message(self.current_offset, message);
                 appendable_messages.push(Arc::new(appendable_message));
             }
         }

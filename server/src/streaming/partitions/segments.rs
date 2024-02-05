@@ -1,5 +1,4 @@
 use crate::streaming::partitions::partition::Partition;
-use crate::streaming::segments::persistence::SegmentPersister;
 use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
 use tracing::info;

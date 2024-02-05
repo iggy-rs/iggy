@@ -5,7 +5,7 @@ use crate::streaming::utils::random_id;
 use iggy::error::IggyError;
 use iggy::models::messages::Message;
 use std::sync::{atomic::Ordering, Arc};
-use tracing::{trace, warn};
+use tracing::{info, trace, warn};
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
@@ -345,9 +345,10 @@ impl Partition {
             }
         } else {
             for mut message in messages {
-                if message.id == 0 {
-                    message.id = random_id::get_uuid();
-                }
+                // TODO
+                // if message.id == 0 {
+                //     message.id = random_id::get_uuid();
+                // }
 
                 if self.should_increment_offset {
                     self.current_offset += 1;
@@ -360,10 +361,10 @@ impl Partition {
             }
         }
 
-        {
-            let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
-            last_segment.append_messages(&appendable_messages).await?;
-        }
+        let now = std::time::Instant::now();
+        let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
+        last_segment.append_messages(&appendable_messages).await?;
+        info!("Append messages took: {:?}", now.elapsed());
 
         let messages_count = appendable_messages.len() as u32;
         if let Some(cache) = &mut self.cache {
@@ -376,12 +377,14 @@ impl Partition {
             if self.unsaved_messages_count >= self.config.partition.messages_required_to_save
                 || last_segment.is_full().await
             {
-                trace!(
-                    "Segment with start offset: {} for partition with ID: {} will be persisted on disk...",
+                info!(
+                    "Segment with start offset: {} for partition with ID: {} will be persisted on disk...{}/{}",
                     last_segment.start_offset,
-                    self.partition_id
+                    self.partition_id, self.unsaved_messages_count, self.config.partition.messages_required_to_save
                 );
+                let now = std::time::Instant::now();
                 last_segment.persist_messages().await?;
+                info!("Persist messages took: {:?}", now.elapsed());
                 self.unsaved_messages_count = 0;
             }
         }

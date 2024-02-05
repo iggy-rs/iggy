@@ -31,12 +31,11 @@ pub enum SegmentStorageVariant {
 
 impl SegmentStorageVariant {
     pub fn new(fsync: bool, path: String) -> Self {
-        if fsync {
-            SegmentStorageVariant::WithSync(StoragePersister::new(WithSync {
-                path: path.to_string(),
-            }))
+        if !fsync {
+            let persister_without_sync = WithoutSync::new(path.clone());
+            SegmentStorageVariant::WithoutSync(StoragePersister::new(persister_without_sync))
         } else {
-            SegmentStorageVariant::WithoutSync(StoragePersister::new(WithoutSync {
+            SegmentStorageVariant::WithSync(StoragePersister::new(WithSync {
                 path: path.to_string(),
             }))
         }
@@ -47,7 +46,7 @@ impl SegmentStorageVariant {
 impl SegmentPersister for SegmentStorageVariant {
     async fn append(
         &self,
-        messages: Arc<Vec<Message>>,
+        messages: Vec<Arc<Message>>,
         current_offset: u64,
     ) -> Result<(), IggyError> {
         match self {
@@ -60,10 +59,10 @@ impl SegmentPersister for SegmentStorageVariant {
         }
     }
 
-    async fn create(&self) -> Result<(), IggyError> {
+    async fn create(&self, path: &str) -> Result<(), IggyError> {
         match self {
-            SegmentStorageVariant::WithSync(persister) => persister.create().await,
-            SegmentStorageVariant::WithoutSync(persister) => persister.create().await,
+            SegmentStorageVariant::WithSync(persister) => persister.create(path).await,
+            SegmentStorageVariant::WithoutSync(persister) => persister.create(path).await,
         }
     }
 
@@ -153,7 +152,7 @@ impl Segment {
     }
 
     pub async fn create(&self) -> Result<(), IggyError> {
-        self.storage.create().await?;
+        self.storage.create(&self.path).await?;
 
         info!("Created segment log file with start offset: {} for partition with ID: {} for topic with ID: {} and stream with ID: {}",
         self.start_offset, self.partition_id, self.topic_id, self.stream_id);
@@ -222,11 +221,8 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn save_messages(&self, messages: Arc<Vec<Message>>) -> Result<u32, IggyError> {
-        let messages_size = messages
-            .iter()
-            .map(|message| message.get_size_bytes())
-            .sum::<u32>();
+    pub async fn save_messages(&self, messages: Vec<Arc<Message>>) -> Result<u32, IggyError> {
+        let messages_size = 10450000;
 
         if let Err(err) = self
             .append(messages)

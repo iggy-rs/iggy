@@ -5,7 +5,7 @@ use iggy::error::IggyError;
 use iggy::models::messages::Message;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::trace;
+use tracing::{info, trace};
 
 const EMPTY_MESSAGES: Vec<Arc<Message>> = vec![];
 
@@ -281,26 +281,23 @@ impl Segment {
             self.partition_id
         );
 
-        let saved_bytes = self.save_messages(unsaved_messages).await?;
-        let current_position = self.size_bytes - saved_bytes;
-        self.save_index(current_position, unsaved_messages).await?;
-        self.save_time_index(unsaved_messages).await?;
+        let unsaved_messages = self.unsaved_messages.take().unwrap();
+        let unsaved_messages_count = unsaved_messages.len();
 
-        trace!(
-            "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
-            unsaved_messages.len(),
-            self.start_offset,
-            self.partition_id,
-            saved_bytes
-        );
+        let now = std::time::Instant::now();
+        self.save_messages(unsaved_messages).await?;
+        info!("save_messages took {:?}", now.elapsed());
 
         if self.is_full().await {
             self.end_offset = self.current_offset;
             self.is_closed = true;
-            self.unsaved_messages = None;
-        } else {
-            self.unsaved_messages.as_mut().unwrap().clear();
         }
+
+        trace!(
+                "Saved {unsaved_messages_count} messages on disk in segment with start offset: {} for partition with ID: {}.",
+                self.start_offset,
+                self.partition_id,
+            );
 
         Ok(())
     }

@@ -251,7 +251,7 @@ retention = "7 days"
 # Enables or disables the system cache.
 # `true` activates caching for frequently accessed data.
 # `false` disables caching, data is always read from the source.
-enabled = true
+enabled = false
 
 # Maximum size of the cache, e.g. "4GB".
 size = "4GB"
@@ -340,12 +340,12 @@ size = "1GB"
 # Controls whether to cache indexes for segment access (boolean).
 # `true` keeps indexes in memory, speeding up data retrieval.
 # `false` reads indexes from disk, which can conserve memory at the cost of access speed.
-cache_indexes = true
+cache_indexes = false
 
 # Determines whether to cache time-based indexes for segments (boolean).
 # `true` allows faster timestamp-based data retrieval by keeping indexes in memory.
 # `false` conserves memory by reading time indexes from disk, which may slow down access.
-cache_time_indexes = true
+cache_time_indexes = false
 
 # Message deduplication configuration
 [system.message_deduplication]

@@ -92,7 +92,8 @@ impl Segment {
         }
     }
 
-    pub async fn append(&self, messages: Arc<Vec<Message>>) -> Result<(), IggyError> {
+    pub async fn append(&self, messages: Vec<Arc<Message>>) -> Result<(), IggyError> {
+        // todo fix this, current_offset is invalid, it should be size - current_offset
         self.storage.append(messages, self.current_offset).await
     }
 

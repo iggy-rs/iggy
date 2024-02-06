@@ -9,7 +9,10 @@ use server::channels::handler::ServerCommandHandler;
 use server::configs::config_provider;
 use server::configs::server::ServerConfig;
 use server::http::http_server;
-use server::logging::Logging;
+#[cfg(not(feature = "tokio-console"))]
+use server::log::logger::Logging;
+#[cfg(feature = "tokio-console")]
+use server::log::tokio_console::Logging;
 use server::quic::quic_server;
 use server::server_error::ServerError;
 

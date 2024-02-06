@@ -2,7 +2,7 @@ use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use iggy::error::IggyError;
-use iggy::models::messages::{Message, RetainedMessage};
+use iggy::models::messages::RetainedMessage;
 use iggy::sizeable::Sizeable;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -91,7 +91,10 @@ impl Segment {
             .as_ref()
             .unwrap()
             .iter()
-            .filter(|message| message.get_offset() >= offset && message.get_offset() <= end_offset)
+            .filter(|message| {
+                let message_offset = message.get_offset();
+                message_offset >= offset && message_offset <= end_offset
+            })
             .cloned()
             .collect::<Vec<Arc<RetainedMessage>>>()
     }
@@ -211,7 +214,8 @@ impl Segment {
         let mut messages_size = 0;
         if self.indexes.is_some() && self.time_indexes.is_some() {
             for message in messages {
-                let relative_offset = (message.get_offset() - self.start_offset) as u32;
+                let message_offset = message.get_offset();
+                let relative_offset = (message_offset - self.start_offset) as u32;
 
                 self.indexes.as_mut().unwrap().push(Index {
                     relative_offset,
@@ -225,12 +229,13 @@ impl Segment {
                 let message_size = message.get_size_bytes();
                 self.size_bytes += message_size;
                 messages_size += message_size;
-                self.current_offset = message.get_offset();
+                self.current_offset = message_offset;
                 unsaved_messages.push(message.clone());
             }
         } else if self.indexes.is_some() {
             for message in messages {
-                let relative_offset = (message.get_offset() - self.start_offset) as u32;
+                let message_offset = message.get_offset();
+                let relative_offset = (message_offset - self.start_offset) as u32;
 
                 self.indexes.as_mut().unwrap().push(Index {
                     relative_offset,
@@ -239,12 +244,13 @@ impl Segment {
                 let message_size = message.get_size_bytes();
                 self.size_bytes += message_size;
                 messages_size += message_size;
-                self.current_offset = message.get_offset();
+                self.current_offset = message_offset;
                 unsaved_messages.push(message.clone());
             }
         } else if self.time_indexes.is_some() {
             for message in messages {
-                let relative_offset = (message.get_offset() - self.start_offset) as u32;
+                let message_offset = message.get_offset();
+                let relative_offset = (message_offset - self.start_offset) as u32;
 
                 self.time_indexes.as_mut().unwrap().push(TimeIndex {
                     relative_offset,
@@ -253,7 +259,7 @@ impl Segment {
                 let message_size = message.get_size_bytes();
                 self.size_bytes += message_size;
                 messages_size += message_size;
-                self.current_offset = message.get_offset();
+                self.current_offset = message_offset;
                 unsaved_messages.push(message.clone());
             }
         } else {

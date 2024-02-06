@@ -7,12 +7,10 @@ use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
-use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
-use iggy::models::messages::{Message, MessageState, RetainedMessage};
+use iggy::models::messages::RetainedMessage;
 use iggy::sizeable::Sizeable;
 use iggy::utils::checksum;
-use std::collections::HashMap;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -260,7 +258,7 @@ impl SegmentStorage for FileSegmentStorage {
         let mut bytes = BytesMut::with_capacity(messages_size as usize);
         for message in messages {
             bytes.put_u32_le(message.length);
-            bytes.extend(&message.payload);
+            bytes.extend(&message.bytes);
         }
 
         if let Err(err) = self
@@ -295,7 +293,7 @@ impl SegmentStorage for FileSegmentStorage {
             segment,
             &IndexRange::max_range(),
             |message: RetainedMessage| {
-                let calculated_checksum = checksum::calculate(&message.get_payload());
+                let calculated_checksum = checksum::calculate(message.get_payload());
                 trace!(
                     "Loaded message for offset: {}, checksum: {}, expected: {}",
                     message.get_offset(),
@@ -597,7 +595,7 @@ async fn load_messages_by_range(
             .read_u32_le()
             .await
             .map_err(|_| IggyError::CannotReadMessageLength)?;
-        let mut payload = Vec::with_capacity(length as usize);
+        let mut payload = vec![0; length as usize];
         let _ = reader
             .read_exact(&mut payload)
             .await

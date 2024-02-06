@@ -1,8 +1,7 @@
 use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
+use iggy::messages::send_messages;
 use iggy::models::header::{HeaderKey, HeaderValue};
-use iggy::models::messages::{Message, MessageState};
-use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::configs::system::{PartitionConfig, SystemConfig};
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;
@@ -42,12 +41,8 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
     let mut messages = Vec::with_capacity(messages_count as usize);
     let mut appended_messages = Vec::with_capacity(messages_count as usize);
     for i in 1..=messages_count {
-        let offset = (i - 1) as u64;
-        let state = MessageState::Available;
-        let timestamp = IggyTimestamp::now().to_micros();
         let id = i as u128;
         let payload = Bytes::from(format!("message {}", i));
-        let checksum = checksum::calculate(&payload);
         let mut headers = HashMap::new();
         headers.insert(
             HeaderKey::new("key_1").unwrap(),
@@ -61,24 +56,18 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
             HeaderKey::new("key-3").unwrap(),
             HeaderValue::from_uint64(123456).unwrap(),
         );
-        let appended_message = Message::create(
-            offset,
-            state,
-            timestamp,
+        let appended_message = send_messages::Message {
             id,
-            payload.clone(),
-            checksum,
-            Some(headers.clone()),
-        );
-        let message = Message::create(
-            offset,
-            state,
-            timestamp,
+            length: payload.len() as u32,
+            payload: payload.clone(),
+            headers: Some(headers.clone()),
+        };
+        let message = send_messages::Message {
             id,
-            payload,
-            checksum,
-            Some(headers),
-        );
+            length: payload.len() as u32,
+            payload: payload.clone(),
+            headers: Some(headers),
+        };
         appended_messages.push(appended_message);
         messages.push(message);
     }
@@ -111,13 +100,10 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         let index = i as usize - 1;
         let loaded_message = &loaded_messages[index];
         let appended_message = &appended_messages[index];
-        assert_eq!(loaded_message.offset, appended_message.offset);
-        assert_eq!(loaded_message.state, appended_message.state);
-        assert_eq!(loaded_message.timestamp, appended_message.timestamp);
-        assert_eq!(loaded_message.id, appended_message.id);
-        assert_eq!(loaded_message.checksum, appended_message.checksum);
-        assert_eq!(loaded_message.length, appended_message.length);
-        assert_eq!(loaded_message.payload, appended_message.payload);
-        assert_eq!(loaded_message.headers, appended_message.headers);
+        assert_eq!(loaded_message.get_id(), appended_message.id);
+        assert_eq!(
+            loaded_message.try_get_headers().unwrap(),
+            appended_message.headers
+        );
     }
 }

@@ -29,3 +29,5 @@ nextests TEST: build
 server:
   cargo run --bin iggy-server
 
+build-tokio-console:
+  RUSTFLAGS="--cfg tokio_unstable" cargo build --release --features tokio-console

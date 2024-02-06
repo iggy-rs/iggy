@@ -32,6 +32,8 @@ pub(crate) type TestUserId = TestIdentifier;
 
 pub(crate) type TestConsumerGroupId = TestIdentifier;
 
+pub(crate) type TestConsumerId = TestIdentifier;
+
 pub(crate) enum OutputFormat {
     Default,
     List,

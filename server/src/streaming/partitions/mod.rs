@@ -1,7 +1,5 @@
 use bytes::Bytes;
 use iggy::messages::send_messages;
-use iggy::models::messages::{Message, MessageState};
-use iggy::utils::checksum;
 
 pub mod consumer_offsets;
 pub mod messages;

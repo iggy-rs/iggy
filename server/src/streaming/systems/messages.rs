@@ -4,12 +4,10 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
-use iggy::bytes_serializable::BytesSerializable;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
-use iggy::sizeable::Sizeable;
 use iggy::{error::IggyError, models::messages::RetainedMessage};
 use std::sync::Arc;
 use tracing::{error, trace};
@@ -69,7 +67,7 @@ impl System {
         let encryptor = self.encryptor.as_ref().unwrap();
         let mut decrypted_messages = Vec::with_capacity(polled_messages.messages.len());
         for message in polled_messages.messages.iter() {
-            let payload = encryptor.decrypt(&message.get_payload());
+            let payload = encryptor.decrypt(message.get_payload());
             match payload {
                 Ok(payload) => {
                     decrypted_messages.push(Arc::new(RetainedMessage::from_bytes(

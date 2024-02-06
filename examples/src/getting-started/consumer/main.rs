@@ -3,7 +3,7 @@ use iggy::clients::client::{IggyClient, IggyClientConfig};
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::models::messages::Message;
+use iggy::models::messages::PolledMessage;
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
@@ -90,7 +90,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
     }
 }
 
-fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
+fn handle_message(message: &PolledMessage) -> Result<(), Box<dyn Error>> {
     // The payload can be of any type as it is a raw byte array. In this case it's a simple string.
     let payload = std::str::from_utf8(&message.payload)?;
     info!(

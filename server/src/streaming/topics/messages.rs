@@ -266,12 +266,15 @@ mod tests {
         let partition_id = 1;
         let partitioning = Partitioning::partition_id(partition_id);
         let partitions_count = 3;
-        let messages_count = 1000;
+        let messages_count: u32 = 1000;
         let topic = init_topic(partitions_count);
 
         for entity_id in 1..=messages_count {
-            let payload = Bytes::from("test");
-            let messages = vec![send_messages::Message::new(Some(128), Bytes::new(), None)];
+            let messages = vec![send_messages::Message::new(
+                Some(entity_id as u128),
+                Bytes::new(),
+                None,
+            )];
             topic
                 .append_messages(&partitioning, messages)
                 .await
@@ -299,8 +302,11 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
-            let payload = Bytes::from("test");
-            let messages = vec![send_messages::Message::new(Some(49494), Bytes::new(), None)];
+            let messages = vec![send_messages::Message::new(
+                Some(entity_id as u128),
+                Bytes::new(),
+                None,
+            )];
             topic
                 .append_messages(&partitioning, messages)
                 .await

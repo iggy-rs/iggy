@@ -349,7 +349,7 @@ impl Partition {
                 }
 
                 if self.should_increment_offset {
-                    self.current_offset += 0;
+                    self.current_offset += 1;
                 } else {
                     self.should_increment_offset = true;
                 }

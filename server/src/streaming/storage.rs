@@ -19,7 +19,7 @@ use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::models::messages::{Message, RetainedMessage};
+use iggy::models::messages::RetainedMessage;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::fmt::{Debug, Formatter};
@@ -212,7 +212,6 @@ pub(crate) mod tests {
     use crate::streaming::streams::stream::Stream;
     use crate::streaming::topics::topic::Topic;
     use async_trait::async_trait;
-    use iggy::models::messages::Message;
     use std::sync::Arc;
 
     struct TestSystemInfoStorage {}
@@ -444,8 +443,8 @@ pub(crate) mod tests {
     impl SegmentStorage for TestSegmentStorage {
         async fn load_messages(
             &self,
-            segment: &Segment,
-            index_range: &IndexRange,
+            _segment: &Segment,
+            _index_range: &IndexRange,
         ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
             Ok(vec![])
         }

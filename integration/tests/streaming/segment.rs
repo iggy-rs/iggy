@@ -1,6 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
-use iggy::models::messages::{Message, MessageState};
+use iggy::models::messages::{MessageState, PolledMessage};
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
@@ -149,7 +149,10 @@ async fn should_persist_and_load_segment_with_messages() {
     let messages_count = 10;
     for i in 0..messages_count {
         let message = create_message(i, "test", IggyTimestamp::now().to_micros());
-        segment.append_messages(&[Arc::new(message)]).await.unwrap();
+        segment
+            .append_messages(&[Arc::new(message.into())])
+            .await
+            .unwrap();
     }
 
     segment.persist_messages().await.unwrap();
@@ -219,7 +222,10 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
         expired_timestamp += 1;
-        segment.append_messages(&[Arc::new(message)]).await.unwrap();
+        segment
+            .append_messages(&[Arc::new(message.into())])
+            .await
+            .unwrap();
     }
 
     segment.persist_messages().await.unwrap();
@@ -271,11 +277,11 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let not_expired_message = create_message(1, "test", not_expired_timestamp);
 
     segment
-        .append_messages(&[Arc::new(expired_message)])
+        .append_messages(&[Arc::new(expired_message.into())])
         .await
         .unwrap();
     segment
-        .append_messages(&[Arc::new(not_expired_message)])
+        .append_messages(&[Arc::new(not_expired_message.into())])
         .await
         .unwrap();
     segment.persist_messages().await.unwrap();
@@ -294,10 +300,10 @@ async fn assert_persisted_segment(partition_path: &str, start_offset: u64) {
     assert!(fs::metadata(&time_index_path).await.is_ok());
 }
 
-fn create_message(offset: u64, payload: &str, timestamp: u64) -> Message {
+fn create_message(offset: u64, payload: &str, timestamp: u64) -> PolledMessage {
     let payload = Bytes::from(payload.to_string());
     let checksum = checksum::calculate(payload.as_ref());
-    Message::create(
+    PolledMessage::create(
         offset,
         MessageState::Available,
         timestamp,

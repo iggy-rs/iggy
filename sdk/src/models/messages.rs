@@ -5,9 +5,7 @@ use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use crate::sizeable::Sizeable;
 use crate::utils::{checksum, timestamp::IggyTimestamp};
-use base64::{engine::general_purpose::STANDARD, Engine as _};
 use bytes::{BufMut, Bytes, BytesMut};
-use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -15,6 +13,8 @@ use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::Arc;
+
+pub(crate) const POLLED_MESSAGE_METADATA: u32 = 4 + 1 + 8 + 8 + 16 + 4 + 4;
 
 /// The wrapper on top of the collection of messages that are polled from the partition.
 /// It consists of the following fields:
@@ -28,7 +28,7 @@ pub struct PolledMessages {
     /// The current offset of the partition.
     pub current_offset: u64,
     /// The collection of messages.
-    pub messages: Vec<Message>,
+    pub messages: Vec<PolledMessage>,
 }
 
 /// The single message that is polled from the partition.
@@ -43,7 +43,7 @@ pub struct PolledMessages {
 /// - `payload`: the binary payload of the message.
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Message {
+pub struct PolledMessage {
     /// The offset of the message.
     pub offset: u64,
     /// The state of the message.
@@ -63,80 +63,23 @@ pub struct Message {
     #[serde_as(as = "Base64")]
     pub payload: Bytes,
 }
-
-impl From<RetainedMessage> for Message {
-    fn from(value: RetainedMessage) -> Self {
-        let offset = u64::from_le_bytes(value.payload[..8].try_into().unwrap());
-        let state = MessageState::from_code(value.payload[8]).unwrap();
-        let timestamp = u64::from_le_bytes(value.payload[9..17].try_into().unwrap());
-        let id = u128::from_le_bytes(value.payload[17..33].try_into().unwrap());
-        let checksum = u32::from_le_bytes(value.payload[33..37].try_into().unwrap());
-        let headers_length = u32::from_le_bytes(value.payload[37..41].try_into().unwrap());
-        let headers = match headers_length {
-            0 => None,
-            _ => {
-                let headers_payload = value.payload[41..41 + headers_length as usize].to_owned();
-                let headers = HashMap::from_bytes(Bytes::from(headers_payload)).unwrap();
-                Some(headers)
-            }
-        };
-        let payload_length = u32::from_le_bytes(
-            value.payload[41 + headers_length as usize..41 + headers_length as usize + 4]
-                .try_into()
-                .unwrap(),
-        );
-
-        Message::create(
-            offset,
-            state,
-            timestamp,
-            id,
-            value.payload.slice(
-                41 + headers_length as usize + 4
-                    ..41 + headers_length as usize + 4 + payload_length as usize,
-            ),
-            checksum,
-            headers,
-        )
-    }
-}
+/// Represents single message that is used by the system.
+/// It consists of the following fields:
+/// - `length`: the length of the message.
+/// - `bytes`: the binary representation of the message.
 
 #[derive(Debug, Clone)]
 pub struct RetainedMessage {
     pub length: u32,
-    pub payload: Bytes,
+    pub bytes: Bytes,
 }
 
-impl Serialize for RetainedMessage {
-    fn serialize<S>(&self, serializer: S) -> Result<<S as serde::Serializer>::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let msg = Message::from(self.clone());
-        msg.serialize(serializer)
-    }
-}
-impl<'de> Deserialize<'de> for RetainedMessage {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let msg = Message::deserialize(deserializer)?;
-        Ok(msg.into())
-    }
-}
-
-impl From<Message> for RetainedMessage {
-    fn from(value: Message) -> Self {
+impl From<PolledMessage> for RetainedMessage {
+    fn from(value: PolledMessage) -> Self {
         let mut payload = BytesMut::with_capacity(
-            4 + 1
-                + 8
-                + 8
-                + 16
-                + 4
-                + 4
-                + value.length as usize
-                + header::get_headers_size_bytes(&value.headers) as usize,
+            (POLLED_MESSAGE_METADATA
+                + value.length
+                + header::get_headers_size_bytes(&value.headers)) as usize,
         );
 
         payload.put_u64_le(value.offset);
@@ -157,16 +100,16 @@ impl From<Message> for RetainedMessage {
 
         Self {
             length: payload.len() as u32,
-            payload: payload.freeze(),
+            bytes: payload.freeze(),
         }
     }
 }
 
 impl RetainedMessage {
-    pub fn new(length: u32, payload: Bytes) -> Self {
-        Self { length, payload }
+    pub fn new(length: u32, bytes: Bytes) -> Self {
+        Self { length, bytes }
     }
-
+    /// Creates a new RetainedMessage from the binary representation.
     pub fn from_bytes(
         id_bytes: &[u8],
         offset_bytes: &[u8],
@@ -196,13 +139,16 @@ impl RetainedMessage {
 
         Self {
             length: payload.len() as u32,
-            payload: payload.freeze(),
+            bytes: payload.freeze(),
         }
     }
-
+    /// Creates a new RetainedMessage from message and offset.
     pub fn from_message(offset: u64, message: send_messages::Message) -> Self {
-        // Can use with_capacity, if would to move headers to bytes instead of HashMap<HeaderKey, HeaderValue>
-        let mut payload = BytesMut::new();
+        let mut payload = BytesMut::with_capacity(
+            (POLLED_MESSAGE_METADATA
+                + message.length
+                + header::get_headers_size_bytes(&message.headers)) as usize,
+        );
 
         let timestamp = IggyTimestamp::now().to_micros();
         let checksum = checksum::calculate(&message.payload);
@@ -227,87 +173,83 @@ impl RetainedMessage {
 
         Self {
             length: payload.len() as u32,
-            payload: payload.freeze(),
+            bytes: payload.freeze(),
         }
     }
 
     pub fn get_id(&self) -> u128 {
-        u128::from_le_bytes(self.payload[17..33].try_into().unwrap())
+        u128::from_le_bytes(self.bytes[17..33].try_into().unwrap())
     }
     pub fn get_message_state(&self) -> MessageState {
-        MessageState::from_code(self.payload[8]).unwrap()
+        MessageState::from_code(self.bytes[8]).unwrap()
     }
     pub fn get_offset(&self) -> u64 {
-        u64::from_le_bytes(self.payload[..8].try_into().unwrap())
+        u64::from_le_bytes(self.bytes[..8].try_into().unwrap())
     }
     pub fn get_timestamp(&self) -> u64 {
-        u64::from_le_bytes(self.payload[9..17].try_into().unwrap())
+        u64::from_le_bytes(self.bytes[9..17].try_into().unwrap())
     }
     pub fn get_checksum(&self) -> u32 {
-        u32::from_le_bytes(self.payload[33..37].try_into().unwrap())
+        u32::from_le_bytes(self.bytes[33..37].try_into().unwrap())
     }
     pub fn try_get_headers(&self) -> Result<Option<HashMap<HeaderKey, HeaderValue>>, IggyError> {
-        let headers_length = u32::from_le_bytes(self.payload[37..41].try_into().unwrap());
+        let headers_length = u32::from_le_bytes(self.bytes[37..41].try_into().unwrap());
         if headers_length == 0 {
             return Ok(None);
         }
-        let headers_payload = self.payload[41..41 + headers_length as usize].to_owned();
+        let headers_payload = self.bytes[41..41 + headers_length as usize].to_owned();
         let headers_bytes = Bytes::from(headers_payload);
+
         Ok(Some(HashMap::from_bytes(headers_bytes)?))
     }
     pub fn get_payload(&self) -> &[u8] {
-        let headers_length = u32::from_le_bytes(self.payload[37..41].try_into().unwrap());
+        let headers_length = u32::from_le_bytes(self.bytes[37..41].try_into().unwrap());
         let payload_length = u32::from_le_bytes(
-            self.payload[41 + headers_length as usize..41 + headers_length as usize + 4]
+            self.bytes[(41 + headers_length) as usize..(41 + headers_length + 4) as usize]
                 .try_into()
                 .unwrap(),
         );
-        &self.payload[41 + headers_length as usize + 4..payload_length as usize]
+        &self.bytes[(41 + headers_length + 4) as usize
+            ..(41 + headers_length + 4 + payload_length) as usize]
     }
     pub fn get_id_bytes(&self) -> &[u8] {
-        &self.payload[17..33]
+        &self.bytes[17..33]
     }
     pub fn get_offset_bytes(&self) -> &[u8] {
-        &self.payload[..8]
+        &self.bytes[..8]
     }
     pub fn get_timestamp_bytes(&self) -> &[u8] {
-        &self.payload[9..17]
+        &self.bytes[9..17]
     }
     pub fn get_checksum_bytes(&self) -> &[u8] {
-        &self.payload[33..37]
+        &self.bytes[33..37]
     }
     pub fn get_headers_bytes(&self) -> &[u8] {
-        let headers_length = u32::from_le_bytes(self.payload[37..41].try_into().unwrap());
-        &self.payload[41..41 + headers_length as usize]
+        let headers_length = u32::from_le_bytes(self.bytes[37..41].try_into().unwrap());
+        &self.bytes[41..41 + headers_length as usize]
     }
     pub fn get_message_state_byte(&self) -> &u8 {
-        &self.payload[8]
+        &self.bytes[8]
     }
     pub fn get_payload_bytes(&self) -> &[u8] {
-        let headers_length = u32::from_le_bytes(self.payload[37..41].try_into().unwrap());
+        let headers_length = u32::from_le_bytes(self.bytes[37..41].try_into().unwrap());
         let payload_length = u32::from_le_bytes(
-            self.payload[41 + headers_length as usize..41 + headers_length as usize + 4]
+            self.bytes[41 + headers_length as usize..41 + headers_length as usize + 4]
                 .try_into()
                 .unwrap(),
         );
-        &self.payload[41 + headers_length as usize + 4..payload_length as usize]
+        &self.bytes[41 + headers_length as usize + 4..payload_length as usize]
     }
 }
 
 impl Sizeable for Arc<RetainedMessage> {
     fn get_size_bytes(&self) -> u32 {
-        4 + self.payload.len() as u32
+        4 + self.bytes.len() as u32
     }
 }
 impl Sizeable for RetainedMessage {
     fn get_size_bytes(&self) -> u32 {
-        4 + self.payload.len() as u32
-    }
-}
-
-impl Sizeable for &Arc<RetainedMessage> {
-    fn get_size_bytes(&self) -> u32 {
-        4 + self.payload.len() as u32
+        4 + self.bytes.len() as u32
     }
 }
 
@@ -372,41 +314,13 @@ impl FromStr for MessageState {
     }
 }
 
-impl Sizeable for Arc<Message> {
+impl Sizeable for Arc<PolledMessage> {
     fn get_size_bytes(&self) -> u32 {
         self.as_ref().get_size_bytes()
     }
 }
 
-impl Message {
-    /// Creates a new message from the `Message` struct being part of `SendMessages` command.
-    pub fn from_message(message: &send_messages::Message) -> Self {
-        let timestamp = IggyTimestamp::now().to_micros();
-        let checksum = checksum::calculate(&message.payload);
-        let headers = message.headers.as_ref().cloned();
-
-        Self::empty(
-            timestamp,
-            MessageState::Available,
-            message.id,
-            message.payload.clone(),
-            checksum,
-            headers,
-        )
-    }
-
-    /// Creates a new message without a specified offset.
-    pub fn empty(
-        timestamp: u64,
-        state: MessageState,
-        id: u128,
-        payload: Bytes,
-        checksum: u32,
-        headers: Option<HashMap<HeaderKey, HeaderValue>>,
-    ) -> Self {
-        Message::create(0, state, timestamp, id, payload, checksum, headers)
-    }
-
+impl PolledMessage {
     /// Creates a new message with a specified offset.
     pub fn create(
         offset: u64,
@@ -417,7 +331,7 @@ impl Message {
         checksum: u32,
         headers: Option<HashMap<HeaderKey, HeaderValue>>,
     ) -> Self {
-        Message {
+        PolledMessage {
             offset,
             state,
             timestamp,
@@ -429,69 +343,9 @@ impl Message {
             headers,
         }
     }
-
     /// Returns the size of the message in bytes.
     pub fn get_size_bytes(&self) -> u32 {
         // Offset + State + Timestamp + ID + Checksum + Length + Payload + Headers
-        8 + 1 + 8 + 16 + 4 + 4 + self.length + header::get_headers_size_bytes(&self.headers)
-    }
-
-    /// Extends the provided bytes with the message.
-    pub fn extend(&self, bytes: &mut BytesMut) {
-        bytes.put_u64_le(self.offset);
-        bytes.put_u8(self.state.as_code());
-        bytes.put_u64_le(self.timestamp);
-        bytes.put_u128_le(self.id);
-        bytes.put_u32_le(self.checksum);
-        if let Some(headers) = &self.headers {
-            let headers_bytes = headers.as_bytes();
-            #[allow(clippy::cast_possible_truncation)]
-            bytes.put_u32_le(headers_bytes.len() as u32);
-            bytes.put_slice(&headers_bytes);
-        } else {
-            bytes.put_u32_le(0u32);
-        }
-        bytes.put_u32_le(self.length);
-        bytes.put_slice(&self.payload);
-    }
-}
-impl BytesSerializable for Message {
-    fn as_bytes(&self) -> Bytes {
-        let size = self.get_size_bytes() as usize;
-        let mut buffer = BytesMut::with_capacity(size);
-        self.extend(&mut buffer);
-        buffer.freeze()
-    }
-    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
-    where
-        Self: Sized,
-    {
-        let offset = u64::from_le_bytes(bytes[..8].try_into()?);
-        let state_code = MessageState::from_code(bytes[8])?;
-        let timestamp = u64::from_le_bytes(bytes[9..17].try_into()?);
-        let id = u128::from_le_bytes(bytes[17..33].try_into()?);
-        let checksum = u32::from_le_bytes(bytes[33..37].try_into()?);
-
-        let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);
-        let headers = match headers_length {
-            0 => None,
-            _ => {
-                let headers_payload = bytes[41..41 + headers_length as usize].to_owned();
-                let headers = HashMap::from_bytes(Bytes::from(headers_payload))?;
-                Some(headers)
-            }
-        };
-
-        let payload_length = u32::from_le_bytes(bytes[41 + headers_length as usize..].try_into()?);
-        let payload = vec![0; payload_length as usize];
-        Ok(Self::create(
-            offset,
-            state_code,
-            timestamp,
-            id,
-            Bytes::from(payload),
-            checksum,
-            headers,
-        ))
+        POLLED_MESSAGE_METADATA + self.length + header::get_headers_size_bytes(&self.headers)
     }
 }

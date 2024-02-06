@@ -11,4 +11,9 @@ pub trait BytesSerializable {
     fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
     where
         Self: Sized;
+
+    /// Computes the size of the struct in bytes.
+    fn size(&self) -> usize {
+        unimplemented!("size")
+    }
 }

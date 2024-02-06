@@ -169,6 +169,10 @@ impl Identifier {
 }
 
 impl BytesSerializable for Identifier {
+    fn size(&self) -> usize {
+        2 + self.length as usize
+    }
+
     fn as_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());

@@ -2,6 +2,7 @@ use crate::binary::binary_client::{BinaryClient, ClientState};
 use crate::client::Client;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
+use crate::write_to::WriteTo;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
@@ -36,7 +37,7 @@ unsafe impl Send for TcpClient {}
 unsafe impl Sync for TcpClient {}
 
 #[async_trait]
-pub(crate) trait ConnectionStream: Debug + Sync + Send {
+pub(crate) trait ConnectionStream: Debug + Sync + Send + Unpin {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError>;
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError>;
     async fn flush(&mut self) -> Result<(), IggyError>;
@@ -212,6 +213,41 @@ impl BinaryClient for TcpClient {
 
     async fn set_state(&self, state: ClientState) {
         *self.state.lock().await = state;
+    }
+
+    async fn send_with_response_v2(
+        &self,
+        command_code: u32,
+        command: &(dyn WriteTo + Send + Sync),
+    ) -> Result<Bytes, IggyError> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Err(IggyError::NotConnected);
+        }
+
+        let mut stream = self.stream.lock().await;
+        if let Some(stream) = stream.as_mut() {
+            let payload_length = command.size() + REQUEST_INITIAL_BYTES_LENGTH;
+            trace!("Sending a TCP request...");
+            stream.write(&(payload_length as u32).to_le_bytes()).await?;
+            stream.write(&command_code.to_le_bytes()).await?;
+            command.write_to(stream.as_mut()).await?;
+            stream.flush().await?;
+            trace!("Sent a TCP request, waiting for a response...");
+
+            let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
+            let read_bytes = stream.read(&mut response_buffer).await?;
+            if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
+                error!("Received an invalid or empty response.");
+                return Err(IggyError::EmptyResponse);
+            }
+
+            let status = u32::from_le_bytes(response_buffer[..4].try_into().unwrap());
+            let length = u32::from_le_bytes(response_buffer[4..].try_into().unwrap());
+            return self.handle_response(status, length, stream.as_mut()).await;
+        }
+
+        error!("Cannot send data. Client is not connected.");
+        Err(IggyError::NotConnected)
     }
 
     async fn send_with_response(&self, command: u32, payload: Bytes) -> Result<Bytes, IggyError> {

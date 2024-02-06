@@ -5,7 +5,10 @@ use crate::identifier::Identifier;
 use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
+use crate::tcp::client::ConnectionStream;
 use crate::validatable::Validatable;
+use crate::write_to::WriteTo;
+use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -293,6 +296,10 @@ impl Display for Message {
 }
 
 impl BytesSerializable for Partitioning {
+    fn size(&self) -> usize {
+        2 + self.length as usize
+    }
+
     fn as_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
@@ -321,6 +328,25 @@ impl BytesSerializable for Partitioning {
             length,
             value,
         })
+    }
+}
+
+#[async_trait]
+impl WriteTo for Message {
+    async fn write_to(&self, stream: &mut dyn ConnectionStream) -> Result<(), IggyError> {
+        stream.write(self.id.to_le_bytes().as_ref()).await?;
+        if let Some(headers) = &self.headers {
+            let headers_bytes = headers.as_bytes();
+            stream
+                .write((headers_bytes.len() as u32).to_le_bytes().as_ref())
+                .await?;
+            stream.write(&headers_bytes).await?;
+        } else {
+            stream.write(0u32.to_le_bytes().as_ref()).await?;
+        }
+        stream.write(self.length.to_le_bytes().as_ref()).await?;
+        stream.write(self.payload.as_ref()).await?;
+        Ok(())
     }
 }
 
@@ -397,7 +423,32 @@ impl FromStr for Message {
     }
 }
 
+#[async_trait]
+impl WriteTo for SendMessages {
+    async fn write_to(&self, stream: &mut dyn ConnectionStream) -> Result<(), IggyError> {
+        stream.write(self.stream_id.as_bytes().as_ref()).await?;
+        stream.write(self.topic_id.as_bytes().as_ref()).await?;
+        stream.write(self.partitioning.as_bytes().as_ref()).await?;
+        for message in &self.messages {
+            message.write_to(stream).await?;
+        }
+        Ok(())
+    }
+}
+
 impl BytesSerializable for SendMessages {
+    fn size(&self) -> usize {
+        let messages_size = self
+            .messages
+            .iter()
+            .map(Message::get_size_bytes)
+            .sum::<u32>();
+        messages_size as usize
+            + self.partitioning.size()
+            + self.stream_id.size()
+            + self.topic_id.size()
+    }
+
     fn as_bytes(&self) -> Bytes {
         let messages_size = self
             .messages

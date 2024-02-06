@@ -13,7 +13,7 @@ pub mod binary;
 pub mod channels;
 pub mod configs;
 pub mod http;
-pub mod logging;
+pub mod log;
 pub mod quic;
 pub mod server_error;
 pub mod streaming;

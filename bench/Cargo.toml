@@ -21,7 +21,7 @@ rustls = { version = "0.21.10" }
 serde = { version = "1.0.196", features = ["derive"] }
 thiserror = "1.0.56"
 tokio = { version = "1.36.0", features = ["full"] }
-toml = "0.8.9"
+toml = "0.8.10"
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.16" }
 

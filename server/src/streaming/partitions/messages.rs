@@ -361,10 +361,10 @@ impl Partition {
             }
         }
 
-        let now = std::time::Instant::now();
+        // let now = std::time::Instant::now();
         let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
         last_segment.append_messages(&appendable_messages).await?;
-        info!("Append messages took: {:?}", now.elapsed());
+        // info!("Append messages took: {:?}", now.elapsed());
 
         let messages_count = appendable_messages.len() as u32;
         if let Some(cache) = &mut self.cache {
@@ -382,9 +382,9 @@ impl Partition {
                     last_segment.start_offset,
                     self.partition_id, self.unsaved_messages_count, self.config.partition.messages_required_to_save
                 );
-                let now = std::time::Instant::now();
+                // let now = std::time::Instant::now();
                 last_segment.persist_messages().await?;
-                info!("Persist messages took: {:?}", now.elapsed());
+                // info!("Persist messages took: {:?}", now.elapsed());
                 self.unsaved_messages_count = 0;
             }
         }

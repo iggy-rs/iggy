@@ -42,17 +42,19 @@ impl WithoutSync {
             let log_path = get_log_path(&path);
             let index_path = get_index_path(&path);
             let time_index_path = get_time_index_path(&path);
+
+            // TODO: remove this
             std::thread::sleep(std::time::Duration::from_millis(10));
 
             warn!("opening log: {}", log_path);
 
-            let log_file = file::append(&log_path).await.unwrap();
-            let index_path = file::append(&index_path).await.unwrap();
-            let time_index_file = file::append(&time_index_path).await.unwrap();
+            let log_file = file::write(&log_path).await.unwrap();
+            let index_path = file::write(&index_path).await.unwrap();
+            let time_index_file = file::write(&time_index_path).await.unwrap();
 
-            let mut log_writer = BufWriter::new(log_file);
-            let mut index_writer = BufWriter::new(index_path);
-            let mut time_index_writer = BufWriter::new(time_index_file);
+            let mut log_writer = BufWriter::with_capacity(1024 * 1024, log_file);
+            let mut index_writer = BufWriter::with_capacity(256 * 1024, index_path);
+            let mut time_index_writer = BufWriter::with_capacity(256 * 1024, time_index_file);
 
             while let Ok(file_operation) = receiver.recv_async().await {
                 match file_operation {

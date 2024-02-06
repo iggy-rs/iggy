@@ -284,9 +284,9 @@ impl Segment {
         let unsaved_messages = self.unsaved_messages.take().unwrap();
         let unsaved_messages_count = unsaved_messages.len();
 
-        let now = std::time::Instant::now();
+        // let now = std::time::Instant::now();
         self.save_messages(unsaved_messages).await?;
-        info!("save_messages took {:?}", now.elapsed());
+        // info!("save_messages took {:?}", now.elapsed());
 
         if self.is_full().await {
             self.end_offset = self.current_offset;

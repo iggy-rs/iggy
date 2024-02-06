@@ -38,6 +38,7 @@ Commands:
   consumer-group   consumer group operations [aliases: g]
   consumer-offset  consumer offset operations [aliases: o]
   message          message operations [aliases: m]
+  context          context operations [aliases: ctx]
   help             Print this message or the help of the given subcommand(s)
 
 

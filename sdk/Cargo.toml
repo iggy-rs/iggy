@@ -57,5 +57,6 @@ serde = { version = "1.0.196", features = ["derive", "rc"] }
 serde_derive = "1.0.194"
 
 [features]
-default = []
+default = ["tokio_lock"]
 iggy-cli = ["dep:comfy-table", "dep:keyring", "dep:passterm"]
+tokio_lock = []

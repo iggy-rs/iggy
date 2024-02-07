@@ -15,10 +15,11 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{create_dir, remove_dir_all};
-use tokio::sync::RwLock;
 use tokio::time::Instant;
 use tracing::{info, trace};
 
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
 use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
 
 #[derive(Debug)]
@@ -57,7 +58,7 @@ pub struct System {
     pub(crate) streams: HashMap<u32, Stream>,
     pub(crate) streams_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
-    pub(crate) client_manager: Arc<RwLock<ClientManager>>,
+    pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
     pub(crate) db: Option<Arc<Db>>,
@@ -117,7 +118,7 @@ impl System {
             streams: HashMap::new(),
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),
-            client_manager: Arc::new(RwLock::new(ClientManager::default())),
+            client_manager: IggySharedMut::new(ClientManager::default()),
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
             db,

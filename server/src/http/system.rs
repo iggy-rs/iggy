@@ -7,6 +7,7 @@ use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::routing::get;
 use axum::{Extension, Json, Router};
+use iggy::locking::IggySharedMutFn;
 use iggy::models::client_info::{ClientInfo, ClientInfoDetails};
 use iggy::models::stats::Stats;
 use std::sync::Arc;

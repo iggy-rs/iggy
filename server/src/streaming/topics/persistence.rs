@@ -1,6 +1,7 @@
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMutFn;
 use tokio::sync::RwLock;
 
 impl Topic {

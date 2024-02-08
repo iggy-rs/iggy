@@ -1,4 +1,3 @@
-use std::ops::Deref;
 use crate::client::Client;
 use crate::error::IggyError;
 use crate::http::config::HttpClientConfig;
@@ -9,6 +8,7 @@ use reqwest::{Response, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
 use serde::Serialize;
+use std::ops::Deref;
 use std::sync::Arc;
 
 const UNAUTHORIZED_PATHS: &[&str] = &[
@@ -84,7 +84,12 @@ impl HttpClient {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
-        let response = self.client.get(url).bearer_auth(token.deref()).send().await?;
+        let response = self
+            .client
+            .get(url)
+            .bearer_auth(token.deref())
+            .send()
+            .await?;
         Self::handle_response(response).await
     }
 
@@ -150,7 +155,12 @@ impl HttpClient {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
-        let response = self.client.delete(url).bearer_auth(token.deref()).send().await?;
+        let response = self
+            .client
+            .delete(url)
+            .bearer_auth(token.deref())
+            .send()
+            .await?;
         Self::handle_response(response).await
     }
 

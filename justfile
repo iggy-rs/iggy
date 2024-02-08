@@ -5,11 +5,14 @@
 #
 # Commands:
 
-alias b := build
-alias t := test
-alias c := tests
-alias n := nextest
-alias s := nextests
+alias b  := build
+alias t  := test
+alias c  := tests
+alias n  := nextest
+alias s  := nextests
+alias rb := run-benches
+alias ps := profile-server
+alias pc := profile-client
 
 build:
   cargo build
@@ -31,3 +34,12 @@ server:
 
 build-tokio-console:
   RUSTFLAGS="--cfg tokio_unstable" cargo build --release --features tokio-console
+
+run-benches:
+  ./scripts/run-benches.sh
+
+profile-server:
+  ./scripts/profile.sh iggy-server
+
+profile-client:
+  ./scripts/profile.sh iggy-bench

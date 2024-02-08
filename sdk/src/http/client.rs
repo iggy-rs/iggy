@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use crate::client::Client;
 use crate::error::IggyError;
 use crate::http::config::HttpClientConfig;
@@ -83,7 +84,7 @@ impl HttpClient {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
-        let response = self.client.get(url).bearer_auth(token).send().await?;
+        let response = self.client.get(url).bearer_auth(token.deref()).send().await?;
         Self::handle_response(response).await
     }
 
@@ -99,7 +100,7 @@ impl HttpClient {
         let response = self
             .client
             .get(url)
-            .bearer_auth(token)
+            .bearer_auth(token.deref())
             .query(query)
             .send()
             .await?;
@@ -118,7 +119,7 @@ impl HttpClient {
         let response = self
             .client
             .post(url)
-            .bearer_auth(token)
+            .bearer_auth(token.deref())
             .json(payload)
             .send()
             .await?;
@@ -137,7 +138,7 @@ impl HttpClient {
         let response = self
             .client
             .put(url)
-            .bearer_auth(token)
+            .bearer_auth(token.deref())
             .json(payload)
             .send()
             .await?;
@@ -149,7 +150,7 @@ impl HttpClient {
         let url = self.get_url(path)?;
         self.fail_if_not_authenticated(path).await?;
         let token = self.access_token.read().await;
-        let response = self.client.delete(url).bearer_auth(token).send().await?;
+        let response = self.client.delete(url).bearer_auth(token.deref()).send().await?;
         Self::handle_response(response).await
     }
 
@@ -165,7 +166,7 @@ impl HttpClient {
         let response = self
             .client
             .delete(url)
-            .bearer_auth(token)
+            .bearer_auth(token.deref())
             .query(query)
             .send()
             .await?;

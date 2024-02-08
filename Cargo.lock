@@ -1418,6 +1418,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fast-async-mutex"
+version = "0.6.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b877ceff2e3d2922823bab7960826ce198181f9c25f75d67b913fde9237e2da6"
+
+[[package]]
 name = "fastrand"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2031,6 +2037,7 @@ dependencies = [
  "convert_case 0.6.0",
  "crc32fast",
  "dirs",
+ "fast-async-mutex",
  "flume",
  "humantime",
  "keyring",

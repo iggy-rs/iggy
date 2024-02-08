@@ -1,9 +1,11 @@
 #!/bin/bash
 
+# shellcheck disable=SC1091
+
 set -euo pipefail
 
 # Load utility functions
-source $(dirname $0)/utils.sh
+source "$(dirname "$0")/utils.sh"
 
 # Trap SIGINT (Ctrl+C) and execute the on_exit function
 trap on_exit_profile SIGINT
@@ -101,10 +103,10 @@ if [[ "${PROFILED_APP_NAME}" == "iggy-server" ]]; then
     wait_for_process "perf" 10
 else
     echo "Starting flamegraph (send) on iggy-bench..."
-    cargo flamegraph --bin iggy-bench -- send tcp > "${BENCH_SEND_LOG_FILE}"
+    cargo flamegraph --bin iggy-bench -o "${FLAMEGRAPH_SEND_SVG}" -- send tcp > "${BENCH_SEND_LOG_FILE}"
     sleep 1
     echo "Starting flamegraph (poll) on iggy-bench..."
-    cargo flamegraph --bin iggy-bench -- poll tcp > "${BENCH_POLL_LOG_FILE}"
+    cargo flamegraph --bin iggy-bench -o "${FLAMEGRAPH_POLL_SVG}" -- poll tcp > "${BENCH_POLL_LOG_FILE}"
 fi
 
 # Gracefully stop the server

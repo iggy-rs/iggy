@@ -2,8 +2,10 @@
 
 # Function to get the git branch and commit hash
 function get_git_info() {
-    local git_info=$(git log -1 --pretty=format:"%h")
-    local git_branch=$(git rev-parse --abbrev-ref HEAD)
+    local git_info
+    git_info=$(git log -1 --pretty=format:"%h")
+    local git_branch
+    git_branch=$(git rev-parse --abbrev-ref HEAD)
     echo "${git_branch}_${git_info}"
 }
 
@@ -11,7 +13,8 @@ function get_git_info() {
 function wait_for_process() {
     local process_name=$1
     local timeout=$2
-    local start_time=$(date +%s)
+    local start_time
+    start_time=$(date +%s)
     local end_time=$((start_time + timeout))
     local continue_outer_loop=false
 
@@ -38,7 +41,8 @@ function wait_for_process() {
 # Function to send a signal to a process
 function send_signal() {
     local process_name=$1
-    local pids=$(pgrep "${process_name}") || true
+    local pids
+    pids=$(pgrep "${process_name}") || true
     local signal=$2
 
     if [[ -n "${pids}" ]]; then

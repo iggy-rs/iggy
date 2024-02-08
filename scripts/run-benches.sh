@@ -1,9 +1,11 @@
 #!/bin/bash
 
+# shellcheck disable=SC1091
+
 set -euo pipefail
 
 # Load utility functions
-source $(dirname $0)/utils.sh
+source "$(dirname "$0")/utils.sh"
 
 # Trap SIGINT (Ctrl+C) and execute the on_exit function, do the same on script exit
 trap on_exit_bench SIGINT
@@ -24,12 +26,12 @@ sleep 1
 
 # Start tcp send bench
 echo "Running iggy-bench send tcp..."
-send_results=`target/release/iggy-bench send tcp | grep -e "Results: total throughput"`
+send_results=$(target/release/iggy-bench send tcp | grep -e "Results: total throughput")
 sleep 1
 
 # Start tcp poll bench
 echo "Running iggy-bench poll tcp..."
-poll_results=`target/release/iggy-bench poll tcp | grep -e "Results: total throughput"`
+poll_results=$(target/release/iggy-bench poll tcp | grep -e "Results: total throughput")
 
 # Gracefully stop the server
 send_signal "iggy-server" "TERM"

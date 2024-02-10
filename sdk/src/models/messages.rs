@@ -143,7 +143,7 @@ impl RetainedMessage {
         }
     }
     /// Creates a new RetainedMessage from message and offset.
-    pub fn from_message(offset: u64, message: send_messages::Message) -> Self {
+    pub fn from_message(offset: u64, message: &send_messages::Message) -> Self {
         let mut payload = BytesMut::with_capacity(
             (POLLED_MESSAGE_METADATA
                 + message.length
@@ -160,7 +160,7 @@ impl RetainedMessage {
         payload.put_u64_le(timestamp);
         payload.put_u128_le(message.id);
         payload.put_u32_le(checksum);
-        if let Some(headers) = message.headers {
+        if let Some(headers) = &message.headers {
             let headers_bytes = headers.as_bytes();
             #[allow(clippy::cast_possible_truncation)]
             payload.put_u32_le(headers_bytes.len() as u32);

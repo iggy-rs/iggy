@@ -14,6 +14,8 @@ use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
+use futures::StreamExt;
+use crate::streaming::utils::random_id;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()
@@ -59,6 +61,11 @@ async fn send_messages(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.partitioning.length = command.partitioning.value.len() as u8;
+    command.messages.iter_mut().for_each(|msg| {
+        if msg.id == 0 {
+            msg.id = random_id::get_uuid();
+        }
+    });
     command.validate()?;
 
     let system = state.system.read();

@@ -174,7 +174,7 @@ mod tests {
         let headers = Some(headers);
         let message = RetainedMessage::from_message(
             offset,
-            send_messages::Message {
+            &send_messages::Message {
                 id,
                 length,
                 payload: payload.clone(),
@@ -211,7 +211,7 @@ mod tests {
         for i in 1..=messages_count {
             let message = RetainedMessage::from_message(
                 i,
-                send_messages::Message {
+                &send_messages::Message {
                     id: (i + 69) as u128,
                     length,
                     payload: payload.clone(),

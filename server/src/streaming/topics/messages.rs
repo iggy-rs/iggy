@@ -60,7 +60,7 @@ impl Topic {
     pub async fn append_messages(
         &self,
         partitioning: &Partitioning,
-        messages: Vec<send_messages::Message>,
+        messages: &Vec<send_messages::Message>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
@@ -87,7 +87,7 @@ impl Topic {
     async fn append_messages_to_partition(
         &self,
         partition_id: u32,
-        messages: Vec<send_messages::Message>,
+        messages: &Vec<send_messages::Message>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
         if partition.is_none() {
@@ -276,7 +276,7 @@ mod tests {
                 None,
             )];
             topic
-                .append_messages(&partitioning, messages)
+                .append_messages(&partitioning, &messages)
                 .await
                 .unwrap();
         }
@@ -308,7 +308,7 @@ mod tests {
                 None,
             )];
             topic
-                .append_messages(&partitioning, messages)
+                .append_messages(&partitioning, &messages)
                 .await
                 .unwrap();
         }

@@ -319,7 +319,7 @@ impl Partition {
 
     pub async fn append_messages(
         &mut self,
-        messages: Vec<send_messages::Message>,
+        messages: &Vec<send_messages::Message>,
     ) -> Result<(), IggyError> {
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
@@ -335,11 +335,7 @@ impl Partition {
 
         let mut appendable_messages = Vec::with_capacity(messages.len());
         if let Some(message_deduplicator) = &self.message_deduplicator {
-            for mut message in messages {
-                if message.id == 0 {
-                    message.id = random_id::get_uuid();
-                }
-
+            for message in messages {
                 if !message_deduplicator.try_insert(&message.id).await {
                     warn!(
                         "Ignored the duplicated message ID: {} for partition with ID: {}.",
@@ -358,11 +354,7 @@ impl Partition {
                 appendable_messages.push(Arc::new(appendable_message));
             }
         } else {
-            for mut message in messages {
-                if message.id == 0 {
-                    message.id = random_id::get_uuid();
-                }
-
+            for message in messages {
                 if self.should_increment_offset {
                     self.current_offset += 1;
                 } else {
@@ -419,7 +411,7 @@ mod tests {
         let mut partition = create_partition(false);
         let messages = create_messages();
         let messages_count = messages.len() as u32;
-        partition.append_messages(messages).await.unwrap();
+        partition.append_messages(&messages).await.unwrap();
 
         let loaded_messages = partition
             .get_messages_by_offset(0, messages_count)
@@ -434,7 +426,7 @@ mod tests {
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let unique_messages_count = 3;
-        partition.append_messages(messages).await.unwrap();
+        partition.append_messages(&messages).await.unwrap();
 
         let loaded_messages = partition
             .get_messages_by_offset(0, messages_count)

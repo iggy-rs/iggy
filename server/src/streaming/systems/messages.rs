@@ -108,9 +108,10 @@ impl System {
             topic.topic_id,
         )?;
 
-        let mut received_messages = Vec::with_capacity(messages.len());
-        let mut batch_size_bytes = 0u64;
+        //let mut received_messages = Vec::with_capacity(messages.len());
+        //let mut batch_size_bytes = 0u64;
 
+        /*
         // For large batches it would be better to use par_iter() from rayon.
         for message in messages {
             let encrypted_message;
@@ -134,6 +135,8 @@ impl System {
                 message.headers.as_ref().cloned(),
             ));
         }
+         */
+        let batch_size_bytes = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
 
         // If there's enough space in cache, do nothing.
         // Otherwise, clean the cache.
@@ -143,7 +146,7 @@ impl System {
             }
         }
         topic
-            .append_messages(partitioning, received_messages)
+            .append_messages(partitioning, messages)
             .await?;
         self.metrics.increment_messages(messages.len() as u64);
         Ok(())

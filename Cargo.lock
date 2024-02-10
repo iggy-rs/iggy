@@ -2031,6 +2031,7 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tracing",
+ "uuid",
 ]
 
 [[package]]

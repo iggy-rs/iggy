@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.77"
 bytes = "1.4.0"
-clap = { version = "4.4.18", features = ["derive"] }
+clap = { version = "4.5.0", features = ["derive"] }
 colored = "2.0.4"
 derive_more = "0.99.17"
 figlet-rs = "0.1.5"

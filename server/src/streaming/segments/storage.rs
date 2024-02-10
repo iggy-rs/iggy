@@ -258,7 +258,7 @@ impl SegmentStorage for FileSegmentStorage {
         let mut bytes = BytesMut::with_capacity(messages_size as usize);
         for message in messages {
             bytes.put_u32_le(message.length);
-            bytes.extend(&message.bytes);
+            bytes.put_slice(&message.bytes);
         }
 
         if let Err(err) = self

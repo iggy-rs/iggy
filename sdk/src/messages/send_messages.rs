@@ -279,7 +279,7 @@ impl Default for Message {
     fn default() -> Self {
         let payload = Bytes::from("hello world");
         Message {
-            id: 0,
+            id: 1,
             length: payload.len() as u32,
             payload,
             headers: None,

@@ -156,7 +156,7 @@ async fn should_purge_existing_partition_on_disk() {
         assert_persisted_partition(&partition.path, with_segment).await;
         let messages = create_messages();
         let messages_count = messages.len();
-        partition.append_messages(messages).await.unwrap();
+        partition.append_messages(&messages).await.unwrap();
         let loaded_messages = partition.get_messages_by_offset(0, 100).await.unwrap();
         assert_eq!(loaded_messages.len(), messages_count);
         partition.purge().await.unwrap();

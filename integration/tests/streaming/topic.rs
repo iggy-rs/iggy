@@ -162,7 +162,7 @@ async fn should_purge_existing_topic_on_disk() {
         let messages = create_messages();
         let messages_count = messages.len();
         topic
-            .append_messages(&Partitioning::partition_id(1), messages)
+            .append_messages(&Partitioning::partition_id(1), &messages)
             .await
             .unwrap();
         let loaded_messages = topic

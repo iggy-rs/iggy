@@ -1,7 +1,6 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::utils::random_id;
 use iggy::error::IggyError;
 use iggy::messages::send_messages;
 use iggy::models::messages::RetainedMessage;

@@ -5,6 +5,7 @@ use crate::streaming;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
+use crate::streaming::utils::random_id;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -14,8 +15,6 @@ use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use futures::StreamExt;
-use crate::streaming::utils::random_id;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()

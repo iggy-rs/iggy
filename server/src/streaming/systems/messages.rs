@@ -108,48 +108,51 @@ impl System {
             topic.topic_id,
         )?;
 
-        //let mut received_messages = Vec::with_capacity(messages.len());
-        //let mut batch_size_bytes = 0u64;
-
-        /*
-        // For large batches it would be better to use par_iter() from rayon.
-        for message in messages {
-            let encrypted_message;
-            let message = match self.encryptor {
-                Some(ref encryptor) => {
-                    let payload = encryptor.encrypt(message.payload.as_ref())?;
-                    encrypted_message = send_messages::Message {
-                        id: message.id,
-                        length: payload.len() as u32,
-                        payload: Bytes::from(payload),
-                        headers: message.headers.clone(),
-                    };
-                    &encrypted_message
+        let mut batch_size_bytes = 0;
+        if let Some(encryptor) = &self.encryptor {
+            let mut encrypted_messages = Vec::with_capacity(messages.len());
+            for message in messages.iter() {
+                let payload = encryptor.encrypt(&message.payload);
+                match payload {
+                    Ok(payload) => {
+                        let msg = send_messages::Message::new(
+                            Some(message.id),
+                            Bytes::from(payload),
+                            message.headers.clone(),
+                        );
+                        batch_size_bytes += msg.get_size_bytes() as u64;
+                        encrypted_messages.push(msg);
+                    }
+                    Err(error) => {
+                        error!("Cannot encrypt the message. Error: {}", error);
+                        return Err(IggyError::CannotEncryptData);
+                    }
                 }
-                None => message,
-            };
-            batch_size_bytes += message.get_size_bytes() as u64;
-            received_messages.push(send_messages::Message::new(
-                Some(message.id),
-                message.payload.clone(),
-                message.headers.as_ref().cloned(),
-            ));
-        }
-         */
-        let batch_size_bytes = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
-
-        // If there's enough space in cache, do nothing.
-        // Otherwise, clean the cache.
-        if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
-            if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
-                self.clean_cache(batch_size_bytes).await;
             }
+            if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
+                if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
+                    self.clean_cache(batch_size_bytes).await;
+                }
+            }
+
+            topic
+                .append_messages(partitioning, &encrypted_messages)
+                .await?;
+            self.metrics
+                .increment_messages(encrypted_messages.len() as u64);
+            Ok(())
+        } else {
+            batch_size_bytes = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
+            if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
+                if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
+                    self.clean_cache(batch_size_bytes).await;
+                }
+            }
+
+            topic.append_messages(partitioning, messages).await?;
+            self.metrics.increment_messages(messages.len() as u64);
+            Ok(())
         }
-        topic
-            .append_messages(partitioning, messages)
-            .await?;
-        self.metrics.increment_messages(messages.len() as u64);
-        Ok(())
     }
 }
 

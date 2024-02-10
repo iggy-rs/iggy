@@ -14,7 +14,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::Arc;
 
-pub(crate) const POLLED_MESSAGE_METADATA: u32 = 4 + 1 + 8 + 8 + 16 + 4 + 4;
+pub(crate) const POLLED_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 16 + 4 + 4 + 4;
 
 /// The wrapper on top of the collection of messages that are polled from the partition.
 /// It consists of the following fields:

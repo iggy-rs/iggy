@@ -198,7 +198,9 @@ impl Segment {
 
         let messages_count = messages.len();
 
-        let unsaved_messages = self.unsaved_messages.get_or_insert_with(Vec::new);
+        let unsaved_messages = self
+            .unsaved_messages
+            .get_or_insert_with(|| Vec::with_capacity(messages_count));
         unsaved_messages.reserve(messages_count);
 
         if let Some(indexes) = &mut self.indexes {

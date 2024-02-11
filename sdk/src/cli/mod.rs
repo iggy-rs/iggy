@@ -1,6 +1,7 @@
 pub mod client;
 pub mod consumer_group;
 pub mod consumer_offset;
+pub mod context;
 pub mod message;
 pub mod partitions;
 pub mod personal_access_tokens;

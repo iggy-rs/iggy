@@ -601,7 +601,7 @@ async fn load_messages_by_range(
             .await
             .map_err(|_| IggyError::CannotReadMessagePayload)?;
 
-        let message = RetainedMessage::new(length, Bytes::from(payload));
+        let message = RetainedMessage::new(length, payload);
         read_messages += 1;
         on_message(message)?;
     }
@@ -634,7 +634,7 @@ async fn load_messages_by_size(
             .await
             .map_err(|_| IggyError::CannotReadMessagePayload)?;
 
-        let message = RetainedMessage::new(length, Bytes::from(payload));
+        let message = RetainedMessage::new(length, payload);
         let message_size = message.get_size_bytes() as u64;
 
         if accumulated_size >= threshold {

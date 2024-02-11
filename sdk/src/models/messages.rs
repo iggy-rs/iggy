@@ -71,12 +71,12 @@ pub struct PolledMessage {
 #[derive(Debug, Clone)]
 pub struct RetainedMessage {
     pub length: u32,
-    pub bytes: Bytes,
+    pub bytes: Vec<u8>,
 }
 
 impl From<PolledMessage> for RetainedMessage {
     fn from(value: PolledMessage) -> Self {
-        let mut payload = BytesMut::with_capacity(
+        let mut payload = Vec::with_capacity(
             (POLLED_MESSAGE_METADATA
                 + value.length
                 + header::get_headers_size_bytes(&value.headers)) as usize,
@@ -100,13 +100,13 @@ impl From<PolledMessage> for RetainedMessage {
 
         Self {
             length: payload.len() as u32,
-            bytes: payload.freeze(),
+            bytes: payload,
         }
     }
 }
 
 impl RetainedMessage {
-    pub fn new(length: u32, bytes: Bytes) -> Self {
+    pub fn new(length: u32, bytes: Vec<u8>) -> Self {
         Self { length, bytes }
     }
     /// Creates a new RetainedMessage from the binary representation.
@@ -119,7 +119,7 @@ impl RetainedMessage {
         headers_bytes: &[u8],
         payload_bytes: &[u8],
     ) -> Self {
-        let mut payload = BytesMut::with_capacity(
+        let mut payload = Vec::with_capacity(
             5 + id_bytes.len()
                 + offset_bytes.len()
                 + timestamp_bytes.len()
@@ -139,12 +139,12 @@ impl RetainedMessage {
 
         Self {
             length: payload.len() as u32,
-            bytes: payload.freeze(),
+            bytes: payload,
         }
     }
     /// Creates a new RetainedMessage from message and offset.
     pub fn from_message(offset: u64, message: &send_messages::Message) -> Self {
-        let mut payload = BytesMut::with_capacity(
+        let mut payload = Vec::with_capacity(
             (POLLED_MESSAGE_METADATA
                 + message.length
                 + header::get_headers_size_bytes(&message.headers)) as usize,
@@ -173,7 +173,7 @@ impl RetainedMessage {
 
         Self {
             length: payload.len() as u32,
-            bytes: payload.freeze(),
+            bytes: payload,
         }
     }
 

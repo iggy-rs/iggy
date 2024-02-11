@@ -107,8 +107,7 @@ impl<'de> serde::de::Visitor<'de> for RetainedMessageVisitor {
         let checksum = checksum.ok_or_else(|| serde::de::Error::missing_field("checksum"))?;
         let message_payload = payload.ok_or_else(|| serde::de::Error::missing_field("payload"))?;
         let message_payload = STANDARD.decode(message_payload.as_bytes()).unwrap();
-        let message_payload = BytesMut::from(&message_payload[..]);
-        let mut payload = BytesMut::with_capacity(
+        let mut payload = Vec::with_capacity(
             (crate::models::messages::POLLED_MESSAGE_METADATA
                 + message_payload.len() as u32
                 + header::get_headers_size_bytes(&headers)) as usize,
@@ -131,7 +130,7 @@ impl<'de> serde::de::Visitor<'de> for RetainedMessageVisitor {
         payload.put_slice(&message_payload);
         Ok(RetainedMessage {
             length: payload.len() as u32,
-            bytes: payload.freeze(),
+            bytes: payload,
         })
     }
 }

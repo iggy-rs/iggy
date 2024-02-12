@@ -16,8 +16,8 @@ use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
-use tracing::log::{trace, warn};
-use tracing::{error, info};
+use tracing::log::{info, trace, warn};
+use tracing::{error};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
@@ -250,14 +250,18 @@ impl SegmentStorage for FileSegmentStorage {
         segment: &Segment,
         messages: &[Arc<RetainedMessage>],
     ) -> Result<u32, IggyError> {
-        let messages_size = messages
+        let messages_size: u64 = messages
             .iter()
-            .map(|message| message.get_size_bytes())
-            .sum::<u32>();
+            .map(|message| 4 + message.get_size_bytes() as u64)
+            .sum();
 
         let mut bytes = BytesMut::with_capacity(messages_size as usize);
         for message in messages {
+            bytes.put_u32_le(message.get_size_bytes());
             bytes.put_u32_le(message.length);
+            bytes.put_u64_le(message.base_offset);
+            bytes.put_u32_le(message.last_offset_delta);
+            bytes.put_u64_le(message.max_timestamp);
             bytes.put_slice(&message.bytes);
         }
 
@@ -270,7 +274,7 @@ impl SegmentStorage for FileSegmentStorage {
             return Err(IggyError::CannotSaveMessagesToSegment(err));
         }
 
-        Ok(messages_size)
+        Ok(messages_size as u32)
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
@@ -450,16 +454,10 @@ impl SegmentStorage for FileSegmentStorage {
         mut current_position: u32,
         messages: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
-        let mut bytes = Vec::with_capacity(messages.len() * 4);
-        for message in messages {
-            trace!("Persisting index for position: {}", current_position);
-            bytes.put_u32_le(current_position);
-            current_position += message.get_size_bytes();
-        }
 
         if let Err(err) = self
             .persister
-            .append(&segment.index_path, &bytes)
+            .append(&segment.index_path, &segment.unsaved_indexes)
             .await
             .with_context(|| format!("Failed to save index to segment: {}", segment.index_path))
         {
@@ -543,14 +541,9 @@ impl SegmentStorage for FileSegmentStorage {
         segment: &Segment,
         messages: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
-        let mut bytes = Vec::with_capacity(messages.len() * 8);
-        for message in messages {
-            bytes.put_u64_le(message.get_timestamp());
-        }
-
         if let Err(err) = self
             .persister
-            .append(&segment.time_index_path, &bytes)
+            .append(&segment.time_index_path, &segment.unsaved_timestamps)
             .await
             .with_context(|| {
                 format!(
@@ -601,7 +594,7 @@ async fn load_messages_by_range(
             .await
             .map_err(|_| IggyError::CannotReadMessagePayload)?;
 
-        let message = RetainedMessage::new(length, payload);
+        let message = RetainedMessage::new(length, Bytes::from(payload));
         read_messages += 1;
         on_message(message)?;
     }
@@ -634,7 +627,7 @@ async fn load_messages_by_size(
             .await
             .map_err(|_| IggyError::CannotReadMessagePayload)?;
 
-        let message = RetainedMessage::new(length, payload);
+        let message = RetainedMessage::new(length, Bytes::from(payload));
         let message_size = message.get_size_bytes() as u64;
 
         if accumulated_size >= threshold {

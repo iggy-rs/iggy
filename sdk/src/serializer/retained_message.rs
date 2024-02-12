@@ -4,7 +4,7 @@ use crate::models::header::{HeaderKey, HeaderValue};
 use crate::models::messages::{MessageState, RetainedMessage};
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -129,8 +129,11 @@ impl<'de> serde::de::Visitor<'de> for RetainedMessageVisitor {
         payload.put_u32_le(message_payload.len() as u32);
         payload.put_slice(&message_payload);
         Ok(RetainedMessage {
+            base_offset: 1,
+            last_offset_delta: 1,
+            max_timestamp: 69,
             length: payload.len() as u32,
-            bytes: payload,
+            bytes: Bytes::from(payload),
         })
     }
 }

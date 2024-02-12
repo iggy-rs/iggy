@@ -6,6 +6,7 @@ use iggy::models::messages::RetainedMessage;
 use iggy::sizeable::Sizeable;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use bytes::BufMut;
 use tracing::trace;
 
 const EMPTY_MESSAGES: Vec<Arc<RetainedMessage>> = vec![];
@@ -187,7 +188,7 @@ impl Segment {
 
     pub async fn append_messages(
         &mut self,
-        messages: &[Arc<RetainedMessage>],
+        messages: Arc<RetainedMessage>,
     ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
@@ -196,12 +197,11 @@ impl Segment {
             ));
         }
 
-        let messages_count = messages.len();
+        let messages_count = 1;
 
-        let unsaved_messages = self
-            .unsaved_messages
-            .get_or_insert_with(|| Vec::with_capacity(messages_count));
+        let unsaved_messages = self.unsaved_messages.get_or_insert_with(Vec::new);
         unsaved_messages.reserve(messages_count);
+        unsaved_messages.push(messages.clone());
 
         if let Some(indexes) = &mut self.indexes {
             indexes.reserve(messages_count);
@@ -211,68 +211,16 @@ impl Segment {
             time_indexes.reserve(messages_count);
         }
 
+        self.store_offset_and_timestamp_index_for_batch(
+            messages.base_offset + messages.last_offset_delta as u64,
+            messages.max_timestamp,
+        );
+
         // Not the prettiest code. It's done this way to avoid repeatably
         // checking if indexes and time_indexes are Some or None.
-        let mut messages_size = 0;
-        if self.indexes.is_some() && self.time_indexes.is_some() {
-            for message in messages {
-                let message_offset = message.get_offset();
-                let relative_offset = (message_offset - self.start_offset) as u32;
-
-                self.indexes.as_mut().unwrap().push(Index {
-                    relative_offset,
-                    position: self.size_bytes,
-                });
-
-                self.time_indexes.as_mut().unwrap().push(TimeIndex {
-                    relative_offset,
-                    timestamp: message.get_timestamp(),
-                });
-                let message_size = message.get_size_bytes();
-                self.size_bytes += message_size;
-                messages_size += message_size;
-                self.current_offset = message_offset;
-                unsaved_messages.push(message.clone());
-            }
-        } else if self.indexes.is_some() {
-            for message in messages {
-                let message_offset = message.get_offset();
-                let relative_offset = (message_offset - self.start_offset) as u32;
-
-                self.indexes.as_mut().unwrap().push(Index {
-                    relative_offset,
-                    position: self.size_bytes,
-                });
-                let message_size = message.get_size_bytes();
-                self.size_bytes += message_size;
-                messages_size += message_size;
-                self.current_offset = message_offset;
-                unsaved_messages.push(message.clone());
-            }
-        } else if self.time_indexes.is_some() {
-            for message in messages {
-                let message_offset = message.get_offset();
-                let relative_offset = (message_offset - self.start_offset) as u32;
-
-                self.time_indexes.as_mut().unwrap().push(TimeIndex {
-                    relative_offset,
-                    timestamp: message.get_timestamp(),
-                });
-                let message_size = message.get_size_bytes();
-                self.size_bytes += message_size;
-                messages_size += message_size;
-                self.current_offset = message_offset;
-                unsaved_messages.push(message.clone());
-            }
-        } else {
-            for message in messages {
-                let message_size = message.get_size_bytes();
-                self.size_bytes += message_size;
-                messages_size += message_size;
-                self.current_offset = message.get_offset();
-                unsaved_messages.push(message.clone());
-            }
-        }
+        let mut messages_size = messages.get_size_bytes();
+        let mut messages_count = messages.last_offset_delta + 1;
+        self.size_bytes += messages.length;
 
         self.size_of_parent_stream
             .fetch_add(messages_size as u64, Ordering::SeqCst);
@@ -289,6 +237,48 @@ impl Segment {
 
         Ok(())
     }
+    fn store_offset_and_timestamp_index_for_batch(
+        &mut self,
+        batch_last_offset: u64,
+        batch_max_timestamp: u64,
+    ) {
+        let relative_offset = (batch_last_offset - self.start_offset) as u32;
+        match (&mut self.indexes, &mut self.time_indexes) {
+            (Some(indexes), Some(time_indexes)) => {
+                indexes.push(Index {
+                    relative_offset,
+                    position: self.size_bytes,
+                });
+                time_indexes.push(TimeIndex {
+                    relative_offset,
+                    timestamp: batch_max_timestamp,
+                });
+            }
+            (Some(indexes), None) => {
+                indexes.push(Index {
+                    relative_offset,
+                    position: self.size_bytes,
+                });
+            }
+            (None, Some(time_indexes)) => {
+                time_indexes.push(TimeIndex {
+                    relative_offset,
+                    timestamp: batch_max_timestamp,
+                });
+            }
+            (None, None) => {}
+        };
+        self.unsaved_indexes.reserve(2);
+        self.unsaved_timestamps.reserve(2);
+
+        // Regardless of whether caching of indexes and time_indexes is on
+        // store them in the unsaved buffer
+        self.unsaved_indexes.put_u32_le(relative_offset);
+        self.unsaved_indexes.put_u32_le(self.size_bytes);
+        self.unsaved_timestamps.put_u32_le(relative_offset);
+        self.unsaved_timestamps.put_u64_le(batch_max_timestamp);
+    }
+
 
     pub async fn persist_messages(&mut self) -> Result<(), IggyError> {
         let storage = self.storage.segment.clone();
@@ -313,7 +303,9 @@ impl Segment {
         storage
             .save_index(self, current_position, unsaved_messages)
             .await?;
+        self.unsaved_indexes.clear();
         storage.save_time_index(self, unsaved_messages).await?;
+        self.unsaved_timestamps.clear();
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",

@@ -14,7 +14,7 @@ use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 use std::sync::Arc;
 
-pub(crate) const POLLED_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 16 + 4 + 4 + 4;
+pub const POLLED_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 16 + 4 + 4 + 4;
 
 /// The wrapper on top of the collection of messages that are polled from the partition.
 /// It consists of the following fields:
@@ -70,13 +70,16 @@ pub struct PolledMessage {
 
 #[derive(Debug, Clone)]
 pub struct RetainedMessage {
+    pub base_offset: u64,
+    pub last_offset_delta: u32,
+    pub max_timestamp: u64,
     pub length: u32,
-    pub bytes: Vec<u8>,
+    pub bytes: Bytes,
 }
 
 impl From<PolledMessage> for RetainedMessage {
     fn from(value: PolledMessage) -> Self {
-        let mut payload = Vec::with_capacity(
+        let mut payload = BytesMut::with_capacity(
             (POLLED_MESSAGE_METADATA
                 + value.length
                 + header::get_headers_size_bytes(&value.headers)) as usize,
@@ -99,15 +102,18 @@ impl From<PolledMessage> for RetainedMessage {
         payload.put_slice(&value.payload);
 
         Self {
+            base_offset: 1,
+            last_offset_delta: 10,
+            max_timestamp: 20,
             length: payload.len() as u32,
-            bytes: payload,
+            bytes: payload.freeze(),
         }
     }
 }
 
 impl RetainedMessage {
-    pub fn new(length: u32, bytes: Vec<u8>) -> Self {
-        Self { length, bytes }
+    pub fn new(length: u32, bytes: Bytes) -> Self {
+        Self { base_offset:1, last_offset_delta: 1, max_timestamp: 20, length, bytes }
     }
     /// Creates a new RetainedMessage from the binary representation.
     pub fn from_bytes(
@@ -138,19 +144,15 @@ impl RetainedMessage {
         payload.put_slice(payload_bytes);
 
         Self {
+            base_offset: 1,
+            last_offset_delta: 10,
+            max_timestamp: 20,
             length: payload.len() as u32,
-            bytes: payload,
+            bytes: Bytes::from(payload),
         }
     }
     /// Creates a new RetainedMessage from message and offset.
-    pub fn from_message(offset: u64, message: &send_messages::Message) -> Self {
-        let mut payload = Vec::with_capacity(
-            (POLLED_MESSAGE_METADATA
-                + message.length
-                + header::get_headers_size_bytes(&message.headers)) as usize,
-        );
-
-        let timestamp = IggyTimestamp::now().to_micros();
+    pub fn from_message(offset: u64, timestamp: u64, message: &send_messages::Message, payload: &mut BytesMut) {
         let checksum = checksum::calculate(&message.payload);
         let message_state = MessageState::Available;
         let length = message.payload.len() as u32;
@@ -170,11 +172,6 @@ impl RetainedMessage {
         }
         payload.put_u32_le(length);
         payload.put_slice(&message.payload);
-
-        Self {
-            length: payload.len() as u32,
-            bytes: payload,
-        }
     }
 
     pub fn get_id(&self) -> u128 {
@@ -244,7 +241,7 @@ impl RetainedMessage {
 
 impl Sizeable for Arc<RetainedMessage> {
     fn get_size_bytes(&self) -> u32 {
-        4 + self.bytes.len() as u32
+        24 + self.length
     }
 }
 impl Sizeable for RetainedMessage {

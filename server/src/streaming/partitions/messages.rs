@@ -1,11 +1,13 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
+use bytes::BytesMut;
 use iggy::error::IggyError;
 use iggy::messages::send_messages;
-use iggy::models::messages::RetainedMessage;
+use iggy::models::messages::{RetainedMessage, POLLED_MESSAGE_METADATA};
 use std::sync::{atomic::Ordering, Arc};
 use tracing::{trace, warn};
+use iggy::utils::timestamp::IggyTimestamp;
 
 const EMPTY_MESSAGES: Vec<Arc<RetainedMessage>> = vec![];
 
@@ -332,7 +334,16 @@ impl Partition {
             }
         }
 
-        let mut appendable_messages = Vec::with_capacity(messages.len());
+        let len: usize = messages
+            .iter()
+            .map(|msg| msg.get_size_bytes() as usize)
+            .sum::<usize>()
+            + (POLLED_MESSAGE_METADATA as usize * messages.len());
+        let mut bytes = BytesMut::with_capacity(len);
+        let base_offset = self.current_offset;
+        let mut last_offset = 0;
+        let mut max_timestamp = 0;
+
         if let Some(message_deduplicator) = &self.message_deduplicator {
             for message in messages {
                 if !message_deduplicator.try_insert(&message.id).await {
@@ -348,9 +359,10 @@ impl Partition {
                 } else {
                     self.should_increment_offset = true;
                 }
-                let appendable_message =
-                    RetainedMessage::from_message(self.current_offset, message);
-                appendable_messages.push(Arc::new(appendable_message));
+                last_offset = self.current_offset;
+                let timestamp = IggyTimestamp::now().to_micros();
+                max_timestamp = timestamp;
+                RetainedMessage::from_message(self.current_offset, timestamp, message, &mut bytes);
             }
         } else {
             for message in messages {
@@ -359,21 +371,27 @@ impl Partition {
                 } else {
                     self.should_increment_offset = true;
                 }
-
-                let appendable_message =
-                    RetainedMessage::from_message(self.current_offset, message);
-                appendable_messages.push(Arc::new(appendable_message));
+                last_offset = self.current_offset;
+                let timestamp = IggyTimestamp::now().to_micros();
+                RetainedMessage::from_message(self.current_offset, timestamp, message, &mut bytes);
             }
         }
+        let msg = Arc::new(RetainedMessage {
+            base_offset,
+            last_offset_delta: (last_offset - base_offset) as u32,
+            max_timestamp,
+            length: bytes.len() as u32,
+            bytes: bytes.freeze(),
+        });
 
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
-            last_segment.append_messages(&appendable_messages).await?;
+            last_segment.append_messages(msg.clone()).await?;
         }
 
-        let messages_count = appendable_messages.len() as u32;
+        let messages_count = (base_offset - last_offset + 1) as u32;
         if let Some(cache) = &mut self.cache {
-            cache.extend(appendable_messages);
+            cache.extend(vec![msg]);
         }
 
         self.unsaved_messages_count += messages_count;
@@ -387,7 +405,8 @@ impl Partition {
                     last_segment.start_offset,
                     self.partition_id
                 );
-                last_segment.persist_messages().await?;
+
+                last_segment.persist_messages().await.unwrap();
                 self.unsaved_messages_count = 0;
             }
         }

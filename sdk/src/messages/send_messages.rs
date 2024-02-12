@@ -288,7 +288,19 @@ impl Default for Message {
 
 impl Display for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}|{}", self.id, String::from_utf8_lossy(&self.payload))
+        let len = self.payload.len();
+
+        if len > 40 {
+            write!(
+                f,
+                "{}|{}...{}",
+                self.id,
+                String::from_utf8_lossy(&self.payload[..20]),
+                String::from_utf8_lossy(&self.payload[len - 20..])
+            )
+        } else {
+            write!(f, "{}|{}", self.id, String::from_utf8_lossy(&self.payload))
+        }
     }
 }
 

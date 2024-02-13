@@ -1,11 +1,15 @@
 name: coverage
 on:
-  workflow_dispatch:
-  workflow_call:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
 
 env:
   CARGO_TERM_COLOR: always
-  GITHUB_BOT_CONTEXT_STRING: "codecov coverage reporting job"
+  GITHUB_BOT_CONTEXT_STRING: "coveralls coverage reporting job"
 
 jobs:
   coverage:
@@ -36,14 +40,12 @@ jobs:
         run: source <(cargo llvm-cov show-env --export-prefix) && cargo test
 
       - name: Generate code coverage
-        run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --codecov --output-path codecov.json --ignore-filename-regex '(bench\/|integration\/|tools\/)'
+        run: source <(cargo llvm-cov show-env --export-prefix) && cargo llvm-cov report --lcov --output-path coverage.lcov --ignore-filename-regex '(bench\/|integration\/|tools\/|tpc\/)'
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload code to Coveralls
+        uses: coverallsapp/github-action@v2
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: codecov.json
-          fail_ci_if_error: false
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
   finalize:
     runs-on: ubuntu-latest
@@ -59,6 +61,6 @@ jobs:
         uses: JasonEtco/create-an-issue@v2.9.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_BOT_CONTEXT_STRING: "codecov coverage reporting job"
+          GITHUB_BOT_CONTEXT_STRING: "coveralls coverage reporting job"
         with:
           filename: .github/BOT_ISSUE_TEMPLATE.md

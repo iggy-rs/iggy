@@ -198,12 +198,6 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  report_coverage:
-    uses: ./.github/workflows/coverage.yml
-    needs:
-      - release_and_publish
-      - tag
-
   merge_docker_manifest:
     runs-on: ubuntu-latest
     needs:

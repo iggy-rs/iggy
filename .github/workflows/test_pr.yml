@@ -29,10 +29,6 @@ jobs:
   sanity:
     uses: ./.github/workflows/sanity.yml
 
-  coverage:
-    needs: sanity
-    uses: ./.github/workflows/coverage.yml
-
   build_and_test:
     needs: sanity
     name: ${{ matrix.platform.skip_tests == true && 'build' || 'build and test' }} ${{ matrix.platform.os_name }}
@@ -122,7 +118,6 @@ jobs:
   finalize:
     runs-on: ubuntu-latest
     needs:
-      - coverage
       - sanity
       - build_and_test
     if: always()

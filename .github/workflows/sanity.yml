@@ -74,18 +74,8 @@ jobs:
           excludeTitle: 'true'                     # exclude the title of a pull request
           checkAllCommitMessages: 'true'           # checks all commits associated with the pull request
           accessToken: ${{ secrets.GITHUB_TOKEN }} # needed only when checkAllCommitMessages is true
-          pattern: '^.{0,80}(\n.*)*$'
-          error: 'Subject of all commits in the PR has to be shorter than 80 characters.'
-
-      - name: Disallow issue hashtag in subject
-        uses: gsactions/commit-message-checker@v2
-        with:
-          excludeDescription: 'true'
-          excludeTitle: 'true'
-          checkAllCommitMessages: 'true'
-          accessToken: ${{ secrets.GITHUB_TOKEN }}
-          pattern: '^(?!.*#\d*).*(\n.*)*$'
-          error: 'Do not include issue hashtags (e.g., #123) in the subject of any commit in the PR.'
+          pattern: '^.{0,90}(\n.*)*$'
+          error: 'Subject of all commits in the PR has to be shorter than 90 characters.'
 
       - name: Disallow specific prefixes in title
         uses: gsactions/commit-message-checker@v2

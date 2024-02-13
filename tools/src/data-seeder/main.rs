@@ -2,7 +2,7 @@ mod seeder;
 
 use anyhow::Result;
 use clap::Parser;
-use iggy::args::Args;
+use iggy::args::{Args, ArgsOptional};
 use iggy::client::UserClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
@@ -17,7 +17,7 @@ use tracing::info;
 #[command(author, version, about, long_about = None)]
 pub struct DataSeederArgs {
     #[clap(flatten)]
-    pub(crate) iggy: Args,
+    pub(crate) iggy: ArgsOptional,
 
     #[arg(long, default_value = "iggy")]
     pub username: String,
@@ -29,18 +29,20 @@ pub struct DataSeederArgs {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = DataSeederArgs::parse();
+    let iggy_args = Args::from(vec![args.iggy.clone()]);
+
     tracing_subscriber::fmt::init();
-    let encryptor: Option<Box<dyn Encryptor>> = match args.iggy.encryption_key.is_empty() {
+    let encryptor: Option<Box<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
         true => None,
         false => Some(Box::new(
-            Aes256GcmEncryptor::from_base64_key(&args.iggy.encryption_key).unwrap(),
+            Aes256GcmEncryptor::from_base64_key(&iggy_args.encryption_key).unwrap(),
         )),
     };
-    info!("Selected transport: {}", args.iggy.transport);
+    info!("Selected transport: {}", iggy_args.transport);
     let username = args.username.clone();
     let password = args.password.clone();
-    let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.iggy)?);
-    let client = client_provider::get_raw_client(client_provider_config).await?;
+    let client_provider_config = Arc::new(ClientProviderConfig::from_args(iggy_args)?);
+    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, encryptor);
     client
         .login_user(&LoginUser { username, password })

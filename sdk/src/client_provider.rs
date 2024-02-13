@@ -100,20 +100,30 @@ pub async fn get_default_client() -> Result<IggyClient, ClientError> {
 
 /// Create a `IggyClient` for the specific transport based on the provided configuration.
 pub async fn get_client(config: Arc<ClientProviderConfig>) -> Result<IggyClient, ClientError> {
-    let client = get_raw_client(config).await?;
+    let client = get_raw_connected_client(config).await?;
     Ok(IggyClient::builder(client).build())
+}
+
+/// Create a `Client` for the specific transport based on the provided configuration.
+pub async fn get_raw_connected_client(
+    config: Arc<ClientProviderConfig>,
+) -> Result<Box<dyn Client>, ClientError> {
+    get_raw_client(config, true).await
 }
 
 /// Create a `Client` for the specific transport based on the provided configuration.
 pub async fn get_raw_client(
     config: Arc<ClientProviderConfig>,
+    establish_connection: bool,
 ) -> Result<Box<dyn Client>, ClientError> {
     let transport = config.transport.clone();
     match transport.as_str() {
         QUIC_TRANSPORT => {
             let quic_config = config.quic.as_ref().unwrap();
             let client = QuicClient::create(quic_config.clone())?;
-            client.connect().await?;
+            if establish_connection {
+                client.connect().await?
+            };
             Ok(Box::new(client))
         }
         HTTP_TRANSPORT => {
@@ -124,7 +134,9 @@ pub async fn get_raw_client(
         TCP_TRANSPORT => {
             let tcp_config = config.tcp.as_ref().unwrap();
             let client = TcpClient::create(tcp_config.clone())?;
-            client.connect().await?;
+            if establish_connection {
+                client.connect().await?
+            };
             Ok(Box::new(client))
         }
         _ => Err(ClientError::InvalidTransport(transport)),

@@ -1,6 +1,7 @@
-use crate::args::IggyConsoleArgs;
+use crate::args::CliOptions;
 use crate::error::{CmdToolError, IggyCmdError};
 use anyhow::Context;
+use iggy::args::Args;
 use iggy::cli_command::PRINT_TARGET;
 use iggy::client::{PersonalAccessTokenClient, UserClient};
 use iggy::clients::client::IggyClient;
@@ -32,7 +33,8 @@ pub(crate) struct IggyCredentials<'a> {
 
 impl<'a> IggyCredentials<'a> {
     pub(crate) fn new(
-        args: &IggyConsoleArgs,
+        cli_options: &CliOptions,
+        iggy_args: &Args,
         login_required: bool,
     ) -> anyhow::Result<Self, anyhow::Error> {
         if !login_required {
@@ -43,8 +45,8 @@ impl<'a> IggyCredentials<'a> {
             });
         }
 
-        if let Some(token_name) = &args.token_name {
-            match args.get_server_address() {
+        if let Some(token_name) = &cli_options.token_name {
+            match iggy_args.get_server_address() {
                 Some(server_address) => {
                     let server_address = format!("iggy:{}", server_address);
                     event!(target: PRINT_TARGET, Level::DEBUG,"Checking token presence under service: {} and name: {}",
@@ -60,14 +62,14 @@ impl<'a> IggyCredentials<'a> {
                 }
                 None => Err(IggyCmdError::CmdToolError(CmdToolError::MissingServerAddress).into()),
             }
-        } else if let Some(token) = &args.token {
+        } else if let Some(token) = &cli_options.token {
             Ok(Self {
                 credentials: Some(Credentials::PersonalAccessToken(token.clone())),
                 iggy_client: None,
                 login_required,
             })
-        } else if let Some(username) = &args.username {
-            let password = match &args.password {
+        } else if let Some(username) = &cli_options.username {
+            let password = match &cli_options.password {
                 Some(password) => password.clone(),
                 None => {
                     if isatty(Stream::Stdin) {

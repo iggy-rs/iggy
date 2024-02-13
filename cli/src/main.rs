@@ -12,10 +12,15 @@ use crate::args::{
 use crate::credentials::IggyCredentials;
 use crate::error::IggyCmdError;
 use crate::logging::Logging;
+use args::context::ContextAction;
 use args::message::MessageAction;
 use args::partition::PartitionAction;
 use args::user::UserAction;
+use args::{CliOptions, IggyMergedConsoleArgs};
 use clap::Parser;
+use iggy::args::Args;
+use iggy::cli::context::common::ContextManager;
+use iggy::cli::context::use_context::UseContextCmd;
 use iggy::cli::{
     client::{get_client::GetClientCmd, get_clients::GetClientsCmd},
     consumer_group::{
@@ -26,6 +31,7 @@ use iggy::cli::{
     consumer_offset::{
         get_consumer_offset::GetConsumerOffsetCmd, set_consumer_offset::SetConsumerOffsetCmd,
     },
+    context::get_contexts::GetContextsCmd,
     message::{poll_messages::PollMessagesCmd, send_messages::SendMessagesCmd},
     partitions::{create_partitions::CreatePartitionsCmd, delete_partitions::DeletePartitionsCmd},
     personal_access_tokens::{
@@ -60,7 +66,11 @@ use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::sync::Arc;
 use tracing::{event, Level};
 
-fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> {
+fn get_command(
+    command: Command,
+    cli_options: &CliOptions,
+    iggy_args: &Args,
+) -> Box<dyn CliCommand> {
     #[warn(clippy::let_and_return)]
     match command {
         Command::Stream(command) => match command {
@@ -131,15 +141,15 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
                 Box::new(CreatePersonalAccessTokenCmd::new(
                     pat_create_args.name.clone(),
                     PersonalAccessTokenExpiry::new(pat_create_args.expiry.clone()),
-                    args.quiet,
+                    cli_options.quiet,
                     pat_create_args.store_token,
-                    args.get_server_address().unwrap(),
+                    iggy_args.get_server_address().unwrap(),
                 ))
             }
             PersonalAccessTokenAction::Delete(pat_delete_args) => {
                 Box::new(DeletePersonalAccessTokenCmd::new(
                     pat_delete_args.name.clone(),
-                    args.get_server_address().unwrap(),
+                    iggy_args.get_server_address().unwrap(),
                 ))
             }
             PersonalAccessTokenAction::List(pat_list_args) => Box::new(
@@ -249,6 +259,14 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
                 set_args.offset,
             )),
         },
+        Command::Context(command) => match command {
+            ContextAction::List(list_args) => {
+                Box::new(GetContextsCmd::new(list_args.list_mode.into()))
+            }
+            ContextAction::Use(use_args) => {
+                Box::new(UseContextCmd::new(use_args.context_name.clone()))
+            }
+        },
     }
 }
 
@@ -256,7 +274,7 @@ fn get_command(command: Command, args: &IggyConsoleArgs) -> Box<dyn CliCommand> 
 async fn main() -> Result<(), IggyCmdError> {
     let args = IggyConsoleArgs::parse();
 
-    if let Some(generator) = args.generator {
+    if let Some(generator) = args.cli.generator {
         args.generate_completion(generator);
         return Ok(());
     }
@@ -267,25 +285,34 @@ async fn main() -> Result<(), IggyCmdError> {
     }
 
     let mut logging = Logging::new();
-    logging.init(args.quiet, &args.debug);
+    logging.init(args.cli.quiet, &args.cli.debug);
 
     let command = args.command.clone().unwrap();
 
+    let mut context_manager = ContextManager::default();
+    let active_context = context_manager.get_active_context().await?;
+    let merged_args = IggyMergedConsoleArgs::from_context(active_context, args);
+
+    let iggy_args = merged_args.iggy;
+    let cli_options = merged_args.cli;
+
     // Get command based on command line arguments
-    let mut command = get_command(command, &args);
+    let mut command = get_command(command, &cli_options, &iggy_args);
 
     // Create credentials based on command line arguments and command
-    let mut credentials = IggyCredentials::new(&args, command.login_required())?;
+    let mut credentials = IggyCredentials::new(&cli_options, &iggy_args, command.login_required())?;
 
-    let encryptor: Option<Box<dyn Encryptor>> = match args.iggy.encryption_key.is_empty() {
+    let encryptor: Option<Box<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
         true => None,
         false => Some(Box::new(
-            Aes256GcmEncryptor::from_base64_key(&args.iggy.encryption_key).unwrap(),
+            Aes256GcmEncryptor::from_base64_key(&iggy_args.encryption_key).unwrap(),
         )),
     };
-    let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.iggy.clone())?);
+    let client_provider_config = Arc::new(ClientProviderConfig::from_args(iggy_args.clone())?);
 
-    let client = client_provider::get_raw_client(client_provider_config).await?;
+    let client =
+        client_provider::get_raw_client(client_provider_config, command.connection_required())
+            .await?;
     let client = IggyClient::create(client, IggyClientConfig::default(), None, None, encryptor);
 
     credentials.set_iggy_client(&client);

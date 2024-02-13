@@ -2,6 +2,7 @@ pub(crate) mod client;
 pub(crate) mod common;
 pub(crate) mod consumer_group;
 pub(crate) mod consumer_offset;
+pub(crate) mod context;
 pub(crate) mod message;
 pub(crate) mod partition;
 pub(crate) mod permissions;
@@ -14,20 +15,17 @@ pub(crate) mod user;
 use self::user::UserAction;
 use crate::args::{
     client::ClientAction, consumer_group::ConsumerGroupAction,
-    consumer_offset::ConsumerOffsetAction, message::MessageAction, partition::PartitionAction,
-    personal_access_token::PersonalAccessTokenAction, stream::StreamAction, system::PingArgs,
-    topic::TopicAction,
+    consumer_offset::ConsumerOffsetAction, context::ContextAction, message::MessageAction,
+    partition::PartitionAction, personal_access_token::PersonalAccessTokenAction,
+    stream::StreamAction, system::PingArgs, topic::TopicAction,
 };
 use clap::{Args, Command as ClapCommand};
 use clap::{Parser, Subcommand};
 use clap_complete::{generate, Generator, Shell};
 use figlet_rs::FIGfont;
-use iggy::args::Args as IggyArgs;
+use iggy::args::{Args as IggyArgs, ArgsOptional as IggyArgsOptional};
+use iggy::cli::context::common::ContextConfig;
 use std::path::PathBuf;
-
-const QUIC_TRANSPORT: &str = "quic";
-const HTTP_TRANSPORT: &str = "http";
-const TCP_TRANSPORT: &str = "tcp";
 
 static CARGO_BIN_NAME: &str = env!("CARGO_BIN_NAME");
 static CARGO_PKG_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
@@ -36,11 +34,18 @@ static CARGO_PKG_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
 #[command(author, version, about, long_about = None)]
 pub(crate) struct IggyConsoleArgs {
     #[clap(flatten, verbatim_doc_comment)]
-    pub(crate) iggy: IggyArgs,
+    pub(crate) iggy: IggyArgsOptional,
+
+    #[clap(flatten, verbatim_doc_comment)]
+    pub(crate) cli: CliOptions,
 
     #[clap(subcommand)]
     pub(crate) command: Option<Command>,
+}
 
+#[derive(Debug, Parser)]
+#[command(author, version, about, long_about = None)]
+pub(crate) struct CliOptions {
     /// Quiet mode (disabled stdout printing)
     #[clap(short, long, default_value_t = false)]
     pub(crate) quiet: bool,
@@ -133,42 +138,12 @@ pub(crate) enum Command {
     /// message operations
     #[command(subcommand, visible_alias = "m")]
     Message(MessageAction),
+    /// context operations
+    #[command(subcommand, visible_alias = "ctx")]
+    Context(ContextAction),
 }
 
 impl IggyConsoleArgs {
-    pub(crate) fn get_server_address(&self) -> Option<String> {
-        match self.iggy.transport.as_str() {
-            QUIC_TRANSPORT => Some(
-                self.iggy
-                    .quic_server_address
-                    .split(':')
-                    .next()
-                    .unwrap()
-                    .into(),
-            ),
-            HTTP_TRANSPORT => Some(
-                self.iggy
-                    .http_api_url
-                    .clone()
-                    .replace("http://", "")
-                    .replace("localhost", "127.0.0.1")
-                    .split(':')
-                    .next()
-                    .unwrap()
-                    .into(),
-            ),
-            TCP_TRANSPORT => Some(
-                self.iggy
-                    .tcp_server_address
-                    .split(':')
-                    .next()
-                    .unwrap()
-                    .into(),
-            ),
-            _ => None,
-        }
-    }
-
     pub(crate) fn generate_completion<G: Generator>(&self, generator: G) {
         generate(
             generator,
@@ -200,5 +175,31 @@ impl IggyConsoleArgs {
         println!("Run '{CARGO_BIN_NAME} COMMAND --help' for more information on a command.");
         println!();
         println!("For more help on what's Iggy and how to use it, head to {CARGO_PKG_HOMEPAGE}");
+    }
+}
+
+pub struct IggyMergedConsoleArgs {
+    pub iggy: IggyArgs,
+    pub cli: CliOptions,
+    pub command: Option<Command>,
+}
+
+impl IggyMergedConsoleArgs {
+    pub fn from_context(context: ContextConfig, args: IggyConsoleArgs) -> Self {
+        let merged_cli_options = CliOptions {
+            quiet: args.cli.quiet,
+            debug: args.cli.debug,
+            username: args.cli.username.or(context.username),
+            password: args.cli.password.or(context.password),
+            token: args.cli.token.or(context.token),
+            token_name: args.cli.token_name.or(context.token_name),
+            generator: args.cli.generator,
+        };
+
+        Self {
+            iggy: IggyArgs::from(vec![context.iggy, args.iggy]),
+            cli: merged_cli_options,
+            command: args.command,
+        }
     }
 }

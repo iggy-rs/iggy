@@ -1,6 +1,7 @@
 use clap::ValueEnum;
 use iggy::cli::client::get_clients::GetClientsOutput;
 use iggy::cli::consumer_group::get_consumer_groups::GetConsumerGroupsOutput;
+use iggy::cli::context::get_contexts::GetContextsOutput;
 use iggy::cli::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokensOutput;
 use iggy::cli::streams::get_streams::GetStreamsOutput;
 use iggy::cli::topics::get_topics::GetTopicsOutput;
@@ -62,6 +63,15 @@ impl From<ListMode> for GetConsumerGroupsOutput {
         match mode {
             ListMode::Table => GetConsumerGroupsOutput::Table,
             ListMode::List => GetConsumerGroupsOutput::List,
+        }
+    }
+}
+
+impl From<ListMode> for GetContextsOutput {
+    fn from(mode: ListMode) -> Self {
+        match mode {
+            ListMode::Table => GetContextsOutput::Table,
+            ListMode::List => GetContextsOutput::List,
         }
     }
 }

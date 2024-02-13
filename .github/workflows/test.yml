@@ -1,4 +1,4 @@
-name: test_pr
+name: test
 on:
   pull_request:
     branches:

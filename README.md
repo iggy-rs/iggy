@@ -11,7 +11,7 @@
   [![crates.io](https://img.shields.io/crates/d/iggy.svg)](https://crates.io/crates/iggy)
   [![docs](https://docs.rs/iggy/badge.svg)](https://docs.rs/iggy)
   [![workflow](https://github.com/iggy-rs/iggy/actions/workflows/test.yml/badge.svg)](https://github.com/iggy-rs/iggy/actions/workflows/test.yml)
-  [![coverage](https://coveralls.io/repos/github/iggy-rs/iggy/badge.svg?branch=coveralls)](https://coveralls.io/github/iggy-rs/iggy?branch=coveralls)
+  [![coverage](https://coveralls.io/repos/github/iggy-rs/iggy/badge.svg?branch=master)](https://coveralls.io/github/iggy-rs/iggy?branch=master)
   [![dependency](https://deps.rs/repo/github/iggy-rs/iggy/status.svg)](https://deps.rs/repo/github/iggy-rs/iggy)
   [![x](https://img.shields.io/twitter/follow/iggy_rs_?style=social)](https://twitter.com/iggy_rs_)
    [![discord-badge](https://img.shields.io/discord/1144142576266530928)](https://iggy.rs/discord)

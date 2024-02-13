@@ -4,9 +4,9 @@ use crate::streaming::segments::segment::Segment;
 use bytes::BytesMut;
 use iggy::error::IggyError;
 use iggy::messages::send_messages;
-use iggy::models::messages::{RetainedMessage, POLLED_MESSAGE_METADATA};
+use iggy::models::messages::{RetainedMessage, POLLED_MESSAGE_METADATA, RETAINED_MESSAGE_HEADER};
 use std::sync::{atomic::Ordering, Arc};
-use tracing::{trace, warn};
+use tracing::{error, trace, warn};
 use iggy::utils::timestamp::IggyTimestamp;
 
 const EMPTY_MESSAGES: Vec<Arc<RetainedMessage>> = vec![];
@@ -339,6 +339,7 @@ impl Partition {
             .map(|msg| msg.get_size_bytes() as usize)
             .sum::<usize>()
             + (POLLED_MESSAGE_METADATA as usize * messages.len());
+
         let mut bytes = BytesMut::with_capacity(len);
         let base_offset = self.current_offset;
         let mut last_offset = 0;

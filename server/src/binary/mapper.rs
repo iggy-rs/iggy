@@ -130,7 +130,7 @@ pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
     bytes.put_u64_le(polled_messages.current_offset);
     bytes.put_u32_le(messages_count);
     for message in polled_messages.messages.iter() {
-        bytes.extend(&message.bytes);
+        bytes.extend(&message.payload);
     }
 
     bytes.freeze()

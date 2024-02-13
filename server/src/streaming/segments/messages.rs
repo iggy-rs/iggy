@@ -1,12 +1,12 @@
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
+use bytes::BufMut;
 use iggy::error::IggyError;
 use iggy::models::messages::RetainedMessage;
 use iggy::sizeable::Sizeable;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use bytes::BufMut;
 use tracing::trace;
 
 const EMPTY_MESSAGES: Vec<Arc<RetainedMessage>> = vec![];
@@ -278,7 +278,6 @@ impl Segment {
         self.unsaved_timestamps.put_u32_le(relative_offset);
         self.unsaved_timestamps.put_u64_le(batch_max_timestamp);
     }
-
 
     pub async fn persist_messages(&mut self) -> Result<(), IggyError> {
         let storage = self.storage.segment.clone();

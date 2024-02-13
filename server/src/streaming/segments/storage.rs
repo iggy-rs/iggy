@@ -16,8 +16,8 @@ use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
+use tracing::error;
 use tracing::log::{info, trace, warn};
-use tracing::{error};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
@@ -454,7 +454,6 @@ impl SegmentStorage for FileSegmentStorage {
         mut current_position: u32,
         messages: &[Arc<RetainedMessage>],
     ) -> Result<(), IggyError> {
-
         if let Err(err) = self
             .persister
             .append(&segment.index_path, &segment.unsaved_indexes)

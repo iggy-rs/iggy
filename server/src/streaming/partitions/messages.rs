@@ -1,13 +1,14 @@
+use crate::streaming::models::messages::{RetainedMessageBatch};
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use bytes::BytesMut;
 use iggy::error::IggyError;
 use iggy::messages::send_messages;
-use iggy::models::messages::{RetainedMessage, POLLED_MESSAGE_METADATA, RETAINED_MESSAGE_HEADER};
+use iggy::models::messages::{POLLED_MESSAGE_METADATA};
+use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::{atomic::Ordering, Arc};
 use tracing::{error, trace, warn};
-use iggy::utils::timestamp::IggyTimestamp;
 
 const EMPTY_MESSAGES: Vec<Arc<RetainedMessage>> = vec![];
 
@@ -334,17 +335,27 @@ impl Partition {
             }
         }
 
-        let len: usize = messages
+        let batch_size: usize = messages
             .iter()
             .map(|msg| msg.get_size_bytes() as usize)
             .sum::<usize>()
             + (POLLED_MESSAGE_METADATA as usize * messages.len());
 
-        let mut bytes = BytesMut::with_capacity(len);
-        let base_offset = self.current_offset;
-        let mut last_offset = 0;
+        let begin_offset = if !self.should_increment_offset {
+            0
+        } else {
+            self.current_offset + 1
+        };
+
+        let mut curr_offset = begin_offset;
+        // assume that messages have monotonic timestamps
         let mut max_timestamp = 0;
 
+        let mut buffer = BytesMut::with_capacity(batch_size);
+        let mut messages_count = 0;
+
+        let batch_builder = RetainedMessageBatch::builder();
+        batch_builder.base_offset(curr_offset);
         if let Some(message_deduplicator) = &self.message_deduplicator {
             for message in messages {
                 if !message_deduplicator.try_insert(&message.id).await {
@@ -355,14 +366,11 @@ impl Partition {
                     continue;
                 }
 
-                if self.should_increment_offset {
-                    self.current_offset += 1;
-                } else {
-                    self.should_increment_offset = true;
-                }
-                last_offset = self.current_offset;
-                let timestamp = IggyTimestamp::now().to_micros();
-                max_timestamp = timestamp;
+                let message_offset = curr_offset;
+                max_timestamp = IggyTimestamp::now().to_micros();
+                curr_offset += 1;
+
+                messages_count += 1;
                 RetainedMessage::from_message(self.current_offset, timestamp, message, &mut bytes);
             }
         } else {

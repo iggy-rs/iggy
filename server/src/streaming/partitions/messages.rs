@@ -1,4 +1,5 @@
-use crate::streaming::models::messages::RetainedMessageBatch;
+use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
+use crate::streaming::models::messages::{RetainedMessage, RetainedMessageBatch};
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
@@ -275,6 +276,8 @@ impl Partition {
         start_offset: u64,
         end_offset: u64,
     ) -> Vec<Arc<RetainedMessage>> {
+        todo!();
+        /*
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,
@@ -317,6 +320,7 @@ impl Partition {
         );
 
         messages
+         */
     }
 
     pub async fn append_messages(
@@ -335,11 +339,11 @@ impl Partition {
             }
         }
 
-        let batch_size: usize = messages
+        //TODO(numinex): Pass this from the system level + POLLED_MESSAGE_METADATA * messages_count
+        let batch_size = messages
             .iter()
-            .map(|msg| msg.get_size_bytes() as usize)
-            .sum::<usize>()
-            + (POLLED_MESSAGE_METADATA as usize * messages.len());
+            .map(|msg| (msg.get_size_bytes() + POLLED_MESSAGE_METADATA) as usize)
+            .sum();
 
         let begin_offset = if !self.should_increment_offset {
             0
@@ -347,58 +351,66 @@ impl Partition {
             self.current_offset + 1
         };
 
+        let mut messages_count = 0;
         let mut curr_offset = begin_offset;
         // assume that messages have monotonic timestamps
         let mut max_timestamp = 0;
 
         let mut buffer = BytesMut::with_capacity(batch_size);
-        let mut messages_count = 0;
-
         let batch_builder = RetainedMessageBatch::builder();
         batch_builder.base_offset(curr_offset);
-        if let Some(message_deduplicator) = &self.message_deduplicator {
-            for message in messages {
-                if !message_deduplicator.try_insert(&message.id).await {
-                    warn!(
-                        "Ignored the duplicated message ID: {} for partition with ID: {}.",
-                        message.id, self.partition_id
-                    );
-                    continue;
-                }
 
-                let message_offset = curr_offset;
-                max_timestamp = IggyTimestamp::now().to_micros();
-                curr_offset += 1;
-                messages_count += 1;
-
-                RetainedMessage::new(message_offset, timestamp, message);
+        for message in messages {
+            let mut should_continue = false;
+            self.message_deduplicator
+                .as_ref()
+                .map(|message_deduplicator| {
+                    if !message_deduplicator.try_insert(&message.id) {
+                        warn!(
+                            "Ignored the duplicated message ID: {} for partition with ID: {}.",
+                            message.id, self.partition_id
+                        );
+                        should_continue = true;
+                    }
+                });
+            if should_continue {
+                continue;
             }
-        } else {
-            for message in messages {
-                let message_offset = curr_offset;
-                max_timestamp = IggyTimestamp::now().to_micros();
-                curr_offset += 1;
-                messages_count += 1;
 
-                RetainedMessage::new(message_offset, timestamp, message);
-            }
+            let message_offset = curr_offset;
+            max_timestamp = IggyTimestamp::now().to_micros();
+            let message = RetainedMessage::new(message_offset, max_timestamp, message);
+            message.extend(&mut buffer);
+
+            curr_offset += 1;
+            messages_count += 1;
         }
-        let msg = Arc::new(RetainedMessage {
-            base_offset,
-            last_offset_delta: (last_offset - base_offset) as u32,
-            max_timestamp,
-            length: bytes.len() as u32,
-            bytes: bytes.freeze(),
-        });
+
+        let last_offset = curr_offset - 1;
+        let last_offset_delta = (last_offset - begin_offset) as u32;
+        let batch = Arc::new(
+            batch_builder
+                .max_timestamp(max_timestamp)
+                .last_offset_delta(last_offset_delta)
+                .length(buffer.len() as u32)
+                .payload(buffer.freeze())
+                .build()?,
+        );
+
+        if self.should_increment_offset {
+            self.current_offset = last_offset;
+        } else {
+            self.should_increment_offset = true;
+            self.current_offset = last_offset;
+        }
 
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
-            last_segment.append_messages(msg.clone()).await?;
+            last_segment.append_messages(batch.clone()).await?;
         }
 
-        let messages_count = (base_offset - last_offset + 1) as u32;
         if let Some(cache) = &mut self.cache {
-            cache.extend(vec![msg]);
+            cache.append(batch);
         }
 
         self.unsaved_messages_count += messages_count;

@@ -304,6 +304,16 @@ pub enum IggyError {
     CannotCreateConsumerGroupInfo(u32, u32, u32) = 5007,
     #[error("Failed to delete consumer group info file for ID: {0} for topic with ID: {1} for stream with ID: {2}.")]
     CannotDeleteConsumerGroupInfo(u32, u32, u32) = 5008,
+    #[error("Base offset is missing")]
+    MissingBaseOffsetRetainedMessageBatch = 6000,
+    #[error("Last offset delta is missing")]
+    MissingLastOffsetDeltaRetainedMessageBatch = 6001,
+    #[error("Max timestamp is missing")]
+    MissingMaxTimestampRetainedMessageBatch = 6002,
+    #[error("Length is missing")]
+    MissingLengthRetainedMessageBatch = 6003,
+    #[error("Payload is missing")]
+    MissingPayloadRetainedMessageBatch = 6004,
 }
 
 impl IggyError {

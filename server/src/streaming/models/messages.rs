@@ -1,8 +1,14 @@
-use bytes::{Bytes, BytesMut};
-use iggy::utils::checksum;
-use iggy::{messages::send_messages::Message, models::messages::MessageState};
+use bytes::{BufMut, Bytes, BytesMut};
+use iggy::error::IggyError;
+use iggy::error::IggyError::{
+    MissingBaseOffsetRetainedMessageBatch, MissingLastOffsetDeltaRetainedMessageBatch,
+    MissingLengthRetainedMessageBatch, MissingMaxTimestampRetainedMessageBatch,
+    MissingPayloadRetainedMessageBatch,
+};
 use iggy::models::messages::PolledMessage;
 use iggy::sizeable::Sizeable;
+use iggy::utils::checksum;
+use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -83,7 +89,7 @@ struct RetainedMessageBatchBuilder {
     last_offset_delta: Option<u32>,
     max_timestamp: Option<u64>,
     length: Option<u32>,
-    bytes: Option<Bytes>,
+    payload: Option<Bytes>,
 }
 
 impl RetainedMessageBatchBuilder {
@@ -93,7 +99,7 @@ impl RetainedMessageBatchBuilder {
             last_offset_delta: None,
             max_timestamp: None,
             length: None,
-            bytes: None,
+            payload: None,
         }
     }
 
@@ -117,19 +123,23 @@ impl RetainedMessageBatchBuilder {
         self
     }
 
-    pub fn bytes(mut self, bytes: Bytes) -> Self {
-        self.bytes = Some(bytes);
+    pub fn payload(mut self, payload: Bytes) -> Self {
+        self.payload = Some(payload);
         self
     }
 
-    pub fn build(self) -> Result<RetainedMessageBatch, String> {
-        let base_offset = self.base_offset.ok_or("base_offset is missing")?;
+    pub fn build(self) -> Result<RetainedMessageBatch, IggyError> {
+        let base_offset = self
+            .base_offset
+            .ok_or(MissingBaseOffsetRetainedMessageBatch)?;
         let last_offset_delta = self
             .last_offset_delta
-            .ok_or("last_offset_delta is missing")?;
-        let max_timestamp = self.max_timestamp.ok_or("max_timestamp is missing")?;
-        let length = self.length.ok_or("length is missing")?;
-        let bytes = self.bytes.ok_or("bytes is missing")?;
+            .ok_or(MissingLastOffsetDeltaRetainedMessageBatch)?;
+        let max_timestamp = self
+            .max_timestamp
+            .ok_or(MissingMaxTimestampRetainedMessageBatch)?;
+        let length = self.length.ok_or(MissingLengthRetainedMessageBatch)?;
+        let bytes = self.payload.ok_or(MissingPayloadRetainedMessageBatch)?;
 
         Ok(RetainedMessageBatch {
             base_offset,

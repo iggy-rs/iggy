@@ -1,7 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::models::messages::{MessageState, RetainedMessage};
+use crate::models::messages::{MessageState};
 use base64::engine::general_purpose::STANDARD;
 use base64::Engine;
 use bytes::{BufMut, Bytes, BytesMut};

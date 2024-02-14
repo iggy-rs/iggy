@@ -96,6 +96,14 @@ where
         self.buffer.extend(elements);
     }
 
+    /// Always appends the element into the buffer, even if it exceeds the memory limit.
+    pub fn append(&mut self, element: T) {
+        let element_size = element.get_size_bytes() as u64;
+        self.memory_tracker.increment_used_memory(element_size);
+        self.current_size += element_size;
+        self.buffer.append(element);
+    }
+
     pub fn len(&self) -> usize {
         self.buffer.len()
     }

@@ -13,5 +13,8 @@ pub trait CliCommand {
     fn login_required(&self) -> bool {
         true
     }
+    fn connection_required(&self) -> bool {
+        true
+    }
     async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error>;
 }

@@ -1,11 +1,11 @@
-use crate::streaming::models::messages::{RetainedMessageBatch};
+use crate::streaming::models::messages::RetainedMessageBatch;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use bytes::BytesMut;
 use iggy::error::IggyError;
 use iggy::messages::send_messages;
-use iggy::models::messages::{POLLED_MESSAGE_METADATA};
+use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::{atomic::Ordering, Arc};
 use tracing::{error, trace, warn};
@@ -369,20 +369,18 @@ impl Partition {
                 let message_offset = curr_offset;
                 max_timestamp = IggyTimestamp::now().to_micros();
                 curr_offset += 1;
-
                 messages_count += 1;
-                RetainedMessage::from_message(self.current_offset, timestamp, message, &mut bytes);
+
+                RetainedMessage::new(message_offset, timestamp, message);
             }
         } else {
             for message in messages {
-                if self.should_increment_offset {
-                    self.current_offset += 1;
-                } else {
-                    self.should_increment_offset = true;
-                }
-                last_offset = self.current_offset;
-                let timestamp = IggyTimestamp::now().to_micros();
-                RetainedMessage::from_message(self.current_offset, timestamp, message, &mut bytes);
+                let message_offset = curr_offset;
+                max_timestamp = IggyTimestamp::now().to_micros();
+                curr_offset += 1;
+                messages_count += 1;
+
+                RetainedMessage::new(message_offset, timestamp, message);
             }
         }
         let msg = Arc::new(RetainedMessage {

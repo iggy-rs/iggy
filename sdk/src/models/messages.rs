@@ -2,7 +2,7 @@ use crate::error::IggyError;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use crate::sizeable::Sizeable;
-use bytes::{Bytes};
+use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -129,6 +129,19 @@ impl Sizeable for Arc<PolledMessage> {
 }
 
 impl PolledMessage {
+    /// Creates a new message from the `Message` struct being part of `SendMessages` command.
+    /// Creates a new message without a specified offset.
+    pub fn empty(
+        timestamp: u64,
+        state: MessageState,
+        id: u128,
+        payload: Bytes,
+        checksum: u32,
+        headers: Option<HashMap<HeaderKey, HeaderValue>>,
+    ) -> Self {
+        PolledMessage::create(0, state, timestamp, id, payload, checksum, headers)
+    }
+
     /// Creates a new message with a specified offset.
     pub fn create(
         offset: u64,

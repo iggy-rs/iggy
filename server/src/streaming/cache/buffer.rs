@@ -1,6 +1,7 @@
+use crate::streaming::sizeable::Sizeable;
+
 use super::memory_tracker::CacheMemoryTracker;
 use atone::Vc;
-use iggy::sizeable::Sizeable;
 use std::fmt::Debug;
 use std::ops::Index;
 use std::sync::Arc;

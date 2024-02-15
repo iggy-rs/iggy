@@ -7,7 +7,6 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
-use iggy::models::messages::RetainedMessage;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;

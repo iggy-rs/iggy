@@ -1,7 +1,6 @@
 use crate::error::IggyError;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::sizeable::Sizeable;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -119,12 +118,6 @@ impl FromStr for MessageState {
             "marked_for_deletion" => Ok(MessageState::MarkedForDeletion),
             _ => Err(IggyError::InvalidCommand),
         }
-    }
-}
-
-impl Sizeable for Arc<PolledMessage> {
-    fn get_size_bytes(&self) -> u32 {
-        self.as_ref().get_size_bytes()
     }
 }
 

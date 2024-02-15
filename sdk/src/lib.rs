@@ -23,8 +23,6 @@ pub mod partitioner;
 pub mod partitions;
 pub mod personal_access_tokens;
 pub mod quic;
-pub mod serializer;
-pub mod sizeable;
 pub mod streams;
 pub mod system;
 pub mod tcp;

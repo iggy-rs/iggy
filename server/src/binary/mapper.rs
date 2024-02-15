@@ -11,7 +11,6 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
-use iggy::sizeable::Sizeable;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

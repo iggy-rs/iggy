@@ -1,10 +1,10 @@
+use crate::streaming::models::messages::{RetainedMessage, RetainedMessageBatch};
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
+use crate::streaming::sizeable::Sizeable;
 use bytes::BufMut;
 use iggy::error::IggyError;
-use iggy::models::messages::RetainedMessage;
-use iggy::sizeable::Sizeable;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
@@ -48,12 +48,12 @@ impl Segment {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let first_offset = unsaved_messages[0].get_offset();
+        let first_offset = unsaved_messages[0].base_offset;
         if end_offset < first_offset {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let last_offset = unsaved_messages[unsaved_messages.len() - 1].get_offset();
+        let last_offset = unsaved_messages[unsaved_messages.len() - 1].base_offset;
         if end_offset <= last_offset {
             return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
         }
@@ -188,7 +188,7 @@ impl Segment {
 
     pub async fn append_messages(
         &mut self,
-        messages: Arc<RetainedMessage>,
+        messages: Arc<RetainedMessageBatch>,
     ) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
@@ -215,12 +215,9 @@ impl Segment {
             messages.base_offset + messages.last_offset_delta as u64,
             messages.max_timestamp,
         );
-
-        // Not the prettiest code. It's done this way to avoid repeatably
-        // checking if indexes and time_indexes are Some or None.
-        let mut messages_size = messages.get_size_bytes();
-        let mut messages_count = messages.last_offset_delta + 1;
-        self.size_bytes += messages.length;
+        let messages_size = messages.get_size_bytes();
+        let messages_count = messages.last_offset_delta + 1;
+        self.size_bytes += messages_size;
 
         self.size_of_parent_stream
             .fetch_add(messages_size as u64, Ordering::SeqCst);

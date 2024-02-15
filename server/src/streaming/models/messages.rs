@@ -6,11 +6,12 @@ use iggy::error::IggyError::{
     MissingPayloadRetainedMessageBatch,
 };
 use iggy::models::messages::PolledMessage;
-use iggy::sizeable::Sizeable;
 use iggy::utils::checksum;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+
+use crate::streaming::sizeable::Sizeable;
 
 // It's the same as PolledMessages from Iggy models, but with the Arc<Message> instead of Message.
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,7 +27,7 @@ pub struct RetainedMessage<'a> {
     pub message: &'a Message,
 }
 
-impl<'a> RetainedMessage {
+impl<'a> RetainedMessage<'a> {
     pub fn new(offset: u64, timestamp: u64, message: &'a Message) -> Self {
         RetainedMessage {
             offset,
@@ -78,6 +79,12 @@ impl RetainedMessageBatch {
 }
 
 impl Sizeable for RetainedMessageBatch {
+    fn get_size_bytes(&self) -> u32 {
+        8 + 4 + 8 + 4 + self.length
+    }
+}
+
+impl Sizeable for Arc<RetainedMessageBatch> {
     fn get_size_bytes(&self) -> u32 {
         8 + 4 + 8 + 4 + self.length
     }

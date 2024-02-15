@@ -1,3 +1,4 @@
+use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
@@ -8,8 +9,6 @@ use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
-use iggy::models::messages::RetainedMessage;
-use iggy::sizeable::Sizeable;
 use iggy::utils::checksum;
 use std::io::SeekFrom;
 use std::path::Path;
@@ -593,9 +592,11 @@ async fn load_messages_by_range(
             .await
             .map_err(|_| IggyError::CannotReadMessagePayload)?;
 
+        /*
         let message = RetainedMessage::new(length, Bytes::from(payload));
         read_messages += 1;
         on_message(message)?;
+        */
     }
     Ok(())
 }
@@ -626,6 +627,7 @@ async fn load_messages_by_size(
             .await
             .map_err(|_| IggyError::CannotReadMessagePayload)?;
 
+        /*
         let message = RetainedMessage::new(length, Bytes::from(payload));
         let message_size = message.get_size_bytes() as u64;
 
@@ -638,6 +640,7 @@ async fn load_messages_by_size(
         if accumulated_size >= file_size {
             break;
         }
+        */
     }
 
     Ok(())

@@ -345,49 +345,47 @@ impl Partition {
             .map(|msg| (msg.get_size_bytes() + POLLED_MESSAGE_METADATA) as usize)
             .sum();
 
-        let begin_offset = if !self.should_increment_offset {
+        let base_offset = if !self.should_increment_offset {
             0
         } else {
             self.current_offset + 1
         };
 
-        let mut messages_count = 0;
-        let mut curr_offset = begin_offset;
+        let mut messages_count = 0u32;
         // assume that messages have monotonic timestamps
         let mut max_timestamp = 0;
 
         let mut buffer = BytesMut::with_capacity(batch_size);
         let batch_builder = RetainedMessageBatch::builder();
-        batch_builder.base_offset(curr_offset);
+        batch_builder.base_offset(base_offset);
+        if let Some(message_deduplicator) = &self.message_deduplicator {
+            for message in messages {
+                if !message_deduplicator.try_insert(&message.id).await {
+                    warn!(
+                        "Ignored the duplicated message ID: {} for partition with ID: {}.",
+                        message.id, self.partition_id
+                    );
+                    continue;
+                }
 
-        for message in messages {
-            let mut should_continue = false;
-            self.message_deduplicator
-                .as_ref()
-                .map(|message_deduplicator| {
-                    if !message_deduplicator.try_insert(&message.id) {
-                        warn!(
-                            "Ignored the duplicated message ID: {} for partition with ID: {}.",
-                            message.id, self.partition_id
-                        );
-                        should_continue = true;
-                    }
-                });
-            if should_continue {
-                continue;
+                let message_offset = base_offset + messages_count as u64;
+                max_timestamp = IggyTimestamp::now().to_micros();
+                let message = RetainedMessage::new(message_offset, max_timestamp, message);
+                message.extend(&mut buffer);
+                messages_count += 1;
             }
-
-            let message_offset = curr_offset;
-            max_timestamp = IggyTimestamp::now().to_micros();
-            let message = RetainedMessage::new(message_offset, max_timestamp, message);
-            message.extend(&mut buffer);
-
-            curr_offset += 1;
-            messages_count += 1;
+        } else {
+            for message in messages {
+                let message_offset = base_offset + messages_count as u64;
+                max_timestamp = IggyTimestamp::now().to_micros();
+                let message = RetainedMessage::new(message_offset, max_timestamp, message);
+                message.extend(&mut buffer);
+                messages_count += 1;
+            }
         }
 
-        let last_offset = curr_offset - 1;
-        let last_offset_delta = (last_offset - begin_offset) as u32;
+        let last_offset = base_offset + (messages_count - 1) as u64;
+        let last_offset_delta = messages_count - 1;
         let batch = Arc::new(
             batch_builder
                 .max_timestamp(max_timestamp)

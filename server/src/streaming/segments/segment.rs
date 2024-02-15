@@ -1,8 +1,8 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::models::messages::RetainedMessageBatch;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
-use iggy::models::messages::RetainedMessage;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
@@ -32,7 +32,7 @@ pub struct Segment {
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
     pub(crate) message_expiry: Option<u32>,
-    pub(crate) unsaved_messages: Option<Vec<Arc<RetainedMessage>>>,
+    pub(crate) unsaved_messages: Option<Vec<Arc<RetainedMessageBatch>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,
@@ -120,7 +120,7 @@ impl Segment {
 
         let last_message = last_messages[0].as_ref();
         let message_expiry = (self.message_expiry.unwrap() * 1000) as u64;
-        (last_message.get_timestamp() + message_expiry) <= now
+        (last_message.timestamp + message_expiry) <= now
     }
 
     fn get_log_path(path: &str) -> String {

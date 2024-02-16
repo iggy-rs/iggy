@@ -39,6 +39,8 @@ Commands:
   consumer-offset  consumer offset operations [aliases: o]
   message          message operations [aliases: m]
   context          context operations [aliases: ctx]
+  login            login to Iggy server [aliases: li]
+  logout           logout from Iggy server [aliases: lo]
   help             Print this message or the help of the given subcommand(s)
 
 

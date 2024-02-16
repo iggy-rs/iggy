@@ -21,6 +21,7 @@ use clap::Parser;
 use iggy::args::Args;
 use iggy::cli::context::common::ContextManager;
 use iggy::cli::context::use_context::UseContextCmd;
+use iggy::cli::utils::login_session_expiry::LoginSessionExpiry;
 use iggy::cli::{
     client::{get_client::GetClientCmd, get_clients::GetClientsCmd},
     consumer_group::{
@@ -43,7 +44,7 @@ use iggy::cli::{
         create_stream::CreateStreamCmd, delete_stream::DeleteStreamCmd, get_stream::GetStreamCmd,
         get_streams::GetStreamsCmd, purge_stream::PurgeStreamCmd, update_stream::UpdateStreamCmd,
     },
-    system::{me::GetMeCmd, ping::PingCmd, stats::GetStatsCmd},
+    system::{login::LoginCmd, logout::LogoutCmd, me::GetMeCmd, ping::PingCmd, stats::GetStatsCmd},
     topics::{
         create_topic::CreateTopicCmd, delete_topic::DeleteTopicCmd, get_topic::GetTopicCmd,
         get_topics::GetTopicsCmd, purge_topic::PurgeTopicCmd, update_topic::UpdateTopicCmd,
@@ -267,6 +268,11 @@ fn get_command(
                 Box::new(UseContextCmd::new(use_args.context_name.clone()))
             }
         },
+        Command::Login(login_args) => Box::new(LoginCmd::new(
+            iggy_args.get_server_address().unwrap(),
+            LoginSessionExpiry::new(login_args.expiry.clone()),
+        )),
+        Command::Logout => Box::new(LogoutCmd::new(iggy_args.get_server_address().unwrap())),
     }
 }
 

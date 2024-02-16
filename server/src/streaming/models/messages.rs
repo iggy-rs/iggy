@@ -1,4 +1,5 @@
 use bytes::{BufMut, Bytes, BytesMut};
+use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::error::IggyError::{
     MissingBaseOffsetRetainedMessageBatch, MissingLastOffsetDeltaRetainedMessageBatch,
@@ -63,6 +64,12 @@ impl<'a> RetainedMessage<'a> {
     }
 }
 
+impl<'a> Sizeable for RetainedMessage<'a> {
+    fn get_size_bytes(&self) -> u32 {
+        8 + 8 + self.message.length
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct RetainedMessageBatch {
     pub base_offset: u64,
@@ -91,7 +98,7 @@ impl Sizeable for Arc<RetainedMessageBatch> {
 }
 
 #[derive(Debug, Clone)]
-struct RetainedMessageBatchBuilder {
+pub struct RetainedMessageBatchBuilder {
     base_offset: Option<u64>,
     last_offset_delta: Option<u32>,
     max_timestamp: Option<u64>,

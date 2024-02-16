@@ -1,6 +1,5 @@
-use crate::streaming::sizeable::Sizeable;
-
 use super::memory_tracker::CacheMemoryTracker;
+use crate::streaming::sizeable::Sizeable;
 use atone::Vc;
 use std::fmt::Debug;
 use std::ops::Index;
@@ -102,7 +101,7 @@ where
         let element_size = element.get_size_bytes() as u64;
         self.memory_tracker.increment_used_memory(element_size);
         self.current_size += element_size;
-        self.buffer.append(element);
+        self.buffer.push(element);
     }
 
     pub fn len(&self) -> usize {

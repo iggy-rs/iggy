@@ -19,11 +19,12 @@ use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::models::messages::RetainedMessage;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
+
+use super::models::messages::{RetainedMessage, RetainedMessageBatch};
 
 #[async_trait]
 pub trait Storage<T>: Sync + Send {
@@ -107,7 +108,7 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn save_messages(
         &self,
         segment: &Segment,
-        messages: &[Arc<RetainedMessage>],
+        messages: &[Arc<RetainedMessageBatch>],
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -119,20 +120,11 @@ pub trait SegmentStorage: Storage<Segment> {
         index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(
-        &self,
-        segment: &Segment,
-        current_position: u32,
-        messages: &[Arc<RetainedMessage>],
-    ) -> Result<(), IggyError>;
+    async fn save_index(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
     async fn load_last_time_index(&self, segment: &Segment)
         -> Result<Option<TimeIndex>, IggyError>;
-    async fn save_time_index(
-        &self,
-        segment: &Segment,
-        messages: &[Arc<RetainedMessage>],
-    ) -> Result<(), IggyError>;
+    async fn save_time_index(&self, segment: &Segment) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]
@@ -460,7 +452,7 @@ pub(crate) mod tests {
         async fn save_messages(
             &self,
             _segment: &Segment,
-            _messages: &[Arc<RetainedMessage>],
+            _messages: &[Arc<RetainedMessageBatch>],
         ) -> Result<u32, IggyError> {
             Ok(0)
         }
@@ -487,12 +479,7 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_index(
-            &self,
-            _segment: &Segment,
-            _current_position: u32,
-            _messages: &[Arc<RetainedMessage>],
-        ) -> Result<(), IggyError> {
+        async fn save_index(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -513,7 +500,6 @@ pub(crate) mod tests {
         async fn save_time_index(
             &self,
             _segment: &Segment,
-            _messages: &[Arc<RetainedMessage>],
         ) -> Result<(), IggyError> {
             Ok(())
         }

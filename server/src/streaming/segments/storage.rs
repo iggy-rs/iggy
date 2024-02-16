@@ -1,8 +1,9 @@
-use crate::streaming::models::messages::RetainedMessage;
+use crate::streaming::models::messages::{RetainedMessage, RetainedMessageBatch};
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
+use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::{SegmentStorage, Storage};
 use crate::streaming::utils::file;
 use anyhow::Context;
@@ -211,6 +212,8 @@ impl SegmentStorage for FileSegmentStorage {
         segment: &Segment,
         index_range: &IndexRange,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+        todo!();
+        /*
         let mut messages = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
@@ -221,6 +224,7 @@ impl SegmentStorage for FileSegmentStorage {
         .await?;
         trace!("Loaded {} messages from disk.", messages.len());
         Ok(messages)
+        */
     }
 
     async fn load_newest_messages_by_size(
@@ -228,6 +232,8 @@ impl SegmentStorage for FileSegmentStorage {
         segment: &Segment,
         size_bytes: u64,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+        todo!();
+        /*
         let mut messages = Vec::new();
         let mut total_size_bytes = 0;
         load_messages_by_size(segment, size_bytes, |message: RetainedMessage| {
@@ -242,12 +248,13 @@ impl SegmentStorage for FileSegmentStorage {
             total_size_bytes
         );
         Ok(messages)
+        */
     }
 
     async fn save_messages(
         &self,
         segment: &Segment,
-        messages: &[Arc<RetainedMessage>],
+        messages: &[Arc<RetainedMessageBatch>],
     ) -> Result<u32, IggyError> {
         let messages_size: u64 = messages
             .iter()
@@ -277,21 +284,26 @@ impl SegmentStorage for FileSegmentStorage {
     }
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
+        todo!();
+        /*
         let mut message_ids = Vec::new();
         load_messages_by_range(
             segment,
             &IndexRange::max_range(),
             |message: RetainedMessage| {
-                message_ids.push(message.get_id());
+                message_ids.push(message.id);
                 Ok(())
             },
         )
         .await?;
         trace!("Loaded {} message IDs from disk.", message_ids.len());
         Ok(message_ids)
+        */
     }
 
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError> {
+        todo!();
+        /*
         load_messages_by_range(
             segment,
             &IndexRange::max_range(),
@@ -315,6 +327,7 @@ impl SegmentStorage for FileSegmentStorage {
         )
         .await?;
         Ok(())
+        */
     }
 
     async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError> {
@@ -447,12 +460,7 @@ impl SegmentStorage for FileSegmentStorage {
         }))
     }
 
-    async fn save_index(
-        &self,
-        segment: &Segment,
-        mut current_position: u32,
-        messages: &[Arc<RetainedMessage>],
-    ) -> Result<(), IggyError> {
+    async fn save_index(&self, segment: &Segment) -> Result<(), IggyError> {
         if let Err(err) = self
             .persister
             .append(&segment.index_path, &segment.unsaved_indexes)
@@ -534,11 +542,7 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(Some(index))
     }
 
-    async fn save_time_index(
-        &self,
-        segment: &Segment,
-        messages: &[Arc<RetainedMessage>],
-    ) -> Result<(), IggyError> {
+    async fn save_time_index(&self, segment: &Segment) -> Result<(), IggyError> {
         if let Err(err) = self
             .persister
             .append(&segment.time_index_path, &segment.unsaved_timestamps)

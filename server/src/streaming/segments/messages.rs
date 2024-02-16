@@ -88,16 +88,19 @@ impl Segment {
         offset: u64,
         end_offset: u64,
     ) -> Vec<Arc<RetainedMessage>> {
+        /*
         self.unsaved_messages
             .as_ref()
             .unwrap()
             .iter()
             .filter(|message| {
-                let message_offset = message.get_offset();
+                let message_offset = message.base_offset;
                 message_offset >= offset && message_offset <= end_offset
             })
             .cloned()
             .collect::<Vec<Arc<RetainedMessage>>>()
+            */
+        vec![]
     }
 
     async fn load_messages_from_disk(
@@ -197,26 +200,25 @@ impl Segment {
             ));
         }
 
-        let messages_count = 1;
-
-        let unsaved_messages = self.unsaved_messages.get_or_insert_with(Vec::new);
-        unsaved_messages.reserve(messages_count);
-        unsaved_messages.push(messages.clone());
-
         if let Some(indexes) = &mut self.indexes {
-            indexes.reserve(messages_count);
+            indexes.reserve(1);
         }
 
         if let Some(time_indexes) = &mut self.time_indexes {
-            time_indexes.reserve(messages_count);
+            time_indexes.reserve(1);
         }
 
-        self.store_offset_and_timestamp_index_for_batch(
-            messages.base_offset + messages.last_offset_delta as u64,
-            messages.max_timestamp,
-        );
+        let last_offset = messages.base_offset + messages.last_offset_delta as u64;
+        self.current_offset = last_offset;
+        self.end_offset = last_offset;
+
+        self.store_offset_and_timestamp_index_for_batch(last_offset, messages.max_timestamp);
+
         let messages_size = messages.get_size_bytes();
         let messages_count = messages.last_offset_delta + 1;
+
+        let unsaved_messages = self.unsaved_messages.get_or_insert_with(Vec::new);
+        unsaved_messages.push(messages);
         self.size_bytes += messages_size;
 
         self.size_of_parent_stream
@@ -295,12 +297,9 @@ impl Segment {
         );
 
         let saved_bytes = storage.save_messages(self, unsaved_messages).await?;
-        let current_position = self.size_bytes - saved_bytes;
-        storage
-            .save_index(self, current_position, unsaved_messages)
-            .await?;
+        storage.save_index(self).await?;
         self.unsaved_indexes.clear();
-        storage.save_time_index(self, unsaved_messages).await?;
+        storage.save_time_index(self).await?;
         self.unsaved_timestamps.clear();
 
         trace!(

@@ -4,11 +4,11 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
-use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
-use iggy::{error::IggyError, models::messages::RetainedMessage};
+use iggy::models::messages::PolledMessage;
+use iggy::{error::IggyError, identifier::Identifier};
 use std::sync::Arc;
 use tracing::{error, trace};
 
@@ -54,7 +54,7 @@ impl System {
             return Ok(polled_messages);
         }
 
-        let offset = polled_messages.messages.last().unwrap().get_offset();
+        let offset = polled_messages.messages.last().unwrap().offset;
         if args.auto_commit {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
             topic.store_consumer_offset(consumer, offset).await?;
@@ -67,18 +67,19 @@ impl System {
         let encryptor = self.encryptor.as_ref().unwrap();
         let mut decrypted_messages = Vec::with_capacity(polled_messages.messages.len());
         for message in polled_messages.messages.iter() {
-            let payload = encryptor.decrypt(message.get_payload());
+            let payload = encryptor.decrypt(&message.payload);
             match payload {
                 Ok(payload) => {
-                    decrypted_messages.push(Arc::new(RetainedMessage::from_bytes(
-                        message.get_id_bytes(),
-                        message.get_offset_bytes(),
-                        message.get_timestamp_bytes(),
-                        message.get_message_state_byte(),
-                        message.get_checksum_bytes(),
-                        message.get_headers_bytes(),
-                        &payload,
-                    )));
+                    decrypted_messages.push(Arc::new(PolledMessage {
+                        id: message.id,
+                        state: message.state,
+                        offset: message.offset,
+                        timestamp: message.timestamp,
+                        checksum: message.checksum,
+                        length: payload.len() as u32,
+                        payload: Bytes::from(payload),
+                        headers: message.headers.clone(),
+                    }));
                 }
                 Err(error) => {
                     error!("Cannot decrypt the message. Error: {}", error);
@@ -86,7 +87,6 @@ impl System {
                 }
             }
         }
-
         polled_messages.messages = decrypted_messages;
         Ok(polled_messages)
     }

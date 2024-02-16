@@ -1,4 +1,4 @@
-use crate::streaming::models::messages::PolledMessages;
+use crate::streaming::models::messages::{PolledMessages, RetainedMessage};
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
@@ -7,8 +7,6 @@ use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
-use iggy::models::messages::RetainedMessage;
-use iggy::sizeable::Sizeable;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -51,7 +49,7 @@ impl Topic {
         }?;
 
         Ok(PolledMessages {
-            messages,
+            messages: vec![],
             partition_id,
             current_offset: partition.current_offset,
         })
@@ -136,6 +134,8 @@ impl Topic {
         if !self.config.cache.enabled {
             return Ok(());
         }
+        todo!();
+        /*
         let path = self.config.get_system_path();
 
         // TODO: load data from database instead of calculating the size on disk
@@ -200,6 +200,7 @@ impl Topic {
         }
 
         Ok(())
+        */
     }
 
     fn cache_integrity_check(cache: &[Arc<RetainedMessage>]) -> bool {
@@ -207,28 +208,31 @@ impl Topic {
             warn!("Cache is empty!");
             return false;
         }
+        todo!();
 
-        let first_offset = cache[0].get_offset();
-        let last_offset = cache[cache.len() - 1].get_offset();
+        /*
+            let first_offset = cache[0].get_offset();
+            let last_offset = cache[cache.len() - 1].get_offset();
 
-        for i in 1..cache.len() {
-            if cache[i].get_offset() != cache[i - 1].get_offset() + 1 {
-                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}", i, cache[i].get_offset(), i-1, cache[i-1].get_offset());
+            for i in 1..cache.len() {
+                if cache[i].get_offset() != cache[i - 1].get_offset() + 1 {
+                    warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}", i, cache[i].get_offset(), i-1, cache[i-1].get_offset());
+                    return false;
+                }
+            }
+
+            let expected_messages_count: u64 = last_offset - first_offset + 1;
+            if cache.len() != expected_messages_count as usize {
+                warn!(
+                    "Messages count is in cache ({}) not equal to expected messages count ({})",
+                    cache.len(),
+                    expected_messages_count
+                );
                 return false;
             }
-        }
 
-        let expected_messages_count: u64 = last_offset - first_offset + 1;
-        if cache.len() != expected_messages_count as usize {
-            warn!(
-                "Messages count is in cache ({}) not equal to expected messages count ({})",
-                cache.len(),
-                expected_messages_count
-            );
-            return false;
-        }
-
-        true
+            true
+        */
     }
 
     pub async fn get_expired_segments_start_offsets_per_partition(

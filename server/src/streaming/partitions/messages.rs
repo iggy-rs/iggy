@@ -220,7 +220,7 @@ impl Partition {
             return None;
         }
 
-        let first_buffered_offset = cache[0].get_offset();
+        let first_buffered_offset = cache[0].base_offset;
         trace!(
             "First buffered offset: {} for partition: {}",
             first_buffered_offset,
@@ -356,8 +356,8 @@ impl Partition {
         let mut max_timestamp = 0;
 
         let mut buffer = BytesMut::with_capacity(batch_size);
-        let batch_builder = RetainedMessageBatch::builder();
-        batch_builder.base_offset(base_offset);
+        let mut batch_builder = RetainedMessageBatch::builder();
+        batch_builder = batch_builder.base_offset(base_offset);
         if let Some(message_deduplicator) = &self.message_deduplicator {
             for message in messages {
                 if !message_deduplicator.try_insert(&message.id).await {

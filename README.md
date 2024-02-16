@@ -1,10 +1,11 @@
 # Iggy
-<div align="center">
-  
+
+<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; text-align: center;">
+
   [Website](https://iggy.rs) | [Getting started](https://docs.iggy.rs/introduction/getting-started/) | [Documentation](https://docs.iggy.rs) | [Blog](https://blog.iggy.rs) | [Discord](https://iggy.rs/discord) | [Crates](https://crates.io/crates/iggy)
 
 </div>
-<div align="center">
+<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; text-align: center;">
 
   [![crates.io](https://img.shields.io/crates/v/iggy.svg)](https://crates.io/crates/iggy)
   [![crates.io](https://img.shields.io/crates/d/iggy.svg)](https://crates.io/crates/iggy)

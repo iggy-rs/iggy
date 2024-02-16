@@ -41,7 +41,7 @@ rcgen = "0.12.1"
 ring = "0.17.7"
 rmp-serde = "1.1.2"
 rustls = { version = "0.21.10" }
-rustls-pemfile = "2.0.0"
+rustls-pemfile = "2.1.0"
 serde = { version = "1.0.196", features = ["derive", "rc"] }
 serde_json = "1.0.113"
 serde_with = { version = "3.6.1", features = ["base64", "macros"] }

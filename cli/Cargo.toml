@@ -15,7 +15,7 @@ figlet-rs = "0.1.5"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.2"
 passterm = "2.0.1"
-thiserror = "1.0.56"
+thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 tracing = "0.1.37"
 tracing-appender = "0.2.2"

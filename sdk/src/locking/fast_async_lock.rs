@@ -2,7 +2,6 @@ use crate::locking::IggySharedMutFn;
 use fast_async_mutex::rwlock::{RwLock as FastAsyncRwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::sync::Arc;
 
-#[cfg(feature = "fast_async_lock")]
 #[derive(Debug)]
 pub struct IggyFastAsyncRwLock<T>(Arc<FastAsyncRwLock<T>>);
 

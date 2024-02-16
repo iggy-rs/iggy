@@ -11,8 +11,10 @@ alias c  := tests
 alias n  := nextest
 alias s  := nextests
 alias rb := run-benches
-alias ps := profile-server
-alias pc := profile-client
+alias pcs := profile-cpu-server
+alias pcc := profile-cpu-client
+alias pis := profile-io-server
+alias pic := profile-io-client
 
 build:
   cargo build
@@ -38,8 +40,14 @@ build-tokio-console:
 run-benches:
   ./scripts/run-benches.sh
 
-profile-server:
-  ./scripts/profile.sh iggy-server
+profile-cpu-server:
+  ./scripts/profile.sh iggy-server cpu
 
-profile-client:
-  ./scripts/profile.sh iggy-bench
+profile-cpu-client:
+  ./scripts/profile.sh iggy-bench cpu
+
+profile-io-server:
+  ./scripts/profile.sh iggy-server io
+
+profile-io-client:
+  ./scripts/profile.sh iggy-bench io

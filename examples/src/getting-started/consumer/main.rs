@@ -1,10 +1,9 @@
 use iggy::client::{Client, UserClient};
-use iggy::clients::client::{IggyClientBuilder, IggyClientConfig};
+use iggy::clients::client::{IggyClientBuilder, TcpClientConfig};
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
-use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use std::env;

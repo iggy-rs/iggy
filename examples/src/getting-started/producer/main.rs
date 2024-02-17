@@ -1,9 +1,8 @@
 use iggy::client::{Client, StreamClient, TopicClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientBuilder, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBuilder, TcpClientConfig};
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
-use iggy::tcp::config::TcpClientConfig;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;

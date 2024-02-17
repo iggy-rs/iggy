@@ -13,7 +13,6 @@ use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
-use crate::http::config::HttpClientConfig;
 use crate::identifier::Identifier;
 use crate::locking::IggySharedMut;
 use crate::locking::IggySharedMutFn;
@@ -38,7 +37,6 @@ use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalA
 use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
 use crate::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use crate::quic::client::QuicClient;
-use crate::quic::config::QuicClientConfig;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -51,7 +49,6 @@ use crate::system::get_me::GetMe;
 use crate::system::get_stats::GetStats;
 use crate::system::ping::Ping;
 use crate::tcp::client::TcpClient;
-use crate::tcp::config::TcpClientConfig;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
@@ -191,6 +188,10 @@ impl IggyClientBuilder {
         ))
     }
 }
+
+pub use crate::http::config::HttpClientConfig;
+pub use crate::quic::config::QuicClientConfig;
+pub use crate::tcp::config::TcpClientConfig;
 
 #[derive(Debug)]
 pub enum IggyClientConfig {

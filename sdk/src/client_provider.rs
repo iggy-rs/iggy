@@ -101,7 +101,7 @@ pub async fn get_default_client() -> Result<IggyClient, ClientError> {
 /// Create a `IggyClient` for the specific transport based on the provided configuration.
 pub async fn get_client(config: Arc<ClientProviderConfig>) -> Result<IggyClient, ClientError> {
     let client = get_raw_connected_client(config).await?;
-    Ok(IggyClient::builder(client).build())
+    Ok(IggyClient::builder().with_client(client).build()?)
 }
 
 /// Create a `Client` for the specific transport based on the provided configuration.

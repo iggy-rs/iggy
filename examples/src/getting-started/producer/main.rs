@@ -1,9 +1,8 @@
 use iggy::client::{Client, StreamClient, TopicClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBuilder, IggyClientConfig};
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
-use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::users::defaults::*;
@@ -11,7 +10,6 @@ use iggy::users::login_user::LoginUser;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn};
@@ -29,8 +27,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         server_address: get_tcp_server_addr(),
         ..TcpClientConfig::default()
     };
-    let tcp_client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
-    let client = IggyClient::create(tcp_client, IggyClientConfig::default(), None, None, None);
+    let client = IggyClientBuilder::new()
+        .with_config(IggyClientConfig::Tcp(tcp_client_config))
+        .build()?;
 
     // Or, instead of above lines, you can just use below code, which will create a Iggy
     // TCP client with default config (default server address for TCP is 127.0.0.1:8090):

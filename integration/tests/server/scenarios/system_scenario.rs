@@ -3,7 +3,7 @@ use iggy::client::{
     ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient, StreamClient,
     SystemClient, TopicClient, UserClient,
 };
-use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
@@ -54,7 +54,13 @@ const MESSAGES_COUNT: u32 = 1000;
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;
-    let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+    let client = IggyClient::create(
+        client,
+        IggyClientBackgroundConfig::default(),
+        None,
+        None,
+        None,
+    );
 
     // 0. Ping server
     let ping = Ping {};

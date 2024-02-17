@@ -1,5 +1,5 @@
 use iggy::client::{PersonalAccessTokenClient, SystemClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::identifier::Identifier;
 use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus;
@@ -22,7 +22,13 @@ use integration::test_server::{assert_clean_system, ClientFactory};
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;
-    let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+    let client = IggyClient::create(
+        client,
+        IggyClientBackgroundConfig::default(),
+        None,
+        None,
+        None,
+    );
 
     // 1. Ping should be allowed for unauthenticated users
     client.ping(&Ping {}).await.unwrap();

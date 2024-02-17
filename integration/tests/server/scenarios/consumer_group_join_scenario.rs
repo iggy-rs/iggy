@@ -1,5 +1,5 @@
 use iggy::client::{ConsumerGroupClient, StreamClient, SystemClient, TopicClient};
-use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
@@ -172,7 +172,13 @@ async fn get_consumer_group_and_validate_members(
 
 async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
     let client = client_factory.create_client().await;
-    IggyClient::create(client, IggyClientConfig::default(), None, None, None)
+    IggyClient::create(
+        client,
+        IggyClientBackgroundConfig::default(),
+        None,
+        None,
+        None,
+    )
 }
 
 async fn cleanup(system_client: &IggyClient) {

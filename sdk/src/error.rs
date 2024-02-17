@@ -116,8 +116,8 @@ pub enum IggyError {
     CannotCreateEndpoint = 302,
     #[error("Cannot parse URL")]
     CannotParseUrl = 303,
-    #[error("Invalid response: {0}")]
-    InvalidResponse(u32) = 304,
+    #[error("Invalid response: {0}: {2})")]
+    InvalidResponse(u32, u32, String) = 304,
     #[error("Empty response")]
     EmptyResponse = 305,
     #[error("Cannot parse address")]

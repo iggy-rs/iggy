@@ -113,10 +113,21 @@ impl IggyClientBuilder {
         IggyClientBuilder::default()
     }
 
-    /// Apply the provided client configuration. Setting client config clears the client.
-    pub fn with_config(mut self, config: IggyClientConfig) -> Self {
-        self.client_config = Some(config);
-        self.client = None;
+    /// Apply the provided client configuration for the tcp transport.
+    pub fn with_tcp_config(mut self, tcp_config: TcpClientConfig) -> Self {
+        self.client_config = Some(IggyClientConfig::Tcp(tcp_config));
+        self
+    }
+
+    /// Apply the provided client configuration for the quic transport.
+    pub fn with_quic_config(mut self, quic_config: QuicClientConfig) -> Self {
+        self.client_config = Some(IggyClientConfig::Quic(quic_config));
+        self
+    }
+
+    /// Apply the provided client configuration for the http transport.
+    pub fn with_http_config(mut self, http_config: HttpClientConfig) -> Self {
+        self.client_config = Some(IggyClientConfig::Http(http_config));
         self
     }
 

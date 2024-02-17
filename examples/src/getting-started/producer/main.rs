@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ..TcpClientConfig::default()
     };
     let client = IggyClientBuilder::new()
-        .with_config(IggyClientConfig::Tcp(tcp_client_config))
+        .with_tcp_config(tcp_client_config)
         .build()?;
 
     // Or, instead of above lines, you can just use below code, which will create a Iggy

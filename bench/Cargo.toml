@@ -19,7 +19,7 @@ nonzero_lit = "0.1.2"
 quinn = { version = "0.10.2" }
 rustls = { version = "0.21.10" }
 serde = { version = "1.0.196", features = ["derive"] }
-thiserror = "1.0.56"
+thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 toml = "0.8.10"
 tracing = { version = "0.1.37" }

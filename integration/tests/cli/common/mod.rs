@@ -232,9 +232,14 @@ impl IggyCmdTest {
         );
 
         // Execute test command
+
         let assert = command.args(command_args.get_opts_and_args()).assert();
         // Verify command output, exit code, etc in the test (if needed)
         test_case.verify_command(assert);
+    }
+
+    pub(crate) fn get_sever_ip_address(&self) -> Option<String> {
+        self.server.get_server_ip_addr()
     }
 }
 

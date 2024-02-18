@@ -38,7 +38,7 @@ impl Display for Protocol {
 }
 
 #[derive(Debug, Default)]
-struct TestMeCmd {
+pub(super) struct TestMeCmd {
     protocol: Protocol,
 }
 
@@ -124,7 +124,8 @@ pub async fn should_help_match() {
             format!(
                 r#"get current client info
 
-Command connects to Iggy server and collects client info like client ID, user ID server address and protocol type.
+Command connects to Iggy server and collects client info like client ID, user ID
+server address and protocol type.
 
 {USAGE_PREFIX} me
 

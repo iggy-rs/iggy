@@ -14,10 +14,16 @@ pub(crate) mod user;
 
 use self::user::UserAction;
 use crate::args::{
-    client::ClientAction, consumer_group::ConsumerGroupAction,
-    consumer_offset::ConsumerOffsetAction, context::ContextAction, message::MessageAction,
-    partition::PartitionAction, personal_access_token::PersonalAccessTokenAction,
-    stream::StreamAction, system::PingArgs, topic::TopicAction,
+    client::ClientAction,
+    consumer_group::ConsumerGroupAction,
+    consumer_offset::ConsumerOffsetAction,
+    context::ContextAction,
+    message::MessageAction,
+    partition::PartitionAction,
+    personal_access_token::PersonalAccessTokenAction,
+    stream::StreamAction,
+    system::{LoginArgs, PingArgs},
+    topic::TopicAction,
 };
 use clap::{Args, Command as ClapCommand};
 use clap::{Parser, Subcommand};
@@ -109,16 +115,19 @@ pub(crate) enum Command {
     /// ping iggy server
     ///
     /// Check if iggy server is up and running and what's the response ping response time
+    #[clap(verbatim_doc_comment)]
     Ping(PingArgs),
     /// get current client info
     ///
     /// Command connects to Iggy server and collects client info like client ID, user ID
     /// server address and protocol type.
+    #[clap(verbatim_doc_comment)]
     Me,
     /// get iggy server statistics
     ///
     /// Collect basic Iggy server statistics like number of streams, topics, partitions, etc.
     /// Server OS name, version, etc. are also collected.
+    #[clap(verbatim_doc_comment)]
     Stats,
     /// personal access token operations
     #[command(subcommand)]
@@ -141,6 +150,20 @@ pub(crate) enum Command {
     /// context operations
     #[command(subcommand, visible_alias = "ctx")]
     Context(ContextAction),
+    /// login to Iggy server
+    ///
+    /// Command logs in to Iggy server using provided credentials and stores session token
+    /// in platform-specific secure storage. Session token is used for authentication in
+    /// subsequent commands until logout command is executed.
+    #[clap(verbatim_doc_comment, visible_alias = "li")]
+    Login(LoginArgs),
+    /// logout from Iggy server
+    ///
+    /// Command logs out from Iggy server and removes session token from platform-specific
+    /// secure storage. After logout command is executed, user needs to log in again to
+    /// execute any command that requires authentication.
+    #[clap(verbatim_doc_comment, visible_alias = "lo")]
+    Logout,
 }
 
 impl IggyConsoleArgs {

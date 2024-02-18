@@ -1,10 +1,12 @@
 use crate::args::CliOptions;
 use crate::error::{CmdToolError, IggyCmdError};
-use anyhow::Context;
+use anyhow::{bail, Context};
 use iggy::args::Args;
+use iggy::cli::system::session::ServerSession;
 use iggy::cli_command::PRINT_TARGET;
 use iggy::client::{PersonalAccessTokenClient, UserClient};
 use iggy::clients::client::IggyClient;
+use iggy::error::IggyError;
 use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use iggy::users::{login_user::LoginUser, logout_user::LogoutUser};
 use keyring::Entry;
@@ -23,6 +25,7 @@ struct IggyUserClient {
 enum Credentials {
     UserNameAndPassword(IggyUserClient),
     PersonalAccessToken(String),
+    SessionWithToken(String, String),
 }
 
 pub(crate) struct IggyCredentials<'a> {
@@ -43,6 +46,17 @@ impl<'a> IggyCredentials<'a> {
                 iggy_client: None,
                 login_required,
             });
+        }
+
+        if let Some(server_address) = iggy_args.get_server_address() {
+            let server_session = ServerSession::new(server_address.clone());
+            if let Some(token) = server_session.get_token() {
+                return Ok(Self {
+                    credentials: Some(Credentials::SessionWithToken(token, server_address)),
+                    iggy_client: None,
+                    login_required,
+                });
+            }
         }
 
         if let Some(token_name) = &cli_options.token_name {
@@ -134,6 +148,39 @@ impl<'a> IggyCredentials<'a> {
                             .with_context(|| {
                                 format!("Problem with server login with token: {}", &token_value)
                             })?;
+                    }
+                    Credentials::SessionWithToken(token_value, server_address) => {
+                        let login_result = client
+                            .login_with_personal_access_token(&LoginWithPersonalAccessToken {
+                                token: token_value.clone(),
+                            })
+                            .await;
+                        if let Err(err) = login_result {
+                            match err {
+                                IggyError::InvalidResponse(code) => {
+                                    // Check what does the code means and if that's one of the cases
+                                    // when we should delete the session and inform user to try login again
+                                    // TODO: improve this part when we have more information about the codes
+                                    if code == IggyError::ResourceNotFound(String::new()).as_code()
+                                        || code == IggyError::Unauthenticated.as_code()
+                                        || code
+                                            == IggyError::PersonalAccessTokenExpired(
+                                                String::new(),
+                                                0,
+                                            )
+                                            .as_code()
+                                    {
+                                        let server_session =
+                                            ServerSession::new(server_address.clone());
+                                        server_session.delete()?;
+                                        bail!("Login session expired for Iggy server: {server_address}, please login again or use other authentication method");
+                                    }
+                                }
+                                _ => {
+                                    bail!("Problem with server login with token: {token_value}");
+                                }
+                            }
+                        }
                     }
                 }
             }

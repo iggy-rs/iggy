@@ -103,8 +103,8 @@ pub struct IggyClientBuilder {
 }
 
 impl IggyClientBuilder {
-    /// Creates a new `IggyClientBuilder` with the provided client implementation for the specific transport.
-    /// The client implementation must be provided directly or via the client configuration.
+    /// Creates a new `IggyClientBuilder`.
+    /// This is not enough to build the `IggyClient` instance. You need to provide the client configuration or the client implementation for the specific transport.
     #[must_use]
     pub fn new() -> Self {
         IggyClientBuilder::default()
@@ -190,11 +190,14 @@ impl IggyClientBuilder {
 }
 
 pub use crate::http::config::HttpClientConfig;
+pub use crate::http::config::HttpClientConfigBuilder;
 pub use crate::quic::config::QuicClientConfig;
+pub use crate::quic::config::QuicClientConfigBuilder;
 pub use crate::tcp::config::TcpClientConfig;
+pub use crate::tcp::config::TcpClientConfigBuilder;
 
 #[derive(Debug)]
-pub enum IggyClientConfig {
+enum IggyClientConfig {
     Tcp(TcpClientConfig),
     Quic(QuicClientConfig),
     Http(HttpClientConfig),

@@ -4,6 +4,7 @@ use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::models::messages::Message;
+use iggy::tcp::config::TcpClientConfigBuilder;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use std::env;
@@ -20,10 +21,9 @@ const BATCHES_LIMIT: u32 = 5;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let tcp_client_config = TcpClientConfig {
-        server_address: get_tcp_server_addr(),
-        ..TcpClientConfig::default()
-    };
+    let tcp_client_config = TcpClientConfigBuilder::new()
+        .with_server_address(get_tcp_server_addr())
+        .build();
     let client = IggyClientBuilder::new()
         .with_tcp_config(tcp_client_config)
         .build()?;

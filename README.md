@@ -119,7 +119,7 @@ There's an ongoing effort to build the administrative web UI for the server, whi
 
 You can find the `Dockerfile` and `docker-compose` in the root of the repository. To build and start the server, run: `docker compose up`.
 
-Additionally, you can run the `CLI` which is available in the running container, by executing: `docker exec -it iggy-server /cli`.
+Additionally, you can run the `CLI` which is available in the running container, by executing: `docker exec -it iggy-server /iggy/iggy`.
 
 Keep in mind that running the container on the OS other than Linux, where the Docker is running in the VM, might result in the significant performance degradation.
 

@@ -69,6 +69,7 @@ impl Default for QuicClientConfig {
 /// - `keep_alive_interval`: Default is 5000 milliseconds.
 /// - `max_idle_timeout`: Default is 10,000 milliseconds.
 /// - `validate_certificate`: Default is false (certificate validation is disabled).
+#[derive(Default)]
 pub struct QuicClientConfigBuilder {
     config: QuicClientConfig,
 }
@@ -76,9 +77,7 @@ pub struct QuicClientConfigBuilder {
 impl QuicClientConfigBuilder {
     /// Creates a new builder instance with default configuration values.
     pub fn new() -> Self {
-        QuicClientConfigBuilder {
-            config: QuicClientConfig::default(),
-        }
+        QuicClientConfigBuilder::default()
     }
 
     /// Sets the client address. Defaults to "127.0.0.1:0".

@@ -20,6 +20,7 @@ impl Default for HttpClientConfig {
 /// Allows configuring the HTTP client with custom settings or using defaults:
 /// - `api_url`: Default is "http://127.0.0.1:3000"
 /// - `retries`: Default is 3.
+#[derive(Default)]
 pub struct HttpClientConfigBuilder {
     config: HttpClientConfig,
 }
@@ -27,9 +28,7 @@ pub struct HttpClientConfigBuilder {
 impl HttpClientConfigBuilder {
     /// Create a new `HttpClientConfigBuilder` with default settings.
     pub fn new() -> Self {
-        HttpClientConfigBuilder {
-            config: HttpClientConfig::default(),
-        }
+        HttpClientConfigBuilder::default()
     }
 
     /// Sets the API URL for the HTTP client.

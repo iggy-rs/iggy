@@ -32,15 +32,14 @@ impl Default for TcpClientConfig {
 /// - `reconnection_interval`: Default is 1000 ms.
 /// - `tls_enabled`: Default is false.
 /// - `tls_domain`: Default is "localhost".
+#[derive(Default)]
 pub struct TcpClientConfigBuilder {
     config: TcpClientConfig,
 }
 
 impl TcpClientConfigBuilder {
     pub fn new() -> Self {
-        TcpClientConfigBuilder {
-            config: TcpClientConfig::default(),
-        }
+        TcpClientConfigBuilder::default()
     }
 
     /// Sets the server address for the TCP client.

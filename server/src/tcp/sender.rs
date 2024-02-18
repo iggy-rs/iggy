@@ -1,4 +1,6 @@
+use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
+use std::mem::size_of;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tracing::debug;
 
@@ -37,7 +39,19 @@ pub(crate) async fn send_error_response<T>(
 where
     T: AsyncRead + AsyncWrite + Unpin,
 {
-    send_response(stream, &error.as_code().to_le_bytes(), &[]).await
+    let error_message = error.to_string();
+    let length = error_message.len() as u32;
+
+    let mut error_details_buffer = BytesMut::with_capacity(error_message.len() + size_of::<u32>());
+    error_details_buffer.put_u32_le(length);
+    error_details_buffer.put_slice(error_message.as_bytes());
+
+    send_response(
+        stream,
+        &error.as_code().to_le_bytes(),
+        &error_details_buffer,
+    )
+    .await
 }
 
 pub(crate) async fn send_response<T>(

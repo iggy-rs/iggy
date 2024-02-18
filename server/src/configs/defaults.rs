@@ -186,6 +186,7 @@ impl Default for LoggingConfig {
             level: "info".to_string(),
             max_size: "200 MB".parse().unwrap(),
             retention: "7 days".parse().unwrap(),
+            sysinfo_print_interval: "10s".parse().unwrap(),
         }
     }
 }

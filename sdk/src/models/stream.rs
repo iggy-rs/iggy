@@ -1,5 +1,5 @@
-use crate::models::topic::Topic;
 use crate::utils::byte_size::IggyByteSize;
+use crate::{models::topic::Topic, utils::timestamp::IggyTimestamp};
 use serde::{Deserialize, Serialize};
 
 /// `Stream` represents the highest level of logical separation of data.
@@ -15,7 +15,7 @@ pub struct Stream {
     /// The unique identifier (numeric) of the stream.
     pub id: u32,
     /// The timestamp when the stream was created.
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     /// The unique name of the stream.
     pub name: String,
     /// The total size of the stream in bytes.
@@ -40,7 +40,7 @@ pub struct StreamDetails {
     /// The unique identifier (numeric) of the stream.
     pub id: u32,
     /// The timestamp when the stream was created.
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     /// The unique name of the stream.
     pub name: String,
     /// The total size of the stream in bytes.

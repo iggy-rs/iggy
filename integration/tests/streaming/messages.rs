@@ -7,7 +7,7 @@ use server::configs::system::{PartitionConfig, SystemConfig};
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 
 #[tokio::test]
@@ -37,6 +37,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU32::new(0)),
     );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
@@ -100,6 +101,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
+        Arc::new(AtomicU32::new(0)),
     );
     loaded_partition.load().await.unwrap();
     let loaded_messages = loaded_partition

@@ -274,20 +274,22 @@ impl Segment {
         Ok(())
     }
 
-    pub async fn persist_messages(&mut self) -> Result<(), IggyError> {
+    pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
         let storage = self.storage.segment.clone();
         if self.unsaved_messages.is_none() {
-            return Ok(());
+            return Ok(0);
         }
 
         let unsaved_messages = self.unsaved_messages.as_ref().unwrap();
         if unsaved_messages.is_empty() {
-            return Ok(());
+            return Ok(0);
         }
+
+        let unsaved_messages_number: usize = unsaved_messages.len();
 
         trace!(
             "Saving {} messages on disk in segment with start offset: {} for partition with ID: {}...",
-            unsaved_messages.len(),
+            unsaved_messages_number,
             self.start_offset,
             self.partition_id
         );
@@ -301,7 +303,7 @@ impl Segment {
 
         trace!(
             "Saved {} messages on disk in segment with start offset: {} for partition with ID: {}, total bytes written: {}.",
-            unsaved_messages.len(),
+            unsaved_messages_number,
             self.start_offset,
             self.partition_id,
             saved_bytes
@@ -315,6 +317,6 @@ impl Segment {
             self.unsaved_messages.as_mut().unwrap().clear();
         }
 
-        Ok(())
+        Ok(unsaved_messages_number)
     }
 }

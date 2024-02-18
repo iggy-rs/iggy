@@ -1,3 +1,5 @@
+use std::sync::atomic::Ordering;
+
 use crate::streaming::partitions::partition::Partition;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
@@ -15,6 +17,8 @@ impl Partition {
     pub async fn delete(&self) -> Result<(), IggyError> {
         for segment in &self.segments {
             self.storage.segment.delete(segment).await?;
+            self.segments_count_of_parent_stream
+                .fetch_sub(1, Ordering::SeqCst);
         }
         self.storage.partition.delete(self).await
     }
@@ -28,6 +32,8 @@ impl Partition {
         }
         for segment in &self.segments {
             self.storage.segment.delete(segment).await?;
+            self.segments_count_of_parent_stream
+                .fetch_sub(1, Ordering::SeqCst);
         }
         self.segments.clear();
         self.storage

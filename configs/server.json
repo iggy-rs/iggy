@@ -101,7 +101,8 @@
       "path": "logs",
       "level": "info",
       "max_size": "512MB",
-      "retention": "7 days"
+      "retention": "7 days",
+      "sysinfo_print_interval": "10s"
     },
     "cache": {
       "enabled": true,

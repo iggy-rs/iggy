@@ -4,6 +4,7 @@ use figlet_rs::FIGfont;
 use server::args::Args;
 use server::channels::commands::clean_messages::CleanMessagesExecutor;
 use server::channels::commands::clean_personal_access_tokens::CleanPersonalAccessTokensExecutor;
+use server::channels::commands::print_sysinfo::SysInfoPrintExecutor;
 use server::channels::commands::save_messages::SaveMessagesExecutor;
 use server::channels::handler::ServerCommandHandler;
 use server::configs::config_provider;
@@ -47,7 +48,8 @@ async fn main() -> Result<(), ServerError> {
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)
         .install_handler(SaveMessagesExecutor)
         .install_handler(CleanMessagesExecutor)
-        .install_handler(CleanPersonalAccessTokensExecutor);
+        .install_handler(CleanPersonalAccessTokensExecutor)
+        .install_handler(SysInfoPrintExecutor);
 
     #[cfg(unix)]
     let (mut ctrl_c, mut sigterm) = {

@@ -2,7 +2,6 @@ use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::streams::get_stream::GetStream;
-use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -38,12 +37,7 @@ impl CliCommand for GetStreamCmd {
 
         table.set_header(vec!["Property", "Value"]);
         table.add_row(vec!["Stream ID", format!("{}", stream.id).as_str()]);
-        table.add_row(vec![
-            "Created",
-            IggyTimestamp::from(stream.created_at)
-                .to_string("%Y-%m-%d %H:%M:%S")
-                .as_str(),
-        ]);
+        table.add_row(vec!["Created", format!("{}", stream.created_at).as_str()]);
         table.add_row(vec!["Stream name", stream.name.as_str()]);
         table.add_row(vec![
             "Stream size",

@@ -173,7 +173,7 @@ impl Topic {
                 * (partition_size_bytes as f64 / total_size_on_disk_bytes as f64))
                 as u64;
             let messages = partition
-                .get_newest_messages_by_size(size_to_fetch_from_disk as u32)
+                .get_newest_message_batches_by_size(size_to_fetch_from_disk as u32)
                 .await?;
 
             let sum: u64 = messages.iter().map(|m| m.get_size_bytes() as u64).sum();

@@ -104,6 +104,10 @@ where
         self.buffer.push(element);
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.buffer.iter()
+    }
+
     pub fn len(&self) -> usize {
         self.buffer.len()
     }

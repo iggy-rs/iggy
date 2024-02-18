@@ -497,10 +497,7 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_time_index(
-            &self,
-            _segment: &Segment,
-        ) -> Result<(), IggyError> {
+        async fn save_time_index(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
     }

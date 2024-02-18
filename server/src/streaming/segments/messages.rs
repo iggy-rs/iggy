@@ -65,12 +65,12 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn get_all_messages(&self) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    pub async fn get_all_batches(&self) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         self.get_messages(self.start_offset, self.get_messages_count() as u32)
             .await
     }
 
-    pub async fn get_newest_messages_by_size(
+    pub async fn get_newest_message_batches_by_size(
         &self,
         size_bytes: u64,
     ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {

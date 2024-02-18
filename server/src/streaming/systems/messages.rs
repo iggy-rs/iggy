@@ -5,8 +5,8 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;
+use iggy::messages::send_messages::{self, Message};
 use iggy::models::messages::PolledMessage;
 use iggy::{error::IggyError, identifier::Identifier};
 use std::sync::Arc;
@@ -97,7 +97,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitioning: &Partitioning,
-        messages: &Vec<send_messages::Message>,
+        messages: &Vec<Message>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
@@ -115,7 +115,7 @@ impl System {
                 let payload = encryptor.encrypt(&message.payload);
                 match payload {
                     Ok(payload) => {
-                        let msg = send_messages::Message::new(
+                        let msg = Message::new(
                             Some(message.id),
                             Bytes::from(payload),
                             message.headers.clone(),
@@ -149,7 +149,7 @@ impl System {
                 }
             }
 
-            topic.append_messages(partitioning, messages).await?;
+            topic.append_messages(partitioning, &messages).await?;
             self.metrics.increment_messages(messages.len() as u64);
             Ok(())
         }

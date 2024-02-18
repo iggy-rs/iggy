@@ -157,7 +157,7 @@ impl<'a> IggyCredentials<'a> {
                             .await;
                         if let Err(err) = login_result {
                             match err {
-                                IggyError::InvalidResponse(code) => {
+                                IggyError::InvalidResponse(code, _, _) => {
                                     // Check what does the code means and if that's one of the cases
                                     // when we should delete the session and inform user to try login again
                                     // TODO: improve this part when we have more information about the codes

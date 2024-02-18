@@ -200,7 +200,16 @@ impl QuicClient {
                 status,
                 IggyError::from_code_as_string(status)
             );
-            return Err(IggyError::InvalidResponse(status));
+
+            let length =
+                u32::from_le_bytes(buffer[4..RESPONSE_INITIAL_BYTES_LENGTH].try_into().unwrap());
+            let error_message = String::from_utf8_lossy(
+                &buffer[RESPONSE_INITIAL_BYTES_LENGTH + 4
+                    ..RESPONSE_INITIAL_BYTES_LENGTH + length as usize],
+            )
+            .to_string();
+
+            return Err(IggyError::InvalidResponse(status, length, error_message));
         }
 
         let length =

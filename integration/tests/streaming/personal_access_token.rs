@@ -13,19 +13,19 @@ async fn many_personal_access_tokens_should_be_saved_and_loaded() {
     setup
         .storage
         .personal_access_token
-        .save(&pat1)
+        .create(&pat1)
         .await
         .expect("Failed to save personal access token");
     setup
         .storage
         .personal_access_token
-        .save(&pat2)
+        .create(&pat2)
         .await
         .expect("Failed to save personal access token");
     setup
         .storage
         .personal_access_token
-        .save(&pat3)
+        .create(&pat3)
         .await
         .expect("Failed to save personal access token");
 
@@ -106,7 +106,7 @@ async fn personal_access_token_should_be_deleted() {
     setup
         .storage
         .personal_access_token
-        .save(&personal_access_token)
+        .create(&personal_access_token)
         .await
         .expect("Failed to save personal access token");
 

@@ -14,7 +14,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let system = system.read().await;
     let streams = system.find_streams(session)?;
     let streams = mapper::map_streams(&streams).await;
     sender.send_ok_response(&streams).await?;

@@ -291,7 +291,7 @@ impl Storage<Partition> for FilePartitionStorage {
         Ok(())
     }
 
-    async fn save(&self, partition: &Partition) -> Result<(), IggyError> {
+    async fn create(&self, partition: &Partition) -> Result<(), IggyError> {
         info!(
             "Saving partition with start ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id

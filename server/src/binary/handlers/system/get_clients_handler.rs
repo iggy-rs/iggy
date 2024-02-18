@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let system = system.read().await;
     let clients = system.get_clients(session).await?;
     let clients = mapper::map_clients(&clients).await;
     sender.send_ok_response(&clients).await?;

@@ -28,7 +28,7 @@ use std::sync::Arc;
 #[async_trait]
 pub trait Storage<T>: Sync + Send {
     async fn load(&self, component: &mut T) -> Result<(), IggyError>;
-    async fn save(&self, component: &T) -> Result<(), IggyError>;
+    async fn create(&self, component: &T) -> Result<(), IggyError>;
     async fn delete(&self, component: &T) -> Result<(), IggyError>;
 }
 
@@ -104,11 +104,6 @@ pub trait SegmentStorage: Storage<Segment> {
         segment: &Segment,
         size_bytes: u64,
     ) -> Result<Vec<Arc<Message>>, IggyError>;
-    async fn save_messages(
-        &self,
-        segment: &Segment,
-        messages: &[Arc<Message>],
-    ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError>;
@@ -119,20 +114,17 @@ pub trait SegmentStorage: Storage<Segment> {
         index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(
-        &self,
-        segment: &Segment,
-        current_position: u32,
-        messages: &[Arc<Message>],
-    ) -> Result<(), IggyError>;
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
     async fn load_last_time_index(&self, segment: &Segment)
         -> Result<Option<TimeIndex>, IggyError>;
-    async fn save_time_index(
+
+    async fn save_to_ssd(
         &self,
         segment: &Segment,
-        messages: &[Arc<Message>],
+        messages: Vec<Arc<Message>>,
     ) -> Result<(), IggyError>;
+
+    async fn terminate(&self, path: &str) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]
@@ -229,7 +221,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
+        async fn create(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -247,7 +239,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _user: &User) -> Result<(), IggyError> {
+        async fn create(&self, _user: &User) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -280,7 +272,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(
+        async fn create(
             &self,
             _personal_access_token: &PersonalAccessToken,
         ) -> Result<(), IggyError> {
@@ -331,7 +323,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _stream: &Stream) -> Result<(), IggyError> {
+        async fn create(&self, _stream: &Stream) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -348,7 +340,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _topic: &Topic) -> Result<(), IggyError> {
+        async fn create(&self, _topic: &Topic) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -389,7 +381,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _partition: &Partition) -> Result<(), IggyError> {
+        async fn create(&self, _partition: &Partition) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -431,7 +423,7 @@ pub(crate) mod tests {
             Ok(())
         }
 
-        async fn save(&self, _segment: &Segment) -> Result<(), IggyError> {
+        async fn create(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -458,14 +450,6 @@ pub(crate) mod tests {
             Ok(vec![])
         }
 
-        async fn save_messages(
-            &self,
-            _segment: &Segment,
-            _messages: &[Arc<Message>],
-        ) -> Result<u32, IggyError> {
-            Ok(0)
-        }
-
         async fn load_message_ids(&self, _segment: &Segment) -> Result<Vec<u128>, IggyError> {
             Ok(vec![])
         }
@@ -488,15 +472,6 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_index(
-            &self,
-            _segment: &Segment,
-            _current_position: u32,
-            _messages: &[Arc<Message>],
-        ) -> Result<(), IggyError> {
-            Ok(())
-        }
-
         async fn load_all_time_indexes(
             &self,
             _segment: &Segment,
@@ -511,11 +486,15 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_time_index(
+        async fn save_to_ssd(
             &self,
             _segment: &Segment,
-            _messages: &[Arc<Message>],
+            _messages: Vec<Arc<Message>>,
         ) -> Result<(), IggyError> {
+            Ok(())
+        }
+
+        async fn terminate(&self, path: &str) -> Result<(), IggyError> {
             Ok(())
         }
     }
@@ -530,5 +509,9 @@ pub(crate) mod tests {
             partition: Arc::new(TestPartitionStorage {}),
             segment: Arc::new(TestSegmentStorage {}),
         }
+    }
+
+    pub fn get_test_segment_storage() -> Arc<dyn SegmentStorage> {
+        Arc::new(TestSegmentStorage {})
     }
 }

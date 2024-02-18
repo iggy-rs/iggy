@@ -159,7 +159,7 @@ impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
         Ok(())
     }
 
-    async fn save(&self, personal_access_token: &PersonalAccessToken) -> Result<(), IggyError> {
+    async fn create(&self, personal_access_token: &PersonalAccessToken) -> Result<(), IggyError> {
         let key = get_key(&personal_access_token.token);
         match rmp_serde::to_vec(&personal_access_token)
             .with_context(|| "Failed to serialize personal access token")

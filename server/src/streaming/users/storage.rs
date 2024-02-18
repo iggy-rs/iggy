@@ -125,7 +125,7 @@ impl Storage<User> for FileUserStorage {
         }
     }
 
-    async fn save(&self, user: &User) -> Result<(), IggyError> {
+    async fn create(&self, user: &User) -> Result<(), IggyError> {
         let key = get_key(user.id);
         match rmp_serde::to_vec(&user)
             .with_context(|| format!("Failed to serialize user with key: {}", key))

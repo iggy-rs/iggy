@@ -8,6 +8,6 @@ impl Segment {
     }
 
     pub async fn persist(&self) -> Result<(), IggyError> {
-        self.storage.segment.save(self).await
+        self.storage.segment.create(self).await
     }
 }

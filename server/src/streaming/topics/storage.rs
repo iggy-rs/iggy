@@ -262,7 +262,7 @@ impl Storage<Topic> for FileTopicStorage {
         Ok(())
     }
 
-    async fn save(&self, topic: &Topic) -> Result<(), IggyError> {
+    async fn create(&self, topic: &Topic) -> Result<(), IggyError> {
         if !Path::new(&topic.path).exists() && create_dir(&topic.path).await.is_err() {
             return Err(IggyError::CannotCreateTopicDirectory(
                 topic.topic_id,

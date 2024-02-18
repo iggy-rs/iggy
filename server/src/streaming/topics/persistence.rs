@@ -27,7 +27,7 @@ impl Topic {
     }
 
     pub async fn persist(&self) -> Result<(), IggyError> {
-        self.storage.topic.save(self).await
+        self.storage.topic.create(self).await
     }
 
     pub async fn delete(&self) -> Result<(), IggyError> {

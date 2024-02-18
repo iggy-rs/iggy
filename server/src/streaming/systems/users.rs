@@ -20,7 +20,7 @@ impl System {
         if users.is_empty() {
             info!("No users found, creating the root user...");
             let root = User::root();
-            self.storage.user.save(&root).await?;
+            self.storage.user.create(&root).await?;
             info!("Created the root user.");
             users = self.storage.user.load_all().await?;
         }
@@ -89,7 +89,7 @@ impl System {
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
         let user = User::new(user_id, &username, password, status, permissions);
-        self.storage.user.save(&user).await?;
+        self.storage.user.create(&user).await?;
         self.permissioner.init_permissions_for_user(user);
         info!("Created user: {username} with ID: {user_id}.");
         self.metrics.increment_users(1);
@@ -145,7 +145,7 @@ impl System {
         }
 
         info!("Updating user: {} with ID: {}...", user.username, user.id);
-        self.storage.user.save(&user).await?;
+        self.storage.user.create(&user).await?;
         info!("Updated user: {} with ID: {}.", user.username, user.id);
         Ok(user)
     }
@@ -171,7 +171,7 @@ impl System {
             "Updating permissions for user: {} with ID: {user_id}...",
             username
         );
-        self.storage.user.save(&user).await?;
+        self.storage.user.create(&user).await?;
         self.permissioner.update_permissions_for_user(user);
         info!(
             "Updated permissions for user: {} with ID: {user_id}.",
@@ -207,7 +207,7 @@ impl System {
             user.username
         );
         user.password = crypto::hash_password(new_password);
-        self.storage.user.save(&user).await?;
+        self.storage.user.create(&user).await?;
         info!(
             "Changed password for user: {} with ID: {user_id}.",
             user.username

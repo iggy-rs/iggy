@@ -18,7 +18,11 @@ pub(crate) async fn handle_connection(
     sender: &mut dyn Sender,
     system: SharedSystem,
 ) -> Result<(), ServerError> {
-    let client_id = system.read().add_client(&address, Transport::Tcp).await;
+    let client_id = system
+        .read()
+        .await
+        .add_client(&address, Transport::Tcp)
+        .await;
 
     let session = Session::from_client_id(client_id, address);
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];

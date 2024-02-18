@@ -66,7 +66,7 @@ impl System {
             PersonalAccessToken::new(user_id, &name, IggyTimestamp::now().to_micros(), expiry);
         self.storage
             .personal_access_token
-            .save(&personal_access_token)
+            .create(&personal_access_token)
             .await?;
         info!("Created personal access token: {name} for user with ID: {user_id}.");
         Ok(token)

@@ -15,30 +15,30 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{create_dir, remove_dir_all};
-use tokio::sync::RwLock;
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use tokio::time::Instant;
 use tracing::{info, trace};
 
-use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
+// use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
 
 #[derive(Debug)]
 pub struct SharedSystem {
-    system: SharedMut<System>,
+    system: Arc<RwLock<System>>,
 }
 
 impl SharedSystem {
     pub fn new(system: System) -> SharedSystem {
         SharedSystem {
-            system: SharedMut::new(system),
+            system: Arc::new(RwLock::new(system)),
         }
     }
 
-    pub fn read(&self) -> SharedReadLock<System> {
-        self.system.read()
+    pub async fn read(&self) -> RwLockReadGuard<System> {
+        self.system.read().await
     }
 
-    pub fn write(&self) -> SharedWriteLock<System> {
-        self.system.write()
+    pub async fn write(&self) -> RwLockWriteGuard<System> {
+        self.system.write().await
     }
 }
 
@@ -86,7 +86,7 @@ impl System {
         };
         let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
             true => Arc::new(FileWithSyncPersister {}),
-            false => Arc::new(FilePersister {}),
+            false => Arc::new(FilePersister::default()),
         };
         Self::create(
             config,

@@ -3,7 +3,7 @@ use crate::client::Client;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -303,11 +303,22 @@ impl TcpClient {
                 error!(
                     "Received an invalid response with status: {} ({}).",
                     status,
-                    IggyError::from_code_as_string(status)
+                    IggyError::from_code_as_string(status),
                 );
             }
 
-            return Err(IggyError::InvalidResponse(status));
+            let mut error_details_buffer = BytesMut::with_capacity(length as usize);
+            error_details_buffer.put_bytes(0, length as usize);
+            stream.read(&mut error_details_buffer).await?;
+
+            let string_length = error_details_buffer.get_u32_le();
+            let error_message = String::from_utf8_lossy(&error_details_buffer);
+
+            return Err(IggyError::InvalidResponse(
+                status,
+                string_length,
+                error_message.to_string(),
+            ));
         }
 
         trace!("Status: OK. Response length: {}", length);

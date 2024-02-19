@@ -153,7 +153,8 @@ impl TcpClientBuilder {
     /// Builds the parent `IggyClient` with TCP configuration.
     pub fn build(self) -> Result<IggyClient, IggyError> {
         let client = TcpClient::create(Arc::new(self.config.build()))?;
-        Ok(self.parent_builder.with_client(Box::new(client)).build()?)
+        let client = self.parent_builder.with_client(Box::new(client)).build()?;
+        Ok(client)
     }
 }
 
@@ -192,7 +193,8 @@ impl QuicClientBuilder {
     /// Builds the parent `IggyClient` with QUIC configuration.
     pub fn build(self) -> Result<IggyClient, IggyError> {
         let client = QuicClient::create(Arc::new(self.config.build()))?;
-        Ok(self.parent_builder.with_client(Box::new(client)).build()?)
+        let client = self.parent_builder.with_client(Box::new(client)).build()?;
+        Ok(client)
     }
 }
 
@@ -217,6 +219,7 @@ impl HttpClientBuilder {
     /// Builds the parent `IggyClient` with HTTP configuration.
     pub fn build(self) -> Result<IggyClient, IggyError> {
         let client = HttpClient::create(Arc::new(self.config.build()))?;
-        Ok(self.parent_builder.with_client(Box::new(client)).build()?)
+        let client = self.parent_builder.with_client(Box::new(client)).build()?;
+        Ok(client)
     }
 }

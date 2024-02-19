@@ -75,7 +75,8 @@ pub async fn should_help_match() {
             format!(
                 r#"get iggy server statistics
 
-Collect basic Iggy server statistics like number of streams, topics, partitions, etc. Server OS name, version, etc. are also collected.
+Collect basic Iggy server statistics like number of streams, topics, partitions, etc.
+Server OS name, version, etc. are also collected.
 
 {USAGE_PREFIX} stats
 

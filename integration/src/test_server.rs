@@ -397,6 +397,23 @@ impl TestServer {
         }
         None
     }
+
+    pub fn get_server_ip_addr(&self) -> Option<String> {
+        if let Some(server_address) = self
+            .get_raw_tcp_addr()
+            .or_else(|| self.get_http_api_addr())
+            .or_else(|| self.get_quic_udp_addr())
+        {
+            server_address
+                .split(':')
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+                .first()
+                .cloned()
+        } else {
+            None
+        }
+    }
 }
 
 impl Drop for TestServer {

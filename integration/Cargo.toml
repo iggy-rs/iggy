@@ -28,7 +28,7 @@ toml = "0.8.10"
 tracing = "0.1"
 tracing-subscriber = "0.3.18"
 uuid = { version = "1.7.0", features = ["v4", "fast-rng", "zerocopy"] }
-xxhash-rust = { version = "0.8.8", features = ["xxh32"] }
+xxhash-rust = { version = "0.8.10", features = ["xxh32"] }
 
 # Some tests are failing in CI due to lack of IPv6 interfaces
 # inside the docker containers. This is a temporary workaround (hopefully).

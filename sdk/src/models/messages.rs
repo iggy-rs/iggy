@@ -167,7 +167,8 @@ impl PolledMessage {
         let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);
         let headers = if headers_length > 0 {
             Some(HashMap::from_bytes(
-                bytes.slice(41..headers_length as usize))?)
+                bytes.slice(41..headers_length as usize),
+            )?)
         } else {
             None
         };

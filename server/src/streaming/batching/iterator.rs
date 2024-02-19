@@ -1,6 +1,13 @@
 use super::message_batch::RetainedMessageBatch;
-use iggy::models::messages::PolledMessage;
+use crate::streaming::models::messages::RetainedMessage;
 use std::sync::Arc;
+
+pub trait IntoBatchIterator {
+    type Item;
+    type IntoIter: Iterator<Item = Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter;
+}
 
 pub struct RetainedMessageBatchIterator {
     batch: Arc<RetainedMessageBatch>,
@@ -17,25 +24,33 @@ impl RetainedMessageBatchIterator {
 }
 
 impl Iterator for RetainedMessageBatchIterator {
-    type Item = PolledMessage;
+    type Item = RetainedMessage;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_position < self.batch.length {
-            let start_position = (self.current_position) as usize;
-            let message_bytes = self.batch.bytes.slice(start_position..);
-            self.current_position += 1;
-            PolledMessage::try_from_bytes(message_bytes).ok()
+            let start_position = self.current_position as usize;
+            let length = u32::from_le_bytes(
+                self.batch.bytes[start_position..start_position + 4]
+                    .try_into()
+                    .ok()?,
+            );
+            let message = self
+                .batch
+                .bytes
+                .slice(start_position + 4..start_position + 4 + length as usize);
+            self.current_position += 4 + length;
+            RetainedMessage::try_from_bytes(message).ok()
         } else {
             None
         }
     }
 }
 
-impl IntoIterator for RetainedMessageBatch {
-    type Item = PolledMessage;
+impl IntoBatchIterator for Arc<RetainedMessageBatch> {
+    type Item = RetainedMessage;
     type IntoIter = RetainedMessageBatchIterator;
 
     fn into_iter(self) -> Self::IntoIter {
-        RetainedMessageBatchIterator::new(&self)
+        RetainedMessageBatchIterator::new(self)
     }
 }

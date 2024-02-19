@@ -1,3 +1,5 @@
+use super::batching::message_batch::RetainedMessageBatch;
+use super::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
 use crate::streaming::persistence::persister::Persister;
@@ -23,8 +25,6 @@ use iggy::models::user_info::UserId;
 use sled::Db;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
-
-use super::models::messages::{RetainedMessage, RetainedMessageBatch};
 
 #[async_trait]
 pub trait Storage<T>: Sync + Send {

@@ -1,5 +1,5 @@
 use crate::configs::system::SystemConfig;
-use crate::streaming::models::messages::RetainedMessageBatch;
+use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;

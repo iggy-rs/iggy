@@ -1,5 +1,5 @@
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
-use crate::streaming::models::messages::{RetainedMessage, RetainedMessageBatch};
+use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
@@ -317,7 +317,7 @@ impl Partition {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Vec<Arc<RetainedMessage>> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,
@@ -325,12 +325,12 @@ impl Partition {
         );
 
         if self.cache.is_none() || start_offset > end_offset {
-            return EMPTY_MESSAGES;
+            return Ok(EMPTY_MESSAGES);
         }
 
         let cache = self.cache.as_ref().unwrap();
         if cache.is_empty() {
-            return EMPTY_MESSAGES;
+            return Ok(EMPTY_MESSAGES);
         }
 
         let mut slice_start = 0;
@@ -350,7 +350,7 @@ impl Partition {
                     None
                 }
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         let expected_messages_count = (end_offset - start_offset + 1) as usize;
         if messages.len() != expected_messages_count {
@@ -359,7 +359,7 @@ impl Partition {
                 messages.len(),
                 expected_messages_count
             );
-            return EMPTY_MESSAGES;
+            return Ok(EMPTY_MESSAGES);
         }
         trace!(
             "Loaded {} messages from cache, start offset: {}, end offset: {}...",
@@ -368,7 +368,8 @@ impl Partition {
             end_offset
         );
 
-        Ok(messages)
+        todo!();
+        //Ok(messages)
     }
 
     pub async fn append_messages(&mut self, messages: &Vec<Message>) -> Result<(), IggyError> {

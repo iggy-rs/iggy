@@ -17,53 +17,57 @@ pub struct PolledMessages {
     pub messages: Vec<Arc<PolledMessage>>,
 }
 
-pub struct RetainedMessage<'a> {
+pub struct RetainedMessage {
+    //pub length: u32,
+    pub id: u128,
     pub offset: u64,
     pub timestamp: u64,
     pub checksum: u32,
     pub message_state: MessageState,
-    pub message: &'a Message,
+    pub headers: Option<Bytes>,
+    pub payload: Bytes,
 }
 
-impl<'a> RetainedMessage<'a> {
+impl RetainedMessage {
     pub fn new(offset: u64, timestamp: u64, message: &Message) -> Self {
         RetainedMessage {
             offset,
             timestamp,
             checksum: checksum::calculate(&message.payload),
             message_state: MessageState::Available,
-            message,
+            id: message.id,
+            payload: message.payload.clone(),
+            headers: message.headers.as_ref().map(|headers| headers.as_bytes()),
         }
     }
 
     pub fn extend(&self, bytes: &mut BytesMut) {
-        let id = self.message.id;
+        let length = self.get_size_bytes() - 4;
+        let id = self.id;
         let offset = self.offset;
         let timestamp = self.timestamp;
-        let length = self.message.length;
-        let payload = &self.message.payload;
+        let payload = self.payload.clone();
         let checksum = self.checksum;
         let message_state = self.message_state;
-        let headers = self.message.headers.as_ref().cloned();
+        let headers = &self.headers;
 
+        bytes.put_u32_le(length);
         bytes.put_u64_le(offset);
         bytes.put_u8(message_state.as_code());
         bytes.put_u64_le(timestamp);
         bytes.put_u128_le(id);
         bytes.put_u32_le(checksum);
         if let Some(headers) = headers {
-            let headers_bytes = headers.as_bytes();
             #[allow(clippy::cast_possible_truncation)]
-            bytes.put_u32_le(headers_bytes.len() as u32);
-            bytes.put_slice(&headers_bytes);
+            bytes.put_u32_le(headers.len() as u32);
+            bytes.put_slice(headers);
         } else {
             bytes.put_u32_le(0u32);
         }
-        bytes.put_u32_le(length);
-        bytes.put_slice(payload);
+        bytes.put_slice(&payload);
     }
 
-    pub fn try_from_bytes(bytes: &[u8]) -> Result<Self, IggyError> {
+    pub fn try_from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
         let offset = u64::from_le_bytes(bytes[..8].try_into()?);
         let message_state = MessageState::from_code(bytes[8])?;
         let timestamp = u64::from_le_bytes(bytes[9..17].try_into()?);
@@ -71,33 +75,32 @@ impl<'a> RetainedMessage<'a> {
         let checksum = u32::from_le_bytes(bytes[33..37].try_into()?);
         let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);
         let headers = if headers_length > 0 {
-            Some(HashMap::from_bytes(Bytes::from(
-                &bytes[41..headers_length as usize],
-            ))?)
+            Some(bytes.slice(41..headers_length as usize))
         } else {
             None
         };
         let position = 41 + headers_length as usize;
-        let length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
-        let payload = Bytes::from(&bytes[position + 4..position + 4 + length as usize]);
+        let payload = bytes.slice(position..);
 
         Ok(RetainedMessage {
+            id,
             offset,
             timestamp,
             checksum,
             message_state,
-            message: &Message {
-                id,
-                length,
-                payload,
-                headers,
-            },
+            headers,
+            payload,
         })
     }
 }
 
-impl<'a> Sizeable for RetainedMessage<'a> {
+impl Sizeable for RetainedMessage {
     fn get_size_bytes(&self) -> u32 {
-        8 + 8 + 4 + 1 + self.message.length
+        let headers_len = self
+            .headers
+            .as_ref()
+            .map(|h| 4 + h.len() as u32)
+            .unwrap_or(4);
+        16 + 4 + 8 + 8 + 4 + 1 + self.payload.len() as u32 + headers_len
     }
 }

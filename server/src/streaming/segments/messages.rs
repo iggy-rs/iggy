@@ -1,4 +1,5 @@
-use crate::streaming::models::messages::{RetainedMessage, RetainedMessageBatch};
+use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;

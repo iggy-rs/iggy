@@ -1,8 +1,8 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
-use crate::streaming::models::messages::RetainedMessageBatch;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;

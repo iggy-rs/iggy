@@ -4,6 +4,7 @@ use crate::streaming::users::user::User;
 use crate::streaming::utils::crypto;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
+use iggy::locking::IggySharedMutFn;
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
 use iggy::utils::text;

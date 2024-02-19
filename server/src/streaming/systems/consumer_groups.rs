@@ -3,6 +3,7 @@ use crate::streaming::systems::system::System;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::locking::IggySharedMutFn;
 use tokio::sync::RwLock;
 
 impl System {

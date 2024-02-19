@@ -1,15 +1,15 @@
 use crate::streaming::utils::hash;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Debug, Default)]
 pub struct ClientManager {
-    clients: HashMap<u32, Arc<RwLock<Client>>>,
+    clients: HashMap<u32, IggySharedMut<Client>>,
 }
 
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl ClientManager {
             consumer_groups: Vec::new(),
         };
         self.clients
-            .insert(client.client_id, Arc::new(RwLock::new(client)));
+            .insert(client.client_id, IggySharedMut::new(client));
         id
     }
 
@@ -83,12 +83,12 @@ impl ClientManager {
     pub fn get_client_by_address(
         &self,
         address: &SocketAddr,
-    ) -> Result<Arc<RwLock<Client>>, IggyError> {
+    ) -> Result<IggySharedMut<Client>, IggyError> {
         let id = hash::calculate_32(address.to_string().as_bytes());
         self.get_client_by_id(id)
     }
 
-    pub fn get_client_by_id(&self, client_id: u32) -> Result<Arc<RwLock<Client>>, IggyError> {
+    pub fn get_client_by_id(&self, client_id: u32) -> Result<IggySharedMut<Client>, IggyError> {
         let client = self.clients.get(&client_id);
         if client.is_none() {
             return Err(IggyError::ClientNotFound(client_id));
@@ -97,7 +97,7 @@ impl ClientManager {
         Ok(client.unwrap().clone())
     }
 
-    pub fn get_clients(&self) -> Vec<Arc<RwLock<Client>>> {
+    pub fn get_clients(&self) -> Vec<IggySharedMut<Client>> {
         self.clients.values().cloned().collect()
     }
 
@@ -119,7 +119,7 @@ impl ClientManager {
         Ok(())
     }
 
-    pub fn delete_client(&mut self, address: &SocketAddr) -> Option<Arc<RwLock<Client>>> {
+    pub fn delete_client(&mut self, address: &SocketAddr) -> Option<IggySharedMut<Client>> {
         let id = hash::calculate_32(address.to_string().as_bytes());
         self.clients.remove(&id)
     }

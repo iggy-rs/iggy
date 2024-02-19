@@ -13,6 +13,8 @@ use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
+use crate::locking::IggySharedMut;
+use crate::locking::IggySharedMutFn;
 use crate::message_handler::MessageHandler;
 use crate::messages::poll_messages::{PollMessages, PollingKind};
 use crate::messages::send_messages::{Partitioning, PartitioningKind, SendMessages};
@@ -69,7 +71,7 @@ use std::collections::VecDeque;
 use std::fmt::Debug;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
@@ -78,7 +80,7 @@ use tracing::{error, info, warn};
 /// It also provides additional functionality (outside of the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
 #[derive(Debug)]
 pub struct IggyClient {
-    client: Arc<RwLock<Box<dyn Client>>>,
+    client: IggySharedMut<Box<dyn Client>>,
     config: Option<IggyClientConfig>,
     send_messages_batch: Option<Arc<Mutex<SendMessagesBatch>>>,
     partitioner: Option<Box<dyn Partitioner>>,
@@ -213,7 +215,7 @@ impl IggyClient {
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport.
     pub fn new(client: Box<dyn Client>) -> Self {
         IggyClient {
-            client: Arc::new(RwLock::new(client)),
+            client: IggySharedMut::new(client),
             config: None,
             send_messages_batch: None,
             partitioner: None,
@@ -239,7 +241,7 @@ impl IggyClient {
             info!("Client-side encryption is enabled.");
         }
 
-        let client = Arc::new(RwLock::new(client));
+        let client = IggySharedMut::new(client);
         let send_messages_batch = Arc::new(Mutex::new(SendMessagesBatch {
             commands: VecDeque::new(),
         }));
@@ -394,7 +396,7 @@ impl IggyClient {
     fn send_messages_in_background(
         interval: u64,
         max_messages: u32,
-        client: Arc<RwLock<Box<dyn Client>>>,
+        client: IggySharedMut<Box<dyn Client>>,
         send_messages_batch: Arc<Mutex<SendMessagesBatch>>,
     ) {
         tokio::spawn(async move {

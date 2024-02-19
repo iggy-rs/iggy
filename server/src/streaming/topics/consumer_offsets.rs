@@ -2,8 +2,9 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
-use tokio::sync::RwLock;
 
 impl Topic {
     pub async fn store_consumer_offset(
@@ -33,7 +34,7 @@ impl Topic {
     async fn resolve_partition(
         &self,
         consumer: PollingConsumer,
-    ) -> Result<&RwLock<Partition>, IggyError> {
+    ) -> Result<&IggySharedMut<Partition>, IggyError> {
         let partition_id = match consumer {
             PollingConsumer::Consumer(_, partition_id) => Ok(partition_id),
             PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {

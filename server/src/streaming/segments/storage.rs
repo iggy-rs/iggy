@@ -208,11 +208,11 @@ impl Storage<Segment> for FileSegmentStorage {
 
 #[async_trait]
 impl SegmentStorage for FileSegmentStorage {
-    async fn load_messages(
+    async fn load_message_batches(
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
         todo!();
         /*
         let mut messages = Vec::with_capacity(
@@ -228,11 +228,11 @@ impl SegmentStorage for FileSegmentStorage {
         */
     }
 
-    async fn load_newest_messages_by_size(
+    async fn load_newest_message_batches_by_size(
         &self,
         segment: &Segment,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
         todo!();
         /*
         let mut messages = Vec::new();

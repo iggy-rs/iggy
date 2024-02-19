@@ -1,5 +1,8 @@
 use std::sync::Arc;
 
+use crate::streaming::batching::batch_filter::BatchFilter;
+use crate::streaming::batching::iterator::IntoBatchIterator;
+use crate::streaming::models::messages::RetainedMessage;
 use bytes::Bytes;
 use iggy::error::IggyError::{
     self, MissingBaseOffsetRetainedMessageBatch, MissingLastOffsetDeltaRetainedMessageBatch,
@@ -34,6 +37,28 @@ impl RetainedMessageBatch {
 
     pub fn get_last_offset(&self) -> u64 {
         self.base_offset + self.last_offset_delta as u64
+    }
+}
+
+impl<T, U> BatchFilter<RetainedMessage, U, T> for T
+where
+    T: Iterator<Item = U>,
+    U: IntoBatchIterator<Item = RetainedMessage>,
+{
+    fn convert_and_filter_by_offset_range(
+        self,
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Vec<RetainedMessage> {
+        self.into_iter().fold(Vec::new(), |mut messages, batch| {
+            messages.extend(
+                batch
+                    .into_iter()
+                    .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
+                    .collect::<Vec<_>>(),
+            );
+            messages
+        })
     }
 }
 

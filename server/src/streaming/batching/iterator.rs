@@ -5,7 +5,6 @@ use std::sync::Arc;
 pub trait IntoBatchIterator {
     type Item;
     type IntoIter: Iterator<Item = Self::Item>;
-
     fn into_iter(self) -> Self::IntoIter;
 }
 
@@ -25,7 +24,6 @@ impl RetainedMessageBatchIterator {
 
 impl Iterator for RetainedMessageBatchIterator {
     type Item = RetainedMessage;
-
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_position < self.batch.length {
             let start_position = self.current_position as usize;

@@ -32,7 +32,7 @@ pub struct Segment {
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
     pub(crate) message_expiry: Option<u32>,
-    pub(crate) unsaved_messages: Option<Vec<Arc<RetainedMessageBatch>>>,
+    pub(crate) unsaved_batches: Option<Vec<Arc<RetainedMessageBatch>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,

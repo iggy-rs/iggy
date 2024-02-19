@@ -1,3 +1,4 @@
+use crate::streaming::batching::batch_filter::BatchFilter;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
@@ -12,7 +13,8 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::{atomic::Ordering, Arc};
 use tracing::{trace, warn};
 
-const EMPTY_MESSAGES: Vec<Arc<RetainedMessage>> = vec![];
+const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
+const EMPTY_BATCHES: Vec<RetainedMessageBatch> = vec![];
 
 impl Partition {
     pub fn get_messages_count(&self) -> u64 {
@@ -23,7 +25,7 @@ impl Partition {
         &self,
         timestamp: u64,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<RetainedMessage>, IggyError> {
         trace!(
             "Getting messages by timestamp: {} for partition: {}...",
             timestamp,
@@ -114,7 +116,7 @@ impl Partition {
         &self,
         start_offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<RetainedMessage>, IggyError> {
         trace!(
             "Getting messages for start offset: {} for partition: {}...",
             start_offset,
@@ -146,14 +148,14 @@ impl Partition {
     pub async fn get_first_messages(
         &self,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<RetainedMessage>, IggyError> {
         self.get_messages_by_offset(0, count).await
     }
 
     pub async fn get_last_messages(
         &self,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<RetainedMessage>, IggyError> {
         let mut count = count as u64;
         if count > self.current_offset + 1 {
             count = self.current_offset + 1
@@ -168,7 +170,7 @@ impl Partition {
         &self,
         consumer: PollingConsumer,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<RetainedMessage>, IggyError> {
         let (consumer_offsets, consumer_id) = match consumer {
             PollingConsumer::Consumer(consumer_id, _) => (&self.consumer_offsets, consumer_id),
             PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
@@ -236,7 +238,7 @@ impl Partition {
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<RetainedMessage>, IggyError> {
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
             let segment_messages = segment.get_messages(offset, count).await?;
@@ -252,7 +254,7 @@ impl Partition {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Option<Vec<Arc<RetainedMessage>>> {
+    ) -> Option<Vec<RetainedMessage>> {
         let cache = self.cache.as_ref()?;
         if cache.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
             return None;
@@ -266,7 +268,7 @@ impl Partition {
         );
 
         if start_offset >= first_buffered_offset {
-            return self.load_messages_from_cache(start_offset, end_offset).ok();
+            return Some(self.load_messages_from_cache(start_offset, end_offset));
         }
         None
     }
@@ -274,7 +276,7 @@ impl Partition {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
         trace!(
             "Getting messages for size: {} bytes for partition: {}...",
             size_bytes,
@@ -282,7 +284,7 @@ impl Partition {
         );
 
         if self.segments.is_empty() {
-            return Ok(EMPTY_MESSAGES);
+            return Ok(EMPTY_BATCHES.into_iter().map(Arc::new).collect());
         }
 
         let mut remaining_size = size_bytes;
@@ -317,7 +319,7 @@ impl Partition {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
+    ) -> Vec<RetainedMessage> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,
@@ -325,12 +327,12 @@ impl Partition {
         );
 
         if self.cache.is_none() || start_offset > end_offset {
-            return Ok(EMPTY_MESSAGES);
+            return EMPTY_MESSAGES;
         }
 
         let cache = self.cache.as_ref().unwrap();
         if cache.is_empty() {
-            return Ok(EMPTY_MESSAGES);
+            return EMPTY_MESSAGES;
         }
 
         let mut slice_start = 0;
@@ -345,12 +347,12 @@ impl Partition {
             .skip(slice_start)
             .filter_map(|batch| {
                 if batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset) {
-                    Some(batch)
+                    Some(batch.clone())
                 } else {
                     None
                 }
             })
-            .collect::<Vec<_>>();
+            .convert_and_filter_by_offset_range(start_offset, end_offset);
 
         let expected_messages_count = (end_offset - start_offset + 1) as usize;
         if messages.len() != expected_messages_count {
@@ -359,7 +361,7 @@ impl Partition {
                 messages.len(),
                 expected_messages_count
             );
-            return Ok(EMPTY_MESSAGES);
+            return EMPTY_MESSAGES;
         }
         trace!(
             "Loaded {} messages from cache, start offset: {}, end offset: {}...",
@@ -368,8 +370,7 @@ impl Partition {
             end_offset
         );
 
-        todo!();
-        //Ok(messages)
+        messages
     }
 
     pub async fn append_messages(&mut self, messages: &Vec<Message>) -> Result<(), IggyError> {

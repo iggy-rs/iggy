@@ -76,62 +76,19 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
+pub use crate::clients::builder::IggyClientBuilder;
+
 /// The main client struct which implements all the `Client` traits and wraps the underlying low-level client for the specific transport.
 /// It also provides additional functionality (outside of the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
 #[derive(Debug)]
 pub struct IggyClient {
     client: IggySharedMut<Box<dyn Client>>,
-    config: Option<IggyClientConfig>,
+    config: Option<IggyClientBackgroundConfig>,
     send_messages_batch: Option<Arc<Mutex<SendMessagesBatch>>>,
     partitioner: Option<Box<dyn Partitioner>>,
     encryptor: Option<Box<dyn Encryptor>>,
     message_handler: Option<Arc<Box<dyn MessageHandler>>>,
     message_channel_sender: Option<Arc<Sender<Message>>>,
-}
-
-/// The builder for the `IggyClient` instance, which allows to configure and provide custom implementations for the partitioner, encryptor or message handler.
-#[derive(Debug)]
-pub struct IggyClientBuilder {
-    client: IggyClient,
-}
-
-impl IggyClientBuilder {
-    /// Creates a new `IggyClientBuilder` with the provided client implementation for the specific transport.
-    #[must_use]
-    pub fn new(client: Box<dyn Client>) -> Self {
-        IggyClientBuilder {
-            client: IggyClient::new(client),
-        }
-    }
-
-    /// Apply the provided configuration.
-    pub fn with_config(mut self, config: IggyClientConfig) -> Self {
-        self.client.config = Some(config);
-        self
-    }
-
-    /// Use the the custom partitioner implementation.
-    pub fn with_partitioner(mut self, partitioner: Box<dyn Partitioner>) -> Self {
-        self.client.partitioner = Some(partitioner);
-        self
-    }
-
-    /// Use the the custom encryptor implementation.
-    pub fn with_encryptor(mut self, encryptor: Box<dyn Encryptor>) -> Self {
-        self.client.encryptor = Some(encryptor);
-        self
-    }
-
-    /// Use the the custom message handler implementation. This handler will be used only for `start_polling_messages` method, if neither `subscribe_to_polled_messages` (which returns the receiver for the messages channel) is called nor `on_message` closure is provided.
-    pub fn with_message_handler(mut self, message_handler: Box<dyn MessageHandler>) -> Self {
-        self.client.message_handler = Some(Arc::new(message_handler));
-        self
-    }
-
-    /// Build the `IggyClient` instance.
-    pub fn build(self) -> IggyClient {
-        self.client
-    }
 }
 
 #[derive(Debug)]
@@ -141,7 +98,7 @@ struct SendMessagesBatch {
 
 /// The optional configuration for the `IggyClient` instance, consisting of the optional configuration for sending and polling the messages in the background.
 #[derive(Debug, Default)]
-pub struct IggyClientConfig {
+pub struct IggyClientBackgroundConfig {
     /// The configuration for sending the messages in the background.
     pub send_messages: SendMessagesConfig,
     /// The configuration for polling the messages in the background.
@@ -207,9 +164,9 @@ impl Default for IggyClient {
 }
 
 impl IggyClient {
-    /// Creates a new `IggyClientBuilder` with the provided client implementation for the specific transport.
-    pub fn builder(client: Box<dyn Client>) -> IggyClientBuilder {
-        IggyClientBuilder::new(client)
+    /// Creates a new `IggyClientBuilder`.
+    pub fn builder() -> IggyClientBuilder {
+        IggyClientBuilder::new()
     }
 
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport.
@@ -229,7 +186,7 @@ impl IggyClient {
     /// Additionally it allows to provide the custom implementations for the message handler, partitioner and encryptor.
     pub fn create(
         client: Box<dyn Client>,
-        config: IggyClientConfig,
+        config: IggyClientBackgroundConfig,
         message_handler: Option<Box<dyn MessageHandler>>,
         partitioner: Option<Box<dyn Partitioner>>,
         encryptor: Option<Box<dyn Encryptor>>,

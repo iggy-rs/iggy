@@ -1,5 +1,5 @@
 use iggy::client::{Client, StreamClient, TopicClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientBuilder, TcpClientConfigBuilder};
+use iggy::clients::client::{IggyClient, IggyClientBuilder};
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
@@ -22,11 +22,9 @@ const BATCHES_LIMIT: u32 = 5;
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
 
-    let tcp_client_config = TcpClientConfigBuilder::new()
-        .with_server_address(get_tcp_server_addr())
-        .build();
     let client = IggyClientBuilder::new()
-        .with_tcp_config(tcp_client_config)
+        .with_tcp()
+        .with_server_address(get_tcp_server_addr())
         .build()?;
 
     // Or, instead of above lines, you can just use below code, which will create a Iggy

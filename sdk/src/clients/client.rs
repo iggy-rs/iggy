@@ -12,7 +12,6 @@ use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
-use crate::http::client::HttpClient;
 use crate::identifier::Identifier;
 use crate::locking::IggySharedMut;
 use crate::locking::IggySharedMutFn;
@@ -36,7 +35,6 @@ use crate::personal_access_tokens::create_personal_access_token::CreatePersonalA
 use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
 use crate::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
-use crate::quic::client::QuicClient;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -78,6 +76,8 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
+pub use crate::clients::builder::IggyClientBuilder;
+
 /// The main client struct which implements all the `Client` traits and wraps the underlying low-level client for the specific transport.
 /// It also provides additional functionality (outside of the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
 #[derive(Debug)]
@@ -89,118 +89,6 @@ pub struct IggyClient {
     encryptor: Option<Box<dyn Encryptor>>,
     message_handler: Option<Arc<Box<dyn MessageHandler>>>,
     message_channel_sender: Option<Arc<Sender<Message>>>,
-}
-
-/// The builder for the `IggyClient` instance, which allows to configure and provide custom implementations for the partitioner, encryptor or message handler.
-#[derive(Debug, Default)]
-pub struct IggyClientBuilder {
-    client: Option<Box<dyn Client>>,
-    client_config: Option<IggyClientConfig>,
-    background_config: Option<IggyClientBackgroundConfig>,
-    partitioner: Option<Box<dyn Partitioner>>,
-    encryptor: Option<Box<dyn Encryptor>>,
-    message_handler: Option<Box<dyn MessageHandler>>,
-}
-
-impl IggyClientBuilder {
-    /// Creates a new `IggyClientBuilder`.
-    /// This is not enough to build the `IggyClient` instance. You need to provide the client configuration or the client implementation for the specific transport.
-    #[must_use]
-    pub fn new() -> Self {
-        IggyClientBuilder::default()
-    }
-
-    /// Apply the provided client configuration for the tcp transport.
-    pub fn with_tcp_config(mut self, tcp_config: TcpClientConfig) -> Self {
-        self.client_config = Some(IggyClientConfig::Tcp(tcp_config));
-        self
-    }
-
-    /// Apply the provided client configuration for the quic transport.
-    pub fn with_quic_config(mut self, quic_config: QuicClientConfig) -> Self {
-        self.client_config = Some(IggyClientConfig::Quic(quic_config));
-        self
-    }
-
-    /// Apply the provided client configuration for the http transport.
-    pub fn with_http_config(mut self, http_config: HttpClientConfig) -> Self {
-        self.client_config = Some(IggyClientConfig::Http(http_config));
-        self
-    }
-
-    /// Apply the provided client implementation for the specific transport. Setting client clears the client config.
-    pub fn with_client(mut self, client: Box<dyn Client>) -> Self {
-        self.client = Some(client);
-        self.client_config = None;
-        self
-    }
-
-    /// Use the the custom partitioner implementation.
-    pub fn with_partitioner(mut self, partitioner: Box<dyn Partitioner>) -> Self {
-        self.partitioner = Some(partitioner);
-        self
-    }
-
-    /// Apply the provided background configuration.
-    pub fn with_background_config(mut self, background_config: IggyClientBackgroundConfig) -> Self {
-        self.background_config = Some(background_config);
-        self
-    }
-
-    /// Use the the custom encryptor implementation.
-    pub fn with_encryptor(mut self, encryptor: Box<dyn Encryptor>) -> Self {
-        self.encryptor = Some(encryptor);
-        self
-    }
-
-    /// Use the the custom message handler implementation. This handler will be used only for `start_polling_messages` method, if neither `subscribe_to_polled_messages` (which returns the receiver for the messages channel) is called nor `on_message` closure is provided.
-    pub fn with_message_handler(mut self, message_handler: Box<dyn MessageHandler>) -> Self {
-        self.message_handler = Some(message_handler);
-        self
-    }
-
-    /// Build the `IggyClient` instance.
-    pub fn build(self) -> Result<IggyClient, IggyError> {
-        // Using String for simplicity; consider using a more descriptive error type
-        let client: Box<dyn Client> = match self.client {
-            Some(client) => client, // Use the directly set client if available
-            None => match self.client_config {
-                // Instantiate the client based on the provided configuration
-                Some(IggyClientConfig::Tcp(tcp_config)) => {
-                    Box::new(TcpClient::create(Arc::new(tcp_config))?)
-                }
-                Some(IggyClientConfig::Quic(quic_config)) => {
-                    Box::new(QuicClient::create(Arc::new(quic_config))?)
-                }
-                Some(IggyClientConfig::Http(http_config)) => {
-                    Box::new(HttpClient::create(Arc::new(http_config))?)
-                }
-                None => return Err(IggyError::InvalidConfiguration),
-            },
-        };
-
-        Ok(IggyClient::create(
-            client,
-            self.background_config.unwrap_or_default(),
-            self.message_handler,
-            self.partitioner,
-            self.encryptor,
-        ))
-    }
-}
-
-pub use crate::http::config::HttpClientConfig;
-pub use crate::http::config::HttpClientConfigBuilder;
-pub use crate::quic::config::QuicClientConfig;
-pub use crate::quic::config::QuicClientConfigBuilder;
-pub use crate::tcp::config::TcpClientConfig;
-pub use crate::tcp::config::TcpClientConfigBuilder;
-
-#[derive(Debug)]
-enum IggyClientConfig {
-    Tcp(TcpClientConfig),
-    Quic(QuicClientConfig),
-    Http(HttpClientConfig),
 }
 
 #[derive(Debug)]

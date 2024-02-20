@@ -6,6 +6,8 @@ use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
 use serde::{Deserialize, Serialize};
 use sled::Db;
@@ -13,7 +15,7 @@ use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::Mutex;
 use tracing::{error, info};
 
 #[derive(Debug)]
@@ -251,7 +253,7 @@ impl Storage<Topic> for FileTopicStorage {
         for partition in loaded_partitions.lock().await.drain(..) {
             topic
                 .partitions
-                .insert(partition.partition_id, Arc::new(RwLock::new(partition)));
+                .insert(partition.partition_id, IggySharedMut::new(partition));
         }
 
         self.load_consumer_groups(topic).await?;

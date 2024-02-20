@@ -1,6 +1,7 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
 
 const PROCESS_NAME: &str = "iggy-server";

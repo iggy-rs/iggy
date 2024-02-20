@@ -6,7 +6,7 @@ use iggy::args::{Args, ArgsOptional};
 use iggy::client::UserClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::users::login_user::LoginUser;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::error::Error;
@@ -43,7 +43,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let password = args.password.clone();
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(iggy_args)?);
     let client = client_provider::get_raw_connected_client(client_provider_config).await?;
-    let client = IggyClient::create(client, IggyClientConfig::default(), None, None, encryptor);
+    let client = IggyClient::create(
+        client,
+        IggyClientBackgroundConfig::default(),
+        None,
+        None,
+        encryptor,
+    );
     client
         .login_user(&LoginUser { username, password })
         .await

@@ -3,6 +3,7 @@ use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
 
 impl System {

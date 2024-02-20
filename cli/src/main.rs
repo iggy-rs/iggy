@@ -62,7 +62,7 @@ use iggy::cli::{
 };
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider::{self, ClientProviderConfig};
-use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::sync::Arc;
 use tracing::{event, Level};
@@ -319,7 +319,13 @@ async fn main() -> Result<(), IggyCmdError> {
     let client =
         client_provider::get_raw_client(client_provider_config, command.connection_required())
             .await?;
-    let client = IggyClient::create(client, IggyClientConfig::default(), None, None, encryptor);
+    let client = IggyClient::create(
+        client,
+        IggyClientBackgroundConfig::default(),
+        None,
+        None,
+        encryptor,
+    );
 
     credentials.set_iggy_client(&client);
     credentials.login_user().await?;

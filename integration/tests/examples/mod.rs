@@ -11,7 +11,7 @@ use iggy::client::SystemClient;
 use iggy::client::TopicClient;
 use iggy::client::UserClient;
 use iggy::clients::client::IggyClient;
-use iggy::clients::client::IggyClientConfig;
+use iggy::clients::client::IggyClientBackgroundConfig;
 use iggy::identifier::Identifier;
 use iggy::streams::create_stream::CreateStream;
 use iggy::system::ping::Ping;
@@ -99,7 +99,13 @@ impl<'a> IggyExampleTest<'a> {
             ..TcpClientConfig::default()
         };
         let client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
-        let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+        let client = IggyClient::create(
+            client,
+            IggyClientBackgroundConfig::default(),
+            None,
+            None,
+            None,
+        );
 
         Self {
             server,

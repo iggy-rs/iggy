@@ -28,11 +28,11 @@ impl Benchmarkable for SendMessagesBenchmark {
         let clients_count = self.args.producers();
         info!("Creating {} client(s)...", clients_count);
         let messages_per_batch = self.args.messages_per_batch();
-        let message_batches = self.args.message_batches();
+        let message_batches = 10;
         let message_size = self.args.message_size();
 
         let mut futures: BenchmarkFutures = Ok(Vec::with_capacity(clients_count as usize));
-        for client_id in 1..=clients_count {
+        for client_id in 1..=1 {
             let args = self.args.clone();
             let client_factory = self.client_factory.clone();
             info!("Executing the benchmark on client #{}...", client_id);

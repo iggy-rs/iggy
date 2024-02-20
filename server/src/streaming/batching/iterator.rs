@@ -1,6 +1,7 @@
+use std::sync::Arc;
+use tracing::error;
 use super::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
-use std::sync::Arc;
 
 pub trait IntoBatchIterator {
     type Item;
@@ -23,9 +24,11 @@ impl RetainedMessageBatchIterator {
 }
 
 // TODO(numinex): Consider using FallibleIterator instead of Option
+// https://crates.io/crates/fallible-iterator
 impl Iterator for RetainedMessageBatchIterator {
     type Item = RetainedMessage;
     fn next(&mut self) -> Option<Self::Item> {
+        //error!("curr_pos: {}, batch_len: {}", self.current_position, self.batch.length);
         if self.current_position < self.batch.length {
             let start_position = self.current_position as usize;
             let length = u32::from_le_bytes(
@@ -40,6 +43,7 @@ impl Iterator for RetainedMessageBatchIterator {
             self.current_position += 4 + length;
             RetainedMessage::try_from_bytes(message).ok()
         } else {
+            error!("Im done with iterating");
             None
         }
     }
@@ -53,3 +57,4 @@ impl IntoBatchIterator for Arc<RetainedMessageBatch> {
         RetainedMessageBatchIterator::new(self)
     }
 }
+

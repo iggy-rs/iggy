@@ -3,7 +3,8 @@ use std::sync::Arc;
 use crate::streaming::batching::batch_filter::BatchFilter;
 use crate::streaming::batching::iterator::IntoBatchIterator;
 use crate::streaming::models::messages::RetainedMessage;
-use bytes::Bytes;
+use bytes::{BufMut, Bytes, BytesMut};
+use tracing::error;
 use iggy::error::IggyError::{
     self, MissingBaseOffsetRetainedMessageBatch, MissingLastOffsetDeltaRetainedMessageBatch,
     MissingLengthRetainedMessageBatch, MissingMaxTimestampRetainedMessageBatch,
@@ -21,6 +22,22 @@ pub struct RetainedMessageBatch {
 }
 
 impl RetainedMessageBatch {
+    pub fn new(
+        base_offset: u64,
+        last_offset_delta: u32,
+        max_timestamp: u64,
+        length: u32,
+        bytes: Bytes,
+    ) -> Self {
+        RetainedMessageBatch {
+            base_offset,
+            last_offset_delta,
+            max_timestamp,
+            length,
+            bytes,
+        }
+    }
+
     pub fn builder() -> RetainedMessageBatchBuilder {
         RetainedMessageBatchBuilder::new()
     }
@@ -37,6 +54,14 @@ impl RetainedMessageBatch {
 
     pub fn get_last_offset(&self) -> u64 {
         self.base_offset + self.last_offset_delta as u64
+    }
+
+    pub fn extend(&self, bytes: &mut BytesMut) {
+        bytes.put_u64_le(self.base_offset);
+        bytes.put_u32_le(self.length);
+        bytes.put_u32_le(self.last_offset_delta);
+        bytes.put_u64_le(self.max_timestamp);
+        bytes.put_slice(&self.bytes);
     }
 }
 

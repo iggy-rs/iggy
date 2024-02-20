@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use std::str::FromStr;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
@@ -6,7 +8,6 @@ use iggy::models::messages::PolledMessage;
 use iggy::utils::checksum;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::sync::Arc;
 
 // It's the same as PolledMessages from Iggy models, but with the Arc<Message> instead of Message.
@@ -17,6 +18,7 @@ pub struct PolledMessages {
     pub messages: Vec<Arc<PolledMessage>>,
 }
 
+#[derive(Debug)]
 pub struct RetainedMessage {
     //pub length: u32,
     pub id: u128,
@@ -26,6 +28,24 @@ pub struct RetainedMessage {
     pub message_state: MessageState,
     pub headers: Option<Bytes>,
     pub payload: Bytes,
+}
+
+impl TryFrom<RetainedMessage> for PolledMessage {
+    type Error = IggyError;
+    fn try_from(value: RetainedMessage) -> Result<Self, Self::Error> {
+        let headers = value.headers.map(|bytes| HashMap::from_bytes(bytes)).transpose()?;
+        let messages = PolledMessage {
+            offset: value.offset,
+            state: value.message_state,
+            timestamp: value.timestamp,
+            id: value.id,
+            checksum: value.checksum,
+            headers,
+            length: value.payload.len() as u32,
+            payload: value.payload,
+        };
+        Ok(messages)
+    }
 }
 
 impl RetainedMessage {
@@ -94,6 +114,14 @@ impl RetainedMessage {
     }
 }
 
+//
+/// Get the size of the message in bytes.
+/*
+pub fn get_size_bytes(&self) -> u32 {
+    // ID + Length + Payload + Headers
+    16 + 4 + self.payload.len() as u32 + header::get_headers_size_bytes(&self.headers)
+}
+ */
 impl Sizeable for RetainedMessage {
     fn get_size_bytes(&self) -> u32 {
         let headers_len = self

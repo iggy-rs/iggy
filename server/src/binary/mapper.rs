@@ -1,5 +1,4 @@
 use crate::streaming::clients::client_manager::{Client, Transport};
-use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::streams::stream::Stream;
@@ -13,6 +12,7 @@ use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use iggy::models::messages::PolledMessages;
 
 pub fn map_stats(stats: &Stats) -> Bytes {
     let mut bytes = BytesMut::with_capacity(104);

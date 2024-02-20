@@ -1,6 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
-use crate::messages::send_messages::Message;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
 use bytes::Bytes;

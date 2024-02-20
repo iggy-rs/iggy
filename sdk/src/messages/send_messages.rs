@@ -268,6 +268,7 @@ impl Message {
         }
     }
 
+    //8 + 1 + 8 + 4
     /// Get the size of the message in bytes.
     pub fn get_size_bytes(&self) -> u32 {
         // ID + Length + Payload + Headers

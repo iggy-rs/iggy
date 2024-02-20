@@ -314,6 +314,16 @@ pub enum IggyError {
     MissingLengthRetainedMessageBatch = 6003,
     #[error("Payload is missing")]
     MissingPayloadRetainedMessageBatch = 6004,
+    #[error("Cannot read batch base offset")]
+    CannotReadBatchBaseOffset = 7000,
+    #[error("Cannot read batch length")]
+    CannotReadBatchLength = 7001,
+    #[error("Cannot read batch last offset delta")]
+    CannotReadLastOffsetDelta = 7002,
+    #[error("Cannot read batch maximum timestamp")]
+    CannotReadMaxTimestamp = 7003,
+    #[error("Cannot read batch attributes")]
+    CannotReadBatchPayload = 7004,
 }
 
 impl IggyError {

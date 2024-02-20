@@ -22,6 +22,7 @@ impl RetainedMessageBatchIterator {
     }
 }
 
+// TODO(numinex): Consider using FallibleIterator instead of Option
 impl Iterator for RetainedMessageBatchIterator {
     type Item = RetainedMessage;
     fn next(&mut self) -> Option<Self::Item> {

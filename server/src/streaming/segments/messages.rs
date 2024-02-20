@@ -35,33 +35,30 @@ impl Segment {
             offset = self.start_offset;
         }
 
-        let mut end_offset = offset + (count - 1) as u64;
-        if end_offset > self.current_offset {
-            end_offset = self.current_offset;
-        }
-
+        let end_offset = offset + (count - 1) as u64;
         // In case that the partition messages buffer is disabled, we need to check the unsaved messages buffer
-        if self.unsaved_messages.is_none() {
+        if self.unsaved_batches.is_none() {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let unsaved_messages = self.unsaved_messages.as_ref().unwrap();
-        if unsaved_messages.is_empty() {
+        let unsaved_batches = self.unsaved_batches.as_ref().unwrap();
+        if unsaved_batches.is_empty() {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let first_offset = unsaved_messages[0].base_offset;
+        let first_offset = unsaved_batches[0].base_offset;
         if end_offset < first_offset {
             return self.load_messages_from_disk(offset, end_offset).await;
         }
 
-        let last_offset = unsaved_messages[unsaved_messages.len() - 1].base_offset;
-        if end_offset <= last_offset {
+        let last_offset = unsaved_batches[unsaved_batches.len() - 1].get_last_offset();
+        if offset >= first_offset && end_offset <= last_offset {
             return Ok(self.load_messages_from_unsaved_buffer(offset, end_offset));
         }
 
+        // Can this be somehow improved? maybe with chain iterators
         let mut messages = self.load_messages_from_disk(offset, end_offset).await?;
-        let mut buffered_messages = self.load_messages_from_unsaved_buffer(offset, end_offset);
+        let mut buffered_messages = self.load_messages_from_unsaved_buffer(offset, last_offset);
         messages.append(&mut buffered_messages);
 
         Ok(messages)
@@ -187,6 +184,7 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Result<Vec<RetainedMessage>, IggyError> {
+        // This can potentially be optimized, to load messages with exact offsets, instead of filtering afterwards.
         let messages = self
             .storage
             .segment

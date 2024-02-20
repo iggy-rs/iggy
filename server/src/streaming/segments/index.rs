@@ -3,7 +3,7 @@ use iggy::error::IggyError::InvalidOffset;
 
 use super::segment::Segment;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Index {
     pub relative_offset: u32,
     pub position: u32,

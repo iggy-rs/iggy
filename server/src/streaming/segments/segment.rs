@@ -82,7 +82,7 @@ impl Segment {
             },
             unsaved_indexes: Vec::new(),
             unsaved_timestamps: Vec::new(),
-            unsaved_messages: None,
+            unsaved_batches: None,
             is_closed: false,
             size_of_parent_stream,
             size_of_parent_partition,
@@ -118,7 +118,7 @@ impl Segment {
             return false;
         }
 
-        let last_message = last_messages[0].as_ref();
+        let last_message = &last_messages[0];
         let message_expiry = (self.message_expiry.unwrap() * 1000) as u64;
         (last_message.timestamp + message_expiry) <= now
     }
@@ -189,7 +189,7 @@ mod tests {
         assert_eq!(segment.index_path, index_path);
         assert_eq!(segment.time_index_path, time_index_path);
         assert_eq!(segment.message_expiry, message_expiry);
-        assert!(segment.unsaved_messages.is_none());
+        assert!(segment.unsaved_batches.is_none());
         assert!(segment.indexes.is_some());
         assert!(segment.time_indexes.is_some());
         assert!(!segment.is_closed);

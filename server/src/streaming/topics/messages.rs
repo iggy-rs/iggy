@@ -53,7 +53,6 @@ impl Topic {
             .into_iter()
             .map(|msg| msg.try_into().unwrap())
             .collect::<Vec<_>>();
-        info!("Polled messages len: {}", messages.len());
         Ok(PolledMessages {
             partition_id,
             current_offset: partition.current_offset,

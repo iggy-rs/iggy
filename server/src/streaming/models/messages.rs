@@ -20,7 +20,6 @@ pub struct PolledMessages {
 
 #[derive(Debug)]
 pub struct RetainedMessage {
-    //pub length: u32,
     pub id: u128,
     pub offset: u64,
     pub timestamp: u64,

@@ -395,8 +395,6 @@ impl Partition {
         let mut min_timestamp = 0;
 
         let mut buffer = BytesMut::with_capacity(batch_size);
-        error!("Buffer len before: {}", batch_size);
-        error!("Buffer capacity before: {}", buffer.capacity());
         let mut batch_builder = RetainedMessageBatch::builder();
         batch_builder = batch_builder.base_offset(base_offset);
         if let Some(message_deduplicator) = &self.message_deduplicator {
@@ -431,8 +429,6 @@ impl Partition {
                 messages_count += 1;
             }
         }
-        error!("Buffer capacity after: {}", buffer.capacity());
-        error!("Buffer len after: {}", buffer.len());
         let avg_timestamp_delta = ((max_timestamp - min_timestamp) / messages_count as u64) as u32;
 
         let min_alpha: f64 = 0.3;

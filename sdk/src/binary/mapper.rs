@@ -236,20 +236,15 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
     }
 
     let length = payload.len();
-    info!("length: {}", length);
     let partition_id = u32::from_le_bytes(payload[..4].try_into()?);
-    info!("partition_id: {}", partition_id);
     let current_offset = u64::from_le_bytes(payload[4..12].try_into()?);
-    info!("current_offset: {}", current_offset);
     // Currently ignored
     let _messages_count = u32::from_le_bytes(payload[12..16].try_into()?);
     let mut position = 16;
     let mut messages = Vec::new();
     while position < length {
         let offset = u64::from_le_bytes(payload[position..position + 8].try_into()?);
-        info!("offset: {}", offset);
         let state = MessageState::from_code(payload[position + 8])?;
-        info!("state: {}", state);
         let timestamp = u64::from_le_bytes(payload[position + 9..position + 17].try_into()?);
         let id = u128::from_le_bytes(payload[position + 17..position + 33].try_into()?);
         let checksum = u32::from_le_bytes(payload[position + 33..position + 37].try_into()?);
@@ -261,7 +256,6 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
         } else {
             None
         };
-        info!("headers: {:?}", headers);
         position += headers_length as usize;
         let message_length = u32::from_le_bytes(payload[position + 41..position + 45].try_into()?);
         let payload_range = position + 45..position + 45 + message_length as usize;

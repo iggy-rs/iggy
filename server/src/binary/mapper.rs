@@ -13,6 +13,7 @@ use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::error;
 
 pub fn map_stats(stats: &Stats) -> Bytes {
     let mut bytes = BytesMut::with_capacity(104);
@@ -125,12 +126,14 @@ pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
         .sum::<u32>();
 
     let mut bytes = BytesMut::with_capacity(20 + messages_size as usize);
+    error!("buffer capacity before: {}", bytes.capacity());
     bytes.put_u32_le(polled_messages.partition_id);
     bytes.put_u64_le(polled_messages.current_offset);
     bytes.put_u32_le(messages_count);
     for message in polled_messages.messages.iter() {
         message.extend(&mut bytes);
     }
+    error!("buffer capacity after: {}", bytes.capacity());
 
     bytes.freeze()
 }

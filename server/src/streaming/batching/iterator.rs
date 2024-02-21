@@ -28,7 +28,6 @@ impl RetainedMessageBatchIterator {
 impl Iterator for RetainedMessageBatchIterator {
     type Item = RetainedMessage;
     fn next(&mut self) -> Option<Self::Item> {
-        //error!("curr_pos: {}, batch_len: {}", self.current_position, self.batch.length);
         if self.current_position < self.batch.length {
             let start_position = self.current_position as usize;
             let length = u32::from_le_bytes(
@@ -43,7 +42,6 @@ impl Iterator for RetainedMessageBatchIterator {
             self.current_position += 4 + length;
             RetainedMessage::try_from_bytes(message).ok()
         } else {
-            error!("Im done with iterating");
             None
         }
     }

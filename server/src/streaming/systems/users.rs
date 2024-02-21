@@ -7,7 +7,9 @@ use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
+use iggy::users::defaults::*;
 use iggy::utils::text;
+use std::env;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::log::error;
 use tracing::{info, warn};
@@ -20,7 +22,7 @@ impl System {
         let mut users = self.storage.user.load_all().await?;
         if users.is_empty() {
             info!("No users found, creating the root user...");
-            let root = User::root();
+            let root = Self::create_root_user();
             self.storage.user.save(&root).await?;
             info!("Created the root user.");
             users = self.storage.user.load_all().await?;
@@ -32,6 +34,39 @@ impl System {
         self.permissioner.init(users);
         info!("Initialized {} user(s).", users_count);
         Ok(())
+    }
+
+    fn create_root_user() -> User {
+        let username = env::var("IGGY_ROOT_USERNAME");
+        let password = env::var("IGGY_ROOT_PASSWORD");
+        if (username.is_ok() && password.is_err()) || (username.is_err() && password.is_ok()) {
+            panic!("When providing the custom root user credentials, both username and password must be set.");
+        }
+        if username.is_ok() && password.is_ok() {
+            info!("Using the custom root user credentials.");
+        } else {
+            info!("Using the default root user credentials.");
+        }
+
+        let username = username.unwrap_or(DEFAULT_ROOT_USERNAME.to_string());
+        let password = password.unwrap_or(DEFAULT_ROOT_PASSWORD.to_string());
+        if username.is_empty() || password.is_empty() {
+            panic!("Root user credentials are not set.");
+        }
+        if username.len() < MIN_USERNAME_LENGTH {
+            panic!("Root username is too short.");
+        }
+        if username.len() > MAX_USERNAME_LENGTH {
+            panic!("Root username is too long.");
+        }
+        if password.len() < MIN_PASSWORD_LENGTH {
+            panic!("Root password is too short.");
+        }
+        if password.len() > MAX_PASSWORD_LENGTH {
+            panic!("Root password is too long.");
+        }
+
+        User::root(&username, &password)
     }
 
     pub async fn find_user(

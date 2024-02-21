@@ -297,6 +297,7 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
+    use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
     use std::{
         net::{Ipv4Addr, SocketAddr},
         sync::Arc,
@@ -310,7 +311,7 @@ mod tests {
         let storage = get_test_system_storage();
         let mut system =
             System::create(config, storage, None, PersonalAccessTokenConfig::default());
-        let root = User::root();
+        let root = User::root(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD);
         let session = Session::new(
             1,
             root.id,

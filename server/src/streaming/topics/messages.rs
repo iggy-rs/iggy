@@ -1,4 +1,4 @@
-use crate::streaming::models::messages::{RetainedMessage};
+use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
@@ -7,11 +7,11 @@ use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
+use iggy::models::messages::PolledMessages;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{info, trace, warn};
-use iggy::models::messages::PolledMessages;
 
 impl Topic {
     pub fn get_messages_count(&self) -> u64 {
@@ -49,10 +49,15 @@ impl Topic {
             PollingKind::Next => partition.get_next_messages(consumer, count).await,
         }?;
 
+        let messages = messages
+            .into_iter()
+            .map(|msg| msg.try_into().unwrap())
+            .collect::<Vec<_>>();
+        info!("Polled messages len: {}", messages.len());
         Ok(PolledMessages {
             partition_id,
             current_offset: partition.current_offset,
-            messages: messages.into_iter().map(|msg| msg.try_into().unwrap()).collect(),
+            messages,
         })
     }
 

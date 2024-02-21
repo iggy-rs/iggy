@@ -11,11 +11,11 @@ use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
+use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
+use iggy::models::messages::PolledMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
-use iggy::messages::poll_messages::PollMessages;
-use iggy::models::messages::PolledMessages;
 
 pub fn router(state: Arc<AppState>) -> Router {
     Router::new()

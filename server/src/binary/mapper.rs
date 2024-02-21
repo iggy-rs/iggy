@@ -8,11 +8,11 @@ use crate::streaming::users::user::User;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
+use iggy::models::messages::PolledMessages;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use iggy::models::messages::PolledMessages;
 
 pub fn map_stats(stats: &Stats) -> Bytes {
     let mut bytes = BytesMut::with_capacity(104);
@@ -129,7 +129,7 @@ pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
     bytes.put_u64_le(polled_messages.current_offset);
     bytes.put_u32_le(messages_count);
     for message in polled_messages.messages.iter() {
-        bytes.extend(&message.payload);
+        message.extend(&mut bytes);
     }
 
     bytes.freeze()

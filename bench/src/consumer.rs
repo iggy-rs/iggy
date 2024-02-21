@@ -68,12 +68,14 @@ impl Consumer {
         let mut current_iteration = 0;
         let mut received_messages = 0;
         let start_timestamp = Instant::now();
+        info!("total_messages: {}", total_messages);
         while received_messages < total_messages {
             let offset = (current_iteration * self.messages_per_batch) as u64;
             poll_messages.strategy.value = offset;
 
             let latency_start = Instant::now();
             let polled_messages = client.poll_messages(&poll_messages).await;
+            info!("polled_messages: {:?}", polled_messages);
             let latency_end = latency_start.elapsed();
             if polled_messages.is_err() {
                 trace!("Offset: {} is not available yet, retrying...", offset);
@@ -96,6 +98,7 @@ impl Consumer {
                 continue;
             }
 
+            info!("polled_messages: {}", polled_messages.messages.len());
             latencies.push(latency_end);
             received_messages += polled_messages.messages.len() as u64;
             for message in polled_messages.messages {

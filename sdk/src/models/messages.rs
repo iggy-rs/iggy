@@ -2,7 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use bytes::Bytes;
+use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
 use serde_with::serde_as;
@@ -190,6 +190,25 @@ impl PolledMessage {
     /// Returns the size of the message in bytes.
     pub fn get_size_bytes(&self) -> u32 {
         // Offset + State + Timestamp + ID + Checksum + Length + Payload + Headers
-        POLLED_MESSAGE_METADATA + self.length + header::get_headers_size_bytes(&self.headers)
+        8 + 1 + 8 + 16 + 4 + 4 + self.length + header::get_headers_size_bytes(&self.headers)
+    }
+
+    /// Extends the provided bytes with the message.
+    pub fn extend(&self, bytes: &mut BytesMut) {
+        bytes.put_u64_le(self.offset);
+        bytes.put_u8(self.state.as_code());
+        bytes.put_u64_le(self.timestamp);
+        bytes.put_u128_le(self.id);
+        bytes.put_u32_le(self.checksum);
+        if let Some(headers) = &self.headers {
+            let headers_bytes = headers.as_bytes();
+            #[allow(clippy::cast_possible_truncation)]
+            bytes.put_u32_le(headers_bytes.len() as u32);
+            bytes.put_slice(&headers_bytes);
+        } else {
+            bytes.put_u32_le(0u32);
+        }
+        bytes.put_u32_le(self.length);
+        bytes.put_slice(&self.payload);
     }
 }

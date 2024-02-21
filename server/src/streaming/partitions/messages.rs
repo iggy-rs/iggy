@@ -145,17 +145,11 @@ impl Partition {
         }
     }
 
-    pub async fn get_first_messages(
-        &self,
-        count: u32,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    pub async fn get_first_messages(&self, count: u32) -> Result<Vec<RetainedMessage>, IggyError> {
         self.get_messages_by_offset(0, count).await
     }
 
-    pub async fn get_last_messages(
-        &self,
-        count: u32,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    pub async fn get_last_messages(&self, count: u32) -> Result<Vec<RetainedMessage>, IggyError> {
         let mut count = count as u64;
         if count > self.current_offset + 1 {
             count = self.current_offset + 1
@@ -316,11 +310,7 @@ impl Partition {
         Ok(batches)
     }
 
-    fn load_messages_from_cache(
-        &self,
-        start_offset: u64,
-        end_offset: u64,
-    ) -> Vec<RetainedMessage> {
+    fn load_messages_from_cache(&self, start_offset: u64, end_offset: u64) -> Vec<RetainedMessage> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,

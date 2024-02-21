@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-use std::str::FromStr;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
@@ -8,6 +6,8 @@ use iggy::models::messages::PolledMessage;
 use iggy::utils::checksum;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::str::FromStr;
 use std::sync::Arc;
 
 // It's the same as PolledMessages from Iggy models, but with the Arc<Message> instead of Message.
@@ -33,7 +33,10 @@ pub struct RetainedMessage {
 impl TryFrom<RetainedMessage> for PolledMessage {
     type Error = IggyError;
     fn try_from(value: RetainedMessage) -> Result<Self, Self::Error> {
-        let headers = value.headers.map(|bytes| HashMap::from_bytes(bytes)).transpose()?;
+        let headers = value
+            .headers
+            .map(|bytes| HashMap::from_bytes(bytes))
+            .transpose()?;
         let messages = PolledMessage {
             offset: value.offset,
             state: value.message_state,

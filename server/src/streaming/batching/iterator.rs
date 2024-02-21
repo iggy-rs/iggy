@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use tracing::error;
 use super::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
+use std::sync::Arc;
+use tracing::error;
 
 pub trait IntoBatchIterator {
     type Item;
@@ -57,4 +57,3 @@ impl IntoBatchIterator for Arc<RetainedMessageBatch> {
         RetainedMessageBatchIterator::new(self)
     }
 }
-

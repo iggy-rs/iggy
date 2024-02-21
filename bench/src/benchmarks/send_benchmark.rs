@@ -28,7 +28,7 @@ impl Benchmarkable for SendMessagesBenchmark {
         let clients_count = self.args.producers();
         info!("Creating {} client(s)...", clients_count);
         let messages_per_batch = self.args.messages_per_batch();
-        let message_batches = 10;
+        let message_batches = 1;
         let message_size = self.args.message_size();
 
         let mut futures: BenchmarkFutures = Ok(Vec::with_capacity(clients_count as usize));

@@ -1,3 +1,4 @@
+use crate::streaming::batching::iterator::IntoBatchIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::persistence::persister::Persister;
@@ -11,7 +12,6 @@ use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
-use crate::streaming::batching::iterator::IntoBatchIterator;
 use iggy::utils::checksum;
 use std::io::SeekFrom;
 use std::path::Path;
@@ -285,15 +285,11 @@ impl SegmentStorage for FileSegmentStorage {
             &IndexRange::max_range(),
             |batch: RetainedMessageBatch| {
                 let batch = Arc::new(batch);
-                message_ids.extend(
-                    batch
-                        .into_iter()
-                        .map(|msg: RetainedMessage| msg.id),
-                );
+                message_ids.extend(batch.into_iter().map(|msg: RetainedMessage| msg.id));
                 Ok(())
             },
         )
-            .await?;
+        .await?;
         trace!("Loaded {} message IDs from disk.", message_ids.len());
         Ok(message_ids)
     }
@@ -323,7 +319,7 @@ impl SegmentStorage for FileSegmentStorage {
                 Ok(())
             },
         )
-            .await?;
+        .await?;
         Ok(())
     }
 

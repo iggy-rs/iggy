@@ -71,9 +71,9 @@ impl Segment {
 
     pub async fn get_all_batches(&self) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
         self.storage
-        .segment
-        .load_message_batches(self, &IndexRange::max_range())
-        .await
+            .segment
+            .load_message_batches(self, &IndexRange::max_range())
+            .await
     }
 
     pub async fn get_newest_message_batches_by_size(

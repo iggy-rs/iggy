@@ -4,12 +4,12 @@ use crate::streaming::batching::batch_filter::BatchFilter;
 use crate::streaming::batching::iterator::IntoBatchIterator;
 use crate::streaming::models::messages::RetainedMessage;
 use bytes::{BufMut, Bytes, BytesMut};
-use tracing::error;
 use iggy::error::IggyError::{
     self, MissingBaseOffsetRetainedMessageBatch, MissingLastOffsetDeltaRetainedMessageBatch,
     MissingLengthRetainedMessageBatch, MissingMaxTimestampRetainedMessageBatch,
     MissingPayloadRetainedMessageBatch,
 };
+use tracing::error;
 
 use crate::streaming::sizeable::Sizeable;
 #[derive(Debug, Clone)]

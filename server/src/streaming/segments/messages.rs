@@ -9,7 +9,8 @@ use bytes::BufMut;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::trace;
+use tokio::time::Instant;
+use tracing::{trace, info};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -113,7 +114,6 @@ impl Segment {
                     relative_end_offset,
                 )
             })
-            .cloned()
             .convert_and_filter_by_offset_range(start_offset, end_offset);
 
         messages
@@ -184,13 +184,12 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Result<Vec<RetainedMessage>, IggyError> {
-        // This can potentially be optimized, to load messages with exact offsets, instead of filtering afterwards.
         let messages = self
             .storage
             .segment
             .load_message_batches(self, index_range)
             .await?
-            .into_iter()
+            .iter()
             .convert_and_filter_by_offset_range(start_offset, end_offset);
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",

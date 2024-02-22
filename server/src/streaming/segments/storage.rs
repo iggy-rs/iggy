@@ -218,8 +218,8 @@ impl SegmentStorage for FileSegmentStorage {
         let mut messages = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
-        load_batches_by_range(segment, index_range, |message: RetainedMessageBatch| {
-            messages.push(Arc::new(message));
+        load_batches_by_range(segment, index_range, |batch | {
+            messages.push(batch);
             Ok(())
         })
         .await?;
@@ -283,9 +283,8 @@ impl SegmentStorage for FileSegmentStorage {
         load_batches_by_range(
             segment,
             &IndexRange::max_range(),
-            |batch: RetainedMessageBatch| {
-                let batch = Arc::new(batch);
-                message_ids.extend(batch.into_iter().map(|msg: RetainedMessage| msg.id));
+            |batch| {
+                message_ids.extend(batch.into_messages_iter().map(|msg: RetainedMessage| msg.id));
                 Ok(())
             },
         )
@@ -298,9 +297,8 @@ impl SegmentStorage for FileSegmentStorage {
         load_batches_by_range(
             segment,
             &IndexRange::max_range(),
-            |batch: RetainedMessageBatch| {
-                let batch = Arc::new(batch);
-                for message in batch.into_iter() {
+            |batch | {
+                for message in batch.into_messages_iter() {
                     let calculated_checksum = checksum::calculate(&message.payload);
                     trace!(
                         "Loaded message for offset: {}, checksum: {}, expected: {}",
@@ -557,7 +555,7 @@ impl SegmentStorage for FileSegmentStorage {
 async fn load_batches_by_range(
     segment: &Segment,
     index_range: &IndexRange,
-    mut on_batch: impl FnMut(RetainedMessageBatch) -> Result<(), IggyError>,
+    mut on_batch: impl FnMut(Arc<RetainedMessageBatch>) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
@@ -609,7 +607,7 @@ async fn load_batches_by_range(
             batch_length,
             Bytes::from(payload),
         );
-        on_batch(batch)?;
+        on_batch(Arc::new(batch))?;
     }
     Ok(())
 }

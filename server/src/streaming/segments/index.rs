@@ -1,33 +1,17 @@
 use iggy::error::IggyError;
 use iggy::error::IggyError::InvalidOffset;
+use crate::streaming::segments::segment::Segment;
 
-use super::segment::Segment;
-
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Index {
     pub relative_offset: u32,
     pub position: u32,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct IndexRange {
     pub start: Index,
     pub end: Index,
-}
-
-impl IndexRange {
-    pub fn max_range() -> Self {
-        Self {
-            start: Index {
-                relative_offset: 0,
-                position: 0,
-            },
-            end: Index {
-                relative_offset: u32::MAX - 1,
-                position: u32::MAX,
-            },
-        }
-    }
 }
 impl Segment {
     pub fn load_highest_lower_bound_index(
@@ -61,6 +45,20 @@ fn binary_search_index(indices: &[Index], offset: u32) -> Option<usize> {
             } else {
                 None
             }
+        }
+    }
+}
+impl IndexRange {
+    pub fn max_range() -> Self {
+        Self {
+            start: Index {
+                relative_offset: 0,
+                position: 0,
+            },
+            end: Index {
+                relative_offset: u32::MAX - 1,
+                position: u32::MAX,
+            },
         }
     }
 }

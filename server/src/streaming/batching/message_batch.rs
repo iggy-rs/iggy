@@ -65,20 +65,21 @@ impl RetainedMessageBatch {
     }
 }
 
-impl<T, U> BatchFilter<RetainedMessage, U, T> for T
+impl<'a, T, U> BatchFilter<RetainedMessage, &'a U, T> for T
 where
-    T: Iterator<Item = U>,
-    U: IntoBatchIterator<Item = RetainedMessage>,
+    T: Iterator<Item = &'a U>,
+    &'a U: IntoBatchIterator<Item = RetainedMessage>,
 {
     fn convert_and_filter_by_offset_range(
         self,
         start_offset: u64,
         end_offset: u64,
     ) -> Vec<RetainedMessage> {
-        self.into_iter().fold(Vec::new(), |mut messages, batch| {
+        let messages_size = start_offset + end_offset;
+        self.fold(Vec::with_capacity(messages_size as usize), |mut messages, batch| {
             messages.extend(
                 batch
-                    .into_iter()
+                    .into_messages_iter()
                     .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
                     .collect::<Vec<_>>(),
             );

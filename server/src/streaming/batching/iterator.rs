@@ -1,21 +1,20 @@
 use super::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
 use std::sync::Arc;
-use tracing::error;
 
 pub trait IntoBatchIterator {
     type Item;
     type IntoIter: Iterator<Item = Self::Item>;
-    fn into_iter(self) -> Self::IntoIter;
+    fn into_messages_iter(self) -> Self::IntoIter;
 }
 
-pub struct RetainedMessageBatchIterator {
-    batch: Arc<RetainedMessageBatch>,
+pub struct RetainedMessageBatchIterator<'a> {
+    batch: &'a Arc<RetainedMessageBatch>,
     current_position: u32,
 }
 
-impl RetainedMessageBatchIterator {
-    pub fn new(batch: Arc<RetainedMessageBatch>) -> Self {
+impl<'a> RetainedMessageBatchIterator<'a> {
+    pub fn new(batch: &'a Arc<RetainedMessageBatch>) -> Self {
         RetainedMessageBatchIterator {
             batch,
             current_position: 0,
@@ -25,7 +24,7 @@ impl RetainedMessageBatchIterator {
 
 // TODO(numinex): Consider using FallibleIterator instead of Option
 // https://crates.io/crates/fallible-iterator
-impl Iterator for RetainedMessageBatchIterator {
+impl<'a> Iterator for RetainedMessageBatchIterator<'a> {
     type Item = RetainedMessage;
     fn next(&mut self) -> Option<Self::Item> {
         if self.current_position < self.batch.length {
@@ -47,11 +46,11 @@ impl Iterator for RetainedMessageBatchIterator {
     }
 }
 
-impl IntoBatchIterator for Arc<RetainedMessageBatch> {
+impl<'a> IntoBatchIterator for &'a Arc<RetainedMessageBatch> {
     type Item = RetainedMessage;
-    type IntoIter = RetainedMessageBatchIterator;
+    type IntoIter = RetainedMessageBatchIterator<'a>;
 
-    fn into_iter(self) -> Self::IntoIter {
+    fn into_messages_iter(self) -> Self::IntoIter {
         RetainedMessageBatchIterator::new(self)
     }
 }

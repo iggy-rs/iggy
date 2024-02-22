@@ -53,11 +53,11 @@ impl User {
         }
     }
 
-    pub fn root() -> Self {
+    pub fn root(username: &str, password: &str) -> Self {
         Self::new(
             DEFAULT_ROOT_USER_ID,
-            DEFAULT_ROOT_USERNAME,
-            DEFAULT_ROOT_PASSWORD,
+            username,
+            password,
             UserStatus::Active,
             Some(Permissions::root()),
         )
@@ -78,7 +78,7 @@ mod tests {
 
     #[test]
     fn given_root_user_data_and_credentials_should_be_valid() {
-        let user = User::root();
+        let user = User::root(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD);
         assert_eq!(user.id, DEFAULT_ROOT_USER_ID);
         assert_eq!(user.username, DEFAULT_ROOT_USERNAME);
         assert_ne!(user.password, DEFAULT_ROOT_PASSWORD);

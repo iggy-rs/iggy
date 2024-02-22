@@ -12,7 +12,7 @@ derive_more = "0.99.17"
 figlet-rs = "0.1.5"
 futures = "0.3.30"
 human_bytes = "0.4.3"
-human_format = "1.0.3"
+human_format = "1.1.0"
 iggy = { path = "../sdk" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"

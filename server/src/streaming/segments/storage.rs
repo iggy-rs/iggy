@@ -590,7 +590,6 @@ async fn load_batches_by_range(
             .await
             .map_err(|_| IggyError::CannotReadMaxTimestamp)?;
 
-        // This works, but it can be done better.
         let last_offset = batch_base_offset + (last_offset_delta as u64);
         let index_last_offset = index_range.end.relative_offset as u64 + segment.start_offset;
 
@@ -600,7 +599,7 @@ async fn load_batches_by_range(
             .read_exact(&mut payload)
             .await
             .map_err(|_| IggyError::CannotReadBatchPayload)?;
-        read_bytes += 8 + 4 + 4 + payload_len as u64;
+        read_bytes += 8 + 4 + 4 + 8 + payload_len as u64;
         last_batch_to_read = read_bytes == file_size || last_offset == index_last_offset;
 
         let batch = RetainedMessageBatch::new(

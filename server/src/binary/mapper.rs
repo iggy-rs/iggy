@@ -13,7 +13,6 @@ use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::error;
 
 pub fn map_stats(stats: &Stats) -> Bytes {
     let mut bytes = BytesMut::with_capacity(104);

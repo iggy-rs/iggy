@@ -11,7 +11,7 @@ use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::{atomic::Ordering, Arc};
-use tracing::{error, info, trace, warn};
+use tracing::{error, trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 const EMPTY_BATCHES: Vec<RetainedMessageBatch> = vec![];
@@ -336,12 +336,8 @@ impl Partition {
         let messages = cache
             .iter()
             .skip(slice_start)
-            .filter_map(|batch| {
-                if batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset) {
-                    Some(batch)
-                } else {
-                    None
-                }
+            .filter(|batch| {
+                batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
             })
             .convert_and_filter_by_offset_range(start_offset, end_offset);
 

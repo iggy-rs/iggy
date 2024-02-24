@@ -215,22 +215,23 @@ impl SegmentStorage for FileSegmentStorage {
         segment: &Segment,
         index_range: &IndexRange,
     ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
-        let mut messages = Vec::with_capacity(
-            1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
-        );
+        // let mut messages = Vec::with_capacity(
+        //     1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
+        // );
+        let mut batches = Vec::new();
         load_batches_by_range(segment, index_range, |batch| {
-            messages.push(batch);
+            batches.push(batch);
             Ok(())
         })
         .await?;
-        trace!("Loaded {} messages from disk.", messages.len());
-        Ok(messages)
+        trace!("Loaded {} message batches from disk.", batches.len());
+        Ok(batches)
     }
 
     async fn load_newest_message_batches_by_size(
         &self,
-        segment: &Segment,
-        size_bytes: u64,
+        _segment: &Segment,
+        _size_bytes: u64,
     ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
         todo!();
         /*
@@ -588,7 +589,8 @@ async fn load_batches_by_range(
         let index_last_offset = index_range.end.relative_offset as u64 + segment.start_offset;
 
         let payload_len = batch_length as usize;
-        let mut payload = vec![0; payload_len];
+        let mut payload = BytesMut::with_capacity(payload_len);
+        payload.put_bytes(0, payload_len);
         reader
             .read_exact(&mut payload)
             .await
@@ -602,13 +604,15 @@ async fn load_batches_by_range(
             last_offset_delta,
             max_timestamp,
             batch_length,
-            Bytes::from(payload),
+            payload.freeze(),
         );
         on_batch(Arc::new(batch))?;
     }
     Ok(())
 }
 
+#[allow(dead_code)]
+// TODO: Make use of this method
 async fn load_messages_by_size(
     segment: &Segment,
     size_bytes: u64,
@@ -620,7 +624,7 @@ async fn load_messages_by_size(
         return Ok(());
     }
 
-    let threshold = file_size.saturating_sub(size_bytes as u64);
+    let threshold = file_size.saturating_sub(size_bytes);
     let mut accumulated_size: u64 = 0;
 
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);

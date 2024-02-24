@@ -1,7 +1,6 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
-use crate::streaming;
 use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;

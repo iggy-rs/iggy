@@ -9,7 +9,6 @@ use iggy::error::IggyError::{
     MissingLengthRetainedMessageBatch, MissingMaxTimestampRetainedMessageBatch,
     MissingPayloadRetainedMessageBatch,
 };
-use tracing::error;
 
 use crate::streaming::sizeable::Sizeable;
 #[derive(Debug, Clone)]

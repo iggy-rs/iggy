@@ -1,5 +1,4 @@
 use crate::streaming::batching::batch_filter::BatchFilter;
-use crate::streaming::batching::iterator::IntoBatchIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
@@ -10,8 +9,8 @@ use bytes::BufMut;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tokio::time::Instant;
-use tracing::{info, trace};
+use tracing::trace;
+use crate::streaming::batching::iterator::IntoBatchIterator;
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -191,27 +190,34 @@ impl Segment {
             .load_message_batches(self, index_range)
             .await?;
 
-        let messages = batches
-            .into_iter()
-            .flat_map(|batch| {
-                batch
-                    .into_messages_iter()
-                    .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
+        let mut retained_messages = Vec::new();
+        for batch in batches {
+            retained_messages.extend(
+                batch.into_messages_iter().filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset),
+            );
+        }
+
+        // let messages = batches
+        //     .into_iter()
+        //     .flat_map(|batch| {
+        //         batch
+        //             .into_messages_iter()
+        //             .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
+        //             .collect::<Vec<_>>()
+        //     })
+        //     .collect::<Vec<_>>();
         /*
            .iter()
            .convert_and_filter_by_offset_range(start_offset, end_offset);
         */
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
-            messages.len(),
+            retained_messages.len(),
             self.start_offset,
             self.current_offset
         );
 
-        Ok(messages)
+        Ok(retained_messages)
     }
 
     pub async fn append_messages(

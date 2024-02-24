@@ -17,7 +17,6 @@ use crate::utils::byte_size::IggyByteSize;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
-use tracing::info;
 
 const EMPTY_MESSAGES: Vec<PolledMessage> = vec![];
 const EMPTY_TOPICS: Vec<Topic> = vec![];

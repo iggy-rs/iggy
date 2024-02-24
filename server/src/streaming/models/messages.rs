@@ -7,7 +7,6 @@ use iggy::utils::checksum;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::str::FromStr;
 use std::sync::Arc;
 
 // It's the same as PolledMessages from Iggy models, but with the Arc<Message> instead of Message.
@@ -32,10 +31,7 @@ pub struct RetainedMessage {
 impl TryFrom<RetainedMessage> for PolledMessage {
     type Error = IggyError;
     fn try_from(value: RetainedMessage) -> Result<Self, Self::Error> {
-        let headers = value
-            .headers
-            .map(|bytes| HashMap::from_bytes(bytes))
-            .transpose()?;
+        let headers = value.headers.map(HashMap::from_bytes).transpose()?;
         let messages = PolledMessage {
             offset: value.offset,
             state: value.message_state,

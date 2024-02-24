@@ -5,8 +5,8 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
 use iggy::messages::poll_messages::PollingStrategy;
+use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
-use iggy::messages::send_messages::{self, Message};
 use iggy::models::messages::PolledMessage;
 use iggy::{error::IggyError, identifier::Identifier};
 use std::sync::Arc;
@@ -149,7 +149,7 @@ impl System {
                 }
             }
 
-            topic.append_messages(partitioning, &messages).await?;
+            topic.append_messages(partitioning, messages).await?;
             self.metrics.increment_messages(messages.len() as u64);
             Ok(())
         }

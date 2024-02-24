@@ -1,7 +1,6 @@
 use crate::streaming::models::messages::{PolledMessages, RetainedMessage};
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
-use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
@@ -10,7 +9,7 @@ use iggy::messages::send_messages::{Partitioning, PartitioningKind};
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{info, trace, warn};
+use tracing::{trace, warn};
 
 impl Topic {
     pub fn get_messages_count(&self) -> u64 {
@@ -207,6 +206,7 @@ impl Topic {
         */
     }
 
+    #[allow(dead_code)]
     fn cache_integrity_check(cache: &[Arc<RetainedMessage>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");

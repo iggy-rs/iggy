@@ -173,7 +173,7 @@ impl PolledMessage {
         };
         let position = 41 + headers_length as usize;
         let length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
-        let payload = Bytes::from(bytes.slice(position + 4..position + 4 + length as usize));
+        let payload = bytes.slice(position + 4..position + 4 + length as usize);
 
         Ok(PolledMessage {
             offset,

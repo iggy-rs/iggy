@@ -1,5 +1,4 @@
 use super::batching::message_batch::RetainedMessageBatch;
-use super::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
 use crate::streaming::persistence::persister::Persister;

@@ -76,15 +76,18 @@ where
         end_offset: u64,
     ) -> Vec<RetainedMessage> {
         let messages_size = start_offset + end_offset;
-        self.fold(Vec::with_capacity(messages_size as usize), |mut messages, batch| {
-            messages.extend(
-                batch
-                    .into_messages_iter()
-                    .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
-                    .collect::<Vec<_>>(),
-            );
-            messages
-        })
+        self.fold(
+            Vec::with_capacity(messages_size as usize),
+            |mut messages, batch| {
+                messages.extend(
+                    batch
+                        .into_messages_iter()
+                        .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
+                        .collect::<Vec<_>>(),
+                );
+                messages
+            },
+        )
     }
 }
 

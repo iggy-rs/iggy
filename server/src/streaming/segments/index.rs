@@ -1,6 +1,6 @@
+use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
 use iggy::error::IggyError::InvalidOffset;
-use crate::streaming::segments::segment::Segment;
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Index {

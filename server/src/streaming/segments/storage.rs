@@ -218,7 +218,7 @@ impl SegmentStorage for FileSegmentStorage {
         let mut messages = Vec::with_capacity(
             1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
         );
-        load_batches_by_range(segment, index_range, |batch | {
+        load_batches_by_range(segment, index_range, |batch| {
             messages.push(batch);
             Ok(())
         })
@@ -280,43 +280,39 @@ impl SegmentStorage for FileSegmentStorage {
 
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError> {
         let mut message_ids = Vec::new();
-        load_batches_by_range(
-            segment,
-            &IndexRange::max_range(),
-            |batch| {
-                message_ids.extend(batch.into_messages_iter().map(|msg: RetainedMessage| msg.id));
-                Ok(())
-            },
-        )
+        load_batches_by_range(segment, &IndexRange::max_range(), |batch| {
+            message_ids.extend(
+                batch
+                    .into_messages_iter()
+                    .map(|msg: RetainedMessage| msg.id),
+            );
+            Ok(())
+        })
         .await?;
         trace!("Loaded {} message IDs from disk.", message_ids.len());
         Ok(message_ids)
     }
 
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError> {
-        load_batches_by_range(
-            segment,
-            &IndexRange::max_range(),
-            |batch | {
-                for message in batch.into_messages_iter() {
-                    let calculated_checksum = checksum::calculate(&message.payload);
-                    trace!(
-                        "Loaded message for offset: {}, checksum: {}, expected: {}",
-                        message.offset,
+        load_batches_by_range(segment, &IndexRange::max_range(), |batch| {
+            for message in batch.into_messages_iter() {
+                let calculated_checksum = checksum::calculate(&message.payload);
+                trace!(
+                    "Loaded message for offset: {}, checksum: {}, expected: {}",
+                    message.offset,
+                    calculated_checksum,
+                    message.checksum
+                );
+                if calculated_checksum != message.checksum {
+                    return Err(IggyError::InvalidMessageChecksum(
                         calculated_checksum,
-                        message.checksum
-                    );
-                    if calculated_checksum != message.checksum {
-                        return Err(IggyError::InvalidMessageChecksum(
-                            calculated_checksum,
-                            message.checksum,
-                            message.offset,
-                        ));
-                    }
+                        message.checksum,
+                        message.offset,
+                    ));
                 }
-                Ok(())
-            },
-        )
+            }
+            Ok(())
+        })
         .await?;
         Ok(())
     }

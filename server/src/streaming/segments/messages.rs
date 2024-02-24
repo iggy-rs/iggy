@@ -1,4 +1,5 @@
 use crate::streaming::batching::batch_filter::BatchFilter;
+use crate::streaming::batching::iterator::IntoBatchIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
@@ -10,7 +11,7 @@ use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::time::Instant;
-use tracing::{trace, info};
+use tracing::{info, trace};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -184,13 +185,25 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Result<Vec<RetainedMessage>, IggyError> {
-        let messages = self
+        let batches = self
             .storage
             .segment
             .load_message_batches(self, index_range)
-            .await?
-            .iter()
-            .convert_and_filter_by_offset_range(start_offset, end_offset);
+            .await?;
+
+        let messages = batches
+            .into_iter()
+            .flat_map(|batch| {
+                batch
+                    .into_messages_iter()
+                    .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+        /*
+           .iter()
+           .convert_and_filter_by_offset_range(start_offset, end_offset);
+        */
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
             messages.len(),

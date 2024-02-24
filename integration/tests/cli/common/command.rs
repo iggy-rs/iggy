@@ -75,4 +75,8 @@ impl IggyCmdCommand {
     pub(crate) fn get_env(&self) -> HashMap<String, String> {
         self.env.clone()
     }
+
+    pub(crate) fn disable_backtrace(self) -> Self {
+        self.env("RUST_BACKTRACE", "0")
+    }
 }

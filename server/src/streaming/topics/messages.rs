@@ -1,4 +1,4 @@
-use crate::streaming::models::messages::RetainedMessage;
+use crate::streaming::models::messages::{PolledMessages, RetainedMessage};
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
@@ -7,7 +7,6 @@ use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};
-use iggy::models::messages::PolledMessages;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -51,7 +50,7 @@ impl Topic {
 
         let messages = messages
             .into_iter()
-            .map(|msg| msg.try_into().unwrap())
+            .map(|msg| Arc::new(msg.try_into().unwrap()))
             .collect::<Vec<_>>();
         Ok(PolledMessages {
             partition_id,

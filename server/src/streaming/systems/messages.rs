@@ -1,4 +1,5 @@
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
+use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
@@ -6,7 +7,7 @@ use bytes::Bytes;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
 use iggy::messages::send_messages::{self, Message};
-use iggy::models::messages::{PolledMessage, PolledMessages};
+use iggy::models::messages::PolledMessage;
 use iggy::{error::IggyError, identifier::Identifier};
 use std::sync::Arc;
 use tracing::{error, trace};
@@ -69,7 +70,7 @@ impl System {
             let payload = encryptor.decrypt(&message.payload);
             match payload {
                 Ok(payload) => {
-                    decrypted_messages.push(PolledMessage {
+                    decrypted_messages.push(Arc::new(PolledMessage {
                         id: message.id,
                         state: message.state,
                         offset: message.offset,
@@ -78,7 +79,7 @@ impl System {
                         length: payload.len() as u32,
                         payload: Bytes::from(payload),
                         headers: message.headers.clone(),
-                    });
+                    }));
                 }
                 Err(error) => {
                     error!("Cannot decrypt the message. Error: {}", error);

@@ -1,4 +1,5 @@
 use crate::streaming::clients::client_manager::{Client, Transport};
+use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::streams::stream::Stream;
@@ -8,7 +9,6 @@ use crate::streaming::users::user::User;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
-use iggy::models::messages::PolledMessages;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
 use std::sync::Arc;

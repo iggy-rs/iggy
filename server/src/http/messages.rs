@@ -2,6 +2,7 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
 use crate::streaming;
+use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
@@ -13,7 +14,6 @@ use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
-use iggy::models::messages::PolledMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 

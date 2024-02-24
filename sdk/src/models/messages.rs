@@ -157,35 +157,6 @@ impl PolledMessage {
             headers,
         }
     }
-    pub fn try_from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
-        let offset = u64::from_le_bytes(bytes[..8].try_into()?);
-        let message_state = MessageState::from_code(bytes[8])?;
-        let timestamp = u64::from_le_bytes(bytes[9..17].try_into()?);
-        let id = u128::from_le_bytes(bytes[17..33].try_into()?);
-        let checksum = u32::from_le_bytes(bytes[33..37].try_into()?);
-        let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);
-        let headers = if headers_length > 0 {
-            Some(HashMap::from_bytes(
-                bytes.slice(41..headers_length as usize),
-            )?)
-        } else {
-            None
-        };
-        let position = 41 + headers_length as usize;
-        let length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
-        let payload = bytes.slice(position + 4..position + 4 + length as usize);
-
-        Ok(PolledMessage {
-            offset,
-            timestamp,
-            checksum,
-            state: message_state,
-            id,
-            headers,
-            length,
-            payload,
-        })
-    }
 
     /// Returns the size of the message in bytes.
     pub fn get_size_bytes(&self) -> u32 {

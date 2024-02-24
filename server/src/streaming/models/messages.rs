@@ -60,7 +60,7 @@ impl RetainedMessage {
     }
 
     pub fn extend(&self, bytes: &mut BytesMut) {
-        let length = self.get_size_bytes() - 4;
+        let length = self.get_size_bytes();
         let id = self.id;
         let offset = self.offset;
         let timestamp = self.timestamp;
@@ -93,7 +93,7 @@ impl RetainedMessage {
         let checksum = u32::from_le_bytes(bytes[33..37].try_into()?);
         let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);
         let headers = if headers_length > 0 {
-            Some(bytes.slice(41..headers_length as usize))
+            Some(bytes.slice(41..41 + headers_length as usize))
         } else {
             None
         };
@@ -112,14 +112,6 @@ impl RetainedMessage {
     }
 }
 
-//
-/// Get the size of the message in bytes.
-/*
-pub fn get_size_bytes(&self) -> u32 {
-    // ID + Length + Payload + Headers
-    16 + 4 + self.payload.len() as u32 + header::get_headers_size_bytes(&self.headers)
-}
- */
 impl Sizeable for RetainedMessage {
     fn get_size_bytes(&self) -> u32 {
         let headers_len = self
@@ -127,6 +119,6 @@ impl Sizeable for RetainedMessage {
             .as_ref()
             .map(|h| 4 + h.len() as u32)
             .unwrap_or(4);
-        16 + 4 + 8 + 8 + 4 + 1 + self.payload.len() as u32 + headers_len
+        16 + 8 + 8 + 4 + 1 + headers_len + self.payload.len() as u32
     }
 }

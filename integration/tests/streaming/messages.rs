@@ -1,5 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
+use iggy::bytes_serializable::BytesSerializable;
 use iggy::messages::send_messages;
 use iggy::models::header::{HeaderKey, HeaderValue};
 use server::configs::system::{PartitionConfig, SystemConfig};
@@ -100,9 +101,12 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         let index = i as usize - 1;
         let loaded_message = &loaded_messages[index];
         let appended_message = &appended_messages[index];
-        assert_eq!(loaded_message.get_id(), appended_message.id);
+        assert_eq!(loaded_message.id, appended_message.id);
         assert_eq!(
-            loaded_message.try_get_headers().unwrap(),
+            loaded_message
+                .headers
+                .as_ref()
+                .map(|bytes| HashMap::from_bytes(bytes.clone()).unwrap()),
             appended_message.headers
         );
     }

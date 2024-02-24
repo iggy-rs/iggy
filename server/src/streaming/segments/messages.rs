@@ -10,7 +10,6 @@ use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::trace;
-use crate::streaming::batching::iterator::IntoBatchIterator;
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -184,40 +183,22 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Result<Vec<RetainedMessage>, IggyError> {
-        let batches = self
+        let messages = self
             .storage
             .segment
             .load_message_batches(self, index_range)
-            .await?;
+            .await?
+            .iter()
+            .convert_and_filter_by_offset_range(start_offset, end_offset);
 
-        let mut retained_messages = Vec::new();
-        for batch in batches {
-            retained_messages.extend(
-                batch.into_messages_iter().filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset),
-            );
-        }
-
-        // let messages = batches
-        //     .into_iter()
-        //     .flat_map(|batch| {
-        //         batch
-        //             .into_messages_iter()
-        //             .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
-        //             .collect::<Vec<_>>()
-        //     })
-        //     .collect::<Vec<_>>();
-        /*
-           .iter()
-           .convert_and_filter_by_offset_range(start_offset, end_offset);
-        */
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",
-            retained_messages.len(),
+            messages.len(),
             self.start_offset,
             self.current_offset
         );
 
-        Ok(retained_messages)
+        Ok(messages)
     }
 
     pub async fn append_messages(

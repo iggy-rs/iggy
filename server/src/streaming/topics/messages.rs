@@ -1,6 +1,9 @@
-use crate::streaming::models::messages::{PolledMessages, RetainedMessage};
+use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::sizeable::Sizeable;
 use crate::streaming::topics::topic::Topic;
+use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
@@ -9,6 +12,7 @@ use iggy::messages::send_messages::{Partitioning, PartitioningKind};
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use tracing::log::info;
 use tracing::{trace, warn};
 
 impl Topic {
@@ -91,17 +95,15 @@ impl Topic {
         messages: &Vec<send_messages::Message>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
-        if partition.is_none() {
-            return Err(IggyError::PartitionNotFound(
-                partition_id,
-                self.topic_id,
-                self.stream_id,
-            ));
-        }
+        partition
+            .ok_or_else(|| {
+                IggyError::PartitionNotFound(partition_id, self.stream_id, self.stream_id)
+            })?
+            .write()
+            .await
+            .append_messages(messages)
+            .await?;
 
-        let partition = partition.unwrap();
-        let mut partition = partition.write().await;
-        partition.append_messages(messages).await?;
         Ok(())
     }
 
@@ -137,8 +139,6 @@ impl Topic {
         if !self.config.cache.enabled {
             return Ok(());
         }
-        todo!();
-        /*
         let path = self.config.get_system_path();
 
         // TODO: load data from database instead of calculating the size on disk
@@ -175,8 +175,9 @@ impl Topic {
             let size_to_fetch_from_disk = (cache_limit_bytes as f64
                 * (partition_size_bytes as f64 / total_size_on_disk_bytes as f64))
                 as u64;
+
             let messages = partition
-                .get_newest_message_batches_by_size(size_to_fetch_from_disk as u32)
+                .get_newest_messages_by_size(size_to_fetch_from_disk)
                 .await?;
 
             let sum: u64 = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
@@ -203,40 +204,22 @@ impl Topic {
         }
 
         Ok(())
-        */
     }
 
-    #[allow(dead_code)]
-    fn cache_integrity_check(cache: &[Arc<RetainedMessage>]) -> bool {
+    fn cache_integrity_check(cache: &[Arc<RetainedMessageBatch>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;
         }
-        todo!();
 
-        /*
-            let first_offset = cache[0].get_offset();
-            let last_offset = cache[cache.len() - 1].get_offset();
-
-            for i in 1..cache.len() {
-                if cache[i].get_offset() != cache[i - 1].get_offset() + 1 {
-                    warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}", i, cache[i].get_offset(), i-1, cache[i-1].get_offset());
-                    return false;
-                }
-            }
-
-            let expected_messages_count: u64 = last_offset - first_offset + 1;
-            if cache.len() != expected_messages_count as usize {
-                warn!(
-                    "Messages count is in cache ({}) not equal to expected messages count ({})",
-                    cache.len(),
-                    expected_messages_count
-                );
+        for i in 1..cache.len() {
+            if cache[i].get_last_offset() <= cache[i - 1].get_last_offset() {
+                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}",
+                        i, cache[i].get_last_offset(), i-1, cache[i-1].get_last_offset());
                 return false;
             }
-
-            true
-        */
+        }
+        true
     }
 
     pub async fn get_expired_segments_start_offsets_per_partition(

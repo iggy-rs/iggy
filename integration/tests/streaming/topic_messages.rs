@@ -101,8 +101,8 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
     }
     for (index, polled_message) in polled_messages.messages.iter().enumerate() {
         let sent_message = sent_messages.get(index).unwrap();
-        assert_eq!(sent_message.payload, polled_message.get_payload());
-        let polled_payload_str = from_utf8(polled_message.get_payload()).unwrap();
+        assert_eq!(sent_message.payload, polled_message.payload);
+        let polled_payload_str = from_utf8(&polled_message.payload).unwrap();
         assert!(polled_payload_str.starts_with(&format!("{}:", index + 1)));
     }
 }

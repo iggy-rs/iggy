@@ -11,7 +11,7 @@ use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::{atomic::Ordering, Arc};
-use tracing::{error, trace, warn};
+use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 const EMPTY_BATCHES: Vec<RetainedMessageBatch> = vec![];
@@ -305,7 +305,6 @@ impl Partition {
                 break;
             }
         }
-        error!("batches len: {}", batches.len());
 
         Ok(batches)
     }

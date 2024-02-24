@@ -230,26 +230,25 @@ impl SegmentStorage for FileSegmentStorage {
 
     async fn load_newest_message_batches_by_size(
         &self,
-        _segment: &Segment,
-        _size_bytes: u64,
+        segment: &Segment,
+        size_bytes: u64,
     ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
-        todo!();
-        /*
-        let mut messages = Vec::new();
+        let mut batches = Vec::new();
         let mut total_size_bytes = 0;
-        load_messages_by_size(segment, size_bytes, |message: RetainedMessage| {
-            total_size_bytes += message.get_size_bytes() as u64;
-            messages.push(Arc::new(message));
+        load_messages_by_size(segment, size_bytes, |batch| {
+            total_size_bytes += batch.get_size_bytes() as u64;
+            batches.push(Arc::new(batch));
             Ok(())
         })
         .await?;
+        let messages_count =
+            batches.first().unwrap().base_offset + batches.last().unwrap().get_last_offset();
         trace!(
             "Loaded {} newest messages of total size {} bytes from disk.",
-            messages.len(),
+            messages_count,
             total_size_bytes
         );
-        Ok(messages)
-        */
+        Ok(batches)
     }
 
     async fn save_messages(

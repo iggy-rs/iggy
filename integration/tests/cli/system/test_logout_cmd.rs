@@ -3,7 +3,6 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::cli::system::session::ServerSession;
 use iggy::client::Client;
-use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use iggy::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
 use predicates::str::diff;
 
@@ -20,20 +19,8 @@ impl TestLogoutCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestLogoutCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, _client: &dyn Client) {
         let login_session = ServerSession::new(self.server_address.clone());
-        assert!(!login_session.is_active());
-
-        let token = client
-            .create_personal_access_token(&CreatePersonalAccessToken {
-                name: login_session.get_token_name(),
-                expiry: None,
-            })
-            .await;
-        assert!(token.is_ok());
-
-        let token = token.unwrap();
-        login_session.store(&token.token).unwrap();
         assert!(login_session.is_active());
     }
 

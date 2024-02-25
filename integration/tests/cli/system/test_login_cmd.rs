@@ -3,18 +3,30 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::cli::system::session::ServerSession;
 use iggy::client::Client;
-use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
+use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use iggy::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
 use predicates::str::diff;
 
 #[derive(Debug)]
+pub enum TestLoginCmdType {
+    Success,
+    SuccessWithTimeout(u64),
+    AlreadyLoggedIn,
+    AlreadyLoggedInWithToken,
+}
+
+#[derive(Debug)]
 pub(super) struct TestLoginCmd {
     server_address: String,
+    login_type: TestLoginCmdType,
 }
 
 impl TestLoginCmd {
-    pub(super) fn new(server_address: String) -> Self {
-        Self { server_address }
+    pub(super) fn new(server_address: String, login_type: TestLoginCmdType) -> Self {
+        Self {
+            server_address,
+            login_type,
+        }
     }
 }
 
@@ -22,24 +34,67 @@ impl TestLoginCmd {
 impl IggyCmdTestCase for TestLoginCmd {
     async fn prepare_server_state(&mut self, client: &dyn Client) {
         let login_session = ServerSession::new(self.server_address.clone());
-        assert!(!login_session.is_active());
+        match self.login_type {
+            TestLoginCmdType::Success | TestLoginCmdType::SuccessWithTimeout(_) => {
+                assert!(!login_session.is_active());
 
-        let pats = client
-            .get_personal_access_tokens(&GetPersonalAccessTokens {})
-            .await
-            .unwrap();
-        assert_eq!(pats.len(), 0);
+                let pats = client
+                    .get_personal_access_tokens(&GetPersonalAccessTokens {})
+                    .await
+                    .unwrap();
+                assert_eq!(pats.len(), 0);
+            }
+            TestLoginCmdType::AlreadyLoggedIn => {
+                assert!(login_session.is_active());
+
+                let pats = client
+                    .get_personal_access_tokens(&GetPersonalAccessTokens {})
+                    .await
+                    .unwrap();
+                assert_eq!(pats.len(), 1);
+            }
+            TestLoginCmdType::AlreadyLoggedInWithToken => {
+                // Local keyring must be empty
+                assert!(!login_session.is_active());
+
+                let pat = client
+                    .create_personal_access_token(&CreatePersonalAccessToken {
+                        name: login_session.get_token_name(),
+                        expiry: None,
+                    })
+                    .await;
+                assert!(pat.is_ok());
+            }
+        }
     }
 
     fn get_command(&self) -> IggyCmdCommand {
-        IggyCmdCommand::new().with_env_credentials().arg("login")
+        let command = IggyCmdCommand::new().with_cli_credentials().arg("login");
+
+        if let TestLoginCmdType::SuccessWithTimeout(timeout) = self.login_type {
+            command.arg(format!("{timeout}s"))
+        } else {
+            command
+        }
     }
 
     fn verify_command(&self, command_state: Assert) {
-        command_state.success().stdout(diff(format!(
-            "Executing login command\nSuccessfully logged into Iggy server {}\n",
-            self.server_address
-        )));
+        match self.login_type {
+            TestLoginCmdType::Success
+            | TestLoginCmdType::AlreadyLoggedInWithToken
+            | TestLoginCmdType::SuccessWithTimeout(_) => {
+                command_state.success().stdout(diff(format!(
+                    "Executing login command\nSuccessfully logged into Iggy server {}\n",
+                    self.server_address
+                )));
+            }
+            TestLoginCmdType::AlreadyLoggedIn => {
+                command_state.success().stdout(diff(format!(
+                    "Executing login command\nAlready logged into Iggy server {}\n",
+                    self.server_address
+                )));
+            }
+        }
     }
 
     async fn verify_server_state(&self, client: &dyn Client) {
@@ -52,15 +107,5 @@ impl IggyCmdTestCase for TestLoginCmd {
             .unwrap();
         assert_eq!(pats.len(), 1);
         assert_eq!(pats[0].name, login_session.get_token_name());
-
-        let cleanup_session = login_session.delete();
-        assert!(cleanup_session.is_ok());
-
-        let token_cleanup = client
-            .delete_personal_access_token(&DeletePersonalAccessToken {
-                name: login_session.get_token_name(),
-            })
-            .await;
-        assert!(token_cleanup.is_ok());
     }
 }

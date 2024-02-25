@@ -94,7 +94,7 @@ jobs:
           command: "test"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: " --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }} -- --nocapture cli:: "
+          args: " --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
 
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }

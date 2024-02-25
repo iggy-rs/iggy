@@ -3,6 +3,8 @@ use crate::http::jwt::json_web_token::{GeneratedTokens, JwtClaims, RevokedAccess
 use crate::http::jwt::refresh_token::RefreshToken;
 use crate::http::jwt::storage::TokenStorage;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -10,7 +12,6 @@ use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenDat
 use sled::Db;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing::{debug, error, info};
 
 pub struct IssuerOptions {
@@ -34,7 +35,7 @@ pub struct JwtManager {
     issuer: IssuerOptions,
     validator: ValidatorOptions,
     tokens_storage: TokenStorage,
-    revoked_tokens: RwLock<HashMap<String, u64>>,
+    revoked_tokens: IggySharedMut<HashMap<String, u64>>,
     validations: HashMap<Algorithm, Validation>,
 }
 
@@ -56,7 +57,7 @@ impl JwtManager {
             issuer,
             validator,
             tokens_storage: TokenStorage::new(db),
-            revoked_tokens: RwLock::new(HashMap::new()),
+            revoked_tokens: IggySharedMut::new(HashMap::new()),
         })
     }
 

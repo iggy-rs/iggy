@@ -8,10 +8,10 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::user::User;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
+use iggy::locking::{IggySharedMut, IggySharedMutFn};
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub fn map_stats(stats: &Stats) -> Bytes {
@@ -63,7 +63,7 @@ pub async fn map_client(client: &Client) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_clients(clients: &[Arc<RwLock<Client>>]) -> Bytes {
+pub async fn map_clients(clients: &[IggySharedMut<Client>]) -> Bytes {
     let mut bytes = BytesMut::new();
     for client in clients {
         let client = client.read().await;

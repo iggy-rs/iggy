@@ -5,6 +5,8 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::user::User;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
 use iggy::models::client_info::ConsumerGroupInfo;
 use iggy::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
 use iggy::models::identity_info::{IdentityInfo, IdentityTokens, TokenInfo};
@@ -12,7 +14,6 @@ use iggy::models::personal_access_token::PersonalAccessTokenInfo;
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
-use std::sync::Arc;
 use tokio::sync::RwLock;
 
 pub async fn map_stream(stream: &Stream) -> StreamDetails {
@@ -159,7 +160,7 @@ pub async fn map_client(client: &Client) -> iggy::models::client_info::ClientInf
 }
 
 pub async fn map_clients(
-    clients: &[Arc<RwLock<Client>>],
+    clients: &[IggySharedMut<Client>],
 ) -> Vec<iggy::models::client_info::ClientInfo> {
     let mut all_clients = Vec::new();
     for client in clients {

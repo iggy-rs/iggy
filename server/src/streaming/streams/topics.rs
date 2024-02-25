@@ -2,6 +2,7 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
+use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::text;
 use std::sync::atomic::Ordering;

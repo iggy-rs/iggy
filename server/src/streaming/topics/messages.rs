@@ -6,6 +6,7 @@ use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::{Partitioning, PartitioningKind};

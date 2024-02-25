@@ -12,13 +12,13 @@ derive_more = "0.99.17"
 figlet-rs = "0.1.5"
 futures = "0.3.30"
 human_bytes = "0.4.3"
-human_format = "1.0.3"
+human_format = "1.1.0"
 iggy = { path = "../sdk" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
 quinn = { version = "0.10.2" }
 rustls = { version = "0.21.10" }
-serde = { version = "1.0.196", features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 toml = "0.8.10"

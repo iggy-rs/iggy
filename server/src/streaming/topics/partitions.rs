@@ -1,8 +1,8 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
 
 const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
@@ -41,7 +41,7 @@ impl Topic {
                 self.size_bytes.clone(),
             );
             self.partitions
-                .insert(partition_id, Arc::new(RwLock::new(partition)));
+                .insert(partition_id, IggySharedMut::new(partition));
             partition_ids.push(partition_id)
         }
 

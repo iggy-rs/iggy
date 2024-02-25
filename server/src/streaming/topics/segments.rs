@@ -1,4 +1,5 @@
 use crate::streaming::topics::topic::Topic;
+use iggy::locking::IggySharedMutFn;
 
 impl Topic {
     pub async fn get_segments_count(&self) -> u32 {

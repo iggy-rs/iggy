@@ -1,7 +1,7 @@
 use crate::args::simple::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
 use iggy::client::MessageClient;
-use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::consumer::Consumer as IggyConsumer;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -42,7 +42,13 @@ impl Consumer {
         let partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;
         let client = self.client_factory.create_client().await;
-        let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+        let client = IggyClient::create(
+            client,
+            IggyClientBackgroundConfig::default(),
+            None,
+            None,
+            None,
+        );
         login_root(&client).await;
         info!(
             "Consumer #{} → preparing the test messages...",

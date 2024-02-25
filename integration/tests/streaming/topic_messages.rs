@@ -1,5 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
+use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages;
 use iggy::messages::send_messages::Partitioning;

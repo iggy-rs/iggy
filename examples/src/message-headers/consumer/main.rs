@@ -2,7 +2,9 @@ use anyhow::Result;
 use clap::Parser;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
+use iggy::clients::client::{
+    IggyClient, IggyClientBackgroundConfig, PollMessagesConfig, StoreOffsetKind,
+};
 use iggy::models::header::HeaderKey;
 use iggy::models::messages::PolledMessage;
 use iggy_examples::shared::args::Args;
@@ -22,15 +24,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_raw_connected_client(client_provider_config).await?;
-    let client = IggyClient::builder(client)
-        .with_config(IggyClientConfig {
+    let client = IggyClient::builder()
+        .with_background_config(IggyClientBackgroundConfig {
             poll_messages: PollMessagesConfig {
                 interval: args.interval,
                 store_offset_kind: StoreOffsetKind::WhenMessagesAreProcessed,
             },
             ..Default::default()
         })
-        .build();
+        .with_client(client)
+        .build()?;
     system::login_root(&client).await;
     system::init_by_consumer(&args, &client).await;
     system::consume_messages(&args, &client, &handle_message).await

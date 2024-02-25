@@ -4,6 +4,7 @@ use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMut;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
@@ -23,7 +24,7 @@ pub struct Topic {
     pub(crate) messages_count_of_parent_stream: Arc<AtomicU64>,
     pub(crate) messages_count: Arc<AtomicU64>,
     pub(crate) config: Arc<SystemConfig>,
-    pub(crate) partitions: HashMap<u32, Arc<RwLock<Partition>>>,
+    pub(crate) partitions: HashMap<u32, IggySharedMut<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
     pub(crate) consumer_groups_ids: HashMap<String, u32>,
@@ -112,11 +113,11 @@ impl Topic {
         IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
     }
 
-    pub fn get_partitions(&self) -> Vec<Arc<RwLock<Partition>>> {
-        self.partitions.values().map(Arc::clone).collect()
+    pub fn get_partitions(&self) -> Vec<IggySharedMut<Partition>> {
+        self.partitions.values().cloned().collect()
     }
 
-    pub fn get_partition(&self, partition_id: u32) -> Result<Arc<RwLock<Partition>>, IggyError> {
+    pub fn get_partition(&self, partition_id: u32) -> Result<IggySharedMut<Partition>, IggyError> {
         match self.partitions.get(&partition_id) {
             Some(partition_arc) => Ok(partition_arc.clone()),
             None => Err(IggyError::PartitionNotFound(
@@ -147,13 +148,14 @@ impl fmt::Display for Topic {
 
 #[cfg(test)]
 mod tests {
+    use iggy::locking::IggySharedMutFn;
     use std::str::FromStr;
 
     use super::*;
     use crate::streaming::storage::tests::get_test_system_storage;
 
-    #[test]
-    fn should_be_created_given_valid_parameters() {
+    #[tokio::test]
+    async fn should_be_created_given_valid_parameters() {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
@@ -190,7 +192,7 @@ mod tests {
         assert_eq!(topic.message_expiry, Some(message_expiry));
 
         for (id, partition) in topic.partitions {
-            let partition = partition.blocking_read();
+            let partition = partition.read().await;
             assert_eq!(partition.stream_id, stream_id);
             assert_eq!(partition.topic_id, topic.topic_id);
             assert_eq!(partition.partition_id, id);

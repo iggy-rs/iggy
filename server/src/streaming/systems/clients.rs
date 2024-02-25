@@ -3,9 +3,9 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
 use std::net::SocketAddr;
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use tracing::{error, info};
 
 impl System {
@@ -78,7 +78,7 @@ impl System {
         &self,
         session: &Session,
         client_id: u32,
-    ) -> Result<Arc<RwLock<Client>>, IggyError> {
+    ) -> Result<IggySharedMut<Client>, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_client(session.get_user_id())?;
         let client_manager = self.client_manager.read().await;
@@ -88,7 +88,7 @@ impl System {
     pub async fn get_clients(
         &self,
         session: &Session,
-    ) -> Result<Vec<Arc<RwLock<Client>>>, IggyError> {
+    ) -> Result<Vec<IggySharedMut<Client>>, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_clients(session.get_user_id())?;
         let client_manager = self.client_manager.read().await;

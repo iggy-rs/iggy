@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use iggy::client::{MessageClient, StreamClient, SystemClient, TopicClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientConfig};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
 use iggy::streams::create_stream::CreateStream;
@@ -33,7 +33,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let _ = tracing_subscriber::fmt::try_init();
 
     let client = client_factory.create_client().await;
-    let client = IggyClient::create(client, IggyClientConfig::default(), None, None, None);
+    let client = IggyClient::create(
+        client,
+        IggyClientBackgroundConfig::default(),
+        None,
+        None,
+        None,
+    );
 
     // 0. Ping server, login as root user and ensure that streams do not exist
     ping_login_and_validate(&client).await;

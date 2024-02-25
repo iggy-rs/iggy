@@ -2,12 +2,10 @@ use anyhow::Result;
 use clap::Parser;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::client::{IggyClient, IggyClientConfig, PollMessagesConfig, StoreOffsetKind};
-use iggy::models::messages::PolledMessage;
 use iggy::clients::client::{
     IggyClient, IggyClientBackgroundConfig, PollMessagesConfig, StoreOffsetKind,
 };
-use iggy::models::messages::Message;
+use iggy::models::messages::PolledMessage;
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::messages::*;
 use iggy_examples::shared::system;

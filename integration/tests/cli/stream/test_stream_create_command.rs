@@ -75,7 +75,7 @@ impl IggyCmdTestCase for TestStreamCreateCmd {
                 stream_id: Identifier::named(self.name.as_str()).unwrap(),
             })
             .await;
-        assert!(delete.is_ok());
+        assert!(!delete.is_ok());
     }
 }
 

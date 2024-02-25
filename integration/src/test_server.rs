@@ -156,7 +156,17 @@ impl TestServer {
         let mut command = if let Some(server_executable_path) = &self.server_executable_path {
             std::process::Command::new(server_executable_path)
         } else {
-            Command::cargo_bin("iggy-server").unwrap()
+            // list all files in the current directory
+            walkdir::WalkDir::new("/")
+                .into_iter()
+                .filter_map(|e| e.ok())
+                .for_each(|e| {
+                    println!("{}", e.path().display());
+                });
+            let x = Command::cargo_bin("iggy-server");
+
+            println!("{:?}", x);
+            x.unwrap()
         };
         command.env(SYSTEM_PATH_ENV_VAR, files_path.clone());
         command.envs(self.envs.clone());

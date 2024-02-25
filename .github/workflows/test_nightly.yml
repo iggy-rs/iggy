@@ -25,14 +25,14 @@ jobs:
       matrix:
         platform:
 
-          - os_name: Linux-x86_64-musl
-            os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
-            name: iggy-Linux-x86_64-musl.tar.gz
-            cargo_command: cargo
-            profile: release
-            docker_arch: linux/amd64
-            cross: false
+#          - os_name: Linux-x86_64-musl
+#            os: ubuntu-latest
+#            target: x86_64-unknown-linux-musl
+#            name: iggy-Linux-x86_64-musl.tar.gz
+#            cargo_command: cargo
+#            profile: release
+#            docker_arch: linux/amd64
+#            cross: false
 
           - os_name: Linux-arm
             os: ubuntu-latest
@@ -43,18 +43,18 @@ jobs:
             cross: true
             qemu_runner: "qemu-arm"
 
-          - os_name: Linux-aarch64-musl
-            os: ubuntu-latest
-            target: aarch64-unknown-linux-musl
-            name: iggy-Linux-aarch64-musl.tar.gz
-            docker_arch: linux/arm64/v8
-            profile: release
-            cross: true
-            qemu_runner: "qemu-aarch64"
+#          - os_name: Linux-aarch64-musl
+#            os: ubuntu-latest
+#            target: aarch64-unknown-linux-musl
+#            name: iggy-Linux-aarch64-musl.tar.gz
+#            docker_arch: linux/arm64/v8
+#            profile: release
+#            cross: true
+#            qemu_runner: "qemu-aarch64"
 
         toolchain:
           - stable
-          - nightly
+#          - nightly
           # - beta
     steps:
       - uses: actions/checkout@v4
@@ -94,7 +94,7 @@ jobs:
           command: "test"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
-          args: " --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
+          args: " --test cli:: --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
 
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }

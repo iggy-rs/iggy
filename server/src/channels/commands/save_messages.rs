@@ -9,6 +9,7 @@ use tokio::time;
 use tracing::{error, info, warn};
 
 pub struct MessagesSaver {
+    enabled: bool,
     enforce_fsync: bool,
     interval: IggyDuration,
     sender: Sender<SaveMessagesCommand>,
@@ -25,6 +26,7 @@ pub struct SaveMessagesExecutor;
 impl MessagesSaver {
     pub fn new(config: &MessageSaverConfig, sender: Sender<SaveMessagesCommand>) -> Self {
         Self {
+            enabled: config.enabled,
             enforce_fsync: config.enforce_fsync,
             interval: config.interval,
             sender,
@@ -32,7 +34,7 @@ impl MessagesSaver {
     }
 
     pub fn start(&self) {
-        if !self.enforce_fsync {
+        if !self.enabled {
             info!("Message saver is disabled.");
             return;
         }

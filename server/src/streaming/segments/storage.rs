@@ -214,10 +214,7 @@ impl SegmentStorage for FileSegmentStorage {
         &self,
         segment: &Segment,
         index_range: &IndexRange,
-    ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
-        // let mut messages = Vec::with_capacity(
-        //     1 + (index_range.end.relative_offset - index_range.start.relative_offset) as usize,
-        // );
+    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         let mut batches = Vec::new();
         load_batches_by_range(segment, index_range, |batch| {
             batches.push(batch);
@@ -228,16 +225,16 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(batches)
     }
 
-    async fn load_newest_message_batches_by_size(
+    async fn load_newest_batches_by_size(
         &self,
         segment: &Segment,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
+    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         let mut batches = Vec::new();
         let mut total_size_bytes = 0;
         load_messages_by_size(segment, size_bytes, |batch| {
             total_size_bytes += batch.get_size_bytes() as u64;
-            batches.push(Arc::new(batch));
+            batches.push(batch);
             Ok(())
         })
         .await?;
@@ -551,7 +548,7 @@ impl SegmentStorage for FileSegmentStorage {
 async fn load_batches_by_range(
     segment: &Segment,
     index_range: &IndexRange,
-    mut on_batch: impl FnMut(Arc<RetainedMessageBatch>) -> Result<(), IggyError>,
+    mut on_batch: impl FnMut(RetainedMessageBatch) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
     let file = file::open(&segment.log_path).await?;
     let file_size = file.metadata().await?.len();
@@ -605,7 +602,7 @@ async fn load_batches_by_range(
             batch_length,
             payload.freeze(),
         );
-        on_batch(Arc::new(batch))?;
+        on_batch(batch)?;
     }
     Ok(())
 }

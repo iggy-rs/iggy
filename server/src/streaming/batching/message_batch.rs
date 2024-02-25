@@ -81,7 +81,7 @@ where
                 messages.extend(
                     batch
                         .into_messages_iter()
-                        .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
+                        .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset),
                 );
                 messages
             },

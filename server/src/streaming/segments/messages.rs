@@ -69,21 +69,21 @@ impl Segment {
             .await
     }
 
-    pub async fn get_all_batches(&self) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
+    pub async fn get_all_batches(&self) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         self.storage
             .segment
             .load_message_batches(self, &IndexRange::max_range())
             .await
     }
 
-    pub async fn get_newest_message_batches_by_size(
+    pub async fn get_newest_batches_by_size(
         &self,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
+    ) -> Result<Vec<RetainedMessageBatch>, IggyError> {
         let messages = self
             .storage
             .segment
-            .load_newest_message_batches_by_size(self, size_bytes)
+            .load_newest_batches_by_size(self, size_bytes)
             .await?;
 
         Ok(messages)
@@ -105,10 +105,7 @@ impl Segment {
         let messages = unsaved_batches[slice_start..]
             .into_iter()
             .filter(|batch| {
-                batch.is_contained_or_overlapping_within_offset_range(
-                    start_offset,
-                    end_offset,
-                )
+                batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
             })
             .convert_and_filter_by_offset_range(start_offset, end_offset);
 
@@ -198,7 +195,7 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn append_messages(
+    pub async fn append_batch(
         &mut self,
         batch: Arc<RetainedMessageBatch>,
     ) -> Result<(), IggyError> {

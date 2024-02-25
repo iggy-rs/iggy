@@ -291,14 +291,16 @@ impl Partition {
             if segment_size_bytes > remaining_size {
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
                 let partial_messages = segment
-                    .get_newest_message_batches_by_size(remaining_size)
-                    .await?;
+                    .get_newest_batches_by_size(remaining_size)
+                    .await?
+                    .into_iter()
+                    .map(Arc::new);
                 batches.splice(..0, partial_messages);
                 break;
             }
 
             // Current segment is smaller than the remaining size, so we need to get all messages from it.
-            let segment_batches = segment.get_all_batches().await?;
+            let segment_batches = segment.get_all_batches().await?.into_iter().map(Arc::new);
             batches.splice(..0, segment_batches);
             remaining_size = remaining_size.saturating_sub(segment_size_bytes);
             if remaining_size == 0 {
@@ -450,7 +452,7 @@ impl Partition {
         );
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
-            last_segment.append_messages(batch.clone()).await?;
+            last_segment.append_batch(batch.clone()).await?;
         }
 
         if let Some(cache) = &mut self.cache {

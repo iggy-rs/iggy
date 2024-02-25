@@ -36,7 +36,7 @@ server:
 
 build-tokio-console:
   RUSTFLAGS="--cfg tokio_unstable" cargo build --release --features tokio-console
-  
+
 run-benches:
   ./scripts/run-benches.sh
 

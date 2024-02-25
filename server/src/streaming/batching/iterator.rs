@@ -46,6 +46,14 @@ impl<'a> Iterator for RetainedMessageBatchIterator<'a> {
     }
 }
 
+impl<'a> IntoBatchIterator for &'a RetainedMessageBatch {
+    type Item = RetainedMessage;
+    type IntoIter = RetainedMessageBatchIterator<'a>;
+
+    fn into_messages_iter(self) -> Self::IntoIter {
+        RetainedMessageBatchIterator::new(self)
+    }
+}
 impl<'a> IntoBatchIterator for &'a Arc<RetainedMessageBatch> {
     type Item = RetainedMessage;
     type IntoIter = RetainedMessageBatchIterator<'a>;

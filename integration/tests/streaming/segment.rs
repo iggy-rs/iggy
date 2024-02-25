@@ -180,7 +180,7 @@ async fn should_persist_and_load_segment_with_messages() {
         batch_buffer.len() as u32,
         batch_buffer.freeze(),
     ));
-    segment.append_messages(batch).await.unwrap();
+    segment.append_batch(batch).await.unwrap();
 
     segment.persist_messages().await.unwrap();
 
@@ -278,7 +278,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         batch_buffer.freeze(),
     ));
 
-    segment.append_messages(batch).await.unwrap();
+    segment.append_batch(batch).await.unwrap();
 
     segment.persist_messages().await.unwrap();
 
@@ -368,8 +368,8 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         not_expired_batch_buffer.freeze(),
     ));
 
-    segment.append_messages(expired_batch).await.unwrap();
-    segment.append_messages(not_expired_batch).await.unwrap();
+    segment.append_batch(expired_batch).await.unwrap();
+    segment.append_batch(not_expired_batch).await.unwrap();
     segment.persist_messages().await.unwrap();
 
     let is_expired = segment.is_expired(now).await;

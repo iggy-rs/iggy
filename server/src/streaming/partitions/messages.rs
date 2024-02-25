@@ -433,6 +433,13 @@ impl Partition {
 
         let last_offset = base_offset + (messages_count - 1) as u64;
         let last_offset_delta = messages_count - 1;
+        if self.should_increment_offset {
+            self.current_offset = last_offset;
+        } else {
+            self.should_increment_offset = true;
+            self.current_offset = last_offset;
+        }
+
         let batch = Arc::new(
             batch_builder
                 .max_timestamp(max_timestamp)
@@ -441,14 +448,6 @@ impl Partition {
                 .payload(buffer.freeze())
                 .build()?,
         );
-
-        if self.should_increment_offset {
-            self.current_offset = last_offset;
-        } else {
-            self.should_increment_offset = true;
-            self.current_offset = last_offset;
-        }
-
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             last_segment.append_messages(batch.clone()).await?;

@@ -9,12 +9,12 @@ pub trait IntoBatchIterator {
 }
 
 pub struct RetainedMessageBatchIterator<'a> {
-    batch: &'a Arc<RetainedMessageBatch>,
+    batch: &'a RetainedMessageBatch,
     current_position: u32,
 }
 
 impl<'a> RetainedMessageBatchIterator<'a> {
-    pub fn new(batch: &'a Arc<RetainedMessageBatch>) -> Self {
+    pub fn new(batch: &'a RetainedMessageBatch) -> Self {
         RetainedMessageBatchIterator {
             batch,
             current_position: 0,
@@ -22,7 +22,7 @@ impl<'a> RetainedMessageBatchIterator<'a> {
     }
 }
 
-// TODO(numinex): Consider using FallibleIterator instead of Option
+// TODO(numinex): Consider using FallibleIterator instead of this
 // https://crates.io/crates/fallible-iterator
 impl<'a> Iterator for RetainedMessageBatchIterator<'a> {
     type Item = RetainedMessage;

@@ -82,7 +82,6 @@ where
                     batch
                         .into_messages_iter()
                         .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset)
-                        .collect::<Vec<_>>(),
                 );
                 messages
             },

@@ -94,23 +94,20 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Vec<RetainedMessage> {
-        let relative_start_offset = start_offset - self.start_offset;
-        let relative_end_offset = end_offset - self.start_offset;
-
         let unsaved_batches = self.unsaved_batches.as_ref().unwrap();
         let slice_start = unsaved_batches
             .iter()
-            .rposition(|batch| batch.base_offset <= relative_start_offset)
+            .rposition(|batch| batch.base_offset <= start_offset)
             .unwrap_or(0);
 
         // Take only the batch when last_offset >= relative_end_offset and it's base_offset is <= relative_end_offset
         // otherwise take batches until the last_offset >= relative_end_offset and base_offset <= relative_start_offset
         let messages = unsaved_batches[slice_start..]
-            .iter()
+            .into_iter()
             .filter(|batch| {
                 batch.is_contained_or_overlapping_within_offset_range(
-                    relative_start_offset,
-                    relative_end_offset,
+                    start_offset,
+                    end_offset,
                 )
             })
             .convert_and_filter_by_offset_range(start_offset, end_offset);
@@ -279,8 +276,6 @@ impl Segment {
             }
             (None, None) => {}
         };
-        self.unsaved_indexes.reserve(2);
-        self.unsaved_timestamps.reserve(2);
 
         // Regardless of whether caching of indexes and time_indexes is on
         // store them in the unsaved buffer

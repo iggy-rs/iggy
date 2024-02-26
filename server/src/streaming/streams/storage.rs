@@ -5,9 +5,11 @@ use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
 use iggy::error::IggyError;
+use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
+use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
@@ -33,7 +35,7 @@ impl StreamStorage for FileStreamStorage {}
 #[derive(Debug, Serialize, Deserialize)]
 struct StreamData {
     name: String,
-    created_at: u64,
+    created_at: IggyTimestamp,
 }
 
 #[async_trait]
@@ -96,6 +98,9 @@ impl Storage<Stream> for FileStreamStorage {
             let topic = Topic::empty(
                 stream.stream_id,
                 topic_id,
+                Arc::new(AtomicU64::new(0)),
+                Arc::new(AtomicU64::new(0)),
+                Arc::new(AtomicU32::new(0)),
                 stream.config.clone(),
                 stream.storage.clone(),
             );

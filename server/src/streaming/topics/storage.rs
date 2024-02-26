@@ -224,6 +224,7 @@ impl Storage<Topic> for FileTopicStorage {
                 topic.messages_count.clone(),
                 topic.size_of_parent_stream.clone(),
                 topic.size_bytes.clone(),
+                topic.segments_count_of_parent_stream.clone(),
             );
             unloaded_partitions.push(partition);
         }

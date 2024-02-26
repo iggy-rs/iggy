@@ -149,7 +149,7 @@ impl CliCommand for GetUserCmd {
         table.add_row(vec![
             "Created",
             IggyTimestamp::from(user.created_at)
-                .to_local("%Y-%m-%d %H:%M:%S")
+                .to_local_string("%Y-%m-%d %H:%M:%S")
                 .as_str(),
         ]);
         table.add_row(vec!["Status", format!("{}", user.status).as_str()]);

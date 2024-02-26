@@ -23,6 +23,7 @@ pub struct Topic {
     pub(crate) size_of_parent_stream: Arc<AtomicU64>,
     pub(crate) messages_count_of_parent_stream: Arc<AtomicU64>,
     pub(crate) messages_count: Arc<AtomicU64>,
+    pub(crate) segments_count_of_parent_stream: Arc<AtomicU32>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) partitions: HashMap<u32, IggySharedMut<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
@@ -39,6 +40,9 @@ impl Topic {
     pub fn empty(
         stream_id: u32,
         topic_id: u32,
+        size_of_parent_stream: Arc<AtomicU64>,
+        messages_count_of_parent_stream: Arc<AtomicU64>,
+        segments_count_of_parent_stream: Arc<AtomicU32>,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
     ) -> Topic {
@@ -49,8 +53,9 @@ impl Topic {
             0,
             config,
             storage,
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
+            size_of_parent_stream,
+            messages_count_of_parent_stream,
+            segments_count_of_parent_stream,
             None,
             None,
             1,
@@ -68,6 +73,7 @@ impl Topic {
         storage: Arc<SystemStorage>,
         size_of_parent_stream: Arc<AtomicU64>,
         messages_count_of_parent_stream: Arc<AtomicU64>,
+        segments_count_of_parent_stream: Arc<AtomicU32>,
         message_expiry: Option<u32>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
@@ -86,6 +92,7 @@ impl Topic {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             messages_count: Arc::new(AtomicU64::new(0)),
+            segments_count_of_parent_stream,
             consumer_groups: HashMap::new(),
             consumer_groups_ids: HashMap::new(),
             current_partition_id: AtomicU32::new(1),
@@ -168,6 +175,7 @@ mod tests {
         let path = config.get_topic_path(stream_id, topic_id);
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
+        let segments_count_of_parent_stream = Arc::new(AtomicU32::new(0));
 
         let topic = Topic::create(
             stream_id,
@@ -178,6 +186,7 @@ mod tests {
             storage,
             messages_count_of_parent_stream,
             size_of_parent_stream,
+            segments_count_of_parent_stream,
             Some(message_expiry),
             Some(max_topic_size),
             replication_factor,

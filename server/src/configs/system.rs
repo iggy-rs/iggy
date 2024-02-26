@@ -48,6 +48,8 @@ pub struct LoggingConfig {
     pub max_size: IggyByteSize,
     #[serde_as(as = "DisplayFromStr")]
     pub retention: IggyDuration,
+    #[serde_as(as = "DisplayFromStr")]
+    pub sysinfo_print_interval: IggyDuration,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

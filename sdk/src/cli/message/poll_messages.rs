@@ -94,7 +94,7 @@ impl CliCommand for PollMessagesCmd {
         messages.messages.iter().for_each(|message| {
             table.add_row(vec![
                 format!("{}", message.offset),
-                IggyTimestamp::from(message.timestamp).to_local("%Y-%m-%d %H:%M:%S%.6f"),
+                IggyTimestamp::from(message.timestamp).to_local_string("%Y-%m-%d %H:%M:%S%.6f"),
                 format!("{}", message.id),
                 format!("{}", message.payload.len()),
                 String::from_utf8_lossy(&message.payload).to_string(),

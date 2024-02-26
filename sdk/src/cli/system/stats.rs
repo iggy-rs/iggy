@@ -3,10 +3,8 @@ use crate::client::Client;
 use crate::system::get_stats::GetStats;
 use anyhow::Context;
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use comfy_table::Table;
-use humantime::format_duration;
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 use tracing::{event, Level};
 
 pub struct GetStatsCmd {
@@ -51,6 +49,10 @@ impl CliCommand for GetStatsCmd {
             format!("{:.4} %", stats.cpu_usage).as_str(),
         ]);
         table.add_row(vec![
+            "Total CPU Usage",
+            format!("{:.4} %", stats.total_cpu_usage).as_str(),
+        ]);
+        table.add_row(vec![
             "Iggy Server Memory Usage",
             stats.memory_usage.as_bytes_u64().to_string().as_str(),
         ]);
@@ -63,18 +65,15 @@ impl CliCommand for GetStatsCmd {
             "Available Memory (RAM)",
             stats.available_memory.as_bytes_u64().to_string().as_str(),
         ]);
-
         table.add_row(vec![
             "Iggy Server Run Time",
-            format!("{}", format_duration(Duration::from_secs(stats.run_time))).as_str(),
+            stats.run_time.as_secs().to_string().as_str(),
         ]);
 
-        let start_time = SystemTime::UNIX_EPOCH + Duration::from_secs(stats.start_time);
-        let date_time_utc: DateTime<Utc> = start_time.into();
-
+        let start_time_utc = stats.start_time + SystemTime::UNIX_EPOCH;
         table.add_row(vec![
             "Start Time (UTC)",
-            format!("{}", date_time_utc.format("%Y-%m-%d %H:%M:%S")).as_str(),
+            start_time_utc.to_string().as_str(),
         ]);
 
         table.add_row(vec![
@@ -93,7 +92,6 @@ impl CliCommand for GetStatsCmd {
                 .to_string()
                 .as_str(),
         ]);
-
         table.add_row(vec![
             "Streams Count",
             format!("{}", stats.streams_count).as_str(),

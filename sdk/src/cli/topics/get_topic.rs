@@ -47,7 +47,7 @@ impl CliCommand for GetTopicCmd {
         table.add_row(vec![
             "Created",
             IggyTimestamp::from(topic.created_at)
-                .to_string("%Y-%m-%d %H:%M:%S")
+                .to_utc_string("%Y-%m-%d %H:%M:%S")
                 .as_str(),
         ]);
         table.add_row(vec!["Topic name", topic.name.as_str()]);

@@ -36,7 +36,7 @@ async fn validate_server_config_json_from_repository() {
 #[tokio::test]
 async fn validate_custom_env_provider() {
     let expected_database_path = "awesome_database_path";
-    let expected_datagram_send_buffer_size = "1 KB";
+    let expected_datagram_send_buffer_size = "1.00 KB";
     let expected_quic_certificate_self_signed = false;
     let expected_http_enabled = false;
     let expected_tcp_enabled = "false";

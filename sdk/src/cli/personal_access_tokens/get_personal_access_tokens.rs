@@ -52,7 +52,9 @@ impl CliCommand for GetPersonalAccessTokensCmd {
                     table.add_row(vec![
                         format!("{}", token.name.clone()),
                         match token.expiry {
-                            Some(value) => IggyTimestamp::from(value).to_local("%Y-%m-%d %H:%M:%S"),
+                            Some(value) => {
+                                IggyTimestamp::from(value).to_local_string("%Y-%m-%d %H:%M:%S")
+                            }
                             None => String::from("unlimited"),
                         },
                     ]);
@@ -66,7 +68,7 @@ impl CliCommand for GetPersonalAccessTokensCmd {
                         "{}|{}",
                         token.name,
                         match token.expiry {
-                            Some(value) => IggyTimestamp::from(value).to_local("%Y-%m-%d %H:%M:%S"),
+                            Some(value) => IggyTimestamp::from(value).to_local_string("%Y-%m-%d %H:%M:%S"),
                             None => String::from("unlimited"),
                         },
                     );

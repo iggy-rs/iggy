@@ -127,10 +127,6 @@ async fn delete_expired_segments(
         .get_expired_segments_start_offsets_per_partition(now)
         .await;
     if expired_segments.is_empty() {
-        info!(
-            "No expired segments found for stream ID: {}, topic ID: {}",
-            topic.stream_id, topic.topic_id
-        );
         return Ok(None);
     }
 

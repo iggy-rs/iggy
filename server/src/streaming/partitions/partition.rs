@@ -8,7 +8,7 @@ use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::models::messages::Message;
 use iggy::utils::timestamp::IggyTimestamp;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
 #[derive(Debug)]
@@ -30,6 +30,7 @@ pub struct Partition {
     pub size_of_parent_stream: Arc<AtomicU64>,
     pub size_of_parent_topic: Arc<AtomicU64>,
     pub size_bytes: Arc<AtomicU64>,
+    pub segments_count_of_parent_stream: Arc<AtomicU32>,
     pub(crate) message_expiry: Option<u32>,
     pub(crate) consumer_offsets: DashMap<u32, ConsumerOffset>,
     pub(crate) consumer_group_offsets: DashMap<u32, ConsumerOffset>,
@@ -90,6 +91,7 @@ impl Partition {
         messages_count_of_parent_topic: Arc<AtomicU64>,
         size_of_parent_stream: Arc<AtomicU64>,
         size_of_parent_topic: Arc<AtomicU64>,
+        segments_count_of_parent_stream: Arc<AtomicU32>,
     ) -> Partition {
         let path = config.get_partition_path(stream_id, topic_id, partition_id);
         let (cached_memory_tracker, messages) = match config.cache.enabled {
@@ -140,6 +142,7 @@ impl Partition {
             messages_count_of_parent_stream,
             messages_count_of_parent_topic,
             messages_count: Arc::new(AtomicU64::new(0)),
+            segments_count_of_parent_stream,
         };
 
         if with_segment {
@@ -159,6 +162,9 @@ impl Partition {
                 partition.messages_count.clone(),
             );
             partition.segments.push(segment);
+            partition
+                .segments_count_of_parent_stream
+                .fetch_add(1, Ordering::SeqCst);
         }
 
         partition
@@ -174,7 +180,7 @@ mod tests {
     use crate::configs::system::{CacheConfig, SystemConfig};
     use crate::streaming::partitions::partition::Partition;
     use crate::streaming::storage::tests::get_test_system_storage;
-    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
 
     #[test]
@@ -199,6 +205,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
         );
 
         assert_eq!(partition.stream_id, stream_id);
@@ -237,6 +244,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
         );
         assert!(partition.cache.is_none());
     }
@@ -257,6 +265,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
         );
         assert!(partition.segments.is_empty());
     }

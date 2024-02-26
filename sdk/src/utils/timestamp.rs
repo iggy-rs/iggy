@@ -1,6 +1,9 @@
 use chrono::{DateTime, Local, Utc};
 use core::fmt;
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{self, Visitor},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use std::{
     ops::Add,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -19,7 +22,7 @@ use std::{
 /// assert_eq!(timestamp.to_utc_string("%Y-%m-%d %H:%M:%S"), "2023-09-17 16:34:06");
 /// assert_eq!(timestamp.to_micros(), 1694968446131680);
 /// ```
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct IggyTimestamp(SystemTime);
 
 pub const UTC_TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
@@ -75,6 +78,41 @@ impl Default for IggyTimestamp {
 impl fmt::Display for IggyTimestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_utc_string(UTC_TIME_FORMAT))
+    }
+}
+
+impl Serialize for IggyTimestamp {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let timestamp = self.to_micros();
+        serializer.serialize_u64(timestamp)
+    }
+}
+
+impl<'de> Deserialize<'de> for IggyTimestamp {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_u64(IggyTimestampVisitor)
+    }
+}
+struct IggyTimestampVisitor;
+
+impl<'de> Visitor<'de> for IggyTimestampVisitor {
+    type Value = IggyTimestamp;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a microsecond timestamp as a u64")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(IggyTimestamp::from(value))
     }
 }
 

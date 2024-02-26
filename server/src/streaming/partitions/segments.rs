@@ -1,3 +1,5 @@
+use std::sync::atomic::Ordering;
+
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
@@ -55,6 +57,8 @@ impl Partition {
         );
         new_segment.persist().await?;
         self.segments.push(new_segment);
+        self.segments_count_of_parent_stream
+            .fetch_add(1, Ordering::SeqCst);
         Ok(())
     }
 
@@ -71,6 +75,8 @@ impl Partition {
 
             let segment = segment.unwrap();
             self.storage.segment.delete(segment).await?;
+            self.segments_count_of_parent_stream
+                .fetch_sub(1, Ordering::SeqCst);
 
             deleted_segment = DeletedSegment {
                 end_offset: segment.end_offset,

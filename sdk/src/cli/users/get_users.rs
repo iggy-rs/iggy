@@ -65,7 +65,7 @@ impl CliCommand for GetUsersCmd {
                 users.iter().for_each(|user| {
                     table.add_row(vec![
                         format!("{}", user.id),
-                        IggyTimestamp::from(user.created_at).to_local("%Y-%m-%d %H:%M:%S"),
+                        IggyTimestamp::from(user.created_at).to_local_string("%Y-%m-%d %H:%M:%S"),
                         user.status.clone().to_string(),
                         user.username.clone(),
                     ]);
@@ -78,7 +78,7 @@ impl CliCommand for GetUsersCmd {
                     event!(target: PRINT_TARGET, Level::INFO,
                         "{}|{}|{}|{}",
                         user.id,
-                        IggyTimestamp::from(user.created_at).to_local("%Y-%m-%d %H:%M:%S"),
+                        IggyTimestamp::from(user.created_at).to_local_string("%Y-%m-%d %H:%M:%S"),
                         user.status.clone().to_string(),
                         user.username.clone(),
                     );

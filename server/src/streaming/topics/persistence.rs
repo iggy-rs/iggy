@@ -40,15 +40,16 @@ impl Topic {
         self.storage.topic.delete(self).await
     }
 
-    pub async fn persist_messages(&self) -> Result<(), IggyError> {
+    pub async fn persist_messages(&self) -> Result<usize, IggyError> {
+        let mut saved_messages_number = 0;
         for partition in self.get_partitions() {
             let mut partition = partition.write().await;
             for segment in partition.get_segments_mut() {
-                segment.persist_messages().await?;
+                saved_messages_number += segment.persist_messages().await?;
             }
         }
 
-        Ok(())
+        Ok(saved_messages_number)
     }
 
     pub async fn purge(&self) -> Result<(), IggyError> {

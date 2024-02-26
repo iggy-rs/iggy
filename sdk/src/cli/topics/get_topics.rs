@@ -74,7 +74,7 @@ impl CliCommand for GetTopicsCmd {
                 topics.iter().for_each(|topic| {
                     table.add_row(vec![
                         format!("{}", topic.id),
-                        IggyTimestamp::from(topic.created_at).to_string("%Y-%m-%d %H:%M:%S"),
+                        IggyTimestamp::from(topic.created_at).to_utc_string("%Y-%m-%d %H:%M:%S"),
                         topic.name.clone(),
                         format!("{}", topic.size),
                         match topic.max_topic_size {
@@ -97,7 +97,7 @@ impl CliCommand for GetTopicsCmd {
                     event!(target: PRINT_TARGET, Level::INFO,
                         "{}|{}|{}|{}|{}|{}|{}|{}",
                         topic.id,
-                        IggyTimestamp::from(topic.created_at).to_string("%Y-%m-%d %H:%M:%S"),
+                        IggyTimestamp::from(topic.created_at).to_utc_string("%Y-%m-%d %H:%M:%S"),
                         topic.name,
                         topic.size,
                         match topic.max_topic_size {

@@ -3,7 +3,10 @@ use crate::error::IggyError;
 use byte_unit::{Byte, UnitType};
 use core::fmt;
 use serde::{Deserialize, Serialize};
-use std::{ops::Add, str::FromStr};
+use std::{
+    ops::{Add, AddAssign, Sub},
+    str::FromStr,
+};
 
 /// A struct for representing byte sizes with various utility functions.
 ///
@@ -18,8 +21,8 @@ use std::{ops::Add, str::FromStr};
 ///
 /// let size = IggyByteSize::from(568_000_000_u64);
 /// assert_eq!(568_000_000, size.as_bytes_u64());
-/// assert_eq!("568 MB", size.as_human_string());
-/// assert_eq!("568 MB", format!("{}", size));
+/// assert_eq!("568.00 MB", size.as_human_string());
+/// assert_eq!("568.00 MB", format!("{}", size));
 ///
 /// let size = IggyByteSize::from(0_u64);
 /// assert_eq!("unlimited", size.as_human_string_with_zero_as_unlimited());
@@ -28,8 +31,8 @@ use std::{ops::Add, str::FromStr};
 ///
 /// let size = IggyByteSize::from_str("1 GB").unwrap();
 /// assert_eq!(1_000_000_000, size.as_bytes_u64());
-/// assert_eq!("1 GB", size.as_human_string());
-/// assert_eq!("1 GB", format!("{}", size));
+/// assert_eq!("1.00 GB", size.as_human_string());
+/// assert_eq!("1.00 GB", format!("{}", size));
 /// ```
 #[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct IggyByteSize(Byte);
@@ -48,7 +51,7 @@ impl IggyByteSize {
 
     /// Returns a human-readable string representation of the byte size using decimal units.
     pub fn as_human_string(&self) -> String {
-        self.0.get_appropriate_unit(UnitType::Decimal).to_string()
+        format!("{:.2}", self.0.get_appropriate_unit(UnitType::Decimal))
     }
 
     /// Returns a human-readable string representation of the byte size.
@@ -57,7 +60,7 @@ impl IggyByteSize {
         if self.as_bytes_u64() == 0 {
             return "unlimited".to_string();
         }
-        self.0.get_appropriate_unit(UnitType::Decimal).to_string()
+        format!("{:.2}", self.0.get_appropriate_unit(UnitType::Decimal))
     }
 
     /// Calculates the throughput based on the provided duration and returns a human-readable string.
@@ -126,6 +129,20 @@ impl Add for IggyByteSize {
     }
 }
 
+impl AddAssign for IggyByteSize {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 = Byte::from_u64(self.as_bytes_u64() + rhs.as_bytes_u64());
+    }
+}
+
+impl Sub for IggyByteSize {
+    type Output = Self;
+
+    fn sub(self, rhs: Self) -> Self::Output {
+        IggyByteSize(Byte::from_u64(self.as_bytes_u64() - rhs.as_bytes_u64()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -181,7 +198,7 @@ mod tests {
     #[test]
     fn test_to_human_string_ok() {
         let byte_size = IggyByteSize::from(1_073_000_000);
-        assert_eq!(byte_size.as_human_string(), "1.073 GB");
+        assert_eq!(byte_size.as_human_string(), "1.07 GB");
     }
 
     #[test]
@@ -205,7 +222,7 @@ mod tests {
         let duration = IggyDuration::from_str("10s").unwrap();
         assert_eq!(
             byte_size._as_human_throughput_string(&duration),
-            "107.3 MB/s"
+            "107.30 MB/s"
         );
     }
 
@@ -236,7 +253,7 @@ mod tests {
         let duration = IggyDuration::from_str("1s").unwrap();
         assert_eq!(
             byte_size._as_human_throughput_string(&duration),
-            "18.446744073709553 EB/s"
+            "18.45 EB/s"
         );
     }
 }

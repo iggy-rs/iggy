@@ -496,7 +496,7 @@ impl Partition {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::AtomicU64;
+    use std::sync::atomic::{AtomicU32, AtomicU64};
 
     use super::*;
     use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
@@ -557,6 +557,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
         )
     }
 }

@@ -80,7 +80,9 @@ impl TokenStorage {
             .collect();
 
         let refresh_tokens = refresh_tokens?;
-        info!("Loaded {} refresh tokens", refresh_tokens.len());
+        if !refresh_tokens.is_empty() {
+            info!("Loaded {} refresh tokens", refresh_tokens.len());
+        }
         Ok(refresh_tokens)
     }
 

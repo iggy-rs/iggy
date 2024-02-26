@@ -3,6 +3,7 @@ use crate::cli::utils::login_session_expiry::LoginSessionExpiry;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
+use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -46,12 +47,24 @@ impl CliCommand for LoginCmd {
                 )
             })?;
 
-        if tokens
+        // If local keyring is empty and server has the token for login session, then something
+        // went wrong, and we should delete the token from the server and recreate login session
+        // from scratch - token on the server and local keyring should be in sync.
+        if let Some(token) = tokens
             .iter()
-            .any(|pat| pat.name == self.server_session.get_token_name())
+            .find(|pat| pat.name == self.server_session.get_token_name())
         {
-            event!(target: PRINT_TARGET, Level::INFO, "Already logged into Iggy server {}", self.server_session.get_server_address());
-            return Ok(());
+            client
+                .delete_personal_access_token(&DeletePersonalAccessToken {
+                    name: token.name.clone(),
+                })
+                .await
+                .with_context(|| {
+                    format!(
+                        "Problem deleting old personal access token with name: {}",
+                        self.server_session.get_token_name()
+                    )
+                })?;
         }
 
         let token = client

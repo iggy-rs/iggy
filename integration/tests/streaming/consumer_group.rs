@@ -1,7 +1,10 @@
 use crate::streaming::common::test_setup::TestSetup;
 use iggy::identifier::Identifier;
 use server::streaming::topics::topic::Topic;
-use std::sync::{atomic::AtomicU64, Arc};
+use std::sync::{
+    atomic::{AtomicU32, AtomicU64},
+    Arc,
+};
 
 #[tokio::test]
 async fn should_persist_consumer_group_and_then_load_it_from_disk() {
@@ -74,6 +77,7 @@ async fn init_topic(setup: &TestSetup) -> Topic {
     let stream_id = 1;
     let size_of_parent_stream = Arc::new(AtomicU64::new(0));
     let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
+    let segments_count_of_parent_stream = Arc::new(AtomicU32::new(0));
 
     setup.create_topics_directory(stream_id).await;
     let name = "test";
@@ -86,6 +90,7 @@ async fn init_topic(setup: &TestSetup) -> Topic {
         setup.storage.clone(),
         size_of_parent_stream,
         messages_count_of_parent_stream,
+        segments_count_of_parent_stream,
         None,
         None,
         1,

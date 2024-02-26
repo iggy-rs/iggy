@@ -246,6 +246,9 @@ max_size = "512 MB"
 # Time to retain log files before deletion.
 retention = "7 days"
 
+# Interval for printing system information to the log.
+sysinfo_print_interval = "10s"
+
 # Cache configuration.
 [system.cache]
 # Enables or disables the system cache.

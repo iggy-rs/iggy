@@ -3,14 +3,24 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
 use integration::test_server::TestServer;
-use predicates::str::{contains, starts_with};
+use predicates::str::{contains, diff, starts_with};
 use serial_test::parallel;
 use std::fmt::Display;
 
-#[derive(Debug)]
-enum Protocol {
+#[derive(Debug, Default)]
+pub(super) enum Protocol {
+    #[default]
     Tcp,
     Quic,
+}
+
+#[derive(Debug, Default)]
+pub(super) enum Scenario {
+    #[default]
+    SuccessWithCredentials,
+    SuccessWithoutCredentials,
+    FailureWithoutCredentials,
+    FailureDueToSessionTimeout,
 }
 
 impl Protocol {
@@ -19,12 +29,6 @@ impl Protocol {
             Self::Tcp => vec!["--transport", "tcp"],
             Self::Quic => vec!["--transport", "quic"],
         }
-    }
-}
-
-impl Default for Protocol {
-    fn default() -> Self {
-        Self::Tcp
     }
 }
 
@@ -40,11 +44,12 @@ impl Display for Protocol {
 #[derive(Debug, Default)]
 pub(super) struct TestMeCmd {
     protocol: Protocol,
+    scenario: Scenario,
 }
 
 impl TestMeCmd {
-    fn new(protocol: Protocol) -> Self {
-        Self { protocol }
+    pub(super) fn new(protocol: Protocol, scenario: Scenario) -> Self {
+        Self { protocol, scenario }
     }
 }
 
@@ -53,17 +58,33 @@ impl IggyCmdTestCase for TestMeCmd {
     async fn prepare_server_state(&mut self, _client: &dyn Client) {}
 
     fn get_command(&self) -> IggyCmdCommand {
-        IggyCmdCommand::new()
-            .with_env_credentials()
-            .opts(self.protocol.as_arg())
-            .arg("me")
+        let command = IggyCmdCommand::new().opts(self.protocol.as_arg()).arg("me");
+
+        match &self.scenario {
+            Scenario::SuccessWithCredentials => command.with_env_credentials(),
+            Scenario::FailureWithoutCredentials => command.disable_backtrace(),
+            Scenario::FailureDueToSessionTimeout => command.disable_backtrace(),
+            _ => command,
+        }
     }
 
     fn verify_command(&self, command_state: Assert) {
-        command_state
-            .success()
-            .stdout(starts_with("Executing me command\n"))
-            .stdout(contains(format!("Transport | {}", self.protocol)));
+        match &self.scenario {
+            Scenario::SuccessWithCredentials | Scenario::SuccessWithoutCredentials => {
+                command_state
+                    .success()
+                    .stdout(starts_with("Executing me command\n"))
+                    .stdout(contains(format!("Transport | {}", self.protocol)));
+            }
+            Scenario::FailureWithoutCredentials => {
+                command_state
+                    .failure()
+                    .stderr(diff("Error: CommandError(Iggy command line tool error\n\nCaused by:\n    Missing iggy server credentials)\n"));
+            }
+            Scenario::FailureDueToSessionTimeout => {
+                command_state.failure().stderr(diff("Error: CommandError(Login session expired for Iggy server: 127.0.0.1, please login again or use other authentication method)\n"));
+            }
+        }
     }
 
     async fn verify_server_state(&self, _client: &dyn Client) {}
@@ -98,7 +119,10 @@ pub async fn should_be_successful_using_transport_tcp() {
 
     iggy_cmd_test.setup().await;
     iggy_cmd_test
-        .execute_test(TestMeCmd::new(Protocol::Tcp))
+        .execute_test(TestMeCmd::new(
+            Protocol::Tcp,
+            Scenario::SuccessWithCredentials,
+        ))
         .await;
 }
 
@@ -109,7 +133,24 @@ pub async fn should_be_successful_using_transport_quic() {
 
     iggy_cmd_test.setup().await;
     iggy_cmd_test
-        .execute_test(TestMeCmd::new(Protocol::Quic))
+        .execute_test(TestMeCmd::new(
+            Protocol::Quic,
+            Scenario::SuccessWithCredentials,
+        ))
+        .await;
+}
+
+#[tokio::test]
+#[parallel]
+pub async fn should_be_unsuccessful_using_transport_tcp() {
+    let mut iggy_cmd_test = IggyCmdTest::default();
+
+    iggy_cmd_test.setup().await;
+    iggy_cmd_test
+        .execute_test(TestMeCmd::new(
+            Protocol::Tcp,
+            Scenario::FailureWithoutCredentials,
+        ))
         .await;
 }
 

@@ -1,4 +1,4 @@
-use crate::utils::byte_size::IggyByteSize;
+use crate::utils::{byte_size::IggyByteSize, duration::IggyDuration, timestamp::IggyTimestamp};
 use serde::{Deserialize, Serialize};
 
 /// `Stats` represents the statistics and details of the server and running process.
@@ -8,6 +8,8 @@ pub struct Stats {
     pub process_id: u32,
     /// The CPU usage of the process.
     pub cpu_usage: f32,
+    /// the total CPU usage of the system.
+    pub total_cpu_usage: f32,
     /// The memory usage of the process.
     pub memory_usage: IggyByteSize,
     /// The total memory of the system.
@@ -15,9 +17,9 @@ pub struct Stats {
     /// The available memory of the system.
     pub available_memory: IggyByteSize,
     /// The run time of the process.
-    pub run_time: u64,
+    pub run_time: IggyDuration,
     /// The start time of the process.
-    pub start_time: u64,
+    pub start_time: IggyTimestamp,
     /// The total number of bytes read.
     pub read_bytes: IggyByteSize,
     /// The total number of bytes written.
@@ -46,4 +48,33 @@ pub struct Stats {
     pub os_version: String,
     /// The version of the kernel.
     pub kernel_version: String,
+}
+
+impl Default for Stats {
+    fn default() -> Self {
+        Self {
+            process_id: 0,
+            cpu_usage: 0.0,
+            total_cpu_usage: 0.0,
+            memory_usage: 0.into(),
+            total_memory: 0.into(),
+            available_memory: 0.into(),
+            run_time: 0.into(),
+            start_time: 0.into(),
+            read_bytes: 0.into(),
+            written_bytes: 0.into(),
+            messages_size_bytes: 0.into(),
+            streams_count: 0,
+            topics_count: 0,
+            partitions_count: 0,
+            segments_count: 0,
+            messages_count: 0,
+            clients_count: 0,
+            consumer_groups_count: 0,
+            hostname: "unknown_hostname".to_string(),
+            os_name: "unknown_os_name".to_string(),
+            os_version: "unknown_os_version".to_string(),
+            kernel_version: "unknown_kernel_version".to_string(),
+        }
+    }
 }

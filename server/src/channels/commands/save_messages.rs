@@ -9,6 +9,7 @@ use tokio::time;
 use tracing::{error, info, warn};
 
 pub struct MessagesSaver {
+    enabled: bool,
     enforce_fsync: bool,
     interval: IggyDuration,
     sender: Sender<SaveMessagesCommand>,
@@ -25,6 +26,7 @@ pub struct SaveMessagesExecutor;
 impl MessagesSaver {
     pub fn new(config: &MessageSaverConfig, sender: Sender<SaveMessagesCommand>) -> Self {
         Self {
+            enabled: config.enabled,
             enforce_fsync: config.enforce_fsync,
             interval: config.interval,
             sender,
@@ -32,7 +34,7 @@ impl MessagesSaver {
     }
 
     pub fn start(&self) {
-        if !self.enforce_fsync {
+        if !self.enabled {
             info!("Message saver is disabled.");
             return;
         }
@@ -50,8 +52,8 @@ impl MessagesSaver {
             loop {
                 interval_timer.tick().await;
                 let command = SaveMessagesCommand { enforce_fsync };
-                sender.send(command).unwrap_or_else(|error| {
-                    error!("Failed to send SaveMessagesCommand. Error: {}", error);
+                sender.send(command).unwrap_or_else(|e| {
+                    error!("Failed to send SaveMessagesCommand. Error: {e}",);
                 });
             }
         });
@@ -61,14 +63,18 @@ impl MessagesSaver {
 #[async_trait]
 impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: SaveMessagesCommand) {
-        system
-            .read()
-            .persist_messages()
-            .await
-            .unwrap_or_else(|error| {
-                error!("Couldn't save buffered messages on disk. Error: {}", error);
-            });
-        info!("Buffered messages saved on disk.");
+        let saved_messages_count = system.read().persist_messages().await;
+
+        match saved_messages_count {
+            Ok(n) => {
+                if n > 0 {
+                    info!("Saved {n} buffered messages on disk.");
+                }
+            }
+            Err(e) => {
+                error!("Couldn't save buffered messages on disk. Error: {e}");
+            }
+        }
     }
 
     fn start_command_sender(

@@ -58,6 +58,41 @@ impl FromStr for IggyDuration {
     }
 }
 
+impl From<Option<u64>> for IggyDuration {
+    fn from(byte_size: Option<u64>) -> Self {
+        match byte_size {
+            Some(value) => IggyDuration {
+                duration: Duration::from_secs(value),
+            },
+            None => IggyDuration {
+                duration: Duration::new(0, 0),
+            },
+        }
+    }
+}
+
+impl From<u64> for IggyDuration {
+    fn from(value: u64) -> Self {
+        IggyDuration {
+            duration: Duration::from_secs(value),
+        }
+    }
+}
+
+impl From<IggyDuration> for u64 {
+    fn from(iggy_duration: IggyDuration) -> u64 {
+        iggy_duration.duration.as_secs()
+    }
+}
+
+impl Default for IggyDuration {
+    fn default() -> Self {
+        IggyDuration {
+            duration: Duration::new(0, 0),
+        }
+    }
+}
+
 impl Display for IggyDuration {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_human_time_string())

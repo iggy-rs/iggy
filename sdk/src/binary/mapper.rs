@@ -29,22 +29,23 @@ const EMPTY_CONSUMER_GROUPS: Vec<ConsumerGroup> = vec![];
 pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
     let process_id = u32::from_le_bytes(payload[..4].try_into()?);
     let cpu_usage = f32::from_le_bytes(payload[4..8].try_into()?);
-    let memory_usage = u64::from_le_bytes(payload[8..16].try_into()?).into();
-    let total_memory = u64::from_le_bytes(payload[16..24].try_into()?).into();
-    let available_memory = u64::from_le_bytes(payload[24..32].try_into()?).into();
-    let run_time = u64::from_le_bytes(payload[32..40].try_into()?);
-    let start_time = u64::from_le_bytes(payload[40..48].try_into()?);
-    let read_bytes = u64::from_le_bytes(payload[48..56].try_into()?).into();
-    let written_bytes = u64::from_le_bytes(payload[56..64].try_into()?).into();
-    let total_size_bytes = u64::from_le_bytes(payload[64..72].try_into()?).into();
-    let streams_count = u32::from_le_bytes(payload[72..76].try_into()?);
-    let topics_count = u32::from_le_bytes(payload[76..80].try_into()?);
-    let partitions_count = u32::from_le_bytes(payload[80..84].try_into()?);
-    let segments_count = u32::from_le_bytes(payload[84..88].try_into()?);
-    let messages_count = u64::from_le_bytes(payload[88..96].try_into()?);
-    let clients_count = u32::from_le_bytes(payload[96..100].try_into()?);
-    let consumer_groups_count = u32::from_le_bytes(payload[100..104].try_into()?);
-    let mut current_position = 104;
+    let total_cpu_usage = f32::from_le_bytes(payload[8..12].try_into()?);
+    let memory_usage = u64::from_le_bytes(payload[12..20].try_into()?).into();
+    let total_memory = u64::from_le_bytes(payload[20..28].try_into()?).into();
+    let available_memory = u64::from_le_bytes(payload[28..36].try_into()?).into();
+    let run_time = u64::from_le_bytes(payload[36..44].try_into()?).into();
+    let start_time = u64::from_le_bytes(payload[44..52].try_into()?).into();
+    let read_bytes = u64::from_le_bytes(payload[52..60].try_into()?).into();
+    let written_bytes = u64::from_le_bytes(payload[60..68].try_into()?).into();
+    let messages_size_bytes = u64::from_le_bytes(payload[68..76].try_into()?).into();
+    let streams_count = u32::from_le_bytes(payload[76..80].try_into()?);
+    let topics_count = u32::from_le_bytes(payload[80..84].try_into()?);
+    let partitions_count = u32::from_le_bytes(payload[84..88].try_into()?);
+    let segments_count = u32::from_le_bytes(payload[88..92].try_into()?);
+    let messages_count = u64::from_le_bytes(payload[92..100].try_into()?);
+    let clients_count = u32::from_le_bytes(payload[100..104].try_into()?);
+    let consumer_groups_count = u32::from_le_bytes(payload[104..108].try_into()?);
+    let mut current_position = 108;
     let hostname_length =
         u32::from_le_bytes(payload[current_position..current_position + 4].try_into()?) as usize;
     let hostname =
@@ -71,6 +72,7 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
     Ok(Stats {
         process_id,
         cpu_usage,
+        total_cpu_usage,
         memory_usage,
         total_memory,
         available_memory,
@@ -78,7 +80,7 @@ pub fn map_stats(payload: Bytes) -> Result<Stats, IggyError> {
         start_time,
         read_bytes,
         written_bytes,
-        messages_size_bytes: total_size_bytes,
+        messages_size_bytes,
         streams_count,
         topics_count,
         partitions_count,
@@ -331,7 +333,7 @@ pub fn map_stream(payload: Bytes) -> Result<StreamDetails, IggyError> {
 
 fn map_to_stream(payload: Bytes, position: usize) -> Result<(Stream, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
-    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?).into();
     let topics_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
     let size_bytes = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?).into();
     let messages_count = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?);

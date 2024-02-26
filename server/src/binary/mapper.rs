@@ -18,11 +18,12 @@ pub fn map_stats(stats: &Stats) -> Bytes {
     let mut bytes = BytesMut::with_capacity(104);
     bytes.put_u32_le(stats.process_id);
     bytes.put_f32_le(stats.cpu_usage);
+    bytes.put_f32_le(stats.total_cpu_usage);
     bytes.put_u64_le(stats.memory_usage.as_bytes_u64());
     bytes.put_u64_le(stats.total_memory.as_bytes_u64());
     bytes.put_u64_le(stats.available_memory.as_bytes_u64());
-    bytes.put_u64_le(stats.run_time);
-    bytes.put_u64_le(stats.start_time);
+    bytes.put_u64_le(stats.run_time.into());
+    bytes.put_u64_le(stats.start_time.into());
     bytes.put_u64_le(stats.read_bytes.as_bytes_u64());
     bytes.put_u64_le(stats.written_bytes.as_bytes_u64());
     bytes.put_u64_le(stats.messages_size_bytes.as_bytes_u64());
@@ -197,7 +198,7 @@ pub async fn map_consumer_groups(consumer_groups: &[&RwLock<ConsumerGroup>]) -> 
 
 async fn extend_stream(stream: &Stream, bytes: &mut BytesMut) {
     bytes.put_u32_le(stream.stream_id);
-    bytes.put_u64_le(stream.created_at);
+    bytes.put_u64_le(stream.created_at.into());
     bytes.put_u32_le(stream.get_topics().len() as u32);
     bytes.put_u64_le(stream.get_size().as_bytes_u64());
     bytes.put_u64_le(stream.get_messages_count());

@@ -13,10 +13,11 @@ pub struct Stream {
     pub name: String,
     pub path: String,
     pub topics_path: String,
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     pub current_topic_id: AtomicU32,
     pub size_bytes: Arc<AtomicU64>,
     pub messages_count: Arc<AtomicU64>,
+    pub segments_count: Arc<AtomicU32>,
     pub(crate) topics: HashMap<u32, Topic>,
     pub(crate) topics_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
@@ -46,10 +47,11 @@ impl Stream {
             current_topic_id: AtomicU32::new(1),
             size_bytes: Arc::new(AtomicU64::new(0)),
             messages_count: Arc::new(AtomicU64::new(0)),
+            segments_count: Arc::new(AtomicU32::new(0)),
             topics: HashMap::new(),
             topics_ids: HashMap::new(),
             storage,
-            created_at: IggyTimestamp::now().to_micros(),
+            created_at: IggyTimestamp::now(),
         }
     }
 

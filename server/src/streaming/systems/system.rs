@@ -164,13 +164,14 @@ impl System {
         Ok(())
     }
 
-    pub async fn persist_messages(&self) -> Result<(), IggyError> {
+    pub async fn persist_messages(&self) -> Result<usize, IggyError> {
         trace!("Saving buffered messages on disk...");
+        let mut saved_messages_number = 0;
         for stream in self.streams.values() {
-            stream.persist_messages().await?;
+            saved_messages_number += stream.persist_messages().await?;
         }
 
-        Ok(())
+        Ok(saved_messages_number)
     }
 
     pub fn ensure_authenticated(&self, session: &Session) -> Result<(), IggyError> {

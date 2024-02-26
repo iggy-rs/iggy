@@ -1,4 +1,4 @@
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 
 use crate::streaming::common::test_setup::TestSetup;
@@ -27,6 +27,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             setup.storage.clone(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
             None,
             None,
             1,
@@ -62,6 +63,7 @@ async fn should_load_existing_topic_from_disk() {
             setup.storage.clone(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
             None,
             None,
             1,
@@ -78,6 +80,9 @@ async fn should_load_existing_topic_from_disk() {
         let mut loaded_topic = Topic::empty(
             stream_id,
             topic_id,
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
             setup.config.clone(),
             setup.storage.clone(),
         );
@@ -109,6 +114,7 @@ async fn should_delete_existing_topic_from_disk() {
             setup.storage.clone(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
             None,
             None,
             1,
@@ -146,6 +152,7 @@ async fn should_purge_existing_topic_on_disk() {
             setup.storage.clone(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
+            Arc::new(AtomicU32::new(0)),
             None,
             None,
             1,

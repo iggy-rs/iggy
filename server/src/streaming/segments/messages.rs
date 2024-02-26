@@ -285,7 +285,7 @@ impl Segment {
     pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {
         let storage = self.storage.segment.clone();
         if self.unsaved_batches.is_none() {
-            return Ok(()
+            return Ok(0);
         }
 
         let unsaved_messages = self.unsaved_batches.as_ref().unwrap();

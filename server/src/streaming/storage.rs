@@ -104,7 +104,7 @@ pub trait SegmentStorage: Storage<Segment> {
         segment: &Segment,
         size_bytes: u64,
     ) -> Result<Vec<RetainedMessageBatch>, IggyError>;
-    async fn save_messages(
+    async fn save_batches(
         &self,
         segment: &Segment,
         messages: &[Arc<RetainedMessageBatch>],
@@ -448,7 +448,7 @@ pub(crate) mod tests {
             Ok(vec![])
         }
 
-        async fn save_messages(
+        async fn save_batches(
             &self,
             _segment: &Segment,
             _messages: &[Arc<RetainedMessageBatch>],

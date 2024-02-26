@@ -1,4 +1,4 @@
-use crate::streaming::batching::batch_filter::BatchFilter;
+use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
@@ -290,12 +290,12 @@ impl Partition {
             }
             if segment_size_bytes > remaining_size {
                 // Last segment is bigger than the remaining size, so we need to get the newest messages from it.
-                let partial_messages = segment
+                let partial_batches = segment
                     .get_newest_batches_by_size(remaining_size)
                     .await?
                     .into_iter()
                     .map(Arc::new);
-                batches.splice(..0, partial_messages);
+                batches.splice(..0, partial_batches);
                 break;
             }
 

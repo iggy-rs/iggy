@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use crate::streaming::batching::batch_filter::BatchFilter;
-use crate::streaming::batching::iterator::IntoBatchIterator;
+use crate::streaming::batching::batch_filter::BatchItemizer;
+use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::models::messages::RetainedMessage;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError::{
@@ -64,10 +64,10 @@ impl RetainedMessageBatch {
     }
 }
 
-impl<'a, T, U> BatchFilter<RetainedMessage, &'a U, T> for T
+impl<'a, T, U> BatchItemizer<RetainedMessage, &'a U, T> for T
 where
     T: Iterator<Item = &'a U>,
-    &'a U: IntoBatchIterator<Item = RetainedMessage>,
+    &'a U: IntoMessagesIterator<Item = RetainedMessage>,
 {
     fn convert_and_filter_by_offset_range(
         self,

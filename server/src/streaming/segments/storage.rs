@@ -1,4 +1,4 @@
-use crate::streaming::batching::iterator::IntoBatchIterator;
+use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::persistence::persister::Persister;
@@ -10,7 +10,7 @@ use crate::streaming::storage::{SegmentStorage, Storage};
 use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
-use bytes::{Buf, BufMut, Bytes, BytesMut};
+use bytes::{Buf, BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::checksum;
 use std::io::SeekFrom;
@@ -238,17 +238,16 @@ impl SegmentStorage for FileSegmentStorage {
             Ok(())
         })
         .await?;
-        let messages_count =
-            batches.first().unwrap().base_offset + batches.last().unwrap().get_last_offset();
+        let messages_count = batches.len();
         trace!(
-            "Loaded {} newest messages of total size {} bytes from disk.",
+            "Loaded {} newest messages batches of total size {} bytes from disk.",
             messages_count,
             total_size_bytes
         );
         Ok(batches)
     }
 
-    async fn save_messages(
+    async fn save_batches(
         &self,
         segment: &Segment,
         messages: &[Arc<RetainedMessageBatch>],
@@ -607,8 +606,6 @@ async fn load_batches_by_range(
     Ok(())
 }
 
-#[allow(dead_code)]
-// TODO: Make use of this method
 async fn load_messages_by_size(
     segment: &Segment,
     size_bytes: u64,
@@ -643,7 +640,7 @@ async fn load_messages_by_size(
             .map_err(|_| IggyError::CannotReadMaxTimestamp)?;
 
         let payload_len = batch_length as usize;
-        let mut payload = vec![0; payload_len];
+        let mut payload = BytesMut::with_capacity(payload_len);
         reader
             .read_exact(&mut payload)
             .await
@@ -654,7 +651,7 @@ async fn load_messages_by_size(
             last_offset_delta,
             max_timestamp,
             batch_length,
-            Bytes::from(payload),
+            payload.freeze(),
         );
         let message_size = batch.get_size_bytes() as u64;
         if accumulated_size >= threshold {

@@ -2,8 +2,7 @@ use crate::streaming::common::test_setup::TestSetup;
 use bytes::Bytes;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::messages::send_messages;
-use iggy::messages::send_messages::Partitioning;
+use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::byte_size::IggyByteSize;
 use server::configs::resource_quota::MemoryResourceQuota;
 use server::configs::system::{CacheConfig, SystemConfig};
@@ -12,8 +11,6 @@ use server::streaming::topics::topic::Topic;
 use server::streaming::utils::hash;
 use std::collections::HashMap;
 use std::str::from_utf8;
-use std::sync::atomic::AtomicU64;
-use std::str::{from_utf8, FromStr};
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 
@@ -229,8 +226,8 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
     topic
 }
 
-fn get_message(id: u128, payload: &str) -> send_messages::Message {
-    send_messages::Message {
+fn get_message(id: u128, payload: &str) -> Message {
+    Message {
         id,
         length: payload.len() as u32,
         payload: Bytes::from(payload.as_bytes().to_vec()),

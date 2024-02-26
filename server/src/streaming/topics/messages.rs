@@ -1,5 +1,4 @@
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
-use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::sizeable::Sizeable;
 use crate::streaming::topics::topic::Topic;
@@ -8,8 +7,8 @@ use crate::streaming::utils::hash;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
-use iggy::messages::send_messages;
-use iggy::messages::send_messages::{Partitioning, PartitioningKind};
+use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
+use iggy::models::messages::PolledMessages;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -54,7 +53,7 @@ impl Topic {
 
         let messages = messages
             .into_iter()
-            .map(|msg| Arc::new(msg.try_into().unwrap()))
+            .map(|msg| msg.try_into().unwrap())
             .collect::<Vec<_>>();
         Ok(PolledMessages {
             partition_id,
@@ -66,7 +65,7 @@ impl Topic {
     pub async fn append_messages(
         &self,
         partitioning: &Partitioning,
-        messages: &Vec<send_messages::Message>,
+        messages: &Vec<Message>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
@@ -93,7 +92,7 @@ impl Topic {
     async fn append_messages_to_partition(
         &self,
         partition_id: u32,
-        messages: &Vec<send_messages::Message>,
+        messages: &Vec<Message>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&partition_id);
         partition
@@ -250,9 +249,8 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
+    use std::sync::atomic::AtomicU32;
     use std::sync::atomic::AtomicU64;
-    use iggy::models::messages::MessageState;
-    use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
 
     #[tokio::test]
@@ -264,11 +262,7 @@ mod tests {
         let topic = init_topic(partitions_count);
 
         for entity_id in 1..=messages_count {
-            let messages = vec![send_messages::Message::new(
-                Some(entity_id as u128),
-                Bytes::new(),
-                None,
-            )];
+            let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             topic
                 .append_messages(&partitioning, &messages)
                 .await
@@ -296,11 +290,7 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
-            let messages = vec![send_messages::Message::new(
-                Some(entity_id as u128),
-                Bytes::new(),
-                None,
-            )];
+            let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             topic
                 .append_messages(&partitioning, &messages)
                 .await

@@ -1,4 +1,4 @@
-use crate::streaming::batching::batch_filter::BatchFilter;
+use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::index::{Index, IndexRange};
@@ -102,14 +102,12 @@ impl Segment {
 
         // Take only the batch when last_offset >= relative_end_offset and it's base_offset is <= relative_end_offset
         // otherwise take batches until the last_offset >= relative_end_offset and base_offset <= relative_start_offset
-        let messages = unsaved_batches[slice_start..]
-            .into_iter()
+        unsaved_batches[slice_start..]
+            .iter()
             .filter(|batch| {
                 batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
             })
-            .convert_and_filter_by_offset_range(start_offset, end_offset);
-
-        messages
+            .convert_and_filter_by_offset_range(start_offset, end_offset)
     }
 
     async fn load_messages_from_disk(
@@ -288,12 +286,13 @@ impl Segment {
             return Ok(0);
         }
 
-        let unsaved_messages = self.unsaved_batches.as_ref().unwrap();
-        if unsaved_messages.is_empty() {
+        let unsaved_batches = self.unsaved_batches.as_ref().unwrap();
+        if unsaved_batches.is_empty() {
             return Ok(0);
         }
 
-        let unsaved_messages_number: usize = unsaved_messages.len();
+        let unsaved_messages_number = unsaved_batches.first().unwrap().base_offset
+            + unsaved_batches.last().unwrap().get_last_offset();
 
         trace!(
             "Saving {} messages on disk in segment with start offset: {} for partition with ID: {}...",
@@ -302,7 +301,7 @@ impl Segment {
             self.partition_id
         );
 
-        let saved_bytes = storage.save_messages(self, unsaved_messages).await?;
+        let saved_bytes = storage.save_batches(self, unsaved_batches).await?;
         storage.save_index(self).await?;
         self.unsaved_indexes.clear();
         storage.save_time_index(self).await?;
@@ -324,6 +323,6 @@ impl Segment {
             self.unsaved_batches.as_mut().unwrap().clear();
         }
 
-        Ok(unsaved_messages_number)
+        Ok(unsaved_messages_number as usize)
     }
 }

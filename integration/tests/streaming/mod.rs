@@ -1,5 +1,6 @@
 use bytes::Bytes;
-use iggy::messages::send_messages;
+use iggy::messages::send_messages::Message;
+
 mod common;
 mod consumer_group;
 mod consumer_offset;
@@ -13,7 +14,7 @@ mod topic;
 mod topic_messages;
 mod user;
 
-fn create_messages() -> Vec<send_messages::Message> {
+fn create_messages() -> Vec<Message> {
     vec![
         create_message(1, "message 1"),
         create_message(2, "message 2"),
@@ -24,9 +25,9 @@ fn create_messages() -> Vec<send_messages::Message> {
     ]
 }
 
-fn create_message(id: u128, payload: &str) -> send_messages::Message {
+fn create_message(id: u128, payload: &str) -> Message {
     let payload = Bytes::from(payload.to_string());
-    send_messages::Message {
+    Message {
         id,
         length: payload.len() as u32,
         payload,

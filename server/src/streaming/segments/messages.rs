@@ -102,12 +102,15 @@ impl Segment {
 
         // Take only the batch when last_offset >= relative_end_offset and it's base_offset is <= relative_end_offset
         // otherwise take batches until the last_offset >= relative_end_offset and base_offset <= relative_start_offset
+        let messages_count = (start_offset + end_offset) as usize;
         unsaved_batches[slice_start..]
             .iter()
             .filter(|batch| {
                 batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
             })
-            .convert_and_filter_by_offset_range(start_offset, end_offset)
+            .to_messages_with_filter(messages_count, &|msg| {
+                msg.offset >= start_offset && msg.offset <= end_offset
+            })
     }
 
     async fn load_messages_from_disk(
@@ -175,13 +178,16 @@ impl Segment {
         start_offset: u64,
         end_offset: u64,
     ) -> Result<Vec<RetainedMessage>, IggyError> {
+        let messages_count = (start_offset + end_offset) as usize;
         let messages = self
             .storage
             .segment
             .load_message_batches(self, index_range)
             .await?
             .iter()
-            .convert_and_filter_by_offset_range(start_offset, end_offset);
+            .to_messages_with_filter(messages_count, &|msg| {
+                msg.offset >= start_offset && msg.offset <= end_offset
+            });
 
         trace!(
             "Loaded {} messages from disk, segment start offset: {}, end offset: {}.",

@@ -335,13 +335,16 @@ impl Partition {
                 break;
             }
         }
+        let messages_count = (start_offset + end_offset) as usize;
         let messages = cache
             .iter()
             .skip(slice_start)
             .filter(|batch| {
                 batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
             })
-            .convert_and_filter_by_offset_range(start_offset, end_offset);
+            .to_messages_with_filter(messages_count, &|msg| {
+                msg.offset >= start_offset && msg.offset <= end_offset
+            });
 
         let expected_messages_count = (end_offset - start_offset + 1) as usize;
         if messages.len() != expected_messages_count {

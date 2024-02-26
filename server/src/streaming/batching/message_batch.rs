@@ -69,23 +69,19 @@ where
     T: Iterator<Item = &'a U>,
     &'a U: IntoMessagesIterator<Item = RetainedMessage>,
 {
-    fn convert_and_filter_by_offset_range(
-        self,
-        start_offset: u64,
-        end_offset: u64,
-    ) -> Vec<RetainedMessage> {
-        let messages_size = start_offset + end_offset;
-        self.fold(
-            Vec::with_capacity(messages_size as usize),
-            |mut messages, batch| {
-                messages.extend(
-                    batch
-                        .into_messages_iter()
-                        .filter(|msg| msg.offset >= start_offset && msg.offset <= end_offset),
-                );
-                messages
-            },
-        )
+    fn to_messages(self) -> Vec<RetainedMessage> {
+        self.flat_map(|batch| batch.into_messages_iter().collect::<Vec<_>>())
+            .collect()
+    }
+
+    fn to_messages_with_filter<F>(self, messages_count: usize, f: &F) -> Vec<RetainedMessage>
+    where
+        F: Fn(&RetainedMessage) -> bool,
+    {
+        self.fold(Vec::with_capacity(messages_count), |mut messages, batch| {
+            messages.extend(batch.into_messages_iter().filter(f));
+            messages
+        })
     }
 }
 

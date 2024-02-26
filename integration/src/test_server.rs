@@ -161,17 +161,6 @@ impl TestServer {
         command.env(SYSTEM_PATH_ENV_VAR, files_path.clone());
         command.envs(self.envs.clone());
 
-        // When running action from github CI, binary needs to be started via QEMU.
-        if let Ok(runner) = std::env::var("QEMU_RUNNER") {
-            let mut runner_command = Command::new(runner);
-            runner_command
-                .arg(command.get_program().to_str().unwrap())
-                .env(SYSTEM_PATH_ENV_VAR, files_path);
-
-            runner_command.envs(self.envs.clone());
-            command = runner_command;
-        };
-
         // By default, server all logs are redirected to files,
         // and dumped to stderr when test fails. With IGGY_TEST_VERBOSE=1
         // logs are dumped to stdout during test execution.

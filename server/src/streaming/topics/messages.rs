@@ -1,3 +1,4 @@
+use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::sizeable::Sizeable;
@@ -64,6 +65,7 @@ impl Topic {
 
     pub async fn append_messages(
         &self,
+        batch_size: u64,
         partitioning: &Partitioning,
         messages: &Vec<Message>,
     ) -> Result<(), IggyError> {
@@ -85,23 +87,28 @@ impl Topic {
             }
         };
 
-        self.append_messages_to_partition(partition_id, messages)
+        let appendable_batch_info = AppendableBatchInfo::new(batch_size, partition_id);
+        self.append_messages_to_partition(appendable_batch_info, messages)
             .await
     }
 
     async fn append_messages_to_partition(
         &self,
-        partition_id: u32,
+        appendable_batch_info: AppendableBatchInfo,
         messages: &Vec<Message>,
     ) -> Result<(), IggyError> {
-        let partition = self.partitions.get(&partition_id);
+        let partition = self.partitions.get(&appendable_batch_info.partition_id);
         partition
             .ok_or_else(|| {
-                IggyError::PartitionNotFound(partition_id, self.stream_id, self.stream_id)
+                IggyError::PartitionNotFound(
+                    appendable_batch_info.partition_id,
+                    self.stream_id,
+                    self.stream_id,
+                )
             })?
             .write()
             .await
-            .append_messages(messages)
+            .append_messages(appendable_batch_info, messages)
             .await?;
 
         Ok(())
@@ -263,8 +270,9 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
+            let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(&partitioning, &messages)
+                .append_messages(batch_size, &partitioning, &messages)
                 .await
                 .unwrap();
         }
@@ -291,8 +299,9 @@ mod tests {
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
+            let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(&partitioning, &messages)
+                .append_messages(batch_size, &partitioning, &messages)
                 .await
                 .unwrap();
         }

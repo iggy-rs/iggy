@@ -1,3 +1,4 @@
+use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
@@ -361,7 +362,11 @@ impl Partition {
         messages
     }
 
-    pub async fn append_messages(&mut self, messages: &Vec<Message>) -> Result<(), IggyError> {
+    pub async fn append_messages(
+        &mut self,
+        appendable_batch_info: AppendableBatchInfo,
+        messages: &Vec<Message>,
+    ) -> Result<(), IggyError> {
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
             if last_segment.is_closed {
@@ -374,12 +379,8 @@ impl Partition {
             }
         }
 
-        //TODO(numinex): Pass this from the system level + POLLED_MESSAGE_METADATA * messages_count
-        let batch_size = messages
-            .iter()
-            .map(|msg| (msg.get_size_bytes() + POLLED_MESSAGE_METADATA) as usize)
-            .sum();
-
+        let batch_size = appendable_batch_info.batch_size
+            + (POLLED_MESSAGE_METADATA * messages.len() as u32) as u64;
         let base_offset = if !self.should_increment_offset {
             0
         } else {
@@ -391,7 +392,7 @@ impl Partition {
         let mut max_timestamp = 0;
         let mut min_timestamp = 0;
 
-        let mut buffer = BytesMut::with_capacity(batch_size);
+        let mut buffer = BytesMut::with_capacity(batch_size as usize);
         let mut batch_builder = RetainedMessageBatch::builder();
         batch_builder = batch_builder.base_offset(base_offset);
         if let Some(message_deduplicator) = &self.message_deduplicator {
@@ -508,7 +509,14 @@ mod tests {
         let mut partition = create_partition(false);
         let messages = create_messages();
         let messages_count = messages.len() as u32;
-        partition.append_messages(&messages).await.unwrap();
+        let appendable_batch_info = AppendableBatchInfo {
+            batch_size: messages.iter().map(|m| m.get_size_bytes() as u64).sum(),
+            partition_id: partition.partition_id,
+        };
+        partition
+            .append_messages(appendable_batch_info, &messages)
+            .await
+            .unwrap();
 
         let loaded_messages = partition
             .get_messages_by_offset(0, messages_count)
@@ -523,7 +531,14 @@ mod tests {
         let messages = create_messages();
         let messages_count = messages.len() as u32;
         let unique_messages_count = 3;
-        partition.append_messages(&messages).await.unwrap();
+        let appendable_batch_info = AppendableBatchInfo {
+            batch_size: messages.iter().map(|m| m.get_size_bytes() as u64).sum(),
+            partition_id: partition.partition_id,
+        };
+        partition
+            .append_messages(appendable_batch_info, &messages)
+            .await
+            .unwrap();
 
         let loaded_messages = partition
             .get_messages_by_offset(0, messages_count)

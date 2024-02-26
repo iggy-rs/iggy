@@ -76,8 +76,9 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
             from_utf8(&message.payload).unwrap(),
         ))
     }
+    let batch_size = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
     topic
-        .append_messages(&partitioning, &messages)
+        .append_messages(batch_size, &partitioning, &messages)
         .await
         .unwrap();
 
@@ -116,8 +117,13 @@ async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_
     let partitioning = Partitioning::balanced();
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
+        let batch_size = 16 + 4 + payload.len() as u64;
         topic
-            .append_messages(&partitioning, &vec![get_message(i as u128, &payload)])
+            .append_messages(
+                batch_size,
+                &partitioning,
+                &vec![get_message(i as u128, &payload)],
+            )
             .await
             .unwrap();
     }
@@ -136,8 +142,13 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
     let partitioning = Partitioning::partition_id(partition_id);
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
+        let batch_size = 16 + 4 + payload.len() as u64;
         topic
-            .append_messages(&partitioning, &vec![get_message(i as u128, &payload)])
+            .append_messages(
+                batch_size,
+                &partitioning,
+                &vec![get_message(i as u128, &payload)],
+            )
             .await
             .unwrap();
     }
@@ -160,8 +171,10 @@ async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_pa
     for entity_id in 1..=partitions_count * messages_count {
         let payload = get_payload(entity_id);
         let partitioning = Partitioning::messages_key_u32(entity_id);
+        let batch_size = 16 + 4 + payload.len() as u64;
         topic
             .append_messages(
+                batch_size,
                 &partitioning,
                 &vec![get_message(entity_id as u128, &payload)],
             )

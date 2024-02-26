@@ -4,6 +4,7 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::messages::send_messages::Message;
 use iggy::models::header::{HeaderKey, HeaderValue};
 use server::configs::system::{PartitionConfig, SystemConfig};
+use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -76,7 +77,14 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
 
     setup.create_partitions_directory(stream_id, topic_id).await;
     partition.persist().await.unwrap();
-    partition.append_messages(&messages).await.unwrap();
+    let appendable_batch_info = AppendableBatchInfo::new(
+        messages.iter().map(|msg| msg.get_size_bytes() as u64).sum(),
+        partition.partition_id,
+    );
+    partition
+        .append_messages(appendable_batch_info, &messages)
+        .await
+        .unwrap();
     assert_eq!(partition.unsaved_messages_count, 0);
 
     let mut loaded_partition = Partition::create(

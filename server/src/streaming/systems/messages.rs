@@ -134,7 +134,7 @@ impl System {
             }
 
             topic
-                .append_messages(partitioning, &encrypted_messages)
+                .append_messages(batch_size_bytes, partitioning, &encrypted_messages)
                 .await?;
             self.metrics
                 .increment_messages(encrypted_messages.len() as u64);
@@ -147,7 +147,9 @@ impl System {
                 }
             }
 
-            topic.append_messages(partitioning, messages).await?;
+            topic
+                .append_messages(batch_size_bytes, partitioning, messages)
+                .await?;
             self.metrics.increment_messages(messages.len() as u64);
             Ok(())
         }

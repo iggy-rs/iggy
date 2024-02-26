@@ -17,13 +17,6 @@ const BENCH_FILES_PREFIX: &str = "bench_";
 fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport) {
     let mut command = Command::cargo_bin("iggy-bench").unwrap();
 
-    // When running action from github CI, binary needs to be started via QEMU.
-    if let Ok(runner) = std::env::var("QEMU_RUNNER") {
-        let mut runner_command = Command::new(runner);
-        runner_command.arg(command.get_program().to_str().unwrap());
-        command = runner_command;
-    };
-
     let mut stderr_file_path = None;
     let mut stdout_file_path = None;
 

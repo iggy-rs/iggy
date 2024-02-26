@@ -144,15 +144,6 @@ impl IggyCmdTest {
         // Set server address for the command - it's randomized for each test
         command.args(test_case.protocol(&self.server));
 
-        // When running action from github CI, binary needs to be started via QEMU.
-        if let Ok(runner) = std::env::var("QEMU_RUNNER") {
-            let mut runner_command = Command::new(runner);
-            runner_command.envs(command_args.get_env());
-            runner_command.arg(command.get_program().to_str().unwrap());
-            runner_command.args(test_case.protocol(&self.server));
-            command = runner_command;
-        };
-
         // Print used environment variables and command with all arguments.
         // By default, it will not be visible but once test is executed with
         // --nocapture flag, it will be visible.
@@ -210,14 +201,6 @@ impl IggyCmdTest {
         let command_args = test_case.get_command();
         // Set environment variables for the command
         command.envs(command_args.get_env());
-
-        // When running action from github CI, binary needs to be started via QEMU.
-        if let Ok(runner) = std::env::var("QEMU_RUNNER") {
-            let mut runner_command = Command::new(runner);
-            runner_command.arg(command.get_program().to_str().unwrap());
-            runner_command.envs(command_args.get_env());
-            command = runner_command;
-        };
 
         // Print used environment variables and command with all arguments.
         // By default, it will not be visible but once test is executed with

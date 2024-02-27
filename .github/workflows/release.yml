@@ -90,7 +90,6 @@ jobs:
             name: iggy-Linux-arm-musl.tar.gz
             docker_arch: linux/arm/v7
             cross: true
-            qemu_runner: "qemu-arm"
 
           - os_name: Linux-aarch64-musl
             os: ubuntu-latest
@@ -101,7 +100,6 @@ jobs:
             name: iggy-Linux-aarch64-musl.tar.gz
             docker_arch: linux/arm64/v8
             cross: true
-            qemu_runner: "qemu-aarch64"
 
         toolchain:
           - stable
@@ -114,10 +112,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           key: "v2"
-
-      - name: Set environment variables
-        run: export QEMU_RUNNER=${{ matrix.platform.qemu_runner }}
-        if: ${{ matrix.platform.cross }}
 
       - name: Install musl-tools on Linux
         run: sudo apt-get update --yes && sudo apt-get install --yes musl-tools

@@ -42,7 +42,6 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         Arc::new(AtomicU32::new(0)),
     );
 
-    let mut test_timestamp: u64 = 0;
     let mut messages = Vec::with_capacity(messages_count as usize);
     let mut appended_messages = Vec::with_capacity(messages_count as usize);
     let mut messages_two = Vec::with_capacity(messages_count as usize);
@@ -114,7 +113,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         .append_messages(appendable_batch_info, &messages)
         .await
         .unwrap();
-    test_timestamp = IggyTimestamp::now().to_micros();
+    let test_timestamp = IggyTimestamp::now().to_micros();
     partition
         .append_messages(appendable_batch_info_two, &messages_two)
         .await

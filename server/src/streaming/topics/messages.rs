@@ -54,8 +54,8 @@ impl Topic {
 
         let messages = messages
             .into_iter()
-            .map(|msg| msg.try_into().unwrap())
-            .collect::<Vec<_>>();
+            .map(|msg| msg.try_into())
+            .collect::<Result<Vec<_>, IggyError>>()?;
         Ok(PolledMessages {
             partition_id,
             current_offset: partition.current_offset,

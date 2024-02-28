@@ -46,10 +46,6 @@ impl IggyDuration {
             duration: Duration::from_nanos(diff as u64),
         }
     }
-
-    pub fn as_nanos(&self) -> u128 {
-        self.duration.as_nanos()
-    }
 }
 
 impl FromStr for IggyDuration {
@@ -87,6 +83,12 @@ impl From<u64> for IggyDuration {
         IggyDuration {
             duration: Duration::from_secs(value),
         }
+    }
+}
+
+impl From<Duration> for IggyDuration {
+    fn from(duration: Duration) -> Self {
+        IggyDuration { duration }
     }
 }
 

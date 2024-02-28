@@ -12,6 +12,7 @@ use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{error::IggyError, utils::duration::IggyDuration};
 use std::sync::{atomic::Ordering, Arc};
+use std::time::Duration;
 use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
@@ -103,14 +104,14 @@ impl Partition {
         timestamp: u64,
         timestamp_from_index: u64,
     ) -> u32 {
-        if self.avg_timestamp_delta.as_nanos() == 0 {
+        if self.avg_timestamp_delta.as_micros() == 0 {
             return count;
         }
         let timestamp_diff = timestamp - timestamp_from_index;
         // This approximation is not exact, but it's good enough for the usage of this function
-        let overfetch_value = ((timestamp_diff as f64 / self.avg_timestamp_delta.as_nanos() as f64)
-            * 1.35)
-            .ceil() as u32;
+        let overfetch_value =
+            ((timestamp_diff as f64 / self.avg_timestamp_delta.as_micros() as f64) * 1.35).ceil()
+                as u32;
         count + overfetch_value
     }
 
@@ -431,7 +432,8 @@ impl Partition {
                 messages_count += 1;
             }
         }
-        let avg_timestamp_delta = ((max_timestamp - min_timestamp) / messages_count as u64).into();
+        let avg_timestamp_delta =
+            Duration::from_micros((max_timestamp - min_timestamp) / messages_count as u64).into();
 
         let min_alpha: f64 = 0.3;
         let max_alpha: f64 = 0.7;
@@ -494,11 +496,11 @@ impl Partition {
         let diff = self
             .avg_timestamp_delta
             .abs_diff(avg_timestamp_delta)
-            .as_nanos() as u64;
+            .as_micros();
 
         let alpha = max_alpha.min(min_alpha.max(1.0 - (diff as f64 / dynamic_range)));
-        let avg_timestamp_diff = (alpha * avg_timestamp_delta.as_nanos() as f64
-            + (1.0f64 - alpha) * self.avg_timestamp_delta.as_nanos() as f64)
+        let avg_timestamp_diff = (alpha * avg_timestamp_delta.as_micros() as f64
+            + (1.0f64 - alpha) * self.avg_timestamp_delta.as_micros() as f64)
             as u64;
         self.avg_timestamp_delta = avg_timestamp_diff.into();
     }

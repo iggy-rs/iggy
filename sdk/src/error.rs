@@ -200,6 +200,8 @@ pub enum IggyError {
     CannotReadTopics(u32) = 2017,
     #[error("Invalid replication factor")]
     InvalidReplicationFactor = 2018,
+    #[error("Topic max size can't be lower than currently configured segment size, Max Topic Size: {0}, Segment Size: {1}")]
+    TopicMaxSizeTooLow(u32, u32) = 2019,
     #[error("Cannot create partition with ID: {0} for stream with ID: {1} and topic with ID: {2}")]
     CannotCreatePartition(u32, u32, u32) = 3000,
     #[error(

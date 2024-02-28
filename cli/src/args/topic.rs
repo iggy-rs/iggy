@@ -1,8 +1,9 @@
 use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
-use iggy::cli::utils::message_expiry::MessageExpiry;
 use iggy::identifier::Identifier;
-use iggy::utils::byte_size::IggyByteSize;
+
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use std::convert::From;
 
 #[derive(Debug, Clone, Subcommand)]
@@ -99,7 +100,7 @@ pub(crate) struct TopicCreateArgs {
     /// ("unlimited" or skipping parameter disables max topic size functionality in topic)
     /// Can't be lower than segment size in the config.
     #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
-    pub(crate) max_topic_size: IggyByteSize,
+    pub(crate) max_topic_size: MaxTopicSize,
     /// Replication factor for the topic
     #[arg(short, long, default_value = "1")]
     pub(crate) replication_factor: u8,
@@ -143,7 +144,7 @@ pub(crate) struct TopicUpdateArgs {
     /// ("unlimited" or skipping parameter causes removal of max topic size parameter in topic)
     /// Can't be lower than segment size in the config.
     #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
-    pub(crate) max_topic_size: IggyByteSize,
+    pub(crate) max_topic_size: MaxTopicSize,
     #[arg(short, long, default_value = "1")]
     /// New replication factor for the topic
     pub(crate) replication_factor: u8,

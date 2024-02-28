@@ -510,6 +510,8 @@ impl Partition {
 mod tests {
     use std::sync::atomic::{AtomicU32, AtomicU64};
 
+    use iggy::utils::message_expiry::MessageExpiry;
+
     use super::*;
     use crate::configs::system::{MessageDeduplicationConfig, SystemConfig};
     use crate::streaming::partitions::create_messages;
@@ -578,7 +580,7 @@ mod tests {
             with_segment,
             config,
             storage,
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),

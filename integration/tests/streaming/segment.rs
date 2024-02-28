@@ -2,6 +2,7 @@ use crate::streaming::common::test_setup::TestSetup;
 use bytes::{Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::messages::{MessageState, PolledMessage};
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::streaming::batching::message_batch::RetainedMessageBatch;
 use server::streaming::models::messages::RetainedMessage;
@@ -26,7 +27,7 @@ async fn should_persist_segment() {
             start_offset,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -64,7 +65,7 @@ async fn should_load_existing_segment_from_disk() {
             start_offset,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -91,7 +92,7 @@ async fn should_load_existing_segment_from_disk() {
             start_offset,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -129,7 +130,7 @@ async fn should_persist_and_load_segment_with_messages() {
         start_offset,
         setup.config.clone(),
         setup.storage.clone(),
-        None,
+        MessageExpiry::default(),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -191,7 +192,7 @@ async fn should_persist_and_load_segment_with_messages() {
         start_offset,
         setup.config.clone(),
         setup.storage.clone(),
-        None,
+        MessageExpiry::default(),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -214,7 +215,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let message_expiry = 10;
+    let message_expiry = 10.into();
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -222,7 +223,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         start_offset,
         setup.config.clone(),
         setup.storage.clone(),
-        Some(message_expiry),
+        message_expiry,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -244,8 +245,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     .await;
     let messages_count = 10;
     let now = IggyTimestamp::now().to_micros();
-    let message_expiry = message_expiry as u64;
-    let mut expired_timestamp = now - (1000 * 2 * message_expiry);
+    let mut expired_timestamp = now - (1000 * 2 * message_expiry.as_micros());
     let mut base_offset = 0;
     let mut last_timestamp = 0;
     let mut batch_buffer = BytesMut::new();
@@ -293,7 +293,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let message_expiry = 10;
+    let message_expiry = 10.into();
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -301,7 +301,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         start_offset,
         setup.config.clone(),
         setup.storage.clone(),
-        Some(message_expiry),
+        message_expiry,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -322,9 +322,8 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     )
     .await;
     let now = IggyTimestamp::now().to_micros();
-    let message_expiry = message_expiry as u64;
-    let expired_timestamp = now - (1000 * 2 * message_expiry);
-    let not_expired_timestamp = now - (1000 * message_expiry) + 1;
+    let expired_timestamp = now - 1000;
+    let not_expired_timestamp = now + 10_000_000;
     let expired_message = create_message(0, "test", expired_timestamp);
     let not_expired_message = create_message(1, "test", not_expired_timestamp);
 

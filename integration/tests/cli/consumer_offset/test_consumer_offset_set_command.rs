@@ -13,6 +13,8 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::str::FromStr;
@@ -101,8 +103,8 @@ impl IggyCmdTestCase for TestConsumerOffsetSetCmd {
                 topic_id: Some(self.topic_id),
                 partitions_count: 1,
                 name: self.topic_name.clone(),
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
             })
             .await;

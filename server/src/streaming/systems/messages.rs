@@ -3,6 +3,7 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
+use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
@@ -137,6 +138,8 @@ impl System {
                 .append_messages(batch_size_bytes, partitioning, &encrypted_messages)
                 .await?;
             self.metrics
+                .write()
+                .await
                 .increment_messages(encrypted_messages.len() as u64);
             Ok(())
         } else {
@@ -150,7 +153,10 @@ impl System {
             topic
                 .append_messages(batch_size_bytes, partitioning, messages)
                 .await?;
-            self.metrics.increment_messages(messages.len() as u64);
+            self.metrics
+                .write()
+                .await
+                .increment_messages(messages.len() as u64);
             Ok(())
         }
     }

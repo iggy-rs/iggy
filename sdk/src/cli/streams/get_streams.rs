@@ -59,9 +59,7 @@ impl CliCommand for GetStreamsCmd {
             GetStreamsOutput::Table => {
                 let mut table = Table::new();
 
-                table.set_header(vec![
-                    "ID", "Created", "Name", "Size (B)", "Messages", "Topics",
-                ]);
+                table.set_header(vec!["ID", "Created", "Name", "Size", "Messages", "Topics"]);
 
                 streams.iter().for_each(|stream| {
                     table.add_row(vec![

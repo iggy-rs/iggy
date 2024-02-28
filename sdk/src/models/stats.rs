@@ -59,7 +59,7 @@ impl Default for Stats {
             memory_usage: 0.into(),
             total_memory: 0.into(),
             available_memory: 0.into(),
-            run_time: 0.into(),
+            run_time: 0u32.into(),
             start_time: 0.into(),
             read_bytes: 0.into(),
             written_bytes: 0.into(),

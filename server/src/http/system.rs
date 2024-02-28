@@ -31,7 +31,8 @@ pub fn router(state: Arc<AppState>, metrics_config: &HttpMetricsConfig) -> Route
 
 async fn get_metrics(State(state): State<Arc<AppState>>) -> Result<String, CustomError> {
     let system = state.system.read();
-    Ok(system.metrics.get_formatted_output())
+    let metrics = system.metrics.write().await;
+    Ok(metrics.get_formatted_output())
 }
 
 async fn get_stats(

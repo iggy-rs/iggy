@@ -14,6 +14,8 @@ use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
 use crate::utils::byte_size::IggyByteSize;
+use crate::utils::max_topic_size::MaxTopicSize;
+use crate::utils::message_expiry::MessageExpiry;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
@@ -402,18 +404,14 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
     let partitions_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
-    let message_expiry = match u32::from_le_bytes(payload[position + 16..position + 20].try_into()?)
-    {
-        0 => None,
-        message_expiry => Some(message_expiry),
-    };
-    let max_topic_size = match u64::from_le_bytes(payload[position + 20..position + 28].try_into()?)
-    {
-        0 => None,
-        max_topic_size => Some(IggyByteSize::from(max_topic_size)),
-    };
+    let message_expiry = MessageExpiry::from(u32::from_le_bytes(
+        payload[position + 16..position + 20].try_into()?,
+    ));
+    let max_topic_size = MaxTopicSize::from(u64::from_le_bytes(
+        payload[position + 20..position + 28].try_into()?,
+    ));
     let replication_factor = payload[position + 28];
-    let size_bytes = IggyByteSize::from(u64::from_le_bytes(
+    let size = IggyByteSize::from(u64::from_le_bytes(
         payload[position + 29..position + 37].try_into()?,
     ));
     let messages_count = u64::from_le_bytes(payload[position + 37..position + 45].try_into()?);
@@ -427,7 +425,7 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
             created_at,
             name,
             partitions_count,
-            size: size_bytes,
+            size,
             messages_count,
             message_expiry,
             max_topic_size,

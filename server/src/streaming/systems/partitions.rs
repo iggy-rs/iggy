@@ -2,6 +2,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::locking::IggySharedMutFn;
 
 impl System {
     pub async fn create_partitions(
@@ -15,7 +16,7 @@ impl System {
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
-            self.permissioner.create_partitons(
+            self.permissioner.create_partitions(
                 session.get_user_id(),
                 stream.stream_id,
                 topic.topic_id,
@@ -25,8 +26,14 @@ impl System {
         let topic = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id)?;
         topic.add_persisted_partitions(partitions_count).await?;
         topic.reassign_consumer_groups().await;
-        self.metrics.increment_partitions(partitions_count);
-        self.metrics.increment_segments(partitions_count);
+        self.metrics
+            .write()
+            .await
+            .increment_partitions(partitions_count);
+        self.metrics
+            .write()
+            .await
+            .increment_segments(partitions_count);
         Ok(())
     }
 
@@ -52,9 +59,18 @@ impl System {
         let partitions = topic.delete_persisted_partitions(partitions_count).await?;
         topic.reassign_consumer_groups().await;
         if let Some(partitions) = partitions {
-            self.metrics.decrement_partitions(partitions_count);
-            self.metrics.decrement_segments(partitions.segments_count);
-            self.metrics.decrement_messages(partitions.messages_count);
+            self.metrics
+                .write()
+                .await
+                .decrement_partitions(partitions_count);
+            self.metrics
+                .write()
+                .await
+                .decrement_segments(partitions.segments_count);
+            self.metrics
+                .write()
+                .await
+                .decrement_messages(partitions.messages_count);
         }
         Ok(())
     }

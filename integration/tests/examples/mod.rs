@@ -19,6 +19,8 @@ use iggy::tcp::config::TcpClientConfig;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use integration::test_server::{IpAddrKind, TestServer};
 use regex::Regex;
 use std::sync::Arc;
@@ -137,8 +139,8 @@ impl<'a> IggyExampleTest<'a> {
                     topic_id: Some(1),
                     partitions_count: 1,
                     name: "sample-topic".to_string(),
-                    message_expiry: None,
-                    max_topic_size: None,
+                    message_expiry: MessageExpiry::default(),
+                    max_topic_size: MaxTopicSize::default(),
                     replication_factor: 1,
                 })
                 .await

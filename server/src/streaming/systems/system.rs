@@ -60,7 +60,7 @@ pub struct System {
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
-    pub(crate) metrics: Metrics,
+    pub(crate) metrics: IggySharedMut<Metrics>,
     pub(crate) db: Option<Arc<Db>>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
@@ -120,7 +120,7 @@ impl System {
             storage: Arc::new(storage),
             client_manager: IggySharedMut::new(ClientManager::default()),
             permissioner: Permissioner::default(),
-            metrics: Metrics::init(),
+            metrics: IggySharedMut::new(Metrics::init()),
             db,
             personal_access_token: pat_config,
         }

@@ -4,7 +4,8 @@ use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 
 impl System {
     pub fn find_topic(
@@ -41,8 +42,8 @@ impl System {
         topic_id: Option<u32>,
         name: &str,
         partitions_count: u32,
-        message_expiry: Option<u32>,
-        max_topic_size: Option<IggyByteSize>,
+        message_expiry: MessageExpiry,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
@@ -62,9 +63,15 @@ impl System {
                 replication_factor,
             )
             .await?;
-        self.metrics.increment_topics(1);
-        self.metrics.increment_partitions(partitions_count);
-        self.metrics.increment_segments(partitions_count);
+        self.metrics.write().await.increment_topics(1);
+        self.metrics
+            .write()
+            .await
+            .increment_partitions(partitions_count);
+        self.metrics
+            .write()
+            .await
+            .increment_segments(partitions_count);
         Ok(())
     }
 
@@ -75,8 +82,8 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         name: &str,
-        message_expiry: Option<u32>,
-        max_topic_size: Option<IggyByteSize>,
+        message_expiry: MessageExpiry,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
@@ -129,11 +136,18 @@ impl System {
             .get_stream_mut(stream_id)?
             .delete_topic(topic_id)
             .await?;
-        self.metrics.decrement_topics(1);
+        self.metrics.write().await.decrement_topics(1);
         self.metrics
+            .write()
+            .await
             .decrement_partitions(topic.get_partitions_count());
-        self.metrics.decrement_messages(topic.get_messages_count());
         self.metrics
+            .write()
+            .await
+            .decrement_messages(topic.get_messages_count());
+        self.metrics
+            .write()
+            .await
             .decrement_segments(topic.get_segments_count().await);
         let client_manager = self.client_manager.read().await;
         client_manager

@@ -45,7 +45,7 @@ impl MessagesCleaner {
         let interval = self.interval;
         let sender = self.sender.clone();
         info!(
-            "Message cleaner is enabled, expired messages will be deleted every: {:?}.",
+            "Message cleaner is enabled, expired messages will be deleted every: {}.",
             interval
         );
 
@@ -73,20 +73,22 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
                 let deleted_segments = delete_expired_segments(topic, now).await;
                 if let Ok(Some(deleted_segments)) = deleted_segments {
                     info!(
-                        "Deleted {} segments and {} messages for stream ID: {}, topic ID: {}",
+                        "Deleted {} expired segments and {} messages for stream ID: {}, topic ID: {}",
                         deleted_segments.segments_count,
                         deleted_segments.messages_count,
                         topic.stream_id,
                         topic.topic_id
                     );
 
-                    system
-                        .write()
+                    system_read
                         .metrics
+                        .write()
+                        .await
                         .decrement_segments(deleted_segments.segments_count);
-                    system
-                        .write()
+                    system_read
                         .metrics
+                        .write()
+                        .await
                         .decrement_messages(deleted_segments.messages_count);
                 }
             }

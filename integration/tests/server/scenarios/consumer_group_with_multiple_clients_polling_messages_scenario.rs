@@ -12,6 +12,8 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::system::get_me::GetMe;
 use iggy::topics::create_topic::CreateTopic;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use integration::test_server::{
     assert_clean_system, create_user, delete_user, login_root, login_user, ClientFactory,
 };
@@ -75,8 +77,8 @@ async fn init_system(
         topic_id: Some(TOPIC_ID),
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
-        message_expiry: None,
-        max_topic_size: None,
+        message_expiry: MessageExpiry::default(),
+        max_topic_size: MaxTopicSize::default(),
         replication_factor: 1,
     };
     system_client.create_topic(&create_topic).await.unwrap();

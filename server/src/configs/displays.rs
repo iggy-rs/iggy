@@ -157,9 +157,8 @@ impl Display for RetentionPolicyConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ message_expiry {}, max_topic_size: {} }}",
-            self.message_expiry.as_secs(),
-            self.max_topic_size.as_human_string_with_zero_as_unlimited()
+            "{{ message_expiry: {}, max_topic_size: {} }}",
+            self.message_expiry, self.max_topic_size
         )
     }
 }
@@ -252,10 +251,11 @@ impl Display for SystemConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, database: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
+          "{{ path: {}, database: {}, logging: {}, retention_policy: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
           self.path,
           self.database,
           self.logging,
+          self.retention_policy,
           self.cache,
           self.stream,
           self.topic,

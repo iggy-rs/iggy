@@ -1,9 +1,9 @@
-use crate::cli::utils::message_expiry::MessageExpiry;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::create_topic::CreateTopic;
-use crate::utils::byte_size::IggyByteSize;
+use crate::utils::max_topic_size::MaxTopicSize;
+use crate::utils::message_expiry::MessageExpiry;
 use anyhow::Context;
 use async_trait::async_trait;
 use core::fmt;
@@ -12,7 +12,7 @@ use tracing::{event, Level};
 pub struct CreateTopicCmd {
     create_topic: CreateTopic,
     message_expiry: MessageExpiry,
-    max_topic_size: IggyByteSize,
+    max_topic_size: MaxTopicSize,
     replication_factor: u8,
 }
 
@@ -23,7 +23,7 @@ impl CreateTopicCmd {
         partitions_count: u32,
         name: String,
         message_expiry: MessageExpiry,
-        max_topic_size: IggyByteSize,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Self {
         Self {
@@ -32,8 +32,8 @@ impl CreateTopicCmd {
                 topic_id,
                 partitions_count,
                 name,
-                message_expiry: message_expiry.clone().into(),
-                max_topic_size: Some(max_topic_size),
+                message_expiry,
+                max_topic_size,
                 replication_factor,
             },
             message_expiry,
@@ -73,7 +73,7 @@ impl CliCommand for CreateTopicCmd {
             self.get_topic_id_info(),
             self.create_topic.partitions_count,
             self.message_expiry,
-            self.max_topic_size.as_human_string_with_zero_as_unlimited(),
+            self.max_topic_size,
             self.replication_factor,
             self.create_topic.stream_id,
         );
@@ -87,7 +87,7 @@ impl fmt::Display for CreateTopicCmd {
         let topic_id = self.get_topic_id_info();
         let topic_name = &self.create_topic.name;
         let message_expiry = &self.message_expiry;
-        let max_topic_size = &self.max_topic_size.as_human_string_with_zero_as_unlimited();
+        let max_topic_size = self.max_topic_size;
         let replication_factor = self.replication_factor;
         let stream_id = &self.create_topic.stream_id;
 

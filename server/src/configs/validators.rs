@@ -10,7 +10,7 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::validatable::Validatable;
 use sysinfo::System;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {
@@ -19,6 +19,13 @@ impl Validatable<ServerError> for ServerConfig {
         self.system.retention_policy.validate()?;
         self.system.compression.validate()?;
         self.personal_access_token.validate()?;
+
+        let max_topic_size = self.system.retention_policy.max_topic_size.as_bytes_u64();
+        let segment_size = self.system.segment.size.as_bytes_u64();
+
+        if max_topic_size <= segment_size {
+            return Err(ServerError::InvalidConfiguration(format!("RetentionPolicy configuration -> max_topic_size: {max_topic_size} must be greater than segment size:{segment_size}.")));
+        }
 
         Ok(())
     }
@@ -54,7 +61,7 @@ impl Validatable<ServerError> for CacheConfig {
         let pretty_free_memory = IggyByteSize::from(free_memory).as_human_string();
 
         if limit_bytes > total_memory {
-            return Err(ServerError::CacheConfigValidationFailure(format!(
+            return Err(ServerError::InvalidConfiguration(format!(
                 "Requested cache size exceeds 100% of total memory. Requested: {} ({:.2}% of total memory: {}).",
                 pretty_cache_limit, cache_percentage, pretty_total_memory
             )));
@@ -78,11 +85,9 @@ impl Validatable<ServerError> for CacheConfig {
 
 impl Validatable<ServerError> for RetentionPolicyConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        // TODO(hubcio): Change this message once topic size based retention policy is fully developed.
-        if self.max_topic_size.as_bytes_u64() > 0 {
-            warn!("Retention policy max_topic_size is not implemented yet!");
+        if self.max_topic_size.as_bytes_u64() == 0 {
+            return Err(ServerError::InvalidConfiguration(format!("RetentionPolicy configuration -> message_expiry cannot be set to 0 ({}), please use \"unlimited\"", self.message_expiry.as_secs())));
         }
-
         Ok(())
     }
 }
@@ -90,11 +95,17 @@ impl Validatable<ServerError> for RetentionPolicyConfig {
 impl Validatable<ServerError> for SegmentConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.size.as_bytes_u64() as u32 > segment::MAX_SIZE_BYTES {
-            error!(
+            return Err(ServerError::InvalidConfiguration(format!(
                 "Segment configuration -> size cannot be greater than: {} bytes.",
                 segment::MAX_SIZE_BYTES
-            );
-            return Err(ServerError::InvalidConfiguration);
+            )));
+        }
+
+        if self.size.as_bytes_u64() < segment::MIN_SIZE_BYTES as u64 {
+            return Err(ServerError::InvalidConfiguration(format!(
+                "Segment configuration -> size cannot be less than: {} bytes.",
+                segment::MIN_SIZE_BYTES
+            )));
         }
 
         Ok(())
@@ -104,8 +115,10 @@ impl Validatable<ServerError> for SegmentConfig {
 impl Validatable<ServerError> for MessageSaverConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.enabled && self.interval.is_zero() {
-            error!("Message saver interval size cannot be zero, it must be greater than 0.");
-            return Err(ServerError::InvalidConfiguration);
+            return Err(ServerError::InvalidConfiguration(
+                "Message saver interval size cannot be zero, it must be greater than 0."
+                    .to_string(),
+            ));
         }
 
         Ok(())
@@ -115,8 +128,10 @@ impl Validatable<ServerError> for MessageSaverConfig {
 impl Validatable<ServerError> for MessageCleanerConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.enabled && self.interval.is_zero() {
-            error!("Message cleaner interval size cannot be zero, it must be greater than 0.");
-            return Err(ServerError::InvalidConfiguration);
+            return Err(ServerError::InvalidConfiguration(
+                "Message cleaner interval size cannot be zero, it must be greater than 0."
+                    .to_string(),
+            ));
         }
 
         Ok(())
@@ -126,15 +141,16 @@ impl Validatable<ServerError> for MessageCleanerConfig {
 impl Validatable<ServerError> for PersonalAccessTokenConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.max_tokens_per_user == 0 {
-            error!("Max tokens per user cannot be zero, it must be greater than 0.");
-            return Err(ServerError::InvalidConfiguration);
+            return Err(ServerError::InvalidConfiguration(
+                "Max tokens per user cannot be zero, it must be greater than 0.".to_string(),
+            ));
         }
 
         if self.cleaner.enabled && self.cleaner.interval.is_zero() {
-            error!(
+            return Err(ServerError::InvalidConfiguration(
                 "Personal access token cleaner interval cannot be zero, it must be greater than 0."
-            );
-            return Err(ServerError::InvalidConfiguration);
+                    .to_string(),
+            ));
         }
 
         Ok(())

@@ -15,6 +15,8 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::topics::purge_topic::PurgeTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use integration::test_server::{assert_clean_system, ClientFactory};
 use std::str::FromStr;
 
@@ -149,8 +151,8 @@ async fn create_topic_assert_empty(client: &IggyClient, stream_name: &str, topic
         topic_id: None,
         partitions_count: PARTITIONS_COUNT,
         name: topic_name.to_string(),
-        message_expiry: None,
-        max_topic_size: None,
+        message_expiry: MessageExpiry::default(),
+        max_topic_size: MaxTopicSize::default(),
         replication_factor: 1,
     };
     client.create_topic(&create_topic).await.unwrap();

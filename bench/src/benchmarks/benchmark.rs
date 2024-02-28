@@ -16,6 +16,7 @@ use iggy::{
     identifier::Identifier,
     streams::{create_stream::CreateStream, get_streams::GetStreams},
     topics::create_topic::CreateTopic,
+    utils::{max_topic_size::MaxTopicSize, message_expiry::MessageExpiry},
 };
 use integration::test_server::{login_root, ClientFactory};
 use std::{pin::Pin, sync::Arc};
@@ -95,8 +96,8 @@ pub trait Benchmarkable {
                         topic_id: Some(topic_id),
                         partitions_count,
                         name,
-                        message_expiry: None,
-                        max_topic_size: None,
+                        message_expiry: MessageExpiry::default(),
+                        max_topic_size: MaxTopicSize::default(),
                         replication_factor: 1,
                     })
                     .await?;

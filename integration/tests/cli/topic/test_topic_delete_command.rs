@@ -7,6 +7,8 @@ use async_trait::async_trait;
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topics::GetTopics;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
@@ -71,8 +73,8 @@ impl IggyCmdTestCase for TestTopicDeleteCmd {
                 topic_id: Some(self.topic_id),
                 partitions_count: 1,
                 name: self.topic_name.clone(),
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
             })
             .await;

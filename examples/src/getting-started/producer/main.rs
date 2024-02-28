@@ -6,6 +6,8 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
@@ -60,8 +62,8 @@ async fn init_system(client: &IggyClient) {
             topic_id: Some(TOPIC_ID),
             partitions_count: 1,
             name: "sample-topic".to_string(),
-            message_expiry: None,
-            max_topic_size: None,
+            message_expiry: MessageExpiry::default(),
+            max_topic_size: MaxTopicSize::default(),
             replication_factor: 1,
         })
         .await

@@ -203,7 +203,7 @@ impl Default for CacheConfig {
 impl Default for RetentionPolicyConfig {
     fn default() -> RetentionPolicyConfig {
         RetentionPolicyConfig {
-            message_expiry: "0".parse().unwrap(),
+            message_expiry: "unlimited".parse().unwrap(),
             max_topic_size: "10 GB".parse().unwrap(),
         }
     }

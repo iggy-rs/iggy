@@ -54,19 +54,11 @@ impl CliCommand for GetTopicCmd {
         table.add_row(vec!["Topic size", format!("{}", topic.size).as_str()]);
         table.add_row(vec![
             "Message expiry",
-            match topic.message_expiry {
-                Some(value) => format!("{}", value),
-                None => String::from("unlimited"),
-            }
-            .as_str(),
+            format!("{}", topic.message_expiry).as_str(),
         ]);
         table.add_row(vec![
             "Max topic size",
-            match topic.max_topic_size {
-                Some(value) => format!("{}", value),
-                None => String::from("unlimited"),
-            }
-            .as_str(),
+            format!("{}", topic.max_topic_size).as_str(),
         ]);
         table.add_row(vec![
             "Topic message count",

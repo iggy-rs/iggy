@@ -7,10 +7,10 @@ use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use bytes::BytesMut;
-use iggy::error::IggyError;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
+use iggy::{error::IggyError, utils::duration::IggyDuration};
 use std::sync::{atomic::Ordering, Arc};
 use tracing::{trace, warn};
 
@@ -103,13 +103,14 @@ impl Partition {
         timestamp: u64,
         timestamp_from_index: u64,
     ) -> u32 {
-        if self.avg_timestamp_delta == 0 {
+        if self.avg_timestamp_delta.as_nanos() == 0 {
             return count;
         }
         let timestamp_diff = timestamp - timestamp_from_index;
         // This approximation is not exact, but it's good enough for the usage of this function
-        let overfetch_value =
-            ((timestamp_diff as f64 / self.avg_timestamp_delta as f64) * 1.35).ceil() as u32;
+        let overfetch_value = ((timestamp_diff as f64 / self.avg_timestamp_delta.as_nanos() as f64)
+            * 1.35)
+            .ceil() as u32;
         count + overfetch_value
     }
 
@@ -430,7 +431,7 @@ impl Partition {
                 messages_count += 1;
             }
         }
-        let avg_timestamp_delta = ((max_timestamp - min_timestamp) / messages_count as u64) as u32;
+        let avg_timestamp_delta = ((max_timestamp - min_timestamp) / messages_count as u64).into();
 
         let min_alpha: f64 = 0.3;
         let max_alpha: f64 = 0.7;
@@ -485,16 +486,21 @@ impl Partition {
 
     fn update_avg_timestamp_delta(
         &mut self,
-        avg_timestamp_delta: u32,
+        avg_timestamp_delta: IggyDuration,
         min_alpha: f64,
         max_alpha: f64,
         dynamic_range: f64,
     ) {
-        let diff = self.avg_timestamp_delta.abs_diff(avg_timestamp_delta);
+        let diff = self
+            .avg_timestamp_delta
+            .abs_diff(avg_timestamp_delta)
+            .as_nanos() as u64;
+
         let alpha = max_alpha.min(min_alpha.max(1.0 - (diff as f64 / dynamic_range)));
-        self.avg_timestamp_delta = (alpha * avg_timestamp_delta as f64
-            + (1.0 - alpha) * self.avg_timestamp_delta as f64)
-            as u32;
+        let avg_timestamp_diff = (alpha * avg_timestamp_delta.as_nanos() as f64
+            + (1.0f64 - alpha) * self.avg_timestamp_delta.as_nanos() as f64)
+            as u64;
+        self.avg_timestamp_delta = avg_timestamp_diff.into();
     }
 }
 

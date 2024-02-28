@@ -39,6 +39,17 @@ impl IggyDuration {
     pub fn is_zero(&self) -> bool {
         self.duration.as_secs() == 0
     }
+
+    pub fn abs_diff(&self, other: IggyDuration) -> IggyDuration {
+        let diff = self.duration.as_nanos().abs_diff(other.duration.as_nanos());
+        IggyDuration {
+            duration: Duration::from_nanos(diff as u64),
+        }
+    }
+
+    pub fn as_nanos(&self) -> u128 {
+        self.duration.as_nanos()
+    }
 }
 
 impl FromStr for IggyDuration {

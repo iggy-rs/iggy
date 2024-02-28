@@ -101,6 +101,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
         )
     }
+
     fn create_test_indices(segment: &mut Segment) {
         let indexes = vec![
             Index {
@@ -138,6 +139,7 @@ mod tests {
         assert_eq!(result.start.relative_offset, 20);
         assert_eq!(result.end.relative_offset, 50);
     }
+
     #[test]
     fn start_and_end_index_should_be_equal() {
         let mut segment = create_segment();
@@ -155,6 +157,7 @@ mod tests {
         assert_eq!(result_start_range.start.relative_offset, 5);
         assert_eq!(result_start_range.end.relative_offset, 5);
     }
+
     #[test]
     fn should_clamp_last_index_when_out_of_range() {
         let mut segment = create_segment();
@@ -166,6 +169,7 @@ mod tests {
         assert_eq!(result.start.relative_offset, 5);
         assert_eq!(result.end.relative_offset, 65);
     }
+
     #[test]
     fn should_return_err_when_both_indices_out_of_range() {
         let mut segment = create_segment();

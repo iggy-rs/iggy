@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::ops::Deref;
 
 use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
@@ -91,7 +91,10 @@ impl Sizeable for RetainedMessageBatch {
     }
 }
 
-impl Sizeable for Arc<RetainedMessageBatch> {
+impl<T> Sizeable for T
+where
+    T: Deref<Target = RetainedMessageBatch>,
+{
     fn get_size_bytes(&self) -> u32 {
         8 + 4 + 8 + 4 + self.length
     }

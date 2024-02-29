@@ -1,16 +1,13 @@
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
-use crate::streaming::models::messages::PolledMessages;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
-use iggy::error::IggyError;
-use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::messages::send_messages;
+use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
-use iggy::models::messages::Message;
-use std::sync::Arc;
+use iggy::models::messages::{PolledMessage, PolledMessages};
+use iggy::{error::IggyError, identifier::Identifier};
 use tracing::{error, trace};
 
 impl System {
@@ -71,7 +68,7 @@ impl System {
             let payload = encryptor.decrypt(&message.payload);
             match payload {
                 Ok(payload) => {
-                    decrypted_messages.push(Arc::new(Message {
+                    decrypted_messages.push(PolledMessage {
                         id: message.id,
                         state: message.state,
                         offset: message.offset,
@@ -80,16 +77,14 @@ impl System {
                         length: payload.len() as u32,
                         payload: Bytes::from(payload),
                         headers: message.headers.clone(),
-                    }));
+                    });
                 }
                 Err(error) => {
-                    // Not sure if we should do this
                     error!("Cannot decrypt the message. Error: {}", error);
                     return Err(IggyError::CannotDecryptData);
                 }
             }
         }
-
         polled_messages.messages = decrypted_messages;
         Ok(polled_messages)
     }
@@ -100,7 +95,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitioning: &Partitioning,
-        messages: &Vec<send_messages::Message>,
+        messages: &Vec<Message>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
@@ -111,41 +106,53 @@ impl System {
             topic.topic_id,
         )?;
 
-        let mut received_messages = Vec::with_capacity(messages.len());
-        let mut batch_size_bytes = 0u64;
-
-        // For large batches it would be better to use par_iter() from rayon.
-        for message in messages {
-            let encrypted_message;
-            let message = match self.encryptor {
-                Some(ref encryptor) => {
-                    let payload = encryptor.encrypt(message.payload.as_ref())?;
-                    encrypted_message = send_messages::Message {
-                        id: message.id,
-                        length: payload.len() as u32,
-                        payload: Bytes::from(payload),
-                        headers: message.headers.clone(),
-                    };
-                    &encrypted_message
+        let mut batch_size_bytes = 0;
+        if let Some(encryptor) = &self.encryptor {
+            let mut encrypted_messages = Vec::with_capacity(messages.len());
+            for message in messages.iter() {
+                let payload = encryptor.encrypt(&message.payload);
+                match payload {
+                    Ok(payload) => {
+                        let msg = Message::new(
+                            Some(message.id),
+                            Bytes::from(payload),
+                            message.headers.clone(),
+                        );
+                        batch_size_bytes += msg.get_size_bytes() as u64;
+                        encrypted_messages.push(msg);
+                    }
+                    Err(error) => {
+                        error!("Cannot encrypt the message. Error: {}", error);
+                        return Err(IggyError::CannotEncryptData);
+                    }
                 }
-                None => message,
-            };
-            batch_size_bytes += message.get_size_bytes() as u64;
-            received_messages.push(Message::from_message(message));
-        }
-
-        // If there's enough space in cache, do nothing.
-        // Otherwise, clean the cache.
-        if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
-            if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
-                self.clean_cache(batch_size_bytes).await;
             }
+            if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
+                if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
+                    self.clean_cache(batch_size_bytes).await;
+                }
+            }
+
+            topic
+                .append_messages(batch_size_bytes, partitioning, &encrypted_messages)
+                .await?;
+            self.metrics
+                .increment_messages(encrypted_messages.len() as u64);
+            Ok(())
+        } else {
+            batch_size_bytes = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
+            if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
+                if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
+                    self.clean_cache(batch_size_bytes).await;
+                }
+            }
+
+            topic
+                .append_messages(batch_size_bytes, partitioning, messages)
+                .await?;
+            self.metrics.increment_messages(messages.len() as u64);
+            Ok(())
         }
-        topic
-            .append_messages(partitioning, received_messages)
-            .await?;
-        self.metrics.increment_messages(messages.len() as u64);
-        Ok(())
     }
 }
 

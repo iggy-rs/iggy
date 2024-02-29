@@ -5,7 +5,7 @@ use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::{
     IggyClient, IggyClientBackgroundConfig, PollMessagesConfig, StoreOffsetKind,
 };
-use iggy::models::messages::Message;
+use iggy::models::messages::PolledMessage;
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::messages::*;
 use iggy_examples::shared::system;
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     system::consume_messages(&args, &client, &handle_message).await
 }
 
-fn handle_message(message: &Message) -> Result<(), Box<dyn Error>> {
+fn handle_message(message: &PolledMessage) -> Result<(), Box<dyn Error>> {
     // The payload can be of any type as it is a raw byte array. In this case it's a JSON string.
     let json = std::str::from_utf8(&message.payload)?;
     // The message envelope can be used to send the different types of messages to the same topic.

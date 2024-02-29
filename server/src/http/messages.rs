@@ -1,10 +1,10 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
-use crate::streaming;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
+use crate::streaming::utils::random_id;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::get;
@@ -12,6 +12,7 @@ use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
+use iggy::models::messages::PolledMessages;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
 
@@ -29,7 +30,7 @@ async fn poll_messages(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     mut query: Query<PollMessages>,
-) -> Result<Json<streaming::models::messages::PolledMessages>, CustomError> {
+) -> Result<Json<PolledMessages>, CustomError> {
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
@@ -59,6 +60,11 @@ async fn send_messages(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.partitioning.length = command.partitioning.value.len() as u8;
+    command.messages.iter_mut().for_each(|msg| {
+        if msg.id == 0 {
+            msg.id = random_id::get_uuid();
+        }
+    });
     command.validate()?;
 
     let system = state.system.read();

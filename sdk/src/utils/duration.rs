@@ -39,6 +39,14 @@ impl IggyDuration {
     pub fn is_zero(&self) -> bool {
         self.duration.as_secs() == 0
     }
+
+    //TODO(numinex) - Replace it with std::time::Duration::abs_diff when it becomes stable
+    pub fn abs_diff(&self, other: IggyDuration) -> IggyDuration {
+        let diff = self.duration.as_nanos().abs_diff(other.duration.as_nanos());
+        IggyDuration {
+            duration: Duration::from_nanos(diff as u64),
+        }
+    }
 }
 
 impl FromStr for IggyDuration {
@@ -76,6 +84,12 @@ impl From<u64> for IggyDuration {
         IggyDuration {
             duration: Duration::from_secs(value),
         }
+    }
+}
+
+impl From<Duration> for IggyDuration {
+    fn from(duration: Duration) -> Self {
+        IggyDuration { duration }
     }
 }
 

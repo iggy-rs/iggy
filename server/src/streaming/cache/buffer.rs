@@ -1,6 +1,6 @@
 use super::memory_tracker::CacheMemoryTracker;
+use crate::streaming::sizeable::Sizeable;
 use atone::Vc;
-use iggy::sizeable::Sizeable;
 use std::fmt::Debug;
 use std::ops::Index;
 use std::sync::Arc;
@@ -94,6 +94,18 @@ where
             element
         });
         self.buffer.extend(elements);
+    }
+
+    /// Always appends the element into the buffer, even if it exceeds the memory limit.
+    pub fn append(&mut self, element: T) {
+        let element_size = element.get_size_bytes() as u64;
+        self.memory_tracker.increment_used_memory(element_size);
+        self.current_size += element_size;
+        self.buffer.push(element);
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.buffer.iter()
     }
 
     pub fn len(&self) -> usize {

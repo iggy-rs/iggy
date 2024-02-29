@@ -1,4 +1,5 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
@@ -6,7 +7,7 @@ use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
-use iggy::models::messages::Message;
+use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -18,12 +19,13 @@ pub struct Partition {
     pub partition_id: u32,
     pub path: String,
     pub current_offset: u64,
-    pub cache: Option<SmartCache<Arc<Message>>>,
+    pub cache: Option<SmartCache<Arc<RetainedMessageBatch>>>,
     pub cached_memory_tracker: Option<Arc<CacheMemoryTracker>>,
     pub message_deduplicator: Option<MessageDeduplicator>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
     pub created_at: u64,
+    pub avg_timestamp_delta: IggyDuration,
     pub messages_count_of_parent_stream: Arc<AtomicU64>,
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
     pub messages_count: Arc<AtomicU64>,
@@ -136,6 +138,7 @@ impl Partition {
             config,
             storage,
             created_at: IggyTimestamp::now().to_micros(),
+            avg_timestamp_delta: IggyDuration::default(),
             size_of_parent_stream,
             size_of_parent_topic,
             size_bytes: Arc::new(AtomicU64::new(0)),

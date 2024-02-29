@@ -1,7 +1,10 @@
 use crate::streaming::common::test_setup::TestSetup;
-use bytes::Bytes;
-use iggy::models::messages::{Message, MessageState};
+use bytes::{Bytes, BytesMut};
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::models::messages::{MessageState, PolledMessage};
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
+use server::streaming::batching::message_batch::RetainedMessageBatch;
+use server::streaming::models::messages::RetainedMessage;
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
 use std::sync::atomic::AtomicU64;
@@ -147,10 +150,37 @@ async fn should_persist_and_load_segment_with_messages() {
     )
     .await;
     let messages_count = 10;
+    let mut base_offset = 0;
+    let mut last_timestamp = 0;
+    let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", IggyTimestamp::now().to_micros());
-        segment.append_messages(&[Arc::new(message)]).await.unwrap();
+        if i == 0 {
+            base_offset = message.offset;
+        }
+        if i == messages_count - 1 {
+            last_timestamp = message.timestamp;
+        }
+
+        let retained_message = RetainedMessage {
+            id: message.id,
+            offset: message.offset,
+            timestamp: message.timestamp,
+            checksum: message.checksum,
+            message_state: message.state,
+            headers: message.headers.map(|headers| headers.as_bytes()),
+            payload: message.payload.clone(),
+        };
+        retained_message.extend(&mut batch_buffer);
     }
+    let batch = Arc::new(RetainedMessageBatch::new(
+        base_offset,
+        messages_count as u32 - 1,
+        last_timestamp,
+        batch_buffer.len() as u32,
+        batch_buffer.freeze(),
+    ));
+    segment.append_batch(batch).await.unwrap();
 
     segment.persist_messages().await.unwrap();
 
@@ -216,11 +246,39 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let now = IggyTimestamp::now().to_micros();
     let message_expiry = message_expiry as u64;
     let mut expired_timestamp = now - (1000 * 2 * message_expiry);
+    let mut base_offset = 0;
+    let mut last_timestamp = 0;
+    let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
         expired_timestamp += 1;
-        segment.append_messages(&[Arc::new(message)]).await.unwrap();
+        if i == 0 {
+            base_offset = message.offset;
+        }
+        if i == messages_count - 1 {
+            last_timestamp = message.timestamp;
+        }
+
+        let retained_message = RetainedMessage {
+            id: message.id,
+            offset: message.offset,
+            timestamp: message.timestamp,
+            checksum: message.checksum,
+            message_state: message.state,
+            headers: message.headers.map(|headers| headers.as_bytes()),
+            payload: message.payload.clone(),
+        };
+        retained_message.extend(&mut batch_buffer);
     }
+    let batch = Arc::new(RetainedMessageBatch::new(
+        base_offset,
+        messages_count as u32 - 1,
+        last_timestamp,
+        batch_buffer.len() as u32,
+        batch_buffer.freeze(),
+    ));
+
+    segment.append_batch(batch).await.unwrap();
 
     segment.persist_messages().await.unwrap();
 
@@ -270,14 +328,48 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let expired_message = create_message(0, "test", expired_timestamp);
     let not_expired_message = create_message(1, "test", not_expired_timestamp);
 
-    segment
-        .append_messages(&[Arc::new(expired_message)])
-        .await
-        .unwrap();
-    segment
-        .append_messages(&[Arc::new(not_expired_message)])
-        .await
-        .unwrap();
+    let mut expired_batch_buffer = BytesMut::new();
+    let expired_retained_message = RetainedMessage {
+        id: expired_message.id,
+        offset: expired_message.offset,
+        timestamp: expired_message.timestamp,
+        checksum: expired_message.checksum,
+        message_state: expired_message.state,
+        headers: expired_message.headers.map(|headers| headers.as_bytes()),
+        payload: expired_message.payload.clone(),
+    };
+    expired_retained_message.extend(&mut expired_batch_buffer);
+    let expired_batch = Arc::new(RetainedMessageBatch::new(
+        0,
+        1,
+        expired_timestamp,
+        expired_batch_buffer.len() as u32,
+        expired_batch_buffer.freeze(),
+    ));
+
+    let mut not_expired_batch_buffer = BytesMut::new();
+    let not_expired_retained_message = RetainedMessage {
+        id: not_expired_message.id,
+        offset: not_expired_message.offset,
+        timestamp: not_expired_message.timestamp,
+        checksum: not_expired_message.checksum,
+        message_state: not_expired_message.state,
+        headers: not_expired_message
+            .headers
+            .map(|headers| headers.as_bytes()),
+        payload: not_expired_message.payload.clone(),
+    };
+    not_expired_retained_message.extend(&mut not_expired_batch_buffer);
+    let not_expired_batch = Arc::new(RetainedMessageBatch::new(
+        1,
+        1,
+        expired_timestamp,
+        not_expired_batch_buffer.len() as u32,
+        not_expired_batch_buffer.freeze(),
+    ));
+
+    segment.append_batch(expired_batch).await.unwrap();
+    segment.append_batch(not_expired_batch).await.unwrap();
     segment.persist_messages().await.unwrap();
 
     let is_expired = segment.is_expired(now).await;
@@ -294,10 +386,10 @@ async fn assert_persisted_segment(partition_path: &str, start_offset: u64) {
     assert!(fs::metadata(&time_index_path).await.is_ok());
 }
 
-fn create_message(offset: u64, payload: &str, timestamp: u64) -> Message {
+fn create_message(offset: u64, payload: &str, timestamp: u64) -> PolledMessage {
     let payload = Bytes::from(payload.to_string());
     let checksum = checksum::calculate(payload.as_ref());
-    Message::create(
+    PolledMessage::create(
         offset,
         MessageState::Available,
         timestamp,

@@ -4,7 +4,7 @@ use crate::models::client_info::{ClientInfo, ClientInfoDetails, ConsumerGroupInf
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
 use crate::models::identity_info::IdentityInfo;
-use crate::models::messages::{Message, MessageState, PolledMessages};
+use crate::models::messages::{MessageState, PolledMessage, PolledMessages};
 use crate::models::partition::Partition;
 use crate::models::permissions::Permissions;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
@@ -18,7 +18,7 @@ use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
 
-const EMPTY_MESSAGES: Vec<Message> = vec![];
+const EMPTY_MESSAGES: Vec<PolledMessage> = vec![];
 const EMPTY_TOPICS: Vec<Topic> = vec![];
 const EMPTY_STREAMS: Vec<Stream> = vec![];
 const EMPTY_CLIENTS: Vec<ClientInfo> = vec![];
@@ -267,7 +267,7 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
         let payload = payload[payload_range].to_vec();
         let total_size = 45 + message_length as usize;
         position += total_size;
-        messages.push(Message {
+        messages.push(PolledMessage {
             offset,
             timestamp,
             state,

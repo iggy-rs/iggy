@@ -4,7 +4,7 @@ use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::models::messages::Message;
+use iggy::models::messages::PolledMessage;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::topics::create_topic::CreateTopic;
@@ -12,7 +12,7 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
 use tracing::info;
-type MessageHandler = dyn Fn(&Message) -> Result<(), Box<dyn std::error::Error>>;
+type MessageHandler = dyn Fn(&PolledMessage) -> Result<(), Box<dyn std::error::Error>>;
 
 pub async fn login_root(client: &dyn Client) {
     client

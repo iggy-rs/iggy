@@ -1,17 +1,20 @@
-use crate::streaming::models::messages::PolledMessages;
+use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
+use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::sizeable::Sizeable;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::utils::file::folder_size;
 use crate::streaming::utils::hash;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
-use iggy::messages::send_messages::{Partitioning, PartitioningKind};
-use iggy::models::messages::Message;
+use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
+use iggy::models::messages::PolledMessages;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{info, trace, warn};
+use tracing::log::info;
+use tracing::{trace, warn};
 
 impl Topic {
     pub fn get_messages_count(&self) -> u64 {
@@ -49,17 +52,22 @@ impl Topic {
             PollingKind::Next => partition.get_next_messages(consumer, count).await,
         }?;
 
+        let messages = messages
+            .into_iter()
+            .map(|msg| msg.try_into())
+            .collect::<Result<Vec<_>, IggyError>>()?;
         Ok(PolledMessages {
-            messages,
             partition_id,
             current_offset: partition.current_offset,
+            messages,
         })
     }
 
     pub async fn append_messages(
         &self,
+        batch_size: u64,
         partitioning: &Partitioning,
-        messages: Vec<Message>,
+        messages: &Vec<Message>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
@@ -79,27 +87,30 @@ impl Topic {
             }
         };
 
-        self.append_messages_to_partition(partition_id, messages)
+        let appendable_batch_info = AppendableBatchInfo::new(batch_size, partition_id);
+        self.append_messages_to_partition(appendable_batch_info, messages)
             .await
     }
 
     async fn append_messages_to_partition(
         &self,
-        partition_id: u32,
-        messages: Vec<Message>,
+        appendable_batch_info: AppendableBatchInfo,
+        messages: &Vec<Message>,
     ) -> Result<(), IggyError> {
-        let partition = self.partitions.get(&partition_id);
-        if partition.is_none() {
-            return Err(IggyError::PartitionNotFound(
-                partition_id,
-                self.topic_id,
-                self.stream_id,
-            ));
-        }
+        let partition = self.partitions.get(&appendable_batch_info.partition_id);
+        partition
+            .ok_or_else(|| {
+                IggyError::PartitionNotFound(
+                    appendable_batch_info.partition_id,
+                    self.stream_id,
+                    self.stream_id,
+                )
+            })?
+            .write()
+            .await
+            .append_messages(appendable_batch_info, messages)
+            .await?;
 
-        let partition = partition.unwrap();
-        let mut partition = partition.write().await;
-        partition.append_messages(messages).await?;
         Ok(())
     }
 
@@ -171,8 +182,9 @@ impl Topic {
             let size_to_fetch_from_disk = (cache_limit_bytes as f64
                 * (partition_size_bytes as f64 / total_size_on_disk_bytes as f64))
                 as u64;
+
             let messages = partition
-                .get_newest_messages_by_size(size_to_fetch_from_disk as u32)
+                .get_newest_messages_by_size(size_to_fetch_from_disk)
                 .await?;
 
             let sum: u64 = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
@@ -201,32 +213,19 @@ impl Topic {
         Ok(())
     }
 
-    fn cache_integrity_check(cache: &[Arc<Message>]) -> bool {
+    fn cache_integrity_check(cache: &[Arc<RetainedMessageBatch>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;
         }
 
-        let first_offset = cache[0].offset;
-        let last_offset = cache[cache.len() - 1].offset;
-
         for i in 1..cache.len() {
-            if cache[i].offset != cache[i - 1].offset + 1 {
-                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}", i, cache[i].offset, i-1, cache[i-1].offset);
+            if cache[i].get_last_offset() <= cache[i - 1].get_last_offset() {
+                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}",
+                        i, cache[i].get_last_offset(), i-1, cache[i-1].get_last_offset());
                 return false;
             }
         }
-
-        let expected_messages_count: u64 = last_offset - first_offset + 1;
-        if cache.len() != expected_messages_count as usize {
-            warn!(
-                "Messages count is in cache ({}) not equal to expected messages count ({})",
-                cache.len(),
-                expected_messages_count
-            );
-            return false;
-        }
-
         true
     }
 
@@ -257,8 +256,8 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
-    use iggy::models::messages::MessageState;
-    use std::sync::atomic::{AtomicU32, AtomicU64};
+    use std::sync::atomic::AtomicU32;
+    use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -266,21 +265,14 @@ mod tests {
         let partition_id = 1;
         let partitioning = Partitioning::partition_id(partition_id);
         let partitions_count = 3;
-        let messages_count = 1000;
+        let messages_count: u32 = 1000;
         let topic = init_topic(partitions_count);
 
         for entity_id in 1..=messages_count {
-            let payload = Bytes::from("test");
-            let messages = vec![Message::empty(
-                1,
-                MessageState::Available,
-                entity_id as u128,
-                payload,
-                1,
-                None,
-            )];
+            let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
+            let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(&partitioning, messages)
+                .append_messages(batch_size, &partitioning, &messages)
                 .await
                 .unwrap();
         }
@@ -306,17 +298,10 @@ mod tests {
 
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
-            let payload = Bytes::from("test");
-            let messages = vec![Message::empty(
-                1,
-                MessageState::Available,
-                entity_id as u128,
-                payload,
-                1,
-                None,
-            )];
+            let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
+            let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(&partitioning, messages)
+                .append_messages(batch_size, &partitioning, &messages)
                 .await
                 .unwrap();
         }

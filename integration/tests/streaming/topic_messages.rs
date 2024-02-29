@@ -1,9 +1,8 @@
 use crate::streaming::common::test_setup::TestSetup;
+use bytes::Bytes;
 use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::messages::send_messages;
-use iggy::messages::send_messages::Partitioning;
-use iggy::models::messages::Message;
+use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::byte_size::IggyByteSize;
 use server::configs::resource_quota::MemoryResourceQuota;
 use server::configs::system::{CacheConfig, SystemConfig};
@@ -11,7 +10,7 @@ use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
 use server::streaming::utils::hash;
 use std::collections::HashMap;
-use std::str::{from_utf8, FromStr};
+use std::str::from_utf8;
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 
@@ -64,15 +63,22 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
     let partitioning = Partitioning::partition_id(partition_id);
     let messages = (0..messages_count)
         .map(|id| {
-            get_message(format!("{}:{}", id + 1, create_payload(payload_size_bytes)).as_str())
+            get_message(
+                id as u128,
+                format!("{}:{}", id + 1, create_payload(payload_size_bytes)).as_str(),
+            )
         })
         .collect::<Vec<_>>();
     let mut sent_messages = Vec::new();
     for message in &messages {
-        sent_messages.push(get_message(from_utf8(&message.payload).unwrap()))
+        sent_messages.push(get_message(
+            message.id,
+            from_utf8(&message.payload).unwrap(),
+        ))
     }
+    let batch_size = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
     topic
-        .append_messages(&partitioning, messages)
+        .append_messages(batch_size, &partitioning, &messages)
         .await
         .unwrap();
 
@@ -111,8 +117,13 @@ async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_
     let partitioning = Partitioning::balanced();
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
+        let batch_size = 16 + 4 + payload.len() as u64;
         topic
-            .append_messages(&partitioning, vec![get_message(&payload)])
+            .append_messages(
+                batch_size,
+                &partitioning,
+                &vec![get_message(i as u128, &payload)],
+            )
             .await
             .unwrap();
     }
@@ -131,8 +142,13 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
     let partitioning = Partitioning::partition_id(partition_id);
     for i in 1..=partitions_count * messages_per_partition_count {
         let payload = get_payload(i);
+        let batch_size = 16 + 4 + payload.len() as u64;
         topic
-            .append_messages(&partitioning, vec![get_message(&payload)])
+            .append_messages(
+                batch_size,
+                &partitioning,
+                &vec![get_message(i as u128, &payload)],
+            )
             .await
             .unwrap();
     }
@@ -155,8 +171,13 @@ async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_pa
     for entity_id in 1..=partitions_count * messages_count {
         let payload = get_payload(entity_id);
         let partitioning = Partitioning::messages_key_u32(entity_id);
+        let batch_size = 16 + 4 + payload.len() as u64;
         topic
-            .append_messages(&partitioning, vec![get_message(&payload)])
+            .append_messages(
+                batch_size,
+                &partitioning,
+                &vec![get_message(entity_id as u128, &payload)],
+            )
             .await
             .unwrap();
     }
@@ -218,8 +239,13 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
     topic
 }
 
-fn get_message(payload: &str) -> Message {
-    Message::from_message(&send_messages::Message::from_str(payload).unwrap())
+fn get_message(id: u128, payload: &str) -> Message {
+    Message {
+        id,
+        length: payload.len() as u32,
+        payload: Bytes::from(payload.as_bytes().to_vec()),
+        headers: None,
+    }
 }
 
 fn create_payload(size: u32) -> String {

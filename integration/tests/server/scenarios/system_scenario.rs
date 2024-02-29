@@ -17,6 +17,7 @@ use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::models::messages::PolledMessage;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::streams::create_stream::CreateStream;
@@ -297,7 +298,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
     assert_eq!(topic.partitions.len(), PARTITIONS_COUNT as usize);
-    assert_eq!(topic.size, 55890);
+    assert_eq!(topic.size, 55914);
     assert_eq!(topic.messages_count, MESSAGES_COUNT as u64);
     let topic_partition = topic.partitions.get((PARTITION_ID - 1) as usize).unwrap();
     assert_eq!(topic_partition.id, PARTITION_ID);
@@ -759,7 +760,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_clean_system(&client).await;
 }
 
-fn assert_message(message: &iggy::models::messages::Message, offset: u64) {
+fn assert_message(message: &PolledMessage, offset: u64) {
     let expected_payload = get_message_payload(offset);
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);

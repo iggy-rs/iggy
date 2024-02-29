@@ -2022,7 +2022,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -2061,6 +2061,7 @@ dependencies = [
  "tokio-native-tls",
  "toml",
  "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -3824,7 +3825,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.4"
+version = "0.2.5"
 dependencies = [
  "aes-gcm",
  "anyhow",

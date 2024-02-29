@@ -1,8 +1,8 @@
 use crate::configs::system::SystemConfig;
+use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
-use iggy::models::messages::Message;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
@@ -32,10 +32,12 @@ pub struct Segment {
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
     pub(crate) message_expiry: Option<u32>,
-    pub(crate) unsaved_messages: Option<Vec<Arc<Message>>>,
+    pub(crate) unsaved_batches: Option<Vec<Arc<RetainedMessageBatch>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,
+    pub(crate) unsaved_indexes: Vec<u8>,
+    pub(crate) unsaved_timestamps: Vec<u8>,
     pub(crate) storage: Arc<SystemStorage>,
 }
 
@@ -78,7 +80,9 @@ impl Segment {
                 true => Some(Vec::new()),
                 false => None,
             },
-            unsaved_messages: None,
+            unsaved_indexes: Vec::new(),
+            unsaved_timestamps: Vec::new(),
+            unsaved_batches: None,
             is_closed: false,
             size_of_parent_stream,
             size_of_parent_partition,
@@ -114,7 +118,7 @@ impl Segment {
             return false;
         }
 
-        let last_message = last_messages[0].as_ref();
+        let last_message = &last_messages[0];
         let message_expiry = (self.message_expiry.unwrap() * 1000) as u64;
         (last_message.timestamp + message_expiry) <= now
     }
@@ -185,7 +189,7 @@ mod tests {
         assert_eq!(segment.index_path, index_path);
         assert_eq!(segment.time_index_path, time_index_path);
         assert_eq!(segment.message_expiry, message_expiry);
-        assert!(segment.unsaved_messages.is_none());
+        assert!(segment.unsaved_batches.is_none());
         assert!(segment.indexes.is_some());
         assert!(segment.time_indexes.is_some());
         assert!(!segment.is_closed);

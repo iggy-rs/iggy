@@ -1,10 +1,7 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
-use crate::messages::send_messages;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::sizeable::Sizeable;
-use crate::utils::{checksum, timestamp::IggyTimestamp};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -12,7 +9,8 @@ use serde_with::serde_as;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
-use std::sync::Arc;
+
+pub const POLLED_MESSAGE_METADATA: u32 = 8 + 1 + 8 + 4;
 
 /// The wrapper on top of the collection of messages that are polled from the partition.
 /// It consists of the following fields:
@@ -26,7 +24,7 @@ pub struct PolledMessages {
     /// The current offset of the partition.
     pub current_offset: u64,
     /// The collection of messages.
-    pub messages: Vec<Message>,
+    pub messages: Vec<PolledMessage>,
 }
 
 /// The single message that is polled from the partition.
@@ -41,7 +39,7 @@ pub struct PolledMessages {
 /// - `payload`: the binary payload of the message.
 #[serde_as]
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Message {
+pub struct PolledMessage {
     /// The offset of the message.
     pub offset: u64,
     /// The state of the message.
@@ -123,29 +121,8 @@ impl FromStr for MessageState {
     }
 }
 
-impl Sizeable for Arc<Message> {
-    fn get_size_bytes(&self) -> u32 {
-        self.as_ref().get_size_bytes()
-    }
-}
-
-impl Message {
+impl PolledMessage {
     /// Creates a new message from the `Message` struct being part of `SendMessages` command.
-    pub fn from_message(message: &send_messages::Message) -> Self {
-        let timestamp = IggyTimestamp::now().to_micros();
-        let checksum = checksum::calculate(&message.payload);
-        let headers = message.headers.as_ref().cloned();
-
-        Self::empty(
-            timestamp,
-            MessageState::Available,
-            message.id,
-            message.payload.clone(),
-            checksum,
-            headers,
-        )
-    }
-
     /// Creates a new message without a specified offset.
     pub fn empty(
         timestamp: u64,
@@ -155,7 +132,7 @@ impl Message {
         checksum: u32,
         headers: Option<HashMap<HeaderKey, HeaderValue>>,
     ) -> Self {
-        Message::create(0, state, timestamp, id, payload, checksum, headers)
+        PolledMessage::create(0, state, timestamp, id, payload, checksum, headers)
     }
 
     /// Creates a new message with a specified offset.
@@ -168,7 +145,7 @@ impl Message {
         checksum: u32,
         headers: Option<HashMap<HeaderKey, HeaderValue>>,
     ) -> Self {
-        Message {
+        PolledMessage {
             offset,
             state,
             timestamp,

@@ -1,3 +1,4 @@
+pub mod batching;
 pub mod cache;
 pub mod clients;
 mod deduplication;
@@ -9,6 +10,7 @@ pub mod personal_access_tokens;
 pub mod polling_consumer;
 pub mod segments;
 pub mod session;
+pub mod sizeable;
 pub mod storage;
 pub mod streams;
 pub mod systems;

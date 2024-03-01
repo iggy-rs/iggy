@@ -56,7 +56,7 @@ impl BenchmarkResults {
         }
     }
 
-    fn calculate_statitics<F>(&self, mut predicate: F) -> BenchmarkStatistics
+    fn calculate_statistics<F>(&self, mut predicate: F) -> BenchmarkStatistics
     where
         F: FnMut(&&BenchmarkResult) -> bool,
     {
@@ -108,8 +108,8 @@ impl Display for BenchmarkResults {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if let Ok(test_type) = self.get_test_type() {
             if test_type == BenchmarkKind::SendAndPoll {
-                let producer_statics = self.calculate_statitics(|x| x.kind == BenchmarkKind::Send);
-                let consumer_statics = self.calculate_statitics(|x| x.kind == BenchmarkKind::Poll);
+                let producer_statics = self.calculate_statistics(|x| x.kind == BenchmarkKind::Send);
+                let consumer_statics = self.calculate_statistics(|x| x.kind == BenchmarkKind::Poll);
 
                 let producer_info = format!("Producer results: total throughput: {:.2} MB/s, {:.0} messages/s, average latency: {:.2} ms, average throughput: {:.2} MB/s, total duration: {:.2} s",
                 producer_statics.total_throughput, producer_statics.messages_per_second, producer_statics.average_latency, producer_statics.average_throughput, producer_statics.total_duration).green();
@@ -120,7 +120,7 @@ impl Display for BenchmarkResults {
             }
         }
 
-        let results = self.calculate_statitics(|x| {
+        let results = self.calculate_statistics(|x| {
             x.kind == BenchmarkKind::Send || x.kind == BenchmarkKind::Poll
         });
 

@@ -43,6 +43,7 @@ impl Benchmarkable for PollMessagesBenchmark {
                 true => start_stream_id + client_id,
                 false => start_stream_id + 1,
             };
+            let warmup_time = args.warmup_time();
 
             let consumer = Consumer::new(
                 client_factory,
@@ -50,6 +51,7 @@ impl Benchmarkable for PollMessagesBenchmark {
                 stream_id,
                 messages_per_batch,
                 message_batches,
+                warmup_time,
             );
 
             let future = Box::pin(async move { consumer.run().await });

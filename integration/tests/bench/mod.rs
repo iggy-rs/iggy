@@ -29,6 +29,8 @@ fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport) {
 
     // 10 MB of data written to disk
     command.args([
+        "--warmup-time",
+        "0",
         "send-and-poll",
         "--messages-per-batch",
         "100",

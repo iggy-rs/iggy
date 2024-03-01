@@ -30,6 +30,7 @@ impl Benchmarkable for SendMessagesBenchmark {
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
         let message_size = self.args.message_size();
+        let warmup_time = self.args.warmup_time();
 
         let mut futures: BenchmarkFutures = Ok(Vec::with_capacity(clients_count as usize));
         for client_id in 1..=clients_count {
@@ -53,6 +54,7 @@ impl Benchmarkable for SendMessagesBenchmark {
                 messages_per_batch,
                 message_batches,
                 message_size,
+                warmup_time,
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);

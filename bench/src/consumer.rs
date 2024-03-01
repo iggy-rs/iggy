@@ -6,6 +6,7 @@ use iggy::consumer::Consumer as IggyConsumer;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
+use iggy::utils::duration::IggyDuration;
 use integration::test_server::{login_root, ClientFactory};
 use std::sync::Arc;
 use std::time::Duration;
@@ -18,6 +19,7 @@ pub struct Consumer {
     stream_id: u32,
     messages_per_batch: u32,
     message_batches: u32,
+    warmup_time: IggyDuration,
 }
 
 impl Consumer {
@@ -27,6 +29,7 @@ impl Consumer {
         stream_id: u32,
         messages_per_batch: u32,
         message_batches: u32,
+        warmup_time: IggyDuration,
     ) -> Self {
         Self {
             client_factory,
@@ -34,6 +37,7 @@ impl Consumer {
             stream_id,
             messages_per_batch,
             message_batches,
+            warmup_time,
         }
     }
 
@@ -50,14 +54,6 @@ impl Consumer {
             None,
         );
         login_root(&client).await;
-        info!(
-            "Consumer #{} → preparing the test messages...",
-            self.consumer_id
-        );
-        info!(
-            "Consumer #{} → polling {} messages in {} batches of {} messages...",
-            self.consumer_id, total_messages, self.message_batches, self.messages_per_batch
-        );
 
         let mut poll_messages = PollMessages {
             consumer: IggyConsumer::new(Identifier::numeric(self.consumer_id).unwrap()),
@@ -71,18 +67,51 @@ impl Consumer {
 
         let mut latencies: Vec<Duration> = Vec::with_capacity(self.message_batches as usize);
         let mut total_size_bytes = 0;
-        let mut current_iteration = 0;
+        let mut current_iteration: u64 = 0;
         let mut received_messages = 0;
+        let mut topic_not_found_counter = 0;
+
+        info!(
+            "Consumer #{} → warming up for {}...",
+            self.consumer_id, self.warmup_time
+        );
+        let warmup_end = Instant::now() + self.warmup_time.get_duration();
+        while Instant::now() < warmup_end {
+            let offset = current_iteration * self.messages_per_batch as u64;
+            poll_messages.strategy.value = offset;
+            client.poll_messages(&poll_messages).await?;
+            current_iteration += 1;
+        }
+
+        info!(
+            "Consumer #{} → polling {} messages in {} batches of {} messages...",
+            self.consumer_id, total_messages, self.message_batches, self.messages_per_batch
+        );
+
         let start_timestamp = Instant::now();
         while received_messages < total_messages {
-            let offset = (current_iteration * self.messages_per_batch) as u64;
+            let offset = current_iteration * self.messages_per_batch as u64;
             poll_messages.strategy.value = offset;
 
             let latency_start = Instant::now();
-            let polled_messages = client.poll_messages(&poll_messages).await;
+
+            let polled_messages: Result<iggy::models::messages::PolledMessages, IggyError> =
+                client.poll_messages(&poll_messages).await;
+
             let latency_end = latency_start.elapsed();
-            if polled_messages.is_err() {
-                trace!("Offset: {} is not available yet, retrying...", offset);
+
+            if let Err(e) = polled_messages {
+                if let IggyError::InvalidResponse(code, _, _) = e {
+                    if code == 2010 {
+                        topic_not_found_counter += 1;
+                        if topic_not_found_counter < 200 {
+                            continue;
+                        }
+                        return Err(e);
+                    }
+                } else {
+                    return Err(e);
+                }
                 continue;
             }
 

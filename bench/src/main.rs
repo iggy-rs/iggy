@@ -38,6 +38,7 @@ async fn main() -> Result<(), IggyError> {
         result = benchmark_future => {
             if let Err(e) = result {
                 error!("Benchmark failed with error: {:?}", e);
+                return Err(e);
             }
             info!("Finished the benchmarks");
         }

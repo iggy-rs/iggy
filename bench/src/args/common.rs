@@ -3,6 +3,7 @@ use super::props::{BenchmarkKindProps, BenchmarkTransportProps};
 use super::{defaults::*, transport::BenchmarkTransportCommand};
 use clap::error::ErrorKind;
 use clap::{CommandFactory, Parser};
+use iggy::utils::duration::IggyDuration;
 use integration::test_server::Transport;
 use std::net::SocketAddr;
 use std::path::Path;
@@ -29,6 +30,10 @@ pub struct IggyBenchArgs {
     /// Server stdout visibility
     #[arg(long, short='v', default_value_t = DEFAULT_SERVER_STDOUT_VISIBILITY)]
     pub verbose: bool,
+
+    /// Warmup time
+    #[arg(long, short = 'w', default_value_t = IggyDuration::from(1))]
+    pub warmup_time: IggyDuration,
 }
 
 fn validate_server_executable_path(v: &str) -> Result<String, String> {
@@ -110,5 +115,9 @@ impl IggyBenchArgs {
         self.benchmark_kind
             .inner()
             .disable_parallel_consumer_streams()
+    }
+
+    pub fn warmup_time(&self) -> IggyDuration {
+        self.warmup_time
     }
 }

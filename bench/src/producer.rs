@@ -5,6 +5,7 @@ use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::utils::duration::IggyDuration;
 use integration::test_server::{login_root, ClientFactory};
 use std::str::FromStr;
 use std::sync::Arc;
@@ -19,6 +20,7 @@ pub struct Producer {
     messages_per_batch: u32,
     message_batches: u32,
     message_size: u32,
+    warmup_time: IggyDuration,
 }
 
 impl Producer {
@@ -29,6 +31,7 @@ impl Producer {
         messages_per_batch: u32,
         message_batches: u32,
         message_size: u32,
+        warmup_time: IggyDuration,
     ) -> Self {
         Producer {
             client_factory,
@@ -37,6 +40,7 @@ impl Producer {
             messages_per_batch,
             message_batches,
             message_size,
+            warmup_time,
         }
     }
 
@@ -70,6 +74,15 @@ impl Producer {
             partitioning: Partitioning::partition_id(partition_id),
             messages,
         };
+
+        info!(
+            "Producer #{} → warming up for {}...",
+            self.producer_id, self.warmup_time
+        );
+        let warmup_end = Instant::now() + self.warmup_time.get_duration();
+        while Instant::now() < warmup_end {
+            client.send_messages(&mut send_messages).await?;
+        }
 
         info!(
             "Producer #{} → sending {} messages in {} batches of {} messages...",

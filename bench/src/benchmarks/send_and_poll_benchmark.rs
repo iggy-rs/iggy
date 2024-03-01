@@ -61,6 +61,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
         let message_size = self.args.message_size();
+        let warmup_time = self.args.warmup_time();
         let mut futures: BenchmarkFutures =
             Ok(Vec::with_capacity((producers + consumers) as usize));
         for producer_id in 1..=producers {
@@ -76,6 +77,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 messages_per_batch,
                 message_batches,
                 message_size,
+                warmup_time,
             );
             let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);
@@ -92,6 +94,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 stream_id,
                 messages_per_batch,
                 message_batches,
+                warmup_time,
             );
             let future = Box::pin(async move { consumer.run().await });
             futures.as_mut().unwrap().push(future);

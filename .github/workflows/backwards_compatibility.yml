@@ -1,9 +1,11 @@
 name: backwards_compatibility
 on:
-  pull_request:
-    branches:
-      - master
-    types: [opened, synchronize, reopened, edited]
+  workflow_call:
+    inputs:
+      pr_body: 
+        description: 'Pull Request body'
+        required: true
+        type: string
 
 jobs:
   check_commit_message:
@@ -48,7 +50,7 @@ jobs:
         id: check_pr_body
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ENV_PR_BODY: ${{ github.event.pull_request.body }}
+          ENV_PR_BODY: ${{ inputs.pr_body }}
         run: |
           PR_BODY="$ENV_PR_BODY"
           echo "Pull Request body: $PR_BODY"

@@ -78,7 +78,7 @@ jobs:
           cargo login "${{ secrets.CARGO_REGISTRY_TOKEN }}"
           cargo publish -p iggy
 
-  finalize:
+  finalize_sdk:
     runs-on: ubuntu-latest
     needs:
       - publish

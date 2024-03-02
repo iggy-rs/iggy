@@ -1,0 +1,104 @@
+name: backwards_compatibility
+on:
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize, reopened]
+
+jobs:
+  check_commit_message:
+    runs-on: ubuntu-latest
+    outputs:
+        should_skip: ${{ steps.check_commit.outputs.skip || steps.check_pr_body.outputs.skip }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for BREAKING_CHANGE in commit message
+        id: check_commit
+        run: |
+          COMMIT_MSG=$(git log --format=%B -n 1 HEAD)
+          echo "Commit message: $COMMIT_MSG"
+          if echo "$COMMIT_MSG" | grep -q "BREAKING_CHANGE"; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Check for BREAKING_CHANGE in pull request body
+        id: check_pr_body
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_MSG_TITLE=$(jq -r .pull_request.title "$GITHUB_EVENT_PATH")
+          PR_MSG_BODY=$(jq -r .pull_request.body "$GITHUB_EVENT_PATH")
+          echo "Pull Request body: $PR_MSG_BODY"
+          if [[ "$PR_MSG_BODY" == *"BREAKING_CHANGE"* ]]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+  build_and_test:
+    runs-on: ubuntu-latest
+    needs: check_commit_message
+    if: ${{ needs.check_commit_message.outputs.should_skip != 'true' }}
+    steps:
+      - run: echo "${{ needs.check_commit_message.outputs.should_skip }}"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
+
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "v2"
+
+      - name: Build (PR)
+        run: cargo build
+
+      - uses: JarvusInnovations/background-action@v1
+        name: Run iggy-server in background (PR)
+        with:
+          run: |
+            target/debug/iggy-server &
+          wait-on: tcp:localhost:8090
+          wait-for: 1m
+          tail: true
+
+      - name: Run send bench (PR)
+        timeout-minutes: 1
+        run: target/debug/iggy-bench --warmup-time 0 --verbose send --message-batches 25 --messages-per-batch 25 tcp
+
+      - name: Stop iggy-server
+        timeout-minutes: 1
+        run: pkill iggy-server && while pgrep -l iggy-server; do sleep 1; done;
+
+      - name: Reset to origin/master
+        run: git reset --hard origin/master
+
+      - name: Build (origin/master)
+        run: cargo build
+
+      - uses: JarvusInnovations/background-action@v1
+        name: Run iggy-server in background (origin/master)
+        with:
+          run: |
+            target/debug/iggy-server &
+          wait-on: tcp:localhost:8090
+          wait-for: 1m
+          tail: true
+
+      - name: Run poll bench (origin/master)
+        timeout-minutes: 1
+        run: target/debug/iggy-bench --warmup-time 0 --verbose poll --message-batches 25 --messages-per-batch 25 tcp
+
+      - name: Run send bench (origin/master)
+        timeout-minutes: 1
+        run: target/debug/iggy-bench --warmup-time 0 --verbose send --message-batches 25 --messages-per-batch 25 tcp
+
+      - name: Stop iggy-server
+        timeout-minutes: 1
+        run: pkill iggy-server && while pgrep -l iggy-server; do sleep 1; done;
+

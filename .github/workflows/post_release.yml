@@ -11,49 +11,76 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Cache cargo & target directories
         uses: Swatinem/rust-cache@v2
         with:
           key: "v2"
+
       - name: Build binary
         run: cargo build
-      - name: Spin up Docker Container
-        run: docker run -d -p 8090:8090 --name iggy_container iggyrs/iggy
-      - name: Test Benchmark
+
+      - uses: addnab/docker-run-action@v3
+        name: Spin up Docker Container
+        with:
+          image: iggyrs/iggy
+          options: -d -p 8090:8090 --name iggy_container
+
+      - name: Test Benchmark - Send
+        timeout-minutes: 1
         run: |
-          send_output=$(timeout 5s ./target/debug/iggy-bench send tcp --server-address 127.0.0.1:8090 2>&1) || send_code=$?;
-          poll_output=$(timeout 5s ./target/debug/release/iggy-bench poll tcp --server-address 127.0.0.1:8090 2>&1) || poll_code=$?;
-          send_poll_output=$(timeout 5s ./target/debug/iggy-bench send-and-poll tcp --server-address 127.0.0.1:8090 2>&1) || send_poll_code=$?;
+          send_output=$(./target/debug/iggy-bench send tcp --server-address 127.0.0.1:8090 2>&1)
+          echo "$send_output"
+          if ! echo "$send_output" | grep -q "Producer #1 → sending 1000000 messages in 1000 batches of 1000 messages..."; then
+            echo "Expected send benchmark output was not found."
+            exit 1
+          fi
 
-          expected_send_lines=("Producer #1 → sending 1000000 messages in 1000 batches of 1000 messages...")
-          expected_poll_lines=("Consumer #1 → polling 1000000 messages in 1000 batches of 1000 messages...")
-          expected_send_poll_lines=("${expected_send_lines[@]}"
-                                    "${expected_poll_lines[@]}")
+      - name: Test Benchmark - Poll
+        timeout-minutes: 1
+        run: |
+          poll_output=$(./target/debug/release/iggy-bench poll tcp --server-address 127.0.0.1:8090 2>&1)
+          echo "$poll_output"
+          if ! echo "$poll_output" | grep -q "Consumer #1 → polling 1000000 messages in 1000 batches of 1000 messages..."; then
+            echo "Expected poll benchmark output was not found."
+            exit 1
+          fi
 
-          # Verify processes successfully timed out with exit code 124
-          exit_codes=($send_code $poll_code $send_poll_code)
-          for code in "${exit_codes[@]}"; do
-            if [ "${code:-0}" -ne 124 ]; then
-              echo "Unexpected exit code: $code"
-              exit 1
-            fi
-          done
+      - name: Test Benchmark - Send and Poll
+        timeout-minutes: 1
+        run: |
+          send_poll_output=$(./target/debug/iggy-bench send-and-poll tcp --server-address 127.0.0.1:8090 2>&1)
+          echo "$send_poll_output"
+          expected_send_lines="Producer #1 → sending 1000000 messages in 1000 batches of 1000 messages..."
+          expected_poll_lines="Consumer #1 → polling 1000000 messages in 1000 batches of 1000 messages..."
+          if ! echo "$send_poll_output" | grep -q "$expected_send_lines" || ! echo "$send_poll_output" | grep -q "$expected_poll_lines"; then
+            echo "Expected send and poll benchmark output was not found."
+            exit 1
+          fi
 
-          # Check for correct output
-          declare -A expected_output=(
-            [send_output]=expected_send_lines[@]
-            [poll_output]=expected_poll_lines[@]
-            [send_poll_output]=expected_send_poll_lines[@]
-          )
-          for command_name in "${!expected_output[@]}"; do
-              actual_output="${!command_name}"
-              expected_lines=("${!expected_output[$command_name]}")
-              for line in "${expected_lines[@]}"; do
-                if ! echo "$actual_output" | grep -q "$line"; then
-                  echo "Expected line '$line' was not found in the output of $command_name."
-                  exit 1
-                fi
-              done
-          done
+      - name: Test CLI - topic creation
+        timeout-minutes: 1
+        run: |
+          IGGY_USERNAME=iggy IGGY_PASSWORD=iggy ./target/debug/iggy stream create test-stream
+
       - name: Clean up
         run: docker rm -f iggy_container
+
+  finalize_post_release:
+    runs-on: ubuntu-latest
+    needs: [post_release]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Everything is fine
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+
+      - name: Something went wrong
+        if: ${{ contains(needs.*.result, 'failure') && github.event_name == 'workflow_run' }}
+        uses: JasonEtco/create-an-issue@v2.9.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          filename: .github/BOT_ISSUE_TEMPLATE.md

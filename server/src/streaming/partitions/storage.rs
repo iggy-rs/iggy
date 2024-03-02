@@ -1,3 +1,5 @@
+use crate::compat::format_sampler::BinaryFormatSampler;
+use crate::compat::samplers::message_sampler::MessageSampler;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
 use crate::streaming::storage::{PartitionStorage, Storage};
@@ -220,6 +222,11 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.messages_count_of_parent_topic.clone(),
                 partition.messages_count.clone(),
             );
+
+            let log_path = &segment.log_path;
+            let index_path = &segment.index_path;
+            let message_sampler = MessageSampler::new(log_path.to_owned(), index_path.to_owned());
+            let xd = message_sampler.sample().await;
             segment.load().await?;
             if !segment.is_closed {
                 segment.unsaved_batches = Some(Vec::new())

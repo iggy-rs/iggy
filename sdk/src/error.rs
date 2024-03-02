@@ -322,8 +322,10 @@ pub enum IggyError {
     CannotReadLastOffsetDelta = 7002,
     #[error("Cannot read batch maximum timestamp")]
     CannotReadMaxTimestamp = 7003,
-    #[error("Cannot read batch attributes")]
+    #[error("Cannot read batch payload")]
     CannotReadBatchPayload = 7004,
+    #[error("Cannot read message, when performing format conversion")]
+    CannotReadMessageFormatConversion = 8000,
 }
 
 impl IggyError {

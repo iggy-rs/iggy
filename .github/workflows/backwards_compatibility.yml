@@ -3,39 +3,61 @@ on:
   pull_request:
     branches:
       - master
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, edited]
 
 jobs:
   check_commit_message:
     runs-on: ubuntu-latest
     outputs:
-        should_skip: ${{ steps.check_commit.outputs.skip || steps.check_pr_body.outputs.skip }}
+        should_skip: ${{ steps.check_commits.outputs.skip || steps.check_pr_body.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+          fetch-depth: 0
 
-      - name: Check for BREAKING_CHANGE in commit message
-        id: check_commit
+      - name: Print the event payload
+        run: cat "$GITHUB_EVENT_PATH"
+
+      - name: Check if BREAKING_CHANGE is present in any commits body in the PR
+        id: check_commits
         run: |
-          COMMIT_MSG=$(git log --format=%B -n 1 HEAD)
-          echo "Commit message: $COMMIT_MSG"
-          if echo "$COMMIT_MSG" | grep -q "BREAKING_CHANGE"; then
+          BREAKING_CHANGE_FOUND=false
+          COMMIT_RANGE=origin/master...HEAD
+
+          for COMMIT in $(git log --format=%H $COMMIT_RANGE); do
+            COMMIT_MSG=$(git log --format=%B -n 1 $COMMIT)
+            COMMIT_MSG_SUBJECT=$(echo "$COMMIT_MSG" | head -n 1)
+            COMMIT_MSG_BODY=$(echo "$COMMIT_MSG" | tail -n +3)
+            echo "Commit $COMMIT, subject: $COMMIT_MSG_SUBJECT, body: $COMMIT_MSG_BODY"
+            if echo "$COMMIT_MSG_BODY" | grep -q "BREAKING_CHANGE"; then
+              BREAKING_CHANGE_FOUND=true
+              break
+            fi
+          done
+      
+          if $BREAKING_CHANGE_FOUND; then
             echo "skip=true" >> $GITHUB_OUTPUT
+            echo "'BREAKING_CHANGE' found in commit message, setting skip=true"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
+            echo "'BREAKING_CHANGE' not found in commit message, setting skip=false"
           fi
 
-      - name: Check for BREAKING_CHANGE in pull request body
+      - name: Check if BREAKING_CHANGE is present in pull request body
         id: check_pr_body
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ENV_PR_BODY: ${{ github.event.pull_request.body }}
         run: |
-          PR_MSG_TITLE=$(jq -r .pull_request.title "$GITHUB_EVENT_PATH")
-          PR_MSG_BODY=$(jq -r .pull_request.body "$GITHUB_EVENT_PATH")
-          echo "Pull Request body: $PR_MSG_BODY"
-          if [[ "$PR_MSG_BODY" == *"BREAKING_CHANGE"* ]]; then
+          PR_BODY="$ENV_PR_BODY"
+          echo "Pull Request body: $PR_BODY"
+          if [[ "$PR_BODY" == *"BREAKING_CHANGE"* ]]; then
             echo "skip=true" >> $GITHUB_OUTPUT
+            echo "'BREAKING_CHANGE' found in pull request body, setting skip=true"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
+            echo "'BREAKING_CHANGE' not found in pull request body, setting skip=false"
           fi
 
   build_and_test:

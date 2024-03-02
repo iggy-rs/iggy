@@ -47,7 +47,7 @@ serde_json = "1.0.114"
 serde_with = { version = "3.6.1", features = ["base64", "macros"] }
 sled = "0.34.7"
 strip-ansi-escapes = "0.2.0"
-sysinfo = "0.30.5"
+sysinfo = "0.30.6"
 thiserror = "1.0.57"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-native-tls = "0.3.1"

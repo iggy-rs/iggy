@@ -29,6 +29,12 @@ jobs:
   sanity:
     uses: ./.github/workflows/sanity.yml
 
+  backwards_compatibility:
+    uses: ./.github/workflows/backwards_compatibility.yml
+    needs: sanity
+    with:
+      pr_body: ${{ github.event.pull_request.body }}
+
   build_and_test:
     needs: sanity
     name: ${{ matrix.platform.skip_tests == true && 'build' || 'build and test' }} ${{ matrix.platform.os_name }}
@@ -115,10 +121,11 @@ jobs:
       - name: Run tests
         run: cargo test --verbose --target aarch64-apple-darwin
 
-  finalize:
+  finalize_pr:
     runs-on: ubuntu-latest
     needs:
       - sanity
+      - backwards_compatibility
       - build_and_test
     if: always()
     steps:

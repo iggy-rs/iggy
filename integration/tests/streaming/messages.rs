@@ -23,6 +23,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         path: setup.config.path.to_string(),
         partition: PartitionConfig {
             messages_required_to_save: messages_count * 3,
+            enforce_fsync: true,
             ..Default::default()
         },
         ..Default::default()
@@ -151,6 +152,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         path: setup.config.path.to_string(),
         partition: PartitionConfig {
             messages_required_to_save: messages_count,
+            enforce_fsync: true,
             ..Default::default()
         },
         ..Default::default()

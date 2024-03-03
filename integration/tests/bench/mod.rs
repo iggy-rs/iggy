@@ -14,7 +14,7 @@ use uuid::Uuid;
 
 const BENCH_FILES_PREFIX: &str = "bench_";
 
-fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport) {
+fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport, bench: &str) {
     let mut command = Command::cargo_bin("iggy-bench").unwrap();
 
     let mut stderr_file_path = None;
@@ -29,15 +29,11 @@ fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport) {
 
     // 10 MB of data written to disk
     command.args([
-        "--warmup-time",
-        "0",
-        "send-and-poll",
+        bench,
         "--messages-per-batch",
         "100",
         "--message-batches",
         "100",
-        "--message-size",
-        "1000",
         &format!("{}", transport),
         "--server-address",
         &server_addr,

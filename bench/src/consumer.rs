@@ -88,6 +88,7 @@ impl Consumer {
             self.consumer_id, total_messages, self.message_batches, self.messages_per_batch
         );
 
+        current_iteration = 0;
         let start_timestamp = Instant::now();
         while received_messages < total_messages {
             let offset = current_iteration * self.messages_per_batch as u64;
@@ -104,7 +105,7 @@ impl Consumer {
                 if let IggyError::InvalidResponse(code, _, _) = e {
                     if code == 2010 {
                         topic_not_found_counter += 1;
-                        if topic_not_found_counter < 200 {
+                        if topic_not_found_counter > 200 {
                             continue;
                         }
                         return Err(e);

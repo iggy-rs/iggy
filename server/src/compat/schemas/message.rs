@@ -17,6 +17,28 @@ pub struct Message {
     headers: Option<HashMap<HeaderKey, HeaderValue>>,
 }
 
+impl Message {
+    pub fn new(
+        offset: u64,
+        state: MessageState,
+        timestamp: u64,
+        id: u128,
+        payload: Bytes,
+        checksum: u32,
+        headers: Option<HashMap<HeaderKey, HeaderValue>>,
+    ) -> Message {
+        Message {
+            offset,
+            state,
+            timestamp,
+            id,
+            payload,
+            checksum,
+            headers,
+        }
+    }
+}
+
 impl TryFrom<Bytes> for Message {
     type Error = IggyError;
 
@@ -78,7 +100,11 @@ impl TryFrom<Bytes> for Message {
             0 => None,
             _ => {
                 let headers_payload = &value[41..(41 + headers_length as usize)];
-                let headers = HashMap::from_bytes(Bytes::copy_from_slice(headers_payload))?;
+                let headers = HashMap::from_bytes(Bytes::copy_from_slice(headers_payload)).map_err(|_| {
+                    IggyError::CannotReadMessageFormatConversion(
+                        "Failed to read message headers".to_owned(),
+                    )
+                })?;
                 Some(headers)
             }
         };

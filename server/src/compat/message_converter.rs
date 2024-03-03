@@ -1,9 +1,9 @@
-use crate::compat::format_sampler::BinaryFormatSampler;
+use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::compat::samplers::message_sampler::MessageSampler;
 use crate::compat::samplers::retained_batch_sampler::RetainedMessageBatchSampler;
 
 pub struct MessageFormatConverter {
-    pub samplers: Vec<Box<dyn BinaryFormatSampler + Send + Sync>>,
+    pub samplers: Vec<Box<dyn BinarySchemaSampler>>,
 }
 
 impl MessageFormatConverter {
@@ -12,7 +12,7 @@ impl MessageFormatConverter {
         log_path: String,
         index_path: String,
     ) -> MessageFormatConverter {
-        // Always append new formats to beginning of vec
+        // Always append new schemas to beginning of vec
         MessageFormatConverter {
             samplers: vec![
                 Box::new(RetainedMessageBatchSampler::new(

@@ -1,6 +1,5 @@
 use bytes::Bytes;
 use iggy::error::IggyError;
-use crate::compat::formats::message::Message;
 
 pub struct RetainedMessageBatch {
     pub base_offset: u64,
@@ -8,13 +7,6 @@ pub struct RetainedMessageBatch {
     pub max_timestamp: u64,
     pub length: u32,
     pub bytes: Bytes,
-}
-
-impl RetainedMessageBatch {
-
-    fn convert_from_message_format(messages: Vec<Message>) {
-
-    }
 }
 
 impl TryFrom<Bytes> for RetainedMessageBatch {

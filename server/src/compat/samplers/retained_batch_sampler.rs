@@ -1,10 +1,11 @@
-use crate::compat::format_sampler::BinaryFormatSampler;
-use crate::compat::formats::retained_batch::RetainedMessageBatch;
+use crate::compat::schema_sampler::BinarySchemaSampler;
+use crate::compat::schemas::retained_batch::RetainedMessageBatch;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use tokio::io::AsyncReadExt;
+use crate::compat::binary_schema::BinarySchema;
 
 pub struct RetainedMessageBatchSampler {
     pub segment_start_offset: u64,
@@ -30,8 +31,8 @@ unsafe impl Send for RetainedMessageBatchSampler {}
 unsafe impl Sync for RetainedMessageBatchSampler {}
 
 #[async_trait]
-impl BinaryFormatSampler for RetainedMessageBatchSampler {
-    async fn sample(&self) -> Result<(), IggyError> {
+impl BinarySchemaSampler for RetainedMessageBatchSampler {
+    async fn try_sample(&self) -> Result<BinarySchema, IggyError> {
         let mut index_file = file::open(&self.index_path).await?;
         let _ = index_file.read_u32_le().await?;
         let _ = index_file.read_u32_le().await?;
@@ -48,6 +49,6 @@ impl BinaryFormatSampler for RetainedMessageBatchSampler {
         if batch.base_offset != self.segment_start_offset {
             return Err(IggyError::InvalidBatchBaseOffsetFormatConversion);
         }
-        Ok(())
+        Ok(BinarySchema::RetainedMessageBatchSchema)
     }
 }

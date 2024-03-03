@@ -1,4 +1,4 @@
-use crate::compat::format_sampler::BinaryFormatSampler;
+use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::compat::message_converter::MessageFormatConverter;
 use crate::compat::samplers::message_sampler::MessageSampler;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
@@ -230,12 +230,12 @@ impl Storage<Partition> for FilePartitionStorage {
                 MessageFormatConverter::init(start_offset, log_path, index_path);
             let samplers_count = message_format_converter.samplers.len();
             for (idx, sampler) in message_format_converter.samplers.iter().enumerate() {
-                match sampler.sample().await {
+                match sampler.try_sample().await {
                     Ok(_) if idx == 0 => {
                         // Found message in the newest format, no conversion needed
                         break;
                     }
-                    Ok(result) => {
+                    Ok(format) => {
                         // Found old format, need to convert it
                         // ... (conversion logic here)
                     }
@@ -247,7 +247,7 @@ impl Storage<Partition> for FilePartitionStorage {
                             start_offset
                         )));
                     }
-                    _ => {} // Handle any other cases if needed
+                    _ => {}
                 }
             }
 

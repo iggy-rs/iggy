@@ -1,4 +1,5 @@
 use crate::compat::format_sampler::BinaryFormatSampler;
+use crate::compat::message_converter::MessageFormatConverter;
 use crate::compat::samplers::message_sampler::MessageSampler;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
@@ -223,10 +224,33 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.messages_count.clone(),
             );
 
-            let log_path = &segment.log_path;
-            let index_path = &segment.index_path;
-            let message_sampler = MessageSampler::new(log_path.to_owned(), index_path.to_owned());
-            let xd = message_sampler.sample().await;
+            let log_path = segment.log_path.to_owned();
+            let index_path = segment.index_path.to_owned();
+            let message_format_converter =
+                MessageFormatConverter::init(start_offset, log_path, index_path);
+            let samplers_count = message_format_converter.samplers.len();
+            for (idx, sampler) in message_format_converter.samplers.iter().enumerate() {
+                match sampler.sample().await {
+                    Ok(_) if idx == 0 => {
+                        // Found message in the newest format, no conversion needed
+                        break;
+                    }
+                    Ok(result) => {
+                        // Found old format, need to convert it
+                        // ... (conversion logic here)
+                    }
+                    Err(_) if idx + 1 == samplers_count => {
+                        // Didn't find any message format, return an error
+                        return Err(IggyError::CannotLoadResource(anyhow::anyhow!(
+                            "Failed to find a valid message format, when trying to perform a conversion for partition with ID: {} and segment with start offset: {}.",
+                            partition.partition_id,
+                            start_offset
+                        )));
+                    }
+                    _ => {} // Handle any other cases if needed
+                }
+            }
+
             segment.load().await?;
             if !segment.is_closed {
                 segment.unsaved_batches = Some(Vec::new())

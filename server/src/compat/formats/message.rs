@@ -8,12 +8,12 @@ use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub struct Message {
-    offset: u64,
+    pub offset: u64,
     state: MessageState,
     timestamp: u64,
     id: u128,
-    payload: Bytes,
-    checksum: u32,
+    pub payload: Bytes,
+    pub checksum: u32,
     headers: Option<HashMap<HeaderKey, HeaderValue>>,
 }
 
@@ -24,36 +24,54 @@ impl TryFrom<Bytes> for Message {
         let offset = u64::from_le_bytes(
             value
                 .get(0..8)
-                .ok_or_else(|| IggyError::CannotReadMessageFormatConversion)?
+                .ok_or_else(|| {
+                    IggyError::CannotReadMessageFormatConversion(
+                        "Failed to read message offset".to_owned(),
+                    )
+                })?
                 .try_into()?,
         );
-        let state = MessageState::from_code(
-            *value
-                .get(8)
-                .ok_or_else(|| IggyError::CannotReadMessageFormatConversion)?,
-        )?;
+        let state = MessageState::from_code(*value.get(8).ok_or_else(|| {
+            IggyError::CannotReadMessageFormatConversion("Failed to read message state".to_owned())
+        })?)?;
         let timestamp = u64::from_le_bytes(
             value
                 .get(9..17)
-                .ok_or_else(|| IggyError::CannotReadMessageFormatConversion)?
+                .ok_or_else(|| {
+                    IggyError::CannotReadMessageFormatConversion(
+                        "Failed to read message timestamp".to_owned(),
+                    )
+                })?
                 .try_into()?,
         );
         let id = u128::from_le_bytes(
             value
                 .get(17..33)
-                .ok_or_else(|| IggyError::CannotReadMessageFormatConversion)?
+                .ok_or_else(|| {
+                    IggyError::CannotReadMessageFormatConversion(
+                        "Failed to read message id".to_owned(),
+                    )
+                })?
                 .try_into()?,
         );
         let checksum = u32::from_le_bytes(
             value
                 .get(33..37)
-                .ok_or_else(|| IggyError::CannotReadMessageFormatConversion)?
+                .ok_or_else(|| {
+                    IggyError::CannotReadMessageFormatConversion(
+                        "Failed to read message checksum".to_owned(),
+                    )
+                })?
                 .try_into()?,
         );
         let headers_length = u32::from_le_bytes(
             value
                 .get(37..41)
-                .ok_or_else(|| IggyError::CannotReadMessageFormatConversion)?
+                .ok_or_else(|| {
+                    IggyError::CannotReadMessageFormatConversion(
+                        "Failed to read headers length".to_owned(),
+                    )
+                })?
                 .try_into()?,
         );
         let headers = match headers_length {
@@ -69,7 +87,11 @@ impl TryFrom<Bytes> for Message {
         let payload_length = u32::from_le_bytes(
             value
                 .get(position..(position + 4))
-                .ok_or_else(|| IggyError::CannotReadMessageFormatConversion)?
+                .ok_or_else(|| {
+                    IggyError::CannotReadMessageFormatConversion(
+                        "Failed to read message payload length".to_owned(),
+                    )
+                })?
                 .try_into()?,
         );
         let payload =

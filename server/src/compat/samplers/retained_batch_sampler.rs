@@ -1,19 +1,24 @@
 use crate::compat::format_sampler::BinaryFormatSampler;
-use crate::compat::formats::message::Message;
+use crate::compat::formats::retained_batch::RetainedMessageBatch;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use tokio::io::AsyncReadExt;
 
-pub struct MessageSampler {
+pub struct RetainedMessageBatchSampler {
     pub segment_start_offset: u64,
     pub log_path: String,
     pub index_path: String,
 }
-impl MessageSampler {
-    pub fn new(segment_start_offset: u64, log_path: String, index_path: String) -> MessageSampler {
-        MessageSampler {
+
+impl RetainedMessageBatchSampler {
+    pub fn new(
+        segment_start_offset: u64,
+        log_path: String,
+        index_path: String,
+    ) -> RetainedMessageBatchSampler {
+        RetainedMessageBatchSampler {
             segment_start_offset,
             log_path,
             index_path,
@@ -21,13 +26,15 @@ impl MessageSampler {
     }
 }
 
-unsafe impl Send for MessageSampler {}
-unsafe impl Sync for MessageSampler {}
+unsafe impl Send for RetainedMessageBatchSampler {}
+unsafe impl Sync for RetainedMessageBatchSampler {}
 
 #[async_trait]
-impl BinaryFormatSampler for MessageSampler {
+impl BinaryFormatSampler for RetainedMessageBatchSampler {
     async fn sample(&self) -> Result<(), IggyError> {
         let mut index_file = file::open(&self.index_path).await?;
+        let _ = index_file.read_u32_le().await?;
+        let _ = index_file.read_u32_le().await?;
         let _ = index_file.read_u32_le().await?;
         let end_position = index_file.read_u32_le().await?;
 
@@ -37,9 +44,9 @@ impl BinaryFormatSampler for MessageSampler {
         buffer.put_bytes(0, buffer_size);
         let _ = log_file.read_exact(&mut buffer).await?;
 
-        let message = Message::try_from(buffer.freeze())?;
-        if message.offset != self.segment_start_offset {
-            return Err(IggyError::InvalidMessageOffsetFormatConversion);
+        let batch = RetainedMessageBatch::try_from(buffer.freeze())?;
+        if batch.base_offset != self.segment_start_offset {
+            return Err(IggyError::InvalidBatchBaseOffsetFormatConversion);
         }
         Ok(())
     }

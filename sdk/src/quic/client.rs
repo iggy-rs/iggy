@@ -135,6 +135,14 @@ impl BinaryClient for QuicClient {
         error!("Cannot send data. Client is not connected.");
         Err(IggyError::NotConnected)
     }
+
+    async fn send_vec_with_response(
+        &self,
+        _command: u32,
+        _payload: Vec<Bytes>,
+    ) -> Result<Bytes, IggyError> {
+        unimplemented!()
+    }
 }
 
 impl QuicClient {

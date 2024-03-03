@@ -20,7 +20,7 @@ impl<B: BinaryClient> MessageClient for B {
 
     async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(SEND_MESSAGES_CODE, command.as_bytes())
+        self.send_vec_with_response(SEND_MESSAGES_CODE, command.as_bytes_vec())
             .await?;
         Ok(())
     }

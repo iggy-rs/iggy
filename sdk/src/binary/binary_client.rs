@@ -23,4 +23,10 @@ pub trait BinaryClient: Client {
     async fn set_state(&self, state: ClientState);
     /// Sends a command and returns the response.
     async fn send_with_response(&self, command: u32, payload: Bytes) -> Result<Bytes, IggyError>;
+    /// Sends a command serialized as vector<Bytes> and returns the response.
+    async fn send_vec_with_response(
+        &self,
+        command: u32,
+        payload: Vec<Bytes>,
+    ) -> Result<Bytes, IggyError>;
 }

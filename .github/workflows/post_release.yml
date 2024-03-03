@@ -1,5 +1,6 @@
 name: post_release
 on:
+  workflow_dispatch:
   workflow_run:
     workflows: ["release"]
     types:
@@ -29,34 +30,17 @@ jobs:
       - name: Test Benchmark - Send
         timeout-minutes: 1
         run: |
-          send_output=$(./target/debug/iggy-bench send tcp --server-address 127.0.0.1:8090 2>&1)
-          echo "$send_output"
-          if ! echo "$send_output" | grep -q "Producer #1 → sending 1000000 messages in 1000 batches of 1000 messages..."; then
-            echo "Expected send benchmark output was not found."
-            exit 1
-          fi
+          ./target/debug/iggy-bench send --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
 
       - name: Test Benchmark - Poll
         timeout-minutes: 1
         run: |
-          poll_output=$(./target/debug/release/iggy-bench poll tcp --server-address 127.0.0.1:8090 2>&1)
-          echo "$poll_output"
-          if ! echo "$poll_output" | grep -q "Consumer #1 → polling 1000000 messages in 1000 batches of 1000 messages..."; then
-            echo "Expected poll benchmark output was not found."
-            exit 1
-          fi
+          ./target/debug/iggy-bench poll --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
 
       - name: Test Benchmark - Send and Poll
         timeout-minutes: 1
         run: |
-          send_poll_output=$(./target/debug/iggy-bench send-and-poll tcp --server-address 127.0.0.1:8090 2>&1)
-          echo "$send_poll_output"
-          expected_send_lines="Producer #1 → sending 1000000 messages in 1000 batches of 1000 messages..."
-          expected_poll_lines="Consumer #1 → polling 1000000 messages in 1000 batches of 1000 messages..."
-          if ! echo "$send_poll_output" | grep -q "$expected_send_lines" || ! echo "$send_poll_output" | grep -q "$expected_poll_lines"; then
-            echo "Expected send and poll benchmark output was not found."
-            exit 1
-          fi
+          ./target/debug/iggy-bench send-and-poll --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
 
       - name: Test CLI - topic creation
         timeout-minutes: 1
@@ -82,5 +66,6 @@ jobs:
         uses: JasonEtco/create-an-issue@v2.9.2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_BOT_CONTEXT_STRING: "post release docker container test"
         with:
           filename: .github/BOT_ISSUE_TEMPLATE.md

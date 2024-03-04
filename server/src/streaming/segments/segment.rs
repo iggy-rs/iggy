@@ -16,7 +16,9 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use tokio::io::{AsyncReadExt, BufReader};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
+use tracing::log::{info};
+use tracing::error;
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
@@ -153,10 +155,10 @@ impl Segment {
     ) -> Result<(), IggyError> {
         let log_path = self.log_path.as_str();
         let index_path = self.index_path.as_str();
-        let timeindex_path = self.time_index_path.as_str();
+        let time_index_path = self.time_index_path.as_str();
         let segment_alternative_path = format!("{log_path}_temp");
         let index_alternative_path = format!("{index_path}_temp");
-        let timeindex_alternative_path = format!("{timeindex_path}_temp");
+        let timeindex_alternative_path = format!("{time_index_path}_temp");
 
         match schema {
             BinarySchema::RetainedMessageSchema => {
@@ -167,38 +169,46 @@ impl Segment {
                     return Ok(());
                 }
 
+
+                let mut read_bytes = 0;
                 let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-                while reader.buffer().has_remaining() {
+                while read_bytes < file_size {
                     let offset = reader.read_u64_le().await;
                     if offset.is_err() {
                         break;
                     }
+                    read_bytes += 8;
 
                     let state = reader.read_u8().await;
                     if state.is_err() {
                         return Err(IggyError::CannotReadMessageState);
                     }
+                    read_bytes += 1;
 
                     let state = MessageState::from_code(state.unwrap())?;
                     let timestamp = reader.read_u64_le().await;
                     if timestamp.is_err() {
                         return Err(IggyError::CannotReadMessageTimestamp);
                     }
+                    read_bytes += 8;
 
                     let id = reader.read_u128_le().await;
                     if id.is_err() {
                         return Err(IggyError::CannotReadMessageId);
                     }
+                    read_bytes += 16;
 
                     let checksum = reader.read_u32_le().await;
                     if checksum.is_err() {
                         return Err(IggyError::CannotReadMessageChecksum);
                     }
+                    read_bytes += 4;
 
                     let headers_length = reader.read_u32_le().await;
                     if headers_length.is_err() {
                         return Err(IggyError::CannotReadHeadersLength);
                     }
+                    read_bytes += 4;
 
                     let headers_length = headers_length.unwrap();
                     let headers = match headers_length {
@@ -206,24 +216,30 @@ impl Segment {
                         _ => {
                             let mut headers_payload =
                                 BytesMut::with_capacity(headers_length as usize);
+                            headers_payload.put_bytes(0, headers_length as usize);
                             if reader.read_exact(&mut headers_payload).await.is_err() {
                                 return Err(IggyError::CannotReadHeadersPayload);
                             }
 
+                            error!("I am reading headers_payload: {:?}", headers_payload);
                             let headers = HashMap::from_bytes(headers_payload.freeze())?;
                             Some(headers)
                         }
                     };
+                    read_bytes += headers_length as u64;
 
-                    let payload_length = reader.read_u32_le().await;
-                    if payload_length.is_err() {
+                    let payload_len = reader.read_u32_le().await;
+                    if payload_len.is_err() {
                         return Err(IggyError::CannotReadMessageLength);
                     }
 
-                    let mut payload = BytesMut::with_capacity(payload_length.unwrap() as usize);
+                    let payload_len = payload_len.unwrap();
+                    let mut payload = BytesMut::with_capacity(payload_len as usize);
+                    payload.put_bytes(0, payload_len as usize);
                     if reader.read_exact(&mut payload).await.is_err() {
                         return Err(IggyError::CannotReadMessagePayload);
                     }
+                    read_bytes += 4 + payload_len as u64;
 
                     let payload = payload.freeze();
                     let offset = offset.unwrap();
@@ -261,10 +277,33 @@ impl Segment {
 
                     size_in_bytes += retained_batch.get_size_bytes() as u32;
                 }
+                /*
+                let mut alt_log_file =  file::write(&segment_alternative_path).await?;
+                let log_persist_result = alt_log_file.write_all(&batch_bytes).await;
 
-                // Now we have to persist those in the temp path, check if everything went correctly
-                // If so then remove the old 
-                //let mut file = file::
+                let mut alt_index_file = file::write(&index_alternative_path).await?;
+                let index_persist_result = alt_index_file.write_all(&index_bytes).await;
+
+                let mut alt_time_index_file = file::write(&timeindex_alternative_path).await?;
+                let time_index_persist_result = alt_time_index_file.write_all(&timeindex_bytes).await;
+
+                if log_persist_result.is_ok() && index_persist_result.is_ok() && time_index_persist_result.is_ok() {
+                    info!("Persisting to disk the new segment files");
+                    let log_removal_result = file::remove(&self.log_path).await;
+                    let index_removal_result = file::remove(&self.index_path).await;
+                    let time_index_removal_result = file::remove(&self.time_index_path).await;
+                    if log_removal_result.is_ok() && index_removal_result.is_ok() && time_index_removal_result.is_ok() {
+                        file::rename(&segment_alternative_path, &self.log_path).await?;
+                        file::rename(&index_alternative_path, &self.index_path).await?;
+                        file::rename(&timeindex_alternative_path, &self.time_index_path).await?;
+                    } else {
+                        return Err(IggyError::CannotRemoveOldSegmentFiles);
+                    }
+                } else {
+                    return Err(IggyError::CannotPersistNewSegmentFiles);
+                }
+                 */
+
                 Ok(())
             }
             BinarySchema::RetainedMessageBatchSchema => Ok(()),

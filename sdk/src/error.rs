@@ -332,6 +332,10 @@ pub enum IggyError {
     InvalidBatchBaseOffsetFormatConversion = 8002,
     #[error("Cannot read message batch, when performing format conversion, {0}")]
     CannotReadMessageBatchFormatConversion(String) = 8003,
+    #[error("Cannot remove old segment files")]
+    CannotRemoveOldSegmentFiles = 8004,
+    #[error("Cannot persist new segment files")]
+    CannotPersistNewSegmentFiles = 8005,
 }
 
 impl IggyError {

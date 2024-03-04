@@ -1,6 +1,6 @@
 use atone::Vc;
 use std::path::{Path, PathBuf};
-use tokio::fs::{read_dir, File, OpenOptions};
+use tokio::fs::{read_dir, File, OpenOptions, remove_file};
 
 pub async fn open(path: &str) -> Result<File, std::io::Error> {
     OpenOptions::new().read(true).open(path).await
@@ -13,6 +13,14 @@ pub async fn append(path: &str) -> Result<File, std::io::Error> {
 pub async fn write(path: &str) -> Result<File, std::io::Error> {
     OpenOptions::new().create(true).write(true).open(path).await
 }
+pub async fn remove(path: &str) -> Result<(), std::io::Error> {
+    remove_file(path).await
+}
+
+pub async fn rename(old_path: &str, new_path: &str) -> Result<(), std::io::Error> {
+    tokio::fs::rename(Path::new(old_path), Path::new(new_path)).await
+}
+
 
 pub async fn folder_size<P>(path: P) -> std::io::Result<u64>
 where

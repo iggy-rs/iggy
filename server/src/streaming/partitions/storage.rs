@@ -235,9 +235,9 @@ impl Storage<Partition> for FilePartitionStorage {
                         // Found message in the newest format, no conversion needed
                         break;
                     }
-                    Ok(format) => {
+                    Ok(schema) => {
                         // Found old format, need to convert it
-                        // ... (conversion logic here)
+                        segment.convert_segment_messages_from_schema(schema).await?;
                     }
                     Err(_) if idx + 1 == samplers_count => {
                         // Didn't find any message format, return an error

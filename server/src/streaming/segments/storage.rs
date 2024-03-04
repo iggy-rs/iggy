@@ -641,6 +641,7 @@ async fn load_messages_by_size(
 
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);
+        payload.put_bytes(0, payload_len);
         reader
             .read_exact(&mut payload)
             .await

@@ -9,7 +9,7 @@ on:
 jobs:
   post_release:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch'}}
     steps:
       - uses: actions/checkout@v4
 
@@ -24,28 +24,43 @@ jobs:
       - uses: addnab/docker-run-action@v3
         name: Spin up Docker Container
         with:
-          image: iggyrs/iggy
-          options: -d -p 8090:8090 --name iggy_container
+          image: iggyrs/iggy:latest
+          options: -d -p 8090:8090
+          run: /iggy/iggy-server
+
+      - name: Wait till iggy-server has bound to TCP 8090 port
+        timeout-minutes: 1
+        run: |
+          while ! nc -z 127.0.0.1 8090; do
+            sleep 1
+          done
 
       - name: Test Benchmark - Send
         timeout-minutes: 1
         run: |
-          ./target/debug/iggy-bench send --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
+          ./target/debug/iggy-bench --skip-server-start --warmup-time 0s send --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
 
       - name: Test Benchmark - Poll
         timeout-minutes: 1
         run: |
-          ./target/debug/iggy-bench poll --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
+          ./target/debug/iggy-bench --skip-server-start --warmup-time 0s poll --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
 
       - name: Test Benchmark - Send and Poll
         timeout-minutes: 1
         run: |
-          ./target/debug/iggy-bench send-and-poll --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
+          ./target/debug/iggy-bench --skip-server-start --warmup-time 0s send-and-poll --message-batches 100 --messages-per-batch 100 tcp --server-address 127.0.0.1:8090
 
-      - name: Test CLI - topic creation
+      - name: Check if number of messages is correct
         timeout-minutes: 1
         run: |
-          IGGY_USERNAME=iggy IGGY_PASSWORD=iggy ./target/debug/iggy stream create test-stream
+          STATS=$(./target/debug/iggy -u iggy -p iggy stats)
+          echo "$STATS"
+          MESSAGE_COUNT=$(echo "$STATS" | grep -oP 'Message Count\s+\|\s+\K\d+')
+          readonly EXPECTED_MESSAGE_COUNT=200000
+          if [ "$MESSAGE_COUNT" -ne "$EXPECTED_MESSAGE_COUNT" ]; then
+            echo "Expected message count to be $EXPECTED_MESSAGE_COUNT, but got $MESSAGE_COUNT"
+            exit 1
+          fi
 
       - name: Clean up
         run: docker rm -f iggy_container

@@ -19,6 +19,11 @@ struct ConfigAddress {
 }
 
 pub async fn start_server_if_needed(args: &mut IggyBenchArgs) -> Option<TestServer> {
+    if args.skip_server_start {
+        info!("Skipping iggy-server start");
+        return None;
+    }
+
     let default_config: ServerConfig =
         toml::from_str(include_str!("../../configs/server.toml")).unwrap();
     let (should_start, mut envs) = match &args.transport() {

@@ -32,8 +32,12 @@ pub struct IggyBenchArgs {
     pub verbose: bool,
 
     /// Warmup time
-    #[arg(long, short = 'w', default_value_t = IggyDuration::from(1))]
+    #[arg(long, short = 'w', default_value_t = IggyDuration::from(DEFAULT_WARMUP_TIME_SECONDS))]
     pub warmup_time: IggyDuration,
+
+    /// Skip server start
+    #[arg(long, short = 'k', default_value_t = DEFAULT_SKIP_SERVER_START)]
+    pub skip_server_start: bool,
 }
 
 fn validate_server_executable_path(v: &str) -> Result<String, String> {

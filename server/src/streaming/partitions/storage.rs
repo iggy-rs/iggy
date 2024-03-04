@@ -1,6 +1,6 @@
-use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::compat::message_converter::MessageFormatConverter;
 use crate::compat::samplers::message_sampler::MessageSampler;
+use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
 use crate::streaming::storage::{PartitionStorage, Storage};

@@ -1,6 +1,6 @@
-use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::compat::samplers::message_sampler::MessageSampler;
 use crate::compat::samplers::retained_batch_sampler::RetainedMessageBatchSampler;
+use crate::compat::schema_sampler::BinarySchemaSampler;
 
 pub struct MessageFormatConverter {
     pub samplers: Vec<Box<dyn BinarySchemaSampler>>,

@@ -1,7 +1,11 @@
-use bytes::Bytes;
+use std::f64::consts::E;
+
+use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
 
-pub struct RetainedMessageBatch {
+use super::message_snapshot::MessageSnapshot;
+
+pub struct RetainedMessageBatchSnapshot {
     pub base_offset: u64,
     pub last_offset_delta: u32,
     pub max_timestamp: u64,
@@ -9,7 +13,71 @@ pub struct RetainedMessageBatch {
     pub bytes: Bytes,
 }
 
-impl TryFrom<Bytes> for RetainedMessageBatch {
+impl RetainedMessageBatchSnapshot {
+    pub fn new(
+        base_offset: u64,
+        last_offset_delta: u32,
+        max_timestamp: u64,
+        length: u32,
+        bytes: Bytes,
+    ) -> RetainedMessageBatchSnapshot {
+        RetainedMessageBatchSnapshot {
+            base_offset,
+            last_offset_delta,
+            max_timestamp,
+            length,
+            bytes,
+        }
+    }
+
+    pub fn get_last_offset(&self) -> u64 {
+        self.base_offset + self.last_offset_delta as u64
+    }
+
+    pub fn try_from_messages(
+        messages: &[MessageSnapshot],
+    ) -> Result<RetainedMessageBatchSnapshot, IggyError> {
+        let first_message = messages.first().unwrap();
+        let last_message = messages.last().unwrap();
+        let base_offset = if first_message.offset == 0 {
+            0
+        } else {
+            first_message.offset + 1
+        };
+        let last_offset_delta = last_message.offset - first_message.offset;
+        let max_timestamp = last_message.timestamp;
+
+        let size = messages
+            .iter()
+            .map(|msg| msg.get_size_bytes() as usize)
+            .sum();
+        let mut bytes = BytesMut::with_capacity(size);
+        for message in messages.iter() {
+            message.extend(&mut bytes);
+        }
+        Ok(RetainedMessageBatchSnapshot::new(
+            base_offset,
+            last_offset_delta as u32,
+            max_timestamp,
+            bytes.len() as u32,
+            bytes.freeze(),
+        ))
+    }
+
+    pub fn extend(&self, bytes: &mut BytesMut) {
+        bytes.put_u64_le(self.base_offset);
+        bytes.put_u32_le(self.length);
+        bytes.put_u32_le(self.last_offset_delta);
+        bytes.put_u64_le(self.max_timestamp);
+        bytes.put_slice(&self.bytes);
+    }
+
+    pub fn get_size_bytes(&self) -> u64 {
+        24 + self.bytes.len() as u64
+    }
+}
+
+impl TryFrom<Bytes> for RetainedMessageBatchSnapshot {
     type Error = IggyError;
     fn try_from(value: Bytes) -> Result<Self, Self::Error> {
         let base_offset = u64::from_le_bytes(
@@ -62,7 +130,7 @@ impl TryFrom<Bytes> for RetainedMessageBatch {
                 })?
                 .to_owned(),
         );
-        Ok(RetainedMessageBatch {
+        Ok(RetainedMessageBatchSnapshot {
             base_offset,
             last_offset_delta,
             max_timestamp,

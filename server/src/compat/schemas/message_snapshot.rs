@@ -1,23 +1,23 @@
-use bytes::{Bytes, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
-use iggy::models::header::{HeaderKey, HeaderValue};
+use iggy::models::header::{self, HeaderKey, HeaderValue};
 use iggy::models::messages::MessageState;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 
 #[derive(Debug)]
-pub struct Message {
+pub struct MessageSnapshot {
     pub offset: u64,
-    state: MessageState,
-    timestamp: u64,
-    id: u128,
+    pub state: MessageState,
+    pub timestamp: u64,
+    pub id: u128,
     pub payload: Bytes,
     pub checksum: u32,
-    headers: Option<HashMap<HeaderKey, HeaderValue>>,
+    pub headers: Option<HashMap<HeaderKey, HeaderValue>>,
 }
 
-impl Message {
+impl MessageSnapshot {
     pub fn new(
         offset: u64,
         state: MessageState,
@@ -26,8 +26,8 @@ impl Message {
         payload: Bytes,
         checksum: u32,
         headers: Option<HashMap<HeaderKey, HeaderValue>>,
-    ) -> Message {
-        Message {
+    ) -> MessageSnapshot {
+        MessageSnapshot {
             offset,
             state,
             timestamp,
@@ -37,9 +37,40 @@ impl Message {
             headers,
         }
     }
+
+    pub fn extend(&self, bytes: &mut BytesMut) {
+        let length = self.get_size_bytes() - 4;
+        let id = self.id;
+        let offset = self.offset;
+        let timestamp = self.timestamp;
+        let payload = self.payload.clone();
+        let checksum = self.checksum;
+        let message_state = self.state;
+        let headers = &self.headers;
+
+        bytes.put_u32_le(length);
+        bytes.put_u64_le(offset);
+        bytes.put_u8(message_state.as_code());
+        bytes.put_u64_le(timestamp);
+        bytes.put_u128_le(id);
+        bytes.put_u32_le(checksum);
+        if let Some(headers) = headers {
+            #[allow(clippy::cast_possible_truncation)]
+            bytes.put_u32_le(headers.len() as u32);
+            bytes.put_slice(&headers.as_bytes());
+        } else {
+            bytes.put_u32_le(0u32);
+        }
+        bytes.put_slice(&payload);
+    }
+
+    pub fn get_size_bytes(&self) -> u32 {
+        let headers_size = header::get_headers_size_bytes(&self.headers);
+        41 + headers_size + self.payload.len() as u32
+    }
 }
 
-impl TryFrom<Bytes> for Message {
+impl TryFrom<Bytes> for MessageSnapshot {
     type Error = IggyError;
 
     fn try_from(value: Bytes) -> Result<Self, Self::Error> {
@@ -100,11 +131,12 @@ impl TryFrom<Bytes> for Message {
             0 => None,
             _ => {
                 let headers_payload = &value[41..(41 + headers_length as usize)];
-                let headers = HashMap::from_bytes(Bytes::copy_from_slice(headers_payload)).map_err(|_| {
-                    IggyError::CannotReadMessageFormatConversion(
-                        "Failed to read message headers".to_owned(),
-                    )
-                })?;
+                let headers = HashMap::from_bytes(Bytes::copy_from_slice(headers_payload))
+                    .map_err(|_| {
+                        IggyError::CannotReadMessageFormatConversion(
+                            "Failed to read message headers".to_owned(),
+                        )
+                    })?;
                 Some(headers)
             }
         };
@@ -123,7 +155,7 @@ impl TryFrom<Bytes> for Message {
         let payload =
             Bytes::copy_from_slice(&value[position + 4..position + 4 + payload_length as usize]);
 
-        Ok(Message {
+        Ok(MessageSnapshot {
             offset,
             state,
             timestamp,

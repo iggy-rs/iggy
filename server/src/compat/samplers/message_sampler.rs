@@ -1,11 +1,11 @@
+use crate::compat::binary_schema::BinarySchema;
 use crate::compat::schema_sampler::BinarySchemaSampler;
-use crate::compat::schemas::message::Message;
+use crate::compat::schemas::message_snapshot::MessageSnapshot;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use tokio::io::AsyncReadExt;
-use crate::compat::binary_schema::BinarySchema;
 
 pub struct MessageSampler {
     pub segment_start_offset: u64,
@@ -38,7 +38,7 @@ impl BinarySchemaSampler for MessageSampler {
         buffer.put_bytes(0, buffer_size);
         let _ = log_file.read_exact(&mut buffer).await?;
 
-        let message = Message::try_from(buffer.freeze())?;
+        let message = MessageSnapshot::try_from(buffer.freeze())?;
         if message.offset != self.segment_start_offset {
             return Err(IggyError::InvalidMessageOffsetFormatConversion);
         }

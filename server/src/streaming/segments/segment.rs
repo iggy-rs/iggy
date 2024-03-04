@@ -1,20 +1,22 @@
-use std::collections::HashMap;
+use crate::compat::schemas::message_snapshot::MessageSnapshot;
+use crate::compat::{
+    binary_schema::BinarySchema, schemas::retained_batch_snapshot::RetainedMessageBatchSnapshot,
+};
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
-use iggy::utils::timestamp::IggyTimestamp;
-use std::sync::atomic::AtomicU64;
-use std::sync::Arc;
-use bytes::{Buf, BytesMut};
-use tokio::io::{AsyncReadExt, BufReader};
+use crate::streaming::utils::file;
+use bytes::{Buf, BufMut as _, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::models::messages::MessageState;
-use crate::compat::binary_schema::BinarySchema;
-use crate::compat::schemas::message::Message;
-use crate::streaming::utils::file;
+use iggy::utils::timestamp::IggyTimestamp;
+use std::collections::HashMap;
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
+use tokio::io::{AsyncReadExt, BufReader};
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
@@ -145,7 +147,17 @@ impl Segment {
         format!("{}.{}", path, TIME_INDEX_EXTENSION)
     }
 
-    pub async fn convert_segment_messages_from_schema(&self, schema: BinarySchema) -> Result<(), IggyError> {
+    pub async fn convert_segment_messages_from_schema(
+        &self,
+        schema: BinarySchema,
+    ) -> Result<(), IggyError> {
+        let log_path = self.log_path.as_str();
+        let index_path = self.index_path.as_str();
+        let timeindex_path = self.time_index_path.as_str();
+        let segment_alternative_path = format!("{log_path}_temp");
+        let index_alternative_path = format!("{index_path}_temp");
+        let timeindex_alternative_path = format!("{timeindex_path}_temp");
+
         match schema {
             BinarySchema::RetainedMessageSchema => {
                 let mut messages = Vec::new();
@@ -192,7 +204,8 @@ impl Segment {
                     let headers = match headers_length {
                         0 => None,
                         _ => {
-                            let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
+                            let mut headers_payload =
+                                BytesMut::with_capacity(headers_length as usize);
                             if reader.read_exact(&mut headers_payload).await.is_err() {
                                 return Err(IggyError::CannotReadHeadersPayload);
                             }
@@ -218,23 +231,43 @@ impl Segment {
                     let id = id.unwrap();
                     let checksum = checksum.unwrap();
 
-                    let message = Message::new(
-                        offset,
-                        state,
-                        timestamp,
-                        id,
-                        payload,
-                        checksum,
-                        headers
+                    let message = MessageSnapshot::new(
+                        offset, state, timestamp, id, payload, checksum, headers,
                     );
                     messages.push(message);
                 }
-                let batches = messages.as_slice().chunks(1000);
+                let message_batches = messages.as_slice().chunks(1000).collect::<Vec<_>>();
+                let messages_size: u64 = message_batches
+                    .iter()
+                    .map(|batch| {
+                        let size: u64 = batch.iter().map(|msg| msg.get_size_bytes() as u64).sum();
+                        size + 24
+                    })
+                    .sum();
+                let mut batch_bytes = BytesMut::with_capacity(messages_size as usize);
+                let mut index_bytes = BytesMut::with_capacity(message_batches.len() * 8);
+                let mut timeindex_bytes = BytesMut::with_capacity(message_batches.len() * 12);
+                let mut size_in_bytes: u32 = 0;
+                for batch in message_batches {
+                    let retained_batch = RetainedMessageBatchSnapshot::try_from_messages(batch)?;
+                    retained_batch.extend(&mut batch_bytes);
+
+                    let relative_offset = retained_batch.get_last_offset() - self.start_offset;
+                    index_bytes.put_u32_le(relative_offset as u32);
+                    index_bytes.put_u32_le(size_in_bytes);
+
+                    timeindex_bytes.put_u32_le(relative_offset as u32);
+                    timeindex_bytes.put_u64_le(retained_batch.max_timestamp);
+
+                    size_in_bytes += retained_batch.get_size_bytes() as u32;
+                }
+
+                // Now we have to persist those in the temp path, check if everything went correctly
+                // If so then remove the old 
+                //let mut file = file::
                 Ok(())
             }
-            BinarySchema::RetainedMessageBatchSchema => {
-                Ok(())
-            }
+            BinarySchema::RetainedMessageBatchSchema => Ok(()),
         }
     }
 }

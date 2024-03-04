@@ -2,7 +2,7 @@ name: backwards_compatibility
 on:
   workflow_call:
     inputs:
-      pr_body: 
+      pr_body:
         description: 'Pull Request body'
         required: true
         type: string
@@ -37,7 +37,7 @@ jobs:
               break
             fi
           done
-      
+
           if $BREAKING_CHANGE_FOUND; then
             echo "skip=true" >> $GITHUB_OUTPUT
             echo "'BREAKING_CHANGE' found in commit message, setting skip=true"
@@ -89,6 +89,8 @@ jobs:
             target/debug/iggy-server &
           wait-on: tcp:localhost:8090
           wait-for: 1m
+          log-output: true
+          log-output-if: true
           tail: true
 
       - name: Run send bench (PR)
@@ -98,6 +100,12 @@ jobs:
       - name: Stop iggy-server
         timeout-minutes: 1
         run: pkill iggy-server && while pgrep -l iggy-server; do sleep 1; done;
+
+      - name: Print iggy-server logs (PR)
+        run: cat local_data/logs/iggy*
+
+      - name: Remove iggy-server logs (PR)
+        run: rm local_data/logs/iggy*
 
       - name: Reset to origin/master
         run: git reset --hard origin/master
@@ -112,6 +120,8 @@ jobs:
             target/debug/iggy-server &
           wait-on: tcp:localhost:8090
           wait-for: 1m
+          log-output: true
+          log-output-if: true
           tail: true
 
       - name: Run poll bench (origin/master)
@@ -125,4 +135,7 @@ jobs:
       - name: Stop iggy-server
         timeout-minutes: 1
         run: pkill iggy-server && while pgrep -l iggy-server; do sleep 1; done;
+
+      - name: Print server logs (origin/master)
+        run: cat local_data/logs/iggy*
 

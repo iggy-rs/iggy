@@ -1,3 +1,4 @@
+use crate::args::common::ListModeExt;
 use clap::Args;
 use iggy::cli::utils::login_session_expiry::LoginSessionExpiry;
 
@@ -17,4 +18,11 @@ pub(crate) struct LoginArgs {
     #[clap(verbatim_doc_comment)]
     #[arg(value_parser = clap::value_parser!(LoginSessionExpiry), group = "store")]
     pub(crate) expiry: Option<Vec<LoginSessionExpiry>>,
+}
+
+#[derive(Debug, Clone, Args)]
+pub(crate) struct StatsArgs {
+    /// List mode (table, list, JSON, TOML)
+    #[clap(short, long, value_enum, default_value_t = ListModeExt::Table)]
+    pub(crate) output: ListModeExt,
 }

@@ -4,6 +4,7 @@ use iggy::cli::consumer_group::get_consumer_groups::GetConsumerGroupsOutput;
 use iggy::cli::context::get_contexts::GetContextsOutput;
 use iggy::cli::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokensOutput;
 use iggy::cli::streams::get_streams::GetStreamsOutput;
+use iggy::cli::system::stats::GetStatsOutput;
 use iggy::cli::topics::get_topics::GetTopicsOutput;
 use iggy::cli::users::get_users::GetUsersOutput;
 
@@ -72,6 +73,25 @@ impl From<ListMode> for GetContextsOutput {
         match mode {
             ListMode::Table => GetContextsOutput::Table,
             ListMode::List => GetContextsOutput::List,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub(crate) enum ListModeExt {
+    Table,
+    List,
+    Json,
+    Toml,
+}
+
+impl From<ListModeExt> for GetStatsOutput {
+    fn from(mode: ListModeExt) -> Self {
+        match mode {
+            ListModeExt::Table => GetStatsOutput::Table,
+            ListModeExt::List => GetStatsOutput::List,
+            ListModeExt::Json => GetStatsOutput::Json,
+            ListModeExt::Toml => GetStatsOutput::Toml,
         }
     }
 }

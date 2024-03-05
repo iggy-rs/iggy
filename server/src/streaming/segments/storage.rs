@@ -1,3 +1,4 @@
+use crate::compat::snapshots::message_snapshot::MessageSnapshot;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
@@ -11,6 +12,7 @@ use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, BytesMut};
+use futures::stream::{self, StreamExt};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
@@ -18,6 +20,7 @@ use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::{error, info, trace, warn};
 
@@ -618,6 +621,7 @@ async fn load_messages_by_size(
     let threshold = file_size.saturating_sub(size_bytes);
     let mut accumulated_size: u64 = 0;
 
+    let mut read_bytes = 0;
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     loop {
         let batch_base_offset = reader

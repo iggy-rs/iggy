@@ -1,6 +1,6 @@
 use crate::compat::binary_schema::BinarySchema;
 use crate::compat::schema_sampler::BinarySchemaSampler;
-use crate::compat::schemas::message_snapshot::MessageSnapshot;
+use crate::compat::snapshots::message_snapshot::MessageSnapshot;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};

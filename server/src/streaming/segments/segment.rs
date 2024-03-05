@@ -1,6 +1,6 @@
-use crate::compat::schemas::message_snapshot::MessageSnapshot;
+use crate::compat::snapshots::message_snapshot::MessageSnapshot;
 use crate::compat::{
-    binary_schema::BinarySchema, schemas::retained_batch_snapshot::RetainedMessageBatchSnapshot,
+    binary_schema::BinarySchema, snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot,
 };
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
@@ -16,9 +16,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
-use tracing::log::{info};
-use tracing::error;
+use tokio::io::{AsyncReadExt, BufReader};
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
@@ -156,9 +154,9 @@ impl Segment {
         let log_path = self.log_path.as_str();
         let index_path = self.index_path.as_str();
         let time_index_path = self.time_index_path.as_str();
-        let segment_alternative_path = format!("{log_path}_temp");
-        let index_alternative_path = format!("{index_path}_temp");
-        let timeindex_alternative_path = format!("{time_index_path}_temp");
+        let segment_alt_path = format!("{log_path}_temp");
+        let index_alt_path = format!("{index_path}_temp");
+        let time_index_alt_path = format!("{time_index_path}_temp");
 
         match schema {
             BinarySchema::RetainedMessageSchema => {
@@ -168,7 +166,6 @@ impl Segment {
                 if file_size == 0 {
                     return Ok(());
                 }
-
 
                 let mut read_bytes = 0;
                 let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
@@ -221,7 +218,6 @@ impl Segment {
                                 return Err(IggyError::CannotReadHeadersPayload);
                             }
 
-                            error!("I am reading headers_payload: {:?}", headers_payload);
                             let headers = HashMap::from_bytes(headers_payload.freeze())?;
                             Some(headers)
                         }

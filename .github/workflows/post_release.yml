@@ -2,7 +2,7 @@ name: post_release
 on:
   workflow_dispatch:
   workflow_run:
-    workflows: ["release"]
+    workflows: [ "release" ]
     types:
       - completed
 
@@ -55,7 +55,7 @@ jobs:
         run: |
           STATS=$(./target/debug/iggy -u iggy -p iggy stats)
           echo "$STATS"
-          MESSAGE_COUNT=$(echo "$STATS" | grep -oP 'Message Count\s+\|\s+\K\d+')
+          MESSAGE_COUNT=$(./target/debug/iggy -u iggy -p iggy -q stats -o json | jq '.messages_count')
           readonly EXPECTED_MESSAGE_COUNT=200000
           if [ "$MESSAGE_COUNT" -ne "$EXPECTED_MESSAGE_COUNT" ]; then
             echo "Expected message count to be $EXPECTED_MESSAGE_COUNT, but got $MESSAGE_COUNT"
@@ -67,7 +67,7 @@ jobs:
 
   finalize_post_release:
     runs-on: ubuntu-latest
-    needs: [post_release]
+    needs: [ post_release ]
     if: always()
     steps:
       - uses: actions/checkout@v4

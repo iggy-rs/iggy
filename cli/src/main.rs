@@ -136,7 +136,7 @@ fn get_command(
         },
         Command::Ping(args) => Box::new(PingCmd::new(args.count)),
         Command::Me => Box::new(GetMeCmd::new()),
-        Command::Stats => Box::new(GetStatsCmd::new()),
+        Command::Stats(args) => Box::new(GetStatsCmd::new(cli_options.quiet, args.output.into())),
         Command::Pat(command) => match command {
             PersonalAccessTokenAction::Create(pat_create_args) => {
                 Box::new(CreatePersonalAccessTokenCmd::new(

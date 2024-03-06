@@ -22,7 +22,7 @@ use crate::args::{
     partition::PartitionAction,
     personal_access_token::PersonalAccessTokenAction,
     stream::StreamAction,
-    system::{LoginArgs, PingArgs},
+    system::{LoginArgs, PingArgs, StatsArgs},
     topic::TopicAction,
 };
 use clap::{Args, Command as ClapCommand};
@@ -128,7 +128,7 @@ pub(crate) enum Command {
     /// Collect basic Iggy server statistics like number of streams, topics, partitions, etc.
     /// Server OS name, version, etc. are also collected.
     #[clap(verbatim_doc_comment)]
-    Stats,
+    Stats(StatsArgs),
     /// personal access token operations
     #[command(subcommand)]
     Pat(PersonalAccessTokenAction),

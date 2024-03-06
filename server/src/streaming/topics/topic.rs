@@ -6,6 +6,8 @@ use core::fmt;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
@@ -30,8 +32,8 @@ pub struct Topic {
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
     pub(crate) consumer_groups_ids: HashMap<String, u32>,
     pub(crate) current_partition_id: AtomicU32,
-    pub message_expiry: Option<u32>,
-    pub max_topic_size: Option<IggyByteSize>,
+    pub message_expiry: MessageExpiry,
+    pub max_topic_size: MaxTopicSize,
     pub replication_factor: u8,
     pub created_at: u64,
 }
@@ -56,8 +58,8 @@ impl Topic {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
-            None,
+            MessageExpiry::default(),
+            MaxTopicSize::default(),
             1,
         )
         .unwrap()
@@ -74,8 +76,8 @@ impl Topic {
         size_of_parent_stream: Arc<AtomicU64>,
         messages_count_of_parent_stream: Arc<AtomicU64>,
         segments_count_of_parent_stream: Arc<AtomicU32>,
-        message_expiry: Option<u32>,
-        max_topic_size: Option<IggyByteSize>,
+        message_expiry: MessageExpiry,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<Topic, IggyError> {
         let path = config.get_topic_path(stream_id, topic_id);
@@ -96,16 +98,7 @@ impl Topic {
             consumer_groups: HashMap::new(),
             consumer_groups_ids: HashMap::new(),
             current_partition_id: AtomicU32::new(1),
-            message_expiry: match message_expiry {
-                Some(expiry) => match expiry {
-                    0 => None,
-                    _ => Some(expiry),
-                },
-                None => match config.retention_policy.message_expiry.as_secs() {
-                    0 => None,
-                    expiry => Some(expiry),
-                },
-            },
+            message_expiry,
             max_topic_size,
             replication_factor,
             config,
@@ -138,25 +131,22 @@ impl Topic {
 
 impl fmt::Display for Topic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        let max_topic_size = match self.max_topic_size {
-            Some(size) => size.as_human_string_with_zero_as_unlimited(),
-            None => "unlimited".to_owned(),
-        };
         write!(f, "ID: {}, ", self.topic_id)?;
         write!(f, "stream ID: {}, ", self.stream_id)?;
         write!(f, "name: {}, ", self.name)?;
         write!(f, "path: {}, ", self.path)?;
-        write!(f, "partitions count: {:?}, ", self.partitions.len())?;
-        write!(f, "message expiry (s): {:?}, ", self.message_expiry)?;
-        write!(f, "max topic size (B): {:?}, ", max_topic_size)?;
+        write!(f, "partitions count: {}, ", self.partitions.len())?;
+        write!(f, "message expiry: {}, ", self.message_expiry)?;
+        write!(f, "max topic size: {}, ", self.max_topic_size)?;
         write!(f, "replication factor: {}, ", self.replication_factor)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use iggy::locking::IggySharedMutFn;
     use std::str::FromStr;
+
+    use iggy::locking::IggySharedMutFn;
 
     use super::*;
     use crate::streaming::storage::tests::get_test_system_storage;
@@ -168,8 +158,8 @@ mod tests {
         let topic_id = 2;
         let name = "test";
         let partitions_count = 3;
-        let message_expiry = 10;
-        let max_topic_size = IggyByteSize::from_str("2 GB").unwrap();
+        let message_expiry = 10u32.into();
+        let max_topic_size = MaxTopicSize::from_str("2 GB").unwrap();
         let replication_factor = 1;
         let config = Arc::new(SystemConfig::default());
         let path = config.get_topic_path(stream_id, topic_id);
@@ -187,8 +177,8 @@ mod tests {
             messages_count_of_parent_stream,
             size_of_parent_stream,
             segments_count_of_parent_stream,
-            Some(message_expiry),
-            Some(max_topic_size),
+            message_expiry,
+            max_topic_size,
             replication_factor,
         )
         .unwrap();
@@ -198,7 +188,7 @@ mod tests {
         assert_eq!(topic.path, path);
         assert_eq!(topic.name, name);
         assert_eq!(topic.partitions.len(), partitions_count as usize);
-        assert_eq!(topic.message_expiry, Some(message_expiry));
+        assert_eq!(topic.message_expiry, message_expiry);
 
         for (id, partition) in topic.partitions {
             let partition = partition.read().await;

@@ -31,10 +31,7 @@ impl SysInfoPrinter {
             return;
         }
 
-        info!(
-            "SysInfoPrinter is enabled, system information will be printed every {:?} seconds.",
-            interval.as_secs()
-        );
+        info!("SysInfoPrinter is enabled, system information will be printed every {interval}.",);
 
         tokio::spawn(async move {
             let mut interval_timer = time::interval(interval.get_duration());
@@ -64,7 +61,7 @@ impl ServerCommand<SysInfoPrintCommand> for SysInfoPrintExecutor {
             / stats.total_memory.as_bytes_u64() as f64)
             * 100f64;
 
-        info!("CPU: {:.2}% / {:.2}% (IggyUsage/Total), Mem: {:.2}% / {} / {} / {} (Free/IggyUsage/TotalUsed/Total), Clients: {}, Messages processed: {}, Read: {}, Written: {}, Run Time: {} s",
+        info!("CPU: {:.2}% / {:.2}% (IggyUsage/Total), Mem: {:.2}% / {} / {} / {} (Free/IggyUsage/TotalUsed/Total), Clients: {}, Messages processed: {}, Read: {}, Written: {}, Run Time: {}",
               stats.cpu_usage,
               stats.total_cpu_usage,
               free_memory_percent,

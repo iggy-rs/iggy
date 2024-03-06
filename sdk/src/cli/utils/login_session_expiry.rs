@@ -1,3 +1,3 @@
-use crate::cli::utils::message_expiry::MessageExpiry;
+use crate::utils::message_expiry::MessageExpiry;
 
 pub type LoginSessionExpiry = MessageExpiry;

@@ -158,6 +158,9 @@ impl Topic {
 
 #[cfg(test)]
 mod tests {
+    use iggy::utils::max_topic_size::MaxTopicSize;
+    use iggy::utils::message_expiry::MessageExpiry;
+
     use super::*;
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
@@ -321,8 +324,8 @@ mod tests {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
-            None,
+            MessageExpiry::default(),
+            MaxTopicSize::default(),
             1,
         )
         .unwrap()

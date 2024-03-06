@@ -1,5 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use iggy::utils::message_expiry::MessageExpiry;
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
@@ -23,7 +24,7 @@ async fn should_persist_partition_with_segment() {
             with_segment,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -53,7 +54,7 @@ async fn should_load_existing_partition_from_disk() {
             with_segment,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -70,7 +71,7 @@ async fn should_load_existing_partition_from_disk() {
             false,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -119,7 +120,7 @@ async fn should_delete_existing_partition_from_disk() {
             with_segment,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -151,7 +152,7 @@ async fn should_purge_existing_partition_on_disk() {
             with_segment,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),

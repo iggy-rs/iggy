@@ -1,5 +1,8 @@
 use crate::streaming::common::test_setup::TestSetup;
-use iggy::identifier::Identifier;
+use iggy::{
+    identifier::Identifier,
+    utils::{max_topic_size::MaxTopicSize, message_expiry::MessageExpiry},
+};
 use server::streaming::topics::topic::Topic;
 use std::sync::{
     atomic::{AtomicU32, AtomicU64},
@@ -91,8 +94,8 @@ async fn init_topic(setup: &TestSetup) -> Topic {
         size_of_parent_stream,
         messages_count_of_parent_stream,
         segments_count_of_parent_stream,
-        None,
-        None,
+        MessageExpiry::default(),
+        MaxTopicSize::default(),
         1,
     )
     .unwrap();

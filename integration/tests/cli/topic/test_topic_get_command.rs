@@ -8,6 +8,8 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
@@ -72,8 +74,8 @@ impl IggyCmdTestCase for TestTopicGetCmd {
                 topic_id: Some(self.topic_id),
                 partitions_count: 1,
                 name: self.topic_name.clone(),
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::Unlimited,
+                max_topic_size: MaxTopicSize::Unlimited,
                 replication_factor: 1,
             })
             .await;

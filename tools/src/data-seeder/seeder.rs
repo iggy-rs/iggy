@@ -7,6 +7,8 @@ use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topics::GetTopics;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use rand::Rng;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -53,8 +55,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 topic_id: Some(1),
                 name: "orders".to_string(),
                 partitions_count: 1,
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
             })
             .await?;
@@ -65,8 +67,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 topic_id: Some(2),
                 name: "users".to_string(),
                 partitions_count: 2,
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
             })
             .await?;
@@ -77,8 +79,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 topic_id: Some(3),
                 name: "notifications".to_string(),
                 partitions_count: 3,
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
             })
             .await?;
@@ -89,8 +91,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 topic_id: Some(4),
                 name: "payments".to_string(),
                 partitions_count: 2,
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
             })
             .await?;
@@ -101,8 +103,8 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 topic_id: Some(5),
                 name: "deliveries".to_string(),
                 partitions_count: 1,
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
             })
             .await?;

@@ -1,12 +1,13 @@
-use std::sync::atomic::{AtomicU32, AtomicU64};
-use std::sync::Arc;
-
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
+use std::sync::atomic::{AtomicU32, AtomicU64};
+use std::sync::Arc;
 use tokio::fs;
 
 #[tokio::test]
@@ -28,8 +29,8 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            None,
-            None,
+            MessageExpiry::default(),
+            MaxTopicSize::default(),
             1,
         )
         .unwrap();
@@ -64,8 +65,8 @@ async fn should_load_existing_topic_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            None,
-            None,
+            MessageExpiry::default(),
+            MaxTopicSize::default(),
             1,
         )
         .unwrap();
@@ -115,8 +116,8 @@ async fn should_delete_existing_topic_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            None,
-            None,
+            MessageExpiry::default(),
+            MaxTopicSize::default(),
             1,
         )
         .unwrap();
@@ -153,8 +154,8 @@ async fn should_purge_existing_topic_on_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            None,
-            None,
+            MessageExpiry::default(),
+            MaxTopicSize::default(),
             1,
         )
         .unwrap();

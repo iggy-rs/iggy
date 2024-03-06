@@ -11,6 +11,8 @@ use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::streams::get_stream::GetStream;
 use iggy::topics::create_topic::CreateTopic;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::str::FromStr;
@@ -58,8 +60,8 @@ impl IggyCmdTestCase for TestStreamPurgeCmd {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Some(self.topic_id),
                 partitions_count: 10,
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
                 name: self.topic_name.clone(),
             })

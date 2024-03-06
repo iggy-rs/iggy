@@ -3,14 +3,16 @@ use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::storage::SystemStorage;
-use iggy::utils::timestamp::IggyTimestamp;
+use iggy::utils::message_expiry::{MessageExpiry, MAX_EXPIRY_SECS};
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use tracing::error;
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
-pub const MAX_SIZE_BYTES: u32 = 1000 * 1000 * 1000;
+pub const MAX_SIZE_BYTES: u32 = 1000 * 1000 * 1000; // 1 GB
+pub const MIN_SIZE_BYTES: u32 = 1000 * 1000; // 1 MB
 
 #[derive(Debug)]
 pub struct Segment {
@@ -31,7 +33,7 @@ pub struct Segment {
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
-    pub(crate) message_expiry: Option<u32>,
+    pub(crate) message_expiry: MessageExpiry,
     pub(crate) unsaved_batches: Option<Vec<Arc<RetainedMessageBatch>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
@@ -50,7 +52,7 @@ impl Segment {
         start_offset: u64,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
-        message_expiry: Option<u32>,
+        message_expiry: MessageExpiry,
         size_of_parent_stream: Arc<AtomicU64>,
         size_of_parent_topic: Arc<AtomicU64>,
         size_of_parent_partition: Arc<AtomicU64>,
@@ -96,20 +98,27 @@ impl Segment {
     }
 
     pub async fn is_full(&self) -> bool {
-        if self.size_bytes >= self.config.segment.size.as_bytes_u64() as u32 {
-            return true;
-        }
-
-        self.is_expired(IggyTimestamp::now().to_micros()).await
+        self.size_bytes >= self.config.segment.size.as_bytes_u64() as u32
     }
 
     pub async fn is_expired(&self, now: u64) -> bool {
-        if self.message_expiry.is_none() {
-            return false;
-        }
+        let message_expiry_secs = match self.message_expiry {
+            MessageExpiry::ExpireDuration(duration) => duration.as_secs(),
+            MessageExpiry::FromServerConfig => {
+                let message_expiry_secs = self.config.retention_policy.message_expiry.as_secs();
+                if message_expiry_secs == MAX_EXPIRY_SECS {
+                    return false;
+                }
+                message_expiry_secs
+            }
+            MessageExpiry::Unlimited => {
+                return false;
+            }
+        };
 
         let last_messages = self.get_messages(self.end_offset, 1).await;
         if last_messages.is_err() {
+            error!("Failed to get last messages: {:?}", last_messages);
             return false;
         }
 
@@ -119,7 +128,7 @@ impl Segment {
         }
 
         let last_message = &last_messages[0];
-        let message_expiry = (self.message_expiry.unwrap() * 1000) as u64;
+        let message_expiry = (message_expiry_secs * 1000) as u64;
         (last_message.timestamp + message_expiry) <= now
     }
 
@@ -154,7 +163,7 @@ mod tests {
         let log_path = Segment::get_log_path(&path);
         let index_path = Segment::get_index_path(&path);
         let time_index_path = Segment::get_time_index_path(&path);
-        let message_expiry = Some(10);
+        let message_expiry = 10u32.into();
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let size_of_parent_topic = Arc::new(AtomicU64::new(0));
         let size_of_parent_partition = Arc::new(AtomicU64::new(0));
@@ -210,7 +219,7 @@ mod tests {
             },
             ..Default::default()
         });
-        let message_expiry = None;
+        let message_expiry = 10u32.into();
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let size_of_parent_topic = Arc::new(AtomicU64::new(0));
         let size_of_parent_partition = Arc::new(AtomicU64::new(0));
@@ -251,7 +260,7 @@ mod tests {
             },
             ..Default::default()
         });
-        let message_expiry = None;
+        let message_expiry = 10u32.into();
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let size_of_parent_topic = Arc::new(AtomicU64::new(0));
         let size_of_parent_partition = Arc::new(AtomicU64::new(0));

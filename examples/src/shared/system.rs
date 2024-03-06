@@ -11,6 +11,8 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::users::defaults::*;
 use iggy::users::login_user::LoginUser;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use tracing::info;
 type MessageHandler = dyn Fn(&PolledMessage) -> Result<(), Box<dyn std::error::Error>>;
 
@@ -89,8 +91,8 @@ pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), Ig
             topic_id: Some(args.topic_id),
             partitions_count: args.partitions_count,
             name: "orders".to_string(),
-            message_expiry: None,
-            max_topic_size: None,
+            message_expiry: MessageExpiry::default(),
+            max_topic_size: MaxTopicSize::default(),
             replication_factor: 1,
         })
         .await?;

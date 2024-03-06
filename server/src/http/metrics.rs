@@ -6,6 +6,7 @@ use axum::{
     middleware::Next,
     response::Response,
 };
+use iggy::locking::IggySharedMutFn;
 use std::sync::Arc;
 
 pub async fn metrics(
@@ -13,6 +14,12 @@ pub async fn metrics(
     request: Request<Body>,
     next: Next,
 ) -> Result<Response, StatusCode> {
-    state.system.read().metrics.increment_http_requests();
+    state
+        .system
+        .read()
+        .metrics
+        .write()
+        .await
+        .increment_http_requests();
     Ok(next.run(request).await)
 }

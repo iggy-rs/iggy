@@ -3,7 +3,8 @@ use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::topics::MAX_NAME_LENGTH;
-use crate::utils::byte_size::IggyByteSize;
+use crate::utils::max_topic_size::MaxTopicSize;
+use crate::utils::message_expiry::MessageExpiry;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -15,8 +16,8 @@ use std::str::from_utf8;
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
-/// - `message_expiry` - optional message expiry in seconds, if `None` then messages will never expire.
-/// - `max_topic_size` - optional maximum size of the topic in bytes, if `None` then topic size is unlimited.
+/// - `message_expiry` - message expiry.
+/// - `max_topic_size` - maximum size of the topic.
 ///                      Can't be lower than segment size in the config.
 /// - `replication_factor` - replication factor for the topic.
 /// - `name` - unique topic name, max length is 255 characters.
@@ -28,11 +29,10 @@ pub struct UpdateTopic {
     /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
-    /// Optional message expiry in seconds, if `None` then messages will never expire.
-    pub message_expiry: Option<u32>,
-    /// Optional max topic size, if `None` then topic size is unlimited.
-    /// Can't be lower than segment size in the config.
-    pub max_topic_size: Option<IggyByteSize>,
+    /// Message expiry
+    pub message_expiry: MessageExpiry,
+    /// Maximum topic size
+    pub max_topic_size: MaxTopicSize,
     /// Replication factor for the topic.
     pub replication_factor: u8,
     /// Unique topic name, max length is 255 characters.
@@ -46,8 +46,8 @@ impl Default for UpdateTopic {
         UpdateTopic {
             stream_id: Identifier::default(),
             topic_id: Identifier::default(),
-            message_expiry: None,
-            max_topic_size: None,
+            message_expiry: MessageExpiry::default(),
+            max_topic_size: MaxTopicSize::default(),
             replication_factor: 1,
             name: "topic".to_string(),
         }
@@ -81,14 +81,8 @@ impl BytesSerializable for UpdateTopic {
         );
         bytes.put_slice(&stream_id_bytes.clone());
         bytes.put_slice(&topic_id_bytes.clone());
-        match self.message_expiry {
-            Some(message_expiry) => bytes.put_u32_le(message_expiry),
-            None => bytes.put_u32_le(0),
-        }
-        match self.max_topic_size {
-            Some(max_topic_size) => bytes.put_u64_le(max_topic_size.as_bytes_u64()),
-            None => bytes.put_u64_le(0),
-        }
+        bytes.put_u32_le(self.message_expiry.into());
+        bytes.put_u64_le(self.max_topic_size.into());
         bytes.put_u8(self.replication_factor);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
@@ -105,16 +99,9 @@ impl BytesSerializable for UpdateTopic {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
-        let message_expiry = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
-        let message_expiry = match message_expiry {
-            0 => None,
-            _ => Some(message_expiry),
-        };
+        let message_expiry = u32::from_le_bytes(bytes[position..position + 4].try_into()?).into();
         let max_topic_size =
-            match u64::from_le_bytes(bytes[position + 4..position + 12].try_into()?) {
-                0 => None,
-                size => Some(IggyByteSize::from(size)),
-            };
+            u64::from_le_bytes(bytes[position + 4..position + 12].try_into()?).into();
         let replication_factor = bytes[position + 12];
         let name_length = bytes[position + 13];
         let name =
@@ -137,17 +124,13 @@ impl BytesSerializable for UpdateTopic {
 
 impl Display for UpdateTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let max_topic_size = match self.max_topic_size {
-            Some(max_topic_size) => max_topic_size.to_string(),
-            None => String::from("unlimited"),
-        };
         write!(
             f,
             "{}|{}|{}|{}|{}|{}",
             self.stream_id,
             self.topic_id,
-            self.message_expiry.unwrap_or(0),
-            max_topic_size,
+            self.message_expiry,
+            self.max_topic_size,
             self.replication_factor,
             self.name,
         )
@@ -157,15 +140,17 @@ impl Display for UpdateTopic {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::byte_size::IggyByteSize;
     use bytes::BufMut;
+    use std::str::FromStr;
 
     #[test]
     fn should_be_serialized_as_bytes() {
         let command = UpdateTopic {
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(2).unwrap(),
-            message_expiry: Some(10),
-            max_topic_size: Some(IggyByteSize::from(100)),
+            message_expiry: MessageExpiry::from_str("10s").unwrap(),
+            max_topic_size: MaxTopicSize::Value(IggyByteSize::from(100)),
             replication_factor: 1,
             name: "test".to_string(),
         };
@@ -176,16 +161,10 @@ mod tests {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
-        let message_expiry = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
-        let message_expiry = match message_expiry {
-            0 => None,
-            _ => Some(message_expiry),
-        };
-        let max_topic_size =
-            match u64::from_le_bytes(bytes[position + 4..position + 12].try_into().unwrap()) {
-                0 => None,
-                size => Some(IggyByteSize::from(size)),
-            };
+        let message_expiry: MessageExpiry =
+            u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap()).into();
+        let max_topic_size: MaxTopicSize =
+            u64::from_le_bytes(bytes[position + 4..position + 12].try_into().unwrap()).into();
         let replication_factor = bytes[position + 12];
         let name_length = bytes[position + 13];
         let name = from_utf8(&bytes[position + 14..position + 14 + name_length as usize])
@@ -231,7 +210,7 @@ mod tests {
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.message_expiry, Some(message_expiry));
+        assert_eq!(command.message_expiry, message_expiry.into());
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
     }

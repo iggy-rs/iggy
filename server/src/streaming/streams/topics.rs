@@ -3,7 +3,9 @@ use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::byte_size::IggyByteSize;
+
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::utils::text;
 use std::sync::atomic::Ordering;
 use tracing::{debug, info};
@@ -18,8 +20,8 @@ impl Stream {
         topic_id: Option<u32>,
         name: &str,
         partitions_count: u32,
-        message_expiry: Option<u32>,
-        max_topic_size: Option<IggyByteSize>,
+        message_expiry: MessageExpiry,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
         let name = text::to_lowercase_non_whitespace(name);
@@ -48,7 +50,6 @@ impl Stream {
             return Err(IggyError::TopicIdAlreadyExists(id, self.stream_id));
         }
 
-        // TODO: check if max_topic_size is not lower than system.segment.size
         let topic = Topic::create(
             self.stream_id,
             id,
@@ -75,8 +76,8 @@ impl Stream {
         &mut self,
         id: &Identifier,
         name: &str,
-        message_expiry: Option<u32>,
-        max_topic_size: Option<IggyByteSize>,
+        message_expiry: MessageExpiry,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
         let topic_id;
@@ -218,6 +219,8 @@ impl Stream {
 
 #[cfg(test)]
 mod tests {
+    use iggy::utils::byte_size::IggyByteSize;
+
     use super::*;
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
@@ -229,8 +232,8 @@ mod tests {
         let stream_name = "test_stream";
         let topic_id = 2;
         let topic_name = "test_topic";
-        let message_expiry = Some(10);
-        let max_topic_size = Some(IggyByteSize::from(100));
+        let message_expiry = 10u32.into();
+        let max_topic_size = MaxTopicSize::Value(IggyByteSize::from(100));
         let config = Arc::new(SystemConfig::default());
         let storage = Arc::new(get_test_system_storage());
         let mut stream = Stream::create(stream_id, stream_name, config, storage);

@@ -8,6 +8,7 @@ use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::utils::duration::IggyDuration;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -33,7 +34,7 @@ pub struct Partition {
     pub size_of_parent_topic: Arc<AtomicU64>,
     pub size_bytes: Arc<AtomicU64>,
     pub segments_count_of_parent_stream: Arc<AtomicU32>,
-    pub(crate) message_expiry: Option<u32>,
+    pub(crate) message_expiry: MessageExpiry,
     pub(crate) consumer_offsets: DashMap<u32, ConsumerOffset>,
     pub(crate) consumer_group_offsets: DashMap<u32, ConsumerOffset>,
     pub(crate) segments: Vec<Segment>,
@@ -88,7 +89,7 @@ impl Partition {
         with_segment: bool,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
-        message_expiry: Option<u32>,
+        message_expiry: MessageExpiry,
         messages_count_of_parent_stream: Arc<AtomicU64>,
         messages_count_of_parent_topic: Arc<AtomicU64>,
         size_of_parent_stream: Arc<AtomicU64>,
@@ -180,6 +181,8 @@ impl Partition {
 
 #[cfg(test)]
 mod tests {
+    use iggy::utils::message_expiry::MessageExpiry;
+
     use crate::configs::system::{CacheConfig, SystemConfig};
     use crate::streaming::partitions::partition::Partition;
     use crate::streaming::storage::tests::get_test_system_storage;
@@ -195,7 +198,7 @@ mod tests {
         let with_segment = true;
         let config = Arc::new(SystemConfig::default());
         let path = config.get_partition_path(stream_id, topic_id, partition_id);
-        let message_expiry = Some(10);
+        let message_expiry = 10u32.into();
         let partition = Partition::create(
             stream_id,
             topic_id,
@@ -242,7 +245,7 @@ mod tests {
                 ..Default::default()
             }),
             storage,
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
@@ -263,7 +266,7 @@ mod tests {
             false,
             Arc::new(SystemConfig::default()),
             storage,
-            None,
+            MessageExpiry::default(),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),

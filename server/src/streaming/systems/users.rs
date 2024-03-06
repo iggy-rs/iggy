@@ -128,7 +128,7 @@ impl System {
         self.storage.user.save(&user).await?;
         self.permissioner.init_permissions_for_user(user);
         info!("Created user: {username} with ID: {user_id}.");
-        self.metrics.increment_users(1);
+        self.metrics.write().await.increment_users(1);
         Ok(())
     }
 
@@ -151,7 +151,7 @@ impl System {
         let mut client_manager = self.client_manager.write().await;
         client_manager.delete_clients_for_user(user.id).await?;
         info!("Deleted user: {} with ID: {user_id}.", user.username);
-        self.metrics.decrement_users(1);
+        self.metrics.write().await.decrement_users(1);
         Ok(user)
     }
 

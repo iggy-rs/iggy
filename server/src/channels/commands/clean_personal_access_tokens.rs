@@ -41,7 +41,7 @@ impl PersonalAccessTokenCleaner {
         let interval = self.interval;
         let sender = self.sender.clone();
         info!(
-            "Personal access token cleaner is enabled, expired tokens will be deleted every: {:?}.",
+            "Personal access token cleaner is enabled, expired tokens will be deleted every: {}.",
             interval
         );
 

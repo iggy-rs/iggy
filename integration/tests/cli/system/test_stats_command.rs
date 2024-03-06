@@ -3,6 +3,8 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::streams::create_stream::CreateStream;
 use iggy::topics::create_topic::CreateTopic;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
@@ -26,8 +28,8 @@ impl IggyCmdTestCase for TestStatsCmd {
                 topic_id: Some(1),
                 stream_id,
                 partitions_count: 5,
-                message_expiry: None,
-                max_topic_size: None,
+                message_expiry: MessageExpiry::default(),
+                max_topic_size: MaxTopicSize::default(),
                 replication_factor: 1,
                 name: String::from("topic"),
             })

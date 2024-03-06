@@ -9,7 +9,9 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
-use serde::{Deserialize, Serialize};
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
+use serde::{Deserialize, Deserializer, Serialize};
 use sled::Db;
 use std::path::Path;
 use std::sync::Arc;
@@ -142,13 +144,68 @@ impl TopicStorage for FileTopicStorage {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+/// Helper enum for deserializing message expiry time from old and new formats.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+// TODO(hubcio): this can be removed around April 2024
+pub enum MessageExpiryHelper {
+    OldFormat(Option<u32>),
+    NewFormat(MessageExpiry),
+}
+
+/// Helper enum for deserializing max topic size from old and new formats.
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+// TODO(hubcio): this can removed be around April 2024
+enum MaxTopicSizeHelper {
+    OldFormat(Option<IggyByteSize>),
+    NewFormat(MaxTopicSize),
+}
+
+#[derive(Debug, Serialize)]
 struct TopicData {
     name: String,
     created_at: u64,
-    message_expiry: Option<u32>,
-    max_topic_size: Option<IggyByteSize>,
+    message_expiry: MessageExpiry,
+    max_topic_size: MaxTopicSize,
     replication_factor: u8,
+}
+
+impl<'de> Deserialize<'de> for TopicData {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Inner {
+            name: String,
+            created_at: u64,
+            message_expiry: MessageExpiryHelper,
+            max_topic_size: MaxTopicSizeHelper,
+            replication_factor: u8,
+        }
+        error!("Deserialize");
+        let helper = Inner::deserialize(deserializer)?;
+        error!("after");
+
+        let message_expiry = match helper.message_expiry {
+            MessageExpiryHelper::OldFormat(old) => MessageExpiry::from(old),
+            MessageExpiryHelper::NewFormat(new) => new,
+        };
+
+        let max_topic_size = match helper.max_topic_size {
+            MaxTopicSizeHelper::OldFormat(old) => MaxTopicSize::from(old),
+            MaxTopicSizeHelper::NewFormat(new) => new,
+        };
+
+        Ok(TopicData {
+            name: helper.name,
+            created_at: helper.created_at,
+            message_expiry,
+            max_topic_size,
+            replication_factor: helper.replication_factor,
+        })
+    }
 }
 
 #[async_trait]

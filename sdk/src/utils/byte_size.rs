@@ -34,7 +34,7 @@ use std::{
 /// assert_eq!("1.00 GB", size.as_human_string());
 /// assert_eq!("1.00 GB", format!("{}", size));
 /// ```
-#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, Serialize, Deserialize)]
 pub struct IggyByteSize(Byte);
 
 impl Default for IggyByteSize {
@@ -112,6 +112,18 @@ impl PartialEq<u64> for IggyByteSize {
 impl PartialOrd<u64> for IggyByteSize {
     fn partial_cmp(&self, other: &u64) -> Option<std::cmp::Ordering> {
         self.as_bytes_u64().partial_cmp(other)
+    }
+}
+
+impl PartialEq<IggyByteSize> for IggyByteSize {
+    fn eq(&self, other: &IggyByteSize) -> bool {
+        *self == other.as_bytes_u64()
+    }
+}
+
+impl PartialOrd<IggyByteSize> for IggyByteSize {
+    fn partial_cmp(&self, other: &IggyByteSize) -> Option<std::cmp::Ordering> {
+        self.as_bytes_u64().partial_cmp(&other.as_bytes_u64())
     }
 }
 

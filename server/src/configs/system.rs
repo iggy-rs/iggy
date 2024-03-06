@@ -1,5 +1,7 @@
 use crate::configs::resource_quota::MemoryResourceQuota;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::{
     compression::compression_algorithm::CompressionAlgorithm, utils::duration::IggyDuration,
 };
@@ -62,8 +64,9 @@ pub struct CacheConfig {
 #[derive(Debug, Deserialize, Serialize, Copy, Clone)]
 pub struct RetentionPolicyConfig {
     #[serde_as(as = "DisplayFromStr")]
-    pub message_expiry: IggyDuration,
-    pub max_topic_size: IggyByteSize,
+    pub message_expiry: MessageExpiry,
+    #[serde_as(as = "DisplayFromStr")]
+    pub max_topic_size: MaxTopicSize,
 }
 
 #[derive(Debug, Deserialize, Serialize, Default)]

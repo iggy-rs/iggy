@@ -4,17 +4,15 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use humantime::Duration as HumanDuration;
-use iggy::cli::utils::message_expiry::MessageExpiry;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
-use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
-use std::time::Duration;
 
 struct TestTopicCreateCmd {
     stream_id: u32,
@@ -22,8 +20,8 @@ struct TestTopicCreateCmd {
     topic_id: Option<u32>,
     topic_name: String,
     partitions_count: u32,
-    message_expiry: Option<Vec<String>>,
-    max_topic_size: Option<IggyByteSize>,
+    message_expiry: Option<Vec<MessageExpiry>>,
+    max_topic_size: Option<MaxTopicSize>,
     replication_factor: u8,
     using_identifier: TestStreamId,
 }
@@ -36,8 +34,8 @@ impl TestTopicCreateCmd {
         topic_id: Option<u32>,
         topic_name: String,
         partitions_count: u32,
-        message_expiry: Option<Vec<String>>,
-        max_topic_size: Option<IggyByteSize>,
+        message_expiry: Option<Vec<MessageExpiry>>,
+        max_topic_size: Option<MaxTopicSize>,
         replication_factor: u8,
         using_identifier: TestStreamId,
     ) -> Self {
@@ -69,8 +67,12 @@ impl TestTopicCreateCmd {
 
         args.push(self.topic_name.clone());
         args.push(format!("{}", self.partitions_count));
-        args.extend(self.message_expiry.clone().unwrap_or_default());
 
+        if let Some(message_expiry) = self.message_expiry.clone() {
+            message_expiry.iter().for_each(|expiry| {
+                args.push(expiry.to_string());
+            });
+        }
         args
     }
 }
@@ -106,17 +108,13 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
             None => "ID auto incremented".to_string(),
         };
         let topic_name = &self.topic_name;
-        let message_expiry = (match &self.message_expiry {
-            Some(value) => value.join(" "),
-            None => MessageExpiry::NeverExpire.to_string(),
-        })
-        .to_string();
 
-        let max_topic_size = (match &self.max_topic_size {
-            Some(value) => value.as_human_string_with_zero_as_unlimited(),
-            None => IggyByteSize::default().as_human_string_with_zero_as_unlimited(),
-        })
-        .to_string();
+        let message_expiry = match self.message_expiry.clone() {
+            Some(value) => value.into(),
+            None => MessageExpiry::Unlimited,
+        };
+
+        let max_topic_size = self.max_topic_size.unwrap_or(MaxTopicSize::Unlimited);
 
         let replication_factor = self.replication_factor;
 
@@ -146,18 +144,8 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
             assert_eq!(topic_details.id, topic_id);
         }
 
-        if self.message_expiry.is_some() {
-            let duration: Duration = *self
-                .message_expiry
-                .clone()
-                .unwrap()
-                .join(" ")
-                .parse::<HumanDuration>()
-                .unwrap();
-            assert_eq!(
-                topic_details.message_expiry,
-                Some(duration.as_secs() as u32)
-            );
+        if let Some(message_expiry) = self.message_expiry.clone() {
+            assert_eq!(topic_details.message_expiry, message_expiry.into());
         }
 
         let delete_topic = client
@@ -180,6 +168,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
 #[tokio::test]
 #[parallel]
 pub async fn should_be_successful() {
+    use std::str::FromStr;
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;
@@ -216,7 +205,10 @@ pub async fn should_be_successful() {
             None,
             String::from("named"),
             1,
-            Some(vec![String::from("3days"), String::from("5s")]),
+            Some(vec![
+                MessageExpiry::from_str("3days").unwrap(),
+                MessageExpiry::from_str("5s").unwrap(),
+            ]),
             None,
             1,
             TestStreamId::Named,
@@ -230,10 +222,10 @@ pub async fn should_be_successful() {
             String::from("probe"),
             2,
             Some(vec![
-                String::from("1day"),
-                String::from("1h"),
-                String::from("1m"),
-                String::from("1s"),
+                MessageExpiry::from_str("1day").unwrap(),
+                MessageExpiry::from_str("1h").unwrap(),
+                MessageExpiry::from_str("1m").unwrap(),
+                MessageExpiry::from_str("1s").unwrap(),
             ]),
             None,
             1,

@@ -1,4 +1,7 @@
-use crate::{models::partition::Partition, utils::byte_size::IggyByteSize};
+use crate::{
+    models::partition::Partition,
+    utils::{byte_size::IggyByteSize, max_topic_size::MaxTopicSize, message_expiry::MessageExpiry},
+};
 use serde::{Deserialize, Serialize};
 
 /// `Topic` represents the medium level of logical separation of data as it's a part of the stream.
@@ -23,10 +26,10 @@ pub struct Topic {
     /// The total size of the topic in bytes.
     pub size: IggyByteSize,
     /// The optional expiry of the messages in the topic in seconds.
-    pub message_expiry: Option<u32>,
+    pub message_expiry: MessageExpiry,
     /// The optional maximum size of the topic.
     /// Can't be lower than segment size in the config.
-    pub max_topic_size: Option<IggyByteSize>,
+    pub max_topic_size: MaxTopicSize,
     /// Replication factor for the topic.
     pub replication_factor: u8,
     /// The total number of messages in the topic.
@@ -58,10 +61,10 @@ pub struct TopicDetails {
     /// The total size of the topic.
     pub size: IggyByteSize,
     /// The optional expiry of the messages in the topic.
-    pub message_expiry: Option<u32>,
+    pub message_expiry: MessageExpiry,
     /// The optional maximum size of the topic.
     /// Can't be lower than segment size in the config.
-    pub max_topic_size: Option<IggyByteSize>,
+    pub max_topic_size: MaxTopicSize,
     /// Replication factor for the topic.
     pub replication_factor: u8,
     /// The total number of messages in the topic.

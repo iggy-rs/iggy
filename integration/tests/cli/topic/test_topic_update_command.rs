@@ -4,30 +4,28 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use humantime::Duration as HumanDuration;
-use iggy::cli::utils::message_expiry::MessageExpiry;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
-use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::max_topic_size::MaxTopicSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
-use std::time::Duration;
 
 struct TestTopicUpdateCmd {
     stream_id: u32,
     stream_name: String,
     topic_id: u32,
     topic_name: String,
-    message_expiry: Option<Vec<String>>,
-    max_topic_size: Option<IggyByteSize>,
+    message_expiry: Option<Vec<MessageExpiry>>,
+    max_topic_size: Option<MaxTopicSize>,
     replication_factor: u8,
     topic_new_name: String,
-    topic_new_message_expiry: Option<Vec<String>>,
-    topic_new_max_size: Option<IggyByteSize>,
+    topic_new_message_expiry: Option<Vec<MessageExpiry>>,
+    topic_new_max_size: Option<MaxTopicSize>,
     topic_new_replication_factor: u8,
     using_stream_id: TestStreamId,
     using_topic_id: TestTopicId,
@@ -40,12 +38,12 @@ impl TestTopicUpdateCmd {
         stream_name: String,
         topic_id: u32,
         topic_name: String,
-        message_expiry: Option<Vec<String>>,
-        max_topic_size: Option<IggyByteSize>,
+        message_expiry: Option<Vec<MessageExpiry>>,
+        max_topic_size: Option<MaxTopicSize>,
         replication_factor: u8,
         topic_new_name: String,
-        topic_new_message_expiry: Option<Vec<String>>,
-        topic_new_max_size: Option<IggyByteSize>,
+        topic_new_message_expiry: Option<Vec<MessageExpiry>>,
+        topic_new_max_size: Option<MaxTopicSize>,
         topic_new_replication_factor: u8,
         using_stream_id: TestStreamId,
         using_topic_id: TestTopicId,
@@ -68,34 +66,36 @@ impl TestTopicUpdateCmd {
     }
 
     fn to_args(&self) -> Vec<String> {
-        let mut command = match self.using_stream_id {
+        let mut args = match self.using_stream_id {
             TestStreamId::Numeric => vec![format!("{}", self.stream_id)],
             TestStreamId::Named => vec![self.stream_name.clone()],
         };
 
-        command.push(match self.using_topic_id {
+        args.push(match self.using_topic_id {
             TestTopicId::Numeric => format!("{}", self.topic_id),
             TestTopicId::Named => self.topic_name.clone(),
         });
 
-        command.push(self.topic_new_name.clone());
+        args.push(self.topic_new_name.clone());
 
         if let Some(max_size_bytes) = &self.topic_new_max_size {
-            command.push(format!("--max-size-bytes={}", max_size_bytes));
+            args.push(format!("--max-size-bytes={}", max_size_bytes));
         }
 
         if self.topic_new_replication_factor != 1 {
-            command.push(format!(
+            args.push(format!(
                 "--replication-factor={}",
                 self.topic_new_replication_factor
             ));
         }
 
-        if let Some(message_expiry) = &self.topic_new_message_expiry {
-            command.extend(message_expiry.clone());
+        if let Some(message_expiry) = self.topic_new_message_expiry.clone() {
+            message_expiry.iter().for_each(|expiry| {
+                args.push(expiry.to_string());
+            });
         }
 
-        command
+        args
     }
 }
 
@@ -110,17 +110,16 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
             .await;
         assert!(stream.is_ok());
 
-        let message_expiry = match &self.message_expiry {
-            None => None,
-            Some(message_expiry) => {
-                let duration: Duration =
-                    *message_expiry.join(" ").parse::<HumanDuration>().unwrap();
-
-                Some(duration.as_secs() as u32)
-            }
+        let message_expiry = if let Some(message_expiry) = self.message_expiry.clone() {
+            message_expiry.into()
+        } else {
+            MessageExpiry::Unlimited
         };
-
-        let max_topic_size = self.max_topic_size;
+        let max_topic_size = if let Some(max_topic_size) = self.max_topic_size {
+            max_topic_size
+        } else {
+            MaxTopicSize::Unlimited
+        };
 
         let topic = client
             .create_topic(&CreateTopic {
@@ -155,17 +154,12 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
             TestTopicId::Named => self.topic_name.clone(),
         };
 
-        let message_expiry = (match &self.topic_new_message_expiry {
-            Some(value) => value.join(" "),
-            None => MessageExpiry::NeverExpire.to_string(),
-        })
-        .to_string();
+        let message_expiry = match self.topic_new_message_expiry.clone() {
+            Some(value) => value.into(),
+            None => MessageExpiry::Unlimited,
+        };
 
-        let max_topic_size = (match &self.topic_new_max_size {
-            Some(value) => value.as_human_string_with_zero_as_unlimited(),
-            None => IggyByteSize::default().as_human_string_with_zero_as_unlimited(),
-        })
-        .to_string();
+        let max_topic_size = self.topic_new_max_size.unwrap_or(MaxTopicSize::Unlimited);
 
         let replication_factor = self.replication_factor;
         let new_topic_name = &self.topic_new_name;
@@ -192,18 +186,8 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
         assert_eq!(topic_details.id, self.topic_id);
         assert_eq!(topic_details.messages_count, 0);
 
-        if self.topic_new_message_expiry.is_some() {
-            let duration: Duration = *self
-                .topic_new_message_expiry
-                .clone()
-                .unwrap()
-                .join(" ")
-                .parse::<HumanDuration>()
-                .unwrap();
-            assert_eq!(
-                topic_details.message_expiry,
-                Some(duration.as_secs() as u32)
-            );
+        if let Some(message_expiry) = self.topic_new_message_expiry.clone() {
+            assert_eq!(topic_details.message_expiry, message_expiry.into());
         }
 
         let topic = client
@@ -226,6 +210,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
 #[tokio::test]
 #[parallel]
 pub async fn should_be_successful() {
+    use std::str::FromStr;
     let mut iggy_cmd_test = IggyCmdTest::default();
     iggy_cmd_test.setup().await;
     iggy_cmd_test
@@ -290,10 +275,10 @@ pub async fn should_be_successful() {
             1,
             String::from("development"),
             Some(vec![
-                String::from("1day"),
-                String::from("1h"),
-                String::from("1m"),
-                String::from("1s"),
+                MessageExpiry::from_str("1day").unwrap(),
+                MessageExpiry::from_str("1h").unwrap(),
+                MessageExpiry::from_str("1m").unwrap(),
+                MessageExpiry::from_str("1s").unwrap(),
             ]),
             None,
             1,
@@ -307,11 +292,11 @@ pub async fn should_be_successful() {
             String::from("stream"),
             1,
             String::from("testing"),
-            Some(vec![String::from("1s")]),
+            Some(vec![MessageExpiry::from_str("1s").unwrap()]),
             None,
             1,
             String::from("testing"),
-            Some(vec![String::from("1m 6s")]),
+            Some(vec![MessageExpiry::from_str("1m 6s").unwrap()]),
             None,
             1,
             TestStreamId::Numeric,
@@ -325,9 +310,9 @@ pub async fn should_be_successful() {
             2,
             String::from("testing"),
             Some(vec![
-                String::from("1s"),
-                String::from("1m"),
-                String::from("1h"),
+                MessageExpiry::from_str("1s").unwrap(),
+                MessageExpiry::from_str("1m").unwrap(),
+                MessageExpiry::from_str("1h").unwrap(),
             ]),
             None,
             1,

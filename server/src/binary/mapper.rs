@@ -210,14 +210,8 @@ async fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
     bytes.put_u32_le(topic.topic_id);
     bytes.put_u64_le(topic.created_at);
     bytes.put_u32_le(topic.get_partitions().len() as u32);
-    match topic.message_expiry {
-        Some(message_expiry) => bytes.put_u32_le(message_expiry),
-        None => bytes.put_u32_le(0),
-    };
-    match topic.max_topic_size {
-        Some(max_topic_size) => bytes.put_u64_le(max_topic_size.as_bytes_u64()),
-        None => bytes.put_u64_le(0),
-    };
+    bytes.put_u32_le(topic.message_expiry.into());
+    bytes.put_u64_le(topic.max_topic_size.into());
     bytes.put_u8(topic.replication_factor);
     bytes.put_u64_le(topic.get_size().as_bytes_u64());
     bytes.put_u64_le(topic.get_messages_count());

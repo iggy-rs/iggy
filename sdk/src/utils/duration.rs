@@ -2,11 +2,12 @@ use humantime::format_duration;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter},
+    ops::Add,
     str::FromStr,
     time::Duration,
 };
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq)]
 pub struct IggyDuration {
     duration: Duration,
 }
@@ -18,6 +19,12 @@ impl IggyDuration {
 
     pub fn as_human_time_string(&self) -> String {
         format!("{}", format_duration(self.duration))
+    }
+
+    pub fn from_secs(secs: u64) -> IggyDuration {
+        IggyDuration {
+            duration: Duration::from_secs(secs),
+        }
     }
 
     pub fn as_secs(&self) -> u32 {
@@ -93,9 +100,23 @@ impl From<Duration> for IggyDuration {
     }
 }
 
+impl From<u32> for IggyDuration {
+    fn from(value: u32) -> Self {
+        IggyDuration {
+            duration: Duration::from_secs(value as u64),
+        }
+    }
+}
+
 impl From<IggyDuration> for u64 {
     fn from(iggy_duration: IggyDuration) -> u64 {
         iggy_duration.duration.as_secs()
+    }
+}
+
+impl PartialEq for IggyDuration {
+    fn eq(&self, other: &Self) -> bool {
+        self.duration == other.duration
     }
 }
 
@@ -103,6 +124,16 @@ impl Default for IggyDuration {
     fn default() -> Self {
         IggyDuration {
             duration: Duration::new(0, 0),
+        }
+    }
+}
+
+impl Add for IggyDuration {
+    type Output = IggyDuration;
+
+    fn add(self, other: IggyDuration) -> IggyDuration {
+        IggyDuration {
+            duration: self.duration + other.duration,
         }
     }
 }

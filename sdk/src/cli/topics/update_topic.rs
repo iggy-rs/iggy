@@ -1,9 +1,9 @@
-use crate::cli::utils::message_expiry::MessageExpiry;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::update_topic::UpdateTopic;
-use crate::utils::byte_size::IggyByteSize;
+use crate::utils::max_topic_size::MaxTopicSize;
+use crate::utils::message_expiry::MessageExpiry;
 use anyhow::Context;
 use async_trait::async_trait;
 use core::fmt;
@@ -12,7 +12,7 @@ use tracing::{event, Level};
 pub struct UpdateTopicCmd {
     update_topic: UpdateTopic,
     message_expiry: MessageExpiry,
-    max_topic_size: IggyByteSize,
+    max_topic_size: MaxTopicSize,
     replication_factor: u8,
 }
 
@@ -22,7 +22,7 @@ impl UpdateTopicCmd {
         topic_id: Identifier,
         name: String,
         message_expiry: MessageExpiry,
-        max_topic_size: IggyByteSize,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Self {
         Self {
@@ -30,8 +30,8 @@ impl UpdateTopicCmd {
                 stream_id,
                 topic_id,
                 name,
-                message_expiry: message_expiry.clone().into(),
-                max_topic_size: Some(max_topic_size),
+                message_expiry,
+                max_topic_size,
                 replication_factor,
             },
             message_expiry,
@@ -78,7 +78,7 @@ impl fmt::Display for UpdateTopicCmd {
         let topic_id = &self.update_topic.topic_id;
         let topic_name = &self.update_topic.name;
         let message_expiry = &self.message_expiry;
-        let max_topic_size = &self.max_topic_size.as_human_string_with_zero_as_unlimited();
+        let max_topic_size = self.max_topic_size;
         let replication_factor = self.replication_factor;
         let stream_id = &self.update_topic.stream_id;
 

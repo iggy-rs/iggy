@@ -2,6 +2,7 @@ extern crate sysinfo;
 
 use crate::configs::resource_quota::MemoryResourceQuota;
 use crate::configs::system::CacheConfig;
+use iggy::utils::byte_size::IggyByteSize;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Once};
 use sysinfo::System;
@@ -42,20 +43,21 @@ impl CacheMemoryTracker {
         let mut sys = System::new_all();
         sys.refresh_all();
 
-        let total_memory_bytes = sys.total_memory();
-        let free_memory = sys.free_memory();
-        let free_memory_percentage = free_memory as f64 / total_memory_bytes as f64 * 100.0;
+        let total_memory_bytes = IggyByteSize::from(sys.total_memory());
+        let free_memory = IggyByteSize::from(sys.free_memory());
+        let free_memory_percentage =
+            free_memory.as_bytes_u64() as f64 / total_memory_bytes.as_bytes_u64() as f64 * 100.0;
         let used_memory_bytes = AtomicU64::new(0);
-        let limit_bytes = limit.into();
+        let limit_bytes = IggyByteSize::from(limit.into());
 
         info!(
-            "Cache memory tracker started, cache: {} bytes, total memory: {} bytes, free memory: {} bytes, free memory percentage: {:.2}%",
+            "Cache memory tracker started, cache: {}, total memory: {}, free memory: {}, free memory percentage: {:.2}%",
             limit_bytes, total_memory_bytes, free_memory, free_memory_percentage
         );
 
         CacheMemoryTracker {
             used_memory_bytes,
-            limit_bytes,
+            limit_bytes: limit_bytes.as_bytes_u64(),
         }
     }
 

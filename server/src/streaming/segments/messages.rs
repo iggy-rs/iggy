@@ -91,26 +91,28 @@ impl Segment {
 
     fn load_messages_from_unsaved_buffer(
         &self,
-        start_offset: u64,
-        end_offset: u64,
+        _start_offset: u64,
+        _end_offset: u64,
     ) -> Vec<RetainedMessage> {
-        let unsaved_batches = self.unsaved_batches.as_ref().unwrap();
-        let slice_start = unsaved_batches
-            .iter()
-            .rposition(|batch| batch.base_offset <= start_offset)
-            .unwrap_or(0);
+        panic!("hubcio");
+
+        // let unsaved_batches = self.unsaved_batches.as_ref().unwrap();
+        // let slice_start = unsaved_batches
+        //     .iter()
+        //     .rposition(|batch| batch.base_offset <= start_offset)
+        //     .unwrap_or(0);
 
         // Take only the batch when last_offset >= relative_end_offset and it's base_offset is <= relative_end_offset
         // otherwise take batches until the last_offset >= relative_end_offset and base_offset <= relative_start_offset
-        let messages_count = (start_offset + end_offset) as usize;
-        unsaved_batches[slice_start..]
-            .iter()
-            .filter(|batch| {
-                batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
-            })
-            .to_messages_with_filter(messages_count, &|msg| {
-                msg.offset >= start_offset && msg.offset <= end_offset
-            })
+        // let messages_count = (start_offset + end_offset) as usize;
+        // unsaved_batches[slice_start..]
+        //     .iter()
+        //     .filter(|batch| {
+        //         batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
+        //     })
+        //     .to_messages_with_filter(messages_count, &|msg| {
+        //         msg.offset >= start_offset && msg.offset <= end_offset
+        //     })
     }
 
     async fn load_messages_from_disk(

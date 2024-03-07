@@ -8,6 +8,7 @@ use iggy::error::IggyError;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
@@ -250,6 +251,9 @@ impl Storage<Partition> for FilePartitionStorage {
                 info!("Loaded: {} unique message IDs for partition with ID: {} and segment with start offset: {}...", unique_message_ids_count, partition.partition_id, segment.start_offset);
             }
 
+            partition
+                .segments_count_of_parent_stream
+                .fetch_add(1, Ordering::SeqCst);
             partition.segments.push(segment);
         }
 

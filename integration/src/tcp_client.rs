@@ -17,8 +17,18 @@ impl ClientFactory for TcpClientFactory {
             server_address: self.server_addr.clone(),
             ..TcpClientConfig::default()
         };
-        let client = TcpClient::create(Arc::new(config)).unwrap();
-        client.connect().await.unwrap();
+        let client = TcpClient::create(Arc::new(config)).unwrap_or_else(|e| {
+            panic!(
+                "Failed to create TcpClient, iggy-server has address {}, error: {:?}",
+                self.server_addr, e
+            )
+        });
+        client.connect().await.unwrap_or_else(|e| {
+            panic!(
+                "Failed to connect to iggy-server at {}, error: {:?}",
+                self.server_addr, e
+            )
+        });
         Box::new(client)
     }
 }

@@ -3,6 +3,7 @@ use crate::args::common::IggyBenchArgs;
 use crate::args::simple::BenchmarkKind;
 use crate::consumer::Consumer;
 use async_trait::async_trait;
+use iggy::utils::byte_size::IggyByteSize;
 use integration::test_server::ClientFactory;
 use std::sync::Arc;
 use tracing::info;
@@ -77,10 +78,10 @@ impl Benchmarkable for PollMessagesBenchmark {
         let total_messages = self.total_messages();
         let total_size_bytes = total_messages * self.args().message_size() as u64;
         info!(
-                "\x1B[32mBenchmark: {}, total messages: {}, total size: {} bytes, {} streams, {} messages per batch, {} batches, {} bytes per message, {} consumers\x1B[0m",
+                "\x1B[32mBenchmark: {}, total messages: {}, processed: {}, {} streams, {} messages per batch, {} batches, {} bytes per message, {} consumers\x1B[0m",
                 self.kind(),
                 total_messages,
-                total_size_bytes,
+                IggyByteSize::from(total_size_bytes),
                 self.args().number_of_streams(),
                 self.args().messages_per_batch(),
                 self.args().message_batches(),

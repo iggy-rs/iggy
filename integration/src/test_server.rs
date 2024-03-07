@@ -191,7 +191,7 @@ impl TestServer {
         self.wait_until_server_has_bound();
     }
 
-    fn stop(&mut self) {
+    pub fn stop(&mut self) {
         #[allow(unused_mut)]
         if let Some(mut child_handle) = self.child_handle.take() {
             #[cfg(unix)]
@@ -354,6 +354,10 @@ impl TestServer {
 
     fn read_file_to_string(path: &str) -> String {
         fs::read_to_string(path).unwrap()
+    }
+
+    pub fn get_local_data_path(&self) -> &str {
+        &self.local_data_path
     }
 
     pub fn get_random_path() -> String {

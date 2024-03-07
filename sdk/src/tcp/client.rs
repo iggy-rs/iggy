@@ -15,8 +15,7 @@ use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tokio_native_tls::native_tls::TlsConnector;
 use tokio_native_tls::TlsStream;
-use tracing::log::trace;
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;

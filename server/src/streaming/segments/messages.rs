@@ -9,7 +9,7 @@ use bytes::BufMut;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::trace;
+use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -126,10 +126,9 @@ impl Segment {
         );
 
         if start_offset > end_offset || end_offset > self.current_offset {
-            trace!(
+            warn!(
                 "Cannot load messages from disk, invalid offset range: {} - {}.",
-                start_offset,
-                end_offset
+                start_offset, end_offset
             );
             return Ok(EMPTY_MESSAGES);
         }

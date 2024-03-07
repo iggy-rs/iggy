@@ -9,7 +9,6 @@ use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
-use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
@@ -98,9 +97,9 @@ impl Storage<Stream> for FileStreamStorage {
             let topic = Topic::empty(
                 stream.stream_id,
                 topic_id,
-                Arc::new(AtomicU64::new(0)),
-                Arc::new(AtomicU64::new(0)),
-                Arc::new(AtomicU32::new(0)),
+                stream.size_bytes.clone(),
+                stream.messages_count.clone(),
+                stream.segments_count.clone(),
                 stream.config.clone(),
                 stream.storage.clone(),
             );

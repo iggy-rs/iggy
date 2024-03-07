@@ -11,7 +11,7 @@ use integration::test_server::{login_root, ClientFactory};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
-use tracing::{info, trace};
+use tracing::{error, info, warn};
 
 pub struct Consumer {
     client_factory: Arc<dyn ClientFactory>,
@@ -71,16 +71,18 @@ impl Consumer {
         let mut received_messages = 0;
         let mut topic_not_found_counter = 0;
 
-        info!(
-            "Consumer #{} → warming up for {}...",
-            self.consumer_id, self.warmup_time
-        );
-        let warmup_end = Instant::now() + self.warmup_time.get_duration();
-        while Instant::now() < warmup_end {
-            let offset = current_iteration * self.messages_per_batch as u64;
-            poll_messages.strategy.value = offset;
-            client.poll_messages(&poll_messages).await?;
-            current_iteration += 1;
+        if self.warmup_time.get_duration() != Duration::from_millis(0) {
+            info!(
+                "Consumer #{} → warming up for {}...",
+                self.consumer_id, self.warmup_time
+            );
+            let warmup_end = Instant::now() + self.warmup_time.get_duration();
+            while Instant::now() < warmup_end {
+                let offset = current_iteration * self.messages_per_batch as u64;
+                poll_messages.strategy.value = offset;
+                client.poll_messages(&poll_messages).await?;
+                current_iteration += 1;
+            }
         }
 
         info!(
@@ -105,25 +107,25 @@ impl Consumer {
                 if let IggyError::InvalidResponse(code, _, _) = e {
                     if code == 2010 {
                         topic_not_found_counter += 1;
-                        if topic_not_found_counter > 200 {
-                            continue;
+                        if topic_not_found_counter > 1000 {
+                            return Err(e);
                         }
-                        return Err(e);
                     }
                 } else {
                     return Err(e);
                 }
+                error!("Unexpected error: {:?}", e);
                 continue;
             }
 
             let polled_messages = polled_messages.unwrap();
             if polled_messages.messages.is_empty() {
-                trace!("Messages are empty for offset: {}, retrying...", offset);
+                warn!("Messages are empty for offset: {}, retrying...", offset);
                 continue;
             }
 
             if polled_messages.messages.len() != self.messages_per_batch as usize {
-                trace!(
+                warn!(
                     "Consumer #{} → expected {} messages, but got {} messages, retrying...",
                     self.consumer_id,
                     self.messages_per_batch,

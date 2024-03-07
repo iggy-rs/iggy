@@ -3,6 +3,7 @@ mod quic;
 mod tcp;
 
 use assert_cmd::prelude::CommandCargoExt;
+use iggy::utils::byte_size::IggyByteSize;
 use integration::test_server::{Transport, TEST_VERBOSITY_ENV_VAR};
 use std::{
     fs::{self, File, OpenOptions},
@@ -13,8 +14,16 @@ use std::{
 use uuid::Uuid;
 
 const BENCH_FILES_PREFIX: &str = "bench_";
+const MESSAGE_BATCHES: u64 = 100;
+const MESSAGES_PER_BATCH: u64 = 100;
+const DEFAULT_NUMBER_OF_STREAMS: u64 = 10;
 
-fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport, bench: &str) {
+pub fn run_bench_and_wait_for_finish(
+    server_addr: &str,
+    transport: Transport,
+    bench: &str,
+    amount_of_data_to_process: IggyByteSize,
+) {
     let mut command = Command::cargo_bin("iggy-bench").unwrap();
 
     let mut stderr_file_path = None;
@@ -27,13 +36,20 @@ fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport, bench:
         stdout_file_path = Some(stdout_file);
     }
 
-    // 10 MB of data written to disk
+    // Calculate message size based on input
+    let total_bytes_to_process_per_stream =
+        amount_of_data_to_process.as_bytes_u64() / DEFAULT_NUMBER_OF_STREAMS;
+    let messages_total = MESSAGES_PER_BATCH * MESSAGE_BATCHES;
+    let message_size = total_bytes_to_process_per_stream / messages_total;
+
     command.args([
         bench,
         "--messages-per-batch",
-        "100",
+        &MESSAGES_PER_BATCH.to_string(),
         "--message-batches",
-        "100",
+        &MESSAGE_BATCHES.to_string(),
+        "--message-size",
+        &message_size.to_string(),
         &format!("{}", transport),
         "--server-address",
         &server_addr,
@@ -66,8 +82,7 @@ fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport, bench:
     let mut child = command.spawn().unwrap();
     let result = child.wait().unwrap();
 
-    // cleanup
-
+    // Cleanup
     if let Ok(output) = child.wait_with_output() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
@@ -90,6 +105,8 @@ fn run_bench_and_wait_for_finish(server_addr: &str, transport: Transport, bench:
                 .write_all(stdout.as_bytes())
                 .unwrap();
         }
+    } else {
+        panic!("Failed to get output from iggy-bench");
     }
 
     // TODO: fix this, it needs to be called in Drop

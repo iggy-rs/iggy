@@ -11,8 +11,7 @@ use iggy::users::defaults::*;
 use iggy::utils::text;
 use std::env;
 use std::sync::atomic::{AtomicU32, Ordering};
-use tracing::log::error;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 static USER_ID: AtomicU32 = AtomicU32::new(1);
 

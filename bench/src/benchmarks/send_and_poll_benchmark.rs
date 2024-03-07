@@ -5,8 +5,8 @@ use crate::consumer::Consumer;
 use crate::producer::Producer;
 use async_trait::async_trait;
 use colored::Colorize;
-use human_bytes::human_bytes;
 use human_format::Formatter;
+use iggy::utils::byte_size::IggyByteSize;
 use integration::test_server::ClientFactory;
 use std::fmt::Display;
 use std::sync::Arc;
@@ -29,14 +29,13 @@ impl SendAndPollMessagesBenchmark {
 impl Display for SendAndPollMessagesBenchmark {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let total_messages = self.total_messages();
-        let total_size_bytes = total_messages * self.args().message_size() as u64;
+        let processed = IggyByteSize::from(total_messages * self.args().message_size() as u64);
         let total_messages_human_readable = Formatter::new().format(total_messages as f64);
-        let total_size_human_readable = human_bytes(total_size_bytes as f64);
-        let info = format!("Benchmark: {}, transport: {}, total messages: {}, total size: {} bytes, {} streams, {} messages per batch, {} batches, {} bytes per message, {} producers, {} consumers",
+        let info = format!("Benchmark: {}, transport: {}, total messages: {}, processed: {}, {} streams, {} messages per batch, {} batches, {} bytes per message, {} producers, {} consumers",
                 self.kind(),
                 self.args().transport(),
                 total_messages_human_readable,
-                total_size_human_readable,
+                processed,
                 self.args().number_of_streams(),
                 self.args().messages_per_batch(),
                 self.args().message_batches(),

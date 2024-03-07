@@ -13,8 +13,7 @@ use iggy::models::messages::PolledMessages;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::log::info;
-use tracing::{trace, warn};
+use tracing::{info, trace, warn};
 
 impl Topic {
     pub fn get_messages_count(&self) -> u64 {

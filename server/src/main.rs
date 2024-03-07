@@ -16,7 +16,6 @@ use server::log::logger::Logging;
 use server::log::tokio_console::Logging;
 use server::quic::quic_server;
 use server::server_error::ServerError;
-
 use server::streaming::systems::system::{SharedSystem, System};
 use server::tcp::tcp_server;
 use tokio::time::Instant;
@@ -41,15 +40,23 @@ async fn main() -> Result<(), ServerError> {
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
-    let mut system = System::new(config.system.clone(), None, config.personal_access_token);
+    let system = SharedSystem::new(System::new(
+        config.system.clone(),
+        None,
+        config.personal_access_token,
+    ));
 
-    system.init().await?;
-    let system = SharedSystem::new(system);
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)
         .install_handler(SaveMessagesExecutor)
         .install_handler(CleanMessagesExecutor)
         .install_handler(CleanPersonalAccessTokensExecutor)
         .install_handler(SysInfoPrintExecutor);
+
+    // Workaround to ensure that the statistics are initialized before the server
+    // loads streams and starts accepting connections. This is necessary to
+    // have the correct statistics when the server starts.
+    system.write().get_stats_bypass_auth().await?;
+    system.write().init().await?;
 
     #[cfg(unix)]
     let (mut ctrl_c, mut sigterm) = {
@@ -81,7 +88,6 @@ async fn main() -> Result<(), ServerError> {
     let current_config_path = format!("{}/current_config.toml", runtime_path);
     let current_config_content =
         toml::to_string(&current_config).expect("Cannot serialize current_config");
-
     tokio::fs::write(current_config_path, current_config_content).await?;
 
     let elapsed_time = startup_timestamp.elapsed();

@@ -12,14 +12,14 @@ use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, BytesMut};
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
-use tracing::error;
-use tracing::log::{info, trace, warn};
+use tracing::{error, info, trace, warn};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
@@ -52,12 +52,6 @@ impl Storage<Segment> for FileSegmentStorage {
         let log_file = file::open(&segment.log_path).await?;
         let file_size = log_file.metadata().await.unwrap().len() as u64;
         segment.size_bytes = file_size as u32;
-        let messages_count = segment.get_messages_count();
-
-        info!(
-            "Segment log file of size {} for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
-            segment.size_bytes, segment.start_offset, segment.current_offset, segment.partition_id, segment.topic_id, segment.stream_id
-        );
 
         if segment.config.segment.cache_indexes {
             segment.indexes = Some(segment.storage.segment.load_all_indexes(segment).await?);
@@ -104,6 +98,13 @@ impl Storage<Segment> for FileSegmentStorage {
         if segment.is_full().await {
             segment.is_closed = true;
         }
+
+        let messages_count = segment.get_messages_count();
+
+        info!(
+            "Loaded segment log file of size {} for start offset {}, current offset: {}, and partition with ID: {} for topic with ID: {} and stream with ID: {}.",
+            IggyByteSize::from(file_size), segment.start_offset, segment.current_offset, segment.partition_id, segment.topic_id, segment.stream_id
+        );
 
         segment
             .size_of_parent_stream
@@ -511,13 +512,13 @@ impl SegmentStorage for FileSegmentStorage {
             return Ok(None);
         }
 
-        let indexes_count = file_size / TIME_INDEX_SIZE as usize;
         let last_index_position = file_size - TIME_INDEX_SIZE as usize;
         file.seek(SeekFrom::Start(last_index_position as u64))
             .await?;
+        let index_offset = file.read_u32_le().await?;
         let timestamp = file.read_u64_le().await?;
         let index = TimeIndex {
-            relative_offset: indexes_count as u32 - 1,
+            relative_offset: index_offset,
             timestamp,
         };
 

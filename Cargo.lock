@@ -3828,6 +3828,7 @@ version = "0.2.6"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "async-stream",
  "async-trait",
  "atone",
  "axum 0.7.4",

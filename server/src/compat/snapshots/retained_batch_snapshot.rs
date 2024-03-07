@@ -1,5 +1,3 @@
-use std::f64::consts::E;
-
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
 

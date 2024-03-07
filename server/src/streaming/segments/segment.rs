@@ -1,4 +1,6 @@
+use crate::compat::message_stream::MessageStream;
 use crate::compat::snapshots::message_snapshot::MessageSnapshot;
+use crate::compat::streams::retained_message::RetainedMessageStream;
 use crate::compat::{
     binary_schema::BinarySchema, snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot,
 };
@@ -16,6 +18,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use futures::{pin_mut, StreamExt};
 use tokio::io::{AsyncReadExt, BufReader};
 
 pub const LOG_EXTENSION: &str = "log";
@@ -160,94 +163,20 @@ impl Segment {
 
         match schema {
             BinarySchema::RetainedMessageSchema => {
-                let mut messages = Vec::new();
+                //let mut messages = Vec::new();
                 let file = file::open(&self.log_path).await?;
                 let file_size = file.metadata().await?.len();
                 if file_size == 0 {
                     return Ok(());
                 }
 
-                let mut read_bytes = 0;
                 let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-                while read_bytes < file_size {
-                    let offset = reader.read_u64_le().await;
-                    if offset.is_err() {
-                        break;
-                    }
-                    read_bytes += 8;
+                let stream = RetainedMessageStream::new(reader, file_size).into_stream();
+                pin_mut!(stream);
 
-                    let state = reader.read_u8().await;
-                    if state.is_err() {
-                        return Err(IggyError::CannotReadMessageState);
-                    }
-                    read_bytes += 1;
-
-                    let state = MessageState::from_code(state.unwrap())?;
-                    let timestamp = reader.read_u64_le().await;
-                    if timestamp.is_err() {
-                        return Err(IggyError::CannotReadMessageTimestamp);
-                    }
-                    read_bytes += 8;
-
-                    let id = reader.read_u128_le().await;
-                    if id.is_err() {
-                        return Err(IggyError::CannotReadMessageId);
-                    }
-                    read_bytes += 16;
-
-                    let checksum = reader.read_u32_le().await;
-                    if checksum.is_err() {
-                        return Err(IggyError::CannotReadMessageChecksum);
-                    }
-                    read_bytes += 4;
-
-                    let headers_length = reader.read_u32_le().await;
-                    if headers_length.is_err() {
-                        return Err(IggyError::CannotReadHeadersLength);
-                    }
-                    read_bytes += 4;
-
-                    let headers_length = headers_length.unwrap();
-                    let headers = match headers_length {
-                        0 => None,
-                        _ => {
-                            let mut headers_payload =
-                                BytesMut::with_capacity(headers_length as usize);
-                            headers_payload.put_bytes(0, headers_length as usize);
-                            if reader.read_exact(&mut headers_payload).await.is_err() {
-                                return Err(IggyError::CannotReadHeadersPayload);
-                            }
-
-                            let headers = HashMap::from_bytes(headers_payload.freeze())?;
-                            Some(headers)
-                        }
-                    };
-                    read_bytes += headers_length as u64;
-
-                    let payload_len = reader.read_u32_le().await;
-                    if payload_len.is_err() {
-                        return Err(IggyError::CannotReadMessageLength);
-                    }
-
-                    let payload_len = payload_len.unwrap();
-                    let mut payload = BytesMut::with_capacity(payload_len as usize);
-                    payload.put_bytes(0, payload_len as usize);
-                    if reader.read_exact(&mut payload).await.is_err() {
-                        return Err(IggyError::CannotReadMessagePayload);
-                    }
-                    read_bytes += 4 + payload_len as u64;
-
-                    let payload = payload.freeze();
-                    let offset = offset.unwrap();
-                    let timestamp = timestamp.unwrap();
-                    let id = id.unwrap();
-                    let checksum = checksum.unwrap();
-
-                    let message = MessageSnapshot::new(
-                        offset, state, timestamp, id, payload, checksum, headers,
-                    );
-                    messages.push(message);
+                for chunk in stream.chunks(1000). {
                 }
+                /*
                 let message_batches = messages.as_slice().chunks(1000).collect::<Vec<_>>();
                 let messages_size: u64 = message_batches
                     .iter()
@@ -273,6 +202,7 @@ impl Segment {
 
                     size_in_bytes += retained_batch.get_size_bytes() as u32;
                 }
+                 */
                 /*
                 let mut alt_log_file =  file::write(&segment_alternative_path).await?;
                 let log_persist_result = alt_log_file.write_all(&batch_bytes).await;

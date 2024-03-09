@@ -1,31 +1,30 @@
+use crate::compat::binary_schema::BinarySchema;
+use crate::compat::chunks_error::IntoTryChunksError;
+use crate::compat::message_converter::MessageFormatConverterPersister;
 use crate::compat::message_stream::MessageStream;
-use crate::compat::snapshots::message_snapshot::MessageSnapshot;
+use crate::compat::snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot;
 use crate::compat::streams::retained_message::RetainedMessageStream;
-use crate::compat::{
-    binary_schema::BinarySchema, snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot,
-};
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
+use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::utils::file;
-use bytes::{Buf, BufMut as _, BytesMut};
-use iggy::bytes_serializable::BytesSerializable;
+use futures::{pin_mut, TryStreamExt};
 use iggy::error::IggyError;
-use iggy::models::messages::MessageState;
 use iggy::utils::timestamp::IggyTimestamp;
-use std::collections::HashMap;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use futures::{pin_mut, StreamExt};
-use tokio::io::{AsyncReadExt, BufReader};
+use tokio::io::{AsyncWriteExt, BufReader, BufWriter};
+use tracing::{error, info, trace};
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
 pub const MAX_SIZE_BYTES: u32 = 1000 * 1000 * 1000;
 const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
+const BUF_WRITER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
 pub struct Segment {
@@ -150,86 +149,100 @@ impl Segment {
         format!("{}.{}", path, TIME_INDEX_EXTENSION)
     }
 
-    pub async fn convert_segment_messages_from_schema(
-        &self,
-        schema: BinarySchema,
-    ) -> Result<(), IggyError> {
+    pub async fn convert_segment_from_schema(&self, schema: BinarySchema) -> Result<(), IggyError> {
         let log_path = self.log_path.as_str();
         let index_path = self.index_path.as_str();
         let time_index_path = self.time_index_path.as_str();
-        let segment_alt_path = format!("{log_path}_temp");
-        let index_alt_path = format!("{index_path}_temp");
-        let time_index_alt_path = format!("{time_index_path}_temp");
+        let log_alt_path = format!("{}_temp.{}", log_path.split('.').next().unwrap(), "log");
+        let index_alt_path = format!("{}_temp.{}", index_path.split('.').next().unwrap(), "index");
+        let time_index_alt_path = format!(
+            "{}_temp.{}",
+            time_index_path.split('.').next().unwrap(),
+            "timeindex"
+        );
 
         match schema {
             BinarySchema::RetainedMessageSchema => {
-                //let mut messages = Vec::new();
                 let file = file::open(&self.log_path).await?;
                 let file_size = file.metadata().await?.len();
                 if file_size == 0 {
                     return Ok(());
                 }
 
-                let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+                trace!(
+                    "Creating temporary files for conversion, log: {}, index: {}, time_index: {}",
+                    log_alt_path,
+                    index_alt_path,
+                    time_index_alt_path
+                );
+                //TODO (numinex) - this whole operation should be done in a single transaction
+                tokio::fs::File::create(&log_alt_path).await?;
+                tokio::fs::File::create(&index_alt_path).await?;
+                tokio::fs::File::create(&time_index_alt_path).await?;
+                let batch_writer = BufWriter::with_capacity(
+                    BUF_WRITER_CAPACITY_BYTES,
+                    file::append(&log_alt_path).await?,
+                );
+                let index_writer = BufWriter::with_capacity(
+                    BUF_WRITER_CAPACITY_BYTES,
+                    file::append(&index_alt_path).await?,
+                );
+                let time_index_writer = BufWriter::with_capacity(
+                    BUF_WRITER_CAPACITY_BYTES,
+                    file::append(&time_index_alt_path).await?,
+                );
+                let reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+
                 let stream = RetainedMessageStream::new(reader, file_size).into_stream();
                 pin_mut!(stream);
+                let (_, mut batch_writer, mut index_writer, mut time_index_writer) = stream
+                        .try_chunks(1000)
+                        .try_fold((0u32, batch_writer, index_writer, time_index_writer), |(position, mut batch_writer, mut index_writer, mut time_index_writer), messages| async move {
+                            let log_path = self.log_path.as_str();
 
-                for chunk in stream.chunks(1000). {
-                }
-                /*
-                let message_batches = messages.as_slice().chunks(1000).collect::<Vec<_>>();
-                let messages_size: u64 = message_batches
-                    .iter()
-                    .map(|batch| {
-                        let size: u64 = batch.iter().map(|msg| msg.get_size_bytes() as u64).sum();
-                        size + 24
-                    })
-                    .sum();
-                let mut batch_bytes = BytesMut::with_capacity(messages_size as usize);
-                let mut index_bytes = BytesMut::with_capacity(message_batches.len() * 8);
-                let mut timeindex_bytes = BytesMut::with_capacity(message_batches.len() * 12);
-                let mut size_in_bytes: u32 = 0;
-                for batch in message_batches {
-                    let retained_batch = RetainedMessageBatchSnapshot::try_from_messages(batch)?;
-                    retained_batch.extend(&mut batch_bytes);
+                            let batch = RetainedMessageBatchSnapshot::try_from_messages(messages)
+                                .map_err(|err| err.into_try_chunks_error())?;
+                            error!("log_name: {}, batch_base_offset: {}, batch_last_offset: {}, payload_size: {}", log_path, batch.base_offset, batch.get_last_offset(), batch.length);
+                            let size = batch.get_size_bytes();
+                            error!("position: {}", position);
+                            info!("Converted messages with start offset: {} and end offset: {}, with binary schema: {} to newest schema",
+                            batch.base_offset, batch.get_last_offset(), schema);
 
-                    let relative_offset = retained_batch.get_last_offset() - self.start_offset;
-                    index_bytes.put_u32_le(relative_offset as u32);
-                    index_bytes.put_u32_le(size_in_bytes);
+                            batch
+                                .persist(&mut batch_writer)
+                                .await
+                                .map_err(|err| err.into_try_chunks_error())?;
+                            trace!("Persisted message batch with new format to log file, saved {} bytes", size);
+                            let relative_offset = (batch.get_last_offset() - self.start_offset) as u32;
+                            error!("segment_start_offset: {}, relative_offset: {}", self.start_offset, relative_offset);
+                            batch
+                                .persist_index(position, relative_offset, &mut index_writer)
+                                .await
+                                .map_err(|err| err.into_try_chunks_error())?;
+                            trace!("Persisted index with offset: {} and position: {} to index file", relative_offset, position);
+                            batch
+                                .persist_time_index(batch.max_timestamp, relative_offset, &mut time_index_writer)
+                                .await
+                                .map_err(|err| err.into_try_chunks_error())?;
+                            trace!("Persisted time index with offset: {} to time index file", relative_offset);
+                            let position = position + size;
 
-                    timeindex_bytes.put_u32_le(relative_offset as u32);
-                    timeindex_bytes.put_u64_le(retained_batch.max_timestamp);
+                            Ok((position, batch_writer, index_writer, time_index_writer))
+                        })
+                        .await
+                        .map_err(|err| err.1)?; // For now
 
-                    size_in_bytes += retained_batch.get_size_bytes() as u32;
-                }
-                 */
-                /*
-                let mut alt_log_file =  file::write(&segment_alternative_path).await?;
-                let log_persist_result = alt_log_file.write_all(&batch_bytes).await;
+                batch_writer.flush().await?;
+                index_writer.flush().await?;
+                time_index_writer.flush().await?;
 
-                let mut alt_index_file = file::write(&index_alternative_path).await?;
-                let index_persist_result = alt_index_file.write_all(&index_bytes).await;
-
-                let mut alt_time_index_file = file::write(&timeindex_alternative_path).await?;
-                let time_index_persist_result = alt_time_index_file.write_all(&timeindex_bytes).await;
-
-                if log_persist_result.is_ok() && index_persist_result.is_ok() && time_index_persist_result.is_ok() {
-                    info!("Persisting to disk the new segment files");
-                    let log_removal_result = file::remove(&self.log_path).await;
-                    let index_removal_result = file::remove(&self.index_path).await;
-                    let time_index_removal_result = file::remove(&self.time_index_path).await;
-                    if log_removal_result.is_ok() && index_removal_result.is_ok() && time_index_removal_result.is_ok() {
-                        file::rename(&segment_alternative_path, &self.log_path).await?;
-                        file::rename(&index_alternative_path, &self.index_path).await?;
-                        file::rename(&timeindex_alternative_path, &self.time_index_path).await?;
-                    } else {
-                        return Err(IggyError::CannotRemoveOldSegmentFiles);
-                    }
-                } else {
-                    return Err(IggyError::CannotPersistNewSegmentFiles);
-                }
-                 */
-
+                // Remove old files and rename the temp to original name
+                file::remove(&log_path).await?;
+                file::remove(&index_path).await?;
+                file::remove(&time_index_path).await?;
+                file::rename(&log_alt_path, &log_path).await?;
+                file::rename(&index_alt_path, &index_path).await?;
+                file::rename(&time_index_alt_path, &time_index_path).await?;
                 Ok(())
             }
             BinarySchema::RetainedMessageBatchSchema => Ok(()),

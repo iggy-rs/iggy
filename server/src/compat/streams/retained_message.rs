@@ -1,10 +1,15 @@
 use crate::compat::message_stream::MessageStream;
 use crate::compat::snapshots::message_snapshot::MessageSnapshot;
+
 use async_stream::try_stream;
+use bytes::{BufMut, BytesMut};
 use futures::Stream;
+use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
+use iggy::models::messages::MessageState;
+use std::collections::HashMap;
 use tokio::fs::File;
-use tokio::io::BufReader;
+use tokio::io::{AsyncReadExt, BufReader};
 
 pub struct RetainedMessageStream {
     pub reader: BufReader<File>,

@@ -1,19 +1,12 @@
 use crate::compat::binary_schema::BinarySchema;
-use crate::compat::message_stream::MessageStream;
 use crate::compat::schema_sampler::BinarySchemaSampler;
-use crate::compat::snapshots::message_snapshot::MessageSnapshot;
 use crate::compat::snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot;
 use crate::streaming::utils::file;
-use async_stream::{stream, try_stream};
 use async_trait::async_trait;
-use bytes::{BufMut, Bytes, BytesMut};
-use futures::Stream;
-use iggy::bytes_serializable::BytesSerializable;
+use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
-use iggy::models::messages::MessageState;
-use std::collections::HashMap;
 use tokio::io::AsyncReadExt;
-use tokio::{fs::File, io::BufReader};
+use tracing::error;
 
 pub struct RetainedMessageBatchSampler {
     pub segment_start_offset: u64,
@@ -55,6 +48,10 @@ impl BinarySchemaSampler for RetainedMessageBatchSampler {
 
         let batch = RetainedMessageBatchSnapshot::try_from(buffer.freeze())?;
         if batch.base_offset != self.segment_start_offset {
+            error!(
+                "base_offset: {}, start_offset: {}",
+                batch.base_offset, self.segment_start_offset
+            );
             return Err(IggyError::InvalidBatchBaseOffsetFormatConversion);
         }
         Ok(BinarySchema::RetainedMessageBatchSchema)

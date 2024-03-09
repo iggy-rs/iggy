@@ -9,7 +9,7 @@ use bytes::BufMut;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{trace, warn};
+use tracing::{error, trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -151,6 +151,7 @@ impl Segment {
                     return Ok(EMPTY_MESSAGES);
                 }
             };
+            error!("index_range: {:?}", index_range);
 
             return self
                 .load_messages_from_segment_file(&index_range, start_offset, end_offset)

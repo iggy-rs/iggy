@@ -1,5 +1,10 @@
+use crate::compat::message_converter::{Extendable};
+use crate::streaming::sizeable::Sizeable;
+
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
+
+use tracing::error;
 
 use super::message_snapshot::MessageSnapshot;
 
@@ -33,17 +38,14 @@ impl RetainedMessageBatchSnapshot {
     }
 
     pub fn try_from_messages(
-        messages: &[MessageSnapshot],
+        messages: Vec<MessageSnapshot>,
     ) -> Result<RetainedMessageBatchSnapshot, IggyError> {
         let first_message = messages.first().unwrap();
         let last_message = messages.last().unwrap();
-        let base_offset = if first_message.offset == 0 {
-            0
-        } else {
-            first_message.offset + 1
-        };
-        let last_offset_delta = last_message.offset - first_message.offset;
+        let base_offset = first_message.offset;
+        let last_offset_delta = last_message.offset - base_offset;
         let max_timestamp = last_message.timestamp;
+        error!("base_offset: {}", base_offset);
 
         let size = messages
             .iter()
@@ -61,17 +63,20 @@ impl RetainedMessageBatchSnapshot {
             bytes.freeze(),
         ))
     }
+}
+impl Sizeable for RetainedMessageBatchSnapshot {
+    fn get_size_bytes(&self) -> u32 {
+        24 + self.bytes.len() as u32
+    }
+}
 
-    pub fn extend(&self, bytes: &mut BytesMut) {
+impl Extendable for RetainedMessageBatchSnapshot {
+    fn extend(&self, bytes: &mut BytesMut) {
         bytes.put_u64_le(self.base_offset);
         bytes.put_u32_le(self.length);
         bytes.put_u32_le(self.last_offset_delta);
         bytes.put_u64_le(self.max_timestamp);
         bytes.put_slice(&self.bytes);
-    }
-
-    pub fn get_size_bytes(&self) -> u64 {
-        24 + self.bytes.len() as u64
     }
 }
 

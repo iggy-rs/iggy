@@ -1,3 +1,5 @@
+use crate::compat::message_converter::Extendable;
+use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
@@ -37,8 +39,10 @@ impl MessageSnapshot {
             headers,
         }
     }
+}
 
-    pub fn extend(&self, bytes: &mut BytesMut) {
+impl Extendable for MessageSnapshot {
+    fn extend(&self, bytes: &mut BytesMut) {
         let length = self.get_size_bytes() - 4;
         let id = self.id;
         let offset = self.offset;
@@ -63,8 +67,10 @@ impl MessageSnapshot {
         }
         bytes.put_slice(&payload);
     }
+}
 
-    pub fn get_size_bytes(&self) -> u32 {
+impl Sizeable for MessageSnapshot {
+    fn get_size_bytes(&self) -> u32 {
         let headers_size = header::get_headers_size_bytes(&self.headers);
         41 + headers_size + self.payload.len() as u32
     }

@@ -1,4 +1,3 @@
-use crate::compat::snapshots::message_snapshot::MessageSnapshot;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
@@ -12,7 +11,6 @@ use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, BytesMut};
-use futures::stream::{self, StreamExt};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
@@ -20,7 +18,6 @@ use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tokio::fs::File;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::{error, info, trace, warn};
 
@@ -568,6 +565,7 @@ async fn load_batches_by_range(
             .read_u64_le()
             .await
             .map_err(|_| IggyError::CannotReadBatchBaseOffset)?;
+        error!("batch_base_offset: {}", batch_base_offset);
         let batch_length = reader
             .read_u32_le()
             .await
@@ -583,6 +581,10 @@ async fn load_batches_by_range(
 
         let last_offset = batch_base_offset + (last_offset_delta as u64);
         let index_last_offset = index_range.end.relative_offset as u64 + segment.start_offset;
+        error!(
+            "last_offset: {}, index_last_offset: {}",
+            last_offset, index_last_offset
+        );
 
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);
@@ -621,7 +623,6 @@ async fn load_messages_by_size(
     let threshold = file_size.saturating_sub(size_bytes);
     let mut accumulated_size: u64 = 0;
 
-    let mut read_bytes = 0;
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     loop {
         let batch_base_offset = reader

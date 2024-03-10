@@ -1,4 +1,5 @@
 pub mod client;
+mod client_v2;
 pub mod config;
 pub mod consumer_groups;
 pub mod consumer_offsets;

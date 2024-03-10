@@ -2,6 +2,7 @@ use crate::binary::binary_client::{BinaryClient, ClientState};
 use crate::error::IggyError;
 
 pub mod binary_client;
+mod client_v2;
 pub mod consumer_groups;
 pub mod consumer_offsets;
 mod mapper;

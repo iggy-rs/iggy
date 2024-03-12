@@ -266,7 +266,7 @@ jobs:
           done
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: zipped_artifacts/*
           tag_name: server-${{ needs.tag.outputs.server_version }}

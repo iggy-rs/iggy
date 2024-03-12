@@ -151,7 +151,6 @@ impl Segment {
                     return Ok(EMPTY_MESSAGES);
                 }
             };
-            error!("index_range: {:?}", index_range);
 
             return self
                 .load_messages_from_segment_file(&index_range, start_offset, end_offset)

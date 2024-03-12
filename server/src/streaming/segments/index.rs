@@ -21,7 +21,6 @@ impl Segment {
         start_offset: u32,
         end_offset: u32,
     ) -> Result<IndexRange, IggyError> {
-        error!("start_offset: {}, end_offset: {}", start_offset, end_offset);
         let starting_offset_idx = binary_search_index(indices, start_offset);
         let ending_offset_idx = binary_search_index(indices, end_offset);
 

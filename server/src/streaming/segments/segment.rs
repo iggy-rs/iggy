@@ -198,13 +198,9 @@ impl Segment {
                 let (_, mut batch_writer, mut index_writer, mut time_index_writer) = stream
                         .try_chunks(1000)
                         .try_fold((0u32, batch_writer, index_writer, time_index_writer), |(position, mut batch_writer, mut index_writer, mut time_index_writer), messages| async move {
-                            let log_path = self.log_path.as_str();
-
                             let batch = RetainedMessageBatchSnapshot::try_from_messages(messages)
                                 .map_err(|err| err.into_try_chunks_error())?;
-                            error!("log_name: {}, batch_base_offset: {}, batch_last_offset: {}, payload_size: {}", log_path, batch.base_offset, batch.get_last_offset(), batch.length);
                             let size = batch.get_size_bytes();
-                            error!("position: {}", position);
                             info!("Converted messages with start offset: {} and end offset: {}, with binary schema: {} to newest schema",
                             batch.base_offset, batch.get_last_offset(), schema);
 
@@ -214,7 +210,6 @@ impl Segment {
                                 .map_err(|err| err.into_try_chunks_error())?;
                             trace!("Persisted message batch with new format to log file, saved {} bytes", size);
                             let relative_offset = (batch.get_last_offset() - self.start_offset) as u32;
-                            error!("segment_start_offset: {}, relative_offset: {}", self.start_offset, relative_offset);
                             batch
                                 .persist_index(position, relative_offset, &mut index_writer)
                                 .await

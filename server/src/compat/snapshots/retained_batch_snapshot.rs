@@ -45,7 +45,6 @@ impl RetainedMessageBatchSnapshot {
         let base_offset = first_message.offset;
         let last_offset_delta = last_message.offset - base_offset;
         let max_timestamp = last_message.timestamp;
-        error!("base_offset: {}", base_offset);
 
         let size = messages
             .iter()

@@ -565,7 +565,6 @@ async fn load_batches_by_range(
             .read_u64_le()
             .await
             .map_err(|_| IggyError::CannotReadBatchBaseOffset)?;
-        error!("batch_base_offset: {}", batch_base_offset);
         let batch_length = reader
             .read_u32_le()
             .await
@@ -581,10 +580,6 @@ async fn load_batches_by_range(
 
         let last_offset = batch_base_offset + (last_offset_delta as u64);
         let index_last_offset = index_range.end.relative_offset as u64 + segment.start_offset;
-        error!(
-            "last_offset: {}, index_last_offset: {}",
-            last_offset, index_last_offset
-        );
 
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);

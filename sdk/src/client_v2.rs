@@ -99,7 +99,7 @@ pub trait UserClientV2 {
     async fn update_user(
         &self,
         user_id: Identifier,
-        username: &str,
+        username: Option<&str>,
         status: Option<UserStatus>,
     ) -> Result<(), IggyError>;
     /// Update the permissions of a user by unique ID or username.

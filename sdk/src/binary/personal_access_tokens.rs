@@ -1,7 +1,8 @@
-use crate::binary::binary_client::{BinaryClient, ClientState};
-use crate::binary::{fail_if_not_authenticated, mapper};
+use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport, ClientState};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::PersonalAccessTokenClient;
+use crate::client_v2::PersonalAccessTokenClientV2;
 use crate::command::*;
 use crate::error::IggyError;
 use crate::models::identity_info::IdentityInfo;
@@ -17,42 +18,116 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
         &self,
         command: &GetPersonalAccessTokens,
     ) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
-        fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(GET_PERSONAL_ACCESS_TOKENS_CODE, command.as_bytes())
-            .await?;
-        mapper::map_personal_access_tokens(response)
+        get_personal_access_tokens(self, command).await
     }
 
     async fn create_personal_access_token(
         &self,
         command: &CreatePersonalAccessToken,
     ) -> Result<RawPersonalAccessToken, IggyError> {
-        fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(CREATE_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
-            .await?;
-        mapper::map_raw_pat(response)
+        create_personal_access_token(self, command).await
     }
 
     async fn delete_personal_access_token(
         &self,
         command: &DeletePersonalAccessToken,
     ) -> Result<(), IggyError> {
-        fail_if_not_authenticated(self).await?;
-        self.send_with_response(DELETE_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
-            .await?;
-        Ok(())
+        delete_personal_access_token(self, command).await
     }
 
     async fn login_with_personal_access_token(
         &self,
         command: &LoginWithPersonalAccessToken,
     ) -> Result<IdentityInfo, IggyError> {
-        let response = self
-            .send_with_response(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
-            .await?;
-        self.set_state(ClientState::Authenticated).await;
-        mapper::map_identity_info(response)
+        login_with_personal_access_token(self, command).await
     }
+}
+
+#[async_trait::async_trait]
+impl<B: BinaryClientV2> PersonalAccessTokenClientV2 for B {
+    async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
+        get_personal_access_tokens(self, &GetPersonalAccessTokens {}).await
+    }
+
+    async fn create_personal_access_token(
+        &self,
+        name: &str,
+        expiry: Option<u32>,
+    ) -> Result<RawPersonalAccessToken, IggyError> {
+        create_personal_access_token(
+            self,
+            &CreatePersonalAccessToken {
+                name: name.to_string(),
+                expiry,
+            },
+        )
+        .await
+    }
+
+    async fn delete_personal_access_token(&self, name: &str) -> Result<(), IggyError> {
+        delete_personal_access_token(
+            self,
+            &DeletePersonalAccessToken {
+                name: name.to_string(),
+            },
+        )
+        .await
+    }
+
+    async fn login_with_personal_access_token(
+        &self,
+        token: &str,
+    ) -> Result<IdentityInfo, IggyError> {
+        login_with_personal_access_token(
+            self,
+            &LoginWithPersonalAccessToken {
+                token: token.to_string(),
+            },
+        )
+        .await
+    }
+}
+
+async fn get_personal_access_tokens<T: BinaryTransport>(
+    transport: &T,
+    command: &GetPersonalAccessTokens,
+) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
+    fail_if_not_authenticated(transport).await?;
+    let response = transport
+        .send_with_response(GET_PERSONAL_ACCESS_TOKENS_CODE, command.as_bytes())
+        .await?;
+    mapper::map_personal_access_tokens(response)
+}
+
+async fn create_personal_access_token<T: BinaryTransport>(
+    transport: &T,
+    command: &CreatePersonalAccessToken,
+) -> Result<RawPersonalAccessToken, IggyError> {
+    fail_if_not_authenticated(transport).await?;
+    let response = transport
+        .send_with_response(CREATE_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
+        .await?;
+    mapper::map_raw_pat(response)
+}
+
+async fn delete_personal_access_token<T: BinaryTransport>(
+    transport: &T,
+    command: &DeletePersonalAccessToken,
+) -> Result<(), IggyError> {
+    fail_if_not_authenticated(transport).await?;
+    transport
+        .send_with_response(DELETE_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
+        .await?;
+    Ok(())
+}
+
+async fn login_with_personal_access_token<T: BinaryTransport>(
+    transport: &T,
+    command: &LoginWithPersonalAccessToken,
+) -> Result<IdentityInfo, IggyError> {
+    let response = transport
+        .send_with_response(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, command.as_bytes())
+        .await?;
+    transport.set_state(ClientState::Authenticated).await;
+    mapper::map_identity_info(response)
 }

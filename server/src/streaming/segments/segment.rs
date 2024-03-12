@@ -17,7 +17,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::io::{AsyncWriteExt, BufReader, BufWriter};
-use tracing::{error, info, trace};
+use tracing::{info, trace};
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
@@ -232,12 +232,12 @@ impl Segment {
                 time_index_writer.flush().await?;
 
                 // Remove old files and rename the temp to original name
-                file::remove(&log_path).await?;
-                file::remove(&index_path).await?;
-                file::remove(&time_index_path).await?;
-                file::rename(&log_alt_path, &log_path).await?;
-                file::rename(&index_alt_path, &index_path).await?;
-                file::rename(&time_index_alt_path, &time_index_path).await?;
+                file::remove(log_path).await?;
+                file::remove(index_path).await?;
+                file::remove(time_index_path).await?;
+                file::rename(&log_alt_path, log_path).await?;
+                file::rename(&index_alt_path, index_path).await?;
+                file::rename(&time_index_alt_path, time_index_path).await?;
                 Ok(())
             }
             BinarySchema::RetainedMessageBatchSchema => Ok(()),

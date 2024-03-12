@@ -1,11 +1,7 @@
 use crate::compat::message_converter::{Extendable};
 use crate::streaming::sizeable::Sizeable;
-
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
-
-use tracing::error;
-
 use super::message_snapshot::MessageSnapshot;
 
 pub struct RetainedMessageBatchSnapshot {

@@ -1,4 +1,4 @@
-use futures::stream::{TryChunksError};
+use futures::stream::TryChunksError;
 use iggy::error::IggyError;
 
 pub trait IntoTryChunksError<T> {

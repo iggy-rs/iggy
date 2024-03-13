@@ -51,10 +51,6 @@ impl BinarySchemaSampler for RetainedMessageBatchSampler {
         }
         let batch = RetainedMessageBatchSnapshot::try_from(Bytes::from(buffer))?;
         if batch.base_offset != self.segment_start_offset {
-            error!(
-                "base_offset: {}, start_offset: {}",
-                batch.base_offset, self.segment_start_offset
-            );
             return Err(IggyError::InvalidBatchBaseOffsetFormatConversion);
         }
         Ok(BinarySchema::RetainedMessageBatchSchema)

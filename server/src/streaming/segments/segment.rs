@@ -3,6 +3,7 @@ use crate::compat::chunks_error::IntoTryChunksError;
 use crate::compat::message_converter::MessageFormatConverterPersister;
 use crate::compat::message_stream::MessageStream;
 use crate::compat::snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot;
+use crate::compat::streams::retained_batch::RetainedBatchWriter;
 use crate::compat::streams::retained_message::RetainedMessageStream;
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
@@ -23,8 +24,6 @@ pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
 pub const MAX_SIZE_BYTES: u32 = 1000 * 1000 * 1000;
-const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
-const BUF_WRITER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
 pub struct Segment {
@@ -179,25 +178,17 @@ impl Segment {
                 tokio::fs::File::create(&log_alt_path).await?;
                 tokio::fs::File::create(&index_alt_path).await?;
                 tokio::fs::File::create(&time_index_alt_path).await?;
-                let batch_writer = BufWriter::with_capacity(
-                    BUF_WRITER_CAPACITY_BYTES,
+
+                let retained_batch_writer = RetainedBatchWriter::init(
                     file::append(&log_alt_path).await?,
-                );
-                let index_writer = BufWriter::with_capacity(
-                    BUF_WRITER_CAPACITY_BYTES,
                     file::append(&index_alt_path).await?,
-                );
-                let time_index_writer = BufWriter::with_capacity(
-                    BUF_WRITER_CAPACITY_BYTES,
                     file::append(&time_index_alt_path).await?,
                 );
-                let reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-
-                let stream = RetainedMessageStream::new(reader, file_size).into_stream();
+                let stream = RetainedMessageStream::new(file, file_size).into_stream();
                 pin_mut!(stream);
-                let (_, mut batch_writer, mut index_writer, mut time_index_writer) = stream
+                let (_, mut retained_batch_writer) = stream
                         .try_chunks(1000)
-                        .try_fold((0u32, batch_writer, index_writer, time_index_writer), |(position, mut batch_writer, mut index_writer, mut time_index_writer), messages| async move {
+                        .try_fold((0u32, retained_batch_writer), |(position, mut retained_batch_writer), messages| async move {
                             let batch = RetainedMessageBatchSnapshot::try_from_messages(messages)
                                 .map_err(|err| err.into_try_chunks_error())?;
                             let size = batch.get_size_bytes();
@@ -205,31 +196,31 @@ impl Segment {
                             batch.base_offset, batch.get_last_offset(), schema);
 
                             batch
-                                .persist(&mut batch_writer)
+                                .persist(&mut retained_batch_writer.log_writer)
                                 .await
                                 .map_err(|err| err.into_try_chunks_error())?;
                             trace!("Persisted message batch with new format to log file, saved {} bytes", size);
                             let relative_offset = (batch.get_last_offset() - self.start_offset) as u32;
                             batch
-                                .persist_index(position, relative_offset, &mut index_writer)
+                                .persist_index(position, relative_offset, &mut retained_batch_writer.index_writer)
                                 .await
                                 .map_err(|err| err.into_try_chunks_error())?;
                             trace!("Persisted index with offset: {} and position: {} to index file", relative_offset, position);
                             batch
-                                .persist_time_index(batch.max_timestamp, relative_offset, &mut time_index_writer)
+                                .persist_time_index(batch.max_timestamp, relative_offset, &mut retained_batch_writer.time_index_writer)
                                 .await
                                 .map_err(|err| err.into_try_chunks_error())?;
                             trace!("Persisted time index with offset: {} to time index file", relative_offset);
                             let position = position + size;
 
-                            Ok((position, batch_writer, index_writer, time_index_writer))
+                            Ok((position, retained_batch_writer))
                         })
                         .await
                         .map_err(|err| err.1)?; // For now
 
-                batch_writer.flush().await?;
-                index_writer.flush().await?;
-                time_index_writer.flush().await?;
+                retained_batch_writer.log_writer.flush().await?;
+                retained_batch_writer.index_writer.flush().await?;
+                retained_batch_writer.time_index_writer.flush().await?;
 
                 // Remove old files and rename the temp to original name
                 file::remove(log_path).await?;

@@ -11,15 +11,17 @@ use std::collections::HashMap;
 use tokio::fs::File;
 use tokio::io::{AsyncReadExt, BufReader};
 
+const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
+
 pub struct RetainedMessageStream {
     pub reader: BufReader<File>,
     read_length: u64,
     read_bytes: u64,
 }
 impl RetainedMessageStream {
-    pub fn new(reader: BufReader<File>, read_length: u64) -> RetainedMessageStream {
+    pub fn new(file: File, read_length: u64) -> RetainedMessageStream {
         RetainedMessageStream {
-            reader,
+            reader: BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file),
             read_bytes: 0,
             read_length,
         }

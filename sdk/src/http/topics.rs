@@ -1,3 +1,4 @@
+use crate::cli::utils::message_expiry::MessageExpiry;
 use crate::client::TopicClient;
 use crate::client_v2::TopicClientV2;
 use crate::error::IggyError;
@@ -69,7 +70,7 @@ impl TopicClientV2 for HttpClient {
         partitions_count: u32,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
-        message_expiry: Option<u32>,
+        message_expiry: MessageExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         create_topic(
@@ -80,7 +81,7 @@ impl TopicClientV2 for HttpClient {
                 partitions_count,
                 replication_factor: replication_factor.unwrap_or(1),
                 topic_id,
-                message_expiry,
+                message_expiry: message_expiry.into(),
                 max_topic_size,
             },
         )
@@ -93,7 +94,7 @@ impl TopicClientV2 for HttpClient {
         topic_id: Identifier,
         name: &str,
         replication_factor: Option<u8>,
-        message_expiry: Option<u32>,
+        message_expiry: MessageExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         update_topic(
@@ -103,7 +104,7 @@ impl TopicClientV2 for HttpClient {
                 topic_id,
                 name: name.to_string(),
                 replication_factor: replication_factor.unwrap_or(1),
-                message_expiry,
+                message_expiry: message_expiry.into(),
                 max_topic_size,
             },
         )

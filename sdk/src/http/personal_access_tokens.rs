@@ -1,3 +1,4 @@
+use crate::cli::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::client::PersonalAccessTokenClient;
 use crate::client_v2::PersonalAccessTokenClientV2;
 use crate::error::IggyError;
@@ -53,13 +54,13 @@ impl PersonalAccessTokenClientV2 for HttpClient {
     async fn create_personal_access_token(
         &self,
         name: &str,
-        expiry: Option<u32>,
+        expiry: PersonalAccessTokenExpiry,
     ) -> Result<RawPersonalAccessToken, IggyError> {
         create_personal_access_token(
             self,
             &CreatePersonalAccessToken {
                 name: name.to_string(),
-                expiry,
+                expiry: expiry.into(),
             },
         )
         .await

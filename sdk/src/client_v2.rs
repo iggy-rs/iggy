@@ -1,3 +1,5 @@
+use crate::cli::utils::message_expiry::MessageExpiry;
+use crate::cli::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::consumer::Consumer;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -134,7 +136,7 @@ pub trait PersonalAccessTokenClientV2 {
     async fn create_personal_access_token(
         &self,
         name: &str,
-        expiry: Option<u32>,
+        expiry: PersonalAccessTokenExpiry,
     ) -> Result<RawPersonalAccessToken, IggyError>;
     /// Delete a personal access token of the currently authenticated user by unique token name.
     async fn delete_personal_access_token(&self, name: &str) -> Result<(), IggyError>;
@@ -200,7 +202,7 @@ pub trait TopicClientV2 {
         partitions_count: u32,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
-        message_expiry: Option<u32>,
+        message_expiry: MessageExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError>;
     /// Update a topic by unique ID or name.
@@ -212,7 +214,7 @@ pub trait TopicClientV2 {
         topic_id: Identifier,
         name: &str,
         replication_factor: Option<u8>,
-        message_expiry: Option<u32>,
+        message_expiry: MessageExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError>;
     /// Delete a topic by unique ID or name.

@@ -1,6 +1,7 @@
 use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
+use crate::cli::utils::message_expiry::MessageExpiry;
 use crate::client::TopicClient;
 use crate::client_v2::TopicClientV2;
 use crate::command::{
@@ -73,7 +74,7 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
         partitions_count: u32,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
-        message_expiry: Option<u32>,
+        message_expiry: MessageExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         create_topic(
@@ -84,7 +85,7 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
                 partitions_count,
                 replication_factor: replication_factor.unwrap_or(1),
                 topic_id,
-                message_expiry,
+                message_expiry: message_expiry.into(),
                 max_topic_size,
             },
         )
@@ -97,7 +98,7 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
         topic_id: Identifier,
         name: &str,
         replication_factor: Option<u8>,
-        message_expiry: Option<u32>,
+        message_expiry: MessageExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         update_topic(
@@ -107,7 +108,7 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
                 topic_id,
                 name: name.to_string(),
                 replication_factor: replication_factor.unwrap_or(1),
-                message_expiry,
+                message_expiry: message_expiry.into(),
                 max_topic_size,
             },
         )

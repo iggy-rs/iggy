@@ -1,6 +1,7 @@
 use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport, ClientState};
 use crate::bytes_serializable::BytesSerializable;
+use crate::cli::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::client::PersonalAccessTokenClient;
 use crate::client_v2::PersonalAccessTokenClientV2;
 use crate::command::*;
@@ -52,13 +53,13 @@ impl<B: BinaryClientV2> PersonalAccessTokenClientV2 for B {
     async fn create_personal_access_token(
         &self,
         name: &str,
-        expiry: Option<u32>,
+        expiry: PersonalAccessTokenExpiry,
     ) -> Result<RawPersonalAccessToken, IggyError> {
         create_personal_access_token(
             self,
             &CreatePersonalAccessToken {
                 name: name.to_string(),
-                expiry,
+                expiry: expiry.into(),
             },
         )
         .await

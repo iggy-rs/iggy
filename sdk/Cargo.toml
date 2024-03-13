@@ -45,7 +45,7 @@ serde = { version = "1.0.197", features = ["derive", "rc"] }
 serde_json = "1.0.114"
 serde_with = { version = "3.7.0", features = ["base64"] }
 strum = { version = "0.26.2", features = ["derive"] }
-thiserror = "1.0.57"
+thiserror = "1.0.58"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
 toml = "0.8.11"

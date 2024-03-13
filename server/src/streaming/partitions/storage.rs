@@ -230,7 +230,7 @@ impl Storage<Partition> for FilePartitionStorage {
             info!("Attempting to detect changes in binary schema for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
             let samplers_count = message_format_converter.samplers.len();
             // Check if partition has any segments
-            if partition.segments.len() > 0 {
+            if !partition.segments.is_empty() {
                 for (idx, sampler) in message_format_converter.samplers.iter().enumerate() {
                     trace!("Trying to sample the message format for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
                     match sampler.try_sample().await {

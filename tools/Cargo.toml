@@ -8,7 +8,7 @@ name = "data-seeder-tool"
 path = "src/data-seeder/main.rs"
 
 [dependencies]
-anyhow = "1.0.80"
+anyhow = "1.0.81"
 bytes = "1.4.0"
 clap = { version = "4.5.2", features = ["derive"] }
 iggy = { path = "../sdk" }

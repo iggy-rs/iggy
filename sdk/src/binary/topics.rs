@@ -1,7 +1,6 @@
 use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
-use crate::cli::utils::message_expiry::MessageExpiry;
 use crate::client::TopicClient;
 use crate::client_v2::TopicClientV2;
 use crate::command::{
@@ -18,6 +17,7 @@ use crate::topics::get_topics::GetTopics;
 use crate::topics::purge_topic::PurgeTopic;
 use crate::topics::update_topic::UpdateTopic;
 use crate::utils::byte_size::IggyByteSize;
+use crate::utils::message_expiry::MessageExpiry;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> TopicClient for B {

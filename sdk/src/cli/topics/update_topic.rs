@@ -1,9 +1,9 @@
-use crate::cli::utils::message_expiry::MessageExpiry;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::update_topic::UpdateTopic;
 use crate::utils::byte_size::IggyByteSize;
+use crate::utils::message_expiry::MessageExpiry;
 use anyhow::Context;
 use async_trait::async_trait;
 use core::fmt;

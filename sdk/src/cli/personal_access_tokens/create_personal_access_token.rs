@@ -1,7 +1,7 @@
-use crate::cli::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
+use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use anyhow::Context;
 use async_trait::async_trait;
 use keyring::Entry;

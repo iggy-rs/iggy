@@ -6,7 +6,6 @@ use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
 use iggy::error::IggyError;
 use tokio::io::AsyncReadExt;
-use tracing::error;
 
 pub struct RetainedMessageBatchSampler {
     pub segment_start_offset: u64,

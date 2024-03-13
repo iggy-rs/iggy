@@ -17,7 +17,7 @@ use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use tokio::io::{AsyncWriteExt, BufReader, BufWriter};
+use tokio::io::AsyncWriteExt;
 use tracing::{info, trace};
 
 pub const LOG_EXTENSION: &str = "log";

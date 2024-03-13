@@ -230,32 +230,31 @@ impl Storage<Partition> for FilePartitionStorage {
             info!("Attempting to detect changes in binary schema for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
             let samplers_count = message_format_converter.samplers.len();
             // Check if partition has any segments
-            if !partition.segments.is_empty() {
-                for (idx, sampler) in message_format_converter.samplers.iter().enumerate() {
-                    trace!("Trying to sample the message format for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
-                    match sampler.try_sample().await {
-                        Ok(schema) if idx == 0 => {
-                            // Found message in the newest format, no conversion needed
-                            trace!("Detected up to date binary schema: {}, for partition with ID: {} and segment with start offset: {}", schema, partition.partition_id, start_offset);
-                            break;
-                        }
-                        Ok(schema) => {
-                            // Found old format, need to convert it
-                            info!("Detected changes in binary schema for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
-                            segment.convert_segment_from_schema(schema).await?;
-                        }
-                        Err(_) if idx + 1 == samplers_count => {
-                            // Didn't find any message format, return an error
-                            return Err(IggyError::CannotLoadResource(anyhow::anyhow!(
+            for (idx, sampler) in message_format_converter.samplers.iter().enumerate() {
+                trace!("Trying to sample the message format for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
+                match sampler.try_sample().await {
+                    Ok(schema) if idx == 0 => {
+                        // Found message in the newest format, no conversion needed
+                        trace!("Detected up to date binary schema: {}, for partition with ID: {} and segment with start offset: {}", schema, partition.partition_id, start_offset);
+                        break;
+                    }
+                    Ok(schema) => {
+                        // Found old format, need to convert it
+                        info!("Detected changes in binary schema for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
+                        segment.convert_segment_from_schema(schema).await?;
+                    }
+                    Err(_) if idx + 1 == samplers_count => {
+                        // Didn't find any message format, return an error
+                        return Err(IggyError::CannotLoadResource(anyhow::anyhow!(
                             "Failed to find a valid message format, when trying to perform a conversion for partition with ID: {} and segment with start offset: {}.",
                             partition.partition_id,
                             start_offset
                         )));
-                        }
-                        _ => {}
                     }
+                    _ => {}
                 }
             }
+
             segment.load().await?;
             if !segment.is_closed {
                 segment.unsaved_batches = Some(Vec::new())

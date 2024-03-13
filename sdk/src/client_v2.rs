@@ -1,5 +1,3 @@
-use crate::cli::utils::message_expiry::MessageExpiry;
-use crate::cli::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::consumer::Consumer;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -18,6 +16,8 @@ use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
 use crate::utils::byte_size::IggyByteSize;
+use crate::utils::message_expiry::MessageExpiry;
+use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use async_trait::async_trait;
 use std::fmt::Debug;
 

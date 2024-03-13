@@ -58,12 +58,12 @@ use iggy::cli::{
         update_permissions::UpdatePermissionsCmd,
         update_user::{UpdateUserCmd, UpdateUserType},
     },
-    utils::personal_access_token_expiry::PersonalAccessTokenExpiry,
 };
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider::{self, ClientProviderConfig};
 use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
+use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use std::sync::Arc;
 use tracing::{event, Level};
 

@@ -29,10 +29,16 @@ unsafe impl Sync for MessageSampler {}
 impl BinarySchemaSampler for MessageSampler {
     async fn try_sample(&self) -> Result<BinarySchema, IggyError> {
         let mut index_file = file::open(&self.index_path).await?;
+        let mut log_file = file::open(&self.log_path).await?;
+        let log_file_size = log_file.metadata().await?.len();
+
+        if log_file_size == 0 {
+            return Ok(BinarySchema::RetainedMessageSchema);
+        }
+
         let _ = index_file.read_u32_le().await?;
         let end_position = index_file.read_u32_le().await?;
 
-        let mut log_file = file::open(&self.log_path).await?;
         let buffer_size = end_position as usize;
         let mut buffer = BytesMut::with_capacity(buffer_size);
         buffer.put_bytes(0, buffer_size);

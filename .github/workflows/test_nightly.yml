@@ -10,6 +10,9 @@ env:
   RUST_BACKTRACE: 1
   CARGO_TERM_COLOR: always
   IGGY_CI_BUILD: true
+  # Option needed for starting docker under cross to be able to lock memory
+  # in order to be able to use keyring inside Docker container
+  CROSS_CONTAINER_OPTS: "--cap-add ipc_lock"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -17,7 +20,7 @@ concurrency:
 
 jobs:
   build_and_test:
-    name: 'build and test ${{ matrix.platform.profile }} ${{ matrix.platform.os_name }}'
+    name: 'build and test ${{ matrix.toolchain }} ${{ matrix.platform.os_name }}'
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 120
     strategy:
@@ -73,6 +76,12 @@ jobs:
           rm -f $HOME/.local/share/keyrings/*
           echo -n "test" | gnome-keyring-daemon --unlock
         if: contains(matrix.platform.name, 'musl')
+
+      - name: Prepare Cross.toml
+        run: |
+          scripts/prepare-cross-toml.sh
+          cat Cross.toml
+        if: ${{ matrix.platform.cross }}
 
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0

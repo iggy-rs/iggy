@@ -41,7 +41,7 @@ impl Persister for FilePersister {
     }
 
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::write(path).await?;
+        let mut file = file::overwrite(path).await?;
         file.write_all(bytes).await?;
         Ok(())
     }
@@ -62,7 +62,7 @@ impl Persister for FileWithSyncPersister {
     }
 
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::write(path).await?;
+        let mut file = file::overwrite(path).await?;
         file.write_all(bytes).await?;
         file.sync_all().await?;
         Ok(())

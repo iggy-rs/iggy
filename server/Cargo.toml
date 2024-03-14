@@ -11,14 +11,14 @@ tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 
 [dependencies]
 aes-gcm = "0.10.3"
-anyhow = "1.0.80"
 async-stream = "0.3.5"
+anyhow = "1.0.81"
 async-trait = "0.1.77"
 atone = "0.3.7"
 axum = "0.7.4"
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }
 bcrypt = "0.15.0"
-blake3 = "1.5.0"
+blake3 = "1.5.1"
 byte-unit = { version = "5.1.4", default-features = false, features = [
     "serde",
     "byte",
@@ -45,14 +45,14 @@ rustls = { version = "0.21.10" }
 rustls-pemfile = "2.1.1"
 serde = { version = "1.0.197", features = ["derive", "rc"] }
 serde_json = "1.0.114"
-serde_with = { version = "3.6.1", features = ["base64", "macros"] }
+serde_with = { version = "3.7.0", features = ["base64", "macros"] }
 sled = "0.34.7"
 strip-ansi-escapes = "0.2.0"
 sysinfo = "0.30.7"
-thiserror = "1.0.57"
+thiserror = "1.0.58"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
-toml = "0.8.10"
+toml = "0.8.11"
 tower = { version = "0.4.13" }
 tower-http = { version = "0.5.2", features = [
     "add-extension",

@@ -10,8 +10,13 @@ pub async fn append(path: &str) -> Result<File, std::io::Error> {
     OpenOptions::new().read(true).append(true).open(path).await
 }
 
-pub async fn write(path: &str) -> Result<File, std::io::Error> {
-    OpenOptions::new().create(true).write(true).open(path).await
+pub async fn overwrite(path: &str) -> Result<File, std::io::Error> {
+    OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path)
+        .await
 }
 pub async fn remove(path: &str) -> Result<(), std::io::Error> {
     remove_file(path).await

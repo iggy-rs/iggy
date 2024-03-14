@@ -1,5 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, ClientState};
+use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::{BinaryTransport, ClientState};
 use crate::client::Client;
+use crate::client_v2::ClientV2;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
@@ -58,7 +60,7 @@ impl TcpConnectionStream {
 }
 
 #[derive(Debug)]
-struct TcpTlsConnectionStream {
+pub(crate) struct TcpTlsConnectionStream {
     stream: TlsStream<TcpStream>,
 }
 
@@ -122,89 +124,27 @@ impl Default for TcpClient {
 #[async_trait]
 impl Client for TcpClient {
     async fn connect(&self) -> Result<(), IggyError> {
-        if self.get_state().await == ClientState::Connected {
-            return Ok(());
-        }
-
-        let tls_enabled = self.config.tls_enabled;
-        let mut retry_count = 0;
-        let connection_stream: Box<dyn ConnectionStream>;
-        let remote_address;
-        loop {
-            info!(
-                "{} client is connecting to server: {}...",
-                NAME, self.config.server_address
-            );
-
-            let connection = TcpStream::connect(self.server_address).await;
-            if connection.is_err() {
-                error!(
-                    "Failed to connect to server: {}",
-                    self.config.server_address
-                );
-                if retry_count < self.config.reconnection_retries {
-                    retry_count += 1;
-                    info!(
-                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
-                        retry_count,
-                        self.config.reconnection_retries,
-                        self.config.server_address,
-                        self.config.reconnection_interval
-                    );
-                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
-                    continue;
-                }
-
-                return Err(IggyError::NotConnected);
-            }
-
-            let stream = connection.unwrap();
-            remote_address = stream.peer_addr()?;
-
-            if !tls_enabled {
-                connection_stream = Box::new(TcpConnectionStream::new(stream));
-                break;
-            }
-
-            let connector =
-                tokio_native_tls::TlsConnector::from(TlsConnector::builder().build().unwrap());
-            let stream = tokio_native_tls::TlsConnector::connect(
-                &connector,
-                &self.config.tls_domain,
-                stream,
-            )
-            .await
-            .unwrap();
-            connection_stream = Box::new(TcpTlsConnectionStream { stream });
-            break;
-        }
-
-        self.stream.lock().await.replace(connection_stream);
-        self.set_state(ClientState::Connected).await;
-
-        info!(
-            "{} client has connected to server: {}",
-            NAME, remote_address
-        );
-
-        Ok(())
+        TcpClient::connect(self).await
     }
 
     async fn disconnect(&self) -> Result<(), IggyError> {
-        if self.get_state().await == ClientState::Disconnected {
-            return Ok(());
-        }
-
-        info!("{} client is disconnecting from server...", NAME);
-        self.set_state(ClientState::Disconnected).await;
-        self.stream.lock().await.take();
-        info!("{} client has disconnected from server.", NAME);
-        Ok(())
+        TcpClient::disconnect(self).await
     }
 }
 
 #[async_trait]
-impl BinaryClient for TcpClient {
+impl ClientV2 for TcpClient {
+    async fn connect(&self) -> Result<(), IggyError> {
+        TcpClient::connect(self).await
+    }
+
+    async fn disconnect(&self) -> Result<(), IggyError> {
+        TcpClient::disconnect(self).await
+    }
+}
+
+#[async_trait]
+impl BinaryTransport for TcpClient {
     async fn get_state(&self) -> ClientState {
         *self.state.lock().await
     }
@@ -244,6 +184,10 @@ impl BinaryClient for TcpClient {
         Err(IggyError::NotConnected)
     }
 }
+
+impl BinaryClient for TcpClient {}
+
+impl BinaryClientV2 for TcpClient {}
 
 impl TcpClient {
     /// Create a new TCP client for the provided server address.
@@ -329,5 +273,86 @@ impl TcpClient {
         response_buffer.put_bytes(0, length as usize);
         stream.read(&mut response_buffer).await?;
         Ok(response_buffer.freeze())
+    }
+
+    async fn connect(&self) -> Result<(), IggyError> {
+        if self.get_state().await == ClientState::Connected {
+            return Ok(());
+        }
+
+        let tls_enabled = self.config.tls_enabled;
+        let mut retry_count = 0;
+        let connection_stream: Box<dyn ConnectionStream>;
+        let remote_address;
+        loop {
+            info!(
+                "{} client is connecting to server: {}...",
+                NAME, self.config.server_address
+            );
+
+            let connection = TcpStream::connect(self.server_address).await;
+            if connection.is_err() {
+                error!(
+                    "Failed to connect to server: {}",
+                    self.config.server_address
+                );
+                if retry_count < self.config.reconnection_retries {
+                    retry_count += 1;
+                    info!(
+                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
+                        retry_count,
+                        self.config.reconnection_retries,
+                        self.config.server_address,
+                        self.config.reconnection_interval
+                    );
+                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
+                    continue;
+                }
+
+                return Err(IggyError::NotConnected);
+            }
+
+            let stream = connection.unwrap();
+            remote_address = stream.peer_addr()?;
+
+            if !tls_enabled {
+                connection_stream = Box::new(TcpConnectionStream::new(stream));
+                break;
+            }
+
+            let connector =
+                tokio_native_tls::TlsConnector::from(TlsConnector::builder().build().unwrap());
+            let stream = tokio_native_tls::TlsConnector::connect(
+                &connector,
+                &self.config.tls_domain,
+                stream,
+            )
+            .await
+            .unwrap();
+            connection_stream = Box::new(TcpTlsConnectionStream { stream });
+            break;
+        }
+
+        self.stream.lock().await.replace(connection_stream);
+        self.set_state(ClientState::Connected).await;
+
+        info!(
+            "{} client has connected to server: {}",
+            NAME, remote_address
+        );
+
+        Ok(())
+    }
+
+    async fn disconnect(&self) -> Result<(), IggyError> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Ok(());
+        }
+
+        info!("{} client is disconnecting from server...", NAME);
+        self.set_state(ClientState::Disconnected).await;
+        self.stream.lock().await.take();
+        info!("{} client has disconnected from server.", NAME);
+        Ok(())
     }
 }

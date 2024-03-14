@@ -1,5 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, ClientState};
+use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::{BinaryTransport, ClientState};
 use crate::client::Client;
+use crate::client_v2::ClientV2;
 use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
@@ -40,70 +42,27 @@ impl Default for QuicClient {
 #[async_trait]
 impl Client for QuicClient {
     async fn connect(&self) -> Result<(), IggyError> {
-        if self.get_state().await == ClientState::Connected {
-            return Ok(());
-        }
-
-        let mut retry_count = 0;
-        let connection;
-        loop {
-            info!(
-                "{} client is connecting to server: {}...",
-                NAME, self.config.server_address
-            );
-            let connection_result = self
-                .endpoint
-                .connect(self.server_address, &self.config.server_name)
-                .unwrap()
-                .await;
-
-            if connection_result.is_err() {
-                error!(
-                    "Failed to connect to server: {}",
-                    self.config.server_address
-                );
-                if retry_count < self.config.reconnection_retries {
-                    retry_count += 1;
-                    info!(
-                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
-                        retry_count,
-                        self.config.reconnection_retries,
-                        self.config.server_address,
-                        self.config.reconnection_interval
-                    );
-                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
-                    continue;
-                }
-
-                return Err(IggyError::NotConnected);
-            }
-
-            connection = connection_result.unwrap();
-            break;
-        }
-
-        self.set_state(ClientState::Connected).await;
-        self.connection.lock().await.replace(connection);
-
-        Ok(())
+        QuicClient::connect(self).await
     }
 
     async fn disconnect(&self) -> Result<(), IggyError> {
-        if self.get_state().await == ClientState::Disconnected {
-            return Ok(());
-        }
-
-        info!("{} client is disconnecting from server...", NAME);
-        self.set_state(ClientState::Disconnected).await;
-        self.connection.lock().await.take();
-        self.endpoint.wait_idle().await;
-        info!("{} client has disconnected from server.", NAME);
-        Ok(())
+        QuicClient::disconnect(self).await
     }
 }
 
 #[async_trait]
-impl BinaryClient for QuicClient {
+impl ClientV2 for QuicClient {
+    async fn connect(&self) -> Result<(), IggyError> {
+        QuicClient::connect(self).await
+    }
+
+    async fn disconnect(&self) -> Result<(), IggyError> {
+        QuicClient::disconnect(self).await
+    }
+}
+
+#[async_trait]
+impl BinaryTransport for QuicClient {
     async fn get_state(&self) -> ClientState {
         *self.state.lock().await
     }
@@ -136,6 +95,10 @@ impl BinaryClient for QuicClient {
         Err(IggyError::NotConnected)
     }
 }
+
+impl BinaryClient for QuicClient {}
+
+impl BinaryClientV2 for QuicClient {}
 
 impl QuicClient {
     /// Creates a new QUIC client for the provided client and server addresses.
@@ -222,6 +185,68 @@ impl QuicClient {
         Ok(Bytes::copy_from_slice(
             &buffer[RESPONSE_INITIAL_BYTES_LENGTH..RESPONSE_INITIAL_BYTES_LENGTH + length as usize],
         ))
+    }
+
+    async fn connect(&self) -> Result<(), IggyError> {
+        if self.get_state().await == ClientState::Connected {
+            return Ok(());
+        }
+
+        let mut retry_count = 0;
+        let connection;
+        loop {
+            info!(
+                "{} client is connecting to server: {}...",
+                NAME, self.config.server_address
+            );
+            let connection_result = self
+                .endpoint
+                .connect(self.server_address, &self.config.server_name)
+                .unwrap()
+                .await;
+
+            if connection_result.is_err() {
+                error!(
+                    "Failed to connect to server: {}",
+                    self.config.server_address
+                );
+                if retry_count < self.config.reconnection_retries {
+                    retry_count += 1;
+                    info!(
+                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
+                        retry_count,
+                        self.config.reconnection_retries,
+                        self.config.server_address,
+                        self.config.reconnection_interval
+                    );
+                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
+                    continue;
+                }
+
+                return Err(IggyError::NotConnected);
+            }
+
+            connection = connection_result.unwrap();
+            break;
+        }
+
+        self.set_state(ClientState::Connected).await;
+        self.connection.lock().await.replace(connection);
+
+        Ok(())
+    }
+
+    async fn disconnect(&self) -> Result<(), IggyError> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Ok(());
+        }
+
+        info!("{} client is disconnecting from server...", NAME);
+        self.set_state(ClientState::Disconnected).await;
+        self.connection.lock().await.take();
+        self.endpoint.wait_idle().await;
+        info!("{} client has disconnected from server.", NAME);
+        Ok(())
     }
 }
 

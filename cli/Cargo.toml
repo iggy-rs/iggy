@@ -7,7 +7,7 @@ repository = "https://github.com/iggy-rs/iggy"
 homepage = "https://iggy.rs"
 
 [dependencies]
-anyhow = "1.0.80"
+anyhow = "1.0.81"
 async-trait = "0.1.77"
 clap = { version = "4.5.2", features = ["derive"] }
 clap_complete = "4.5.1"
@@ -15,7 +15,7 @@ figlet-rs = "0.1.5"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.2"
 passterm = "2.0.1"
-thiserror = "1.0.57"
+thiserror = "1.0.58"
 tokio = { version = "1.36.0", features = ["full"] }
 tracing = "0.1.37"
 tracing-appender = "0.2.2"

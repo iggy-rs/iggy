@@ -5,13 +5,13 @@ use crate::cli::common::{
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
-use iggy::cli::utils::message_expiry::MessageExpiry;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::message_expiry::MessageExpiry;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;

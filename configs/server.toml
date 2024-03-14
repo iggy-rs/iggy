@@ -220,6 +220,11 @@ interval = "1m"
 # Base path for system data storage.
 path = "local_data"
 
+# Backup configuration
+[system.backup]
+# Path for storing backup of segments with old schema after conversion.
+path = "backup"
+
 # Database configuration.
 [system.database]
 # Path for storing database files.

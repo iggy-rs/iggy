@@ -14,6 +14,8 @@ use crate::configs::system::{
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
 
+use super::system::BackupConfig;
+
 impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
@@ -138,6 +140,7 @@ impl Default for SystemConfig {
     fn default() -> SystemConfig {
         SystemConfig {
             path: "local_data".to_string(),
+            backup: BackupConfig::default(),
             database: DatabaseConfig::default(),
             runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
@@ -150,6 +153,14 @@ impl Default for SystemConfig {
             segment: SegmentConfig::default(),
             compression: CompressionConfig::default(),
             message_deduplication: MessageDeduplicationConfig::default(),
+        }
+    }
+}
+
+impl Default for BackupConfig {
+    fn default() -> BackupConfig {
+        BackupConfig {
+            path: "backup".to_string(),
         }
     }
 }

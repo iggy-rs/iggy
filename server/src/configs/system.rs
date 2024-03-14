@@ -10,6 +10,7 @@ use serde_with::DisplayFromStr;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SystemConfig {
     pub path: String,
+    pub backup: BackupConfig,
     pub database: DatabaseConfig,
     pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
@@ -26,6 +27,11 @@ pub struct SystemConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct DatabaseConfig {
+    pub path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct BackupConfig {
     pub path: String,
 }
 
@@ -109,6 +115,10 @@ pub struct SegmentConfig {
 impl SystemConfig {
     pub fn get_system_path(&self) -> String {
         self.path.to_string()
+    }
+
+    pub fn get_backup_path(&self) -> String {
+        format!("{}/{}", self.get_system_path(), self.backup.path)
     }
 
     pub fn get_database_path(&self) -> String {

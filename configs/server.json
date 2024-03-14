@@ -94,6 +94,9 @@
     "database": {
       "path": "database"
     },
+    "backup" : {
+      "path": "backup"
+    },
     "runtime": {
       "path": "runtime"
     },

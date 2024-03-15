@@ -33,4 +33,16 @@ pub enum ServerError {
     CacheConfigValidationFailure(String),
     #[error("Command length error: {0}")]
     CommandLengthError(String),
+    #[error("Cannot read message, when performing format conversion, {0}")]
+    CannotReadMessageFormatConversion(String),
+    #[error("Invalid message offset, when performing format conversion")]
+    InvalidMessageOffsetFormatConversion,
+    #[error("Invalid batch base offset, when performing format conversion")]
+    InvalidBatchBaseOffsetFormatConversion,
+    #[error("Cannot read message batch, when performing format conversion, {0}")]
+    CannotReadMessageBatchFormatConversion(String),
+    #[error("Cannot remove old segment files")]
+    CannotRemoveOldSegmentFiles,
+    #[error("Cannot persist new segment files")]
+    CannotPersistNewSegmentFiles,
 }

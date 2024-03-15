@@ -2,11 +2,11 @@ use crate::compat::message_converter::Extendable;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
-use iggy::error::IggyError;
 use iggy::models::header::{self, HeaderKey, HeaderValue};
 use iggy::models::messages::MessageState;
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use crate::server_error::ServerError;
 
 #[derive(Debug)]
 pub struct MessageSnapshot {
@@ -77,27 +77,27 @@ impl Sizeable for MessageSnapshot {
 }
 
 impl TryFrom<Bytes> for MessageSnapshot {
-    type Error = IggyError;
+    type Error = ServerError;
 
     fn try_from(value: Bytes) -> Result<Self, Self::Error> {
         let offset = u64::from_le_bytes(
             value
                 .get(0..8)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageFormatConversion(
+                    ServerError::CannotReadMessageFormatConversion(
                         "Failed to read message offset".to_owned(),
                     )
                 })?
                 .try_into()?,
         );
         let state = MessageState::from_code(*value.get(8).ok_or_else(|| {
-            IggyError::CannotReadMessageFormatConversion("Failed to read message state".to_owned())
+            ServerError::CannotReadMessageFormatConversion("Failed to read message state".to_owned())
         })?)?;
         let timestamp = u64::from_le_bytes(
             value
                 .get(9..17)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageFormatConversion(
+                    ServerError::CannotReadMessageFormatConversion(
                         "Failed to read message timestamp".to_owned(),
                     )
                 })?
@@ -107,7 +107,7 @@ impl TryFrom<Bytes> for MessageSnapshot {
             value
                 .get(17..33)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageFormatConversion(
+                    ServerError::CannotReadMessageFormatConversion(
                         "Failed to read message id".to_owned(),
                     )
                 })?
@@ -117,7 +117,7 @@ impl TryFrom<Bytes> for MessageSnapshot {
             value
                 .get(33..37)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageFormatConversion(
+                    ServerError::CannotReadMessageFormatConversion(
                         "Failed to read message checksum".to_owned(),
                     )
                 })?
@@ -127,7 +127,7 @@ impl TryFrom<Bytes> for MessageSnapshot {
             value
                 .get(37..41)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageFormatConversion(
+                    ServerError::CannotReadMessageFormatConversion(
                         "Failed to read headers length".to_owned(),
                     )
                 })?
@@ -139,7 +139,7 @@ impl TryFrom<Bytes> for MessageSnapshot {
                 let headers_payload = &value[41..(41 + headers_length as usize)];
                 let headers = HashMap::from_bytes(Bytes::copy_from_slice(headers_payload))
                     .map_err(|_| {
-                        IggyError::CannotReadMessageFormatConversion(
+                        ServerError::CannotReadMessageFormatConversion(
                             "Failed to read message headers".to_owned(),
                         )
                     })?;
@@ -152,7 +152,7 @@ impl TryFrom<Bytes> for MessageSnapshot {
             value
                 .get(position..(position + 4))
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageFormatConversion(
+                    ServerError::CannotReadMessageFormatConversion(
                         "Failed to read message payload length".to_owned(),
                     )
                 })?

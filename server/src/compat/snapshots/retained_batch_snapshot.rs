@@ -3,6 +3,7 @@ use crate::compat::message_converter::Extendable;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
+use crate::server_error::ServerError;
 
 pub struct RetainedMessageBatchSnapshot {
     pub base_offset: u64,
@@ -76,13 +77,13 @@ impl Extendable for RetainedMessageBatchSnapshot {
 }
 
 impl TryFrom<Bytes> for RetainedMessageBatchSnapshot {
-    type Error = IggyError;
+    type Error = ServerError;
     fn try_from(value: Bytes) -> Result<Self, Self::Error> {
         let base_offset = u64::from_le_bytes(
             value
                 .get(0..8)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageBatchFormatConversion(
+                    ServerError::CannotReadMessageBatchFormatConversion(
                         "Failed to read batch base offset".to_owned(),
                     )
                 })?
@@ -92,7 +93,7 @@ impl TryFrom<Bytes> for RetainedMessageBatchSnapshot {
             value
                 .get(8..12)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageBatchFormatConversion(
+                    ServerError::CannotReadMessageBatchFormatConversion(
                         "Failed to read batch length".to_owned(),
                     )
                 })?
@@ -102,7 +103,7 @@ impl TryFrom<Bytes> for RetainedMessageBatchSnapshot {
             value
                 .get(12..16)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageBatchFormatConversion(
+                    ServerError::CannotReadMessageBatchFormatConversion(
                         "Failed to read batch last_offset_delta".to_owned(),
                     )
                 })?
@@ -112,7 +113,7 @@ impl TryFrom<Bytes> for RetainedMessageBatchSnapshot {
             value
                 .get(16..24)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageBatchFormatConversion(
+                    ServerError::CannotReadMessageBatchFormatConversion(
                         "Failed to read batch max_timestamp".to_owned(),
                     )
                 })?
@@ -122,7 +123,7 @@ impl TryFrom<Bytes> for RetainedMessageBatchSnapshot {
             value
                 .get(24..length as usize)
                 .ok_or_else(|| {
-                    IggyError::CannotReadMessageBatchFormatConversion(
+                    ServerError::CannotReadMessageBatchFormatConversion(
                         "Failed to read batch payload".to_owned(),
                     )
                 })?

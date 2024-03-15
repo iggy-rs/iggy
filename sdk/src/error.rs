@@ -324,18 +324,6 @@ pub enum IggyError {
     CannotReadMaxTimestamp = 7003,
     #[error("Cannot read batch payload")]
     CannotReadBatchPayload = 7004,
-    #[error("Cannot read message, when performing format conversion, {0}")]
-    CannotReadMessageFormatConversion(String) = 8000,
-    #[error("Invalid message offset, when performing format conversion")]
-    InvalidMessageOffsetFormatConversion = 8001,
-    #[error("Invalid batch base offset, when performing format conversion")]
-    InvalidBatchBaseOffsetFormatConversion = 8002,
-    #[error("Cannot read message batch, when performing format conversion, {0}")]
-    CannotReadMessageBatchFormatConversion(String) = 8003,
-    #[error("Cannot remove old segment files")]
-    CannotRemoveOldSegmentFiles = 8004,
-    #[error("Cannot persist new segment files")]
-    CannotPersistNewSegmentFiles = 8005,
 }
 
 impl IggyError {

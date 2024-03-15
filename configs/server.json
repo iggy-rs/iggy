@@ -95,7 +95,10 @@
       "path": "database"
     },
     "backup" : {
-      "path": "backup"
+      "path": "backup",
+      "compatibility": {
+        "path": "compatibility"
+      }
     },
     "runtime": {
       "path": "runtime"

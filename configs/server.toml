@@ -222,8 +222,12 @@ path = "local_data"
 
 # Backup configuration
 [system.backup]
-# Path for storing backup of segments with old schema after conversion.
+# Path for storing backup.
 path = "backup"
+
+[system.backup.compatibility]
+# Path for storing backup.
+path = "compatibility"
 
 # Database configuration.
 [system.database]

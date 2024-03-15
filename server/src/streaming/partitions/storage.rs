@@ -235,7 +235,7 @@ impl Storage<Partition> for FilePartitionStorage {
                 match sampler.try_sample().await {
                     Ok(schema) if idx == 0 => {
                         // Found message in the newest format, no conversion needed
-                        trace!("Detected up to date binary schema: {}, for partition with ID: {} and segment with start offset: {}", schema, partition.partition_id, start_offset);
+                        trace!("Detected up to date binary schema: {:?}, for partition with ID: {} and segment with start offset: {}", schema, partition.partition_id, start_offset);
                         break;
                     }
                     Ok(schema) => {

@@ -162,9 +162,9 @@ impl Segment {
                     return Ok(());
                 }
 
-                let backup_path = self.config.get_backup_path();
+                let compat_backup_path = self.config.get_compatibility_backup_path();
                 let conversion_writer =
-                    ConversionWriter::init(log_path, index_path, time_index_path, &backup_path, schema);
+                    ConversionWriter::init(log_path, index_path, time_index_path, &compat_backup_path, schema);
                 conversion_writer.create_alt_directories().await?;
                 let retained_batch_writer = RetainedBatchWriter::init(
                     file::append(&conversion_writer.alt_log_path).await?,
@@ -180,7 +180,7 @@ impl Segment {
                             let batch = RetainedMessageBatchSnapshot::try_from_messages(messages)
                                 .map_err(|err| err.into_try_chunks_error())?;
                             let size = batch.get_size_bytes();
-                            info!("Converted messages with start offset: {} and end offset: {}, with binary schema: {} to newest schema",
+                            info!("Converted messages with start offset: {} and end offset: {}, with binary schema: {:?} to newest schema",
                             batch.base_offset, batch.get_last_offset(), schema);
 
                             batch

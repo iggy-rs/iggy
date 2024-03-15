@@ -6,11 +6,7 @@ use crate::configs::server::{
     MessageCleanerConfig, MessageSaverConfig, PersonalAccessTokenCleanerConfig,
     PersonalAccessTokenConfig, ServerConfig,
 };
-use crate::configs::system::{
-    CacheConfig, CompressionConfig, DatabaseConfig, EncryptionConfig, LoggingConfig,
-    MessageDeduplicationConfig, PartitionConfig, RetentionPolicyConfig, RuntimeConfig,
-    SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
-};
+use crate::configs::system::{CacheConfig, CompatibilityConfig, CompressionConfig, DatabaseConfig, EncryptionConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig};
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
 
@@ -161,6 +157,15 @@ impl Default for BackupConfig {
     fn default() -> BackupConfig {
         BackupConfig {
             path: "backup".to_string(),
+            compatibility: CompatibilityConfig::default(),
+        }
+    }
+}
+
+impl Default for CompatibilityConfig {
+    fn default() -> Self {
+        CompatibilityConfig {
+            path: "compatibility".to_string(),
         }
     }
 }

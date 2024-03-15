@@ -13,7 +13,7 @@ pub struct ConversionWriter<'w> {
     pub alt_index_path: String,
     pub alt_time_index_path: String,
 
-    backup_path: String,
+    compat_backup_path: &'w str,
 }
 
 impl<'w> ConversionWriter<'w> {
@@ -21,7 +21,7 @@ impl<'w> ConversionWriter<'w> {
         log_path: &'w str,
         index_path: &'w str,
         time_index_path: &'w str,
-        backup_path: &'w str,
+        compat_backup_path: &'w str,
         schema: BinarySchema,
     ) -> ConversionWriter<'w> {
         ConversionWriter {
@@ -35,7 +35,7 @@ impl<'w> ConversionWriter<'w> {
                 time_index_path.split('.').next().unwrap(),
                 "timeindex"
             ),
-            backup_path: format!("{}/conversion_{}", backup_path, schema),
+            compat_backup_path
         }
     }
 
@@ -57,17 +57,17 @@ impl<'w> ConversionWriter<'w> {
         let log_backup_path = &self
             .log_path
             .split_once('/')
-            .map(|(_, path)| format!("{}/{}", &self.backup_path, path))
+            .map(|(_, path)| format!("{}/{}", &self.compat_backup_path, path))
             .unwrap();
         let index_backup_path = &self
             .index_path
             .split_once('/')
-            .map(|(_, path)| format!("{}/{}", self.backup_path, path))
+            .map(|(_, path)| format!("{}/{}", self.compat_backup_path, path))
             .unwrap();
         let time_index_backup_path = &self
             .time_index_path
             .split_once('/')
-            .map(|(_, path)| format!("{}/{}", self.backup_path, path))
+            .map(|(_, path)| format!("{}/{}", self.compat_backup_path, path))
             .unwrap();
 
         let log_path_last_idx = log_backup_path.rfind('/').unwrap();

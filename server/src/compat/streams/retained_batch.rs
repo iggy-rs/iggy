@@ -10,7 +10,7 @@ pub struct RetainedBatchWriter {
 }
 
 impl RetainedBatchWriter {
-    pub fn init(log_file: File, index_file: File, time_index_file: File) -> RetainedBatchWriter {
+    pub fn init(log_file: File, index_file: File, time_index_file: File) -> Self {
         RetainedBatchWriter {
             log_writer: BufWriter::with_capacity(BUF_WRITER_CAPACITY_BYTES, log_file),
             index_writer: BufWriter::with_capacity(BUF_WRITER_CAPACITY_BYTES, index_file),

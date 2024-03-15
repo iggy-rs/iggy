@@ -1,5 +1,6 @@
 use crate::compat::binary_schema::BinarySchema;
 use crate::compat::chunks_error::IntoTryChunksError;
+use crate::compat::conversion_writer::ConversionWriter;
 use crate::compat::message_converter::MessageFormatConverterPersister;
 use crate::compat::message_stream::MessageStream;
 use crate::compat::snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot;
@@ -152,13 +153,6 @@ impl Segment {
         let log_path = self.log_path.as_str();
         let index_path = self.index_path.as_str();
         let time_index_path = self.time_index_path.as_str();
-        let log_alt_path = format!("{}_temp.{}", log_path.split('.').next().unwrap(), "log");
-        let index_alt_path = format!("{}_temp.{}", index_path.split('.').next().unwrap(), "index");
-        let time_index_alt_path = format!(
-            "{}_temp.{}",
-            time_index_path.split('.').next().unwrap(),
-            "timeindex"
-        );
 
         match schema {
             BinarySchema::RetainedMessageSchema => {
@@ -168,22 +162,16 @@ impl Segment {
                     return Ok(());
                 }
 
-                trace!(
-                    "Creating temporary files for conversion, log: {}, index: {}, time_index: {}",
-                    log_alt_path,
-                    index_alt_path,
-                    time_index_alt_path
-                );
-                //TODO (numinex) - this whole operation should be done in a single transaction
-                tokio::fs::File::create(&log_alt_path).await?;
-                tokio::fs::File::create(&index_alt_path).await?;
-                tokio::fs::File::create(&time_index_alt_path).await?;
-
+                let backup_path = self.config.get_backup_path();
+                let conversion_writer =
+                    ConversionWriter::init(log_path, index_path, time_index_path, &backup_path);
+                conversion_writer.create_alt_directories().await?;
                 let retained_batch_writer = RetainedBatchWriter::init(
-                    file::append(&log_alt_path).await?,
-                    file::append(&index_alt_path).await?,
-                    file::append(&time_index_alt_path).await?,
+                    file::append(&conversion_writer.alt_log_path).await?,
+                    file::append(&conversion_writer.alt_index_path).await?,
+                    file::append(&conversion_writer.alt_time_index_path).await?,
                 );
+
                 let stream = RetainedMessageStream::new(file, file_size).into_stream();
                 pin_mut!(stream);
                 let (_, mut retained_batch_writer) = stream
@@ -217,60 +205,12 @@ impl Segment {
                         })
                         .await
                         .map_err(|err| err.1)?; // For now
-
                 retained_batch_writer.log_writer.flush().await?;
                 retained_batch_writer.index_writer.flush().await?;
                 retained_batch_writer.time_index_writer.flush().await?;
 
-                let log_backup_path = &self
-                    .log_path
-                    .split_once('/')
-                    .map(|(_, path)| format!("{}/{}", self.config.get_backup_path(), path))
-                    .unwrap();
-                let index_backup_path = &self
-                    .index_path
-                    .split_once('/')
-                    .map(|(_, path)| format!("{}/{}", self.config.get_backup_path(), path))
-                    .unwrap();
-                let time_index_backup_path = &self
-                    .time_index_path
-                    .split_once('/')
-                    .map(|(_, path)| format!("{}/{}", self.config.get_backup_path(), path))
-                    .unwrap();
-
-                let log_path_last_idx = log_backup_path.rfind('/').unwrap();
-                let index_path_last_idx = index_backup_path.rfind('/').unwrap();
-                let time_index_path_last_idx = time_index_backup_path.rfind('/').unwrap();
-
-                if tokio::fs::metadata(&log_backup_path[..log_path_last_idx])
-                    .await
-                    .is_err()
-                {
-                    tokio::fs::create_dir_all(&log_backup_path[..log_path_last_idx]).await?;
-                }
-
-                if tokio::fs::metadata(&index_backup_path[..index_path_last_idx])
-                    .await
-                    .is_err()
-                {
-                    tokio::fs::create_dir_all(&index_backup_path[..index_path_last_idx]).await?;
-                }
-
-                if tokio::fs::metadata(&time_index_backup_path[..time_index_path_last_idx])
-                    .await
-                    .is_err()
-                {
-                    tokio::fs::create_dir_all(&time_index_backup_path[..time_index_path_last_idx])
-                        .await?;
-                }
-
-                file::rename(log_path, log_backup_path).await?;
-                file::rename(index_path, index_backup_path).await?;
-                file::rename(time_index_path, time_index_backup_path).await?;
-
-                file::rename(&log_alt_path, log_path).await?;
-                file::rename(&index_alt_path, index_path).await?;
-                file::rename(&time_index_alt_path, time_index_path).await?;
+                conversion_writer.create_old_segment_backup().await?;
+                conversion_writer.replace_with_converted().await?;
                 Ok(())
             }
             BinarySchema::RetainedMessageBatchSchema => Ok(()),

@@ -1,5 +1,6 @@
 pub(crate) mod binary_schema;
 pub(crate) mod chunks_error;
+pub(crate) mod conversion_writer;
 pub(crate) mod message_converter;
 pub(crate) mod message_stream;
 pub(crate) mod samplers;

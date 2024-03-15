@@ -164,7 +164,7 @@ impl Segment {
 
                 let backup_path = self.config.get_backup_path();
                 let conversion_writer =
-                    ConversionWriter::init(log_path, index_path, time_index_path, &backup_path);
+                    ConversionWriter::init(log_path, index_path, time_index_path, &backup_path, schema);
                 conversion_writer.create_alt_directories().await?;
                 let retained_batch_writer = RetainedBatchWriter::init(
                     file::append(&conversion_writer.alt_log_path).await?,

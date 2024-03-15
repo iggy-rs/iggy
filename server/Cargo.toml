@@ -16,7 +16,7 @@ async-trait = "0.1.77"
 atone = "0.3.7"
 axum = "0.7.4"
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }
-bcrypt = "0.15.0"
+bcrypt = "0.15.1"
 blake3 = "1.5.1"
 byte-unit = { version = "5.1.4", default-features = false, features = [
     "serde",

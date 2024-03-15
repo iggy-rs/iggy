@@ -1,2 +1,0 @@
-[build.env]
-passthrough = ["IGGY_SYSTEM_PATH", "IGGY_CI_BUILD", "RUST_BACKTRACE=1"]

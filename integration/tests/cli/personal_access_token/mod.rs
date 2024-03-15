@@ -2,6 +2,6 @@ mod test_pat_create_command;
 mod test_pat_delete_command;
 mod test_pat_help_command;
 mod test_pat_list_command;
-// Disable tests due to missing keyring on arm and aarch64 until #294 is implemented
-#[cfg(not(any(target_arch = "aarch64", target_arch = "arm")))]
+// Disable tests due to missing keyring on macOS until #794 is implemented
+#[cfg(not(target_os = "macos"))]
 mod test_pat_login_options;

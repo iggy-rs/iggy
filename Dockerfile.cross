@@ -1,0 +1,25 @@
+ARG CROSS_BASE_IMAGE
+FROM $CROSS_BASE_IMAGE
+
+ARG USER
+ARG CROSS_CONTAINER_UID
+ARG CROSS_CONTAINER_GID
+
+USER root
+RUN apt-get update \
+    && apt-get install gnome-keyring \
+    --yes --no-install-recommends \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Copy the entrypoint script into the container
+COPY scripts/cross-docker-entrypoint.sh /usr/local/bin/
+
+# Make the entrypoint script executable
+RUN chmod +x /usr/local/bin/cross-docker-entrypoint.sh
+
+# Add user with specified UID and GID
+RUN groupadd -g $CROSS_CONTAINER_GID $USER
+RUN useradd -r -u $CROSS_CONTAINER_UID -g $CROSS_CONTAINER_GID -m $USER
+
+# Set the entry point
+ENTRYPOINT ["/usr/local/bin/cross-docker-entrypoint.sh"]

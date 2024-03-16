@@ -24,7 +24,7 @@ byte-unit = { version = "5.1.4", default-features = false, features = [
 ] }
 bytes = "1.5.0"
 chrono = { version = "0.4.35" }
-clap = { version = "4.5.2", features = ["derive"] }
+clap = { version = "4.5.3", features = ["derive"] }
 comfy-table = { version = "7.1.0", optional = true }
 crc32fast = "1.4.0"
 dirs = "5.0.1"
@@ -38,7 +38,7 @@ passterm = { version = "2.0.1", optional = true }
 quinn = { version = "0.10.2" }
 regex = "1.10.3"
 reqwest = { version = "0.11.26", features = ["json"] }
-reqwest-middleware = "0.2.4"
+reqwest-middleware = "0.2.5"
 reqwest-retry = "0.4.0"
 rustls = { version = "0.21.10", features = ["dangerous_configuration"] }
 serde = { version = "1.0.197", features = ["derive", "rc"] }

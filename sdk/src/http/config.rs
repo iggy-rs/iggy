@@ -20,7 +20,7 @@ impl Default for HttpClientConfig {
 /// Allows configuring the HTTP client with custom settings or using defaults:
 /// - `api_url`: Default is "http://127.0.0.1:3000"
 /// - `retries`: Default is 3.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct HttpClientConfigBuilder {
     config: HttpClientConfig,
 }

@@ -32,7 +32,7 @@ impl Default for TcpClientConfig {
 /// - `reconnection_interval`: Default is 1000 ms.
 /// - `tls_enabled`: Default is false.
 /// - `tls_domain`: Default is "localhost".
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct TcpClientConfigBuilder {
     config: TcpClientConfig,
 }

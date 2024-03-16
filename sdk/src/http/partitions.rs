@@ -23,15 +23,15 @@ impl PartitionClient for HttpClient {
 impl PartitionClientV2 for HttpClient {
     async fn create_partitions(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), IggyError> {
         create_partitions(
             self,
             &CreatePartitions {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
                 partitions_count,
             },
         )
@@ -40,15 +40,15 @@ impl PartitionClientV2 for HttpClient {
 
     async fn delete_partitions(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), IggyError> {
         delete_partitions(
             self,
             &DeletePartitions {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
                 partitions_count,
             },
         )

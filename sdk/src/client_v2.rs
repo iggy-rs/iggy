@@ -76,7 +76,7 @@ pub trait UserClientV2 {
     /// Get the info about a specific user by unique ID or username.
     ///
     /// Authentication is required, and the permission to read the users, unless the provided user ID is the same as the authenticated user.
-    async fn get_user(&self, user_id: Identifier) -> Result<UserInfoDetails, IggyError>;
+    async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError>;
     /// Get the info about all the users.
     ///
     /// Authentication is required, and the permission to read the users.
@@ -94,13 +94,13 @@ pub trait UserClientV2 {
     /// Delete a user by unique ID or username.
     ///
     /// Authentication is required, and the permission to manage the users.
-    async fn delete_user(&self, user_id: Identifier) -> Result<(), IggyError>;
+    async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError>;
     /// Update a user by unique ID or username.
     ///
     /// Authentication is required, and the permission to manage the users.
     async fn update_user(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         username: Option<&str>,
         status: Option<UserStatus>,
     ) -> Result<(), IggyError>;
@@ -109,7 +109,7 @@ pub trait UserClientV2 {
     /// Authentication is required, and the permission to manage the users.
     async fn update_permissions(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError>;
     /// Change the password of a user by unique ID or username.
@@ -117,7 +117,7 @@ pub trait UserClientV2 {
     /// Authentication is required, and the permission to manage the users, unless the provided user ID is the same as the authenticated user.
     async fn change_password(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         current_password: &str,
         new_password: &str,
     ) -> Result<(), IggyError>;
@@ -153,7 +153,7 @@ pub trait StreamClientV2 {
     /// Get the info about a specific stream by unique ID or name.
     ///
     /// Authentication is required, and the permission to read the streams.
-    async fn get_stream(&self, stream_id: Identifier) -> Result<StreamDetails, IggyError>;
+    async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError>;
     /// Get the info about all the streams.
     ///
     /// Authentication is required, and the permission to read the streams.
@@ -165,15 +165,15 @@ pub trait StreamClientV2 {
     /// Update a stream by unique ID or name.
     ///
     /// Authentication is required, and the permission to manage the streams.
-    async fn update_stream(&self, stream_id: Identifier, name: &str) -> Result<(), IggyError>;
+    async fn update_stream(&self, stream_id: &Identifier, name: &str) -> Result<(), IggyError>;
     /// Delete a stream by unique ID or name.
     ///
     /// Authentication is required, and the permission to manage the streams.
-    async fn delete_stream(&self, stream_id: Identifier) -> Result<(), IggyError>;
+    async fn delete_stream(&self, stream_id: &Identifier) -> Result<(), IggyError>;
     /// Purge a stream by unique ID or name.
     ///
     /// Authentication is required, and the permission to manage the streams.
-    async fn purge_stream(&self, stream_id: Identifier) -> Result<(), IggyError>;
+    async fn purge_stream(&self, stream_id: &Identifier) -> Result<(), IggyError>;
 }
 
 /// This trait defines the methods to interact with the topic module.
@@ -184,20 +184,20 @@ pub trait TopicClientV2 {
     /// Authentication is required, and the permission to read the topics.
     async fn get_topic(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<TopicDetails, IggyError>;
     /// Get the info about all the topics.
     ///
     /// Authentication is required, and the permission to read the topics.
-    async fn get_topics(&self, stream_id: Identifier) -> Result<Vec<Topic>, IggyError>;
+    async fn get_topics(&self, stream_id: &Identifier) -> Result<Vec<Topic>, IggyError>;
     /// Create a new topic.
     ///
     /// Authentication is required, and the permission to manage the topics.
     #[allow(clippy::too_many_arguments)]
     async fn create_topic(
         &self,
-        stream_id: Identifier,
+        stream_id: &Identifier,
         name: &str,
         partitions_count: u32,
         replication_factor: Option<u8>,
@@ -210,8 +210,8 @@ pub trait TopicClientV2 {
     /// Authentication is required, and the permission to manage the topics.
     async fn update_topic(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         name: &str,
         replication_factor: Option<u8>,
         message_expiry: MessageExpiry,
@@ -222,16 +222,16 @@ pub trait TopicClientV2 {
     /// Authentication is required, and the permission to manage the topics.
     async fn delete_topic(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<(), IggyError>;
     /// Purge a topic by unique ID or name.
     ///
     /// Authentication is required, and the permission to manage the topics.
     async fn purge_topic(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<(), IggyError>;
 }
 
@@ -245,8 +245,8 @@ pub trait PartitionClientV2 {
     /// Authentication is required, and the permission to manage the partitions.
     async fn create_partitions(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), IggyError>;
     /// Delete last N partitions for a topic by unique ID or name.
@@ -256,8 +256,8 @@ pub trait PartitionClientV2 {
     /// Authentication is required, and the permission to manage the partitions.
     async fn delete_partitions(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), IggyError>;
 }
@@ -271,11 +271,11 @@ pub trait MessageClientV2 {
     #[allow(clippy::too_many_arguments)]
     async fn poll_messages(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partition_id: Option<u32>,
-        consumer: Consumer,
-        strategy: PollingStrategy,
+        consumer: &Consumer,
+        strategy: &PollingStrategy,
         count: u32,
         auto_commit: bool,
     ) -> Result<PolledMessages, IggyError>;
@@ -284,10 +284,10 @@ pub trait MessageClientV2 {
     /// Authentication is required, and the permission to send the messages.
     async fn send_messages(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        partitioning: Partitioning,
-        messages: Vec<Message>,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partitioning: &Partitioning,
+        messages: &mut [Message],
     ) -> Result<(), IggyError>;
 }
 
@@ -299,9 +299,9 @@ pub trait ConsumerOffsetClientV2 {
     /// Authentication is required, and the permission to poll the messages.
     async fn store_consumer_offset(
         &self,
-        consumer: Consumer,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partition_id: Option<u32>,
         offset: u64,
     ) -> Result<(), IggyError>;
@@ -310,9 +310,9 @@ pub trait ConsumerOffsetClientV2 {
     /// Authentication is required, and the permission to poll the messages.
     async fn get_consumer_offset(
         &self,
-        consumer: Consumer,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partition_id: Option<u32>,
     ) -> Result<ConsumerOffsetInfo, IggyError>;
 }
@@ -325,25 +325,25 @@ pub trait ConsumerGroupClientV2 {
     /// Authentication is required, and the permission to read the streams or topics.
     async fn get_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        group_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<ConsumerGroupDetails, IggyError>;
     /// Get the info about all the consumer groups for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to read the streams or topics.
     async fn get_consumer_groups(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<Vec<ConsumerGroup>, IggyError>;
     /// Create a new consumer group for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to manage the streams or topics.
     async fn create_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         group_id: u32,
         name: &str,
     ) -> Result<(), IggyError>;
@@ -352,26 +352,26 @@ pub trait ConsumerGroupClientV2 {
     /// Authentication is required, and the permission to manage the streams or topics.
     async fn delete_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        group_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<(), IggyError>;
     /// Join a consumer group by unique ID or name for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to read the streams or topics.
     async fn join_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        group_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<(), IggyError>;
     /// Leave a consumer group by unique ID or name for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to read the streams or topics.
     async fn leave_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        group_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<(), IggyError>;
 }

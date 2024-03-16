@@ -26,22 +26,22 @@ impl<B: BinaryClient> MessageClient for B {
 impl<B: BinaryClientV2> MessageClientV2 for B {
     async fn poll_messages(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partition_id: Option<u32>,
-        consumer: Consumer,
-        strategy: PollingStrategy,
+        consumer: &Consumer,
+        strategy: &PollingStrategy,
         count: u32,
         auto_commit: bool,
     ) -> Result<PolledMessages, IggyError> {
         poll_messages(
             self,
             &PollMessages {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
                 partition_id,
-                consumer,
-                strategy,
+                consumer: consumer.clone(),
+                strategy: *strategy,
                 count,
                 auto_commit,
             },
@@ -51,18 +51,18 @@ impl<B: BinaryClientV2> MessageClientV2 for B {
 
     async fn send_messages(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        partitioning: Partitioning,
-        messages: Vec<Message>,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partitioning: &Partitioning,
+        messages: &mut [Message],
     ) -> Result<(), IggyError> {
         send_messages(
             self,
             &mut SendMessages {
-                stream_id,
-                topic_id,
-                partitioning,
-                messages,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
+                partitioning: partitioning.clone(),
+                messages: messages.to_vec(), // TODO: Improve this in a final version
             },
         )
         .await

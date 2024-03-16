@@ -69,7 +69,7 @@ impl Default for QuicClientConfig {
 /// - `keep_alive_interval`: Default is 5000 milliseconds.
 /// - `max_idle_timeout`: Default is 10,000 milliseconds.
 /// - `validate_certificate`: Default is false (certificate validation is disabled).
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct QuicClientConfigBuilder {
     config: QuicClientConfig,
 }

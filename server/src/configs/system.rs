@@ -128,7 +128,11 @@ impl SystemConfig {
     }
 
     pub fn get_compatibility_backup_path(&self) -> String {
-        format!("{}/{}", self.get_backup_path(), self.backup.compatibility.path)
+        format!(
+            "{}/{}",
+            self.get_backup_path(),
+            self.backup.compatibility.path
+        )
     }
 
     pub fn get_database_path(&self) -> String {

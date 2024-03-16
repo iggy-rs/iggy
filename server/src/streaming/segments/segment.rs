@@ -163,8 +163,12 @@ impl Segment {
                 }
 
                 let compat_backup_path = self.config.get_compatibility_backup_path();
-                let conversion_writer =
-                    ConversionWriter::init(log_path, index_path, time_index_path, &compat_backup_path, schema);
+                let conversion_writer = ConversionWriter::init(
+                    log_path,
+                    index_path,
+                    time_index_path,
+                    &compat_backup_path,
+                );
                 conversion_writer.create_alt_directories().await?;
                 let retained_batch_writer = RetainedBatchWriter::init(
                     file::append(&conversion_writer.alt_log_path).await?,

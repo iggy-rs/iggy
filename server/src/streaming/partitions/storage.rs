@@ -243,13 +243,14 @@ impl Storage<Partition> for FilePartitionStorage {
                         info!("Detected changes in binary schema for partition with ID: {} and segment with start offset: {}", partition.partition_id, start_offset);
                         segment.convert_segment_from_schema(schema).await?;
                     }
-                    Err(_) if idx + 1 == samplers_count => {
+                    Err(err) if idx + 1 == samplers_count => {
                         // Didn't find any message format, return an error
-                        return Err(IggyError::CannotLoadResource(anyhow::anyhow!(
+                        return Err(IggyError::CannotLoadResource(anyhow::anyhow!(err)
+                            .context(format!(
                             "Failed to find a valid message format, when trying to perform a conversion for partition with ID: {} and segment with start offset: {}.",
                             partition.partition_id,
                             start_offset
-                        )));
+                            ))));
                     }
                     _ => {}
                 }

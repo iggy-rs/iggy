@@ -1,9 +1,9 @@
 use super::message_snapshot::MessageSnapshot;
 use crate::compat::message_converter::Extendable;
+use crate::server_error::ServerError;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
-use crate::server_error::ServerError;
 
 pub struct RetainedMessageBatchSnapshot {
     pub base_offset: u64,

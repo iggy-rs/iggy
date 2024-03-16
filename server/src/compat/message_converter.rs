@@ -5,6 +5,7 @@ use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 
+use crate::streaming::segments::storage::{INDEX_SIZE, TIME_INDEX_SIZE};
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 pub trait Extendable {
@@ -46,7 +47,7 @@ where
         relative_offset: u32,
         writer: &mut W,
     ) -> Result<(), IggyError> {
-        let mut index_bytes = BytesMut::with_capacity(8);
+        let mut index_bytes = BytesMut::with_capacity(INDEX_SIZE as usize);
         index_bytes.put_u32_le(relative_offset);
         index_bytes.put_u32_le(position);
 
@@ -60,7 +61,7 @@ where
         relative_offset: u32,
         writer: &mut W,
     ) -> Result<(), IggyError> {
-        let mut time_index_bytes = BytesMut::with_capacity(12);
+        let mut time_index_bytes = BytesMut::with_capacity(TIME_INDEX_SIZE as usize);
         time_index_bytes.put_u32_le(relative_offset);
         time_index_bytes.put_u64_le(timestamp);
 

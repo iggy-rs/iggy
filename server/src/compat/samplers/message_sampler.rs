@@ -1,11 +1,11 @@
 use crate::compat::binary_schema::BinarySchema;
 use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::compat::snapshots::message_snapshot::MessageSnapshot;
+use crate::server_error::ServerError;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use tokio::io::AsyncReadExt;
-use crate::server_error::ServerError;
 
 pub struct MessageSampler {
     pub segment_start_offset: u64,

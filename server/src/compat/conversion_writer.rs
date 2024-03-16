@@ -1,7 +1,6 @@
 use crate::streaming::utils::file;
 use iggy::error::IggyError;
 use tracing::trace;
-use crate::compat::binary_schema::BinarySchema;
 
 //TODO (numinex) - Make this writer transactional
 pub struct ConversionWriter<'w> {
@@ -22,7 +21,6 @@ impl<'w> ConversionWriter<'w> {
         index_path: &'w str,
         time_index_path: &'w str,
         compat_backup_path: &'w str,
-        schema: BinarySchema,
     ) -> ConversionWriter<'w> {
         ConversionWriter {
             log_path,
@@ -35,7 +33,7 @@ impl<'w> ConversionWriter<'w> {
                 time_index_path.split('.').next().unwrap(),
                 "timeindex"
             ),
-            compat_backup_path
+            compat_backup_path,
         }
     }
 

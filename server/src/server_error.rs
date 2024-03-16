@@ -34,7 +34,7 @@ pub enum ServerError {
     #[error("Command length error: {0}")]
     CommandLengthError(String),
     #[error("Cannot read message, when performing format conversion, {0}")]
-    CannotReadMessageFormatConversion(String),
+    InvalidMessageFieldFormatConversionSampling(String),
     #[error("Invalid message offset, when performing format conversion")]
     InvalidMessageOffsetFormatConversion,
     #[error("Invalid batch base offset, when performing format conversion")]

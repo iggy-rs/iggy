@@ -46,8 +46,14 @@ impl<B: BinaryClient> StreamClient for B {
 
 #[async_trait::async_trait]
 impl<B: BinaryClientV2> StreamClientV2 for B {
-    async fn get_stream(&self, stream_id: Identifier) -> Result<StreamDetails, IggyError> {
-        get_stream(self, &GetStream { stream_id }).await
+    async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
+        get_stream(
+            self,
+            &GetStream {
+                stream_id: stream_id.clone(),
+            },
+        )
+        .await
     }
 
     async fn get_streams(&self) -> Result<Vec<Stream>, IggyError> {
@@ -65,23 +71,35 @@ impl<B: BinaryClientV2> StreamClientV2 for B {
         .await
     }
 
-    async fn update_stream(&self, stream_id: Identifier, name: &str) -> Result<(), IggyError> {
+    async fn update_stream(&self, stream_id: &Identifier, name: &str) -> Result<(), IggyError> {
         update_stream(
             self,
             &UpdateStream {
-                stream_id,
+                stream_id: stream_id.clone(),
                 name: name.to_string(),
             },
         )
         .await
     }
 
-    async fn delete_stream(&self, stream_id: Identifier) -> Result<(), IggyError> {
-        delete_stream(self, &DeleteStream { stream_id }).await
+    async fn delete_stream(&self, stream_id: &Identifier) -> Result<(), IggyError> {
+        delete_stream(
+            self,
+            &DeleteStream {
+                stream_id: stream_id.clone(),
+            },
+        )
+        .await
     }
 
-    async fn purge_stream(&self, stream_id: Identifier) -> Result<(), IggyError> {
-        purge_stream(self, &PurgeStream { stream_id }).await
+    async fn purge_stream(&self, stream_id: &Identifier) -> Result<(), IggyError> {
+        purge_stream(
+            self,
+            &PurgeStream {
+                stream_id: stream_id.clone(),
+            },
+        )
+        .await
     }
 }
 

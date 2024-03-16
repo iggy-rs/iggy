@@ -29,18 +29,18 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
 impl<B: BinaryClientV2> ConsumerOffsetClientV2 for B {
     async fn store_consumer_offset(
         &self,
-        consumer: Consumer,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partition_id: Option<u32>,
         offset: u64,
     ) -> Result<(), IggyError> {
         store_consumer_offset(
             self,
             &StoreConsumerOffset {
-                consumer,
-                stream_id,
-                topic_id,
+                consumer: consumer.clone(),
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
                 partition_id,
                 offset,
             },
@@ -50,17 +50,17 @@ impl<B: BinaryClientV2> ConsumerOffsetClientV2 for B {
 
     async fn get_consumer_offset(
         &self,
-        consumer: Consumer,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         partition_id: Option<u32>,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
         get_consumer_offset(
             self,
             &GetConsumerOffset {
-                consumer,
-                stream_id,
-                topic_id,
+                consumer: consumer.clone(),
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
                 partition_id,
             },
         )

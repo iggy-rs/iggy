@@ -50,16 +50,16 @@ impl ConsumerGroupClient for HttpClient {
 impl ConsumerGroupClientV2 for HttpClient {
     async fn get_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        group_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<ConsumerGroupDetails, IggyError> {
         get_consumer_group(
             self,
             &GetConsumerGroup {
-                stream_id,
-                topic_id,
-                consumer_group_id: group_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
+                consumer_group_id: group_id.clone(),
             },
         )
         .await
@@ -67,14 +67,14 @@ impl ConsumerGroupClientV2 for HttpClient {
 
     async fn get_consumer_groups(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<Vec<ConsumerGroup>, IggyError> {
         get_consumer_groups(
             self,
             &GetConsumerGroups {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
             },
         )
         .await
@@ -82,16 +82,16 @@ impl ConsumerGroupClientV2 for HttpClient {
 
     async fn create_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         group_id: u32,
         name: &str,
     ) -> Result<(), IggyError> {
         create_consumer_group(
             self,
             &CreateConsumerGroup {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
                 consumer_group_id: group_id,
                 name: name.to_string(),
             },
@@ -101,16 +101,16 @@ impl ConsumerGroupClientV2 for HttpClient {
 
     async fn delete_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        group_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<(), IggyError> {
         delete_consumer_group(
             self,
             &DeleteConsumerGroup {
-                stream_id,
-                topic_id,
-                consumer_group_id: group_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
+                consumer_group_id: group_id.clone(),
             },
         )
         .await
@@ -118,16 +118,16 @@ impl ConsumerGroupClientV2 for HttpClient {
 
     async fn join_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        group_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<(), IggyError> {
         join_consumer_group(
             self,
             &JoinConsumerGroup {
-                stream_id,
-                topic_id,
-                consumer_group_id: group_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
+                consumer_group_id: group_id.clone(),
             },
         )
         .await
@@ -135,16 +135,16 @@ impl ConsumerGroupClientV2 for HttpClient {
 
     async fn leave_consumer_group(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        group_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<(), IggyError> {
         leave_consumer_group(
             self,
             &LeaveConsumerGroup {
-                stream_id,
-                topic_id,
-                consumer_group_id: group_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
+                consumer_group_id: group_id.clone(),
             },
         )
         .await

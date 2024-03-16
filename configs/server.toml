@@ -225,8 +225,9 @@ path = "local_data"
 # Path for storing backup.
 path = "backup"
 
+# Compatibility conversion configuration
 [system.backup.compatibility]
-# Path for storing backup.
+# Subpath of the backup directory where converted segment data is stored after compatibility conversion.
 path = "compatibility"
 
 # Database configuration.

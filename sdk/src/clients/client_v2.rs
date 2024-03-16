@@ -42,6 +42,12 @@ use crate::utils::byte_size::IggyByteSize;
 use crate::utils::message_expiry::MessageExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 
+// The default interval between sending the messages as batches in the background.
+pub const DEFAULT_SEND_MESSAGES_INTERVAL_MS: u64 = 100;
+
+// The default interval between polling the messages in the background.
+pub const DEFAULT_POLL_MESSAGES_INTERVAL_MS: u64 = 100;
+
 /// The next version of main client struct which implements all the `ClientV2` traits and wraps the underlying low-level client for the specific transport.
 /// It also provides additional functionality (outside of the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
 #[derive(Debug)]
@@ -106,7 +112,7 @@ impl Default for SendMessagesConfig {
     fn default() -> Self {
         SendMessagesConfig {
             enabled: false,
-            interval: 100,
+            interval: DEFAULT_SEND_MESSAGES_INTERVAL_MS,
             max_messages: 1000,
         }
     }
@@ -115,7 +121,7 @@ impl Default for SendMessagesConfig {
 impl Default for PollMessagesConfig {
     fn default() -> Self {
         PollMessagesConfig {
-            interval: 100,
+            interval: DEFAULT_POLL_MESSAGES_INTERVAL_MS,
             store_offset_kind: StoreOffsetKind::WhenMessagesAreProcessed,
         }
     }
@@ -211,7 +217,7 @@ impl IggyClientV2 {
         F: Fn(PolledMessage) + Send + Sync + 'static,
     {
         let client = self.client.clone();
-        let mut interval = Duration::from_millis(100);
+        let mut interval = Duration::from_millis(DEFAULT_POLL_MESSAGES_INTERVAL_MS);
         let message_handler = self.message_handler.clone();
         let message_channel_sender = self.message_channel_sender.clone();
         let mut store_offset_after_processing_each_message = false;
@@ -359,8 +365,8 @@ impl IggyClientV2 {
                 }
 
                 let mut initialized = false;
-                let mut stream_id = Identifier::numeric(1).unwrap();
-                let mut topic_id = Identifier::numeric(1).unwrap();
+                let mut stream_id = Identifier::default();
+                let mut topic_id = Identifier::default();
                 let mut key = Partitioning::partition_id(1);
                 let mut batch_messages = true;
 

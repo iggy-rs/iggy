@@ -364,15 +364,14 @@ impl SegmentStorage for FileSegmentStorage {
     async fn load_index_range(
         &self,
         segment: &Segment,
-        segment_start_offset: u64,
-        mut index_start_offset: u64,
+        index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError> {
         trace!(
             "Loading index range for offsets: {} to {}, segment starts at: {}",
             index_start_offset,
             index_end_offset,
-            segment_start_offset
+            segment.start_offset
         );
 
         if index_start_offset > index_end_offset {
@@ -391,12 +390,9 @@ impl SegmentStorage for FileSegmentStorage {
         }
 
         trace!("Index file length: {}.", file_length);
-        if index_start_offset < segment_start_offset {
-            index_start_offset = segment_start_offset - 1;
-        }
 
-        let relative_start_offset = (index_start_offset - segment_start_offset) as u32;
-        let relative_end_offset = (index_end_offset - segment_start_offset) as u32;
+        let relative_start_offset = (index_start_offset - segment.start_offset) as u32;
+        let relative_end_offset = (index_end_offset - segment.start_offset) as u32;
         let start_seek_position = file_length;
 
         trace!(

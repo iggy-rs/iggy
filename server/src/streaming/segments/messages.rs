@@ -160,7 +160,7 @@ impl Segment {
         match self
             .storage
             .segment
-            .load_index_range(self, self.start_offset, start_offset, end_offset)
+            .load_index_range(self, start_offset, end_offset)
             .await?
         {
             Some(index_range) => {

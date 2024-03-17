@@ -115,7 +115,6 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn load_index_range(
         &self,
         segment: &Segment,
-        segment_start_offset: u64,
         index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
@@ -476,7 +475,6 @@ pub(crate) mod tests {
         async fn load_index_range(
             &self,
             _segment: &Segment,
-            _segment_start_offset: u64,
             _index_start_offset: u64,
             _index_end_offset: u64,
         ) -> Result<Option<IndexRange>, IggyError> {

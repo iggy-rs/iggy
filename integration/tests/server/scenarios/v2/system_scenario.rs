@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bytes::Bytes;
 
 use iggy::client_v2::{
@@ -563,7 +561,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
     // 36. Update the existing topic and ensure it's updated
     let updated_topic_name = format!("{}-updated", TOPIC_NAME);
     let updated_message_expiry = 1000;
-    let message_expiry_duration = Duration::from_secs(updated_message_expiry as u64);
+    let message_expiry_duration = updated_message_expiry.into();
     let updated_max_topic_size = IggyByteSize::from(0x1337);
     let updated_replication_factor = 5;
 
@@ -588,7 +586,10 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
         .unwrap();
 
     assert_eq!(updated_topic.name, updated_topic_name);
-    assert_eq!(updated_topic.message_expiry, Some(updated_message_expiry));
+    assert_eq!(
+        updated_topic.message_expiry,
+        Some(updated_message_expiry as u32)
+    );
     assert_eq!(updated_topic.max_topic_size, Some(updated_max_topic_size));
     assert_eq!(updated_topic.replication_factor, updated_replication_factor);
 

@@ -1,3 +1,4 @@
+use crate::utils::duration::IggyDuration;
 use humantime::format_duration;
 use humantime::Duration as HumanDuration;
 use std::fmt::Display;
@@ -9,7 +10,7 @@ use std::{convert::From, str::FromStr};
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum MessageExpiry {
     /// Set message expiry time to given value
-    ExpireDuration(Duration),
+    ExpireDuration(IggyDuration),
     /// Never expire messages
     NeverExpire,
 }
@@ -23,7 +24,7 @@ impl MessageExpiry {
 impl From<&MessageExpiry> for Option<u32> {
     fn from(value: &MessageExpiry) -> Self {
         match value {
-            MessageExpiry::ExpireDuration(value) => Some(value.as_secs() as u32),
+            MessageExpiry::ExpireDuration(value) => Some(value.as_secs()),
             MessageExpiry::NeverExpire => None,
         }
     }
@@ -33,7 +34,7 @@ impl Display for MessageExpiry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NeverExpire => write!(f, "none"),
-            Self::ExpireDuration(value) => write!(f, "{}", format_duration(*value)),
+            Self::ExpireDuration(value) => write!(f, "{value}"),
         }
     }
 }
@@ -77,7 +78,7 @@ impl FromStr for MessageExpiry {
                     ));
                 }
 
-                MessageExpiry::ExpireDuration(Duration::from_secs(duration.as_secs()))
+                MessageExpiry::ExpireDuration(IggyDuration::from(duration))
             }
         };
 
@@ -88,7 +89,7 @@ impl FromStr for MessageExpiry {
 impl From<MessageExpiry> for Option<u32> {
     fn from(val: MessageExpiry) -> Self {
         match val {
-            MessageExpiry::ExpireDuration(value) => Some(value.as_secs() as u32),
+            MessageExpiry::ExpireDuration(value) => Some(value.as_secs()),
             MessageExpiry::NeverExpire => None,
         }
     }
@@ -116,19 +117,19 @@ mod tests {
         );
         assert_eq!(
             MessageExpiry::from_str("15days").unwrap(),
-            MessageExpiry::ExpireDuration(Duration::from_secs(60 * 60 * 24 * 15))
+            MessageExpiry::ExpireDuration(IggyDuration::from(60 * 60 * 24 * 15))
         );
         assert_eq!(
             MessageExpiry::from_str("2min").unwrap(),
-            MessageExpiry::ExpireDuration(Duration::from_secs(60 * 2))
+            MessageExpiry::ExpireDuration(IggyDuration::from(60 * 2))
         );
         assert_eq!(
             MessageExpiry::from_str("1s").unwrap(),
-            MessageExpiry::ExpireDuration(Duration::from_secs(1))
+            MessageExpiry::ExpireDuration(IggyDuration::from(1))
         );
         assert_eq!(
             MessageExpiry::from_str("15days 2min 2s").unwrap(),
-            MessageExpiry::ExpireDuration(Duration::from_secs(60 * 60 * 24 * 15 + 60 * 2 + 2))
+            MessageExpiry::ExpireDuration(IggyDuration::from(60 * 60 * 24 * 15 + 60 * 2 + 2))
         );
     }
 
@@ -149,17 +150,17 @@ mod tests {
             MessageExpiry::NeverExpire
         );
         assert_eq!(
-            MessageExpiry::NeverExpire + MessageExpiry::ExpireDuration(Duration::from_secs(3)),
-            MessageExpiry::ExpireDuration(Duration::from_secs(3))
+            MessageExpiry::NeverExpire + MessageExpiry::ExpireDuration(IggyDuration::from(3)),
+            MessageExpiry::ExpireDuration(IggyDuration::from(3))
         );
         assert_eq!(
-            MessageExpiry::ExpireDuration(Duration::from_secs(5)) + MessageExpiry::NeverExpire,
-            MessageExpiry::ExpireDuration(Duration::from_secs(5))
+            MessageExpiry::ExpireDuration(IggyDuration::from(5)) + MessageExpiry::NeverExpire,
+            MessageExpiry::ExpireDuration(IggyDuration::from(5))
         );
         assert_eq!(
-            MessageExpiry::ExpireDuration(Duration::from_secs(5))
-                + MessageExpiry::ExpireDuration(Duration::from_secs(3)),
-            MessageExpiry::ExpireDuration(Duration::from_secs(8))
+            MessageExpiry::ExpireDuration(IggyDuration::from(5))
+                + MessageExpiry::ExpireDuration(IggyDuration::from(3)),
+            MessageExpiry::ExpireDuration(IggyDuration::from(8))
         );
     }
 
@@ -173,13 +174,13 @@ mod tests {
         );
         let x = vec![
             MessageExpiry::NeverExpire,
-            MessageExpiry::ExpireDuration(Duration::from_secs(333)),
+            MessageExpiry::ExpireDuration(IggyDuration::from(333)),
             MessageExpiry::NeverExpire,
-            MessageExpiry::ExpireDuration(Duration::from_secs(123)),
+            MessageExpiry::ExpireDuration(IggyDuration::from(123)),
         ];
         assert_eq!(
             x.into_iter().sum::<MessageExpiry>(),
-            MessageExpiry::ExpireDuration(Duration::from_secs(456))
+            MessageExpiry::ExpireDuration(IggyDuration::from(456))
         );
     }
 
@@ -187,7 +188,7 @@ mod tests {
     fn should_check_display_message_expiry() {
         assert_eq!(MessageExpiry::NeverExpire.to_string(), "none");
         assert_eq!(
-            MessageExpiry::ExpireDuration(Duration::from_secs(333333)).to_string(),
+            MessageExpiry::ExpireDuration(IggyDuration::from(333333)).to_string(),
             "3days 20h 35m 33s"
         );
     }
@@ -201,7 +202,7 @@ mod tests {
 
     #[test]
     fn should_calculate_some_seconds_from_message_expire() {
-        let duration = std::time::Duration::new(42, 0);
+        let duration = IggyDuration::new(std::time::Duration::new(42, 0));
         let message_expiry = MessageExpiry::ExpireDuration(duration);
         let result: Option<u32> = From::from(&message_expiry);
         assert_eq!(result, Some(42));
@@ -211,13 +212,13 @@ mod tests {
     fn should_create_new_message_expiry_from_vec() {
         let some_values = vec![
             MessageExpiry::NeverExpire,
-            MessageExpiry::ExpireDuration(Duration::from_secs(3)),
-            MessageExpiry::ExpireDuration(Duration::from_secs(2)),
-            MessageExpiry::ExpireDuration(Duration::from_secs(1)),
+            MessageExpiry::ExpireDuration(IggyDuration::from(3)),
+            MessageExpiry::ExpireDuration(IggyDuration::from(2)),
+            MessageExpiry::ExpireDuration(IggyDuration::from(1)),
         ];
         assert_eq!(
             MessageExpiry::new(Some(some_values)),
-            Some(MessageExpiry::ExpireDuration(Duration::from_secs(6)))
+            Some(MessageExpiry::ExpireDuration(IggyDuration::from(6)))
         );
         assert_eq!(MessageExpiry::new(None), None);
         let none_values = vec![MessageExpiry::NeverExpire; 10];

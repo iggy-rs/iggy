@@ -120,6 +120,11 @@ pub trait SegmentStorage: Storage<Segment> {
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
     async fn save_index(&self, segment: &Segment) -> Result<(), IggyError>;
+    async fn try_load_time_index_for_timestamp(
+        &self,
+        segment: &Segment,
+        timestamp: u64,
+    ) -> Result<Option<TimeIndex>, IggyError>;
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
     async fn load_last_time_index(&self, segment: &Segment)
         -> Result<Option<TimeIndex>, IggyError>;

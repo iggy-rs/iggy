@@ -455,6 +455,39 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(())
     }
 
+    async fn try_load_time_index_for_timestamp(
+        &self,
+        segment: &Segment,
+        timestamp: u64,
+    ) -> Result<Option<TimeIndex>, IggyError> {
+        trace!("Loading time indexes from file...");
+        let file = file::open(&segment.time_index_path).await?;
+        let file_size = file.metadata().await?.len() as usize;
+        if file_size == 0 {
+            trace!("Time index file is empty.");
+            return Ok(Some(TimeIndex::default()));
+        }
+
+        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        reader.seek(SeekFrom::End(0)).await?;
+
+        let mut read_bytes = 0;
+        loop {
+            let offset = reader.read_u32_le().await?;
+            let time = reader.read_u64_le().await?;
+            if time <= timestamp {
+                return Ok(Some(TimeIndex {
+                    relative_offset: offset,
+                    timestamp: time,
+                }));
+            }
+            read_bytes += TIME_INDEX_SIZE as usize;
+            if read_bytes == file_size {
+                return Ok(None);
+            }
+        }
+    }
+
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError> {
         trace!("Loading time indexes from file...");
         let file = file::open(&segment.time_index_path).await?;

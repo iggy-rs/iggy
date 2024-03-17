@@ -3,7 +3,9 @@ use async_trait::async_trait;
 use derive_more::Display;
 use futures::executor::block_on;
 use iggy::client::{Client, StreamClient, UserClient};
+use iggy::client_v2::{ClientV2, StreamClientV2, UserClientV2};
 use iggy::clients::client::IggyClient;
+use iggy::clients::client_v2::IggyClientV2;
 use iggy::identifier::Identifier;
 use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus::Active;
@@ -41,6 +43,11 @@ pub enum IpAddrKind {
 #[async_trait]
 pub trait ClientFactory: Sync + Send {
     async fn create_client(&self) -> Box<dyn Client>;
+}
+
+#[async_trait]
+pub trait ClientFactoryV2: Sync + Send {
+    async fn create_client(&self) -> Box<dyn ClientV2>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Display)]
@@ -502,5 +509,13 @@ pub async fn assert_clean_system(system_client: &IggyClient) {
     assert!(streams.is_empty());
 
     let users = system_client.get_users(&GetUsers {}).await.unwrap();
+    assert_eq!(users.len(), 1);
+}
+
+pub async fn assert_clean_system_v2(system_client: &IggyClientV2) {
+    let streams = system_client.get_streams().await.unwrap();
+    assert!(streams.is_empty());
+
+    let users = system_client.get_users().await.unwrap();
     assert_eq!(users.len(), 1);
 }

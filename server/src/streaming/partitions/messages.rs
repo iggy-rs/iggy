@@ -5,7 +5,6 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
-use crate::streaming::segments::time_index::TimeIndex;
 use bytes::BytesMut;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
@@ -37,66 +36,74 @@ impl Partition {
             return Ok(EMPTY_MESSAGES);
         }
 
-        let result = self
-            .segments
-            .iter()
-            .rev()
-            .find_map(|segment| {
-                segment.time_indexes.as_ref().and_then(|time_indexes| {
-                    if time_indexes.is_empty() {
-                        return None;
-                    }
-
-                    time_indexes
-                        .iter()
-                        .rposition(|time_index| time_index.timestamp <= timestamp)
-                        .map(|idx| {
-                            let found_index = time_indexes[idx];
-                            let start_offset =
-                                segment.start_offset + found_index.relative_offset as u64;
-                            trace!(
-                                "Found start offset: {} for timestamp: {}.",
-                                start_offset,
-                                timestamp
-                            );
-                            if found_index.timestamp == timestamp {
-                                return self.get_messages_by_offset(start_offset, count);
-                            }
-
-                            let adjusted_count = self.calculate_adjusted_timestamp_message_count(
-                                count,
-                                timestamp,
-                                found_index.timestamp,
-                            );
-                            self.get_messages_by_offset(start_offset, adjusted_count)
-                        })
-                })
-            })
-            .or_else(|| {
-                let overfetch_value = self
-                    .segments
-                    .first()?
-                    .time_indexes
+        let mut found_index = None;
+        let mut start_offset = self.segments.last().unwrap().start_offset;
+        // Since index cache is configurable globally, not per segment we can handle it this way.
+        let cache_time_index = self.config.segment.cache_time_indexes;
+        if !cache_time_index {
+            for segment in self.segments.iter() {
+                let time_index = segment
+                    .storage
                     .as_ref()
-                    .map(|time_indexes| time_indexes.first().unwrap().relative_offset);
+                    .segment
+                    .try_load_time_index_for_timestamp(&segment, timestamp)
+                    .await?;
+                if time_index.is_none() {
+                    continue;
+                } else {
+                    found_index = time_index;
+                    start_offset =
+                        segment.start_offset + found_index.unwrap().relative_offset as u64;
+                    break;
+                }
+            }
+        } else {
+            start_offset = self.segments.first().unwrap().start_offset;
+            for segment in self.segments.iter().rev() {
+                let time_indexes = segment.time_indexes.as_ref().unwrap();
+                let time_index = time_indexes
+                    .iter()
+                    .rposition(|time_index| time_index.timestamp <= timestamp)
+                    .map(|idx| time_indexes[idx]);
+                if time_index.is_none() {
+                    continue;
+                } else {
+                    found_index = time_index;
+                    start_offset =
+                        segment.start_offset + found_index.unwrap().relative_offset as u64;
+                    break;
+                }
+            }
+        }
 
-                let first_time_index = TimeIndex::default();
-                let start_offset = first_time_index.relative_offset as u64;
-
-                overfetch_value.map(|overfetch_value| {
-                    self.get_messages_by_offset(start_offset, count + overfetch_value)
-                })
-            });
-
-        match result {
-            Some(result) => Ok(result
+        let found_index = found_index.unwrap_or_default();
+        trace!(
+            "Found start offset: {} for timestamp: {}.",
+            start_offset,
+            timestamp
+        );
+        if found_index.timestamp == timestamp {
+            return Ok(self
+                .get_messages_by_offset(start_offset, count)
                 .await?
                 .into_iter()
                 .filter(|msg| msg.timestamp >= timestamp)
                 .take(count as usize)
-                .collect()),
-            None => Ok(EMPTY_MESSAGES),
+                .collect());
         }
+
+        let adjusted_count = self.calculate_adjusted_timestamp_message_count(
+            count,
+            timestamp,
+            found_index.timestamp,
+        );
+        return Ok(self
+            .get_messages_by_offset(start_offset, adjusted_count)
+            .await?
+            .into_iter()
+            .filter(|msg| msg.timestamp >= timestamp)
+            .take(count as usize)
+            .collect());
     }
     fn calculate_adjusted_timestamp_message_count(
         &self,

@@ -125,7 +125,7 @@ impl Segment {
             self.current_offset
         );
 
-        if start_offset > end_offset || end_offset > self.current_offset {
+        if start_offset > end_offset {
             warn!(
                 "Cannot load messages from disk, invalid offset range: {} - {}.",
                 start_offset, end_offset

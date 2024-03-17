@@ -8,6 +8,7 @@ use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::{SegmentStorage, Storage};
 use crate::streaming::utils::file;
+use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, BytesMut};
@@ -469,17 +470,18 @@ impl SegmentStorage for FileSegmentStorage {
         }
 
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-        reader.seek(SeekFrom::End(0)).await?;
-
         let mut read_bytes = 0;
+        let mut idx_pred = HeadTailBuffer::new();
         loop {
             let offset = reader.read_u32_le().await?;
             let time = reader.read_u64_le().await?;
-            if time <= timestamp {
-                return Ok(Some(TimeIndex {
-                    relative_offset: offset,
-                    timestamp: time,
-                }));
+            let idx = TimeIndex {
+                relative_offset: offset,
+                timestamp: time,
+            };
+            idx_pred.push(idx);
+            if time >= timestamp {
+                return Ok(idx_pred.tail());
             }
             read_bytes += TIME_INDEX_SIZE as usize;
             if read_bytes == file_size {

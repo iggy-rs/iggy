@@ -4,7 +4,7 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::messages::send_messages::Message;
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::utils::timestamp::IggyTimestamp;
-use server::configs::system::{PartitionConfig, SystemConfig};
+use server::configs::system::{PartitionConfig, SegmentConfig, SystemConfig};
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;
@@ -22,9 +22,14 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
     let config = Arc::new(SystemConfig {
         path: setup.config.path.to_string(),
         partition: PartitionConfig {
-            messages_required_to_save: messages_count * 3,
+            messages_required_to_save: messages_count,
             enforce_fsync: true,
             ..Default::default()
+        },
+        segment: SegmentConfig {
+            size: "500MB".parse().unwrap(),
+            cache_indexes: false,
+            cache_time_indexes: false,
         },
         ..Default::default()
     });

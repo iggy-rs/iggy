@@ -36,13 +36,13 @@ pub(crate) enum PersonalAccessTokenAction {
 pub(crate) struct PersonalAccessTokenCreateArgs {
     /// Name of the personal access token
     pub(crate) name: String,
-    /// Personal access token expiry time in human readable format
+    /// Personal access token expiry time in human-readable format
     ///
-    /// Expiry time must be expressed in human readable format like 15days 2min 2s
+    /// Expiry time must be expressed in human-readable format like 15days 2min 2s
     /// ("none" or skipping parameter disables personal access token expiry)
     #[arg(value_parser = clap::value_parser!(PersonalAccessTokenExpiry), group = "store")]
     pub(crate) expiry: Option<Vec<PersonalAccessTokenExpiry>>,
-    /// Store token in in an underlying platform-specific secure store
+    /// Store token in an underlying platform-specific secure store
     ///
     /// Generated token is stored in a platform-specific secure storage without revealing
     /// its content to the user. It can be used to authenticate on iggy server using

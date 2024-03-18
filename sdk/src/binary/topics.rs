@@ -17,7 +17,7 @@ use crate::topics::get_topics::GetTopics;
 use crate::topics::purge_topic::PurgeTopic;
 use crate::topics::update_topic::UpdateTopic;
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::message_expiry::MessageExpiry;
+use crate::utils::expiry::IggyExpiry;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> TopicClient for B {
@@ -80,7 +80,7 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
         partitions_count: u32,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         create_topic(
@@ -104,7 +104,7 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
         topic_id: &Identifier,
         name: &str,
         replication_factor: Option<u8>,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         update_topic(

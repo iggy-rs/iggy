@@ -39,7 +39,7 @@ use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::message_expiry::MessageExpiry;
+use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 
 // The default interval between sending the messages as batches in the background.
@@ -679,7 +679,7 @@ impl TopicClientV2 for IggyClientV2 {
         partitions_count: u32,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         self.client
@@ -703,7 +703,7 @@ impl TopicClientV2 for IggyClientV2 {
         topic_id: &Identifier,
         name: &str,
         replication_factor: Option<u8>,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         self.client

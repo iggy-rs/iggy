@@ -3,7 +3,7 @@ use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::update_topic::UpdateTopic;
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::message_expiry::MessageExpiry;
+use crate::utils::expiry::IggyExpiry;
 use anyhow::Context;
 use async_trait::async_trait;
 use core::fmt;
@@ -11,7 +11,7 @@ use tracing::{event, Level};
 
 pub struct UpdateTopicCmd {
     update_topic: UpdateTopic,
-    message_expiry: MessageExpiry,
+    message_expiry: IggyExpiry,
     max_topic_size: IggyByteSize,
     replication_factor: u8,
 }
@@ -21,7 +21,7 @@ impl UpdateTopicCmd {
         stream_id: Identifier,
         topic_id: Identifier,
         name: String,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: IggyByteSize,
         replication_factor: u8,
     ) -> Self {

@@ -13,7 +13,7 @@ use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::messages::PolledMessage;
 use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::message_expiry::MessageExpiry;
+use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{assert_clean_system_v2, ClientFactoryV2};
 
 const STREAM_ID: u32 = 1;
@@ -110,7 +110,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
             PARTITIONS_COUNT,
             Some(1),
             Some(TOPIC_ID),
-            MessageExpiry::NeverExpire,
+            IggyExpiry::NeverExpire,
             None,
         )
         .await
@@ -192,7 +192,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
             PARTITIONS_COUNT,
             Some(1),
             Some(TOPIC_ID),
-            MessageExpiry::NeverExpire,
+            IggyExpiry::NeverExpire,
             None,
         )
         .await;
@@ -206,7 +206,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
             PARTITIONS_COUNT,
             Some(1),
             Some(TOPIC_ID + 1),
-            MessageExpiry::NeverExpire,
+            IggyExpiry::NeverExpire,
             None,
         )
         .await;
@@ -571,7 +571,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
             &Identifier::numeric(TOPIC_ID).unwrap(),
             &updated_topic_name,
             Some(updated_replication_factor),
-            MessageExpiry::ExpireDuration(message_expiry_duration),
+            IggyExpiry::ExpireDuration(message_expiry_duration),
             Some(updated_max_topic_size),
         )
         .await
@@ -704,7 +704,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
             PARTITIONS_COUNT,
             Some(1),
             None,
-            MessageExpiry::NeverExpire,
+            IggyExpiry::NeverExpire,
             None,
         )
         .await

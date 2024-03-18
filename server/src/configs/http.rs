@@ -15,7 +15,7 @@ pub struct HttpConfig {
     pub tls: HttpTlsConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HttpCorsConfig {
     pub enabled: bool,
     pub allowed_methods: Vec<String>,
@@ -47,7 +47,7 @@ pub struct HttpJwtConfig {
     pub use_base64_secret: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HttpMetricsConfig {
     pub enabled: bool,
     pub endpoint: String,
@@ -59,7 +59,7 @@ pub enum JwtSecret {
     Base64(String),
 }
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct HttpTlsConfig {
     pub enabled: bool,
     pub cert_file: String,

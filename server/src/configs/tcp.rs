@@ -7,7 +7,7 @@ pub struct TcpConfig {
     pub tls: TcpTlsConfig,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TcpTlsConfig {
     pub enabled: bool,
     pub certificate: String,

@@ -78,7 +78,7 @@ pub struct RetentionPolicyConfig {
     pub max_topic_size: IggyByteSize,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct EncryptionConfig {
     pub enabled: bool,
     pub key: String,

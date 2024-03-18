@@ -11,7 +11,7 @@ use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
 use async_trait::async_trait;
-use bytes::{Buf, BufMut, BytesMut};
+use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
@@ -388,43 +388,39 @@ impl SegmentStorage for FileSegmentStorage {
             trace!("Index file is empty.");
             return Ok(None);
         }
-
         trace!("Index file length: {}.", file_length);
-
         let relative_start_offset = (index_start_offset - segment.start_offset) as u32;
         let relative_end_offset = (index_end_offset - segment.start_offset) as u32;
-        let start_seek_position = file_length;
 
         trace!(
             "Seeking to index range: {}...{}",
             relative_start_offset,
             relative_end_offset,
         );
-
+        let mut idx_pred = HeadTailBuffer::new();
         let mut index_range = IndexRange::default();
-        let mut start_position = 0;
-        let mut end_position = 0;
+        let mut read_bytes = 0;
+
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-        reader
-            .seek(SeekFrom::End(start_seek_position as i64))
-            .await?;
-        while reader.buffer().has_remaining() {
-            let position = reader.read_u32_le().await?;
+        loop {
             let relative_offset = reader.read_u32_le().await?;
+            let position = reader.read_u32_le().await?;
+            read_bytes += INDEX_SIZE;
+            let idx = Index {
+                relative_offset,
+                position,
+            };
+            idx_pred.push(idx);
+
+            if relative_offset >= relative_start_offset {
+                index_range.start = idx_pred.tail().unwrap_or_default();
+            }
             if relative_offset >= relative_end_offset {
-                end_position = position;
-                index_range.end = Index {
-                    relative_offset,
-                    position,
-                }
+                index_range.end = idx;
+                break;
             }
 
-            if relative_offset <= relative_start_offset {
-                start_position = position;
-                index_range.end = Index {
-                    relative_offset,
-                    position,
-                };
+            if read_bytes == file_length {
                 break;
             }
         }
@@ -433,8 +429,8 @@ impl SegmentStorage for FileSegmentStorage {
             "Loaded index range: {}...{}, position range: {}...{}",
             relative_start_offset,
             relative_end_offset,
-            start_position,
-            end_position
+            index_range.start.position,
+            index_range.end.position
         );
         Ok(Some(index_range))
     }

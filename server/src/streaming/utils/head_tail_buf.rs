@@ -1,3 +1,4 @@
+#[derive(Default)]
 pub struct HeadTailBuffer<T>
 where
     T: Default + Eq + Copy,

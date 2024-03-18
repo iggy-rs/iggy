@@ -2,10 +2,16 @@ use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
 use iggy::error::IggyError::InvalidOffset;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Eq, Clone, Copy, Default)]
 pub struct Index {
     pub relative_offset: u32,
     pub position: u32,
+}
+
+impl PartialEq<Self> for Index {
+    fn eq(&self, other: &Self) -> bool {
+        self.relative_offset == other.relative_offset
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default)]

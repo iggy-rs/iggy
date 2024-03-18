@@ -485,6 +485,14 @@ pub(crate) mod tests {
             Ok(())
         }
 
+        async fn try_load_time_index_for_timestamp(
+            &self,
+            _segment: &Segment,
+            _timestamp: u64,
+        ) -> Result<Option<TimeIndex>, IggyError> {
+            Ok(None)
+        }
+
         async fn load_all_time_indexes(
             &self,
             _segment: &Segment,

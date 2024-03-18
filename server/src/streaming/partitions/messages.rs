@@ -46,7 +46,7 @@ impl Partition {
                     .storage
                     .as_ref()
                     .segment
-                    .try_load_time_index_for_timestamp(&segment, timestamp)
+                    .try_load_time_index_for_timestamp(segment, timestamp)
                     .await?;
                 if time_index.is_none() {
                     continue;
@@ -97,13 +97,13 @@ impl Partition {
             timestamp,
             found_index.timestamp,
         );
-        return Ok(self
+        Ok(self
             .get_messages_by_offset(start_offset, adjusted_count)
             .await?
             .into_iter()
             .filter(|msg| msg.timestamp >= timestamp)
             .take(count as usize)
-            .collect());
+            .collect())
     }
     fn calculate_adjusted_timestamp_message_count(
         &self,

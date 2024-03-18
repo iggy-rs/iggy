@@ -7,14 +7,17 @@ use crate::configs::server::{
     PersonalAccessTokenConfig, ServerConfig,
 };
 use crate::configs::system::{
-    CacheConfig, CompatibilityConfig, CompressionConfig, DatabaseConfig, EncryptionConfig,
-    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RetentionPolicyConfig,
-    RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, DatabaseConfig,
+    EncryptionConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig,
+    RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
 
-use super::system::BackupConfig;
+static_toml::static_toml! {
+    // static_toml crate always starts from CARGO_MANIFEST_DIR (in this case iggy-server root directory)
+    static SERVER_CONFIG = include_toml!("../configs/server.toml");
+}
 
 impl Default for ServerConfig {
     fn default() -> ServerConfig {
@@ -34,14 +37,18 @@ impl Default for QuicConfig {
     fn default() -> QuicConfig {
         QuicConfig {
             enabled: true,
-            address: "127.0.0.1:8080".to_string(),
-            max_concurrent_bidi_streams: 10000,
-            datagram_send_buffer_size: "100KB".parse().unwrap(),
-            initial_mtu: "10KB".parse().unwrap(),
-            send_window: "100KB".parse().unwrap(),
-            receive_window: "100KB".parse().unwrap(),
-            keep_alive_interval: "5s".parse().unwrap(),
-            max_idle_timeout: "10s".parse().unwrap(),
+            address: SERVER_CONFIG.quic.address.parse().unwrap(),
+            max_concurrent_bidi_streams: SERVER_CONFIG.quic.max_concurrent_bidi_streams as u64,
+            datagram_send_buffer_size: SERVER_CONFIG
+                .quic
+                .datagram_send_buffer_size
+                .parse()
+                .unwrap(),
+            initial_mtu: SERVER_CONFIG.quic.initial_mtu.parse().unwrap(),
+            send_window: SERVER_CONFIG.quic.send_window.parse().unwrap(),
+            receive_window: SERVER_CONFIG.quic.receive_window.parse().unwrap(),
+            keep_alive_interval: SERVER_CONFIG.quic.keep_alive_interval.parse().unwrap(),
+            max_idle_timeout: SERVER_CONFIG.quic.max_idle_timeout.parse().unwrap(),
             certificate: QuicCertificateConfig::default(),
         }
     }
@@ -50,9 +57,9 @@ impl Default for QuicConfig {
 impl Default for QuicCertificateConfig {
     fn default() -> QuicCertificateConfig {
         QuicCertificateConfig {
-            self_signed: true,
-            cert_file: "certs/iggy_cert.pem".to_string(),
-            key_file: "certs/iggy_key.pem".to_string(),
+            self_signed: SERVER_CONFIG.quic.certificate.self_signed,
+            cert_file: SERVER_CONFIG.quic.certificate.cert_file.parse().unwrap(),
+            key_file: SERVER_CONFIG.quic.certificate.key_file.parse().unwrap(),
         }
     }
 }
@@ -60,9 +67,19 @@ impl Default for QuicCertificateConfig {
 impl Default for TcpConfig {
     fn default() -> TcpConfig {
         TcpConfig {
-            enabled: true,
-            address: "127.0.0.1:8090".to_string(),
+            enabled: SERVER_CONFIG.tcp.enabled,
+            address: SERVER_CONFIG.tcp.address.parse().unwrap(),
             tls: TcpTlsConfig::default(),
+        }
+    }
+}
+
+impl Default for TcpTlsConfig {
+    fn default() -> TcpTlsConfig {
+        TcpTlsConfig {
+            enabled: SERVER_CONFIG.tcp.tls.enabled,
+            certificate: SERVER_CONFIG.tcp.tls.certificate.parse().unwrap(),
+            password: SERVER_CONFIG.tcp.tls.password.parse().unwrap(),
         }
     }
 }
@@ -71,7 +88,7 @@ impl Default for HttpConfig {
     fn default() -> HttpConfig {
         HttpConfig {
             enabled: true,
-            address: "127.0.0.1:3000".to_string(),
+            address: SERVER_CONFIG.http.address.parse().unwrap(),
             cors: HttpCorsConfig::default(),
             jwt: HttpJwtConfig::default(),
             metrics: HttpMetricsConfig::default(),
@@ -80,21 +97,90 @@ impl Default for HttpConfig {
     }
 }
 
+impl Default for HttpCorsConfig {
+    fn default() -> HttpCorsConfig {
+        HttpCorsConfig {
+            enabled: SERVER_CONFIG.http.cors.enabled,
+            allowed_methods: SERVER_CONFIG
+                .http
+                .cors
+                .allowed_methods
+                .iter()
+                .map(|s| s.parse().unwrap())
+                .collect(),
+            allowed_origins: SERVER_CONFIG
+                .http
+                .cors
+                .allowed_origins
+                .iter()
+                .map(|s| s.parse().unwrap())
+                .collect(),
+            allowed_headers: SERVER_CONFIG
+                .http
+                .cors
+                .allowed_headers
+                .iter()
+                .map(|s| s.parse().unwrap())
+                .collect(),
+            exposed_headers: SERVER_CONFIG
+                .http
+                .cors
+                .exposed_headers
+                .iter()
+                .map(|s| s.parse().unwrap())
+                .collect(),
+            allow_credentials: SERVER_CONFIG.http.cors.allow_credentials,
+            allow_private_network: SERVER_CONFIG.http.cors.allow_private_network,
+        }
+    }
+}
+
 impl Default for HttpJwtConfig {
     fn default() -> HttpJwtConfig {
         HttpJwtConfig {
-            algorithm: "HS256".to_string(),
-            issuer: "iggy".to_string(),
-            audience: "iggy".to_string(),
-            valid_issuers: vec!["iggy".to_string()],
-            valid_audiences: vec!["iggy".to_string()],
-            access_token_expiry: "1h".parse().unwrap(),
-            refresh_token_expiry: "1d".parse().unwrap(),
-            clock_skew: "5s".parse().unwrap(),
-            not_before: "0s".parse().unwrap(),
-            encoding_secret: "top_secret$iggy.rs$_jwt_HS256_key#!".to_string(),
-            decoding_secret: "top_secret$iggy.rs$_jwt_HS256_key#!".to_string(),
-            use_base64_secret: false,
+            algorithm: SERVER_CONFIG.http.jwt.algorithm.parse().unwrap(),
+            issuer: SERVER_CONFIG.http.jwt.issuer.parse().unwrap(),
+            audience: SERVER_CONFIG.http.jwt.audience.parse().unwrap(),
+            valid_issuers: SERVER_CONFIG
+                .http
+                .jwt
+                .valid_issuers
+                .iter()
+                .map(|s| s.parse().unwrap())
+                .collect(),
+            valid_audiences: SERVER_CONFIG
+                .http
+                .jwt
+                .valid_audiences
+                .iter()
+                .map(|s| s.parse().unwrap())
+                .collect(),
+            access_token_expiry: SERVER_CONFIG.http.jwt.access_token_expiry.parse().unwrap(),
+            refresh_token_expiry: SERVER_CONFIG.http.jwt.refresh_token_expiry.parse().unwrap(),
+            clock_skew: SERVER_CONFIG.http.jwt.clock_skew.parse().unwrap(),
+            not_before: SERVER_CONFIG.http.jwt.not_before.parse().unwrap(),
+            encoding_secret: SERVER_CONFIG.http.jwt.encoding_secret.parse().unwrap(),
+            decoding_secret: SERVER_CONFIG.http.jwt.decoding_secret.parse().unwrap(),
+            use_base64_secret: SERVER_CONFIG.http.jwt.use_base_64_secret,
+        }
+    }
+}
+
+impl Default for HttpMetricsConfig {
+    fn default() -> HttpMetricsConfig {
+        HttpMetricsConfig {
+            enabled: SERVER_CONFIG.http.metrics.enabled,
+            endpoint: SERVER_CONFIG.http.metrics.endpoint.parse().unwrap(),
+        }
+    }
+}
+
+impl Default for HttpTlsConfig {
+    fn default() -> HttpTlsConfig {
+        HttpTlsConfig {
+            enabled: SERVER_CONFIG.http.tls.enabled,
+            cert_file: SERVER_CONFIG.http.tls.cert_file.parse().unwrap(),
+            key_file: SERVER_CONFIG.http.tls.key_file.parse().unwrap(),
         }
     }
 }
@@ -102,8 +188,8 @@ impl Default for HttpJwtConfig {
 impl Default for MessageCleanerConfig {
     fn default() -> MessageCleanerConfig {
         MessageCleanerConfig {
-            enabled: true,
-            interval: "1m".parse().unwrap(),
+            enabled: SERVER_CONFIG.message_cleaner.enabled,
+            interval: SERVER_CONFIG.message_cleaner.interval.parse().unwrap(),
         }
     }
 }
@@ -111,9 +197,9 @@ impl Default for MessageCleanerConfig {
 impl Default for MessageSaverConfig {
     fn default() -> MessageSaverConfig {
         MessageSaverConfig {
-            enabled: true,
-            enforce_fsync: true,
-            interval: "30s".parse().unwrap(),
+            enabled: SERVER_CONFIG.message_saver.enabled,
+            enforce_fsync: SERVER_CONFIG.message_saver.enforce_fsync,
+            interval: SERVER_CONFIG.message_saver.interval.parse().unwrap(),
         }
     }
 }
@@ -121,7 +207,7 @@ impl Default for MessageSaverConfig {
 impl Default for PersonalAccessTokenConfig {
     fn default() -> PersonalAccessTokenConfig {
         PersonalAccessTokenConfig {
-            max_tokens_per_user: 100,
+            max_tokens_per_user: SERVER_CONFIG.personal_access_token.max_tokens_per_user as u32,
             cleaner: PersonalAccessTokenCleanerConfig::default(),
         }
     }
@@ -130,8 +216,13 @@ impl Default for PersonalAccessTokenConfig {
 impl Default for PersonalAccessTokenCleanerConfig {
     fn default() -> PersonalAccessTokenCleanerConfig {
         PersonalAccessTokenCleanerConfig {
-            enabled: true,
-            interval: "1m".parse().unwrap(),
+            enabled: SERVER_CONFIG.personal_access_token.cleaner.enabled,
+            interval: SERVER_CONFIG
+                .personal_access_token
+                .cleaner
+                .interval
+                .parse()
+                .unwrap(),
         }
     }
 }
@@ -139,7 +230,7 @@ impl Default for PersonalAccessTokenCleanerConfig {
 impl Default for SystemConfig {
     fn default() -> SystemConfig {
         SystemConfig {
-            path: "local_data".to_string(),
+            path: SERVER_CONFIG.system.path.parse().unwrap(),
             backup: BackupConfig::default(),
             database: DatabaseConfig::default(),
             runtime: RuntimeConfig::default(),
@@ -160,7 +251,7 @@ impl Default for SystemConfig {
 impl Default for BackupConfig {
     fn default() -> BackupConfig {
         BackupConfig {
-            path: "backup".to_string(),
+            path: SERVER_CONFIG.system.backup.path.parse().unwrap(),
             compatibility: CompatibilityConfig::default(),
         }
     }
@@ -169,7 +260,13 @@ impl Default for BackupConfig {
 impl Default for CompatibilityConfig {
     fn default() -> Self {
         CompatibilityConfig {
-            path: "compatibility".to_string(),
+            path: SERVER_CONFIG
+                .system
+                .backup
+                .compatibility
+                .path
+                .parse()
+                .unwrap(),
         }
     }
 }
@@ -177,7 +274,7 @@ impl Default for CompatibilityConfig {
 impl Default for DatabaseConfig {
     fn default() -> DatabaseConfig {
         DatabaseConfig {
-            path: "database".to_string(),
+            path: SERVER_CONFIG.system.database.path.parse().unwrap(),
         }
     }
 }
@@ -185,7 +282,7 @@ impl Default for DatabaseConfig {
 impl Default for RuntimeConfig {
     fn default() -> RuntimeConfig {
         RuntimeConfig {
-            path: "runtime".to_string(),
+            path: SERVER_CONFIG.system.runtime.path.parse().unwrap(),
         }
     }
 }
@@ -193,8 +290,13 @@ impl Default for RuntimeConfig {
 impl Default for CompressionConfig {
     fn default() -> Self {
         CompressionConfig {
-            allow_override: false,
-            default_algorithm: "none".parse().unwrap(),
+            allow_override: SERVER_CONFIG.system.compression.allow_override,
+            default_algorithm: SERVER_CONFIG
+                .system
+                .compression
+                .default_algorithm
+                .parse()
+                .unwrap(),
         }
     }
 }
@@ -202,11 +304,16 @@ impl Default for CompressionConfig {
 impl Default for LoggingConfig {
     fn default() -> LoggingConfig {
         LoggingConfig {
-            path: "logs".to_string(),
-            level: "info".to_string(),
-            max_size: "200 MB".parse().unwrap(),
-            retention: "7 days".parse().unwrap(),
-            sysinfo_print_interval: "10s".parse().unwrap(),
+            path: SERVER_CONFIG.system.logging.path.parse().unwrap(),
+            level: SERVER_CONFIG.system.logging.level.parse().unwrap(),
+            max_size: SERVER_CONFIG.system.logging.max_size.parse().unwrap(),
+            retention: SERVER_CONFIG.system.logging.retention.parse().unwrap(),
+            sysinfo_print_interval: SERVER_CONFIG
+                .system
+                .logging
+                .sysinfo_print_interval
+                .parse()
+                .unwrap(),
         }
     }
 }
@@ -214,8 +321,8 @@ impl Default for LoggingConfig {
 impl Default for CacheConfig {
     fn default() -> CacheConfig {
         CacheConfig {
-            enabled: true,
-            size: "2 GB".parse().unwrap(),
+            enabled: SERVER_CONFIG.system.cache.enabled,
+            size: SERVER_CONFIG.system.cache.size.parse().unwrap(),
         }
     }
 }
@@ -223,8 +330,27 @@ impl Default for CacheConfig {
 impl Default for RetentionPolicyConfig {
     fn default() -> RetentionPolicyConfig {
         RetentionPolicyConfig {
-            message_expiry: "0".parse().unwrap(),
-            max_topic_size: "10 GB".parse().unwrap(),
+            message_expiry: SERVER_CONFIG
+                .system
+                .retention_policy
+                .message_expiry
+                .parse()
+                .unwrap(),
+            max_topic_size: SERVER_CONFIG
+                .system
+                .retention_policy
+                .max_topic_size
+                .parse()
+                .unwrap(),
+        }
+    }
+}
+
+impl Default for EncryptionConfig {
+    fn default() -> EncryptionConfig {
+        EncryptionConfig {
+            enabled: SERVER_CONFIG.system.encryption.enabled,
+            key: SERVER_CONFIG.system.encryption.key.parse().unwrap(),
         }
     }
 }
@@ -232,7 +358,7 @@ impl Default for RetentionPolicyConfig {
 impl Default for StreamConfig {
     fn default() -> StreamConfig {
         StreamConfig {
-            path: "streams".to_string(),
+            path: SERVER_CONFIG.system.stream.path.parse().unwrap(),
         }
     }
 }
@@ -240,7 +366,7 @@ impl Default for StreamConfig {
 impl Default for TopicConfig {
     fn default() -> TopicConfig {
         TopicConfig {
-            path: "topics".to_string(),
+            path: SERVER_CONFIG.system.topic.path.parse().unwrap(),
         }
     }
 }
@@ -248,10 +374,11 @@ impl Default for TopicConfig {
 impl Default for PartitionConfig {
     fn default() -> PartitionConfig {
         PartitionConfig {
-            path: "partitions".to_string(),
-            messages_required_to_save: 1000,
-            enforce_fsync: false,
-            validate_checksum: false,
+            path: SERVER_CONFIG.system.partition.path.parse().unwrap(),
+            messages_required_to_save: SERVER_CONFIG.system.partition.messages_required_to_save
+                as u32,
+            enforce_fsync: SERVER_CONFIG.system.partition.enforce_fsync,
+            validate_checksum: SERVER_CONFIG.system.partition.validate_checksum,
         }
     }
 }
@@ -259,9 +386,9 @@ impl Default for PartitionConfig {
 impl Default for SegmentConfig {
     fn default() -> SegmentConfig {
         SegmentConfig {
-            size: "1 GB".parse().unwrap(),
-            cache_indexes: true,
-            cache_time_indexes: true,
+            size: SERVER_CONFIG.system.segment.size.parse().unwrap(),
+            cache_indexes: SERVER_CONFIG.system.segment.cache_indexes,
+            cache_time_indexes: SERVER_CONFIG.system.segment.cache_time_indexes,
         }
     }
 }
@@ -269,9 +396,14 @@ impl Default for SegmentConfig {
 impl Default for MessageDeduplicationConfig {
     fn default() -> MessageDeduplicationConfig {
         MessageDeduplicationConfig {
-            enabled: false,
-            max_entries: 1000,
-            expiry: "1m".parse().unwrap(),
+            enabled: SERVER_CONFIG.system.message_deduplication.enabled,
+            max_entries: SERVER_CONFIG.system.message_deduplication.max_entries as u64,
+            expiry: SERVER_CONFIG
+                .system
+                .message_deduplication
+                .expiry
+                .parse()
+                .unwrap(),
         }
     }
 }

@@ -3830,10 +3830,11 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.6"
+version = "0.2.7"
 dependencies = [
  "aes-gcm",
  "anyhow",
+ "async-stream",
  "async-trait",
  "atone",
  "axum 0.7.4",

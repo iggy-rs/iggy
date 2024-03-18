@@ -220,6 +220,16 @@ interval = "1m"
 # Base path for system data storage.
 path = "local_data"
 
+# Backup configuration
+[system.backup]
+# Path for storing backup.
+path = "backup"
+
+# Compatibility conversion configuration
+[system.backup.compatibility]
+# Subpath of the backup directory where converted segment data is stored after compatibility conversion.
+path = "compatibility"
+
 # Database configuration.
 [system.database]
 # Path for storing database files.

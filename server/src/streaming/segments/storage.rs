@@ -23,8 +23,8 @@ use tracing::{error, info, trace, warn};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
 const EMPTY_TIME_INDEXES: Vec<TimeIndex> = vec![];
-const INDEX_SIZE: u32 = 8;
-const TIME_INDEX_SIZE: u32 = 12;
+pub(crate) const INDEX_SIZE: u32 = 8;
+pub(crate) const TIME_INDEX_SIZE: u32 = 12;
 const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
@@ -251,16 +251,13 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_batches(
         &self,
         segment: &Segment,
-        messages: &[Arc<RetainedMessageBatch>],
+        batches: &[Arc<RetainedMessageBatch>],
     ) -> Result<u32, IggyError> {
-        let messages_size = messages
-            .iter()
-            .map(|message| message.get_size_bytes())
-            .sum();
+        let messages_size = batches.iter().map(|batch| batch.get_size_bytes()).sum();
 
         let mut bytes = BytesMut::with_capacity(messages_size as usize);
-        for message in messages {
-            message.extend(&mut bytes);
+        for batch in batches {
+            batch.extend(&mut bytes);
         }
 
         if let Err(err) = self

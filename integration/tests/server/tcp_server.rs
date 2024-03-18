@@ -1,7 +1,7 @@
 use crate::server::scenarios::{
     consumer_group_join_scenario, consumer_group_with_multiple_clients_polling_messages_scenario,
     consumer_group_with_single_client_polling_messages_scenario, message_headers_scenario,
-    stream_size_validation_scenario, system_scenario, user_scenario,
+    stream_size_validation_scenario, system_scenario, user_scenario, v2,
 };
 use integration::{tcp_client::TcpClientFactory, test_server::TestServer};
 use serial_test::parallel;
@@ -14,6 +14,7 @@ async fn system_scenario_should_be_valid() {
     let server_addr = test_server.get_raw_tcp_addr().unwrap();
     let client_factory = TcpClientFactory { server_addr };
     system_scenario::run(&client_factory).await;
+    v2::system_scenario::run(&client_factory).await;
 }
 
 #[tokio::test]

@@ -1,12 +1,14 @@
 use humantime::format_duration;
+use humantime::Duration as HumanDuration;
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{Display, Formatter},
+    ops::Add,
     str::FromStr,
     time::Duration,
 };
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
 pub struct IggyDuration {
     duration: Duration,
 }
@@ -93,6 +95,14 @@ impl From<Duration> for IggyDuration {
     }
 }
 
+impl From<HumanDuration> for IggyDuration {
+    fn from(human_duration: HumanDuration) -> Self {
+        Self {
+            duration: human_duration.into(),
+        }
+    }
+}
+
 impl From<IggyDuration> for u64 {
     fn from(iggy_duration: IggyDuration) -> u64 {
         iggy_duration.duration.as_secs()
@@ -110,6 +120,16 @@ impl Default for IggyDuration {
 impl Display for IggyDuration {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_human_time_string())
+    }
+}
+
+impl Add for IggyDuration {
+    type Output = IggyDuration;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        IggyDuration {
+            duration: self.duration + rhs.duration,
+        }
     }
 }
 
@@ -184,5 +204,13 @@ mod tests {
     fn test_disabled() {
         let iggy_duration: IggyDuration = "disabled".parse().unwrap();
         assert_eq!(iggy_duration.as_secs(), 0);
+    }
+
+    #[test]
+    fn test_add_duration() {
+        let iggy_duration1: IggyDuration = "6s".parse().unwrap();
+        let iggy_duration2: IggyDuration = "1m".parse().unwrap();
+        let result: IggyDuration = iggy_duration1 + iggy_duration2;
+        assert_eq!(result.as_secs(), 66);
     }
 }

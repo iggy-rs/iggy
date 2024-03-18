@@ -62,8 +62,14 @@ impl UserClient for HttpClient {
 
 #[async_trait]
 impl UserClientV2 for HttpClient {
-    async fn get_user(&self, user_id: Identifier) -> Result<UserInfoDetails, IggyError> {
-        get_user(self, &GetUser { user_id }).await
+    async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
+        get_user(
+            self,
+            &GetUser {
+                user_id: user_id.clone(),
+            },
+        )
+        .await
     }
 
     async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {
@@ -89,20 +95,26 @@ impl UserClientV2 for HttpClient {
         .await
     }
 
-    async fn delete_user(&self, user_id: Identifier) -> Result<(), IggyError> {
-        delete_user(self, &DeleteUser { user_id }).await
+    async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError> {
+        delete_user(
+            self,
+            &DeleteUser {
+                user_id: user_id.clone(),
+            },
+        )
+        .await
     }
 
     async fn update_user(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         username: Option<&str>,
         status: Option<UserStatus>,
     ) -> Result<(), IggyError> {
         update_user(
             self,
             &UpdateUser {
-                user_id,
+                user_id: user_id.clone(),
                 username: username.map(|s| s.to_string()),
                 status,
             },
@@ -112,13 +124,13 @@ impl UserClientV2 for HttpClient {
 
     async fn update_permissions(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
         update_permissions(
             self,
             &UpdatePermissions {
-                user_id,
+                user_id: user_id.clone(),
                 permissions,
             },
         )
@@ -127,14 +139,14 @@ impl UserClientV2 for HttpClient {
 
     async fn change_password(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         current_password: &str,
         new_password: &str,
     ) -> Result<(), IggyError> {
         change_password(
             self,
             &ChangePassword {
-                user_id,
+                user_id: user_id.clone(),
                 current_password: current_password.to_string(),
                 new_password: new_password.to_string(),
             },

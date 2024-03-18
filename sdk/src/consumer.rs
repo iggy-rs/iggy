@@ -13,7 +13,7 @@ use std::fmt::Display;
 /// - `kind`: the type of consumer. It can be either `Consumer` or `ConsumerGroup`.
 /// - `id`: the unique identifier of the consumer.
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Clone)]
 pub struct Consumer {
     /// The type of consumer. It can be either `Consumer` or `ConsumerGroup`.
     #[serde(skip)]

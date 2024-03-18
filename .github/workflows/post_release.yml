@@ -34,6 +34,8 @@ jobs:
           while ! nc -z 127.0.0.1 8090; do
             sleep 1
           done
+          sleep 1
+          ss -tuln | grep :8090
 
       - name: Test Benchmark - Send
         timeout-minutes: 1

@@ -7,7 +7,7 @@ pub mod cli_command;
 pub mod client;
 pub mod client_error;
 pub mod client_provider;
-mod client_v2;
+pub mod client_v2;
 pub mod clients;
 pub mod command;
 pub mod compression;

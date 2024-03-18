@@ -11,7 +11,7 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::message_expiry::MessageExpiry;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
@@ -157,7 +157,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
 
         let message_expiry = (match &self.topic_new_message_expiry {
             Some(value) => value.join(" "),
-            None => MessageExpiry::NeverExpire.to_string(),
+            None => IggyExpiry::NeverExpire.to_string(),
         })
         .to_string();
 
@@ -350,7 +350,7 @@ pub async fn should_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "update", "--help"],
             format!(
-                r#"Update topic name an message expiry time for given topic ID in given stream ID
+                r#"Update topic name a message expiry time for given topic ID in given stream ID
 
 Stream ID can be specified as a stream name or ID
 Topic ID can be specified as a topic name or ID
@@ -379,7 +379,7 @@ Arguments:
           New name for the topic
 
   [MESSAGE_EXPIRY]...
-          New message expiry time in human readable format like 15days 2min 2s
+          New message expiry time in human-readable format like 15days 2min 2s
 {CLAP_INDENT}
           ("unlimited" or skipping parameter causes removal of expiry parameter in topic)
 
@@ -414,7 +414,7 @@ pub async fn should_short_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "update", "-h"],
             format!(
-                r#"Update topic name an message expiry time for given topic ID in given stream ID
+                r#"Update topic name a message expiry time for given topic ID in given stream ID
 
 {USAGE_PREFIX} topic update [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME> [MESSAGE_EXPIRY]...
 
@@ -422,7 +422,7 @@ Arguments:
   <STREAM_ID>          Stream ID to update topic
   <TOPIC_ID>           Topic ID to update
   <NAME>               New name for the topic
-  [MESSAGE_EXPIRY]...  New message expiry time in human readable format like 15days 2min 2s
+  [MESSAGE_EXPIRY]...  New message expiry time in human-readable format like 15days 2min 2s
 
 Options:
   -m, --max-topic-size <MAX_TOPIC_SIZE>          New max topic size [default: unlimited]

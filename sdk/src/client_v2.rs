@@ -16,7 +16,7 @@ use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::message_expiry::MessageExpiry;
+use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use async_trait::async_trait;
 use std::fmt::Debug;
@@ -202,7 +202,7 @@ pub trait TopicClientV2 {
         partitions_count: u32,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError>;
     /// Update a topic by unique ID or name.
@@ -214,7 +214,7 @@ pub trait TopicClientV2 {
         topic_id: &Identifier,
         name: &str,
         replication_factor: Option<u8>,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError>;
     /// Delete a topic by unique ID or name.

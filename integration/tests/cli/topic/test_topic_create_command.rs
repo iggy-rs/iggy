@@ -10,7 +10,7 @@ use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::message_expiry::MessageExpiry;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
@@ -108,7 +108,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
         let topic_name = &self.topic_name;
         let message_expiry = (match &self.message_expiry {
             Some(value) => value.join(" "),
-            None => MessageExpiry::NeverExpire.to_string(),
+            None => IggyExpiry::NeverExpire.to_string(),
         })
         .to_string();
 
@@ -277,7 +277,7 @@ Arguments:
           Number of partitions inside the topic
 
   [MESSAGE_EXPIRY]...
-          Message expiry time in human readable format like 15days 2min 2s
+          Message expiry time in human-readable format like 15days 2min 2s
 {CLAP_INDENT}
           ("unlimited" or skipping parameter disables message expiry functionality in topic)
 
@@ -322,7 +322,7 @@ Arguments:
   <STREAM_ID>          Stream ID to create topic
   <NAME>               Name of the topic
   <PARTITIONS_COUNT>   Number of partitions inside the topic
-  [MESSAGE_EXPIRY]...  Message expiry time in human readable format like 15days 2min 2s
+  [MESSAGE_EXPIRY]...  Message expiry time in human-readable format like 15days 2min 2s
 
 Options:
   -t, --topic-id <TOPIC_ID>                      Topic ID to create

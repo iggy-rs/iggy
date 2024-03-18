@@ -30,7 +30,7 @@ allowed_headers = ["content-type"]
 
 # Headers that browsers are allowed to access in CORS responses.
 # An empty array means no additional headers are exposed to browsers.
-exposed_headers = []
+exposed_headers = [""]
 
 # Determines if credentials like cookies or HTTP auth can be included in CORS requests.
 # `true` allows credentials to be included, useful for authenticated sessions.

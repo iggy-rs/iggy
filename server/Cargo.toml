@@ -73,6 +73,8 @@ xxhash-rust = { version = "0.8.10", features = ["xxh32"] }
 tikv-jemallocator = { version = "0.5", optional = true }
 
 [build-dependencies]
+figment = { version = "0.10.14", features = ["json", "toml", "env"] }
+serde_json = "1.0.114"
 vergen = { version = "8.3.1", features = [
     "build",
     "cargo",

@@ -432,6 +432,10 @@ impl Partition {
                 messages_count += 1;
             }
         }
+        if messages_count == 0 {
+            return Ok(());
+        }
+
         let avg_timestamp_delta =
             Duration::from_micros((max_timestamp - min_timestamp) / messages_count as u64).into();
 

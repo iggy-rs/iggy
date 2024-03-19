@@ -82,7 +82,7 @@ async fn init_system(client: &IggyClientV2) {
 async fn execute_using_messages_key_key(client: &IggyClientV2) {
     // 1. Send messages to the calculated partition ID on the server side by using entity ID as a key
     for entity_id in 1..=MESSAGES_COUNT {
-        let message = Message::from_str(&get_message_payload(entity_id)).unwrap();
+        let message = Message::from_str(&create_message_payload(entity_id)).unwrap();
         let mut messages = vec![message];
         client
             .send_messages(
@@ -118,7 +118,7 @@ async fn execute_using_messages_key_key(client: &IggyClientV2) {
     assert_eq!(total_read_messages_count, MESSAGES_COUNT);
 }
 
-fn get_message_payload(entity_id: u32) -> String {
+fn create_message_payload(entity_id: u32) -> String {
     format!("message-{}", entity_id)
 }
 
@@ -131,7 +131,7 @@ async fn execute_using_none_key(client: &IggyClientV2) {
         }
 
         let message =
-            Message::from_str(&get_extended_message_payload(partition_id, entity_id)).unwrap();
+            Message::from_str(&create_extended_message_payload(partition_id, entity_id)).unwrap();
         let mut messages = vec![message];
         client
             .send_messages(
@@ -169,7 +169,7 @@ async fn execute_using_none_key(client: &IggyClientV2) {
         let payload = from_utf8(&message.payload).unwrap();
         assert_eq!(
             payload,
-            &get_extended_message_payload(partition_id, entity_id)
+            &create_extended_message_payload(partition_id, entity_id)
         );
         partition_id += 1;
         entity_id += 1;
@@ -196,6 +196,6 @@ async fn execute_using_none_key(client: &IggyClientV2) {
     }
 }
 
-fn get_extended_message_payload(partition_id: u32, entity_id: u32) -> String {
+fn create_extended_message_payload(partition_id: u32, entity_id: u32) -> String {
     format!("message-{}-{}", partition_id, entity_id)
 }

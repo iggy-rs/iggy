@@ -1,6 +1,6 @@
 use crate::server::scenarios::{
     consumer_group_join_scenario, consumer_group_with_multiple_clients_polling_messages_scenario,
-    consumer_group_with_single_client_polling_messages_scenario, message_headers_scenario,
+    consumer_group_with_single_client_polling_messages_scenario, create_message_payload,
     stream_size_validation_scenario, system_scenario, user_scenario, v2,
 };
 use integration::{quic_client::QuicClientFactory, test_server::TestServer};
@@ -53,7 +53,7 @@ async fn message_headers_scenario_should_be_valid() {
     test_server.start();
     let server_addr = test_server.get_quic_udp_addr().unwrap();
     let client_factory = QuicClientFactory { server_addr };
-    message_headers_scenario::run(&client_factory).await;
+    create_message_payload::run(&client_factory).await;
 }
 
 #[tokio::test]

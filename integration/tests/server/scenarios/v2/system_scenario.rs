@@ -716,7 +716,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
 }
 
 fn assert_message(message: &PolledMessage, offset: u64) {
-    let expected_payload = get_message_payload(offset);
+    let expected_payload = create_message_payload(offset);
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);
     assert_eq!(message.payload, expected_payload);
@@ -726,7 +726,7 @@ fn create_messages() -> Vec<Message> {
     let mut messages = Vec::new();
     for offset in 0..MESSAGES_COUNT {
         let id = (offset + 1) as u128;
-        let payload = get_message_payload(offset as u64);
+        let payload = create_message_payload(offset as u64);
         messages.push(Message {
             id,
             length: payload.len() as u32,
@@ -737,6 +737,6 @@ fn create_messages() -> Vec<Message> {
     messages
 }
 
-fn get_message_payload(offset: u64) -> Bytes {
+fn create_message_payload(offset: u64) -> Bytes {
     Bytes::from(format!("message {}", offset))
 }

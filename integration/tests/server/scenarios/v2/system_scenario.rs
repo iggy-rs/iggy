@@ -1,11 +1,16 @@
 use bytes::Bytes;
 
+use crate::server::scenarios::v2::{
+    get_consumer_group, leave_consumer_group, CONSUMER_GROUP_ID, CONSUMER_GROUP_NAME, CONSUMER_ID,
+    CONSUMER_KIND, MESSAGES_COUNT, PARTITIONS_COUNT, PARTITION_ID, STREAM_ID, STREAM_NAME,
+    TOPIC_ID, TOPIC_NAME,
+};
 use iggy::client_v2::{
     ConsumerGroupClientV2, ConsumerOffsetClientV2, MessageClientV2, PartitionClientV2,
     StreamClientV2, SystemClientV2, TopicClientV2, UserClientV2,
 };
 use iggy::clients::client_v2::{IggyClientBackgroundConfigV2, IggyClientV2};
-use iggy::consumer::{Consumer, ConsumerKind};
+use iggy::consumer::Consumer;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -15,18 +20,6 @@ use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{assert_clean_system_v2, ClientFactoryV2};
-
-const STREAM_ID: u32 = 1;
-const TOPIC_ID: u32 = 1;
-const PARTITION_ID: u32 = 1;
-const PARTITIONS_COUNT: u32 = 3;
-const CONSUMER_ID: u32 = 1;
-const CONSUMER_KIND: ConsumerKind = ConsumerKind::Consumer;
-const STREAM_NAME: &str = "test-stream";
-const TOPIC_NAME: &str = "test-topic";
-const CONSUMER_GROUP_ID: u32 = 10;
-const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
-const MESSAGES_COUNT: u32 = 1000;
 
 pub async fn run(client_factory: &dyn ClientFactoryV2) {
     let client = client_factory.create_client().await;
@@ -444,14 +437,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
 
     match result {
         Ok(_) => {
-            let consumer_group = client
-                .get_consumer_group(
-                    &Identifier::numeric(STREAM_ID).unwrap(),
-                    &Identifier::numeric(TOPIC_ID).unwrap(),
-                    &Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
-                )
-                .await
-                .unwrap();
+            let consumer_group = get_consumer_group(&client).await;
             assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
             assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
             assert_eq!(consumer_group.name, CONSUMER_GROUP_NAME);
@@ -469,23 +455,9 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
             assert_eq!(consumer_group.topic_id, TOPIC_ID);
             assert_eq!(consumer_group.consumer_group_id, CONSUMER_GROUP_ID);
 
-            client
-                .leave_consumer_group(
-                    &Identifier::numeric(STREAM_ID).unwrap(),
-                    &Identifier::numeric(TOPIC_ID).unwrap(),
-                    &Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
-                )
-                .await
-                .unwrap();
+            leave_consumer_group(&client).await;
 
-            let consumer_group = client
-                .get_consumer_group(
-                    &Identifier::numeric(STREAM_ID).unwrap(),
-                    &Identifier::numeric(TOPIC_ID).unwrap(),
-                    &Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
-                )
-                .await
-                .unwrap();
+            let consumer_group = get_consumer_group(&client).await;
             assert_eq!(consumer_group.members_count, 0);
             assert!(consumer_group.members.is_empty());
 
@@ -744,7 +716,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
 }
 
 fn assert_message(message: &PolledMessage, offset: u64) {
-    let expected_payload = get_message_payload(offset);
+    let expected_payload = create_message_payload(offset);
     assert!(message.timestamp > 0);
     assert_eq!(message.offset, offset);
     assert_eq!(message.payload, expected_payload);
@@ -754,7 +726,7 @@ fn create_messages() -> Vec<Message> {
     let mut messages = Vec::new();
     for offset in 0..MESSAGES_COUNT {
         let id = (offset + 1) as u128;
-        let payload = get_message_payload(offset as u64);
+        let payload = create_message_payload(offset as u64);
         messages.push(Message {
             id,
             length: payload.len() as u32,
@@ -765,6 +737,6 @@ fn create_messages() -> Vec<Message> {
     messages
 }
 
-fn get_message_payload(offset: u64) -> Bytes {
+fn create_message_payload(offset: u64) -> Bytes {
     Bytes::from(format!("message {}", offset))
 }

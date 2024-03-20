@@ -15,7 +15,7 @@ readme = "../README.md"
 aes-gcm = "0.10.3"
 anyhow = "1.0.81"
 async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
-async-trait = "0.1.77"
+async-trait = "0.1.78"
 base64 = "0.22.0"
 byte-unit = { version = "5.1.4", default-features = false, features = [
     "serde",
@@ -50,7 +50,7 @@ tokio = { version = "1.36.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
 toml = "0.8.12"
 tracing = { version = "0.1.40" }
-uuid = { version = "1.7.0", features = ["v4", "fast-rng"] }
+uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 
 [build-dependencies]
 convert_case = "0.6.0"

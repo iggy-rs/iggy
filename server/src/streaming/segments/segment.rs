@@ -1,11 +1,25 @@
+use crate::compat::binary_schema::BinarySchema;
+use crate::compat::chunks_error::IntoTryChunksError;
+use crate::compat::conversion_writer::ConversionWriter;
+use crate::compat::message_converter::MessageFormatConverterPersister;
+use crate::compat::message_stream::MessageStream;
+use crate::compat::snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot;
+use crate::compat::streams::retained_batch::RetainedBatchWriter;
+use crate::compat::streams::retained_message::RetainedMessageStream;
 use crate::configs::system::SystemConfig;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::segments::index::Index;
 use crate::streaming::segments::time_index::TimeIndex;
+use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::SystemStorage;
+use crate::streaming::utils::file;
+use futures::{pin_mut, TryStreamExt};
+use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
+use tracing::{info, trace};
 
 pub const LOG_EXTENSION: &str = "log";
 pub const INDEX_EXTENSION: &str = "index";
@@ -133,6 +147,78 @@ impl Segment {
 
     fn get_time_index_path(path: &str) -> String {
         format!("{}.{}", path, TIME_INDEX_EXTENSION)
+    }
+
+    pub async fn convert_segment_from_schema(&self, schema: BinarySchema) -> Result<(), IggyError> {
+        let log_path = self.log_path.as_str();
+        let index_path = self.index_path.as_str();
+        let time_index_path = self.time_index_path.as_str();
+
+        match schema {
+            BinarySchema::RetainedMessageSchema => {
+                let file = file::open(&self.log_path).await?;
+                let file_size = file.metadata().await?.len();
+                if file_size == 0 {
+                    return Ok(());
+                }
+
+                let compat_backup_path = self.config.get_compatibility_backup_path();
+                let conversion_writer = ConversionWriter::init(
+                    log_path,
+                    index_path,
+                    time_index_path,
+                    &compat_backup_path,
+                );
+                conversion_writer.create_alt_directories().await?;
+                let retained_batch_writer = RetainedBatchWriter::init(
+                    file::append(&conversion_writer.alt_log_path).await?,
+                    file::append(&conversion_writer.alt_index_path).await?,
+                    file::append(&conversion_writer.alt_time_index_path).await?,
+                );
+
+                let stream = RetainedMessageStream::new(file, file_size).into_stream();
+                pin_mut!(stream);
+                let (_, mut retained_batch_writer) = stream
+                        .try_chunks(1000)
+                        .try_fold((0u32, retained_batch_writer), |(position, mut retained_batch_writer), messages| async move {
+                            let batch = RetainedMessageBatchSnapshot::try_from_messages(messages)
+                                .map_err(|err| err.into_try_chunks_error())?;
+                            let size = batch.get_size_bytes();
+                            info!("Converted messages with start offset: {} and end offset: {}, with binary schema: {:?} to newest schema",
+                            batch.base_offset, batch.get_last_offset(), schema);
+
+                            batch
+                                .persist(&mut retained_batch_writer.log_writer)
+                                .await
+                                .map_err(|err| err.into_try_chunks_error())?;
+                            trace!("Persisted message batch with new format to log file, saved {} bytes", size);
+                            let relative_offset = (batch.get_last_offset() - self.start_offset) as u32;
+                            batch
+                                .persist_index(position, relative_offset, &mut retained_batch_writer.index_writer)
+                                .await
+                                .map_err(|err| err.into_try_chunks_error())?;
+                            trace!("Persisted index with offset: {} and position: {} to index file", relative_offset, position);
+                            batch
+                                .persist_time_index(batch.max_timestamp, relative_offset, &mut retained_batch_writer.time_index_writer)
+                                .await
+                                .map_err(|err| err.into_try_chunks_error())?;
+                            trace!("Persisted time index with offset: {} to time index file", relative_offset);
+                            let position = position + size;
+
+                            Ok((position, retained_batch_writer))
+                        })
+                        .await
+                        .map_err(|err| err.1)?; // For now
+                retained_batch_writer.log_writer.flush().await?;
+                retained_batch_writer.index_writer.flush().await?;
+                retained_batch_writer.time_index_writer.flush().await?;
+
+                conversion_writer.create_old_segment_backup().await?;
+                conversion_writer.replace_with_converted().await?;
+                Ok(())
+            }
+            BinarySchema::RetainedMessageBatchSchema => Ok(()),
+        }
     }
 }
 

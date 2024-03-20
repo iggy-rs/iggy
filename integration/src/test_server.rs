@@ -1,19 +1,3 @@
-use assert_cmd::prelude::CommandCargoExt;
-use async_trait::async_trait;
-use derive_more::Display;
-use futures::executor::block_on;
-use iggy::client::{Client, StreamClient, UserClient};
-use iggy::clients::client::IggyClient;
-use iggy::identifier::Identifier;
-use iggy::models::permissions::{GlobalPermissions, Permissions};
-use iggy::models::user_status::UserStatus::Active;
-use iggy::streams::get_streams::GetStreams;
-use iggy::users::create_user::CreateUser;
-use iggy::users::defaults::*;
-use iggy::users::delete_user::DeleteUser;
-use iggy::users::get_users::GetUsers;
-use iggy::users::login_user::LoginUser;
-use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
 use std::collections::HashMap;
 use std::fs;
 use std::fs::{File, OpenOptions};
@@ -23,7 +7,28 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::thread::{panicking, sleep};
 use std::time::Duration;
+
+use assert_cmd::prelude::CommandCargoExt;
+use async_trait::async_trait;
+use derive_more::Display;
+use futures::executor::block_on;
 use uuid::Uuid;
+
+use iggy::client::{Client, StreamClient, UserClient};
+use iggy::client_v2::{ClientV2, StreamClientV2, UserClientV2};
+use iggy::clients::client::IggyClient;
+use iggy::clients::client_v2::IggyClientV2;
+use iggy::identifier::Identifier;
+use iggy::models::identity_info::IdentityInfo;
+use iggy::models::permissions::{GlobalPermissions, Permissions};
+use iggy::models::user_status::UserStatus::Active;
+use iggy::streams::get_streams::GetStreams;
+use iggy::users::create_user::CreateUser;
+use iggy::users::defaults::*;
+use iggy::users::delete_user::DeleteUser;
+use iggy::users::get_users::GetUsers;
+use iggy::users::login_user::LoginUser;
+use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
 
 pub const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
 pub const TEST_VERBOSITY_ENV_VAR: &str = "IGGY_TEST_VERBOSE";
@@ -41,6 +46,11 @@ pub enum IpAddrKind {
 #[async_trait]
 pub trait ClientFactory: Sync + Send {
     async fn create_client(&self) -> Box<dyn Client>;
+}
+
+#[async_trait]
+pub trait ClientFactoryV2: Sync + Send {
+    async fn create_client(&self) -> Box<dyn ClientV2>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Display)]
@@ -468,11 +478,44 @@ pub async fn create_user(client: &IggyClient, username: &str) {
         .unwrap();
 }
 
+pub async fn create_user_v2(client: &IggyClientV2, username: &str) {
+    client
+        .create_user(
+            username,
+            USER_PASSWORD,
+            Some(Active),
+            Some(Permissions {
+                global: GlobalPermissions {
+                    manage_servers: true,
+                    read_servers: true,
+                    manage_users: true,
+                    read_users: true,
+                    manage_streams: true,
+                    read_streams: true,
+                    manage_topics: true,
+                    read_topics: true,
+                    poll_messages: true,
+                    send_messages: true,
+                },
+                streams: None,
+            }),
+        )
+        .await
+        .unwrap();
+}
+
 pub async fn delete_user(client: &IggyClient, username: &str) {
     client
         .delete_user(&DeleteUser {
             user_id: Identifier::named(username).unwrap(),
         })
+        .await
+        .unwrap();
+}
+
+pub async fn delete_user_v2(client: &IggyClientV2, username: &str) {
+    client
+        .delete_user(&Identifier::named(username).unwrap())
         .await
         .unwrap();
 }
@@ -487,6 +530,13 @@ pub async fn login_root(client: &IggyClient) {
         .unwrap();
 }
 
+pub async fn login_root_v2(client: &IggyClientV2) -> IdentityInfo {
+    client
+        .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
+        .await
+        .unwrap()
+}
+
 pub async fn login_user(client: &IggyClient, username: &str) {
     client
         .login_user(&LoginUser {
@@ -497,10 +547,22 @@ pub async fn login_user(client: &IggyClient, username: &str) {
         .unwrap();
 }
 
+pub async fn login_user_v2(client: &IggyClientV2, username: &str) -> IdentityInfo {
+    client.login_user(username, USER_PASSWORD).await.unwrap()
+}
+
 pub async fn assert_clean_system(system_client: &IggyClient) {
     let streams = system_client.get_streams(&GetStreams {}).await.unwrap();
     assert!(streams.is_empty());
 
     let users = system_client.get_users(&GetUsers {}).await.unwrap();
+    assert_eq!(users.len(), 1);
+}
+
+pub async fn assert_clean_system_v2(system_client: &IggyClientV2) {
+    let streams = system_client.get_streams().await.unwrap();
+    assert!(streams.is_empty());
+
+    let users = system_client.get_users().await.unwrap();
     assert_eq!(users.len(), 1);
 }

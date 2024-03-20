@@ -38,7 +38,7 @@ impl IggyClientBuilder {
         self
     }
 
-    /// Use the the custom partitioner implementation.
+    /// Use the custom partitioner implementation.
     pub fn with_partitioner(mut self, partitioner: Box<dyn Partitioner>) -> Self {
         self.partitioner = Some(partitioner);
         self
@@ -50,13 +50,13 @@ impl IggyClientBuilder {
         self
     }
 
-    /// Use the the custom encryptor implementation.
+    /// Use the custom encryptor implementation.
     pub fn with_encryptor(mut self, encryptor: Box<dyn Encryptor>) -> Self {
         self.encryptor = Some(encryptor);
         self
     }
 
-    /// Use the the custom message handler implementation. This handler will be used only for `start_polling_messages` method, if neither `subscribe_to_polled_messages` (which returns the receiver for the messages channel) is called nor `on_message` closure is provided.
+    /// Use the custom message handler implementation. This handler will be used only for `start_polling_messages` method, if neither `subscribe_to_polled_messages` (which returns the receiver for the messages channel) is called nor `on_message` closure is provided.
     pub fn with_message_handler(mut self, message_handler: Box<dyn MessageHandler>) -> Self {
         self.message_handler = Some(message_handler);
         self

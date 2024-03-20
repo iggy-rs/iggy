@@ -107,7 +107,7 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn save_batches(
         &self,
         segment: &Segment,
-        messages: &[Arc<RetainedMessageBatch>],
+        batches: &[Arc<RetainedMessageBatch>],
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -455,7 +455,7 @@ pub(crate) mod tests {
         async fn save_batches(
             &self,
             _segment: &Segment,
-            _messages: &[Arc<RetainedMessageBatch>],
+            _batches: &[Arc<RetainedMessageBatch>],
         ) -> Result<u32, IggyError> {
             Ok(0)
         }

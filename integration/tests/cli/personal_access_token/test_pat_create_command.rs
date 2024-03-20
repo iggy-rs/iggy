@@ -135,13 +135,13 @@ Arguments:
           Name of the personal access token
 
   [EXPIRY]...
-          Personal access token expiry time in human readable format
+          Personal access token expiry time in human-readable format
 {CLAP_INDENT}
-          Expiry time must be expressed in human readable format like 15days 2min 2s ("none" or skipping parameter disables personal access token expiry)
+          Expiry time must be expressed in human-readable format like 15days 2min 2s ("none" or skipping parameter disables personal access token expiry)
 
 Options:
   -s, --store-token
-          Store token in in an underlying platform-specific secure store
+          Store token in an underlying platform-specific secure store
 {CLAP_INDENT}
           Generated token is stored in a platform-specific secure storage without revealing its content to the user. It can be used to authenticate on iggy server using associated name and -n/--token-name command line option instead of -u/--username and -p/--password or -t/--token. In quiet mode only the token name is printed. This option can only be used for creating tokens which does not have expiry time set.
 
@@ -168,10 +168,10 @@ pub async fn should_short_help_match() {
 
 Arguments:
   <NAME>       Name of the personal access token
-  [EXPIRY]...  Personal access token expiry time in human readable format
+  [EXPIRY]...  Personal access token expiry time in human-readable format
 
 Options:
-  -s, --store-token  Store token in in an underlying platform-specific secure store
+  -s, --store-token  Store token in an underlying platform-specific secure store
   -h, --help         Print help (see more with '--help')
 "#,
             ),

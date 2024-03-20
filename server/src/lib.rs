@@ -11,6 +11,7 @@ static GLOBAL: Jemalloc = Jemalloc;
 pub mod args;
 pub mod binary;
 pub mod channels;
+pub(crate) mod compat;
 pub mod configs;
 pub mod http;
 pub mod log;

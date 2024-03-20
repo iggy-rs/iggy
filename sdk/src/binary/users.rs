@@ -61,8 +61,14 @@ impl<B: BinaryClient> UserClient for B {
 
 #[async_trait::async_trait]
 impl<B: BinaryClientV2> UserClientV2 for B {
-    async fn get_user(&self, user_id: Identifier) -> Result<UserInfoDetails, IggyError> {
-        get_user(self, &GetUser { user_id }).await
+    async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
+        get_user(
+            self,
+            &GetUser {
+                user_id: user_id.clone(),
+            },
+        )
+        .await
     }
 
     async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {
@@ -88,20 +94,26 @@ impl<B: BinaryClientV2> UserClientV2 for B {
         .await
     }
 
-    async fn delete_user(&self, user_id: Identifier) -> Result<(), IggyError> {
-        delete_user(self, &DeleteUser { user_id }).await
+    async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError> {
+        delete_user(
+            self,
+            &DeleteUser {
+                user_id: user_id.clone(),
+            },
+        )
+        .await
     }
 
     async fn update_user(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         username: Option<&str>,
         status: Option<UserStatus>,
     ) -> Result<(), IggyError> {
         update_user(
             self,
             &UpdateUser {
-                user_id,
+                user_id: user_id.clone(),
                 username: username.map(|s| s.to_string()),
                 status,
             },
@@ -111,13 +123,13 @@ impl<B: BinaryClientV2> UserClientV2 for B {
 
     async fn update_permissions(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
         update_permissions(
             self,
             &UpdatePermissions {
-                user_id,
+                user_id: user_id.clone(),
                 permissions,
             },
         )
@@ -126,14 +138,14 @@ impl<B: BinaryClientV2> UserClientV2 for B {
 
     async fn change_password(
         &self,
-        user_id: Identifier,
+        user_id: &Identifier,
         current_password: &str,
         new_password: &str,
     ) -> Result<(), IggyError> {
         change_password(
             self,
             &ChangePassword {
-                user_id,
+                user_id: user_id.clone(),
                 current_password: current_password.to_string(),
                 new_password: new_password.to_string(),
             },

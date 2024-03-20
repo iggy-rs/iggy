@@ -133,18 +133,21 @@ fn configure_cors(config: HttpCorsConfig) -> CorsLayer {
     let allowed_headers = config
         .allowed_headers
         .iter()
+        .filter(|s| !s.is_empty())
         .map(|s| s.parse().unwrap())
         .collect::<Vec<_>>();
 
     let exposed_headers = config
         .exposed_headers
         .iter()
+        .filter(|s| !s.is_empty())
         .map(|s| s.parse().unwrap())
         .collect::<Vec<_>>();
 
     let allowed_methods = config
         .allowed_methods
         .iter()
+        .filter(|s| !s.is_empty())
         .map(|s| match s.to_uppercase().as_str() {
             "GET" => Method::GET,
             "POST" => Method::POST,

@@ -3,7 +3,7 @@ use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::create_topic::CreateTopic;
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::message_expiry::MessageExpiry;
+use crate::utils::expiry::IggyExpiry;
 use anyhow::Context;
 use async_trait::async_trait;
 use core::fmt;
@@ -11,7 +11,7 @@ use tracing::{event, Level};
 
 pub struct CreateTopicCmd {
     create_topic: CreateTopic,
-    message_expiry: MessageExpiry,
+    message_expiry: IggyExpiry,
     max_topic_size: IggyByteSize,
     replication_factor: u8,
 }
@@ -22,7 +22,7 @@ impl CreateTopicCmd {
         topic_id: Option<u32>,
         partitions_count: u32,
         name: String,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: IggyByteSize,
         replication_factor: u8,
     ) -> Self {

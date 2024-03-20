@@ -2,7 +2,7 @@ use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
 use iggy::identifier::Identifier;
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::message_expiry::MessageExpiry;
+use iggy::utils::expiry::IggyExpiry;
 use std::convert::From;
 
 #[derive(Debug, Clone, Subcommand)]
@@ -31,7 +31,7 @@ pub(crate) enum TopicAction {
     ///  iggy topic delete 2 debugs
     #[clap(verbatim_doc_comment, visible_alias = "d")]
     Delete(TopicDeleteArgs),
-    /// Update topic name an message expiry time for given topic ID in given stream ID
+    /// Update topic name a message expiry time for given topic ID in given stream ID
     ///
     /// Stream ID can be specified as a stream name or ID
     /// Topic ID can be specified as a topic name or ID
@@ -103,11 +103,11 @@ pub(crate) struct TopicCreateArgs {
     /// Replication factor for the topic
     #[arg(short, long, default_value = "1")]
     pub(crate) replication_factor: u8,
-    /// Message expiry time in human readable format like 15days 2min 2s
+    /// Message expiry time in human-readable format like 15days 2min 2s
     ///
     /// ("unlimited" or skipping parameter disables message expiry functionality in topic)
-    #[arg(value_parser = clap::value_parser!(MessageExpiry), verbatim_doc_comment)]
-    pub(crate) message_expiry: Vec<MessageExpiry>,
+    #[arg(value_parser = clap::value_parser!(IggyExpiry), verbatim_doc_comment)]
+    pub(crate) message_expiry: Vec<IggyExpiry>,
 }
 
 #[derive(Debug, Clone, Args)]
@@ -147,11 +147,11 @@ pub(crate) struct TopicUpdateArgs {
     #[arg(short, long, default_value = "1")]
     /// New replication factor for the topic
     pub(crate) replication_factor: u8,
-    /// New message expiry time in human readable format like 15days 2min 2s
+    /// New message expiry time in human-readable format like 15days 2min 2s
     ///
     /// ("unlimited" or skipping parameter causes removal of expiry parameter in topic)
-    #[arg(value_parser = clap::value_parser!(MessageExpiry), verbatim_doc_comment)]
-    pub(crate) message_expiry: Vec<MessageExpiry>,
+    #[arg(value_parser = clap::value_parser!(IggyExpiry), verbatim_doc_comment)]
+    pub(crate) message_expiry: Vec<IggyExpiry>,
 }
 
 #[derive(Debug, Clone, Args)]

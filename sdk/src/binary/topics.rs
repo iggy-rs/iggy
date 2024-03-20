@@ -17,7 +17,7 @@ use crate::topics::get_topics::GetTopics;
 use crate::topics::purge_topic::PurgeTopic;
 use crate::topics::update_topic::UpdateTopic;
 use crate::utils::byte_size::IggyByteSize;
-use crate::utils::message_expiry::MessageExpiry;
+use crate::utils::expiry::IggyExpiry;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> TopicClient for B {
@@ -50,37 +50,43 @@ impl<B: BinaryClient> TopicClient for B {
 impl<B: BinaryClientV2> TopicClientV2 for B {
     async fn get_topic(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<TopicDetails, IggyError> {
         get_topic(
             self,
             &GetTopic {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
             },
         )
         .await
     }
 
-    async fn get_topics(&self, stream_id: Identifier) -> Result<Vec<Topic>, IggyError> {
-        get_topics(self, &GetTopics { stream_id }).await
+    async fn get_topics(&self, stream_id: &Identifier) -> Result<Vec<Topic>, IggyError> {
+        get_topics(
+            self,
+            &GetTopics {
+                stream_id: stream_id.clone(),
+            },
+        )
+        .await
     }
 
     async fn create_topic(
         &self,
-        stream_id: Identifier,
+        stream_id: &Identifier,
         name: &str,
         partitions_count: u32,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         create_topic(
             self,
             &CreateTopic {
-                stream_id,
+                stream_id: stream_id.clone(),
                 name: name.to_string(),
                 partitions_count,
                 replication_factor: replication_factor.unwrap_or(1),
@@ -94,18 +100,18 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
 
     async fn update_topic(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
         name: &str,
         replication_factor: Option<u8>,
-        message_expiry: MessageExpiry,
+        message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
         update_topic(
             self,
             &UpdateTopic {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
                 name: name.to_string(),
                 replication_factor: replication_factor.unwrap_or(1),
                 message_expiry: message_expiry.into(),
@@ -117,14 +123,14 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
 
     async fn delete_topic(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<(), IggyError> {
         delete_topic(
             self,
             &DeleteTopic {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
             },
         )
         .await
@@ -132,14 +138,14 @@ impl<B: BinaryClientV2> TopicClientV2 for B {
 
     async fn purge_topic(
         &self,
-        stream_id: Identifier,
-        topic_id: Identifier,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<(), IggyError> {
         purge_topic(
             self,
             &PurgeTopic {
-                stream_id,
-                topic_id,
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
             },
         )
         .await

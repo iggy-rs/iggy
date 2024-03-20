@@ -1,3 +1,3 @@
-use crate::utils::message_expiry::MessageExpiry;
+use crate::utils::expiry::IggyExpiry;
 
-pub type LoginSessionExpiry = MessageExpiry;
+pub type LoginSessionExpiry = IggyExpiry;

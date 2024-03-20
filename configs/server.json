@@ -16,7 +16,9 @@
       "allowed_headers": [
         "content-type"
       ],
-      "exposed_headers": [],
+      "exposed_headers": [
+        ""
+      ],
       "allow_credentials": false,
       "allow_private_network": false
     },
@@ -30,10 +32,10 @@
       "valid_audiences": [
         "iggy.rs"
       ],
-      "access_token_expiry": "1h",
-      "refresh_token_expiry": "1d",
-      "clock_skew": "5s",
-      "not_before": "0s",
+      "access_token_expiry": "1 h",
+      "refresh_token_expiry": "1 d",
+      "clock_skew": "5 s",
+      "not_before": "0 s",
       "encoding_secret": "top_secret$iggy.rs$_jwt_HS256_key#!",
       "decoding_secret": "top_secret$iggy.rs$_jwt_HS256_key#!",
       "use_base64_secret": false
@@ -61,12 +63,12 @@
     "enabled": true,
     "address": "0.0.0.0:8080",
     "max_concurrent_bidi_streams": 10000,
-    "datagram_send_buffer_size": "100KB",
-    "initial_mtu": "8KB",
-    "send_window": "100KB",
-    "receive_window": "100KB",
-    "keep_alive_interval": "5s",
-    "max_idle_timeout": "10s",
+    "datagram_send_buffer_size": "100 KB",
+    "initial_mtu": "8 KB",
+    "send_window": "100 KB",
+    "receive_window": "100 KB",
+    "keep_alive_interval": "5 s",
+    "max_idle_timeout": "10 s",
     "certificate": {
       "self_signed": true,
       "cert_file": "certs/iggy_cert.pem",
@@ -75,18 +77,18 @@
   },
   "message_cleaner": {
     "enabled": true,
-    "interval": "1m"
+    "interval": "1 m"
   },
   "message_saver": {
     "enabled": true,
     "enforce_fsync": true,
-    "interval": "30s"
+    "interval": "30 s"
   },
   "personal_access_token": {
     "max_tokens_per_user": 100,
     "cleaner": {
       "enabled": true,
-      "interval": "1m"
+      "interval": "1 m"
     }
   },
   "system": {
@@ -94,15 +96,21 @@
     "database": {
       "path": "database"
     },
+    "backup": {
+      "path": "backup",
+      "compatibility": {
+        "path": "compatibility"
+      }
+    },
     "runtime": {
       "path": "runtime"
     },
     "logging": {
       "path": "logs",
       "level": "info",
-      "max_size": "512MB",
+      "max_size": "512 MB",
       "retention": "7 days",
-      "sysinfo_print_interval": "10s"
+      "sysinfo_print_interval": "10 s"
     },
     "cache": {
       "enabled": true,
@@ -133,14 +141,14 @@
       "messages_required_to_save": 10000
     },
     "segment": {
-      "size": "1GB",
+      "size": "1 GB",
       "cache_indexes": true,
       "cache_time_indexes": true
     },
     "message_deduplication": {
       "enabled": false,
       "max_entries": 1000,
-      "expiry": "1m"
+      "expiry": "1 m"
     }
   }
 }

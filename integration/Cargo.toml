@@ -27,7 +27,7 @@ tokio = { version = "1.36.0", features = ["full"] }
 toml = "0.8.11"
 tracing = "0.1"
 tracing-subscriber = "0.3.18"
-uuid = { version = "1.7.0", features = ["v4", "fast-rng", "zerocopy"] }
+uuid = { version = "1.8.0", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.10", features = ["xxh32"] }
 
 # Some tests are failing in CI due to lack of IPv6 interfaces

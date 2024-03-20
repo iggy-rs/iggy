@@ -38,8 +38,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let mut messages = Vec::new();
     for offset in 0..MESSAGES_COUNT {
         let id = (offset + 1) as u128;
-        let payload = get_message_payload(offset as u64);
-        let headers = get_message_headers();
+        let payload = create_message_payload(offset as u64);
+        let headers = create_message_headers();
         messages.push(Message {
             id,
             length: payload.len() as u32,
@@ -128,11 +128,11 @@ async fn cleanup_system(client: &IggyClient) {
     client.delete_stream(&delete_stream).await.unwrap();
 }
 
-fn get_message_payload(offset: u64) -> Bytes {
+fn create_message_payload(offset: u64) -> Bytes {
     Bytes::from(format!("message {}", offset))
 }
 
-fn get_message_headers() -> HashMap<HeaderKey, HeaderValue> {
+fn create_message_headers() -> HashMap<HeaderKey, HeaderValue> {
     let mut headers = HashMap::new();
     headers.insert(
         HeaderKey::new("key_1").unwrap(),

@@ -22,7 +22,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
     let config = Arc::new(SystemConfig {
         path: setup.config.path.to_string(),
         partition: PartitionConfig {
-            messages_required_to_save: messages_count * 3,
+            messages_required_to_save: messages_count,
             enforce_fsync: true,
             ..Default::default()
         },

@@ -33,7 +33,7 @@ figment = { version = "0.10.15", features = ["json", "toml", "env"] }
 flume = "0.11.0"
 futures = "0.3.30"
 iggy = { path = "../sdk" }
-jsonwebtoken = "9.2.0"
+jsonwebtoken = "9.3.0"
 keepcalm = "0.3.5"
 moka = { version = "0.12.5", features = ["future"] }
 prometheus-client = "0.22.2"

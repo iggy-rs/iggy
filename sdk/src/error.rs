@@ -20,6 +20,8 @@ pub enum IggyError {
     InvalidFormat = 4,
     #[error("Feature is unavailable")]
     FeatureUnavailable = 5,
+    #[error("Invalid identifier")]
+    InvalidIdentifier = 6,
     #[error("Cannot create base directory, Path: {0}")]
     CannotCreateBaseDirectory(String) = 10,
     #[error("Cannot create runtime directory, Path: {0}")]

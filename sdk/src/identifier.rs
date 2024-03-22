@@ -51,20 +51,20 @@ impl Default for Identifier {
 impl Validatable<IggyError> for Identifier {
     fn validate(&self) -> Result<(), IggyError> {
         if self.length == 0 {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         if self.value.is_empty() {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         #[allow(clippy::cast_possible_truncation)]
         if self.length != self.value.len() as u8 {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         if self.kind == IdKind::Numeric && self.length != 4 {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         Ok(())
@@ -75,11 +75,11 @@ impl Identifier {
     /// Returns the numeric value of the identifier.
     pub fn get_u32_value(&self) -> Result<u32, IggyError> {
         if self.kind != IdKind::Numeric {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         if self.length != 4 {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         Ok(u32::from_le_bytes(self.value.clone().try_into().unwrap()))
@@ -93,7 +93,7 @@ impl Identifier {
     /// Returns the Cow<str> value of the identifier.
     pub fn get_cow_str_value(&self) -> Result<Cow<str>, IggyError> {
         if self.kind != IdKind::String {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         Ok(String::from_utf8_lossy(&self.value))
@@ -130,7 +130,7 @@ impl Identifier {
     pub fn from_str_value(value: &str) -> Result<Self, IggyError> {
         let length = value.len();
         if length == 0 || length > 255 {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         match value.parse::<u32>() {
@@ -142,7 +142,7 @@ impl Identifier {
     /// Creates a new identifier from the given numeric value.
     pub fn numeric(value: u32) -> Result<Self, IggyError> {
         if value == 0 {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         Ok(Self {
@@ -156,7 +156,7 @@ impl Identifier {
     pub fn named(value: &str) -> Result<Self, IggyError> {
         let length = value.len();
         if length == 0 || length > 255 {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         Ok(Self {
@@ -182,14 +182,14 @@ impl BytesSerializable for Identifier {
         Self: Sized,
     {
         if bytes.len() < 3 {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         let kind = IdKind::from_code(bytes[0])?;
         let length = bytes[1];
         let value = bytes[2..2 + length as usize].to_vec();
         if value.len() != length as usize {
-            return Err(IggyError::InvalidCommand);
+            return Err(IggyError::InvalidIdentifier);
         }
 
         let identifier = Identifier {
@@ -216,7 +216,7 @@ impl IdKind {
         match code {
             1 => Ok(IdKind::Numeric),
             2 => Ok(IdKind::String),
-            _ => Err(IggyError::InvalidCommand),
+            _ => Err(IggyError::InvalidIdentifier),
         }
     }
 }
@@ -227,7 +227,7 @@ impl FromStr for IdKind {
         match input {
             "n" | "numeric" => Ok(IdKind::Numeric),
             "s" | "string" => Ok(IdKind::String),
-            _ => Err(IggyError::InvalidCommand),
+            _ => Err(IggyError::InvalidIdentifier),
         }
     }
 }
@@ -242,6 +242,20 @@ impl FromStr for Identifier {
         let identifier = Identifier::named(input)?;
         identifier.validate()?;
         Ok(identifier)
+    }
+}
+
+impl TryFrom<u32> for Identifier {
+    type Error = IggyError;
+    fn try_from(value: u32) -> Result<Self, Self::Error> {
+        Identifier::numeric(value)
+    }
+}
+
+impl TryFrom<&str> for Identifier {
+    type Error = IggyError;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Identifier::from_str(value)
     }
 }
 
@@ -264,5 +278,53 @@ impl Display for IdKind {
             IdKind::Numeric => write!(f, "numeric"),
             IdKind::String => write!(f, "string"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn identifier_with_a_value_of_greater_than_zero_should_be_valid() {
+        assert!(Identifier::numeric(1).is_ok());
+    }
+
+    #[test]
+    fn identifier_with_a_value_of_zero_should_be_invalid() {
+        assert!(Identifier::numeric(0).is_err());
+    }
+
+    #[test]
+    fn identifier_with_a_value_of_non_empty_string_should_be_valid() {
+        assert!(Identifier::named("test").is_ok());
+    }
+
+    #[test]
+    fn identifier_with_a_value_of_empty_string_should_be_invalid() {
+        assert!(Identifier::named("").is_err());
+    }
+
+    #[test]
+    fn identifier_with_a_value_of_string_greater_than_255_chars_should_be_invalid() {
+        assert!(Identifier::named(&"a".repeat(256)).is_err());
+    }
+
+    #[test]
+    fn numeric_id_should_be_converted_into_identifier_using_trait() {
+        let id = 1;
+        let identifier: Identifier = id.try_into().unwrap();
+        assert_eq!(identifier.kind, IdKind::Numeric);
+        assert_eq!(identifier.length, 4);
+        assert_eq!(identifier.value, id.to_le_bytes().to_vec());
+    }
+
+    #[test]
+    fn string_id_should_be_converted_into_identifier_using_trait() {
+        let id = "test";
+        let identifier: Identifier = id.try_into().unwrap();
+        assert_eq!(identifier.kind, IdKind::String);
+        assert_eq!(identifier.length, 4);
+        assert_eq!(identifier.value, id.as_bytes().to_vec());
     }
 }

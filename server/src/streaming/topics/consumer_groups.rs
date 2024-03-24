@@ -228,7 +228,7 @@ mod tests {
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_ok());
         assert_eq!(topic.consumer_groups.len(), 1);
-        let result = topic.create_consumer_group(Some(group_id), name).await;
+        let result = topic.create_consumer_group(Some(group_id), "test2").await;
         assert!(result.is_err());
         assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();

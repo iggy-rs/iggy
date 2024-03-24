@@ -19,7 +19,7 @@ pub async fn handle(
             session,
             &command.stream_id,
             &command.topic_id,
-            command.consumer_group_id,
+            command.group_id,
             &command.name,
         )
         .await?;

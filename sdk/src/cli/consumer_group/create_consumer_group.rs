@@ -14,16 +14,23 @@ impl CreateConsumerGroupCmd {
     pub fn new(
         stream_id: Identifier,
         topic_id: Identifier,
-        consumer_group_id: u32,
         name: String,
+        group_id: Option<u32>,
     ) -> Self {
         Self {
             create_consumer_group: CreateConsumerGroup {
                 stream_id,
                 topic_id,
-                consumer_group_id,
                 name,
+                group_id,
             },
+        }
+    }
+
+    fn get_group_id_info(&self) -> String {
+        match self.create_consumer_group.group_id {
+            Some(group_id) => format!("ID: {}", group_id),
+            None => "ID auto incremented".to_string(),
         }
     }
 }
@@ -32,8 +39,8 @@ impl CreateConsumerGroupCmd {
 impl CliCommand for CreateConsumerGroupCmd {
     fn explain(&self) -> String {
         format!(
-            "create consumer group with ID: {}, name: {} for topic with ID: {} and stream with ID: {}",
-            self.create_consumer_group.consumer_group_id,
+            "create consumer group: {}, name: {} for topic with ID: {} and stream with ID: {}",
+            self.get_group_id_info(),
             self.create_consumer_group.name,
             self.create_consumer_group.topic_id,
             self.create_consumer_group.stream_id,
@@ -46,14 +53,14 @@ impl CliCommand for CreateConsumerGroupCmd {
             .await
             .with_context(|| {
                 format!(
-                    "Problem creating consumer group (ID: {}, name: {}) for topic with ID: {} and stream with ID: {}",
-                    self.create_consumer_group.consumer_group_id, self.create_consumer_group.name, self.create_consumer_group.topic_id, self.create_consumer_group.stream_id
+                    "Problem creating consumer group ({}, name: {}) for topic with ID: {} and stream with ID: {}",
+                    self.get_group_id_info(), self.create_consumer_group.name, self.create_consumer_group.topic_id, self.create_consumer_group.stream_id
                 )
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
-            "Consumer group with ID: {}, name: {} created for topic with ID: {} and stream with ID: {}",
-            self.create_consumer_group.consumer_group_id,
+            "Consumer group: {}, name: {} created for topic with ID: {} and stream with ID: {}",
+            self.get_group_id_info(),
             self.create_consumer_group.name,
             self.create_consumer_group.topic_id,
             self.create_consumer_group.stream_id,

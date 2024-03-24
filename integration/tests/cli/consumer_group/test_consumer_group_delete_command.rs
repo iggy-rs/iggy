@@ -19,11 +19,11 @@ struct TestConsumerGroupDeleteCmd {
     stream_name: String,
     topic_id: u32,
     topic_name: String,
-    consumer_group_id: u32,
-    consumer_group_name: String,
+    group_id: u32,
+    group_name: String,
     using_stream_id: TestStreamId,
     using_topic_id: TestTopicId,
-    using_consumer_group_id: TestConsumerGroupId,
+    using_group_id: TestConsumerGroupId,
 }
 
 impl TestConsumerGroupDeleteCmd {
@@ -33,22 +33,22 @@ impl TestConsumerGroupDeleteCmd {
         stream_name: String,
         topic_id: u32,
         topic_name: String,
-        consumer_group_id: u32,
-        consumer_group_name: String,
+        group_id: u32,
+        group_name: String,
         using_stream_id: TestStreamId,
         using_topic_id: TestTopicId,
-        using_consumer_group_id: TestConsumerGroupId,
+        using_group_id: TestConsumerGroupId,
     ) -> Self {
         Self {
             stream_id,
             stream_name,
             topic_id,
             topic_name,
-            consumer_group_id,
-            consumer_group_name,
+            group_id,
+            group_name,
             using_stream_id,
             using_topic_id,
-            using_consumer_group_id,
+            using_group_id,
         }
     }
 
@@ -63,9 +63,9 @@ impl TestConsumerGroupDeleteCmd {
             TestTopicId::Named => self.topic_name.clone(),
         });
 
-        command.push(match self.using_consumer_group_id {
-            TestConsumerGroupId::Numeric => format!("{}", self.consumer_group_id),
-            TestConsumerGroupId::Named => self.consumer_group_name.clone(),
+        command.push(match self.using_group_id {
+            TestConsumerGroupId::Numeric => format!("{}", self.group_id),
+            TestConsumerGroupId::Named => self.group_name.clone(),
         });
 
         command
@@ -100,8 +100,8 @@ impl IggyCmdTestCase for TestConsumerGroupDeleteCmd {
             .create_consumer_group(&CreateConsumerGroup {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Identifier::numeric(self.topic_id).unwrap(),
-                consumer_group_id: self.consumer_group_id,
-                name: self.consumer_group_name.clone(),
+                group_id: Some(self.group_id),
+                name: self.group_name.clone(),
             })
             .await;
         assert!(consumer_group.is_ok());
@@ -126,13 +126,13 @@ impl IggyCmdTestCase for TestConsumerGroupDeleteCmd {
             TestTopicId::Named => self.topic_name.clone(),
         };
 
-        let consumer_group_id = match self.using_consumer_group_id {
-            TestConsumerGroupId::Numeric => format!("{}", self.consumer_group_id),
-            TestConsumerGroupId::Named => self.consumer_group_name.clone(),
+        let group_id = match self.using_group_id {
+            TestConsumerGroupId::Numeric => format!("{}", self.group_id),
+            TestConsumerGroupId::Named => self.group_name.clone(),
         };
 
         let message = format!("Executing delete consumer group with ID: {} for topic with ID: {} and stream with ID: {}\nConsumer group with ID: {} deleted for topic with ID: {} and stream with ID: {}\n",
-            consumer_group_id, topic_id, stream_id, consumer_group_id, topic_id, stream_id);
+                              group_id, topic_id, stream_id, group_id, topic_id, stream_id);
 
         command_state.success().stdout(diff(message));
     }
@@ -214,7 +214,7 @@ pub async fn should_be_successful() {
     ];
 
     iggy_cmd_test.setup().await;
-    for (using_stream_id, using_topic_id, using_consumer_group_id) in test_parameters {
+    for (using_stream_id, using_topic_id, using_group_id) in test_parameters {
         iggy_cmd_test
             .execute_test(TestConsumerGroupDeleteCmd::new(
                 1,
@@ -225,7 +225,7 @@ pub async fn should_be_successful() {
                 String::from("consumer-group"),
                 using_stream_id,
                 using_topic_id,
-                using_consumer_group_id,
+                using_group_id,
             ))
             .await;
     }
@@ -256,7 +256,7 @@ Examples:
  iggy consumer-group delete stream 2 group
  iggy consumer-group delete stream topic group
 
-{USAGE_PREFIX} consumer-group delete <STREAM_ID> <TOPIC_ID> <CONSUMER_GROUP_ID>
+{USAGE_PREFIX} consumer-group delete <STREAM_ID> <TOPIC_ID> <GROUP_ID>
 
 Arguments:
   <STREAM_ID>
@@ -269,7 +269,7 @@ Arguments:
 {CLAP_INDENT}
           Topic ID can be specified as a topic name or ID
 
-  <CONSUMER_GROUP_ID>
+  <GROUP_ID>
           Consumer group ID to delete
 {CLAP_INDENT}
           Consumer group ID can be specified as a consumer group name or ID
@@ -294,12 +294,12 @@ pub async fn should_short_help_match() {
             format!(
                 r#"Delete consumer group with given ID for given stream ID and topic ID
 
-{USAGE_PREFIX} consumer-group delete <STREAM_ID> <TOPIC_ID> <CONSUMER_GROUP_ID>
+{USAGE_PREFIX} consumer-group delete <STREAM_ID> <TOPIC_ID> <GROUP_ID>
 
 Arguments:
   <STREAM_ID>          Stream ID to delete consumer group
   <TOPIC_ID>           Topic ID to delete consumer group
-  <CONSUMER_GROUP_ID>  Consumer group ID to delete
+  <GROUP_ID>           Consumer group ID to delete
 
 Options:
   -h, --help  Print help (see more with '--help')

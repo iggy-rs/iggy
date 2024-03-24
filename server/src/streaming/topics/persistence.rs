@@ -10,15 +10,13 @@ impl Topic {
         storage.topic.load(self).await?;
         let consumer_groups = storage.topic.load_consumer_groups(self).await?;
         for consumer_group in consumer_groups {
-            self.consumer_groups_ids.insert(
-                consumer_group.name.clone(),
-                consumer_group.consumer_group_id,
-            );
+            self.consumer_groups_ids
+                .insert(consumer_group.name.clone(), consumer_group.group_id);
             self.consumer_groups.insert(
-                consumer_group.consumer_group_id,
+                consumer_group.group_id,
                 RwLock::new(ConsumerGroup::new(
                     self.topic_id,
-                    consumer_group.consumer_group_id,
+                    consumer_group.group_id,
                     &consumer_group.name,
                     self.get_partitions_count(),
                 )),

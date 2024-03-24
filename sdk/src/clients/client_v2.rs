@@ -879,13 +879,13 @@ impl ConsumerGroupClientV2 for IggyClientV2 {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        group_id: u32,
         name: &str,
+        group_id: Option<u32>,
     ) -> Result<(), IggyError> {
         self.client
             .read()
             .await
-            .create_consumer_group(stream_id, topic_id, group_id, name)
+            .create_consumer_group(stream_id, topic_id, name, group_id)
             .await
     }
 

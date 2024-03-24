@@ -186,7 +186,7 @@ pub async fn map_consumer_groups(
     for consumer_group in consumer_groups {
         let consumer_group = consumer_group.read().await;
         let consumer_group = iggy::models::consumer_group::ConsumerGroup {
-            id: consumer_group.consumer_group_id,
+            id: consumer_group.group_id,
             name: consumer_group.name.clone(),
             partitions_count: consumer_group.partitions_count,
             members_count: consumer_group.get_members().len() as u32,
@@ -199,7 +199,7 @@ pub async fn map_consumer_groups(
 
 pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> ConsumerGroupDetails {
     let mut consumer_group_details = ConsumerGroupDetails {
-        id: consumer_group.consumer_group_id,
+        id: consumer_group.group_id,
         name: consumer_group.name.clone(),
         partitions_count: consumer_group.partitions_count,
         members_count: consumer_group.get_members().len() as u32,

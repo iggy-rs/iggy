@@ -49,7 +49,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        consumer_group_id: u32,
+        group_id: Option<u32>,
         name: &str,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
@@ -64,7 +64,7 @@ impl System {
         }
 
         let topic = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id)?;
-        topic.create_consumer_group(consumer_group_id, name).await?;
+        topic.create_consumer_group(group_id, name).await?;
         Ok(())
     }
 
@@ -106,7 +106,7 @@ impl System {
                     member.id,
                     stream_id_value,
                     topic_id_value,
-                    consumer_group.consumer_group_id,
+                    consumer_group.group_id,
                 )
                 .await?;
         }
@@ -144,7 +144,7 @@ impl System {
             {
                 let consumer_group = topic.get_consumer_group(consumer_group_id)?;
                 let consumer_group = consumer_group.read().await;
-                group_id = consumer_group.consumer_group_id;
+                group_id = consumer_group.group_id;
             }
 
             topic
@@ -203,7 +203,7 @@ impl System {
             {
                 let consumer_group = topic.get_consumer_group(consumer_group_id)?;
                 let consumer_group = consumer_group.read().await;
-                group_id = consumer_group.consumer_group_id;
+                group_id = consumer_group.group_id;
             }
 
             stream_id_value = stream.stream_id;

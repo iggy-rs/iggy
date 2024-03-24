@@ -305,9 +305,9 @@ pub async fn should_short_help_match() {
 {USAGE_PREFIX} consumer-group get <STREAM_ID> <TOPIC_ID> <GROUP_ID>
 
 Arguments:
-  <STREAM_ID>          Stream ID to get consumer group
-  <TOPIC_ID>           Topic ID to get consumer group
-  <GROUP_ID>           Consumer group ID to get
+  <STREAM_ID>  Stream ID to get consumer group
+  <TOPIC_ID>   Topic ID to get consumer group
+  <GROUP_ID>   Consumer group ID to get
 
 Options:
   -h, --help  Print help (see more with '--help')

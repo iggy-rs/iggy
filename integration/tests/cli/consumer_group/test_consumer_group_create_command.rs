@@ -119,8 +119,8 @@ impl IggyCmdTestCase for TestConsumerGroupCreateCmd {
             None => "ID auto incremented".to_string(),
         };
 
-        let message = format!("Executing create consumer group with name: {}, {}, for topic with ID: {} and stream with ID: {}\nConsumer group with name: {}, {} created for topic with ID: {} and stream with ID: {}\n",
-                              self.group_name, group_id, topic_id, stream_id, self.group_name, group_id, topic_id, stream_id);
+        let message = format!("Executing create consumer group: {}, name: {} for topic with ID: {} and stream with ID: {}\nConsumer group: {}, name: {} created for topic with ID: {} and stream with ID: {}\n",
+                              group_id, self.group_name, topic_id, stream_id, group_id, self.group_name, topic_id, stream_id);
 
         command_state.success().stdout(diff(message));
     }
@@ -234,7 +234,7 @@ Examples:
  iggy consumer-group create 2 topic receiver
  iggy consumer-group create -g 4 stream topic group
 
-{USAGE_PREFIX} consumer-group create <STREAM_ID> <TOPIC_ID> <NAME>
+{USAGE_PREFIX} consumer-group create [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME>
 
 Arguments:
   <STREAM_ID>
@@ -273,16 +273,16 @@ pub async fn should_short_help_match() {
             format!(
                 r#"Create consumer group with given ID and name for given stream ID and topic ID.
 
-{USAGE_PREFIX} consumer-group create <STREAM_ID> <TOPIC_ID> <NAME>
+{USAGE_PREFIX} consumer-group create [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME>
 
 Arguments:
-  <STREAM_ID>          Stream ID to create consumer group
-  <TOPIC_ID>           Topic ID to create consumer group
-  <NAME>               Consumer group name to create
+  <STREAM_ID>  Stream ID to create consumer group
+  <TOPIC_ID>   Topic ID to create consumer group
+  <NAME>       Consumer group name to create
 
 Options:
-  -g, --group-id <GROUP_ID>     Consumer group ID to create
-  -h, --help                    Print help (see more with '--help')
+  -g, --group-id <GROUP_ID>  Consumer group ID to create
+  -h, --help                 Print help (see more with '--help')
 "#,
             ),
         ))

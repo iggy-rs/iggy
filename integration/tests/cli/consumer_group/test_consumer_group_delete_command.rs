@@ -297,9 +297,9 @@ pub async fn should_short_help_match() {
 {USAGE_PREFIX} consumer-group delete <STREAM_ID> <TOPIC_ID> <GROUP_ID>
 
 Arguments:
-  <STREAM_ID>          Stream ID to delete consumer group
-  <TOPIC_ID>           Topic ID to delete consumer group
-  <GROUP_ID>           Consumer group ID to delete
+  <STREAM_ID>  Stream ID to delete consumer group
+  <TOPIC_ID>   Topic ID to delete consumer group
+  <GROUP_ID>   Consumer group ID to delete
 
 Options:
   -h, --help  Print help (see more with '--help')

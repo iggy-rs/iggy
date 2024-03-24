@@ -651,7 +651,7 @@ impl MessageClient for IggyClient {
 
     async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
         if command.messages.is_empty() {
-            return Ok(());
+            return Err(IggyError::InvalidMessagesCount);
         }
 
         if let Some(partitioner) = &self.partitioner {

@@ -2027,7 +2027,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.2.12"
+version = "0.2.13"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -3831,7 +3831,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.9"
+version = "0.2.10"
 dependencies = [
  "aes-gcm",
  "anyhow",

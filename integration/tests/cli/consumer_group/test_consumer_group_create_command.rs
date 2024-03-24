@@ -18,8 +18,8 @@ struct TestConsumerGroupCreateCmd {
     stream_name: String,
     topic_id: u32,
     topic_name: String,
-    consumer_group_id: u32,
-    consumer_group_name: String,
+    group_id: Option<u32>,
+    group_name: String,
     using_stream_id: TestStreamId,
     using_topic_id: TestTopicId,
 }
@@ -31,8 +31,8 @@ impl TestConsumerGroupCreateCmd {
         stream_name: String,
         topic_id: u32,
         topic_name: String,
-        consumer_group_id: u32,
-        consumer_group_name: String,
+        group_id: Option<u32>,
+        group_name: String,
         using_stream_id: TestStreamId,
         using_topic_id: TestTopicId,
     ) -> Self {
@@ -41,8 +41,8 @@ impl TestConsumerGroupCreateCmd {
             stream_name,
             topic_id,
             topic_name,
-            consumer_group_id,
-            consumer_group_name,
+            group_id,
+            group_name,
             using_stream_id,
             using_topic_id,
         }
@@ -59,8 +59,12 @@ impl TestConsumerGroupCreateCmd {
             TestTopicId::Named => self.topic_name.clone(),
         });
 
-        command.push(format!("{}", self.consumer_group_id));
-        command.push(self.consumer_group_name.clone());
+        if let Some(group_id) = self.group_id {
+            command.push("-g".to_string());
+            command.push(format!("{}", group_id));
+        }
+
+        command.push(self.group_name.clone());
 
         command
     }
@@ -110,8 +114,13 @@ impl IggyCmdTestCase for TestConsumerGroupCreateCmd {
             TestTopicId::Named => self.topic_name.clone(),
         };
 
-        let message = format!("Executing create consumer group with ID: {}, name: {} for topic with ID: {} and stream with ID: {}\nConsumer group with ID: {}, name: {} created for topic with ID: {} and stream with ID: {}\n",
-            self.consumer_group_id, self.consumer_group_name, topic_id, stream_id, self.consumer_group_id, self.consumer_group_name, topic_id, stream_id);
+        let group_id = match self.group_id {
+            Some(group_id) => format!("ID: {}", group_id),
+            None => "ID auto incremented".to_string(),
+        };
+
+        let message = format!("Executing create consumer group: {}, name: {} for topic with ID: {} and stream with ID: {}\nConsumer group: {}, name: {} created for topic with ID: {} and stream with ID: {}\n",
+                              group_id, self.group_name, topic_id, stream_id, group_id, self.group_name, topic_id, stream_id);
 
         command_state.success().stdout(diff(message));
     }
@@ -121,13 +130,15 @@ impl IggyCmdTestCase for TestConsumerGroupCreateCmd {
             .get_consumer_group(&GetConsumerGroup {
                 topic_id: Identifier::numeric(self.topic_id).unwrap(),
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                consumer_group_id: Identifier::numeric(self.consumer_group_id).unwrap(),
+                consumer_group_id: Identifier::named(self.group_name.as_str()).unwrap(),
             })
             .await;
         assert!(consumer_group.is_ok());
         let consumer_group_details = consumer_group.unwrap();
-        assert_eq!(consumer_group_details.name, self.consumer_group_name);
-        assert_eq!(consumer_group_details.id, self.consumer_group_id);
+        assert_eq!(consumer_group_details.name, self.group_name);
+        if let Some(group_id) = self.group_id {
+            assert_eq!(consumer_group_details.id, group_id);
+        }
 
         let topic = client
             .delete_topic(&DeleteTopic {
@@ -158,7 +169,7 @@ pub async fn should_be_successful() {
             String::from("main"),
             1,
             String::from("sync"),
-            1,
+            Some(1),
             String::from("group1"),
             TestStreamId::Numeric,
             TestTopicId::Numeric,
@@ -170,7 +181,7 @@ pub async fn should_be_successful() {
             String::from("stream"),
             3,
             String::from("topic"),
-            3,
+            Some(3),
             String::from("group3"),
             TestStreamId::Named,
             TestTopicId::Numeric,
@@ -182,7 +193,7 @@ pub async fn should_be_successful() {
             String::from("development"),
             1,
             String::from("probe"),
-            7,
+            Some(7),
             String::from("group7"),
             TestStreamId::Numeric,
             TestTopicId::Named,
@@ -194,7 +205,7 @@ pub async fn should_be_successful() {
             String::from("production"),
             5,
             String::from("test"),
-            4,
+            Some(4),
             String::from("group4"),
             TestStreamId::Named,
             TestTopicId::Named,
@@ -215,14 +226,15 @@ pub async fn should_help_match() {
 
 Stream ID can be specified as a stream name or ID
 Topic ID can be specified as a topic name or ID
+If group ID is not provided then the server will automatically assign it
 
 Examples:
- iggy consumer-group create 1 1 1 prod
- iggy consumer-group create stream 2 2 test
- iggy consumer-group create 2 topic 3 receiver
- iggy consumer-group create stream topic 4 group
+ iggy consumer-group create 1 1 prod
+ iggy consumer-group create stream 2 test
+ iggy consumer-group create 2 topic receiver
+ iggy consumer-group create -g 4 stream topic group
 
-{USAGE_PREFIX} consumer-group create <STREAM_ID> <TOPIC_ID> <CONSUMER_GROUP_ID> <NAME>
+{USAGE_PREFIX} consumer-group create [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME>
 
 Arguments:
   <STREAM_ID>
@@ -235,13 +247,13 @@ Arguments:
 {CLAP_INDENT}
           Topic ID can be specified as a topic name or ID
 
-  <CONSUMER_GROUP_ID>
-          Consumer group ID to create
-
   <NAME>
           Consumer group name to create
 
 Options:
+  -g, --group-id <GROUP_ID>
+          Consumer group ID to create
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -261,16 +273,16 @@ pub async fn should_short_help_match() {
             format!(
                 r#"Create consumer group with given ID and name for given stream ID and topic ID.
 
-{USAGE_PREFIX} consumer-group create <STREAM_ID> <TOPIC_ID> <CONSUMER_GROUP_ID> <NAME>
+{USAGE_PREFIX} consumer-group create [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME>
 
 Arguments:
-  <STREAM_ID>          Stream ID to create consumer group
-  <TOPIC_ID>           Topic ID to create consumer group
-  <CONSUMER_GROUP_ID>  Consumer group ID to create
-  <NAME>               Consumer group name to create
+  <STREAM_ID>  Stream ID to create consumer group
+  <TOPIC_ID>   Topic ID to create consumer group
+  <NAME>       Consumer group name to create
 
 Options:
-  -h, --help  Print help (see more with '--help')
+  -g, --group-id <GROUP_ID>  Consumer group ID to create
+  -h, --help                 Print help (see more with '--help')
 "#,
             ),
         ))

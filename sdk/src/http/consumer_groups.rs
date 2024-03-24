@@ -84,16 +84,16 @@ impl ConsumerGroupClientV2 for HttpClient {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        group_id: u32,
         name: &str,
+        group_id: Option<u32>,
     ) -> Result<(), IggyError> {
         create_consumer_group(
             self,
             &CreateConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
-                consumer_group_id: group_id,
                 name: name.to_string(),
+                group_id,
             },
         )
         .await

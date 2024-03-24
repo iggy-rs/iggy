@@ -344,8 +344,8 @@ pub trait ConsumerGroupClientV2 {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        group_id: u32,
         name: &str,
+        group_id: Option<u32>,
     ) -> Result<(), IggyError>;
     /// Delete a consumer group by unique ID or name for the given stream and topic by unique IDs or names.
     ///

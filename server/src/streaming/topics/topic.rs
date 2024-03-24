@@ -29,6 +29,7 @@ pub struct Topic {
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
     pub(crate) consumer_groups_ids: HashMap<String, u32>,
+    pub(crate) current_consumer_group_id: AtomicU32,
     pub(crate) current_partition_id: AtomicU32,
     pub message_expiry: Option<u32>,
     pub max_topic_size: Option<IggyByteSize>,
@@ -95,6 +96,7 @@ impl Topic {
             segments_count_of_parent_stream,
             consumer_groups: HashMap::new(),
             consumer_groups_ids: HashMap::new(),
+            current_consumer_group_id: AtomicU32::new(1),
             current_partition_id: AtomicU32::new(1),
             message_expiry: match message_expiry {
                 Some(expiry) => match expiry {

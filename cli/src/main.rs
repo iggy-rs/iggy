@@ -205,18 +205,18 @@ fn get_command(
             ConsumerGroupAction::Create(create_args) => Box::new(CreateConsumerGroupCmd::new(
                 create_args.stream_id.clone(),
                 create_args.topic_id.clone(),
-                create_args.consumer_group_id,
                 create_args.name.clone(),
+                create_args.group_id,
             )),
             ConsumerGroupAction::Delete(delete_args) => Box::new(DeleteConsumerGroupCmd::new(
                 delete_args.stream_id.clone(),
                 delete_args.topic_id.clone(),
-                delete_args.consumer_group_id.clone(),
+                delete_args.group_id.clone(),
             )),
             ConsumerGroupAction::Get(get_args) => Box::new(GetConsumerGroupCmd::new(
                 get_args.stream_id.clone(),
                 get_args.topic_id.clone(),
-                get_args.consumer_group_id.clone(),
+                get_args.group_id.clone(),
             )),
             ConsumerGroupAction::List(list_args) => Box::new(GetConsumerGroupsCmd::new(
                 list_args.stream_id.clone(),

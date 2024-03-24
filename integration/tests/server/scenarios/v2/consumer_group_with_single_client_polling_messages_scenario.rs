@@ -56,8 +56,8 @@ async fn init_system(client: &IggyClientV2) {
         .create_consumer_group(
             &Identifier::numeric(STREAM_ID).unwrap(),
             &Identifier::numeric(TOPIC_ID).unwrap(),
-            CONSUMER_GROUP_ID,
             CONSUMER_GROUP_NAME,
+            Some(CONSUMER_GROUP_ID),
         )
         .await
         .unwrap();

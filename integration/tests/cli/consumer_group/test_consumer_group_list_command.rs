@@ -97,7 +97,7 @@ impl IggyCmdTestCase for TestConsumerGroupListCmd {
             .create_consumer_group(&CreateConsumerGroup {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Identifier::numeric(self.topic_id).unwrap(),
-                consumer_group_id: self.consumer_group_id,
+                group_id: Some(self.consumer_group_id),
                 name: self.consumer_group_name.clone(),
             })
             .await;

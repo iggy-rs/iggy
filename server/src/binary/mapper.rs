@@ -235,7 +235,7 @@ fn extend_partition(partition: &Partition, bytes: &mut BytesMut) {
 }
 
 fn extend_consumer_group(consumer_group: &ConsumerGroup, bytes: &mut BytesMut) {
-    bytes.put_u32_le(consumer_group.consumer_group_id);
+    bytes.put_u32_le(consumer_group.group_id);
     bytes.put_u32_le(consumer_group.partitions_count);
     bytes.put_u32_le(consumer_group.get_members().len() as u32);
     bytes.put_u8(consumer_group.name.len() as u8);

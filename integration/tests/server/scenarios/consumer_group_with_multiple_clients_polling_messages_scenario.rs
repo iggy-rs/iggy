@@ -85,7 +85,7 @@ async fn init_system(
     let create_group = CreateConsumerGroup {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        consumer_group_id: CONSUMER_GROUP_ID,
+        group_id: Some(CONSUMER_GROUP_ID),
         name: CONSUMER_GROUP_NAME.to_string(),
     };
     system_client

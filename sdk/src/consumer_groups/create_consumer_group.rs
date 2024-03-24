@@ -24,8 +24,8 @@ pub struct CreateConsumerGroup {
     /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
-    /// Unique consumer group ID.
-    pub consumer_group_id: u32,
+    /// Unique consumer group ID (numeric), if None is provided then the server will automatically assign it.
+    pub group_id: Option<u32>,
     /// Unique consumer group name, max length is 255 characters.
     pub name: String,
 }
@@ -37,7 +37,7 @@ impl Default for CreateConsumerGroup {
         CreateConsumerGroup {
             stream_id: Identifier::default(),
             topic_id: Identifier::default(),
-            consumer_group_id: 1,
+            group_id: None,
             name: "consumer_group_1".to_string(),
         }
     }
@@ -45,8 +45,10 @@ impl Default for CreateConsumerGroup {
 
 impl Validatable<IggyError> for CreateConsumerGroup {
     fn validate(&self) -> Result<(), IggyError> {
-        if self.consumer_group_id == 0 {
-            return Err(IggyError::InvalidConsumerGroupId);
+        if let Some(group_id) = self.group_id {
+            if group_id == 0 {
+                return Err(IggyError::InvalidConsumerGroupId);
+            }
         }
 
         if self.name.is_empty() || self.name.len() > MAX_NAME_LENGTH {
@@ -70,7 +72,7 @@ impl BytesSerializable for CreateConsumerGroup {
         );
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);
-        bytes.put_u32_le(self.consumer_group_id);
+        bytes.put_u32_le(self.group_id.unwrap_or(0));
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.put_slice(self.name.as_bytes());
@@ -87,14 +89,15 @@ impl BytesSerializable for CreateConsumerGroup {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
-        let consumer_group_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let group_id = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let group_id = if group_id == 0 { None } else { Some(group_id) };
         let name_length = bytes[position + 4];
         let name =
             from_utf8(&bytes[position + 5..position + 5 + name_length as usize])?.to_string();
         let command = CreateConsumerGroup {
             stream_id,
             topic_id,
-            consumer_group_id,
+            group_id,
             name,
         };
         command.validate()?;
@@ -107,7 +110,10 @@ impl Display for CreateConsumerGroup {
         write!(
             f,
             "{}|{}|{}|{}",
-            self.stream_id, self.topic_id, self.consumer_group_id, self.name
+            self.stream_id,
+            self.topic_id,
+            self.group_id.unwrap_or(0),
+            self.name
         )
     }
 }
@@ -121,7 +127,7 @@ mod tests {
         let command = CreateConsumerGroup {
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(2).unwrap(),
-            consumer_group_id: 3,
+            group_id: Some(3),
             name: "test".to_string(),
         };
 
@@ -131,15 +137,14 @@ mod tests {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
-        let consumer_group_id =
-            u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
+        let group_id = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
+
         let name_length = bytes[position + 4];
         let name = from_utf8(&bytes[position + 5..position + 5 + name_length as usize]).unwrap();
-
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
-        assert_eq!(consumer_group_id, command.consumer_group_id);
+        assert_eq!(group_id, command.group_id.unwrap());
         assert_eq!(name, command.name);
     }
 
@@ -165,7 +170,7 @@ mod tests {
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.consumer_group_id, consumer_group_id);
+        assert_eq!(command.group_id.unwrap(), consumer_group_id);
         assert_eq!(command.name, name);
     }
 }

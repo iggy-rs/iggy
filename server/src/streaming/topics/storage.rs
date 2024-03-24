@@ -45,13 +45,9 @@ impl TopicStorage for FileTopicStorage {
         topic: &Topic,
         consumer_group: &ConsumerGroup,
     ) -> Result<(), IggyError> {
-        let key = get_consumer_group_key(
-            topic.stream_id,
-            topic.topic_id,
-            consumer_group.consumer_group_id,
-        );
+        let key = get_consumer_group_key(topic.stream_id, topic.topic_id, consumer_group.group_id);
         match rmp_serde::to_vec(&ConsumerGroupData {
-            id: consumer_group.consumer_group_id,
+            id: consumer_group.group_id,
             name: consumer_group.name.clone(),
         })
         .with_context(|| format!("Failed to serialize consumer group with key: {}", key))
@@ -118,11 +114,7 @@ impl TopicStorage for FileTopicStorage {
         topic: &Topic,
         consumer_group: &ConsumerGroup,
     ) -> Result<(), IggyError> {
-        let key = get_consumer_group_key(
-            topic.stream_id,
-            topic.topic_id,
-            consumer_group.consumer_group_id,
-        );
+        let key = get_consumer_group_key(topic.stream_id, topic.topic_id, consumer_group.group_id);
         match self
             .db
             .remove(&key)
@@ -131,7 +123,7 @@ impl TopicStorage for FileTopicStorage {
             Ok(_) => {
                 info!(
             "Consumer group with ID: {} for topic with ID: {} and stream with ID: {} was deleted.",
-            consumer_group.consumer_group_id, topic.topic_id, topic.stream_id
+            consumer_group.group_id, topic.topic_id, topic.stream_id
         );
                 Ok(())
             }

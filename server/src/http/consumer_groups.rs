@@ -78,7 +78,7 @@ async fn create_consumer_group(
             &Session::stateless(identity.user_id, identity.ip_address),
             &command.stream_id,
             &command.topic_id,
-            command.consumer_group_id,
+            command.group_id,
             &command.name,
         )
         .await?;

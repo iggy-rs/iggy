@@ -19,11 +19,11 @@ struct TestConsumerGroupGetCmd {
     stream_name: String,
     topic_id: u32,
     topic_name: String,
-    consumer_group_id: u32,
-    consumer_group_name: String,
+    group_id: u32,
+    group_name: String,
     using_stream_id: TestStreamId,
     using_topic_id: TestTopicId,
-    using_consumer_group_id: TestConsumerGroupId,
+    using_group_id: TestConsumerGroupId,
 }
 
 impl TestConsumerGroupGetCmd {
@@ -33,22 +33,22 @@ impl TestConsumerGroupGetCmd {
         stream_name: String,
         topic_id: u32,
         topic_name: String,
-        consumer_group_id: u32,
-        consumer_group_name: String,
+        group_id: u32,
+        group_name: String,
         using_stream_id: TestStreamId,
         using_topic_id: TestTopicId,
-        using_consumer_group_id: TestConsumerGroupId,
+        using_group_id: TestConsumerGroupId,
     ) -> Self {
         Self {
             stream_id,
             stream_name,
             topic_id,
             topic_name,
-            consumer_group_id,
-            consumer_group_name,
+            group_id,
+            group_name,
             using_stream_id,
             using_topic_id,
-            using_consumer_group_id,
+            using_group_id,
         }
     }
 
@@ -63,9 +63,9 @@ impl TestConsumerGroupGetCmd {
             TestTopicId::Named => self.topic_name.clone(),
         });
 
-        command.push(match self.using_consumer_group_id {
-            TestConsumerGroupId::Numeric => format!("{}", self.consumer_group_id),
-            TestConsumerGroupId::Named => self.consumer_group_name.clone(),
+        command.push(match self.using_group_id {
+            TestConsumerGroupId::Numeric => format!("{}", self.group_id),
+            TestConsumerGroupId::Named => self.group_name.clone(),
         });
 
         command
@@ -100,8 +100,8 @@ impl IggyCmdTestCase for TestConsumerGroupGetCmd {
             .create_consumer_group(&CreateConsumerGroup {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Identifier::numeric(self.topic_id).unwrap(),
-                consumer_group_id: self.consumer_group_id,
-                name: self.consumer_group_name.clone(),
+                group_id: Some(self.group_id),
+                name: self.group_name.clone(),
             })
             .await;
         assert!(consumer_group.is_ok());
@@ -126,9 +126,9 @@ impl IggyCmdTestCase for TestConsumerGroupGetCmd {
             TestTopicId::Named => self.topic_name.clone(),
         };
 
-        let consumer_group_id = match self.using_consumer_group_id {
-            TestConsumerGroupId::Numeric => format!("{}", self.consumer_group_id),
-            TestConsumerGroupId::Named => self.consumer_group_name.clone(),
+        let consumer_group_id = match self.using_group_id {
+            TestConsumerGroupId::Numeric => format!("{}", self.group_id),
+            TestConsumerGroupId::Named => self.group_name.clone(),
         };
 
         let start_message = format!(
@@ -139,13 +139,10 @@ impl IggyCmdTestCase for TestConsumerGroupGetCmd {
         command_state
             .success()
             .stdout(starts_with(start_message))
-            .stdout(contains(format!(
-                "Consumer group id   | {}",
-                self.consumer_group_id
-            )))
+            .stdout(contains(format!("Consumer group id   | {}", self.group_id)))
             .stdout(contains(format!(
                 "Consumer group name | {}",
-                self.consumer_group_name
+                self.group_name
             )));
     }
 
@@ -154,7 +151,7 @@ impl IggyCmdTestCase for TestConsumerGroupGetCmd {
             .delete_consumer_group(&DeleteConsumerGroup {
                 topic_id: Identifier::numeric(self.topic_id).unwrap(),
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                consumer_group_id: Identifier::numeric(self.consumer_group_id).unwrap(),
+                consumer_group_id: Identifier::numeric(self.group_id).unwrap(),
             })
             .await;
         assert!(consumer_group.is_ok());
@@ -267,7 +264,7 @@ Examples:
  iggy consumer-group get stream 2 group
  iggy consumer-group get stream topic group
 
-{USAGE_PREFIX} consumer-group get <STREAM_ID> <TOPIC_ID> <CONSUMER_GROUP_ID>
+{USAGE_PREFIX} consumer-group get <STREAM_ID> <TOPIC_ID> <GROUP_ID>
 
 Arguments:
   <STREAM_ID>
@@ -280,7 +277,7 @@ Arguments:
 {CLAP_INDENT}
           Topic ID can be specified as a topic name or ID
 
-  <CONSUMER_GROUP_ID>
+  <GROUP_ID>
           Consumer group ID to get
 {CLAP_INDENT}
           Consumer group ID can be specified as a consumer group name or ID
@@ -305,12 +302,12 @@ pub async fn should_short_help_match() {
             format!(
                 r#"Get details of a single consumer group with given ID for given stream ID and topic ID
 
-{USAGE_PREFIX} consumer-group get <STREAM_ID> <TOPIC_ID> <CONSUMER_GROUP_ID>
+{USAGE_PREFIX} consumer-group get <STREAM_ID> <TOPIC_ID> <GROUP_ID>
 
 Arguments:
-  <STREAM_ID>          Stream ID to get consumer group
-  <TOPIC_ID>           Topic ID to get consumer group
-  <CONSUMER_GROUP_ID>  Consumer group ID to get
+  <STREAM_ID>  Stream ID to get consumer group
+  <TOPIC_ID>   Topic ID to get consumer group
+  <GROUP_ID>   Consumer group ID to get
 
 Options:
   -h, --help  Print help (see more with '--help')

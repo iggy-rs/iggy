@@ -1,8 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::TopicClient;
-use crate::client_v2::TopicClientV2;
 use crate::command::{
     CREATE_TOPIC_CODE, DELETE_TOPIC_CODE, GET_TOPICS_CODE, GET_TOPIC_CODE, PURGE_TOPIC_CODE,
     UPDATE_TOPIC_CODE,
@@ -10,6 +9,7 @@ use crate::command::{
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::topic::{Topic, TopicDetails};
+use crate::next_client::TopicClientNext;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
@@ -47,7 +47,7 @@ impl<B: BinaryClient> TopicClient for B {
 }
 
 #[async_trait::async_trait]
-impl<B: BinaryClientV2> TopicClientV2 for B {
+impl<B: BinaryClientNext> TopicClientNext for B {
     async fn get_topic(
         &self,
         stream_id: &Identifier,

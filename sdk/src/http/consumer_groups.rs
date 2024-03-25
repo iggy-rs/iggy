@@ -1,5 +1,4 @@
 use crate::client::ConsumerGroupClient;
-use crate::client_v2::ConsumerGroupClientV2;
 use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
@@ -11,6 +10,7 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
+use crate::next_client::ConsumerGroupClientNext;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -47,7 +47,7 @@ impl ConsumerGroupClient for HttpClient {
 }
 
 #[async_trait]
-impl ConsumerGroupClientV2 for HttpClient {
+impl ConsumerGroupClientNext for HttpClient {
     async fn get_consumer_group(
         &self,
         stream_id: &Identifier,

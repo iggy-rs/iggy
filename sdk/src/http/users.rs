@@ -1,5 +1,4 @@
 use crate::client::UserClient;
-use crate::client_v2::UserClientV2;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
@@ -8,6 +7,7 @@ use crate::models::identity_info::IdentityInfo;
 use crate::models::permissions::Permissions;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
+use crate::next_client::UserClientNext;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
@@ -61,7 +61,7 @@ impl UserClient for HttpClient {
 }
 
 #[async_trait]
-impl UserClientV2 for HttpClient {
+impl UserClientNext for HttpClient {
     async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
         get_user(
             self,

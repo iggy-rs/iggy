@@ -25,16 +25,16 @@ use std::fmt::Debug;
 /// It consists of multiple modules, each of which is responsible for a specific set of commands.
 /// Except the ping, login and get me, all the other methods require authentication.
 #[async_trait]
-pub trait ClientV2:
-    SystemClientV2
-    + UserClientV2
-    + PersonalAccessTokenClientV2
-    + StreamClientV2
-    + TopicClientV2
-    + PartitionClientV2
-    + MessageClientV2
-    + ConsumerOffsetClientV2
-    + ConsumerGroupClientV2
+pub trait ClientNext:
+    SystemClientNext
+    + UserClientNext
+    + PersonalAccessTokenClientNext
+    + StreamClientNext
+    + TopicClientNext
+    + PartitionClientNext
+    + MessageClientNext
+    + ConsumerOffsetClientNext
+    + ConsumerGroupClientNext
     + Sync
     + Send
     + Debug
@@ -49,7 +49,7 @@ pub trait ClientV2:
 
 /// This trait defines the methods to interact with the system module.
 #[async_trait]
-pub trait SystemClientV2 {
+pub trait SystemClientNext {
     /// Get the stats of the system such as PID, memory usage, streams count etc.
     ///
     /// Authentication is required, and the permission to read the server info.
@@ -72,7 +72,7 @@ pub trait SystemClientV2 {
 
 /// This trait defines the methods to interact with the user module.
 #[async_trait]
-pub trait UserClientV2 {
+pub trait UserClientNext {
     /// Get the info about a specific user by unique ID or username.
     ///
     /// Authentication is required, and the permission to read the users, unless the provided user ID is the same as the authenticated user.
@@ -129,7 +129,7 @@ pub trait UserClientV2 {
 
 /// This trait defines the methods to interact with the personal access token module.
 #[async_trait]
-pub trait PersonalAccessTokenClientV2 {
+pub trait PersonalAccessTokenClientNext {
     /// Get the info about all the personal access tokens of the currently authenticated user.
     async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError>;
     /// Create a new personal access token for the currently authenticated user.
@@ -149,7 +149,7 @@ pub trait PersonalAccessTokenClientV2 {
 
 /// This trait defines the methods to interact with the stream module.
 #[async_trait]
-pub trait StreamClientV2 {
+pub trait StreamClientNext {
     /// Get the info about a specific stream by unique ID or name.
     ///
     /// Authentication is required, and the permission to read the streams.
@@ -178,7 +178,7 @@ pub trait StreamClientV2 {
 
 /// This trait defines the methods to interact with the topic module.
 #[async_trait]
-pub trait TopicClientV2 {
+pub trait TopicClientNext {
     /// Get the info about a specific topic by unique ID or name.
     ///
     /// Authentication is required, and the permission to read the topics.
@@ -237,7 +237,7 @@ pub trait TopicClientV2 {
 
 /// This trait defines the methods to interact with the partition module.
 #[async_trait]
-pub trait PartitionClientV2 {
+pub trait PartitionClientNext {
     /// Create new N partitions for a topic by unique ID or name.
     ///
     /// For example, given a topic with 3 partitions, if you create 2 partitions, the topic will have 5 partitions (from 1 to 5).
@@ -264,7 +264,7 @@ pub trait PartitionClientV2 {
 
 /// This trait defines the methods to interact with the messaging module.
 #[async_trait]
-pub trait MessageClientV2 {
+pub trait MessageClientNext {
     /// Poll given amount of messages using the specified consumer and strategy from the specified stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to poll the messages.
@@ -293,7 +293,7 @@ pub trait MessageClientV2 {
 
 /// This trait defines the methods to interact with the consumer offset module.
 #[async_trait]
-pub trait ConsumerOffsetClientV2 {
+pub trait ConsumerOffsetClientNext {
     /// Store the consumer offset for a specific consumer or consumer group for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to poll the messages.
@@ -319,7 +319,7 @@ pub trait ConsumerOffsetClientV2 {
 
 /// This trait defines the methods to interact with the consumer group module.
 #[async_trait]
-pub trait ConsumerGroupClientV2 {
+pub trait ConsumerGroupClientNext {
     /// Get the info about a specific consumer group by unique ID or name for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to read the streams or topics.

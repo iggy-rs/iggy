@@ -1,31 +1,31 @@
 use bytes::Bytes;
 
-use crate::server::scenarios::v2::{
+use crate::server::scenarios::next::{
     get_consumer_group, leave_consumer_group, CONSUMER_GROUP_ID, CONSUMER_GROUP_NAME, CONSUMER_ID,
     CONSUMER_KIND, MESSAGES_COUNT, PARTITIONS_COUNT, PARTITION_ID, STREAM_ID, STREAM_NAME,
     TOPIC_ID, TOPIC_NAME,
 };
-use iggy::client_v2::{
-    ConsumerGroupClientV2, ConsumerOffsetClientV2, MessageClientV2, PartitionClientV2,
-    StreamClientV2, SystemClientV2, TopicClientV2, UserClientV2,
-};
-use iggy::clients::client_v2::{IggyClientBackgroundConfigV2, IggyClientV2};
+use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
 use iggy::consumer::Consumer;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::messages::PolledMessage;
+use iggy::next_client::{
+    ConsumerGroupClientNext, ConsumerOffsetClientNext, MessageClientNext, PartitionClientNext,
+    StreamClientNext, SystemClientNext, TopicClientNext, UserClientNext,
+};
 use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
-use integration::test_server::{assert_clean_system_v2, ClientFactoryV2};
+use integration::test_server::{assert_clean_system_next, ClientFactoryNext};
 
-pub async fn run(client_factory: &dyn ClientFactoryV2) {
+pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let client = client_factory.create_client().await;
-    let client = IggyClientV2::create(
+    let client = IggyClientNext::create(
         client,
-        IggyClientBackgroundConfigV2::default(),
+        IggyClientNextBackgroundConfig::default(),
         None,
         None,
         None,
@@ -712,7 +712,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
 
     assert!(clients.len() <= 1);
 
-    assert_clean_system_v2(&client).await;
+    assert_clean_system_next(&client).await;
 }
 
 fn assert_message(message: &PolledMessage, offset: u64) {

@@ -1,5 +1,4 @@
 use crate::client::ConsumerOffsetClient;
-use crate::client_v2::ConsumerOffsetClientV2;
 use crate::consumer::Consumer;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
@@ -8,6 +7,7 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
+use crate::next_client::ConsumerOffsetClientNext;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -25,7 +25,7 @@ impl ConsumerOffsetClient for HttpClient {
 }
 
 #[async_trait]
-impl ConsumerOffsetClientV2 for HttpClient {
+impl ConsumerOffsetClientNext for HttpClient {
     async fn store_consumer_offset(
         &self,
         consumer: &Consumer,

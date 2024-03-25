@@ -1,8 +1,8 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{BinaryTransport, ClientState};
 use crate::client::Client;
-use crate::client_v2::ClientV2;
 use crate::error::{IggyError, IggyErrorDiscriminants};
+use crate::next_client::ClientNext;
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
@@ -133,7 +133,7 @@ impl Client for TcpClient {
 }
 
 #[async_trait]
-impl ClientV2 for TcpClient {
+impl ClientNext for TcpClient {
     async fn connect(&self) -> Result<(), IggyError> {
         TcpClient::connect(self).await
     }
@@ -187,7 +187,7 @@ impl BinaryTransport for TcpClient {
 
 impl BinaryClient for TcpClient {}
 
-impl BinaryClientV2 for TcpClient {}
+impl BinaryClientNext for TcpClient {}
 
 impl TcpClient {
     /// Create a new TCP client for the provided server address.

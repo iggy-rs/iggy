@@ -1,8 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::MessageClient;
-use crate::client_v2::MessageClientV2;
 use crate::command::{POLL_MESSAGES_CODE, SEND_MESSAGES_CODE};
 use crate::consumer::Consumer;
 use crate::error::IggyError;
@@ -10,6 +9,7 @@ use crate::identifier::Identifier;
 use crate::messages::poll_messages::{PollMessages, PollingStrategy};
 use crate::messages::send_messages::{Message, Partitioning, SendMessages};
 use crate::models::messages::PolledMessages;
+use crate::next_client::MessageClientNext;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> MessageClient for B {
@@ -23,7 +23,7 @@ impl<B: BinaryClient> MessageClient for B {
 }
 
 #[async_trait::async_trait]
-impl<B: BinaryClientV2> MessageClientV2 for B {
+impl<B: BinaryClientNext> MessageClientNext for B {
     async fn poll_messages(
         &self,
         stream_id: &Identifier,

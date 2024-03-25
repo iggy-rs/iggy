@@ -1,7 +1,3 @@
-use crate::client_v2::{
-    ClientV2, ConsumerGroupClientV2, ConsumerOffsetClientV2, MessageClientV2, PartitionClientV2,
-    PersonalAccessTokenClientV2, StreamClientV2, SystemClientV2, TopicClientV2, UserClientV2,
-};
 use crate::consumer::Consumer;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -19,6 +15,11 @@ use crate::models::stats::Stats;
 use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
+use crate::next_client::{
+    ClientNext, ConsumerGroupClientNext, ConsumerOffsetClientNext, MessageClientNext,
+    PartitionClientNext, PersonalAccessTokenClientNext, StreamClientNext, SystemClientNext,
+    TopicClientNext, UserClientNext,
+};
 use crate::partitioner::Partitioner;
 use crate::tcp::client::TcpClient;
 use crate::utils::crypto::Encryptor;
@@ -48,12 +49,12 @@ pub const DEFAULT_SEND_MESSAGES_INTERVAL_MS: u64 = 100;
 // The default interval between polling the messages in the background.
 pub const DEFAULT_POLL_MESSAGES_INTERVAL_MS: u64 = 100;
 
-/// The next version of main client struct which implements all the `ClientV2` traits and wraps the underlying low-level client for the specific transport.
-/// It also provides additional functionality (outside of the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
+/// The next version of main client struct which implements all the `ClientNext` traits and wraps the underlying low-level client for the specific transport.
+/// It also provides additional functionality (outside the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
 #[derive(Debug)]
-pub struct IggyClientV2 {
-    client: IggySharedMut<Box<dyn ClientV2>>,
-    config: Option<IggyClientBackgroundConfigV2>,
+pub struct IggyClientNext {
+    client: IggySharedMut<Box<dyn ClientNext>>,
+    config: Option<IggyClientNextBackgroundConfig>,
     send_messages_batch: Option<Arc<Mutex<SendMessagesBatch>>>,
     partitioner: Option<Box<dyn Partitioner>>,
     encryptor: Option<Box<dyn Encryptor>>,
@@ -66,9 +67,9 @@ struct SendMessagesBatch {
     pub commands: VecDeque<SendMessages>,
 }
 
-/// The optional configuration for the `IggyClientV2` instance, consisting of the optional configuration for sending and polling the messages in the background.
+/// The optional configuration for the `IggyClientNext` instance, consisting of the optional configuration for sending and polling the messages in the background.
 #[derive(Debug, Default)]
-pub struct IggyClientBackgroundConfigV2 {
+pub struct IggyClientNextBackgroundConfig {
     /// The configuration for sending the messages in the background.
     pub send_messages: SendMessagesConfig,
     /// The configuration for polling the messages in the background.
@@ -127,21 +128,21 @@ impl Default for PollMessagesConfig {
     }
 }
 
-impl Default for IggyClientV2 {
+impl Default for IggyClientNext {
     fn default() -> Self {
-        IggyClientV2::new(Box::<TcpClient>::default())
+        IggyClientNext::new(Box::<TcpClient>::default())
     }
 }
 
-impl IggyClientV2 {
+impl IggyClientNext {
     /// Creates a new `IggyClientBuilder`.
     pub fn builder() -> IggyClientBuilder {
         IggyClientBuilder::new()
     }
 
-    /// Creates a new `IggyClientV2` with the provided client implementation for the specific transport.
-    pub fn new(client: Box<dyn ClientV2>) -> Self {
-        IggyClientV2 {
+    /// Creates a new `IggyClientNext` with the provided client implementation for the specific transport.
+    pub fn new(client: Box<dyn ClientNext>) -> Self {
+        IggyClientNext {
             client: IggySharedMut::new(client),
             config: None,
             send_messages_batch: None,
@@ -152,11 +153,11 @@ impl IggyClientV2 {
         }
     }
 
-    /// Creates a new `IggyClientV2` with the provided client implementation for the specific transport and the optional configuration for sending and polling the messages in the background.
-    /// Additionally it allows to provide the custom implementations for the message handler, partitioner and encryptor.
+    /// Creates a new `IggyClientNext` with the provided client implementation for the specific transport and the optional configuration for sending and polling the messages in the background.
+    /// Additionally, it allows to provide the custom implementations for the message handler, partitioner and encryptor.
     pub fn create(
-        client: Box<dyn ClientV2>,
-        config: IggyClientBackgroundConfigV2,
+        client: Box<dyn ClientNext>,
+        config: IggyClientNextBackgroundConfig,
         message_handler: Option<Box<dyn MessageHandler>>,
         partitioner: Option<Box<dyn Partitioner>>,
         encryptor: Option<Box<dyn Encryptor>>,
@@ -182,7 +183,7 @@ impl IggyClientV2 {
             );
         }
 
-        IggyClientV2 {
+        IggyClientNext {
             client,
             config: Some(config),
             send_messages_batch: Some(send_messages_batch),
@@ -351,7 +352,7 @@ impl IggyClientV2 {
     fn send_messages_in_background(
         interval: u64,
         max_messages: u32,
-        client: IggySharedMut<Box<dyn ClientV2>>,
+        client: IggySharedMut<Box<dyn ClientNext>>,
         send_messages_batch: Arc<Mutex<SendMessagesBatch>>,
     ) {
         tokio::spawn(async move {
@@ -469,7 +470,7 @@ impl IggyClientV2 {
 }
 
 #[async_trait]
-impl ClientV2 for IggyClientV2 {
+impl ClientNext for IggyClientNext {
     async fn connect(&self) -> Result<(), IggyError> {
         self.client.read().await.connect().await
     }
@@ -480,7 +481,7 @@ impl ClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl UserClientV2 for IggyClientV2 {
+impl UserClientNext for IggyClientNext {
     async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
         self.client.read().await.get_user(user_id).await
     }
@@ -559,7 +560,7 @@ impl UserClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl PersonalAccessTokenClientV2 for IggyClientV2 {
+impl PersonalAccessTokenClientNext for IggyClientNext {
     async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         self.client.read().await.get_personal_access_tokens().await
     }
@@ -597,7 +598,7 @@ impl PersonalAccessTokenClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl SystemClientV2 for IggyClientV2 {
+impl SystemClientNext for IggyClientNext {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
         self.client.read().await.get_stats().await
     }
@@ -620,7 +621,7 @@ impl SystemClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl StreamClientV2 for IggyClientV2 {
+impl StreamClientNext for IggyClientNext {
     async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
         self.client.read().await.get_stream(stream_id).await
     }
@@ -655,7 +656,7 @@ impl StreamClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl TopicClientV2 for IggyClientV2 {
+impl TopicClientNext for IggyClientNext {
     async fn get_topic(
         &self,
         stream_id: &Identifier,
@@ -746,7 +747,7 @@ impl TopicClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl PartitionClientV2 for IggyClientV2 {
+impl PartitionClientNext for IggyClientNext {
     async fn create_partitions(
         &self,
         stream_id: &Identifier,
@@ -775,7 +776,7 @@ impl PartitionClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl MessageClientV2 for IggyClientV2 {
+impl MessageClientNext for IggyClientNext {
     async fn poll_messages(
         &self,
         stream_id: &Identifier,
@@ -817,7 +818,7 @@ impl MessageClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl ConsumerOffsetClientV2 for IggyClientV2 {
+impl ConsumerOffsetClientNext for IggyClientNext {
     async fn store_consumer_offset(
         &self,
         consumer: &Consumer,
@@ -849,7 +850,7 @@ impl ConsumerOffsetClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl ConsumerGroupClientV2 for IggyClientV2 {
+impl ConsumerGroupClientNext for IggyClientNext {
     async fn get_consumer_group(
         &self,
         stream_id: &Identifier,
@@ -930,7 +931,7 @@ impl ConsumerGroupClientV2 for IggyClientV2 {
 }
 
 #[async_trait]
-impl AsyncDrop for IggyClientV2 {
+impl AsyncDrop for IggyClientNext {
     async fn async_drop(&mut self) {
         let _ = self.client.read().await.logout_user().await;
     }

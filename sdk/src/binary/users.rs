@@ -1,8 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport, ClientState};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::UserClient;
-use crate::client_v2::UserClientV2;
 use crate::command::*;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -10,6 +9,7 @@ use crate::models::identity_info::IdentityInfo;
 use crate::models::permissions::Permissions;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
+use crate::next_client::UserClientNext;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
@@ -60,7 +60,7 @@ impl<B: BinaryClient> UserClient for B {
 }
 
 #[async_trait::async_trait]
-impl<B: BinaryClientV2> UserClientV2 for B {
+impl<B: BinaryClientNext> UserClientNext for B {
     async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
         get_user(
             self,

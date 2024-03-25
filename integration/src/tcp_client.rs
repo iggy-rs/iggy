@@ -1,7 +1,7 @@
-use crate::test_server::{ClientFactory, ClientFactoryV2};
+use crate::test_server::{ClientFactory, ClientFactoryNext};
 use async_trait::async_trait;
 use iggy::client::Client;
-use iggy::client_v2::ClientV2;
+use iggy::next_client::ClientNext;
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use std::sync::Arc;
@@ -37,8 +37,8 @@ impl ClientFactory for TcpClientFactory {
 }
 
 #[async_trait]
-impl ClientFactoryV2 for TcpClientFactory {
-    async fn create_client(&self) -> Box<dyn ClientV2> {
+impl ClientFactoryNext for TcpClientFactory {
+    async fn create_client(&self) -> Box<dyn ClientNext> {
         let config = TcpClientConfig {
             server_address: self.server_addr.clone(),
             ..TcpClientConfig::default()
@@ -49,7 +49,7 @@ impl ClientFactoryV2 for TcpClientFactory {
                 self.server_addr, e
             )
         });
-        iggy::client_v2::ClientV2::connect(&client)
+        iggy::next_client::ClientNext::connect(&client)
             .await
             .unwrap_or_else(|e| {
                 panic!(

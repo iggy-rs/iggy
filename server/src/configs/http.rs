@@ -1,4 +1,5 @@
 use iggy::error::IggyError;
+use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
@@ -9,6 +10,7 @@ use serde_with::DisplayFromStr;
 pub struct HttpConfig {
     pub enabled: bool,
     pub address: String,
+    pub max_request_size: IggyByteSize,
     pub cors: HttpCorsConfig,
     pub jwt: HttpJwtConfig,
     pub metrics: HttpMetricsConfig,

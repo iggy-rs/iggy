@@ -1,9 +1,9 @@
-use crate::test_server::{ClientFactory, ClientFactoryV2};
+use crate::test_server::{ClientFactory, ClientFactoryNext};
 use async_trait::async_trait;
 use iggy::client::Client;
-use iggy::client_v2::ClientV2;
 use iggy::http::client::HttpClient;
 use iggy::http::config::HttpClientConfig;
+use iggy::next_client::ClientNext;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -24,8 +24,8 @@ impl ClientFactory for HttpClientFactory {
 }
 
 #[async_trait]
-impl ClientFactoryV2 for HttpClientFactory {
-    async fn create_client(&self) -> Box<dyn ClientV2> {
+impl ClientFactoryNext for HttpClientFactory {
+    async fn create_client(&self) -> Box<dyn ClientNext> {
         let config = HttpClientConfig {
             api_url: format!("http://{}", self.server_addr.clone()),
             ..HttpClientConfig::default()

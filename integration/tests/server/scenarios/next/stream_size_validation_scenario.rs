@@ -1,11 +1,11 @@
-use crate::server::scenarios::v2::{create_client, PARTITIONS_COUNT, PARTITION_ID};
+use crate::server::scenarios::next::{create_client, PARTITIONS_COUNT, PARTITION_ID};
 use bytes::Bytes;
-use iggy::client_v2::{MessageClientV2, StreamClientV2, SystemClientV2, TopicClientV2};
-use iggy::clients::client_v2::IggyClientV2;
+use iggy::clients::next_client::IggyClientNext;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::next_client::{MessageClientNext, StreamClientNext, SystemClientNext, TopicClientNext};
 use iggy::utils::expiry::IggyExpiry;
-use integration::test_server::{assert_clean_system_v2, login_root_v2, ClientFactoryV2};
+use integration::test_server::{assert_clean_system_next, login_root_next, ClientFactoryNext};
 use std::str::FromStr;
 
 const S1_NAME: &str = "test-stream-1";
@@ -17,7 +17,7 @@ const MSG_SIZE: u64 = 16 + 8 + 8 + 4 + 4 + 4 + 1 + MESSAGE_PAYLOAD_SIZE_BYTES; /
 const MSGS_COUNT: u64 = 117; // number of messages in a single topic after one pass of appending
 const MSGS_SIZE: u64 = MSG_SIZE * MSGS_COUNT + 8 + 4 + 8 + 4; // number of bytes in a single topic after one pass of appending
 
-pub async fn run(client_factory: &dyn ClientFactoryV2) {
+pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let _ = tracing_subscriber::fmt::try_init();
     let client = create_client(client_factory).await;
 
@@ -100,22 +100,22 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
     delete_stream(&client, S2_NAME).await;
 
     // 23. Validate system, should be empty
-    assert_clean_system_v2(&client).await;
+    assert_clean_system_next(&client).await;
 }
 
-async fn ping_login_and_validate(client: &IggyClientV2) {
+async fn ping_login_and_validate(client: &IggyClientNext) {
     // 1. Ping server
     client.ping().await.unwrap();
 
     // 2. Login as root user
-    login_root_v2(client).await;
+    login_root_next(client).await;
 
     // 3. Ensure that streams do not exist
     let streams = client.get_streams().await.unwrap();
     assert!(streams.is_empty());
 }
 
-async fn create_topic_assert_empty(client: &IggyClientV2, stream_name: &str, topic_name: &str) {
+async fn create_topic_assert_empty(client: &IggyClientNext, stream_name: &str, topic_name: &str) {
     // 1. Create topic
     client
         .create_topic(
@@ -134,7 +134,7 @@ async fn create_topic_assert_empty(client: &IggyClientV2, stream_name: &str, top
     validate_topic(client, stream_name, topic_name, 0, 0).await;
 }
 
-async fn create_stream_assert_empty(client: &IggyClientV2, stream_name: &str) {
+async fn create_stream_assert_empty(client: &IggyClientNext, stream_name: &str) {
     // 1. Create stream
     client.create_stream(stream_name, None).await.unwrap();
 
@@ -143,7 +143,7 @@ async fn create_stream_assert_empty(client: &IggyClientV2, stream_name: &str) {
 }
 
 async fn validate_operations_on_topic_twice(
-    client: &IggyClientV2,
+    client: &IggyClientNext,
     stream_name: &str,
     topic_name: &str,
     partition_id: u32,
@@ -187,7 +187,7 @@ async fn validate_operations_on_topic_twice(
 }
 
 async fn validate_stream(
-    client: &IggyClientV2,
+    client: &IggyClientNext,
     stream_name: &str,
     expected_size: u64,
     expected_messages_count: u64,
@@ -204,7 +204,7 @@ async fn validate_stream(
 }
 
 async fn validate_topic(
-    client: &IggyClientV2,
+    client: &IggyClientNext,
     stream_name: &str,
     topic_name: &str,
     expected_size: u64,
@@ -224,7 +224,7 @@ async fn validate_topic(
     assert_eq!(topic.messages_count, expected_messages_count);
 }
 
-async fn delete_topic(client: &IggyClientV2, stream_name: &str, topic_name: &str) {
+async fn delete_topic(client: &IggyClientNext, stream_name: &str, topic_name: &str) {
     client
         .delete_topic(
             &Identifier::from_str(stream_name).unwrap(),
@@ -234,7 +234,7 @@ async fn delete_topic(client: &IggyClientV2, stream_name: &str, topic_name: &str
         .unwrap();
 }
 
-async fn purge_topic(client: &IggyClientV2, stream_name: &str, topic_name: &str) {
+async fn purge_topic(client: &IggyClientNext, stream_name: &str, topic_name: &str) {
     client
         .purge_topic(
             &Identifier::from_str(stream_name).unwrap(),
@@ -244,14 +244,14 @@ async fn purge_topic(client: &IggyClientV2, stream_name: &str, topic_name: &str)
         .unwrap();
 }
 
-async fn delete_stream(client: &IggyClientV2, stream_name: &str) {
+async fn delete_stream(client: &IggyClientNext, stream_name: &str) {
     client
         .delete_stream(&Identifier::from_str(stream_name).unwrap())
         .await
         .unwrap();
 }
 
-async fn purge_stream(client: &IggyClientV2, stream_name: &str) {
+async fn purge_stream(client: &IggyClientNext, stream_name: &str) {
     client
         .purge_stream(&Identifier::from_str(stream_name).unwrap())
         .await

@@ -1,12 +1,12 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport, ClientState};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::PersonalAccessTokenClient;
-use crate::client_v2::PersonalAccessTokenClientV2;
 use crate::command::*;
 use crate::error::IggyError;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use crate::next_client::PersonalAccessTokenClientNext;
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
@@ -45,7 +45,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
 }
 
 #[async_trait::async_trait]
-impl<B: BinaryClientV2> PersonalAccessTokenClientV2 for B {
+impl<B: BinaryClientNext> PersonalAccessTokenClientNext for B {
     async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         get_personal_access_tokens(self, &GetPersonalAccessTokens {}).await
     }

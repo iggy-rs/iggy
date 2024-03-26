@@ -1,10 +1,10 @@
 use crate::client::TopicClient;
-use crate::client_v2::TopicClientV2;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::models::topic::{Topic, TopicDetails};
+use crate::next_client::TopicClientNext;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
@@ -43,7 +43,7 @@ impl TopicClient for HttpClient {
 }
 
 #[async_trait]
-impl TopicClientV2 for HttpClient {
+impl TopicClientNext for HttpClient {
     async fn get_topic(
         &self,
         stream_id: &Identifier,

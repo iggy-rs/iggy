@@ -1,10 +1,10 @@
 use crate::client::PersonalAccessTokenClient;
-use crate::client_v2::PersonalAccessTokenClientV2;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
+use crate::next_client::PersonalAccessTokenClientNext;
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
@@ -46,7 +46,7 @@ impl PersonalAccessTokenClient for HttpClient {
 }
 
 #[async_trait]
-impl PersonalAccessTokenClientV2 for HttpClient {
+impl PersonalAccessTokenClientNext for HttpClient {
     async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         get_personal_access_tokens(self, &GetPersonalAccessTokens {}).await
     }

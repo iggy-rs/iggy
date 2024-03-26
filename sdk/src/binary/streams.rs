@@ -1,8 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::StreamClient;
-use crate::client_v2::StreamClientV2;
 use crate::command::{
     CREATE_STREAM_CODE, DELETE_STREAM_CODE, GET_STREAMS_CODE, GET_STREAM_CODE, PURGE_STREAM_CODE,
     UPDATE_STREAM_CODE,
@@ -10,6 +9,7 @@ use crate::command::{
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::stream::{Stream, StreamDetails};
+use crate::next_client::StreamClientNext;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -45,7 +45,7 @@ impl<B: BinaryClient> StreamClient for B {
 }
 
 #[async_trait::async_trait]
-impl<B: BinaryClientV2> StreamClientV2 for B {
+impl<B: BinaryClientNext> StreamClientNext for B {
     async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
         get_stream(
             self,

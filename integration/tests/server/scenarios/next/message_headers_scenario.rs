@@ -1,23 +1,23 @@
-use crate::server::scenarios::v2::{
+use crate::server::scenarios::next::{
     cleanup, create_client, MESSAGES_COUNT, PARTITIONS_COUNT, PARTITION_ID, STREAM_ID, STREAM_NAME,
     TOPIC_ID, TOPIC_NAME,
 };
 use bytes::Bytes;
-use iggy::client_v2::{MessageClientV2, StreamClientV2, TopicClientV2};
-use iggy::clients::client_v2::IggyClientV2;
+use iggy::clients::next_client::IggyClientNext;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
+use iggy::next_client::{MessageClientNext, StreamClientNext, TopicClientNext};
 use iggy::utils::expiry::IggyExpiry;
-use integration::test_server::{assert_clean_system_v2, login_root_v2, ClientFactoryV2};
+use integration::test_server::{assert_clean_system_next, login_root_next, ClientFactoryNext};
 use std::collections::HashMap;
 use std::str::FromStr;
 
-pub async fn run(client_factory: &dyn ClientFactoryV2) {
+pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let client = create_client(client_factory).await;
-    login_root_v2(&client).await;
+    login_root_next(&client).await;
     init_system(&client).await;
 
     // 1. Send messages with the included headers
@@ -88,10 +88,10 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
         );
     }
     cleanup(&client, false).await;
-    assert_clean_system_v2(&client).await;
+    assert_clean_system_next(&client).await;
 }
 
-async fn init_system(client: &IggyClientV2) {
+async fn init_system(client: &IggyClientNext) {
     // 1. Create the stream
     client
         .create_stream(STREAM_NAME, Some(STREAM_ID))

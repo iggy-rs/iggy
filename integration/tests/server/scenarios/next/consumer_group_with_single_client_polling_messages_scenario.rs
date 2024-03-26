@@ -1,23 +1,23 @@
-use crate::server::scenarios::v2::{
+use crate::server::scenarios::next::{
     cleanup, create_client, get_consumer_group, join_consumer_group, CONSUMER_GROUP_ID,
     CONSUMER_GROUP_NAME, MESSAGES_COUNT, PARTITIONS_COUNT, STREAM_ID, STREAM_NAME, TOPIC_ID,
     TOPIC_NAME,
 };
-use iggy::client_v2::{
-    ConsumerGroupClientV2, MessageClientV2, StreamClientV2, SystemClientV2, TopicClientV2,
-};
-use iggy::clients::client_v2::IggyClientV2;
+use iggy::clients::next_client::IggyClientNext;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::next_client::{
+    ConsumerGroupClientNext, MessageClientNext, StreamClientNext, SystemClientNext, TopicClientNext,
+};
 use iggy::utils::expiry::IggyExpiry;
-use integration::test_server::{assert_clean_system_v2, login_root_v2, ClientFactoryV2};
+use integration::test_server::{assert_clean_system_next, login_root_next, ClientFactoryNext};
 use std::str::{from_utf8, FromStr};
 
-pub async fn run(client_factory: &dyn ClientFactoryV2) {
+pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let client = create_client(client_factory).await;
-    login_root_v2(&client).await;
+    login_root_next(&client).await;
     init_system(&client).await;
     execute_using_messages_key_key(&client).await;
     client
@@ -27,10 +27,10 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
     init_system(&client).await;
     execute_using_none_key(&client).await;
     cleanup(&client, false).await;
-    assert_clean_system_v2(&client).await;
+    assert_clean_system_next(&client).await;
 }
 
-async fn init_system(client: &IggyClientV2) {
+async fn init_system(client: &IggyClientNext) {
     // 1. Create the stream
     client
         .create_stream(STREAM_NAME, Some(STREAM_ID))
@@ -79,7 +79,7 @@ async fn init_system(client: &IggyClientV2) {
     assert_eq!(member.partitions_count, PARTITIONS_COUNT);
 }
 
-async fn execute_using_messages_key_key(client: &IggyClientV2) {
+async fn execute_using_messages_key_key(client: &IggyClientNext) {
     // 1. Send messages to the calculated partition ID on the server side by using entity ID as a key
     for entity_id in 1..=MESSAGES_COUNT {
         let message = Message::from_str(&create_message_payload(entity_id)).unwrap();
@@ -122,7 +122,7 @@ fn create_message_payload(entity_id: u32) -> String {
     format!("message-{}", entity_id)
 }
 
-async fn execute_using_none_key(client: &IggyClientV2) {
+async fn execute_using_none_key(client: &IggyClientNext) {
     // 1. Send messages to the calculated partition ID on the server side (round-robin) by using none key
     for entity_id in 1..=MESSAGES_COUNT * PARTITIONS_COUNT {
         let mut partition_id = entity_id % PARTITIONS_COUNT;

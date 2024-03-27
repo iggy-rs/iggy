@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-async-trait = "0.1.78"
+async-trait = "0.1.79"
 bytes = "1.6.0"
 clap = { version = "4.5.3", features = ["derive"] }
 colored = "2.0.4"

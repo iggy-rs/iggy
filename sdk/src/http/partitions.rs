@@ -1,9 +1,9 @@
 use crate::client::PartitionClient;
-use crate::client_v2::PartitionClientV2;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
+use crate::next_client::PartitionClientNext;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 use async_trait::async_trait;
@@ -20,7 +20,7 @@ impl PartitionClient for HttpClient {
 }
 
 #[async_trait]
-impl PartitionClientV2 for HttpClient {
+impl PartitionClientNext for HttpClient {
     async fn create_partitions(
         &self,
         stream_id: &Identifier,

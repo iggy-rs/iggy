@@ -17,8 +17,8 @@ impl Display for HttpConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ enabled: {}, address: {}, cors: {}, jwt: {}, metrics: {}, tls: {} }}",
-            self.enabled, self.address, self.cors, self.jwt, self.metrics, self.tls
+            "{{ enabled: {}, address: {}, max_request_size: {}, cors: {}, jwt: {}, metrics: {}, tls: {} }}",
+            self.enabled, self.address, self.max_request_size, self.cors, self.jwt, self.metrics, self.tls
         )
     }
 }

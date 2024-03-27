@@ -1,10 +1,10 @@
 use crate::client::Client;
-use crate::client_v2::ClientV2;
 use crate::error::IggyError;
 use crate::http::config::HttpClientConfig;
 use crate::http::HttpTransport;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::models::identity_info::IdentityInfo;
+use crate::next_client::ClientNext;
 use async_trait::async_trait;
 use reqwest::{Response, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -45,7 +45,7 @@ impl Client for HttpClient {
 }
 
 #[async_trait]
-impl ClientV2 for HttpClient {
+impl ClientNext for HttpClient {
     async fn connect(&self) -> Result<(), IggyError> {
         HttpClient::connect(self).await
     }

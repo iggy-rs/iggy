@@ -1,10 +1,10 @@
 use crate::client::SystemClient;
-use crate::client_v2::SystemClientV2;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::stats::Stats;
+use crate::next_client::SystemClientNext;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
@@ -40,7 +40,7 @@ impl SystemClient for HttpClient {
 }
 
 #[async_trait]
-impl SystemClientV2 for HttpClient {
+impl SystemClientNext for HttpClient {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
         get_stats(self, &GetStats {}).await
     }

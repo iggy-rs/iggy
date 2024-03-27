@@ -1,13 +1,13 @@
-use crate::server::scenarios::v2::create_client;
-use iggy::client_v2::{PersonalAccessTokenClientV2, SystemClientV2, UserClientV2};
+use crate::server::scenarios::next::create_client;
 use iggy::identifier::Identifier;
 use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus;
+use iggy::next_client::{PersonalAccessTokenClientNext, SystemClientNext, UserClientNext};
 use iggy::users::defaults::DEFAULT_ROOT_USERNAME;
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
-use integration::test_server::{assert_clean_system_v2, login_root_v2, ClientFactoryV2};
+use integration::test_server::{assert_clean_system_next, login_root_next, ClientFactoryNext};
 
-pub async fn run(client_factory: &dyn ClientFactoryV2) {
+pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let client = create_client(client_factory).await;
     // 1. Ping should be allowed for unauthenticated users
     client.ping().await.unwrap();
@@ -17,7 +17,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
     assert!(get_users.is_err());
 
     // 3. Login as root user
-    let identity_info = login_root_v2(&client).await;
+    let identity_info = login_root_next(&client).await;
 
     assert_eq!(identity_info.user_id, 1);
 
@@ -174,7 +174,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
     assert!(personal_access_tokens.is_empty());
 
     // 19. Login as root user again
-    login_root_v2(&client).await;
+    login_root_next(&client).await;
 
     // 20. Trying to create a new user with the same username should fail
     let create_duplicated_user = client
@@ -231,7 +231,7 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
 
     assert!(delete_root_user.is_err());
 
-    assert_clean_system_v2(&client).await;
+    assert_clean_system_next(&client).await;
 
     // 25. Logout
     client.logout_user().await.unwrap();

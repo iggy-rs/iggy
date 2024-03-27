@@ -1,8 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::ConsumerOffsetClient;
-use crate::client_v2::ConsumerOffsetClientV2;
 use crate::command::{GET_CONSUMER_OFFSET_CODE, STORE_CONSUMER_OFFSET_CODE};
 use crate::consumer::Consumer;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
@@ -10,6 +9,7 @@ use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
+use crate::next_client::ConsumerOffsetClientNext;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> ConsumerOffsetClient for B {
@@ -26,7 +26,7 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
 }
 
 #[async_trait::async_trait]
-impl<B: BinaryClientV2> ConsumerOffsetClientV2 for B {
+impl<B: BinaryClientNext> ConsumerOffsetClientNext for B {
     async fn store_consumer_offset(
         &self,
         consumer: &Consumer,

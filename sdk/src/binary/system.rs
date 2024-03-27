@@ -1,12 +1,12 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::SystemClient;
-use crate::client_v2::SystemClientV2;
 use crate::command::{GET_CLIENTS_CODE, GET_CLIENT_CODE, GET_ME_CODE, GET_STATS_CODE, PING_CODE};
 use crate::error::IggyError;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::stats::Stats;
+use crate::next_client::SystemClientNext;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
@@ -37,7 +37,7 @@ impl<B: BinaryClient> SystemClient for B {
 }
 
 #[async_trait::async_trait]
-impl<B: BinaryClientV2> SystemClientV2 for B {
+impl<B: BinaryClientNext> SystemClientNext for B {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
         get_stats(self, &GetStats {}).await
     }

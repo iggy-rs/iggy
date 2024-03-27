@@ -1,26 +1,28 @@
-use crate::server::scenarios::v2::{
+use crate::server::scenarios::next::{
     cleanup, create_client, join_consumer_group, CONSUMER_GROUP_ID, CONSUMER_GROUP_NAME,
     PARTITIONS_COUNT, STREAM_ID, STREAM_NAME, TOPIC_ID, TOPIC_NAME, USERNAME_1, USERNAME_2,
     USERNAME_3,
 };
-use iggy::client_v2::{ConsumerGroupClientV2, StreamClientV2, SystemClientV2, TopicClientV2};
-use iggy::clients::client_v2::IggyClientV2;
+use iggy::clients::next_client::IggyClientNext;
 use iggy::identifier::Identifier;
 use iggy::models::client_info::ClientInfoDetails;
 use iggy::models::consumer_group::ConsumerGroupDetails;
+use iggy::next_client::{
+    ConsumerGroupClientNext, StreamClientNext, SystemClientNext, TopicClientNext,
+};
 use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{
-    assert_clean_system_v2, create_user_v2, login_root_v2, login_user_v2, ClientFactoryV2,
+    assert_clean_system_next, create_user_next, login_root_next, login_user_next, ClientFactoryNext,
 };
 
-pub async fn run(client_factory: &dyn ClientFactoryV2) {
+pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let system_client = create_client(client_factory).await;
 
     let client1 = create_client(client_factory).await;
     let client2 = create_client(client_factory).await;
     let client3 = create_client(client_factory).await;
 
-    login_root_v2(&system_client).await;
+    login_root_next(&system_client).await;
 
     // 1. Create the stream
     system_client
@@ -54,14 +56,14 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
         .unwrap();
 
     // 4. Create the users for all clients
-    create_user_v2(&system_client, USERNAME_1).await;
-    create_user_v2(&system_client, USERNAME_2).await;
-    create_user_v2(&system_client, USERNAME_3).await;
+    create_user_next(&system_client, USERNAME_1).await;
+    create_user_next(&system_client, USERNAME_2).await;
+    create_user_next(&system_client, USERNAME_3).await;
 
     // 5. Login all the clients
-    login_user_v2(&client1, USERNAME_1).await;
-    login_user_v2(&client2, USERNAME_2).await;
-    login_user_v2(&client3, USERNAME_3).await;
+    login_user_next(&client1, USERNAME_1).await;
+    login_user_next(&client2, USERNAME_2).await;
+    login_user_next(&client3, USERNAME_3).await;
 
     // 5. Join the consumer group by client 1
     join_consumer_group(&client1).await;
@@ -112,10 +114,10 @@ pub async fn run(client_factory: &dyn ClientFactoryV2) {
     assert_ne!(member2.partitions[0], member3.partitions[0]);
 
     cleanup(&system_client, true).await;
-    assert_clean_system_v2(&system_client).await;
+    assert_clean_system_next(&system_client).await;
 }
 
-async fn get_me_and_validate_consumer_groups(client: &IggyClientV2) -> ClientInfoDetails {
+async fn get_me_and_validate_consumer_groups(client: &IggyClientNext) -> ClientInfoDetails {
     let client_info = client.get_me().await.unwrap();
 
     assert!(client_info.client_id > 0);
@@ -131,7 +133,7 @@ async fn get_me_and_validate_consumer_groups(client: &IggyClientV2) -> ClientInf
 }
 
 async fn get_consumer_group_and_validate_members(
-    client: &IggyClientV2,
+    client: &IggyClientNext,
     members_count: u32,
 ) -> ConsumerGroupDetails {
     let consumer_group = client

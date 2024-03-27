@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.2.10"
+version = "0.2.11"
 edition = "2021"
 build = "src/build.rs"
 
@@ -13,7 +13,7 @@ tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 aes-gcm = "0.10.3"
 anyhow = "1.0.81"
 async-stream = "0.3.5"
-async-trait = "0.1.78"
+async-trait = "0.1.79"
 atone = "0.3.7"
 axum = "0.7.5"
 axum-server = { version = "0.6.0", features = ["tls-rustls"] }

@@ -1,8 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientV2};
+use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::ConsumerGroupClient;
-use crate::client_v2::ConsumerGroupClientV2;
 use crate::command::{
     CREATE_CONSUMER_GROUP_CODE, DELETE_CONSUMER_GROUP_CODE, GET_CONSUMER_GROUPS_CODE,
     GET_CONSUMER_GROUP_CODE, JOIN_CONSUMER_GROUP_CODE, LEAVE_CONSUMER_GROUP_CODE,
@@ -16,6 +15,7 @@ use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
+use crate::next_client::ConsumerGroupClientNext;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> ConsumerGroupClient for B {
@@ -51,7 +51,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
 }
 
 #[async_trait::async_trait]
-impl<B: BinaryClientV2> ConsumerGroupClientV2 for B {
+impl<B: BinaryClientNext> ConsumerGroupClientNext for B {
     async fn get_consumer_group(
         &self,
         stream_id: &Identifier,

@@ -7,6 +7,7 @@ use crate::http::metrics::metrics;
 use crate::http::shared::AppState;
 use crate::http::*;
 use crate::streaming::systems::system::SharedSystem;
+use axum::extract::DefaultBodyLimit;
 use axum::http::Method;
 use axum::{middleware, Router};
 use axum_server::tls_rustls::RustlsConfig;
@@ -36,6 +37,9 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
         .merge(consumer_offsets::router(app_state.clone()))
         .merge(partitions::router(app_state.clone()))
         .merge(messages::router(app_state.clone()))
+        .layer(DefaultBodyLimit::max(
+            config.max_request_size.as_bytes_u64() as usize,
+        ))
         .layer(middleware::from_fn_with_state(app_state.clone(), jwt_auth));
 
     if config.cors.enabled {

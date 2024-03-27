@@ -89,6 +89,7 @@ impl Default for HttpConfig {
         HttpConfig {
             enabled: true,
             address: SERVER_CONFIG.http.address.parse().unwrap(),
+            max_request_size: SERVER_CONFIG.http.max_request_size.parse().unwrap(),
             cors: HttpCorsConfig::default(),
             jwt: HttpJwtConfig::default(),
             metrics: HttpMetricsConfig::default(),

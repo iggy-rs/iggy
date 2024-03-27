@@ -15,13 +15,13 @@ use futures::executor::block_on;
 use uuid::Uuid;
 
 use iggy::client::{Client, StreamClient, UserClient};
-use iggy::client_v2::{ClientV2, StreamClientV2, UserClientV2};
 use iggy::clients::client::IggyClient;
-use iggy::clients::client_v2::IggyClientV2;
+use iggy::clients::next_client::IggyClientNext;
 use iggy::identifier::Identifier;
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus::Active;
+use iggy::next_client::{ClientNext, StreamClientNext, UserClientNext};
 use iggy::streams::get_streams::GetStreams;
 use iggy::users::create_user::CreateUser;
 use iggy::users::defaults::*;
@@ -49,8 +49,8 @@ pub trait ClientFactory: Sync + Send {
 }
 
 #[async_trait]
-pub trait ClientFactoryV2: Sync + Send {
-    async fn create_client(&self) -> Box<dyn ClientV2>;
+pub trait ClientFactoryNext: Sync + Send {
+    async fn create_client(&self) -> Box<dyn ClientNext>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Display)]
@@ -478,7 +478,7 @@ pub async fn create_user(client: &IggyClient, username: &str) {
         .unwrap();
 }
 
-pub async fn create_user_v2(client: &IggyClientV2, username: &str) {
+pub async fn create_user_next(client: &IggyClientNext, username: &str) {
     client
         .create_user(
             username,
@@ -513,7 +513,7 @@ pub async fn delete_user(client: &IggyClient, username: &str) {
         .unwrap();
 }
 
-pub async fn delete_user_v2(client: &IggyClientV2, username: &str) {
+pub async fn delete_user_next(client: &IggyClientNext, username: &str) {
     client
         .delete_user(&Identifier::named(username).unwrap())
         .await
@@ -530,7 +530,7 @@ pub async fn login_root(client: &IggyClient) {
         .unwrap();
 }
 
-pub async fn login_root_v2(client: &IggyClientV2) -> IdentityInfo {
+pub async fn login_root_next(client: &IggyClientNext) -> IdentityInfo {
     client
         .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
         .await
@@ -547,7 +547,7 @@ pub async fn login_user(client: &IggyClient, username: &str) {
         .unwrap();
 }
 
-pub async fn login_user_v2(client: &IggyClientV2, username: &str) -> IdentityInfo {
+pub async fn login_user_next(client: &IggyClientNext, username: &str) -> IdentityInfo {
     client.login_user(username, USER_PASSWORD).await.unwrap()
 }
 
@@ -559,7 +559,7 @@ pub async fn assert_clean_system(system_client: &IggyClient) {
     assert_eq!(users.len(), 1);
 }
 
-pub async fn assert_clean_system_v2(system_client: &IggyClientV2) {
+pub async fn assert_clean_system_next(system_client: &IggyClientNext) {
     let streams = system_client.get_streams().await.unwrap();
     assert!(streams.is_empty());
 

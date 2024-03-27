@@ -1,10 +1,10 @@
 use crate::client::StreamClient;
-use crate::client_v2::StreamClientV2;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::models::stream::{Stream, StreamDetails};
+use crate::next_client::StreamClientNext;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -43,7 +43,7 @@ impl StreamClient for HttpClient {
 }
 
 #[async_trait]
-impl StreamClientV2 for HttpClient {
+impl StreamClientNext for HttpClient {
     async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
         get_stream(
             self,

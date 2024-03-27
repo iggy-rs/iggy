@@ -112,6 +112,12 @@ pub enum IggyError {
     CannotParseByteUnit(#[from] byte_unit::ParseError) = 205,
     #[error("Connection closed")]
     ConnectionClosed = 206,
+    #[error("Cannot parse float")]
+    CannotParseFloat(#[from] std::num::ParseFloatError) = 207,
+    #[error("Cannot parse bool")]
+    CannotParseBool(#[from] std::str::ParseBoolError) = 208,
+    #[error("Cannot parse header kind from {0}")]
+    CannotParseHeaderKind(String) = 209,
     #[error("HTTP response error, status: {0}, body: {1}")]
     HttpResponseError(u16, String) = 300,
     #[error("Request middleware error")]

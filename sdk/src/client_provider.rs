@@ -1,8 +1,10 @@
 use crate::client::Client;
 use crate::client_error::ClientError;
 use crate::clients::client::IggyClient;
+use crate::clients::next_client::IggyClientNext;
 use crate::http::client::HttpClient;
 use crate::http::config::HttpClientConfig;
+use crate::next_client::ClientNext;
 use crate::quic::client::QuicClient;
 use crate::quic::config::QuicClientConfig;
 use crate::tcp::client::TcpClient;
@@ -98,10 +100,23 @@ pub async fn get_default_client() -> Result<IggyClient, ClientError> {
     get_client(Arc::new(ClientProviderConfig::default())).await
 }
 
+/// Create a default `IggyClientNext` with the default configuration.
+pub async fn get_default_client_next() -> Result<IggyClientNext, ClientError> {
+    get_client_next(Arc::new(ClientProviderConfig::default())).await
+}
+
 /// Create a `IggyClient` for the specific transport based on the provided configuration.
 pub async fn get_client(config: Arc<ClientProviderConfig>) -> Result<IggyClient, ClientError> {
     let client = get_raw_connected_client(config).await?;
     Ok(IggyClient::builder().with_client(client).build()?)
+}
+
+/// Create a `IggyClientNext` for the specific transport based on the provided configuration.
+pub async fn get_client_next(
+    config: Arc<ClientProviderConfig>,
+) -> Result<IggyClientNext, ClientError> {
+    let client = get_raw_connected_client_next(config).await?;
+    Ok(IggyClientNext::builder().with_client(client).build()?)
 }
 
 /// Create a `Client` for the specific transport based on the provided configuration.
@@ -109,6 +124,13 @@ pub async fn get_raw_connected_client(
     config: Arc<ClientProviderConfig>,
 ) -> Result<Box<dyn Client>, ClientError> {
     get_raw_client(config, true).await
+}
+
+/// Create a `ClientNext` for the specific transport based on the provided configuration.
+pub async fn get_raw_connected_client_next(
+    config: Arc<ClientProviderConfig>,
+) -> Result<Box<dyn ClientNext>, ClientError> {
+    get_raw_client_next(config, true).await
 }
 
 /// Create a `Client` for the specific transport based on the provided configuration.
@@ -122,7 +144,7 @@ pub async fn get_raw_client(
             let quic_config = config.quic.as_ref().unwrap();
             let client = QuicClient::create(quic_config.clone())?;
             if establish_connection {
-                client.connect().await?
+                Client::connect(&client).await?
             };
             Ok(Box::new(client))
         }
@@ -135,7 +157,39 @@ pub async fn get_raw_client(
             let tcp_config = config.tcp.as_ref().unwrap();
             let client = TcpClient::create(tcp_config.clone())?;
             if establish_connection {
-                client.connect().await?
+                Client::connect(&client).await?
+            };
+            Ok(Box::new(client))
+        }
+        _ => Err(ClientError::InvalidTransport(transport)),
+    }
+}
+
+/// Create a `ClientNext` for the specific transport based on the provided configuration.
+pub async fn get_raw_client_next(
+    config: Arc<ClientProviderConfig>,
+    establish_connection: bool,
+) -> Result<Box<dyn ClientNext>, ClientError> {
+    let transport = config.transport.clone();
+    match transport.as_str() {
+        QUIC_TRANSPORT => {
+            let quic_config = config.quic.as_ref().unwrap();
+            let client = QuicClient::create(quic_config.clone())?;
+            if establish_connection {
+                ClientNext::connect(&client).await?
+            };
+            Ok(Box::new(client))
+        }
+        HTTP_TRANSPORT => {
+            let http_config = config.http.as_ref().unwrap();
+            let client = HttpClient::create(http_config.clone())?;
+            Ok(Box::new(client))
+        }
+        TCP_TRANSPORT => {
+            let tcp_config = config.tcp.as_ref().unwrap();
+            let client = TcpClient::create(tcp_config.clone())?;
+            if establish_connection {
+                ClientNext::connect(&client).await?
             };
             Ok(Box::new(client))
         }

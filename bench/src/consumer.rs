@@ -63,6 +63,7 @@ impl Consumer {
             strategy: PollingStrategy::offset(0),
             count: self.messages_per_batch,
             auto_commit: false,
+            show_headers: false,
         };
 
         let mut latencies: Vec<Duration> = Vec::with_capacity(self.message_batches as usize);

@@ -2,8 +2,10 @@ use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::messages::send_messages::{Message, Partitioning, SendMessages};
+use crate::models::header::{HeaderKey, HeaderValue};
 use anyhow::Context;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::io::{self, Read};
 use std::vec::Vec;
 use tracing::{event, Level};
@@ -13,6 +15,7 @@ pub struct SendMessagesCmd {
     topic_id: Identifier,
     partitioning: Partitioning,
     messages: Option<Vec<String>>,
+    headers: Vec<(HeaderKey, HeaderValue)>,
 }
 
 impl SendMessagesCmd {
@@ -22,6 +25,7 @@ impl SendMessagesCmd {
         partition_id: Option<u32>,
         message_key: Option<String>,
         messages: Option<Vec<String>>,
+        headers: Vec<(HeaderKey, HeaderValue)>,
     ) -> Self {
         let partitioning = match (partition_id, message_key) {
             (Some(_), Some(_)) => unreachable!(),
@@ -40,6 +44,7 @@ impl SendMessagesCmd {
             topic_id,
             partitioning,
             messages,
+            headers,
         }
     }
 
@@ -65,7 +70,15 @@ impl CliCommand for SendMessagesCmd {
         let messages = match &self.messages {
             Some(messages) => messages
                 .iter()
-                .map(|s| Message::new(None, s.clone().into(), None))
+                .map(|s| {
+                    let headers = self
+                        .headers
+                        .clone()
+                        .iter()
+                        .map(|(key, value)| (key.clone(), value.clone()))
+                        .collect::<HashMap<_, _>>();
+                    Message::new(None, s.clone().into(), Some(headers))
+                })
                 .collect::<Vec<_>>(),
             None => {
                 let input = self.read_message_from_stdin()?;

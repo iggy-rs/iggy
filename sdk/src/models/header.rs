@@ -62,7 +62,7 @@ pub struct HeaderValue {
 }
 
 /// Represents the kind of a header value.
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, Hash)]
 #[serde(rename_all = "snake_case")]
 pub enum HeaderKind {
     Raw,
@@ -146,7 +146,7 @@ impl FromStr for HeaderKind {
             "uint128" => Ok(HeaderKind::Uint128),
             "float32" => Ok(HeaderKind::Float32),
             "float64" => Ok(HeaderKind::Float64),
-            _ => Err(IggyError::InvalidCommand),
+            _ => Err(IggyError::CannotParseHeaderKind(s.to_string())),
         }
     }
 }
@@ -154,71 +154,7 @@ impl FromStr for HeaderKind {
 impl Display for HeaderValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}: ", self.kind)?;
-        match self.kind {
-            HeaderKind::Raw => write!(f, "{:?}", self.value),
-            HeaderKind::String => write!(f, "{}", String::from_utf8_lossy(&self.value)),
-            HeaderKind::Bool => write!(f, "{}", self.value[0] != 0),
-            HeaderKind::Int8 => write!(
-                f,
-                "{}",
-                i8::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Int16 => write!(
-                f,
-                "{}",
-                i16::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Int32 => write!(
-                f,
-                "{}",
-                i32::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Int64 => write!(
-                f,
-                "{}",
-                i64::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Int128 => write!(
-                f,
-                "{}",
-                i128::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Uint8 => write!(
-                f,
-                "{}",
-                u8::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Uint16 => write!(
-                f,
-                "{}",
-                u16::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Uint32 => write!(
-                f,
-                "{}",
-                u32::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Uint64 => write!(
-                f,
-                "{}",
-                u64::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Uint128 => write!(
-                f,
-                "{}",
-                u128::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Float32 => write!(
-                f,
-                "{}",
-                f32::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-            HeaderKind::Float64 => write!(
-                f,
-                "{}",
-                f64::from_le_bytes(self.value.clone().try_into().unwrap())
-            ),
-        }
+        write!(f, "{}", self.value_only_to_string())
     }
 }
 
@@ -252,6 +188,35 @@ impl FromStr for HeaderValue {
 }
 
 impl HeaderValue {
+    /// Creates a new header value from the specified kind and value.
+    /// The kind is parsed from the string representation.
+    /// The value is parsed from the string representation.
+    pub fn from_kind_str_and_value_str(kind: &str, value: &str) -> Result<Self, IggyError> {
+        let kind = HeaderKind::from_str(kind)?;
+        Self::from_kind_and_value_str(kind, value)
+    }
+
+    /// Creates a new header value from the specified kind and value.
+    /// The value is parsed from the string representation.
+    pub fn from_kind_and_value_str(kind: HeaderKind, value: &str) -> Result<Self, IggyError> {
+        match kind {
+            HeaderKind::Raw => Self::from_raw(value.as_bytes()),
+            HeaderKind::String => Self::from_str(value),
+            HeaderKind::Bool => Self::from_bool(value.parse()?),
+            HeaderKind::Int8 => Self::from_int8(value.parse()?),
+            HeaderKind::Int16 => Self::from_int16(value.parse()?),
+            HeaderKind::Int32 => Self::from_int32(value.parse()?),
+            HeaderKind::Int64 => Self::from_int64(value.parse()?),
+            HeaderKind::Int128 => Self::from_int128(value.parse()?),
+            HeaderKind::Uint8 => Self::from_uint8(value.parse()?),
+            HeaderKind::Uint16 => Self::from_uint16(value.parse()?),
+            HeaderKind::Uint32 => Self::from_uint32(value.parse()?),
+            HeaderKind::Uint64 => Self::from_uint64(value.parse()?),
+            HeaderKind::Uint128 => Self::from_uint128(value.parse()?),
+            HeaderKind::Float32 => Self::from_float32(value.parse()?),
+            HeaderKind::Float64 => Self::from_float64(value.parse()?),
+        }
+    }
     /// Creates a new header value from the specified raw bytes.
     pub fn from_raw(value: &[u8]) -> Result<Self, IggyError> {
         Self::from(HeaderKind::Raw, value)
@@ -526,6 +491,63 @@ impl HeaderValue {
             kind,
             value: value.to_vec(),
         })
+    }
+
+    /// Returns the string representation of the header value without the kind.
+    pub fn value_only_to_string(&self) -> String {
+        match self.kind {
+            HeaderKind::Raw => format!("{:?}", self.value),
+            HeaderKind::String => format!("{}", String::from_utf8_lossy(&self.value)),
+            HeaderKind::Bool => format!("{}", self.value[0] != 0),
+            HeaderKind::Int8 => format!(
+                "{}",
+                i8::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Int16 => format!(
+                "{}",
+                i16::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Int32 => format!(
+                "{}",
+                i32::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Int64 => format!(
+                "{}",
+                i64::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Int128 => format!(
+                "{}",
+                i128::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Uint8 => format!(
+                "{}",
+                u8::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Uint16 => format!(
+                "{}",
+                u16::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Uint32 => format!(
+                "{}",
+                u32::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Uint64 => format!(
+                "{}",
+                u64::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Uint128 => format!(
+                "{}",
+                u128::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Float32 => format!(
+                "{}",
+                f32::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+            HeaderKind::Float64 => format!(
+                "{}",
+                f64::from_le_bytes(self.value.clone().try_into().unwrap())
+            ),
+        }
     }
 }
 

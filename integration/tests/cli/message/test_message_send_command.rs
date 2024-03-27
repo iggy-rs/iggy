@@ -200,6 +200,7 @@ impl IggyCmdTestCase for TestMessageSendCmd {
                 strategy: PollingStrategy::offset(0),
                 count: self.messages.len() as u32,
                 auto_commit: false,
+                show_headers: false,
             })
             .await;
 
@@ -386,6 +387,13 @@ Options:
 {CLAP_INDENT}
           Value of the key will be used by the server to calculate the partition ID
 
+  -H, --headers <HEADERS>
+          Comma separated list of key:kind:value, sent as header with the message
+{CLAP_INDENT}
+          Headers are comma seperated key-value pairs that can be sent with the message.
+          Kind can be one of the following: raw, string, bool, int8, int16, int32, int64,
+          int128, uint8, uint16, uint32, uint64, uint128, float32, float64
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -415,6 +423,7 @@ Arguments:
 Options:
   -p, --partition-id <PARTITION_ID>  ID of the partition to which the message will be sent
   -m, --message-key <MESSAGE_KEY>    Messages key which will be used to partition the messages
+  -H, --headers <HEADERS>            Comma separated list of key:kind:value, sent as header with the message
   -h, --help                         Print help (see more with '--help')
 "#,
             ),

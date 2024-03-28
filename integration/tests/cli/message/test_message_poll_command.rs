@@ -78,6 +78,8 @@ impl TestMessagePollCmd {
             format!("{}", self.message_count),
         ]);
 
+        command.extend(vec!["--show-headers".into()]);
+
         command.extend(match self.using_stream_id {
             TestStreamId::Numeric => vec![format!("{}", self.stream_id)],
             TestStreamId::Named => vec![self.stream_name.clone()],

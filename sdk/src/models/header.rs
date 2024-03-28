@@ -27,6 +27,12 @@ impl HeaderKey {
     }
 }
 
+impl Display for HeaderKey {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 impl Hash for HeaderKey {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
@@ -830,6 +836,325 @@ mod tests {
         assert_eq!(header_value.kind, HeaderKind::Float64);
         assert_eq!(header_value.value, value.to_le_bytes());
         assert_eq!(header_value.as_float64().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_string_from_kind_and_value_str() {
+        let value = "Value 1";
+        let header_value = HeaderValue::from_kind_str_and_value_str("string", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::String);
+        assert_eq!(header_value.value, value.as_bytes());
+        assert_eq!(header_value.as_str().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_float_from_kind_and_value_str() {
+        let value: f64 = 1234.01234;
+        let header_value = HeaderValue::from_kind_str_and_value_str("float64", &value.to_string());
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Float64);
+        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.as_float64().unwrap(), value);
+    }
+
+    #[test]
+    fn header_value_should_be_created_raw_from_kind_and_value_str() {
+        let value = "Value 1";
+        let header_value = HeaderValue::from_kind_str_and_value_str("raw", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Raw);
+        assert_eq!(header_value.value, value.as_bytes());
+    }
+
+    #[test]
+    fn header_value_should_be_created_bool_from_kind_and_value_str() {
+        let value = "true";
+        let header_value = HeaderValue::from_kind_str_and_value_str("bool", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Bool);
+        assert_eq!(header_value.value, vec![1]);
+        assert_eq!(header_value.as_bool().unwrap(), true);
+    }
+
+    #[test]
+    fn header_value_should_be_created_int8_from_kind_and_value_str() {
+        let value = "123";
+        let header_value = HeaderValue::from_kind_str_and_value_str("int8", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int8);
+        assert_eq!(header_value.value, vec![123]);
+        assert_eq!(header_value.as_int8().unwrap(), 123);
+    }
+
+    #[test]
+    fn header_value_should_be_created_int16_from_kind_and_value_str() {
+        let value = "1234";
+        let header_value = HeaderValue::from_kind_str_and_value_str("int16", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int16);
+        assert_eq!(
+            header_value.value,
+            value.parse::<i16>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_int16().unwrap(),
+            value.parse::<i16>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_int32_from_kind_and_value_str() {
+        let value = "123456";
+        let header_value = HeaderValue::from_kind_str_and_value_str("int32", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int32);
+        assert_eq!(
+            header_value.value,
+            value.parse::<i32>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_int32().unwrap(),
+            value.parse::<i32>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_int64_from_kind_and_value_str() {
+        let value = "123456789";
+        let header_value = HeaderValue::from_kind_str_and_value_str("int64", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int64);
+        assert_eq!(
+            header_value.value,
+            value.parse::<i64>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_int64().unwrap(),
+            value.parse::<i64>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_int128_from_kind_and_value_str() {
+        let value = "123456789123456789";
+        let header_value = HeaderValue::from_kind_str_and_value_str("int128", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Int128);
+        assert_eq!(
+            header_value.value,
+            value.parse::<i128>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_int128().unwrap(),
+            value.parse::<i128>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_uint8_from_kind_and_value_str() {
+        let value = "123";
+        let header_value = HeaderValue::from_kind_str_and_value_str("uint8", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint8);
+        assert_eq!(header_value.value, vec![123]);
+        assert_eq!(header_value.as_uint8().unwrap(), 123);
+    }
+
+    #[test]
+    fn header_value_should_be_created_uint16_from_kind_and_value_str() {
+        let value = "12345";
+        let header_value = HeaderValue::from_kind_str_and_value_str("uint16", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint16);
+        assert_eq!(
+            header_value.value,
+            value.parse::<u16>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_uint16().unwrap(),
+            value.parse::<u16>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_uint32_from_kind_and_value_str() {
+        let value = "123456";
+        let header_value = HeaderValue::from_kind_str_and_value_str("uint32", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint32);
+        assert_eq!(
+            header_value.value,
+            value.parse::<u32>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_uint32().unwrap(),
+            value.parse::<u32>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_uint64_from_kind_and_value_str() {
+        let value = "123456789";
+        let header_value = HeaderValue::from_kind_str_and_value_str("uint64", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint64);
+        assert_eq!(
+            header_value.value,
+            value.parse::<u64>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_uint64().unwrap(),
+            value.parse::<u64>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_uint128_from_kind_and_value_str() {
+        let value = "123456789123456789";
+        let header_value = HeaderValue::from_kind_str_and_value_str("uint128", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Uint128);
+        assert_eq!(
+            header_value.value,
+            value.parse::<u128>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_uint128().unwrap(),
+            value.parse::<u128>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_float32_from_kind_and_value_str() {
+        let value = "123.01";
+        let header_value = HeaderValue::from_kind_str_and_value_str("float32", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Float32);
+        assert_eq!(
+            header_value.value,
+            value.parse::<f32>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_float32().unwrap(),
+            value.parse::<f32>().unwrap()
+        );
+    }
+
+    #[test]
+    fn header_value_should_be_created_float64_from_kind_and_value_str() {
+        let value = "1234.01234";
+        let header_value = HeaderValue::from_kind_str_and_value_str("float64", &value);
+        assert!(header_value.is_ok());
+        let header_value = header_value.unwrap();
+        assert_eq!(header_value.kind, HeaderKind::Float64);
+        assert_eq!(
+            header_value.value,
+            value.parse::<f64>().unwrap().to_le_bytes().to_vec()
+        );
+        assert_eq!(
+            header_value.as_float64().unwrap(),
+            value.parse::<f64>().unwrap()
+        );
+    }
+
+    #[test]
+    fn value_only_to_string_for_string_kind() {
+        let header_value = HeaderValue::from_str("Hello").unwrap();
+        assert_eq!(header_value.value_only_to_string(), "Hello");
+    }
+
+    #[test]
+    fn value_only_to_string_for_bool_kind() {
+        let header_value = HeaderValue::from_bool(true).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "true");
+    }
+
+    #[test]
+    fn value_only_to_string_for_int8_kind() {
+        let header_value = HeaderValue::from_int8(123).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123");
+    }
+
+    #[test]
+    fn value_only_to_string_for_int16_kind() {
+        let header_value = HeaderValue::from_int16(12345).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "12345");
+    }
+
+    #[test]
+    fn value_only_to_string_for_int32_kind() {
+        let header_value = HeaderValue::from_int32(123456).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123456");
+    }
+
+    #[test]
+    fn value_only_to_string_for_int64_kind() {
+        let header_value = HeaderValue::from_int64(123456789).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123456789");
+    }
+
+    #[test]
+    fn value_only_to_string_for_int128_kind() {
+        let header_value = HeaderValue::from_int128(123456789123456789).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123456789123456789");
+    }
+
+    #[test]
+    fn value_only_to_string_for_uint8_kind() {
+        let header_value = HeaderValue::from_uint8(123).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123");
+    }
+
+    #[test]
+    fn value_only_to_string_for_uint16_kind() {
+        let header_value = HeaderValue::from_uint16(12345).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "12345");
+    }
+
+    #[test]
+    fn value_only_to_string_for_uint32_kind() {
+        let header_value = HeaderValue::from_uint32(123456).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123456");
+    }
+
+    #[test]
+    fn value_only_to_string_for_uint64_kind() {
+        let header_value = HeaderValue::from_uint64(123456789).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123456789");
+    }
+
+    #[test]
+    fn value_only_to_string_for_uint128_kind() {
+        let header_value = HeaderValue::from_uint128(123456789123456789).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123456789123456789");
+    }
+
+    #[test]
+    fn value_only_to_string_for_float32_kind() {
+        let header_value = HeaderValue::from_float32(123.01).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "123.01");
+    }
+
+    #[test]
+    fn value_only_to_string_for_float64_kind() {
+        let header_value = HeaderValue::from_float64(1234.01234).unwrap();
+        assert_eq!(header_value.value_only_to_string(), "1234.01234");
     }
 
     #[test]

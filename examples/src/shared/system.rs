@@ -107,7 +107,6 @@ pub async fn consume_messages(
                 &PollingStrategy::next(),
                 args.messages_per_batch,
                 true,
-                false
             )
             .await?;
         if polled_messages.messages.is_empty() {

@@ -106,6 +106,7 @@ async fn assert_message_count(client: &IggyClient, expected_count: u32) {
         strategy: PollingStrategy::offset(0),
         count: expected_count * 2,
         auto_commit: false,
+        show_headers: false,
     };
 
     let polled_messages = client.poll_messages(&poll_messages).await.unwrap();

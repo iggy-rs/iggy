@@ -93,7 +93,6 @@ impl PollMessagesCmd {
     }
 
     fn create_table_content(
-        &self,
         polled_messages: &PolledMessages,
         message_header_keys: &HashSet<(HeaderKey, HeaderKind)>,
     ) -> Vec<Row> {
@@ -174,7 +173,7 @@ impl CliCommand for PollMessagesCmd {
 
         let mut table = Table::new();
         let table_header = Self::create_table_header(&message_header_keys);
-        let table_content = self.create_table_content(&messages, &message_header_keys);
+        let table_content = Self::create_table_content(&messages, &message_header_keys);
         table.set_header(table_header);
         table.add_rows(table_content);
 

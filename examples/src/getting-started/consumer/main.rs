@@ -1,11 +1,9 @@
-use iggy::client::{Client, UserClient};
-use iggy::clients::client::IggyClientBuilder;
+use iggy::clients::next_builder::IggyClientNextBuilder;
 use iggy::consumer::Consumer;
-use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
+use iggy::next_client::{ClientNext, UserClientNext};
 use iggy::users::defaults::*;
-use iggy::users::login_user::LoginUser;
 use std::env;
 use std::error::Error;
 use std::time::Duration;
@@ -20,27 +18,24 @@ const BATCHES_LIMIT: u32 = 5;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let client = IggyClientBuilder::new()
+    let client = IggyClientNextBuilder::new()
         .with_tcp()
         .with_server_address(get_tcp_server_addr())
         .build()?;
 
     // Or, instead of above lines, you can just use below code, which will create a Iggy
     // TCP client with default config (default server address for TCP is 127.0.0.1:8090):
-    // let client = IggyClient::default();
+    // let client = IggyClientNext::default();
 
     client.connect().await?;
     client
-        .login_user(&LoginUser {
-            username: DEFAULT_ROOT_USERNAME.to_string(),
-            password: DEFAULT_ROOT_PASSWORD.to_string(),
-        })
+        .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
         .await?;
 
     consume_messages(&client).await
 }
 
-async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
+async fn consume_messages(client: &dyn ClientNext) -> Result<(), Box<dyn Error>> {
     let interval = Duration::from_millis(500);
     info!(
         "Messages will be consumed from stream: {}, topic: {}, partition: {} with interval {} ms.",
@@ -53,6 +48,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
     let mut offset = 0;
     let messages_per_batch = 10;
     let mut consumed_batches = 0;
+    let consumer = Consumer::default();
     loop {
         if consumed_batches == BATCHES_LIMIT {
             info!("Consumed {consumed_batches} batches of messages, exiting.");
@@ -60,16 +56,17 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
         }
 
         let polled_messages = client
-            .poll_messages(&PollMessages {
-                consumer: Consumer::default(),
-                stream_id: Identifier::numeric(STREAM_ID)?,
-                topic_id: Identifier::numeric(TOPIC_ID)?,
-                partition_id: Some(PARTITION_ID),
-                strategy: PollingStrategy::offset(offset),
-                count: messages_per_batch,
-                auto_commit: false,
-            })
+            .poll_messages(
+                &STREAM_ID.try_into()?,
+                &TOPIC_ID.try_into()?,
+                Some(PARTITION_ID),
+                &consumer,
+                &PollingStrategy::offset(offset),
+                messages_per_batch,
+                false,
+            )
             .await?;
+
         if polled_messages.messages.is_empty() {
             info!("No messages found.");
             sleep(interval).await;

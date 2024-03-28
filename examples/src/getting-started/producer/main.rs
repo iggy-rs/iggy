@@ -1,11 +1,9 @@
-use iggy::client::{Client, StreamClient, TopicClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientBuilder};
-use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
-use iggy::streams::create_stream::CreateStream;
-use iggy::topics::create_topic::CreateTopic;
+use iggy::clients::next_builder::IggyClientNextBuilder;
+use iggy::clients::next_client::IggyClientNext;
+use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::next_client::{ClientNext, StreamClientNext, TopicClientNext, UserClientNext};
 use iggy::users::defaults::*;
-use iggy::users::login_user::LoginUser;
+use iggy::utils::expiry::IggyExpiry;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
@@ -22,7 +20,7 @@ const BATCHES_LIMIT: u32 = 5;
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
 
-    let client = IggyClientBuilder::new()
+    let client = IggyClientNextBuilder::new()
         .with_tcp()
         .with_server_address(get_tcp_server_addr())
         .build()?;
@@ -33,37 +31,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     client.connect().await?;
     client
-        .login_user(&LoginUser {
-            username: DEFAULT_ROOT_USERNAME.to_string(),
-            password: DEFAULT_ROOT_PASSWORD.to_string(),
-        })
+        .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
         .await?;
     init_system(&client).await;
     produce_messages(&client).await
 }
 
-async fn init_system(client: &IggyClient) {
-    match client
-        .create_stream(&CreateStream {
-            stream_id: Some(STREAM_ID),
-            name: "sample-stream".to_string(),
-        })
-        .await
-    {
+async fn init_system(client: &IggyClientNext) {
+    match client.create_stream("sample-stream", Some(STREAM_ID)).await {
         Ok(_) => info!("Stream was created."),
         Err(_) => warn!("Stream already exists and will not be created again."),
     }
 
     match client
-        .create_topic(&CreateTopic {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-            topic_id: Some(TOPIC_ID),
-            partitions_count: 1,
-            name: "sample-topic".to_string(),
-            message_expiry: None,
-            max_topic_size: None,
-            replication_factor: 1,
-        })
+        .create_topic(
+            &STREAM_ID.try_into().unwrap(),
+            "sample-topic",
+            1,
+            None,
+            Some(TOPIC_ID),
+            IggyExpiry::NeverExpire,
+            None,
+        )
         .await
     {
         Ok(_) => info!("Topic was created."),
@@ -71,7 +60,7 @@ async fn init_system(client: &IggyClient) {
     }
 }
 
-async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
+async fn produce_messages(client: &dyn ClientNext) -> Result<(), Box<dyn Error>> {
     let interval = Duration::from_millis(500);
     info!(
         "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
@@ -84,6 +73,7 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
     let mut current_id = 0;
     let messages_per_batch = 10;
     let mut sent_batches = 0;
+    let partitioning = Partitioning::partition_id(PARTITION_ID);
     loop {
         if sent_batches == BATCHES_LIMIT {
             info!("Sent {sent_batches} batches of messages, exiting.");
@@ -98,12 +88,12 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
             messages.push(message);
         }
         client
-            .send_messages(&mut SendMessages {
-                stream_id: Identifier::numeric(STREAM_ID)?,
-                topic_id: Identifier::numeric(TOPIC_ID)?,
-                partitioning: Partitioning::partition_id(PARTITION_ID),
-                messages,
-            })
+            .send_messages(
+                &STREAM_ID.try_into().unwrap(),
+                &TOPIC_ID.try_into().unwrap(),
+                &partitioning,
+                &mut messages,
+            )
             .await?;
         sent_batches += 1;
         info!("Sent {messages_per_batch} message(s).");

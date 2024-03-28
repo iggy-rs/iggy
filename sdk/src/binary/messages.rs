@@ -44,6 +44,7 @@ impl<B: BinaryClientNext> MessageClientNext for B {
                 strategy: *strategy,
                 count,
                 auto_commit,
+                show_headers: false,
             },
         )
         .await

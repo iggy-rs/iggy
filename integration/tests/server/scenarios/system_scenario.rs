@@ -249,6 +249,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
+        show_headers: false,
     };
 
     let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
@@ -275,6 +276,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             strategy: PollingStrategy::offset(start_offset),
             count: batch_size,
             auto_commit: false,
+            show_headers: false,
         };
 
         let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
@@ -319,6 +321,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
+        show_headers: false,
     };
     let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
     assert!(polled_messages.messages.is_empty());
@@ -386,6 +389,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         strategy: PollingStrategy::next(),
         count: messages_count,
         auto_commit: true,
+        show_headers: false,
     };
 
     let polled_messages = client.poll_messages(&poll_messages).await.unwrap();

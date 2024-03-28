@@ -6,6 +6,7 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
+use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
@@ -14,6 +15,7 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
+use std::collections::HashMap;
 use std::str::from_utf8;
 use xxhash_rust::xxh32::xxh32;
 
@@ -51,6 +53,7 @@ struct TestMessageSendCmd {
     using_stream_id: TestStreamId,
     using_topic_id: TestTopicId,
     partitioning: PartitionSelection,
+    header: Option<HashMap<HeaderKey, HeaderValue>>,
 }
 
 impl TestMessageSendCmd {
@@ -66,6 +69,7 @@ impl TestMessageSendCmd {
         using_stream_id: TestStreamId,
         using_topic_id: TestTopicId,
         partitioning: PartitionSelection,
+        header: Option<HashMap<HeaderKey, HeaderValue>>,
     ) -> Self {
         Self {
             stream_id,
@@ -78,6 +82,7 @@ impl TestMessageSendCmd {
             using_stream_id,
             using_topic_id,
             partitioning,
+            header,
         }
     }
 
@@ -94,8 +99,21 @@ impl TestMessageSendCmd {
             TestTopicId::Named => self.topic_name.clone(),
         });
 
+        if let Some(header) = &self.header {
+            command.push("-H".to_string());
+            command.push(
+                header
+                    .iter()
+                    .map(|(k, v)| format!("{}:{}:{}", k, v.kind, v.value_only_to_string()))
+                    .collect::<Vec<_>>()
+                    .join(","),
+            );
+        }
+
         match &self.message_input {
-            ProvideMessages::AsArgs => command.extend(self.messages.clone()),
+            ProvideMessages::AsArgs => {
+                command.extend(self.messages.clone());
+            }
             ProvideMessages::ViaStdin => {}
         }
 
@@ -200,6 +218,7 @@ impl IggyCmdTestCase for TestMessageSendCmd {
                 strategy: PollingStrategy::offset(0),
                 count: self.messages.len() as u32,
                 auto_commit: false,
+                show_headers: false,
             })
             .await;
 
@@ -214,6 +233,18 @@ impl IggyCmdTestCase for TestMessageSendCmd {
                 .collect::<Vec<_>>(),
             self.messages
         );
+
+        match self.message_input {
+            ProvideMessages::AsArgs => {
+                if let Some(expected_header) = &self.header {
+                    polled_messages.messages.iter().for_each(|m| {
+                        assert_eq!(m.headers.is_some(), true);
+                        assert_eq!(expected_header, m.headers.as_ref().unwrap());
+                    })
+                };
+            }
+            ProvideMessages::ViaStdin => {}
+        }
 
         let topic = client
             .delete_topic(&DeleteTopic {
@@ -330,6 +361,16 @@ pub async fn should_be_successful() {
                 using_stream_id,
                 using_topic_id,
                 using_partitioning,
+                Some(HashMap::from([
+                    (
+                        HeaderKey::new("key1").unwrap(),
+                        HeaderValue::from_kind_str_and_value_str("string", "value1").unwrap(),
+                    ),
+                    (
+                        HeaderKey::new("key2").unwrap(),
+                        HeaderValue::from_kind_str_and_value_str("int32", "42").unwrap(),
+                    ),
+                ])),
             ))
             .await;
     }
@@ -386,6 +427,13 @@ Options:
 {CLAP_INDENT}
           Value of the key will be used by the server to calculate the partition ID
 
+  -H, --headers <HEADERS>
+          Comma separated list of key:kind:value, sent as header with the message
+{CLAP_INDENT}
+          Headers are comma seperated key-value pairs that can be sent with the message.
+          Kind can be one of the following: raw, string, bool, int8, int16, int32, int64,
+          int128, uint8, uint16, uint32, uint64, uint128, float32, float64
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -415,6 +463,7 @@ Arguments:
 Options:
   -p, --partition-id <PARTITION_ID>  ID of the partition to which the message will be sent
   -m, --message-key <MESSAGE_KEY>    Messages key which will be used to partition the messages
+  -H, --headers <HEADERS>            Comma separated list of key:kind:value, sent as header with the message
   -h, --help                         Print help (see more with '--help')
 "#,
             ),

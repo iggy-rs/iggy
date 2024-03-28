@@ -171,6 +171,7 @@ async fn poll_messages(client: &IggyClient) -> u32 {
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
+        show_headers: false,
     };
 
     let mut total_read_messages_count = 0;
@@ -254,6 +255,7 @@ async fn validate_message_polling(client: &IggyClient, consumer_group: &Consumer
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
+        show_headers: false,
     };
 
     for i in 1..=MESSAGES_COUNT {

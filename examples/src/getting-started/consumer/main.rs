@@ -68,6 +68,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
                 strategy: PollingStrategy::offset(offset),
                 count: messages_per_batch,
                 auto_commit: false,
+                show_headers: false,
             })
             .await?;
         if polled_messages.messages.is_empty() {

@@ -42,6 +42,9 @@ pub struct PollMessages {
     #[serde(default)]
     /// Whether to commit offset on the server automatically after polling the messages.
     pub auto_commit: bool,
+    /// Whether to include the message headers in the output.
+    #[serde(default)]
+    pub show_headers: bool,
 }
 
 /// `PollingStrategy` specifies from where to start polling messages.
@@ -91,6 +94,7 @@ impl Default for PollMessages {
             strategy: default_strategy(),
             count: default_count(),
             auto_commit: false,
+            show_headers: false,
         }
     }
 }
@@ -296,6 +300,7 @@ impl BytesSerializable for PollMessages {
             strategy,
             count,
             auto_commit,
+            show_headers: false,
         };
         command.validate()?;
         Ok(command)
@@ -366,6 +371,7 @@ mod tests {
             strategy: PollingStrategy::offset(2),
             count: 3,
             auto_commit: true,
+            show_headers: false,
         };
 
         let bytes = command.as_bytes();

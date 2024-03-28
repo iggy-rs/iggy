@@ -65,6 +65,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         strategy: PollingStrategy::offset(0),
         count: MESSAGES_COUNT,
         auto_commit: false,
+        show_headers: false,
     };
 
     let polled_messages = client.poll_messages(&poll_messages).await.unwrap();

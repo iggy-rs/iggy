@@ -130,6 +130,7 @@ async fn execute_using_messages_key_key(client: &IggyClient) {
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
+        show_headers: false,
     };
 
     let mut total_read_messages_count = 0;
@@ -174,6 +175,7 @@ async fn execute_using_none_key(client: &IggyClient) {
         strategy: PollingStrategy::next(),
         count: 1,
         auto_commit: true,
+        show_headers: false,
     };
 
     let mut partition_id = 1;

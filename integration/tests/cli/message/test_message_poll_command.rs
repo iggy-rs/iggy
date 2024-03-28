@@ -78,6 +78,8 @@ impl TestMessagePollCmd {
             format!("{}", self.message_count),
         ]);
 
+        command.extend(vec!["--show-headers".into()]);
+
         command.extend(match self.using_stream_id {
             TestStreamId::Numeric => vec![format!("{}", self.stream_id)],
             TestStreamId::Named => vec![self.stream_name.clone()],
@@ -364,6 +366,12 @@ Options:
 {CLAP_INDENT}
           [default: 1]
 
+  -s, --show-headers
+          Include the message headers in the output
+{CLAP_INDENT}
+          Flag indicates whether to include headers in the output
+          after polling the messages.
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -398,6 +406,7 @@ Options:
   -l, --last                           Polling strategy - start polling from the last message in the partition
   -n, --next                           Polling strategy - start polling from the next message
   -c, --consumer <CONSUMER>            Regular consumer which will poll messages [default: 1]
+  -s, --show-headers                   Include the message headers in the output
   -h, --help                           Print help (see more with '--help')
 "#,
             ),

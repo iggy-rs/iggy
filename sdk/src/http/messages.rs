@@ -43,6 +43,7 @@ impl MessageClientNext for HttpClient {
                 strategy: *strategy,
                 count,
                 auto_commit,
+                show_headers: false,
             },
         )
         .await

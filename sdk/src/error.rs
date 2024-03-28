@@ -110,6 +110,12 @@ pub enum IggyError {
     CannotParseSlice(#[from] std::array::TryFromSliceError) = 204,
     #[error("Cannot parse byte unit")]
     CannotParseByteUnit(#[from] byte_unit::ParseError) = 205,
+    #[error("Cannot parse float")]
+    CannotParseFloat(#[from] std::num::ParseFloatError) = 206,
+    #[error("Cannot parse bool")]
+    CannotParseBool(#[from] std::str::ParseBoolError) = 207,
+    #[error("Cannot parse header kind from {0}")]
+    CannotParseHeaderKind(String) = 208,
     #[error("HTTP response error, status: {0}, body: {1}")]
     HttpResponseError(u16, String) = 300,
     #[error("Request middleware error")]

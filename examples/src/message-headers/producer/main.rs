@@ -1,13 +1,12 @@
 use anyhow::Result;
 use bytes::Bytes;
 use clap::Parser;
-use iggy::client::MessageClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::client::IggyClient;
-use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::clients::next_client::IggyClientNext;
+use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
+use iggy::next_client::MessageClientNext;
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::messages_generator::MessagesGenerator;
 use iggy_examples::shared::system;
@@ -26,14 +25,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
-    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
-    let client = IggyClient::builder().with_client(client).build()?;
+    let client = client_provider::get_raw_connected_client_next(client_provider_config).await?;
+    let client = IggyClientNext::builder().with_client(client).build()?;
     system::login_root(&client).await;
     system::init_by_producer(&args, &client).await?;
     produce_messages(&args, &client).await
 }
 
-async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
+async fn produce_messages(args: &Args, client: &IggyClientNext) -> Result<(), Box<dyn Error>> {
     info!(
         "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.stream_id, args.topic_id, args.partition_id, args.interval
@@ -41,6 +40,7 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
     let mut message_generator = MessagesGenerator::new();
     let mut sent_batches = 0;
+    let partitioning = Partitioning::partition_id(args.partition_id);
     loop {
         if args.message_batches_limit > 0 && sent_batches == args.message_batches_limit {
             info!("Sent {sent_batches} batches of messages, exiting.");
@@ -68,12 +68,12 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
             serializable_messages.push(serializable_message);
         }
         client
-            .send_messages(&mut SendMessages {
-                stream_id: Identifier::numeric(args.stream_id)?,
-                topic_id: Identifier::numeric(args.topic_id)?,
-                partitioning: Partitioning::partition_id(args.partition_id),
-                messages,
-            })
+            .send_messages(
+                &args.stream_id.try_into()?,
+                &args.topic_id.try_into()?,
+                &partitioning,
+                &mut messages,
+            )
             .await?;
         sent_batches += 1;
         info!("Sent messages: {:#?}", serializable_messages);

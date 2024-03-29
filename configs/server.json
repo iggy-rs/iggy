@@ -2,6 +2,7 @@
   "http": {
     "enabled": true,
     "address": "0.0.0.0:3000",
+    "max_request_size": "2 MB",
     "cors": {
       "enabled": true,
       "allowed_methods": [

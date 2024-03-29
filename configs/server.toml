@@ -9,6 +9,9 @@ enabled = true
 # The format is "HOST:PORT". For example, "0.0.0.0:3000" listens on all network interfaces on port 3000.
 address = "0.0.0.0:3000"
 
+# Maximum size of the request body in bytes. For security reasons, the default limit is 2 MB.
+max_request_size = "2 MB"
+
 # Configuration for Cross-Origin Resource Sharing (CORS).
 [http.cors]
 # Controls whether CORS is enabled for the HTTP server.

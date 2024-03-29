@@ -284,6 +284,8 @@ pub enum IggyError {
     InvalidMessageChecksum(u32, u32, u64) = 4027,
     #[error("Invalid key value length")]
     InvalidKeyValueLength = 4028,
+    #[error("Command length error: {0}")]
+    CommandLengthError(String) = 4029,
     #[error("Invalid offset: {0}")]
     InvalidOffset(u64) = 4100,
     #[error("Failed to read consumers offsets for partition with ID: {0}")]

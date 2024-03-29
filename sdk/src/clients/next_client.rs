@@ -36,6 +36,7 @@ use tokio::time::sleep;
 use tracing::{error, info, warn};
 
 pub use crate::clients::builder::IggyClientBuilder;
+use crate::clients::next_builder::IggyClientNextBuilder;
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
@@ -136,8 +137,8 @@ impl Default for IggyClientNext {
 
 impl IggyClientNext {
     /// Creates a new `IggyClientBuilder`.
-    pub fn builder() -> IggyClientBuilder {
-        IggyClientBuilder::new()
+    pub fn builder() -> IggyClientNextBuilder {
+        IggyClientNextBuilder::new()
     }
 
     /// Creates a new `IggyClientNext` with the provided client implementation for the specific transport.

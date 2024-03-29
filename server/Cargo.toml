@@ -44,7 +44,7 @@ rmp-serde = "1.1.2"
 rustls = { version = "0.21.10" }
 rustls-pemfile = "2.1.1"
 serde = { version = "1.0.197", features = ["derive", "rc"] }
-serde_json = "1.0.114"
+serde_json = "1.0.115"
 serde_with = { version = "3.7.0", features = ["base64", "macros"] }
 sled = "0.34.7"
 static-toml = "1.2.0"
@@ -74,7 +74,7 @@ tikv-jemallocator = { version = "0.5", optional = true }
 
 [build-dependencies]
 figment = { version = "0.10.15", features = ["json", "toml", "env"] }
-serde_json = "1.0.114"
+serde_json = "1.0.115"
 vergen = { version = "8.3.1", features = [
     "build",
     "cargo",

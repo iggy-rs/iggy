@@ -6,7 +6,6 @@ use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
-use tracing::info;
 
 impl System {
     pub fn find_topic(
@@ -18,7 +17,6 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
-        info!("topic: {}", topic);
         self.permissioner
             .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)?;
         Ok(topic)

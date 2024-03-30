@@ -394,6 +394,30 @@ impl BytesSerializable for Message {
     }
 }
 
+// This method is used by the new version of `IggyClient` to serialize `SendMessages` without copying the messages.
+pub(crate) fn as_bytes(
+    stream_id: &Identifier,
+    topic_id: &Identifier,
+    partitioning: &Partitioning,
+    messages: &[Message],
+) -> Bytes {
+    let messages_size = messages.iter().map(Message::get_size_bytes).sum::<u32>();
+    let key_bytes = partitioning.as_bytes();
+    let stream_id_bytes = stream_id.as_bytes();
+    let topic_id_bytes = topic_id.as_bytes();
+    let mut bytes = BytesMut::with_capacity(
+        stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages_size as usize,
+    );
+    bytes.put_slice(&stream_id_bytes);
+    bytes.put_slice(&topic_id_bytes);
+    bytes.put_slice(&key_bytes);
+    for message in messages {
+        bytes.put_slice(&message.as_bytes());
+    }
+
+    bytes.freeze()
+}
+
 impl FromStr for Message {
     type Err = IggyError;
     fn from_str(input: &str) -> Result<Self, Self::Err> {
@@ -415,26 +439,12 @@ impl FromStr for Message {
 
 impl BytesSerializable for SendMessages {
     fn as_bytes(&self) -> Bytes {
-        let messages_size = self
-            .messages
-            .iter()
-            .map(Message::get_size_bytes)
-            .sum::<u32>();
-
-        let key_bytes = self.partitioning.as_bytes();
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
-        let mut bytes = BytesMut::with_capacity(
-            stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages_size as usize,
-        );
-        bytes.put_slice(&stream_id_bytes);
-        bytes.put_slice(&topic_id_bytes);
-        bytes.put_slice(&key_bytes);
-        for message in &self.messages {
-            bytes.put_slice(&message.as_bytes());
-        }
-
-        bytes.freeze()
+        as_bytes(
+            &self.stream_id,
+            &self.topic_id,
+            &self.partitioning,
+            &self.messages,
+        )
     }
 
     fn from_bytes(bytes: Bytes) -> Result<SendMessages, IggyError> {

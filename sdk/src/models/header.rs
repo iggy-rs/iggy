@@ -58,7 +58,7 @@ pub struct HeaderValue {
     pub kind: HeaderKind,
     /// The binary value of the header payload.
     #[serde_as(as = "Base64")]
-    pub value: Vec<u8>,
+    pub value: Bytes,
 }
 
 /// Represents the kind of a header value.
@@ -161,62 +161,62 @@ impl Display for HeaderValue {
             HeaderKind::Int8 => write!(
                 f,
                 "{}",
-                i8::from_le_bytes(self.value.clone().try_into().unwrap())
+                i8::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Int16 => write!(
                 f,
                 "{}",
-                i16::from_le_bytes(self.value.clone().try_into().unwrap())
+                i16::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Int32 => write!(
                 f,
                 "{}",
-                i32::from_le_bytes(self.value.clone().try_into().unwrap())
+                i32::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Int64 => write!(
                 f,
                 "{}",
-                i64::from_le_bytes(self.value.clone().try_into().unwrap())
+                i64::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Int128 => write!(
                 f,
                 "{}",
-                i128::from_le_bytes(self.value.clone().try_into().unwrap())
+                i128::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Uint8 => write!(
                 f,
                 "{}",
-                u8::from_le_bytes(self.value.clone().try_into().unwrap())
+                u8::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Uint16 => write!(
                 f,
                 "{}",
-                u16::from_le_bytes(self.value.clone().try_into().unwrap())
+                u16::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Uint32 => write!(
                 f,
                 "{}",
-                u32::from_le_bytes(self.value.clone().try_into().unwrap())
+                u32::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Uint64 => write!(
                 f,
                 "{}",
-                u64::from_le_bytes(self.value.clone().try_into().unwrap())
+                u64::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Uint128 => write!(
                 f,
                 "{}",
-                u128::from_le_bytes(self.value.clone().try_into().unwrap())
+                u128::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Float32 => write!(
                 f,
                 "{}",
-                f32::from_le_bytes(self.value.clone().try_into().unwrap())
+                f32::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
             HeaderKind::Float64 => write!(
                 f,
                 "{}",
-                f64::from_le_bytes(self.value.clone().try_into().unwrap())
+                f64::from_le_bytes(self.value.to_vec().try_into().unwrap())
             ),
         }
     }
@@ -304,7 +304,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -323,7 +323,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -342,7 +342,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -361,7 +361,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -380,7 +380,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -413,7 +413,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -432,7 +432,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -451,7 +451,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -470,7 +470,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -489,7 +489,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -508,7 +508,7 @@ impl HeaderValue {
             return Err(IggyError::InvalidHeaderValue);
         }
 
-        let value = self.value.clone().try_into();
+        let value = self.value.to_vec().try_into();
         if value.is_err() {
             return Err(IggyError::InvalidHeaderValue);
         }
@@ -524,7 +524,7 @@ impl HeaderValue {
 
         Ok(Self {
             kind,
-            value: value.to_vec(),
+            value: Bytes::from(value.to_vec()),
         })
     }
 }
@@ -581,7 +581,13 @@ impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
             position += 4;
             let value = bytes[position..position + value_length].to_vec();
             position += value_length;
-            headers.insert(HeaderKey(key), HeaderValue { kind, value });
+            headers.insert(
+                HeaderKey(key),
+                HeaderValue {
+                    kind,
+                    value: Bytes::from(value),
+                },
+            );
         }
 
         Ok(headers)
@@ -653,7 +659,7 @@ mod tests {
         let value = b"Value 1";
         let header_value = HeaderValue::from_raw(value);
         assert!(header_value.is_ok());
-        assert_eq!(header_value.unwrap().value, value);
+        assert_eq!(header_value.unwrap().value.as_ref(), value);
     }
 
     #[test]
@@ -674,7 +680,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Bool);
-        assert_eq!(header_value.value, if value { [1] } else { [0] });
+        assert_eq!(header_value.value.as_ref(), if value { [1] } else { [0] });
         assert_eq!(header_value.as_bool().unwrap(), value);
     }
 
@@ -685,7 +691,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Int8);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_int8().unwrap(), value);
     }
 
@@ -696,7 +702,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Int16);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_int16().unwrap(), value);
     }
 
@@ -707,7 +713,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Int32);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_int32().unwrap(), value);
     }
 
@@ -718,7 +724,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Int64);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_int64().unwrap(), value);
     }
 
@@ -729,7 +735,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Int128);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_int128().unwrap(), value);
     }
 
@@ -740,7 +746,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Uint8);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_uint8().unwrap(), value);
     }
 
@@ -751,7 +757,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Uint16);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_uint16().unwrap(), value);
     }
 
@@ -762,7 +768,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Uint32);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_uint32().unwrap(), value);
     }
 
@@ -773,7 +779,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Uint64);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_uint64().unwrap(), value);
     }
 
@@ -784,7 +790,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Uint128);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_uint128().unwrap(), value);
     }
 
@@ -795,7 +801,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Float32);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_float32().unwrap(), value);
     }
 
@@ -806,7 +812,7 @@ mod tests {
         assert!(header_value.is_ok());
         let header_value = header_value.unwrap();
         assert_eq!(header_value.kind, HeaderKind::Float64);
-        assert_eq!(header_value.value, value.to_le_bytes());
+        assert_eq!(header_value.value.as_ref(), value.to_le_bytes());
         assert_eq!(header_value.as_float64().unwrap(), value);
     }
 

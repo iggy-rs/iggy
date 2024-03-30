@@ -99,6 +99,7 @@ pub(crate) struct TopicCreateArgs {
     #[arg(value_parser = clap::value_parser!(CompressionAlgorithm), verbatim_doc_comment)]
     pub(crate) compression_algorithm: CompressionAlgorithm,
     /// Max topic size
+    ///
     /// ("unlimited" or skipping parameter disables max topic size functionality in topic)
     /// Can't be lower than segment size in the config.
     #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]

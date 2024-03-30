@@ -332,11 +332,11 @@ pub async fn should_short_help_match() {
 {USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
 Arguments:
-  <STREAM_ID>          Stream ID to create topic
-  <NAME>               Name of the topic
-  <PARTITIONS_COUNT>   Number of partitions inside the topic
-  <COMPRESSION_ALGORITHM> Compression algorithm for the topic, set to "none" for no compression
-  [MESSAGE_EXPIRY]...  Message expiry time in human-readable format like 15days 2min 2s
+  <STREAM_ID>              Stream ID to create topic
+  <NAME>                   Name of the topic
+  <PARTITIONS_COUNT>       Number of partitions inside the topic
+  <COMPRESSION_ALGORITHM>  Compression algorithm for the topic, set to "none" for no compression
+  [MESSAGE_EXPIRY]...      Message expiry time in human-readable format like 15days 2min 2s
 
 Options:
   -t, --topic-id <TOPIC_ID>                      Topic ID to create

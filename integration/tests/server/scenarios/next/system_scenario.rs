@@ -568,7 +568,10 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
         updated_topic.message_expiry,
         Some(updated_message_expiry as u32)
     );
-    assert_eq!(updated_topic.compression_algorithm, CompressionAlgorithm::Gzip);
+    assert_eq!(
+        updated_topic.compression_algorithm,
+        CompressionAlgorithm::Gzip
+    );
     assert_eq!(updated_topic.max_topic_size, Some(updated_max_topic_size));
     assert_eq!(updated_topic.replication_factor, updated_replication_factor);
 

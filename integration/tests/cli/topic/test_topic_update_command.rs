@@ -445,11 +445,11 @@ pub async fn should_short_help_match() {
 {USAGE_PREFIX} topic update [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
 Arguments:
-  <STREAM_ID>          Stream ID to update topic
-  <TOPIC_ID>           Topic ID to update
-  <NAME>               New name for the topic
+  <STREAM_ID>              Stream ID to update topic
+  <TOPIC_ID>               Topic ID to update
+  <NAME>                   New name for the topic
   <COMPRESSION_ALGORITHM>  Compression algorithm for the topic, set to "none" for no compression
-  [MESSAGE_EXPIRY]...  New message expiry time in human-readable format like 15days 2min 2s
+  [MESSAGE_EXPIRY]...      New message expiry time in human-readable format like 15days 2min 2s
 
 Options:
   -m, --max-topic-size <MAX_TOPIC_SIZE>          New max topic size [default: unlimited]

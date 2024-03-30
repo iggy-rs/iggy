@@ -16,16 +16,19 @@ use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
 use std::time::Duration;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 struct TestTopicUpdateCmd {
     stream_id: u32,
     stream_name: String,
     topic_id: u32,
     topic_name: String,
+    compression_algorithm: CompressionAlgorithm,
     message_expiry: Option<Vec<String>>,
     max_topic_size: Option<IggyByteSize>,
     replication_factor: u8,
     topic_new_name: String,
+    topic_new_compression_algorithm: CompressionAlgorithm,
     topic_new_message_expiry: Option<Vec<String>>,
     topic_new_max_size: Option<IggyByteSize>,
     topic_new_replication_factor: u8,
@@ -40,10 +43,12 @@ impl TestTopicUpdateCmd {
         stream_name: String,
         topic_id: u32,
         topic_name: String,
+        compression_algorithm: CompressionAlgorithm,
         message_expiry: Option<Vec<String>>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
         topic_new_name: String,
+        topic_new_compression_algorithm: CompressionAlgorithm,
         topic_new_message_expiry: Option<Vec<String>>,
         topic_new_max_size: Option<IggyByteSize>,
         topic_new_replication_factor: u8,
@@ -55,10 +60,12 @@ impl TestTopicUpdateCmd {
             stream_name,
             topic_id,
             topic_name,
+            compression_algorithm,
             message_expiry,
             max_topic_size,
             replication_factor,
             topic_new_name,
+            topic_new_compression_algorithm,
             topic_new_message_expiry,
             topic_new_max_size,
             topic_new_replication_factor,
@@ -79,6 +86,7 @@ impl TestTopicUpdateCmd {
         });
 
         command.push(self.topic_new_name.clone());
+        command.push(self.topic_new_compression_algorithm.to_string());
 
         if let Some(max_size_bytes) = &self.topic_new_max_size {
             command.push(format!("--max-size-bytes={}", max_size_bytes));
@@ -90,6 +98,7 @@ impl TestTopicUpdateCmd {
                 self.topic_new_replication_factor
             ));
         }
+
 
         if let Some(message_expiry) = &self.topic_new_message_expiry {
             command.extend(message_expiry.clone());
@@ -127,6 +136,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Some(self.topic_id),
                 partitions_count: 1,
+                compression_algorithm: self.compression_algorithm,
                 name: self.topic_name.clone(),
                 message_expiry,
                 max_topic_size,
@@ -155,6 +165,8 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
             TestTopicId::Named => self.topic_name.clone(),
         };
 
+        let compression_algorithm = &self.topic_new_compression_algorithm;
+
         let message_expiry = (match &self.topic_new_message_expiry {
             Some(value) => value.join(" "),
             None => IggyExpiry::NeverExpire.to_string(),
@@ -171,10 +183,10 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
         let new_topic_name = &self.topic_new_name;
 
         let expected_message = format!("Executing update topic with ID: {topic_id}, name: {new_topic_name}, \
-                                message expiry: {message_expiry}, max topic size: {max_topic_size}, \
+                                message expiry: {message_expiry}, compression algorithm: {compression_algorithm}, max topic size: {max_topic_size}, \
                                 replication factor: {replication_factor}, in stream with ID: {stream_id}\n\
-                                Topic with ID: {topic_id} updated name: {new_topic_name}, updated message expiry: {message_expiry} \
-                                in stream with ID: {stream_id}\n");
+                                Topic with ID: {topic_id} updated name: {new_topic_name}, updated message expiry: {message_expiry}, \
+                                updated compression algorithm: {compression_algorithm} in stream with ID: {stream_id}\n");
 
         command_state.success().stdout(diff(expected_message));
     }
@@ -234,10 +246,12 @@ pub async fn should_be_successful() {
             String::from("main"),
             1,
             String::from("sync"),
+            Default::default(),
             None,
             None,
             1,
             String::from("new_name"),
+            CompressionAlgorithm::Gzip,
             None,
             None,
             1,
@@ -251,10 +265,12 @@ pub async fn should_be_successful() {
             String::from("production"),
             3,
             String::from("topic"),
+            Default::default(),
             None,
             None,
             1,
             String::from("testing"),
+            CompressionAlgorithm::Gzip,
             None,
             None,
             1,
@@ -268,10 +284,12 @@ pub async fn should_be_successful() {
             String::from("testing"),
             5,
             String::from("development"),
+            Default::default(),
             None,
             None,
             1,
             String::from("development"),
+            CompressionAlgorithm::Gzip,
             None,
             None,
             1,
@@ -285,10 +303,12 @@ pub async fn should_be_successful() {
             String::from("other"),
             2,
             String::from("probe"),
+            Default::default(),
             None,
             None,
             1,
             String::from("development"),
+            CompressionAlgorithm::Gzip,
             Some(vec![
                 String::from("1day"),
                 String::from("1h"),
@@ -307,10 +327,12 @@ pub async fn should_be_successful() {
             String::from("stream"),
             1,
             String::from("testing"),
+            Default::default(),
             Some(vec![String::from("1s")]),
             None,
             1,
             String::from("testing"),
+            CompressionAlgorithm::Gzip,
             Some(vec![String::from("1m 6s")]),
             None,
             1,
@@ -324,6 +346,7 @@ pub async fn should_be_successful() {
             String::from("testing"),
             2,
             String::from("testing"),
+            Default::default(),
             Some(vec![
                 String::from("1s"),
                 String::from("1m"),
@@ -332,6 +355,7 @@ pub async fn should_be_successful() {
             None,
             1,
             String::from("testing"),
+            CompressionAlgorithm::Gzip,
             None,
             None,
             1,
@@ -362,7 +386,7 @@ Examples
  iggy update 1 1 new-name
  iggy update 1 2 new-name 1day 1hour 1min 1sec
 
-{USAGE_PREFIX} topic update [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME> [MESSAGE_EXPIRY]...
+{USAGE_PREFIX} topic update [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
 Arguments:
   <STREAM_ID>
@@ -377,6 +401,9 @@ Arguments:
 
   <NAME>
           New name for the topic
+
+  <COMPRESSION_ALGORITHM>
+          Compression algorithm for the topic, set to "none" for no compression
 
   [MESSAGE_EXPIRY]...
           New message expiry time in human-readable format like 15days 2min 2s
@@ -416,12 +443,13 @@ pub async fn should_short_help_match() {
             format!(
                 r#"Update topic name a message expiry time for given topic ID in given stream ID
 
-{USAGE_PREFIX} topic update [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME> [MESSAGE_EXPIRY]...
+{USAGE_PREFIX} topic update [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
 Arguments:
   <STREAM_ID>          Stream ID to update topic
   <TOPIC_ID>           Topic ID to update
   <NAME>               New name for the topic
+  <COMPRESSION_ALGORITHM>  Compression algorithm for the topic, set to "none" for no compression
   [MESSAGE_EXPIRY]...  New message expiry time in human-readable format like 15days 2min 2s
 
 Options:

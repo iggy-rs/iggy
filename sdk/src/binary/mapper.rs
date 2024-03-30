@@ -17,6 +17,8 @@ use crate::utils::byte_size::IggyByteSize;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
+use tracing::info;
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 const EMPTY_MESSAGES: Vec<PolledMessage> = vec![];
 const EMPTY_TOPICS: Vec<Topic> = vec![];
@@ -389,6 +391,7 @@ pub fn map_topic(payload: Bytes) -> Result<TopicDetails, IggyError> {
         size: topic.size,
         messages_count: topic.messages_count,
         message_expiry: topic.message_expiry,
+        compression_algorithm: topic.compression_algorithm,
         max_topic_size: topic.max_topic_size,
         replication_factor: topic.replication_factor,
         #[allow(clippy::cast_possible_truncation)]
@@ -407,20 +410,22 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
         0 => None,
         message_expiry => Some(message_expiry),
     };
-    let max_topic_size = match u64::from_le_bytes(payload[position + 20..position + 28].try_into()?)
+    let compression_algorithm = CompressionAlgorithm::from_code(payload[position + 20])?;
+    info!("compression_algo: {}", compression_algorithm);
+    let max_topic_size = match u64::from_le_bytes(payload[position + 21..position + 29].try_into()?)
     {
         0 => None,
         max_topic_size => Some(IggyByteSize::from(max_topic_size)),
     };
-    let replication_factor = payload[position + 28];
+    let replication_factor = payload[position + 29];
     let size_bytes = IggyByteSize::from(u64::from_le_bytes(
-        payload[position + 29..position + 37].try_into()?,
+        payload[position + 30..position + 38].try_into()?,
     ));
-    let messages_count = u64::from_le_bytes(payload[position + 37..position + 45].try_into()?);
-    let name_length = payload[position + 45];
+    let messages_count = u64::from_le_bytes(payload[position + 38..position + 46].try_into()?);
+    let name_length = payload[position + 46];
     let name =
-        from_utf8(&payload[position + 46..position + 46 + name_length as usize])?.to_string();
-    let read_bytes = 4 + 8 + 4 + 4 + 8 + 8 + 8 + 1 + 1 + name_length as usize;
+        from_utf8(&payload[position + 47..position + 47 + name_length as usize])?.to_string();
+    let read_bytes = 4 + 8 + 4 + 4 + 8 + 8 + 8 + 1 + 1 + 1 + name_length as usize;
     Ok((
         Topic {
             id,
@@ -430,6 +435,7 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
             size: size_bytes,
             messages_count,
             message_expiry,
+            compression_algorithm,
             max_topic_size,
             replication_factor,
         },

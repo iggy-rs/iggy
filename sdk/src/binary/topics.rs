@@ -6,6 +6,7 @@ use crate::command::{
     CREATE_TOPIC_CODE, DELETE_TOPIC_CODE, GET_TOPICS_CODE, GET_TOPIC_CODE, PURGE_TOPIC_CODE,
     UPDATE_TOPIC_CODE,
 };
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::topic::{Topic, TopicDetails};
@@ -78,23 +79,22 @@ impl<B: BinaryClientNext> TopicClientNext for B {
         stream_id: &Identifier,
         name: &str,
         partitions_count: u32,
+        compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
-        create_topic(
-            self,
-            &CreateTopic {
+        create_topic(self, &CreateTopic {
                 stream_id: stream_id.clone(),
                 name: name.to_string(),
                 partitions_count,
+                compression_algorithm,
                 replication_factor: replication_factor.unwrap_or(1),
                 topic_id,
                 message_expiry: message_expiry.into(),
                 max_topic_size,
-            },
-        )
+            },)
         .await
     }
 
@@ -103,6 +103,7 @@ impl<B: BinaryClientNext> TopicClientNext for B {
         stream_id: &Identifier,
         topic_id: &Identifier,
         name: &str,
+        compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
@@ -113,6 +114,7 @@ impl<B: BinaryClientNext> TopicClientNext for B {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 name: name.to_string(),
+                compression_algorithm,
                 replication_factor: replication_factor.unwrap_or(1),
                 message_expiry: message_expiry.into(),
                 max_topic_size,

@@ -17,6 +17,7 @@ use integration::test_server::{
     assert_clean_system_next, create_user_next, login_root_next, login_user_next, ClientFactoryNext,
 };
 use std::str::{from_utf8, FromStr};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let system_client = create_client(client_factory).await;
@@ -52,6 +53,7 @@ async fn init_system(
             &Identifier::numeric(STREAM_ID).unwrap(),
             TOPIC_NAME,
             PARTITIONS_COUNT,
+            CompressionAlgorithm::default(),
             Some(1),
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,

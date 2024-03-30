@@ -92,6 +92,7 @@ fn get_command(
                 args.stream_id.clone(),
                 args.topic_id,
                 args.partitions_count,
+                args.compression_algorithm,
                 args.name.clone(),
                 args.message_expiry.clone().into(),
                 args.max_topic_size,
@@ -104,6 +105,7 @@ fn get_command(
             TopicAction::Update(args) => Box::new(UpdateTopicCmd::new(
                 args.stream_id.clone(),
                 args.topic_id.clone(),
+                args.compression_algorithm,
                 args.name.clone(),
                 args.message_expiry.clone().into(),
                 args.max_topic_size,

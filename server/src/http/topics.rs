@@ -80,6 +80,7 @@ async fn create_topic(
             &command.name,
             command.partitions_count,
             command.message_expiry,
+            command.compression_algorithm,
             command.max_topic_size,
             command.replication_factor,
         )
@@ -104,6 +105,7 @@ async fn update_topic(
             &command.topic_id,
             &command.name,
             command.message_expiry,
+            command.compression_algorithm,
             command.max_topic_size,
             command.replication_factor,
         )

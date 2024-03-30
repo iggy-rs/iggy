@@ -28,6 +28,9 @@ pub struct Args {
     pub partitions_count: u32,
 
     #[arg(long, default_value = "1")]
+    pub compression_algorithm: u8,
+
+    #[arg(long, default_value = "1")]
     pub consumer_kind: u8,
 
     #[arg(long, default_value = "1")]

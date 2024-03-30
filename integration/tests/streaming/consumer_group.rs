@@ -5,6 +5,7 @@ use std::sync::{
     atomic::{AtomicU32, AtomicU64},
     Arc,
 };
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 #[tokio::test]
 async fn should_persist_consumer_group_and_then_load_it_from_disk() {
@@ -83,6 +84,7 @@ async fn init_topic(setup: &TestSetup) -> Topic {
         messages_count_of_parent_stream,
         segments_count_of_parent_stream,
         None,
+        CompressionAlgorithm::default(),
         None,
         1,
     )

@@ -20,6 +20,7 @@ use iggy::{
 use integration::test_server::{login_root, ClientFactory};
 use std::{pin::Pin, sync::Arc};
 use tracing::info;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 pub type BenchmarkFutures = Result<
     Vec<Pin<Box<dyn Future<Output = Result<BenchmarkResult, IggyError>> + Send>>>,
@@ -94,6 +95,7 @@ pub trait Benchmarkable {
                         stream_id: Identifier::numeric(stream_id)?,
                         topic_id: Some(topic_id),
                         partitions_count,
+                        compression_algorithm: CompressionAlgorithm::None,
                         name,
                         message_expiry: None,
                         max_topic_size: None,

@@ -1,3 +1,4 @@
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
@@ -5,6 +6,7 @@ use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
+use tracing::info;
 
 impl System {
     pub fn find_topic(
@@ -16,6 +18,7 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
+        info!("topic: {}", topic);
         self.permissioner
             .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)?;
         Ok(topic)
@@ -42,6 +45,7 @@ impl System {
         name: &str,
         partitions_count: u32,
         message_expiry: Option<u32>,
+        compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
@@ -58,6 +62,7 @@ impl System {
                 name,
                 partitions_count,
                 message_expiry,
+                compression_algorithm,
                 max_topic_size,
                 replication_factor,
             )
@@ -76,6 +81,7 @@ impl System {
         topic_id: &Identifier,
         name: &str,
         message_expiry: Option<u32>,
+        compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
@@ -95,6 +101,7 @@ impl System {
                 topic_id,
                 name,
                 message_expiry,
+                compression_algorithm,
                 max_topic_size,
                 replication_factor,
             )

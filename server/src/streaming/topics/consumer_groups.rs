@@ -198,6 +198,7 @@ mod tests {
     use crate::streaming::storage::tests::get_test_system_storage;
     use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
+    use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
     #[tokio::test]
     async fn should_be_created_given_valid_parameters() {
@@ -340,6 +341,7 @@ mod tests {
         let stream_id = 1;
         let id = 2;
         let name = "test";
+        let compression_algorithm = CompressionAlgorithm::None;
         let partitions_count = 3;
         let config = Arc::new(SystemConfig::default());
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
@@ -357,6 +359,7 @@ mod tests {
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
             None,
+            compression_algorithm,
             None,
             1,
         )

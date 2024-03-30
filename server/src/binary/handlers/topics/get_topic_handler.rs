@@ -5,7 +5,7 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::IggyError;
 use iggy::topics::get_topic::GetTopic;
-use tracing::debug;
+use tracing::{debug, info};
 
 pub async fn handle(
     command: &GetTopic,
@@ -16,6 +16,7 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let system = system.read();
     let topic = system.find_topic(session, &command.stream_id, &command.topic_id)?;
+    info!("topic: {}", topic);
     let topic = mapper::map_topic(topic).await;
     sender.send_ok_response(&topic).await?;
     Ok(())

@@ -14,6 +14,7 @@ use crate::topics::update_topic::UpdateTopic;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
 use async_trait::async_trait;
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 #[async_trait]
 impl TopicClient for HttpClient {
@@ -74,6 +75,7 @@ impl TopicClientNext for HttpClient {
         stream_id: &Identifier,
         name: &str,
         partitions_count: u32,
+        compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
@@ -85,6 +87,7 @@ impl TopicClientNext for HttpClient {
                 stream_id: stream_id.clone(),
                 name: name.to_string(),
                 partitions_count,
+                compression_algorithm,
                 replication_factor: replication_factor.unwrap_or(1),
                 topic_id,
                 message_expiry: message_expiry.into(),
@@ -99,6 +102,7 @@ impl TopicClientNext for HttpClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         name: &str,
+        compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
@@ -109,6 +113,7 @@ impl TopicClientNext for HttpClient {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 name: name.to_string(),
+                compression_algorithm,
                 replication_factor: replication_factor.unwrap_or(1),
                 message_expiry: message_expiry.into(),
                 max_topic_size,

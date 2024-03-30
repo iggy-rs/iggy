@@ -10,6 +10,7 @@ use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 /// `UpdateTopic` command is used to update a topic in a stream.
 /// It has additional payload:
@@ -28,6 +29,8 @@ pub struct UpdateTopic {
     /// Unique topic ID (numeric or name).
     #[serde(skip)]
     pub topic_id: Identifier,
+    /// Compression algorithm for the topic.
+    pub compression_algorithm: CompressionAlgorithm,
     /// Optional message expiry in seconds, if `None` then messages will never expire.
     pub message_expiry: Option<u32>,
     /// Optional max topic size, if `None` then topic size is unlimited.
@@ -46,6 +49,7 @@ impl Default for UpdateTopic {
         UpdateTopic {
             stream_id: Identifier::default(),
             topic_id: Identifier::default(),
+            compression_algorithm: Default::default(),
             message_expiry: None,
             max_topic_size: None,
             replication_factor: 1,
@@ -77,10 +81,11 @@ impl BytesSerializable for UpdateTopic {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(
-            13 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
+            14 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
         );
         bytes.put_slice(&stream_id_bytes.clone());
         bytes.put_slice(&topic_id_bytes.clone());
+        bytes.put_u8(self.compression_algorithm.as_code());
         match self.message_expiry {
             Some(message_expiry) => bytes.put_u32_le(message_expiry),
             None => bytes.put_u32_le(0),
@@ -105,6 +110,8 @@ impl BytesSerializable for UpdateTopic {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
+        let compression_algorithm = CompressionAlgorithm::from_code(bytes[position])?;
+        position += 1;
         let message_expiry = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
         let message_expiry = match message_expiry {
             0 => None,
@@ -125,6 +132,7 @@ impl BytesSerializable for UpdateTopic {
         let command = UpdateTopic {
             stream_id,
             topic_id,
+            compression_algorithm,
             message_expiry,
             max_topic_size,
             replication_factor,
@@ -164,6 +172,7 @@ mod tests {
         let command = UpdateTopic {
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(2).unwrap(),
+            compression_algorithm: CompressionAlgorithm::None,
             message_expiry: Some(10),
             max_topic_size: Some(IggyByteSize::from(100)),
             replication_factor: 1,
@@ -176,6 +185,8 @@ mod tests {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
+        let compression_algorithm = CompressionAlgorithm::from_code(bytes[position]).unwrap();
+        position += 1;
         let message_expiry = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
         let message_expiry = match message_expiry {
             0 => None,
@@ -195,6 +206,7 @@ mod tests {
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
+        assert_eq!(compression_algorithm, command.compression_algorithm);
         assert_eq!(message_expiry, command.message_expiry);
         assert_eq!(max_topic_size, command.max_topic_size);
         assert_eq!(replication_factor, command.replication_factor);
@@ -206,6 +218,7 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
+        let compression_algorithm = CompressionAlgorithm::None;
         let name = "test".to_string();
         let message_expiry = 10;
         let max_topic_size = IggyByteSize::from(100);
@@ -217,6 +230,7 @@ mod tests {
             BytesMut::with_capacity(5 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);
+        bytes.put_u8(compression_algorithm.as_code());
         bytes.put_u32_le(message_expiry);
         bytes.put_u64_le(max_topic_size.as_bytes_u64());
         bytes.put_u8(replication_factor);

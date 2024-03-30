@@ -37,6 +37,7 @@ use tracing::{error, info, warn};
 
 pub use crate::clients::builder::IggyClientBuilder;
 use crate::clients::next_builder::IggyClientNextBuilder;
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
@@ -679,6 +680,7 @@ impl TopicClientNext for IggyClientNext {
         stream_id: &Identifier,
         name: &str,
         partitions_count: u32,
+        compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
@@ -691,6 +693,7 @@ impl TopicClientNext for IggyClientNext {
                 stream_id,
                 name,
                 partitions_count,
+                compression_algorithm,
                 replication_factor,
                 topic_id,
                 message_expiry,
@@ -704,6 +707,7 @@ impl TopicClientNext for IggyClientNext {
         stream_id: &Identifier,
         topic_id: &Identifier,
         name: &str,
+        compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
@@ -715,6 +719,7 @@ impl TopicClientNext for IggyClientNext {
                 stream_id,
                 topic_id,
                 name,
+                compression_algorithm,
                 replication_factor,
                 message_expiry,
                 max_topic_size,

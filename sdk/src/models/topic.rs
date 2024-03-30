@@ -1,5 +1,6 @@
 use crate::{models::partition::Partition, utils::byte_size::IggyByteSize};
 use serde::{Deserialize, Serialize};
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 /// `Topic` represents the medium level of logical separation of data as it's a part of the stream.
 /// It consists of the following fields:
@@ -24,6 +25,8 @@ pub struct Topic {
     pub size: IggyByteSize,
     /// The optional expiry of the messages in the topic in seconds.
     pub message_expiry: Option<u32>,
+    /// Compression algorithm for the topic.
+    pub compression_algorithm: CompressionAlgorithm,
     /// The optional maximum size of the topic.
     /// Can't be lower than segment size in the config.
     pub max_topic_size: Option<IggyByteSize>,
@@ -59,6 +62,8 @@ pub struct TopicDetails {
     pub size: IggyByteSize,
     /// The optional expiry of the messages in the topic.
     pub message_expiry: Option<u32>,
+    /// Compression algorithm for the topic.
+    pub compression_algorithm: CompressionAlgorithm,
     /// The optional maximum size of the topic.
     /// Can't be lower than segment size in the config.
     pub max_topic_size: Option<IggyByteSize>,

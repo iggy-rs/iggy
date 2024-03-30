@@ -11,11 +11,16 @@ use crate::error::IggyError;
 
 // for now only those, in the future will add snappy, lz4, zstd (same as in confluent kafka) in addition to that
 // we should consider brotli as well.
-#[derive(Debug, PartialEq, Clone)]
+/// Supported compression algorithms
+#[derive(Debug, Default, PartialEq, Clone, Copy)]
 pub enum CompressionAlgorithm {
+    // No compression
+    #[default]
     None,
+    // Gzip compression algorithm
     Gzip,
 }
+
 impl FromStr for CompressionAlgorithm {
     type Err = String;
 

@@ -8,6 +8,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use core::fmt;
 use tracing::{event, Level};
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 pub struct CreateTopicCmd {
     create_topic: CreateTopic,
@@ -17,10 +18,12 @@ pub struct CreateTopicCmd {
 }
 
 impl CreateTopicCmd {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         stream_id: Identifier,
         topic_id: Option<u32>,
         partitions_count: u32,
+        compression_algorithm: CompressionAlgorithm,
         name: String,
         message_expiry: IggyExpiry,
         max_topic_size: IggyByteSize,
@@ -31,6 +34,7 @@ impl CreateTopicCmd {
                 stream_id,
                 topic_id,
                 partitions_count,
+                compression_algorithm,
                 name,
                 message_expiry: message_expiry.clone().into(),
                 max_topic_size: Some(max_topic_size),
@@ -68,10 +72,11 @@ impl CliCommand for CreateTopicCmd {
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
-            "Topic with name: {}, {}, partitions count: {}, message expiry: {}, max topic size: {}, replication factor: {} created in stream with ID: {}",
+            "Topic with name: {}, {}, partitions count: {}, compression algorithm: {}, message expiry: {}, max topic size: {}, replication factor: {} created in stream with ID: {}",
             self.create_topic.name,
             self.get_topic_id_info(),
             self.create_topic.partitions_count,
+            self.create_topic.compression_algorithm,
             self.message_expiry,
             self.max_topic_size.as_human_string_with_zero_as_unlimited(),
             self.replication_factor,
@@ -86,6 +91,7 @@ impl fmt::Display for CreateTopicCmd {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         let topic_id = self.get_topic_id_info();
         let topic_name = &self.create_topic.name;
+        let compression_algorithm = &self.create_topic.compression_algorithm;
         let message_expiry = &self.message_expiry;
         let max_topic_size = &self.max_topic_size.as_human_string_with_zero_as_unlimited();
         let replication_factor = self.replication_factor;
@@ -93,7 +99,7 @@ impl fmt::Display for CreateTopicCmd {
 
         write!(
             f,
-            "create topic with name: {topic_name}, {topic_id}, message expiry: {message_expiry}, \
+            "create topic with name: {topic_name}, {topic_id}, message expiry: {message_expiry}, compression algorithm: {compression_algorithm}, \
             max topic size: {max_topic_size}, replication factor: {replication_factor} in stream with ID: {stream_id}",
         )
     }

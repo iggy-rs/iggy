@@ -10,6 +10,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;
@@ -48,6 +49,7 @@ async fn init_system(client: &IggyClientNext) {
             &STREAM_ID.try_into().unwrap(),
             "sample-topic",
             1,
+            CompressionAlgorithm::default(),
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,

@@ -14,6 +14,7 @@ use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{assert_clean_system_next, login_root_next, ClientFactoryNext};
 use std::collections::HashMap;
 use std::str::FromStr;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let client = create_client(client_factory).await;
@@ -104,6 +105,7 @@ async fn init_system(client: &IggyClientNext) {
             &Identifier::numeric(STREAM_ID).unwrap(),
             TOPIC_NAME,
             PARTITIONS_COUNT,
+            CompressionAlgorithm::default(),
             Some(1),
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,

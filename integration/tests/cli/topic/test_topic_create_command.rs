@@ -15,6 +15,7 @@ use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
 use std::time::Duration;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 struct TestTopicCreateCmd {
     stream_id: u32,
@@ -22,6 +23,7 @@ struct TestTopicCreateCmd {
     topic_id: Option<u32>,
     topic_name: String,
     partitions_count: u32,
+    compression_algorithm: CompressionAlgorithm,
     message_expiry: Option<Vec<String>>,
     max_topic_size: Option<IggyByteSize>,
     replication_factor: u8,
@@ -36,6 +38,7 @@ impl TestTopicCreateCmd {
         topic_id: Option<u32>,
         topic_name: String,
         partitions_count: u32,
+        compression_algorithm: CompressionAlgorithm,
         message_expiry: Option<Vec<String>>,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
@@ -47,6 +50,7 @@ impl TestTopicCreateCmd {
             topic_id,
             topic_name,
             partitions_count,
+            compression_algorithm,
             message_expiry,
             max_topic_size,
             replication_factor,
@@ -69,6 +73,7 @@ impl TestTopicCreateCmd {
 
         args.push(self.topic_name.clone());
         args.push(format!("{}", self.partitions_count));
+        args.push(format!("{}", self.compression_algorithm));
         args.extend(self.message_expiry.clone().unwrap_or_default());
 
         args
@@ -106,6 +111,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
             None => "ID auto incremented".to_string(),
         };
         let topic_name = &self.topic_name;
+        let compression_algorithm = &self.compression_algorithm;
         let message_expiry = (match &self.message_expiry {
             Some(value) => value.join(" "),
             None => IggyExpiry::NeverExpire.to_string(),
@@ -121,9 +127,9 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
         let replication_factor = self.replication_factor;
 
         let message = format!(
-            "Executing create topic with name: {topic_name}, {topic_id}, message expiry: {message_expiry}, \
+            "Executing create topic with name: {topic_name}, {topic_id}, message expiry: {message_expiry}, compression algorithm: {compression_algorithm}, \
             max topic size: {max_topic_size}, replication factor: {replication_factor} in stream with ID: {stream_id}\n\
-            Topic with name: {topic_name}, {topic_id}, partitions count: {partitions_count}, message expiry: {message_expiry}, \
+            Topic with name: {topic_name}, {topic_id}, partitions count: {partitions_count}, compression algorithm: {compression_algorithm}, message expiry: {message_expiry}, \
             max topic size: {max_topic_size}, replication factor: {replication_factor} created in stream with ID: {stream_id}\n",
         );
 
@@ -190,6 +196,7 @@ pub async fn should_be_successful() {
             None,
             String::from("sync"),
             1,
+            Default::default(),
             None,
             None,
             1,
@@ -203,6 +210,7 @@ pub async fn should_be_successful() {
             Some(2),
             String::from("topic"),
             5,
+            Default::default(),
             None,
             None,
             1,
@@ -216,6 +224,7 @@ pub async fn should_be_successful() {
             None,
             String::from("named"),
             1,
+            Default::default(),
             Some(vec![String::from("3days"), String::from("5s")]),
             None,
             1,
@@ -229,6 +238,7 @@ pub async fn should_be_successful() {
             Some(1),
             String::from("probe"),
             2,
+            Default::default(),
             Some(vec![
                 String::from("1day"),
                 String::from("1h"),
@@ -262,7 +272,7 @@ Examples
  iggy topic create test debugs 2 1day 1hour 1min 1sec
  iggy topic create -t 3 1 sensor3 2 unlimited
 
-{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> [MESSAGE_EXPIRY]...
+{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
 Arguments:
   <STREAM_ID>
@@ -275,6 +285,9 @@ Arguments:
 
   <PARTITIONS_COUNT>
           Number of partitions inside the topic
+
+  <COMPRESSION_ALGORITHM>
+          Compression algorithm for the topic, set to "none" for no compression
 
   [MESSAGE_EXPIRY]...
           Message expiry time in human-readable format like 15days 2min 2s
@@ -316,12 +329,13 @@ pub async fn should_short_help_match() {
             format!(
                 r#"Create topic with given name, number of partitions and expiry time for given stream ID
 
-{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> [MESSAGE_EXPIRY]...
+{USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
 Arguments:
   <STREAM_ID>          Stream ID to create topic
   <NAME>               Name of the topic
   <PARTITIONS_COUNT>   Number of partitions inside the topic
+  <COMPRESSION_ALGORITHM> Compression algorithm for the topic, set to "none" for no compression
   [MESSAGE_EXPIRY]...  Message expiry time in human-readable format like 15days 2min 2s
 
 Options:

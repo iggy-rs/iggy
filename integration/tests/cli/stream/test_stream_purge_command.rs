@@ -58,6 +58,7 @@ impl IggyCmdTestCase for TestStreamPurgeCmd {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Some(self.topic_id),
                 partitions_count: 10,
+                compression_algorithm: Default::default(),
                 message_expiry: None,
                 max_topic_size: None,
                 replication_factor: 1,

@@ -148,6 +148,7 @@ async fn create_topic_assert_empty(client: &IggyClient, stream_name: &str, topic
         stream_id: Identifier::from_str(stream_name).unwrap(),
         topic_id: None,
         partitions_count: PARTITIONS_COUNT,
+        compression_algorithm: Default::default(),
         name: topic_name.to_string(),
         message_expiry: None,
         max_topic_size: None,

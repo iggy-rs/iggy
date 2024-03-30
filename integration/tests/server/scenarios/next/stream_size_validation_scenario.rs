@@ -7,6 +7,7 @@ use iggy::next_client::{MessageClientNext, StreamClientNext, SystemClientNext, T
 use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{assert_clean_system_next, login_root_next, ClientFactoryNext};
 use std::str::FromStr;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 const S1_NAME: &str = "test-stream-1";
 const T1_NAME: &str = "test-topic-1";
@@ -122,6 +123,7 @@ async fn create_topic_assert_empty(client: &IggyClientNext, stream_name: &str, t
             &Identifier::from_str(stream_name).unwrap(),
             topic_name,
             PARTITIONS_COUNT,
+            CompressionAlgorithm::default(),
             Some(1),
             None,
             IggyExpiry::NeverExpire,

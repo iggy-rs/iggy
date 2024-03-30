@@ -8,6 +8,7 @@ use iggy::next_client::ClientNext;
 use iggy::users::defaults::*;
 use iggy::utils::expiry::IggyExpiry;
 use tracing::info;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 type MessageHandler = dyn Fn(&PolledMessage) -> Result<(), Box<dyn std::error::Error>>;
 
@@ -69,6 +70,7 @@ pub async fn init_by_producer(args: &Args, client: &dyn ClientNext) -> Result<()
             &args.stream_id.try_into()?,
             "orders",
             args.partitions_count,
+            CompressionAlgorithm::from_code(args.compression_algorithm)?,
             None,
             Some(args.topic_id),
             IggyExpiry::NeverExpire,

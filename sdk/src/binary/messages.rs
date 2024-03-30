@@ -7,6 +7,7 @@ use crate::consumer::Consumer;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::poll_messages::{PollMessages, PollingStrategy};
+use crate::messages::send_messages;
 use crate::messages::send_messages::{Message, Partitioning, SendMessages};
 use crate::models::messages::PolledMessages;
 use crate::next_client::MessageClientNext;
@@ -18,7 +19,10 @@ impl<B: BinaryClient> MessageClient for B {
     }
 
     async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
-        send_messages(self, command).await
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(SEND_MESSAGES_CODE, command.as_bytes())
+            .await?;
+        Ok(())
     }
 }
 
@@ -56,16 +60,13 @@ impl<B: BinaryClientNext> MessageClientNext for B {
         partitioning: &Partitioning,
         messages: &mut [Message],
     ) -> Result<(), IggyError> {
-        send_messages(
-            self,
-            &mut SendMessages {
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-                partitioning: partitioning.clone(),
-                messages: messages.to_vec(), // TODO: Improve this in a final version
-            },
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            SEND_MESSAGES_CODE,
+            send_messages::as_bytes(stream_id, topic_id, partitioning, messages),
         )
-        .await
+        .await?;
+        Ok(())
     }
 }
 
@@ -78,15 +79,4 @@ async fn poll_messages<T: BinaryTransport>(
         .send_with_response(POLL_MESSAGES_CODE, command.as_bytes())
         .await?;
     mapper::map_polled_messages(response)
-}
-
-async fn send_messages<T: BinaryTransport>(
-    transport: &T,
-    command: &mut SendMessages,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(SEND_MESSAGES_CODE, command.as_bytes())
-        .await?;
-    Ok(())
 }

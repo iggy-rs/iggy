@@ -61,7 +61,7 @@ impl MessageClientNext for HttpClient {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 partitioning: partitioning.clone(),
-                messages: messages.to_vec(), // TODO: Improve this in a final version
+                messages: messages.to_vec(),
             },
         )
         .await

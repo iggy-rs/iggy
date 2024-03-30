@@ -51,7 +51,7 @@ static-toml = "1.2.0"
 strip-ansi-escapes = "0.2.0"
 sysinfo = "0.30.7"
 thiserror = "1.0.58"
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
 toml = "0.8.12"
 tower = { version = "0.4.13" }

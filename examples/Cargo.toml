@@ -44,6 +44,6 @@ rand = "0.8.5"
 serde = { version = "1.0.197", features = ["derive", "rc"] }
 serde_json = "1.0.115"
 thiserror = "1.0.58"
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.16" }

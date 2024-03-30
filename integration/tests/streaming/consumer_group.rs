@@ -1,11 +1,11 @@
 use crate::streaming::common::test_setup::TestSetup;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use server::streaming::topics::topic::Topic;
 use std::sync::{
     atomic::{AtomicU32, AtomicU64},
     Arc,
 };
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 #[tokio::test]
 async fn should_persist_consumer_group_and_then_load_it_from_disk() {

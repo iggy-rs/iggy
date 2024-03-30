@@ -1,10 +1,10 @@
 use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use std::convert::From;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum TopicAction {

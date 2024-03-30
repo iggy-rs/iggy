@@ -1,5 +1,6 @@
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
@@ -7,7 +8,6 @@ use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::text;
 use std::sync::atomic::Ordering;
 use tracing::{debug, info};
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 impl Stream {
     pub fn get_topics_count(&self) -> u32 {

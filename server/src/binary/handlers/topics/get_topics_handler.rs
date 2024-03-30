@@ -5,7 +5,7 @@ use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use iggy::error::IggyError;
 use iggy::topics::get_topics::GetTopics;
-use tracing::{debug};
+use tracing::debug;
 
 pub async fn handle(
     command: &GetTopics,

@@ -1,6 +1,6 @@
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::{models::partition::Partition, utils::byte_size::IggyByteSize};
 use serde::{Deserialize, Serialize};
-use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 /// `Topic` represents the medium level of logical separation of data as it's a part of the stream.
 /// It consists of the following fields:

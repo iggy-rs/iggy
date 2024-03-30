@@ -196,9 +196,9 @@ mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
+    use iggy::compression::compression_algorithm::CompressionAlgorithm;
     use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
-    use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
     #[tokio::test]
     async fn should_be_created_given_valid_parameters() {

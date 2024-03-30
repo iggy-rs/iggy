@@ -4,6 +4,7 @@ use iggy::client::{
     SystemClient, TopicClient, UserClient,
 };
 use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
@@ -157,6 +158,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
+    assert_eq!(topic.compression_algorithm, CompressionAlgorithm::default());
     assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
     assert_eq!(topic.message_expiry, None);
@@ -175,6 +177,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
     assert_eq!(topic.partitions.len(), PARTITIONS_COUNT as usize);
+    assert_eq!(topic.compression_algorithm, CompressionAlgorithm::default());
     assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
     let mut id = 1;
@@ -197,6 +200,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
+    assert_eq!(topic.compression_algorithm, CompressionAlgorithm::default());
 
     // 13. Get stream details and validate that created topic exists
     let stream = client
@@ -602,7 +606,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             stream_id: Identifier::numeric(STREAM_ID).unwrap(),
             topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
             name: updated_topic_name.clone(),
-            compression_algorithm: Default::default(),
+            compression_algorithm: CompressionAlgorithm::Gzip,
             message_expiry: Some(updated_message_expiry),
             max_topic_size: Some(updated_max_topic_size),
             replication_factor: updated_replication_factor,
@@ -620,6 +624,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
     assert_eq!(updated_topic.name, updated_topic_name);
     assert_eq!(updated_topic.message_expiry, Some(updated_message_expiry));
+    assert_eq!(updated_topic.compression_algorithm, CompressionAlgorithm::Gzip);
     assert_eq!(updated_topic.max_topic_size, Some(updated_max_topic_size));
     assert_eq!(updated_topic.replication_factor, updated_replication_factor);
 

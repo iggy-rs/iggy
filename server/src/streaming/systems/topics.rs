@@ -1,7 +1,7 @@
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;

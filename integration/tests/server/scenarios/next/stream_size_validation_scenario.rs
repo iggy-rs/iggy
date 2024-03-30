@@ -1,13 +1,13 @@
 use crate::server::scenarios::next::{create_client, PARTITIONS_COUNT, PARTITION_ID};
 use bytes::Bytes;
 use iggy::clients::next_client::IggyClientNext;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::next_client::{MessageClientNext, StreamClientNext, SystemClientNext, TopicClientNext};
 use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{assert_clean_system_next, login_root_next, ClientFactoryNext};
 use std::str::FromStr;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 const S1_NAME: &str = "test-stream-1";
 const T1_NAME: &str = "test-topic-1";

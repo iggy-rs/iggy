@@ -1,5 +1,6 @@
 use iggy::clients::next_builder::IggyClientNextBuilder;
 use iggy::clients::next_client::IggyClientNext;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::next_client::{ClientNext, StreamClientNext, TopicClientNext, UserClientNext};
 use iggy::users::defaults::*;
@@ -10,7 +11,6 @@ use std::str::FromStr;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn};
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 const STREAM_ID: u32 = 1;
 const TOPIC_ID: u32 = 1;

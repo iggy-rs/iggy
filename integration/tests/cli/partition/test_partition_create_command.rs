@@ -4,6 +4,7 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
@@ -12,7 +13,6 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 struct TestPartitionCreateCmd {
     stream_id: u32,

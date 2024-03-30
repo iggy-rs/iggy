@@ -1,4 +1,5 @@
 use crate::client::TopicClient;
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
@@ -14,7 +15,6 @@ use crate::topics::update_topic::UpdateTopic;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
 use async_trait::async_trait;
-use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 #[async_trait]
 impl TopicClient for HttpClient {

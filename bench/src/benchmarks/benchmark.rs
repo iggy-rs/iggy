@@ -9,6 +9,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::Future;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::{
     client::{StreamClient, TopicClient},
     clients::client::{IggyClient, IggyClientBackgroundConfig},
@@ -20,7 +21,6 @@ use iggy::{
 use integration::test_server::{login_root, ClientFactory};
 use std::{pin::Pin, sync::Arc};
 use tracing::info;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 pub type BenchmarkFutures = Result<
     Vec<Pin<Box<dyn Future<Output = Result<BenchmarkResult, IggyError>> + Send>>>,

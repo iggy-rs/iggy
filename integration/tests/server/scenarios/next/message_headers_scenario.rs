@@ -4,6 +4,7 @@ use crate::server::scenarios::next::{
 };
 use bytes::Bytes;
 use iggy::clients::next_client::IggyClientNext;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -14,7 +15,6 @@ use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{assert_clean_system_next, login_root_next, ClientFactoryNext};
 use std::collections::HashMap;
 use std::str::FromStr;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 pub async fn run(client_factory: &dyn ClientFactoryNext) {
     let client = create_client(client_factory).await;

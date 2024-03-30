@@ -121,6 +121,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
+    assert_eq!(topic.compression_algorithm, CompressionAlgorithm::default());
     assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
     assert_eq!(topic.message_expiry, None);
@@ -546,7 +547,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
             &Identifier::numeric(STREAM_ID).unwrap(),
             &Identifier::numeric(TOPIC_ID).unwrap(),
             &updated_topic_name,
-            CompressionAlgorithm::default(),
+            CompressionAlgorithm::Gzip,
             Some(updated_replication_factor),
             IggyExpiry::ExpireDuration(message_expiry_duration),
             Some(updated_max_topic_size),
@@ -567,6 +568,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
         updated_topic.message_expiry,
         Some(updated_message_expiry as u32)
     );
+    assert_eq!(updated_topic.compression_algorithm, CompressionAlgorithm::Gzip);
     assert_eq!(updated_topic.max_topic_size, Some(updated_max_topic_size));
     assert_eq!(updated_topic.replication_factor, updated_replication_factor);
 

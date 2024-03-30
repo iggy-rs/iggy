@@ -5,6 +5,7 @@ use crate::cli::common::{
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::delete_topic::DeleteTopic;
@@ -15,7 +16,6 @@ use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
 use std::time::Duration;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 struct TestTopicCreateCmd {
     stream_id: u32,

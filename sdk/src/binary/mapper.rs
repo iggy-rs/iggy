@@ -1,4 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails, ConsumerGroupInfo};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails, ConsumerGroupMember};
@@ -18,7 +19,6 @@ use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
 use tracing::info;
-use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 const EMPTY_MESSAGES: Vec<PolledMessage> = vec![];
 const EMPTY_TOPICS: Vec<Topic> = vec![];

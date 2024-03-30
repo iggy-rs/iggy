@@ -85,7 +85,9 @@ impl<B: BinaryClientNext> TopicClientNext for B {
         message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,
     ) -> Result<(), IggyError> {
-        create_topic(self, &CreateTopic {
+        create_topic(
+            self,
+            &CreateTopic {
                 stream_id: stream_id.clone(),
                 name: name.to_string(),
                 partitions_count,
@@ -94,7 +96,8 @@ impl<B: BinaryClientNext> TopicClientNext for B {
                 topic_id,
                 message_expiry: message_expiry.into(),
                 max_topic_size,
-            },)
+            },
+        )
         .await
     }
 

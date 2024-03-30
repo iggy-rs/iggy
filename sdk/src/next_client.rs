@@ -1,3 +1,4 @@
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::consumer::Consumer;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -20,7 +21,6 @@ use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use async_trait::async_trait;
 use std::fmt::Debug;
-use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 /// The next version of the client which is the main interface to the Iggy server.
 /// It consists of multiple modules, each of which is responsible for a specific set of commands.

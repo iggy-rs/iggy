@@ -1,4 +1,5 @@
 use crate::shared::args::Args;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -8,7 +9,6 @@ use iggy::next_client::ClientNext;
 use iggy::users::defaults::*;
 use iggy::utils::expiry::IggyExpiry;
 use tracing::info;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 type MessageHandler = dyn Fn(&PolledMessage) -> Result<(), Box<dyn std::error::Error>>;
 

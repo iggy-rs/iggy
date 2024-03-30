@@ -1,5 +1,6 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::command::CommandPayload;
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::topics::{MAX_NAME_LENGTH, MAX_PARTITIONS_COUNT};
@@ -10,7 +11,6 @@ use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::str::from_utf8;
-use crate::compression::compression_algorithm::CompressionAlgorithm;
 
 /// `CreateTopic` command is used to create a new topic in a stream.
 /// It has additional payload:

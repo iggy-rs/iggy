@@ -5,6 +5,7 @@ use crate::cli::common::{
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
@@ -16,7 +17,6 @@ use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
 use std::time::Duration;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 struct TestTopicUpdateCmd {
     stream_id: u32,
@@ -98,7 +98,6 @@ impl TestTopicUpdateCmd {
                 self.topic_new_replication_factor
             ));
         }
-
 
         if let Some(message_expiry) = &self.topic_new_message_expiry {
             command.extend(message_expiry.clone());

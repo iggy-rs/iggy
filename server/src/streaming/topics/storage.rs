@@ -5,6 +5,7 @@ use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
@@ -17,7 +18,6 @@ use tokio::fs;
 use tokio::fs::create_dir;
 use tokio::sync::Mutex;
 use tracing::{error, info};
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
 #[derive(Debug)]
 pub struct FileTopicStorage {

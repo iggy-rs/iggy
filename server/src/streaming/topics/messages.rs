@@ -255,10 +255,10 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
+    use iggy::compression::compression_algorithm::CompressionAlgorithm;
     use std::sync::atomic::AtomicU32;
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
-    use iggy::compression::compression_algorithm::CompressionAlgorithm;
 
     #[tokio::test]
     async fn given_partition_id_key_messages_should_be_appended_only_to_the_chosen_partition() {

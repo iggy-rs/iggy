@@ -1,12 +1,11 @@
 use crate::args::simple::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
-use iggy::client::MessageClient;
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
 use iggy::error::IggyError;
-use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::next_client::MessageClientNext;
 use iggy::utils::duration::IggyDuration;
-use integration::test_server::{login_root, ClientFactory};
+use integration::test_server::{login_root_next, ClientFactoryNext};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
@@ -14,7 +13,7 @@ use tokio::time::Instant;
 use tracing::info;
 
 pub struct Producer {
-    client_factory: Arc<dyn ClientFactory>,
+    client_factory: Arc<dyn ClientFactoryNext>,
     producer_id: u32,
     stream_id: u32,
     messages_per_batch: u32,
@@ -25,7 +24,7 @@ pub struct Producer {
 
 impl Producer {
     pub fn new(
-        client_factory: Arc<dyn ClientFactory>,
+        client_factory: Arc<dyn ClientFactoryNext>,
         producer_id: u32,
         stream_id: u32,
         messages_per_batch: u32,
@@ -49,14 +48,14 @@ impl Producer {
         let partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;
         let client = self.client_factory.create_client().await;
-        let client = IggyClient::create(
+        let client = IggyClientNext::create(
             client,
-            IggyClientBackgroundConfig::default(),
+            IggyClientNextBackgroundConfig::default(),
             None,
             None,
             None,
         );
-        login_root(&client).await;
+        login_root_next(&client).await;
         info!(
             "Producer #{} → preparing the test messages...",
             self.producer_id
@@ -68,12 +67,9 @@ impl Producer {
             messages.push(message);
         }
 
-        let mut send_messages = SendMessages {
-            stream_id: Identifier::numeric(self.stream_id)?,
-            topic_id: Identifier::numeric(topic_id)?,
-            partitioning: Partitioning::partition_id(partition_id),
-            messages,
-        };
+        let stream_id = self.stream_id.try_into()?;
+        let topic_id = topic_id.try_into()?;
+        let partitioning = Partitioning::partition_id(partition_id);
 
         info!(
             "Producer #{} → warming up for {}...",
@@ -81,7 +77,9 @@ impl Producer {
         );
         let warmup_end = Instant::now() + self.warmup_time.get_duration();
         while Instant::now() < warmup_end {
-            client.send_messages(&mut send_messages).await?;
+            client
+                .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
+                .await?;
         }
 
         info!(
@@ -93,7 +91,9 @@ impl Producer {
         let mut latencies: Vec<Duration> = Vec::with_capacity(self.message_batches as usize);
         for _ in 0..self.message_batches {
             let latency_start = Instant::now();
-            client.send_messages(&mut send_messages).await?;
+            client
+                .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
+                .await?;
             let latency_end = latency_start.elapsed();
             latencies.push(latency_end);
         }

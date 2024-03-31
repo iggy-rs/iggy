@@ -3,6 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::utils::byte_size::IggyByteSize;
@@ -32,6 +33,7 @@ pub struct Topic {
     pub(crate) current_consumer_group_id: AtomicU32,
     pub(crate) current_partition_id: AtomicU32,
     pub message_expiry: Option<u32>,
+    pub compression_algorithm: CompressionAlgorithm,
     pub max_topic_size: Option<IggyByteSize>,
     pub replication_factor: u8,
     pub created_at: u64,
@@ -58,6 +60,7 @@ impl Topic {
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
             None,
+            Default::default(),
             None,
             1,
         )
@@ -76,6 +79,7 @@ impl Topic {
         messages_count_of_parent_stream: Arc<AtomicU64>,
         segments_count_of_parent_stream: Arc<AtomicU32>,
         message_expiry: Option<u32>,
+        compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<Topic, IggyError> {
@@ -108,6 +112,7 @@ impl Topic {
                     expiry => Some(expiry),
                 },
             },
+            compression_algorithm,
             max_topic_size,
             replication_factor,
             config,
@@ -171,6 +176,7 @@ mod tests {
         let name = "test";
         let partitions_count = 3;
         let message_expiry = 10;
+        let compression_algorithm = CompressionAlgorithm::None;
         let max_topic_size = IggyByteSize::from_str("2 GB").unwrap();
         let replication_factor = 1;
         let config = Arc::new(SystemConfig::default());
@@ -190,6 +196,7 @@ mod tests {
             size_of_parent_stream,
             segments_count_of_parent_stream,
             Some(message_expiry),
+            compression_algorithm,
             Some(max_topic_size),
             replication_factor,
         )

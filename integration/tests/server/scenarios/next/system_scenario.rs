@@ -6,6 +6,7 @@ use crate::server::scenarios::next::{
     TOPIC_ID, TOPIC_NAME,
 };
 use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::Consumer;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -101,6 +102,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
             &Identifier::numeric(STREAM_ID).unwrap(),
             TOPIC_NAME,
             PARTITIONS_COUNT,
+            Default::default(),
             Some(1),
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
@@ -119,6 +121,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
+    assert_eq!(topic.compression_algorithm, CompressionAlgorithm::default());
     assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
     assert_eq!(topic.message_expiry, None);
@@ -183,6 +186,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
             &Identifier::numeric(STREAM_ID).unwrap(),
             &format!("{}-2", TOPIC_NAME),
             PARTITIONS_COUNT,
+            Default::default(),
             Some(1),
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
@@ -197,6 +201,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
             &Identifier::numeric(STREAM_ID).unwrap(),
             TOPIC_NAME,
             PARTITIONS_COUNT,
+            Default::default(),
             Some(1),
             Some(TOPIC_ID + 1),
             IggyExpiry::NeverExpire,
@@ -542,6 +547,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
             &Identifier::numeric(STREAM_ID).unwrap(),
             &Identifier::numeric(TOPIC_ID).unwrap(),
             &updated_topic_name,
+            CompressionAlgorithm::Gzip,
             Some(updated_replication_factor),
             IggyExpiry::ExpireDuration(message_expiry_duration),
             Some(updated_max_topic_size),
@@ -561,6 +567,10 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
     assert_eq!(
         updated_topic.message_expiry,
         Some(updated_message_expiry as u32)
+    );
+    assert_eq!(
+        updated_topic.compression_algorithm,
+        CompressionAlgorithm::Gzip
     );
     assert_eq!(updated_topic.max_topic_size, Some(updated_max_topic_size));
     assert_eq!(updated_topic.replication_factor, updated_replication_factor);
@@ -674,6 +684,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
             &Identifier::numeric(stream_id).unwrap(),
             &topic_name,
             PARTITIONS_COUNT,
+            CompressionAlgorithm::default(),
             Some(1),
             None,
             IggyExpiry::NeverExpire,

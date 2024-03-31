@@ -60,6 +60,7 @@ impl IggyCmdTestCase for TestStatsCmd {
                 topic_id: Some(1),
                 stream_id,
                 partitions_count: 5,
+                compression_algorithm: Default::default(),
                 message_expiry: None,
                 max_topic_size: None,
                 replication_factor: 1,

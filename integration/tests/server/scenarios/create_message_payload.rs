@@ -113,6 +113,7 @@ async fn init_system(client: &IggyClient) {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Some(TOPIC_ID),
         partitions_count: PARTITIONS_COUNT,
+        compression_algorithm: Default::default(),
         name: TOPIC_NAME.to_string(),
         message_expiry: None,
         max_topic_size: None,

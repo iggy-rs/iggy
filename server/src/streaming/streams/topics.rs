@@ -1,5 +1,6 @@
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
@@ -13,12 +14,14 @@ impl Stream {
         self.topics.len() as u32
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn create_topic(
         &mut self,
         topic_id: Option<u32>,
         name: &str,
         partitions_count: u32,
         message_expiry: Option<u32>,
+        compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
@@ -60,6 +63,7 @@ impl Stream {
             self.messages_count.clone(),
             self.segments_count.clone(),
             message_expiry,
+            compression_algorithm,
             max_topic_size,
             replication_factor,
         )?;
@@ -76,6 +80,7 @@ impl Stream {
         id: &Identifier,
         name: &str,
         message_expiry: Option<u32>,
+        compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
@@ -109,6 +114,7 @@ impl Stream {
             let topic = self.get_topic_mut(id)?;
             topic.name = updated_name;
             topic.message_expiry = message_expiry;
+            topic.compression_algorithm = compression_algorithm;
             for partition in topic.partitions.values_mut() {
                 let mut partition = partition.write().await;
                 partition.message_expiry = message_expiry;
@@ -230,6 +236,7 @@ mod tests {
         let topic_id = 2;
         let topic_name = "test_topic";
         let message_expiry = Some(10);
+        let compression_algorithm = CompressionAlgorithm::None;
         let max_topic_size = Some(IggyByteSize::from(100));
         let config = Arc::new(SystemConfig::default());
         let storage = Arc::new(get_test_system_storage());
@@ -240,6 +247,7 @@ mod tests {
                 topic_name,
                 1,
                 message_expiry,
+                compression_algorithm,
                 max_topic_size,
                 1,
             )
@@ -251,11 +259,13 @@ mod tests {
         let topic = topic.unwrap();
         assert_eq!(topic.topic_id, topic_id);
         assert_eq!(topic.name, topic_name);
+        assert_eq!(topic.compression_algorithm, compression_algorithm);
 
         let topic = stream.get_topic(&Identifier::named(topic_name).unwrap());
         assert!(topic.is_ok());
         let topic = topic.unwrap();
         assert_eq!(topic.topic_id, topic_id);
         assert_eq!(topic.name, topic_name);
+        assert_eq!(topic.compression_algorithm, compression_algorithm);
     }
 }

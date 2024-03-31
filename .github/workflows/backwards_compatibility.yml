@@ -11,7 +11,7 @@ jobs:
   check_commit_message:
     runs-on: ubuntu-latest
     outputs:
-        should_skip: ${{ steps.check_commits.outputs.skip || steps.check_pr_body.outputs.skip }}
+        should_skip: ${{ steps.check_skip.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,6 +60,18 @@ jobs:
           else
             echo "skip=false" >> $GITHUB_OUTPUT
             echo "'BREAKING_CHANGE' not found in pull request body, setting skip=false"
+          fi
+      - name: Print commits output
+        run: echo "${{steps.check_commits.outputs.skip}}"
+      - name: Print pr_body output
+        run: echo "${{steps.check_pr_body.outputs.skip}}"
+      - name: Check For Skip Condition
+        id: check_skip
+        run: |
+          if [[ ${{ steps.check_commits.outputs.skip }} || ${{ steps.check_pr_body.outputs.skip }} ]]; then
+            echo "skip=true" >> $GITHUB_OUTPUT  
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
           fi
 
   build_and_test:

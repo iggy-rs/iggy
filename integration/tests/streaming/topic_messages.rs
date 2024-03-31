@@ -231,6 +231,7 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU32::new(0)),
         None,
+        Default::default(),
         None,
         1,
     )

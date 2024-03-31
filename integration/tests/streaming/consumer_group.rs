@@ -1,4 +1,5 @@
 use crate::streaming::common::test_setup::TestSetup;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use server::streaming::topics::topic::Topic;
 use std::sync::{
@@ -83,6 +84,7 @@ async fn init_topic(setup: &TestSetup) -> Topic {
         messages_count_of_parent_stream,
         segments_count_of_parent_stream,
         None,
+        CompressionAlgorithm::default(),
         None,
         1,
     )

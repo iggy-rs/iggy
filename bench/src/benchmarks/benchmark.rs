@@ -9,6 +9,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::Future;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::{
     client::{StreamClient, TopicClient},
     clients::client::{IggyClient, IggyClientBackgroundConfig},
@@ -94,6 +95,7 @@ pub trait Benchmarkable {
                         stream_id: Identifier::numeric(stream_id)?,
                         topic_id: Some(topic_id),
                         partitions_count,
+                        compression_algorithm: CompressionAlgorithm::None,
                         name,
                         message_expiry: None,
                         max_topic_size: None,

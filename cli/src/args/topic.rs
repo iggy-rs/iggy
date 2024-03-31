@@ -1,5 +1,6 @@
 use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
@@ -94,6 +95,9 @@ pub(crate) struct TopicCreateArgs {
     pub(crate) topic_id: Option<u32>,
     /// Number of partitions inside the topic
     pub(crate) partitions_count: u32,
+    /// Compression algorithm for the topic, set to "none" for no compression
+    #[arg(value_parser = clap::value_parser!(CompressionAlgorithm), verbatim_doc_comment)]
+    pub(crate) compression_algorithm: CompressionAlgorithm,
     /// Max topic size
     ///
     /// ("unlimited" or skipping parameter disables max topic size functionality in topic)
@@ -138,6 +142,9 @@ pub(crate) struct TopicUpdateArgs {
     pub(crate) topic_id: Identifier,
     /// New name for the topic
     pub(crate) name: String,
+    /// Compression algorithm for the topic, set to "none" for no compression
+    #[arg(value_parser = clap::value_parser!(CompressionAlgorithm), verbatim_doc_comment)]
+    pub(crate) compression_algorithm: CompressionAlgorithm,
     /// New max topic size
     ///
     /// ("unlimited" or skipping parameter causes removal of max topic size parameter in topic)

@@ -73,6 +73,7 @@ async fn init_system(
     let create_topic = CreateTopic {
         stream_id: Identifier::numeric(STREAM_ID).unwrap(),
         topic_id: Some(TOPIC_ID),
+        compression_algorithm: Default::default(),
         partitions_count: PARTITIONS_COUNT,
         name: TOPIC_NAME.to_string(),
         message_expiry: None,

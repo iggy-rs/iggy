@@ -4,6 +4,7 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
 use iggy::topics::create_topic::CreateTopic;
@@ -19,6 +20,7 @@ struct TestPartitionCreateCmd {
     topic_id: u32,
     topic_name: String,
     partitions_count: u32,
+    compression_algorithm: CompressionAlgorithm,
     new_partitions: u32,
     using_stream_id: TestStreamId,
     using_topic_id: TestTopicId,
@@ -32,6 +34,7 @@ impl TestPartitionCreateCmd {
         topic_id: u32,
         topic_name: String,
         partitions_count: u32,
+        compression_algorithm: CompressionAlgorithm,
         new_partitions: u32,
         using_stream_id: TestStreamId,
         using_topic_id: TestTopicId,
@@ -42,6 +45,7 @@ impl TestPartitionCreateCmd {
             topic_id,
             topic_name,
             partitions_count,
+            compression_algorithm,
             new_partitions,
             using_stream_id,
             using_topic_id,
@@ -81,6 +85,7 @@ impl IggyCmdTestCase for TestPartitionCreateCmd {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Some(self.topic_id),
                 partitions_count: self.partitions_count,
+                compression_algorithm: self.compression_algorithm,
                 name: self.topic_name.clone(),
                 message_expiry: None,
                 max_topic_size: None,
@@ -167,6 +172,7 @@ pub async fn should_be_successful() {
             1,
             String::from("sync"),
             1,
+            Default::default(),
             1,
             TestStreamId::Numeric,
             TestTopicId::Numeric,
@@ -179,6 +185,7 @@ pub async fn should_be_successful() {
             3,
             String::from("topic"),
             3,
+            Default::default(),
             2,
             TestStreamId::Named,
             TestTopicId::Numeric,
@@ -191,6 +198,7 @@ pub async fn should_be_successful() {
             1,
             String::from("probe"),
             0,
+            Default::default(),
             4,
             TestStreamId::Numeric,
             TestTopicId::Named,
@@ -203,6 +211,7 @@ pub async fn should_be_successful() {
             5,
             String::from("test"),
             4,
+            Default::default(),
             1,
             TestStreamId::Named,
             TestTopicId::Named,

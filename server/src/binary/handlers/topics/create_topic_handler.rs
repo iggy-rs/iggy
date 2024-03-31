@@ -22,6 +22,7 @@ pub async fn handle(
             &command.name,
             command.partitions_count,
             command.message_expiry,
+            command.compression_algorithm,
             command.max_topic_size,
             command.replication_factor,
         )

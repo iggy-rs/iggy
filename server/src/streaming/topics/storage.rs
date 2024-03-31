@@ -5,6 +5,7 @@ use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
@@ -139,6 +140,7 @@ struct TopicData {
     name: String,
     created_at: u64,
     message_expiry: Option<u32>,
+    compression_algorithm: CompressionAlgorithm,
     max_topic_size: Option<IggyByteSize>,
     replication_factor: u8,
 }
@@ -178,6 +180,7 @@ impl Storage<Topic> for FileTopicStorage {
         topic.name = topic_data.name;
         topic.created_at = topic_data.created_at;
         topic.message_expiry = topic_data.message_expiry;
+        topic.compression_algorithm = topic_data.compression_algorithm;
         topic.max_topic_size = topic_data.max_topic_size;
         topic.replication_factor = topic_data.replication_factor;
 
@@ -280,6 +283,7 @@ impl Storage<Topic> for FileTopicStorage {
             name: topic.name.clone(),
             created_at: topic.created_at,
             message_expiry: topic.message_expiry,
+            compression_algorithm: topic.compression_algorithm,
             max_topic_size: topic.max_topic_size,
             replication_factor: topic.replication_factor,
         })

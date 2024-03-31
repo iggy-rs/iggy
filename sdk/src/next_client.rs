@@ -1,3 +1,4 @@
+use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::consumer::Consumer;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -177,6 +178,7 @@ pub trait StreamClientNext {
 }
 
 /// This trait defines the methods to interact with the topic module.
+#[allow(clippy::too_many_arguments)]
 #[async_trait]
 pub trait TopicClientNext {
     /// Get the info about a specific topic by unique ID or name.
@@ -200,6 +202,7 @@ pub trait TopicClientNext {
         stream_id: &Identifier,
         name: &str,
         partitions_count: u32,
+        compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
@@ -213,6 +216,7 @@ pub trait TopicClientNext {
         stream_id: &Identifier,
         topic_id: &Identifier,
         name: &str,
+        compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         message_expiry: IggyExpiry,
         max_topic_size: Option<IggyByteSize>,

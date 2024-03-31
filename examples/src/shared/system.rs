@@ -1,4 +1,5 @@
 use crate::shared::args::Args;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -69,6 +70,7 @@ pub async fn init_by_producer(args: &Args, client: &dyn ClientNext) -> Result<()
             &args.stream_id.try_into()?,
             "orders",
             args.partitions_count,
+            CompressionAlgorithm::from_code(args.compression_algorithm)?,
             None,
             Some(args.topic_id),
             IggyExpiry::NeverExpire,

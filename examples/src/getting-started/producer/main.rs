@@ -1,5 +1,6 @@
 use iggy::clients::next_builder::IggyClientNextBuilder;
 use iggy::clients::next_client::IggyClientNext;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::next_client::{ClientNext, StreamClientNext, TopicClientNext, UserClientNext};
 use iggy::users::defaults::*;
@@ -48,6 +49,7 @@ async fn init_system(client: &IggyClientNext) {
             &STREAM_ID.try_into().unwrap(),
             "sample-topic",
             1,
+            CompressionAlgorithm::default(),
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,

@@ -136,6 +136,7 @@ impl<'a> IggyExampleTest<'a> {
                     stream_id: Identifier::numeric(1).unwrap(),
                     topic_id: Some(1),
                     partitions_count: 1,
+                    compression_algorithm: Default::default(),
                     name: "sample-topic".to_string(),
                     message_expiry: None,
                     max_topic_size: None,

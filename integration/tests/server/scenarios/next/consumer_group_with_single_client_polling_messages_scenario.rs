@@ -4,6 +4,7 @@ use crate::server::scenarios::next::{
     TOPIC_NAME,
 };
 use iggy::clients::next_client::IggyClientNext;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::Consumer;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -43,6 +44,7 @@ async fn init_system(client: &IggyClientNext) {
             &Identifier::numeric(STREAM_ID).unwrap(),
             TOPIC_NAME,
             PARTITIONS_COUNT,
+            CompressionAlgorithm::default(),
             Some(1),
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,

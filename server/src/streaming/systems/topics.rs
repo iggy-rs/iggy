@@ -1,6 +1,7 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::topic::Topic;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
@@ -42,6 +43,7 @@ impl System {
         name: &str,
         partitions_count: u32,
         message_expiry: Option<u32>,
+        compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
@@ -58,6 +60,7 @@ impl System {
                 name,
                 partitions_count,
                 message_expiry,
+                compression_algorithm,
                 max_topic_size,
                 replication_factor,
             )
@@ -76,6 +79,7 @@ impl System {
         topic_id: &Identifier,
         name: &str,
         message_expiry: Option<u32>,
+        compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
@@ -95,6 +99,7 @@ impl System {
                 topic_id,
                 name,
                 message_expiry,
+                compression_algorithm,
                 max_topic_size,
                 replication_factor,
             )

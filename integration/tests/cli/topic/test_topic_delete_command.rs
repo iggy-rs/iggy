@@ -70,6 +70,7 @@ impl IggyCmdTestCase for TestTopicDeleteCmd {
                 stream_id: Identifier::numeric(self.stream_id).unwrap(),
                 topic_id: Some(self.topic_id),
                 partitions_count: 1,
+                compression_algorithm: Default::default(),
                 name: self.topic_name.clone(),
                 message_expiry: None,
                 max_topic_size: None,

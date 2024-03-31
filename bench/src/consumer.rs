@@ -63,6 +63,7 @@ impl Consumer {
         let mut current_iteration: u64 = 0;
         let mut received_messages = 0;
         let mut topic_not_found_counter = 0;
+        let mut strategy = PollingStrategy::offset(0);
 
         if self.warmup_time.get_duration() != Duration::from_millis(0) {
             info!(
@@ -72,13 +73,14 @@ impl Consumer {
             let warmup_end = Instant::now() + self.warmup_time.get_duration();
             while Instant::now() < warmup_end {
                 let offset = current_iteration * self.messages_per_batch as u64;
+                strategy.set_value(offset);
                 client
                     .poll_messages(
                         &stream_id,
                         &topic_id,
                         partition_id,
                         &consumer,
-                        &PollingStrategy::offset(offset),
+                        &strategy,
                         self.messages_per_batch,
                         false,
                     )

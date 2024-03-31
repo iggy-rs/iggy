@@ -172,6 +172,13 @@ impl PollingStrategy {
             value: 0,
         }
     }
+
+    /// Change the value of the polling strategy, affects only `Offset` and `Timestamp` kinds.
+    pub fn set_value(&mut self, value: u64) {
+        if self.kind == PollingKind::Offset || self.kind == PollingKind::Timestamp {
+            self.value = value;
+        }
+    }
 }
 
 impl PollingKind {
@@ -227,33 +234,15 @@ impl Display for PollingKind {
 
 impl BytesSerializable for PollMessages {
     fn as_bytes(&self) -> Bytes {
-        let consumer_bytes = self.consumer.as_bytes();
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
-        let strategy_bytes = self.strategy.as_bytes();
-        let mut bytes = BytesMut::with_capacity(
-            9 + consumer_bytes.len()
-                + stream_id_bytes.len()
-                + topic_id_bytes.len()
-                + strategy_bytes.len(),
-        );
-        bytes.put_slice(&consumer_bytes);
-        bytes.put_slice(&stream_id_bytes);
-        bytes.put_slice(&topic_id_bytes);
-        if let Some(partition_id) = self.partition_id {
-            bytes.put_u32_le(partition_id);
-        } else {
-            bytes.put_u32_le(0);
-        }
-        bytes.put_slice(&strategy_bytes);
-        bytes.put_u32_le(self.count);
-        if self.auto_commit {
-            bytes.put_u8(1);
-        } else {
-            bytes.put_u8(0);
-        }
-
-        bytes.freeze()
+        as_bytes(
+            &self.stream_id,
+            &self.topic_id,
+            self.partition_id,
+            &self.consumer,
+            &self.strategy,
+            self.count,
+            self.auto_commit,
+        )
     }
 
     fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
@@ -300,6 +289,45 @@ impl BytesSerializable for PollMessages {
         command.validate()?;
         Ok(command)
     }
+}
+
+// This method is used by the new version of `IggyClient` to serialize `PollMessages` without cloning the args.
+pub(crate) fn as_bytes(
+    stream_id: &Identifier,
+    topic_id: &Identifier,
+    partition_id: Option<u32>,
+    consumer: &Consumer,
+    strategy: &PollingStrategy,
+    count: u32,
+    auto_commit: bool,
+) -> Bytes {
+    let consumer_bytes = consumer.as_bytes();
+    let stream_id_bytes = stream_id.as_bytes();
+    let topic_id_bytes = topic_id.as_bytes();
+    let strategy_bytes = strategy.as_bytes();
+    let mut bytes = BytesMut::with_capacity(
+        9 + consumer_bytes.len()
+            + stream_id_bytes.len()
+            + topic_id_bytes.len()
+            + strategy_bytes.len(),
+    );
+    bytes.put_slice(&consumer_bytes);
+    bytes.put_slice(&stream_id_bytes);
+    bytes.put_slice(&topic_id_bytes);
+    if let Some(partition_id) = partition_id {
+        bytes.put_u32_le(partition_id);
+    } else {
+        bytes.put_u32_le(0);
+    }
+    bytes.put_slice(&strategy_bytes);
+    bytes.put_u32_le(count);
+    if auto_commit {
+        bytes.put_u8(1);
+    } else {
+        bytes.put_u8(0);
+    }
+
+    bytes.freeze()
 }
 
 impl Display for PollMessages {

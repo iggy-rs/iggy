@@ -18,7 +18,6 @@ use crate::utils::byte_size::IggyByteSize;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
-use tracing::info;
 
 const EMPTY_MESSAGES: Vec<PolledMessage> = vec![];
 const EMPTY_TOPICS: Vec<Topic> = vec![];
@@ -411,7 +410,6 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
         message_expiry => Some(message_expiry),
     };
     let compression_algorithm = CompressionAlgorithm::from_code(payload[position + 20])?;
-    info!("compression_algo: {}", compression_algorithm);
     let max_topic_size = match u64::from_le_bytes(payload[position + 21..position + 29].try_into()?)
     {
         0 => None,

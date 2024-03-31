@@ -9,16 +9,12 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::Future;
+use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
-use iggy::{
-    client::{StreamClient, TopicClient},
-    clients::client::{IggyClient, IggyClientBackgroundConfig},
-    error::IggyError,
-    identifier::Identifier,
-    streams::{create_stream::CreateStream, get_streams::GetStreams},
-    topics::create_topic::CreateTopic,
-};
-use integration::test_server::{login_root, ClientFactory};
+use iggy::error::IggyError;
+use iggy::next_client::{StreamClientNext, TopicClientNext};
+use iggy::utils::expiry::IggyExpiry;
+use integration::test_server::{login_root_next, ClientFactoryNext};
 use std::{pin::Pin, sync::Arc};
 use tracing::info;
 
@@ -51,7 +47,7 @@ pub trait Benchmarkable {
     async fn run(&mut self) -> BenchmarkFutures;
     fn kind(&self) -> BenchmarkKind;
     fn args(&self) -> &IggyBenchArgs;
-    fn client_factory(&self) -> &Arc<dyn ClientFactory>;
+    fn client_factory(&self) -> &Arc<dyn ClientFactoryNext>;
     fn display_settings(&self);
 
     /// Below methods have common implementation for all benchmarks.
@@ -64,26 +60,21 @@ pub trait Benchmarkable {
         let topic_id: u32 = 1;
         let partitions_count: u32 = 1;
         let client = self.client_factory().create_client().await;
-        let client = IggyClient::create(
+        let client = IggyClientNext::create(
             client,
-            IggyClientBackgroundConfig::default(),
+            IggyClientNextBackgroundConfig::default(),
             None,
             None,
             None,
         );
-        login_root(&client).await;
-        let streams = client.get_streams(&GetStreams {}).await?;
+        login_root_next(&client).await;
+        let streams = client.get_streams().await?;
         for i in 1..=number_of_streams {
             let stream_id = start_stream_id + i;
             if streams.iter().all(|s| s.id != stream_id) {
                 info!("Creating the test stream {}", stream_id);
                 let name = format!("stream {}", stream_id);
-                client
-                    .create_stream(&CreateStream {
-                        stream_id: Some(stream_id),
-                        name,
-                    })
-                    .await?;
+                client.create_stream(&name, Some(stream_id)).await?;
 
                 info!(
                     "Creating the test topic {} for stream {}",
@@ -91,16 +82,16 @@ pub trait Benchmarkable {
                 );
                 let name = format!("topic {}", topic_id);
                 client
-                    .create_topic(&CreateTopic {
-                        stream_id: Identifier::numeric(stream_id)?,
-                        topic_id: Some(topic_id),
+                    .create_topic(
+                        &stream_id.try_into()?,
+                        &name,
                         partitions_count,
-                        compression_algorithm: CompressionAlgorithm::None,
-                        name,
-                        message_expiry: None,
-                        max_topic_size: None,
-                        replication_factor: 1,
-                    })
+                        CompressionAlgorithm::default(),
+                        Some(1),
+                        None,
+                        IggyExpiry::NeverExpire,
+                        None,
+                    )
                     .await?;
             }
         }
@@ -111,15 +102,15 @@ pub trait Benchmarkable {
         let start_stream_id = self.args().start_stream_id();
         let number_of_streams = self.args().number_of_streams();
         let client = self.client_factory().create_client().await;
-        let client = IggyClient::create(
+        let client = IggyClientNext::create(
             client,
-            IggyClientBackgroundConfig::default(),
+            IggyClientNextBackgroundConfig::default(),
             None,
             None,
             None,
         );
-        login_root(&client).await;
-        let streams = client.get_streams(&GetStreams {}).await?;
+        login_root_next(&client).await;
+        let streams = client.get_streams().await?;
         for i in 1..=number_of_streams {
             let stream_id = start_stream_id + i;
             if streams.iter().all(|s| s.id != stream_id) {

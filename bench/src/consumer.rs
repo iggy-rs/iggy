@@ -1,20 +1,19 @@
 use crate::args::simple::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
-use iggy::client::MessageClient;
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
 use iggy::consumer::Consumer as IggyConsumer;
 use iggy::error::IggyError;
-use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
+use iggy::messages::poll_messages::PollingStrategy;
+use iggy::next_client::MessageClientNext;
 use iggy::utils::duration::IggyDuration;
-use integration::test_server::{login_root, ClientFactory};
+use integration::test_server::{login_root_next, ClientFactoryNext};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
 use tracing::{error, info, warn};
 
 pub struct Consumer {
-    client_factory: Arc<dyn ClientFactory>,
+    client_factory: Arc<dyn ClientFactoryNext>,
     consumer_id: u32,
     stream_id: u32,
     messages_per_batch: u32,
@@ -24,7 +23,7 @@ pub struct Consumer {
 
 impl Consumer {
     pub fn new(
-        client_factory: Arc<dyn ClientFactory>,
+        client_factory: Arc<dyn ClientFactoryNext>,
         consumer_id: u32,
         stream_id: u32,
         messages_per_batch: u32,
@@ -46,24 +45,18 @@ impl Consumer {
         let partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;
         let client = self.client_factory.create_client().await;
-        let client = IggyClient::create(
+        let client = IggyClientNext::create(
             client,
-            IggyClientBackgroundConfig::default(),
+            IggyClientNextBackgroundConfig::default(),
             None,
             None,
             None,
         );
-        login_root(&client).await;
-
-        let mut poll_messages = PollMessages {
-            consumer: IggyConsumer::new(Identifier::numeric(self.consumer_id).unwrap()),
-            stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            topic_id: Identifier::numeric(topic_id).unwrap(),
-            partition_id: Some(partition_id),
-            strategy: PollingStrategy::offset(0),
-            count: self.messages_per_batch,
-            auto_commit: false,
-        };
+        login_root_next(&client).await;
+        let consumer = IggyConsumer::new(self.consumer_id.try_into().unwrap());
+        let stream_id = self.stream_id.try_into().unwrap();
+        let topic_id = topic_id.try_into().unwrap();
+        let partition_id = Some(partition_id);
 
         let mut latencies: Vec<Duration> = Vec::with_capacity(self.message_batches as usize);
         let mut total_size_bytes = 0;
@@ -79,8 +72,17 @@ impl Consumer {
             let warmup_end = Instant::now() + self.warmup_time.get_duration();
             while Instant::now() < warmup_end {
                 let offset = current_iteration * self.messages_per_batch as u64;
-                poll_messages.strategy.value = offset;
-                client.poll_messages(&poll_messages).await?;
+                client
+                    .poll_messages(
+                        &stream_id,
+                        &topic_id,
+                        partition_id,
+                        &consumer,
+                        &PollingStrategy::offset(offset),
+                        self.messages_per_batch,
+                        false,
+                    )
+                    .await?;
                 current_iteration += 1;
             }
         }
@@ -94,12 +96,19 @@ impl Consumer {
         let start_timestamp = Instant::now();
         while received_messages < total_messages {
             let offset = current_iteration * self.messages_per_batch as u64;
-            poll_messages.strategy.value = offset;
-
             let latency_start = Instant::now();
 
-            let polled_messages: Result<iggy::models::messages::PolledMessages, IggyError> =
-                client.poll_messages(&poll_messages).await;
+            let polled_messages = client
+                .poll_messages(
+                    &stream_id,
+                    &topic_id,
+                    partition_id,
+                    &consumer,
+                    &PollingStrategy::offset(offset),
+                    self.messages_per_batch,
+                    false,
+                )
+                .await;
 
             let latency_end = latency_start.elapsed();
 

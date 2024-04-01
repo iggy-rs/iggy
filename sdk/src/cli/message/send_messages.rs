@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
-use crate::messages::send_messages::{Message, Partitioning, SendMessages};
+use crate::messages::send_messages::{Message, Partitioning};
+use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use std::io::{self, Read};
@@ -61,8 +61,8 @@ impl CliCommand for SendMessagesCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        let messages = match &self.messages {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+        let mut messages = match &self.messages {
             Some(messages) => messages
                 .iter()
                 .map(|s| Message::new(None, s.clone().into(), None))
@@ -78,12 +78,12 @@ impl CliCommand for SendMessagesCmd {
         };
 
         client
-            .send_messages(&mut SendMessages {
-                stream_id: self.stream_id.clone(),
-                topic_id: self.topic_id.clone(),
-                partitioning: self.partitioning.clone(),
-                messages,
-            })
+            .send_messages(
+                &self.stream_id,
+                &self.topic_id,
+                &self.partitioning,
+                &mut messages,
+            )
             .await
             .with_context(|| {
                 format!(

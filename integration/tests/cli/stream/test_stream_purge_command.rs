@@ -4,13 +4,9 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::client::Client;
-use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::streams::get_stream::GetStream;
-use iggy::topics::create_topic::CreateTopic;
+use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::next_client::ClientNext;
+use iggy::utils::expiry::IggyExpiry;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::str::FromStr;
@@ -44,49 +40,42 @@ impl TestStreamPurgeCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestStreamPurgeCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let stream = client
-            .create_stream(&CreateStream {
-                stream_id: Some(self.stream_id),
-                name: self.stream_name.clone(),
-            })
+            .create_stream(&self.stream_name, Some(self.stream_id))
             .await;
         assert!(stream.is_ok());
 
         let topic = client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Some(self.topic_id),
-                partitions_count: 10,
-                compression_algorithm: Default::default(),
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: 1,
-                name: self.topic_name.clone(),
-            })
+            .create_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_name,
+                10,
+                Default::default(),
+                None,
+                Some(self.topic_id),
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await;
         assert!(topic.is_ok());
 
-        let messages = (1..100)
+        let mut messages = (1..100)
             .map(|n| format!("message {}", n))
             .filter_map(|s| Message::from_str(s.as_str()).ok())
             .collect::<Vec<_>>();
 
         let send_status = client
-            .send_messages(&mut SendMessages {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
-                partitioning: Partitioning::default(),
-                messages,
-            })
+            .send_messages(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_id.try_into().unwrap(),
+                &Partitioning::default(),
+                &mut messages,
+            )
             .await;
         assert!(send_status.is_ok());
 
-        let stream_state = client
-            .get_stream(&GetStream {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            })
-            .await;
+        let stream_state = client.get_stream(&self.stream_id.try_into().unwrap()).await;
         assert!(stream_state.is_ok());
         let stream_state = stream_state.unwrap();
         assert!(stream_state.size_bytes > 0);
@@ -114,20 +103,14 @@ impl IggyCmdTestCase for TestStreamPurgeCmd {
         command_state.success().stdout(diff(start_message));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
-        let stream_state = client
-            .get_stream(&GetStream {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            })
-            .await;
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
+        let stream_state = client.get_stream(&self.stream_id.try_into().unwrap()).await;
         assert!(stream_state.is_ok());
         let stream_state = stream_state.unwrap();
         assert_eq!(stream_state.size_bytes, 0);
 
         let stream_delete = client
-            .delete_stream(&DeleteStream {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            })
+            .delete_stream(&self.stream_id.try_into().unwrap())
             .await;
         assert!(stream_delete.is_ok());
     }

@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
+use crate::next_client::ClientNext;
 use crate::system::get_clients::GetClients;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -12,14 +12,14 @@ pub enum GetClientsOutput {
 }
 
 pub struct GetClientsCmd {
-    get_clients: GetClients,
+    _get_clients: GetClients,
     output: GetClientsOutput,
 }
 
 impl GetClientsCmd {
     pub fn new(output: GetClientsOutput) -> Self {
         GetClientsCmd {
-            get_clients: GetClients {},
+            _get_clients: GetClients {},
             output,
         }
     }
@@ -28,7 +28,7 @@ impl GetClientsCmd {
 impl Default for GetClientsCmd {
     fn default() -> Self {
         GetClientsCmd {
-            get_clients: GetClients {},
+            _get_clients: GetClients {},
             output: GetClientsOutput::Table,
         }
     }
@@ -44,9 +44,9 @@ impl CliCommand for GetClientsCmd {
         format!("list clients in {mode} mode")
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let clients = client
-            .get_clients(&self.get_clients)
+            .get_clients()
             .await
             .with_context(|| String::from("Problem getting list of clients"))?;
 

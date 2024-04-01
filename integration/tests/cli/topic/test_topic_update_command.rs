@@ -6,14 +6,9 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::topics::create_topic::CreateTopic;
-use iggy::topics::delete_topic::DeleteTopic;
-use iggy::topics::get_topic::GetTopic;
+use iggy::next_client::ClientNext;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
-use iggy::{client::Client, identifier::Identifier};
 use predicates::str::diff;
 use serial_test::parallel;
 use std::time::Duration;
@@ -109,12 +104,9 @@ impl TestTopicUpdateCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestTopicUpdateCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let stream = client
-            .create_stream(&CreateStream {
-                stream_id: Some(self.stream_id),
-                name: self.stream_name.clone(),
-            })
+            .create_stream(&self.stream_name, Some(self.stream_id))
             .await;
         assert!(stream.is_ok());
 
@@ -128,19 +120,17 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
             }
         };
 
-        let max_topic_size = self.max_topic_size;
-
         let topic = client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Some(self.topic_id),
-                partitions_count: 1,
-                compression_algorithm: self.compression_algorithm,
-                name: self.topic_name.clone(),
-                message_expiry,
-                max_topic_size,
-                replication_factor: self.replication_factor,
-            })
+            .create_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_name,
+                1,
+                self.compression_algorithm,
+                Some(self.replication_factor),
+                Some(self.topic_id),
+                message_expiry.into(),
+                self.max_topic_size,
+            )
             .await;
         assert!(topic.is_ok());
     }
@@ -190,12 +180,12 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
         command_state.success().stdout(diff(expected_message));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let topic = client
-            .get_topic(&GetTopic {
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            })
+            .get_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_id.try_into().unwrap(),
+            )
             .await;
         assert!(topic.is_ok());
         let topic_details = topic.unwrap();
@@ -218,17 +208,15 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
         }
 
         let topic = client
-            .delete_topic(&DeleteTopic {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
-            })
+            .delete_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_id.try_into().unwrap(),
+            )
             .await;
         assert!(topic.is_ok());
 
         let stream = client
-            .delete_stream(&DeleteStream {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            })
+            .delete_stream(&self.stream_id.try_into().unwrap())
             .await;
         assert!(stream.is_ok());
     }

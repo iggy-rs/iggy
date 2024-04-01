@@ -5,11 +5,7 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use humantime::format_duration;
 use humantime::Duration as HumanDuration;
-use iggy::client::Client;
-use iggy::personal_access_tokens::{
-    delete_personal_access_token::DeletePersonalAccessToken,
-    get_personal_access_tokens::GetPersonalAccessTokens,
-};
+use iggy::next_client::ClientNext;
 use predicates::str::starts_with;
 use serial_test::parallel;
 use std::time::Duration;
@@ -36,7 +32,7 @@ impl TestPatCreateCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestPatCreateCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
+    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
@@ -62,10 +58,8 @@ impl IggyCmdTestCase for TestPatCreateCmd {
         command_state.success().stdout(starts_with(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
-        let tokens = client
-            .get_personal_access_tokens(&GetPersonalAccessTokens {})
-            .await;
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
+        let tokens = client.get_personal_access_tokens().await;
 
         assert!(tokens.is_ok());
         let tokens = tokens.unwrap();
@@ -76,11 +70,7 @@ impl IggyCmdTestCase for TestPatCreateCmd {
             assert!(token.expiry.is_none())
         }
 
-        let delete = client
-            .delete_personal_access_token(&DeletePersonalAccessToken {
-                name: self.name.clone(),
-            })
-            .await;
+        let delete = client.delete_personal_access_token(&self.name).await;
         assert!(delete.is_ok());
     }
 }

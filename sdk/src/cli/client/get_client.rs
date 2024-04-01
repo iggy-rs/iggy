@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
+use crate::next_client::ClientNext;
 use crate::system::get_client::GetClient;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -24,13 +24,16 @@ impl CliCommand for GetClientCmd {
         format!("get client with ID: {}", self.get_client.client_id)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        let client_details = client.get_client(&self.get_client).await.with_context(|| {
-            format!(
-                "Problem getting client with ID: {}",
-                self.get_client.client_id
-            )
-        })?;
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+        let client_details = client
+            .get_client(self.get_client.client_id)
+            .await
+            .with_context(|| {
+                format!(
+                    "Problem getting client with ID: {}",
+                    self.get_client.client_id
+                )
+            })?;
 
         let mut table = Table::new();
 

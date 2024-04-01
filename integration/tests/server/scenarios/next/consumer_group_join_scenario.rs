@@ -38,7 +38,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
             TOPIC_NAME,
             PARTITIONS_COUNT,
             CompressionAlgorithm::default(),
-            Some(1),
+            None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
             None,

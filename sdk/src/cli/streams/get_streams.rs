@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
+use crate::next_client::ClientNext;
 use crate::streams::get_streams::GetStreams;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -12,14 +12,14 @@ pub enum GetStreamsOutput {
 }
 
 pub struct GetStreamsCmd {
-    get_streams: GetStreams,
+    _get_streams: GetStreams,
     output: GetStreamsOutput,
 }
 
 impl GetStreamsCmd {
     pub fn new(output: GetStreamsOutput) -> Self {
         GetStreamsCmd {
-            get_streams: GetStreams {},
+            _get_streams: GetStreams {},
             output,
         }
     }
@@ -28,7 +28,7 @@ impl GetStreamsCmd {
 impl Default for GetStreamsCmd {
     fn default() -> Self {
         GetStreamsCmd {
-            get_streams: GetStreams {},
+            _get_streams: GetStreams {},
             output: GetStreamsOutput::Table,
         }
     }
@@ -44,9 +44,9 @@ impl CliCommand for GetStreamsCmd {
         format!("list streams in {mode} mode")
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let streams = client
-            .get_streams(&self.get_streams)
+            .get_streams()
             .await
             .with_context(|| String::from("Problem getting list of streams"))?;
 

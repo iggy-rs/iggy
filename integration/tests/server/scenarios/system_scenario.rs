@@ -142,7 +142,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         name: TOPIC_NAME.to_string(),
         message_expiry: None,
         max_topic_size: None,
-        replication_factor: 1,
+        replication_factor: None,
     };
     client.create_topic(&create_topic).await.unwrap();
 
@@ -609,7 +609,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             compression_algorithm: CompressionAlgorithm::Gzip,
             message_expiry: Some(updated_message_expiry),
             max_topic_size: Some(updated_max_topic_size),
-            replication_factor: updated_replication_factor,
+            replication_factor: Some(updated_replication_factor),
         })
         .await
         .unwrap();
@@ -731,7 +731,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         compression_algorithm: Default::default(),
         message_expiry: None,
         max_topic_size: None,
-        replication_factor: 1,
+        replication_factor: None,
     };
 
     client.create_topic(&create_topic).await.unwrap();

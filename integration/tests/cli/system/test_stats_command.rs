@@ -4,11 +4,9 @@ use crate::cli::common::{
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::cli::system::stats::GetStatsOutput;
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::topics::create_topic::CreateTopic;
-use iggy::topics::delete_topic::DeleteTopic;
-use iggy::{client::Client, identifier::Identifier};
+use iggy::identifier::Identifier;
+use iggy::next_client::ClientNext;
+use iggy::utils::expiry::IggyExpiry;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
@@ -45,27 +43,22 @@ impl TestStatsCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestStatsCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let stream_id = Identifier::from_str_value("logs").unwrap();
-        let stream = client
-            .create_stream(&CreateStream {
-                stream_id: Some(1),
-                name: stream_id.as_string(),
-            })
-            .await;
+        let stream = client.create_stream(&stream_id.as_string(), Some(1)).await;
         assert!(stream.is_ok());
 
         let topic = client
-            .create_topic(&CreateTopic {
-                topic_id: Some(1),
-                stream_id,
-                partitions_count: 5,
-                compression_algorithm: Default::default(),
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: 1,
-                name: String::from("topic"),
-            })
+            .create_topic(
+                &stream_id,
+                "topic",
+                5,
+                Default::default(),
+                None,
+                Some(1),
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await;
         assert!(topic.is_ok());
     }
@@ -124,20 +117,13 @@ impl IggyCmdTestCase for TestStatsCmd {
         }
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let topic = client
-            .delete_topic(&DeleteTopic {
-                topic_id: Identifier::numeric(1).unwrap(),
-                stream_id: Identifier::numeric(1).unwrap(),
-            })
+            .delete_topic(&1.try_into().unwrap(), &1.try_into().unwrap())
             .await;
         assert!(topic.is_ok());
 
-        let stream = client
-            .delete_stream(&DeleteStream {
-                stream_id: Identifier::numeric(1).unwrap(),
-            })
-            .await;
+        let stream = client.delete_stream(&1.try_into().unwrap()).await;
         assert!(stream.is_ok());
     }
 }

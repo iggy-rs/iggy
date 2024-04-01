@@ -106,6 +106,15 @@ impl From<Vec<IggyExpiry>> for IggyExpiry {
     }
 }
 
+impl From<Option<u32>> for IggyExpiry {
+    fn from(value: Option<u32>) -> Self {
+        match value {
+            Some(value) => IggyExpiry::ExpireDuration(IggyDuration::from(value as u64)),
+            None => IggyExpiry::NeverExpire,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -252,6 +252,13 @@ impl TryFrom<u32> for Identifier {
     }
 }
 
+impl TryFrom<String> for Identifier {
+    type Error = IggyError;
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Identifier::from_str(&value)
+    }
+}
+
 impl TryFrom<&str> for Identifier {
     type Error = IggyError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {

@@ -483,7 +483,7 @@ pub async fn create_user_next(client: &IggyClientNext, username: &str) {
         .create_user(
             username,
             USER_PASSWORD,
-            Some(Active),
+            Active,
             Some(Permissions {
                 global: GlobalPermissions {
                     manage_servers: true,

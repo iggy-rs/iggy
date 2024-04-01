@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::{presets::ASCII_NO_BORDERS, Table};
@@ -34,9 +34,9 @@ impl CliCommand for GetConsumerGroupCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let consumer_group = client
-            .get_consumer_group(&self.get_consumer_group)
+            .get_consumer_group(&self.get_consumer_group.stream_id, &self.get_consumer_group.topic_id, &self.get_consumer_group.consumer_group_id)
             .await
             .with_context(|| {
                 format!(

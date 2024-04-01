@@ -496,7 +496,7 @@ impl UserClientNext for IggyClientNext {
         &self,
         username: &str,
         password: &str,
-        status: Option<UserStatus>,
+        status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
         self.client

@@ -2,9 +2,8 @@ use crate::cli::common::{IggyCmdCommand, IggyCmdTestCase};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::cli::system::session::ServerSession;
-use iggy::client::Client;
-use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
-use iggy::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
+use iggy::next_client::ClientNext;
+use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use predicates::str::diff;
 
 #[derive(Debug)]
@@ -32,25 +31,19 @@ impl TestLoginCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestLoginCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let login_session = ServerSession::new(self.server_address.clone());
         match self.login_type {
             TestLoginCmdType::Success | TestLoginCmdType::SuccessWithTimeout(_) => {
                 assert!(!login_session.is_active());
 
-                let pats = client
-                    .get_personal_access_tokens(&GetPersonalAccessTokens {})
-                    .await
-                    .unwrap();
+                let pats = client.get_personal_access_tokens().await.unwrap();
                 assert_eq!(pats.len(), 0);
             }
             TestLoginCmdType::AlreadyLoggedIn => {
                 assert!(login_session.is_active());
 
-                let pats = client
-                    .get_personal_access_tokens(&GetPersonalAccessTokens {})
-                    .await
-                    .unwrap();
+                let pats = client.get_personal_access_tokens().await.unwrap();
                 assert_eq!(pats.len(), 1);
             }
             TestLoginCmdType::AlreadyLoggedInWithToken => {
@@ -58,10 +51,10 @@ impl IggyCmdTestCase for TestLoginCmd {
                 assert!(!login_session.is_active());
 
                 let pat = client
-                    .create_personal_access_token(&CreatePersonalAccessToken {
-                        name: login_session.get_token_name(),
-                        expiry: None,
-                    })
+                    .create_personal_access_token(
+                        &login_session.get_token_name(),
+                        PersonalAccessTokenExpiry::NeverExpire,
+                    )
                     .await;
                 assert!(pat.is_ok());
             }
@@ -97,14 +90,11 @@ impl IggyCmdTestCase for TestLoginCmd {
         }
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let login_session = ServerSession::new(self.server_address.clone());
         assert!(login_session.is_active());
 
-        let pats = client
-            .get_personal_access_tokens(&GetPersonalAccessTokens {})
-            .await
-            .unwrap();
+        let pats = client.get_personal_access_tokens().await.unwrap();
         assert_eq!(pats.len(), 1);
         assert_eq!(pats[0].name, login_session.get_token_name());
     }

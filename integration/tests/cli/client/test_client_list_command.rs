@@ -4,7 +4,7 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::{client::Client, system::get_me::GetMe};
+use iggy::next_client::ClientNext;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
@@ -28,8 +28,8 @@ impl TestClientListCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestClientListCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
-        let client_info = client.get_me(&GetMe {}).await;
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+        let client_info = client.get_me().await;
         assert!(client_info.is_ok());
         self.client_id = Some(client_info.unwrap().client_id);
     }
@@ -52,7 +52,7 @@ impl IggyCmdTestCase for TestClientListCmd {
             .stdout(contains(format!("{}", self.client_id.unwrap_or(0))));
     }
 
-    async fn verify_server_state(&self, _client: &dyn Client) {}
+    async fn verify_server_state(&self, _client: &dyn ClientNext) {}
 }
 
 #[tokio::test]

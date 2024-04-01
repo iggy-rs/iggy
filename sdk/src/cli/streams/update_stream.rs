@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use crate::streams::update_stream::UpdateStream;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -27,9 +27,9 @@ impl CliCommand for UpdateStreamCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         client
-            .update_stream(&self.update_stream)
+            .update_stream(&self.update_stream.stream_id, &self.update_stream.name)
             .await
             .with_context(|| {
                 format!(

@@ -969,7 +969,7 @@ checksum = "98cc8fbded0c607b7ba9dd60cd98df59af97e84d24e49c8557331cfc26d301ce"
 
 [[package]]
 name = "cli"
-version = "0.20.0"
+version = "0.20.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2025,7 +2025,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.2.19"
+version = "0.2.20"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -3829,7 +3829,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.13"
+version = "0.2.14"
 dependencies = [
  "aes-gcm",
  "anyhow",

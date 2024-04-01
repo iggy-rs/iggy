@@ -6,8 +6,7 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::models::permissions::{GlobalPermissions, StreamPermissions, TopicPermissions};
 use iggy::models::{permissions::Permissions, user_status::UserStatus};
-use iggy::users::get_user::GetUser;
-use iggy::{client::Client, identifier::Identifier};
+use iggy::next_client::ClientNext;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::collections::HashMap;
@@ -78,7 +77,7 @@ impl TestUserCreateCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestUserCreateCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
+    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
@@ -95,11 +94,9 @@ impl IggyCmdTestCase for TestUserCreateCmd {
                                             self.username, self.password, self.username, self.password)));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let user = client
-            .get_user(&GetUser {
-                user_id: Identifier::from_str_value(self.username.as_str()).unwrap(),
-            })
+            .get_user(&self.username.as_str().try_into().unwrap())
             .await;
         assert!(user.is_ok());
         let user = user.unwrap();

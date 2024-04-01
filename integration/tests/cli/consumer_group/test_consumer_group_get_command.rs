@@ -4,13 +4,8 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::topics::create_topic::CreateTopic;
-use iggy::topics::delete_topic::DeleteTopic;
-use iggy::{client::Client, identifier::Identifier};
+use iggy::next_client::ClientNext;
+use iggy::utils::expiry::IggyExpiry;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
@@ -74,36 +69,33 @@ impl TestConsumerGroupGetCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestConsumerGroupGetCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let stream = client
-            .create_stream(&CreateStream {
-                stream_id: Some(self.stream_id),
-                name: self.stream_name.clone(),
-            })
+            .create_stream(&self.stream_name, Some(self.stream_id))
             .await;
         assert!(stream.is_ok());
 
         let topic = client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Some(self.topic_id),
-                partitions_count: 0,
-                compression_algorithm: Default::default(),
-                name: self.topic_name.clone(),
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: 1,
-            })
+            .create_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_name,
+                0,
+                Default::default(),
+                None,
+                Some(self.topic_id),
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await;
         assert!(topic.is_ok());
 
         let consumer_group = client
-            .create_consumer_group(&CreateConsumerGroup {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
-                group_id: Some(self.group_id),
-                name: self.group_name.clone(),
-            })
+            .create_consumer_group(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_id.try_into().unwrap(),
+                &self.group_name,
+                self.group_id.into(),
+            )
             .await;
         assert!(consumer_group.is_ok());
     }
@@ -147,28 +139,26 @@ impl IggyCmdTestCase for TestConsumerGroupGetCmd {
             )));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let consumer_group = client
-            .delete_consumer_group(&DeleteConsumerGroup {
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                consumer_group_id: Identifier::numeric(self.group_id).unwrap(),
-            })
+            .delete_consumer_group(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_id.try_into().unwrap(),
+                &self.group_name.clone().try_into().unwrap(),
+            )
             .await;
         assert!(consumer_group.is_ok());
 
         let topic = client
-            .delete_topic(&DeleteTopic {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
-            })
+            .delete_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_id.try_into().unwrap(),
+            )
             .await;
         assert!(topic.is_ok());
 
         let stream = client
-            .delete_stream(&DeleteStream {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            })
+            .delete_stream(&self.stream_id.try_into().unwrap())
             .await;
         assert!(stream.is_ok());
     }

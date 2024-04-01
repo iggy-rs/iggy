@@ -152,7 +152,7 @@ async fn create_topic_assert_empty(client: &IggyClient, stream_name: &str, topic
         name: topic_name.to_string(),
         message_expiry: None,
         max_topic_size: None,
-        replication_factor: 1,
+        replication_factor: None,
     };
     client.create_topic(&create_topic).await.unwrap();
 

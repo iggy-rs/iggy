@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use crate::streams::purge_stream::PurgeStream;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -24,9 +24,9 @@ impl CliCommand for PurgeStreamCmd {
         format!("purge stream with ID: {}", self.purge_stream.stream_id)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         client
-            .purge_stream(&self.purge_stream)
+            .purge_stream(&self.purge_stream.stream_id)
             .await
             .with_context(|| {
                 format!(

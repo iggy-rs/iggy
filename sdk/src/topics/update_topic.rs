@@ -37,7 +37,7 @@ pub struct UpdateTopic {
     /// Can't be lower than segment size in the config.
     pub max_topic_size: Option<IggyByteSize>,
     /// Replication factor for the topic.
-    pub replication_factor: u8,
+    pub replication_factor: Option<u8>,
     /// Unique topic name, max length is 255 characters.
     pub name: String,
 }
@@ -52,7 +52,7 @@ impl Default for UpdateTopic {
             compression_algorithm: Default::default(),
             message_expiry: None,
             max_topic_size: None,
-            replication_factor: 1,
+            replication_factor: None,
             name: "topic".to_string(),
         }
     }
@@ -68,8 +68,10 @@ impl Validatable<IggyError> for UpdateTopic {
             return Err(IggyError::InvalidTopicName);
         }
 
-        if self.replication_factor == 0 {
-            return Err(IggyError::InvalidReplicationFactor);
+        if let Some(replication_factor) = self.replication_factor {
+            if replication_factor == 0 {
+                return Err(IggyError::InvalidReplicationFactor);
+            }
         }
 
         Ok(())
@@ -94,7 +96,10 @@ impl BytesSerializable for UpdateTopic {
             Some(max_topic_size) => bytes.put_u64_le(max_topic_size.as_bytes_u64()),
             None => bytes.put_u64_le(0),
         }
-        bytes.put_u8(self.replication_factor);
+        match self.replication_factor {
+            Some(replication_factor) => bytes.put_u8(replication_factor),
+            None => bytes.put_u8(0),
+        }
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.put_slice(self.name.as_bytes());
@@ -122,7 +127,10 @@ impl BytesSerializable for UpdateTopic {
                 0 => None,
                 size => Some(IggyByteSize::from(size)),
             };
-        let replication_factor = bytes[position + 12];
+        let replication_factor = match bytes[position + 12] {
+            0 => None,
+            factor => Some(factor),
+        };
         let name_length = bytes[position + 13];
         let name =
             from_utf8(&bytes[position + 14..(position + 14 + name_length as usize)])?.to_string();
@@ -156,7 +164,7 @@ impl Display for UpdateTopic {
             self.topic_id,
             self.message_expiry.unwrap_or(0),
             max_topic_size,
-            self.replication_factor,
+            self.replication_factor.unwrap_or(0),
             self.name,
         )
     }
@@ -175,7 +183,7 @@ mod tests {
             compression_algorithm: CompressionAlgorithm::None,
             message_expiry: Some(10),
             max_topic_size: Some(IggyByteSize::from(100)),
-            replication_factor: 1,
+            replication_factor: Some(1),
             name: "test".to_string(),
         };
 
@@ -209,7 +217,7 @@ mod tests {
         assert_eq!(compression_algorithm, command.compression_algorithm);
         assert_eq!(message_expiry, command.message_expiry);
         assert_eq!(max_topic_size, command.max_topic_size);
-        assert_eq!(replication_factor, command.replication_factor);
+        assert_eq!(replication_factor, command.replication_factor.unwrap());
         assert_eq!(name.len() as u8, command.name.len() as u8);
         assert_eq!(name, command.name);
     }

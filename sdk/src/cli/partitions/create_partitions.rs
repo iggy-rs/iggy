@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use crate::partitions::create_partitions::CreatePartitions;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -38,14 +38,18 @@ impl CliCommand for CreatePartitionsCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let mut partitions = String::from("partition");
         if self.create_partition.partitions_count > 1 {
             partitions.push('s');
         };
 
         client
-            .create_partitions(&self.create_partition)
+            .create_partitions(
+                &self.create_partition.stream_id,
+                &self.create_partition.topic_id,
+                self.create_partition.partitions_count,
+            )
             .await
             .with_context(|| {
                 format!(

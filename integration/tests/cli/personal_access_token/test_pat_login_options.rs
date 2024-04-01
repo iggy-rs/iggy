@@ -1,13 +1,8 @@
 use crate::cli::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::{
-    client::Client,
-    personal_access_tokens::{
-        create_personal_access_token::CreatePersonalAccessToken,
-        delete_personal_access_token::DeletePersonalAccessToken,
-    },
-};
+use iggy::next_client::ClientNext;
+use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use keyring::Entry;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
@@ -66,12 +61,9 @@ impl TestLoginOptions {
 
 #[async_trait]
 impl IggyCmdTestCase for TestLoginOptions {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let token = client
-            .create_personal_access_token(&CreatePersonalAccessToken {
-                name: self.token_name.clone(),
-                expiry: None,
-            })
+            .create_personal_access_token(&self.token_name, PersonalAccessTokenExpiry::NeverExpire)
             .await;
         assert!(token.is_ok());
         let token = token.unwrap();
@@ -93,12 +85,8 @@ impl IggyCmdTestCase for TestLoginOptions {
             .stdout(contains(String::from("Transport | TCP")));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
-        let token = client
-            .delete_personal_access_token(&DeletePersonalAccessToken {
-                name: self.token_name.clone(),
-            })
-            .await;
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
+        let token = client.delete_personal_access_token(&self.token_name).await;
         assert!(token.is_ok());
 
         if let Err(e) = self.keyring.delete_password() {

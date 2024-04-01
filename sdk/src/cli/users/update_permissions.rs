@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::models::permissions::Permissions;
+use crate::next_client::ClientNext;
 use crate::users::update_permissions::UpdatePermissions;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -31,9 +31,12 @@ impl CliCommand for UpdatePermissionsCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         client
-            .update_permissions(&self.update_permissions)
+            .update_permissions(
+                &self.update_permissions.user_id,
+                self.update_permissions.permissions.clone(),
+            )
             .await
             .with_context(|| {
                 format!(

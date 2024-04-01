@@ -3,7 +3,7 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::client::Client;
+use iggy::next_client::ClientNext;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
@@ -19,7 +19,7 @@ impl Default for TestPingCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestPingCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
+    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
@@ -46,7 +46,7 @@ impl IggyCmdTestCase for TestPingCmd {
             )));
     }
 
-    async fn verify_server_state(&self, _client: &dyn Client) {}
+    async fn verify_server_state(&self, _client: &dyn ClientNext) {}
 }
 
 #[tokio::test]

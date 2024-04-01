@@ -1,9 +1,7 @@
 use crate::cli::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::streams::get_stream::GetStream;
-use iggy::{client::Client, identifier::Identifier};
+use iggy::next_client::ClientNext;
 use predicates::str::diff;
 use serial_test::parallel;
 
@@ -33,7 +31,7 @@ impl TestStreamCreateCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestStreamCreateCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
+    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
@@ -57,11 +55,9 @@ impl IggyCmdTestCase for TestStreamCreateCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let stream = client
-            .get_stream(&GetStream {
-                stream_id: Identifier::named(self.name.as_str()).unwrap(),
-            })
+            .get_stream(&self.name.clone().try_into().unwrap())
             .await;
         assert!(stream.is_ok());
         let stream = stream.unwrap();
@@ -71,9 +67,7 @@ impl IggyCmdTestCase for TestStreamCreateCmd {
         }
 
         let delete = client
-            .delete_stream(&DeleteStream {
-                stream_id: Identifier::named(self.name.as_str()).unwrap(),
-            })
+            .delete_stream(&self.name.clone().try_into().unwrap())
             .await;
         assert!(delete.is_ok());
     }

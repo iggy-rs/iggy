@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use crate::streams::get_stream::GetStream;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -25,13 +25,16 @@ impl CliCommand for GetStreamCmd {
         format!("get stream with ID: {}", self.get_stream.stream_id)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        let stream = client.get_stream(&self.get_stream).await.with_context(|| {
-            format!(
-                "Problem getting stream with ID: {}",
-                self.get_stream.stream_id
-            )
-        })?;
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+        let stream = client
+            .get_stream(&self.get_stream.stream_id)
+            .await
+            .with_context(|| {
+                format!(
+                    "Problem getting stream with ID: {}",
+                    self.get_stream.stream_id
+                )
+            })?;
 
         let mut table = Table::new();
 

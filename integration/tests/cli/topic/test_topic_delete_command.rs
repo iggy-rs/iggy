@@ -4,10 +4,8 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::streams::create_stream::CreateStream;
-use iggy::topics::create_topic::CreateTopic;
-use iggy::topics::get_topics::GetTopics;
-use iggy::{client::Client, identifier::Identifier};
+use iggy::next_client::ClientNext;
+use iggy::utils::expiry::IggyExpiry;
 use predicates::str::diff;
 use serial_test::parallel;
 
@@ -56,26 +54,23 @@ impl TestTopicDeleteCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestTopicDeleteCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let stream = client
-            .create_stream(&CreateStream {
-                stream_id: Some(self.stream_id),
-                name: self.stream_name.clone(),
-            })
+            .create_stream(&self.stream_name, Some(self.stream_id))
             .await;
         assert!(stream.is_ok());
 
         let topic = client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Some(self.topic_id),
-                partitions_count: 1,
-                compression_algorithm: Default::default(),
-                name: self.topic_name.clone(),
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: 1,
-            })
+            .create_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_name,
+                1,
+                Default::default(),
+                None,
+                Some(self.topic_id),
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await;
         assert!(topic.is_ok());
     }
@@ -108,12 +103,8 @@ impl IggyCmdTestCase for TestTopicDeleteCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
-        let topic = client
-            .get_topics(&GetTopics {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            })
-            .await;
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
+        let topic = client.get_topics(&self.stream_id.try_into().unwrap()).await;
         assert!(topic.is_ok());
         let topics = topic.unwrap();
         assert!(topics.is_empty());

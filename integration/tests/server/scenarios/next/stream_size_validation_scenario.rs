@@ -124,7 +124,7 @@ async fn create_topic_assert_empty(client: &IggyClientNext, stream_name: &str, t
             topic_name,
             PARTITIONS_COUNT,
             CompressionAlgorithm::default(),
-            Some(1),
+            None,
             None,
             IggyExpiry::NeverExpire,
             None,

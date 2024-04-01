@@ -1,4 +1,4 @@
-use crate::client::Client;
+use crate::next_client::ClientNext;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 
@@ -16,5 +16,5 @@ pub trait CliCommand {
     fn connection_required(&self) -> bool {
         true
     }
-    async fn execute_cmd(&mut self, client: &dyn Client) -> Result<(), Error>;
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> Result<(), Error>;
 }

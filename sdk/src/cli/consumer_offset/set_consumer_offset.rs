@@ -1,8 +1,8 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use tracing::{event, Level};
@@ -47,9 +47,9 @@ impl CliCommand for SetConsumerOffsetCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         client
-            .store_consumer_offset(&self.set_consumer_offset)
+            .store_consumer_offset(&self.set_consumer_offset.consumer, &self.set_consumer_offset.stream_id, &self.set_consumer_offset.topic_id, self.set_consumer_offset.partition_id, self.set_consumer_offset.offset)
             .await
             .with_context(|| {
                 format!(

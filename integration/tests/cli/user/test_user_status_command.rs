@@ -6,10 +6,7 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::models::user_info::UserId;
 use iggy::models::user_status::UserStatus;
-use iggy::users::create_user::CreateUser;
-use iggy::users::delete_user::DeleteUser;
-use iggy::users::get_user::GetUser;
-use iggy::{client::Client, identifier::Identifier};
+use iggy::next_client::ClientNext;
 use predicates::str::diff;
 use serial_test::parallel;
 
@@ -55,19 +52,13 @@ impl TestUserStatusCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestUserStatusCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let create_user = client
-            .create_user(&CreateUser {
-                username: self.username.clone(),
-                status: self.status,
-                ..Default::default()
-            })
+            .create_user(&self.username, "secret", self.status, None)
             .await;
         assert!(create_user.is_ok());
         let user = client
-            .get_user(&GetUser {
-                user_id: Identifier::from_str_value(self.username.as_str()).unwrap(),
-            })
+            .get_user(&self.username.clone().try_into().unwrap())
             .await;
         assert!(user.is_ok());
         self.user_id = Some(user.unwrap().id);
@@ -90,11 +81,9 @@ impl IggyCmdTestCase for TestUserStatusCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let deleted = client
-            .delete_user(&DeleteUser {
-                user_id: Identifier::numeric(self.user_id.unwrap()).unwrap(),
-            })
+            .delete_user(&self.user_id.unwrap().try_into().unwrap())
             .await;
         assert!(deleted.is_ok());
     }

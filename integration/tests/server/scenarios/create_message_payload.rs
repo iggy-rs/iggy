@@ -117,7 +117,7 @@ async fn init_system(client: &IggyClient) {
         name: TOPIC_NAME.to_string(),
         message_expiry: None,
         max_topic_size: None,
-        replication_factor: 1,
+        replication_factor: None,
     };
     client.create_topic(&create_topic).await.unwrap();
 }

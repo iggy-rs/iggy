@@ -5,12 +5,9 @@ use crate::cli::common::{
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::topics::create_topic::CreateTopic;
-use iggy::topics::delete_topic::DeleteTopic;
-use iggy::{client::Client, identifier::Identifier};
+use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::next_client::ClientNext;
+use iggy::utils::expiry::IggyExpiry;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 use std::str::FromStr;
@@ -96,42 +93,39 @@ impl TestMessagePollCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestMessagePollCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let stream = client
-            .create_stream(&CreateStream {
-                stream_id: Some(self.stream_id),
-                name: self.stream_name.clone(),
-            })
+            .create_stream(&self.stream_name, self.stream_id.into())
             .await;
         assert!(stream.is_ok());
 
         let topic = client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Some(self.topic_id),
-                partitions_count: self.partitions_count,
-                compression_algorithm: Default::default(),
-                name: self.topic_name.clone(),
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: 1,
-            })
+            .create_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_name,
+                self.partitions_count,
+                Default::default(),
+                None,
+                Some(self.topic_id),
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await;
         assert!(topic.is_ok());
 
-        let messages = self
+        let mut messages = self
             .messages
             .iter()
             .filter_map(|s| Message::from_str(s).ok())
             .collect::<Vec<_>>();
 
         let send_status = client
-            .send_messages(&mut SendMessages {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
-                partitioning: Partitioning::partition_id(self.partition_id),
-                messages,
-            })
+            .send_messages(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_id.try_into().unwrap(),
+                &Partitioning::partition_id(self.partition_id),
+                &mut messages,
+            )
             .await;
         assert!(send_status.is_ok());
     }
@@ -191,19 +185,17 @@ impl IggyCmdTestCase for TestMessagePollCmd {
         }
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let topic = client
-            .delete_topic(&DeleteTopic {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-                topic_id: Identifier::numeric(self.topic_id).unwrap(),
-            })
+            .delete_topic(
+                &self.stream_id.try_into().unwrap(),
+                &self.topic_id.try_into().unwrap(),
+            )
             .await;
         assert!(topic.is_ok());
 
         let stream = client
-            .delete_stream(&DeleteStream {
-                stream_id: Identifier::numeric(self.stream_id).unwrap(),
-            })
+            .delete_stream(&self.stream_id.try_into().unwrap())
             .await;
         assert!(stream.is_ok());
     }

@@ -1,10 +1,7 @@
 use crate::cli::system::session::ServerSession;
 use crate::cli::utils::login_session_expiry::LoginSessionExpiry;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
-use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
-use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
-use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
+use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use tracing::{event, Level};
@@ -31,21 +28,18 @@ impl CliCommand for LoginCmd {
         "login command".to_owned()
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         if self.server_session.is_active() {
             event!(target: PRINT_TARGET, Level::INFO, "Already logged into Iggy server {}", self.server_session.get_server_address());
             return Ok(());
         }
 
-        let tokens = client
-            .get_personal_access_tokens(&GetPersonalAccessTokens {})
-            .await
-            .with_context(|| {
-                format!(
-                    "Problem getting personal access tokens from server: {}",
-                    self.server_session.get_server_address()
-                )
-            })?;
+        let tokens = client.get_personal_access_tokens().await.with_context(|| {
+            format!(
+                "Problem getting personal access tokens from server: {}",
+                self.server_session.get_server_address()
+            )
+        })?;
 
         // If local keyring is empty and server has the token for login session, then something
         // went wrong, and we should delete the token from the server and recreate login session
@@ -55,9 +49,7 @@ impl CliCommand for LoginCmd {
             .find(|pat| pat.name == self.server_session.get_token_name())
         {
             client
-                .delete_personal_access_token(&DeletePersonalAccessToken {
-                    name: token.name.clone(),
-                })
+                .delete_personal_access_token(&token.name)
                 .await
                 .with_context(|| {
                     format!(
@@ -68,13 +60,13 @@ impl CliCommand for LoginCmd {
         }
 
         let token = client
-            .create_personal_access_token(&CreatePersonalAccessToken {
-                name: self.server_session.get_token_name(),
-                expiry: match &self.login_session_expiry {
-                    None => Some(DEFAULT_LOGIN_SESSION_TIMEOUT),
-                    Some(value) => value.into(),
+            .create_personal_access_token(
+                &self.server_session.get_token_name(),
+                match &self.login_session_expiry {
+                    None => Some(DEFAULT_LOGIN_SESSION_TIMEOUT).into(),
+                    Some(value) => value.clone(),
                 },
-            })
+            )
             .await
             .with_context(|| {
                 format!(

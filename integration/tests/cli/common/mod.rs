@@ -5,14 +5,11 @@ pub(crate) use crate::cli::common::help::{TestHelpCmd, CLAP_INDENT, USAGE_PREFIX
 use assert_cmd::assert::{Assert, OutputAssertExt};
 use assert_cmd::prelude::CommandCargoExt;
 use async_trait::async_trait;
-use iggy::client::Client;
-use iggy::client::{SystemClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
-use iggy::system::ping::Ping;
+use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
+use iggy::next_client::{ClientNext, SystemClientNext, UserClientNext};
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
-use iggy::users::login_user::LoginUser;
 use integration::test_server::TestServer;
 use std::fmt::{Display, Formatter, Result};
 use std::io::Write;
@@ -62,13 +59,13 @@ impl OutputFormat {
 
 #[async_trait]
 pub(crate) trait IggyCmdTestCase {
-    async fn prepare_server_state(&mut self, client: &dyn Client);
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext);
     fn get_command(&self) -> IggyCmdCommand;
     fn provide_stdin_input(&self) -> Option<Vec<String>> {
         None
     }
     fn verify_command(&self, command_state: Assert);
-    async fn verify_server_state(&self, client: &dyn Client);
+    async fn verify_server_state(&self, client: &dyn ClientNext);
     fn protocol(&self, server: &TestServer) -> Vec<String> {
         vec![
             "--tcp-server-address".into(),
@@ -79,7 +76,7 @@ pub(crate) trait IggyCmdTestCase {
 
 pub(crate) struct IggyCmdTest {
     server: TestServer,
-    client: IggyClient,
+    client: IggyClientNext,
 }
 
 impl IggyCmdTest {
@@ -93,9 +90,9 @@ impl IggyCmdTest {
             ..TcpClientConfig::default()
         };
         let client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
-        let client = IggyClient::create(
+        let client = IggyClientNext::create(
             client,
-            IggyClientBackgroundConfig::default(),
+            IggyClientNextBackgroundConfig::default(),
             None,
             None,
             None,
@@ -111,16 +108,13 @@ impl IggyCmdTest {
     pub(crate) async fn setup(&mut self) {
         self.client.connect().await.unwrap();
 
-        let ping_result = self.client.ping(&Ping {}).await;
+        let ping_result = self.client.ping().await;
 
         assert!(ping_result.is_ok());
 
         let identity_info = self
             .client
-            .login_user(&LoginUser {
-                username: DEFAULT_ROOT_USERNAME.to_string(),
-                password: DEFAULT_ROOT_PASSWORD.to_string(),
-            })
+            .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
             .await
             .unwrap();
 

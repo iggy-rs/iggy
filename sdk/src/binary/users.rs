@@ -79,7 +79,7 @@ impl<B: BinaryClientNext> UserClientNext for B {
         &self,
         username: &str,
         password: &str,
-        status: Option<UserStatus>,
+        status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
         create_user(
@@ -87,7 +87,7 @@ impl<B: BinaryClientNext> UserClientNext for B {
             &CreateUser {
                 username: username.to_string(),
                 password: password.to_string(),
-                status: status.unwrap_or(UserStatus::Active),
+                status,
                 permissions,
             },
         )

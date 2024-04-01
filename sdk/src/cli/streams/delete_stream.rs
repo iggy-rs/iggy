@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use crate::streams::delete_stream::DeleteStream;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -24,9 +24,9 @@ impl CliCommand for DeleteStreamCmd {
         format!("delete stream with ID: {}", self.delete_stream.stream_id)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         client
-            .delete_stream(&self.delete_stream)
+            .delete_stream(&self.delete_stream.stream_id)
             .await
             .with_context(|| {
                 format!(

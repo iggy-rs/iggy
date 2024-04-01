@@ -1,7 +1,7 @@
 use crate::cli::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::client::Client;
+use iggy::next_client::ClientNext;
 use integration::test_server::TestServer;
 use predicates::str::{contains, diff, starts_with};
 use serial_test::parallel;
@@ -55,7 +55,7 @@ impl TestMeCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestMeCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
+    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         let command = IggyCmdCommand::new().opts(self.protocol.as_arg()).arg("me");
@@ -87,7 +87,7 @@ impl IggyCmdTestCase for TestMeCmd {
         }
     }
 
-    async fn verify_server_state(&self, _client: &dyn Client) {}
+    async fn verify_server_state(&self, _client: &dyn ClientNext) {}
 
     fn protocol(&self, server: &TestServer) -> Vec<String> {
         match &self.protocol {

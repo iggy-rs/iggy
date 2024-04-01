@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
+use crate::next_client::ClientNext;
 use crate::system::ping::Ping;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -9,14 +9,14 @@ use tokio::time::{sleep, Instant};
 use tracing::{event, Level};
 
 pub struct PingCmd {
-    ping: Ping,
+    _ping: Ping,
     count: u32,
 }
 
 impl PingCmd {
     pub fn new(count: u32) -> Self {
         Self {
-            ping: Ping {},
+            _ping: Ping {},
             count,
         }
     }
@@ -98,14 +98,14 @@ impl CliCommand for PingCmd {
         false
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let print_width = (self.count.ilog10() + 1) as usize;
         let mut ping_stats = PingStats::new();
 
         for i in 1..=self.count {
             let time_start = Instant::now();
             client
-                .ping(&self.ping)
+                .ping()
                 .await
                 .with_context(|| "Problem sending ping command".to_owned())?;
             let ping_duration = time_start.elapsed();

@@ -1,10 +1,8 @@
 use async_trait::async_trait;
 use tracing::{event, Level};
 
-use crate::{
-    cli_command::{CliCommand, PRINT_TARGET},
-    client::Client,
-};
+use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::next_client::ClientNext;
 
 use super::common::{ContextManager, DEFAULT_CONTEXT_NAME};
 
@@ -41,7 +39,7 @@ impl CliCommand for UseContextCmd {
         false
     }
 
-    async fn execute_cmd(&mut self, _client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, _client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let mut context_mgr = ContextManager::default();
 
         context_mgr

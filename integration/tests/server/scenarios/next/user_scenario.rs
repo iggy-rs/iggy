@@ -50,7 +50,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
         .create_user(
             test_user,
             test_password,
-            Some(UserStatus::Active),
+            UserStatus::Active,
             Some(Permissions {
                 global: GlobalPermissions {
                     manage_servers: false,
@@ -87,7 +87,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
 
     // 10. Trying to create a new user (or any other resource) without the appropriate permissions should fail
     let create_user_result = client
-        .create_user("user2", "secret", Some(UserStatus::Active), None)
+        .create_user("user2", "secret", UserStatus::Active, None)
         .await;
 
     assert!(create_user_result.is_err());
@@ -178,7 +178,7 @@ pub async fn run(client_factory: &dyn ClientFactoryNext) {
 
     // 20. Trying to create a new user with the same username should fail
     let create_duplicated_user = client
-        .create_user(test_user, test_password, Some(UserStatus::Active), None)
+        .create_user(test_user, test_password, UserStatus::Active, None)
         .await;
 
     assert!(create_duplicated_user.is_err());

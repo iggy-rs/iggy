@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use tracing::{event, Level};
@@ -47,9 +47,9 @@ impl CliCommand for CreateConsumerGroupCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         client
-            .create_consumer_group(&self.create_consumer_group)
+            .create_consumer_group(&self.create_consumer_group.stream_id, &self.create_consumer_group.topic_id, &self.create_consumer_group.name, self.create_consumer_group.group_id)
             .await
             .with_context(|| {
                 format!(

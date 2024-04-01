@@ -8,9 +8,8 @@ use async_trait::async_trait;
 use iggy::models::permissions::Permissions;
 use iggy::models::permissions::{GlobalPermissions, StreamPermissions, TopicPermissions};
 use iggy::models::user_info::UserId;
-use iggy::users::create_user::CreateUser;
-use iggy::users::get_user::GetUser;
-use iggy::{client::Client, identifier::Identifier};
+use iggy::models::user_status::UserStatus;
+use iggy::next_client::ClientNext;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::collections::HashMap;
@@ -52,18 +51,13 @@ impl TestUserPermissionsCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestUserPermissionsCmd {
-    async fn prepare_server_state(&mut self, client: &dyn Client) {
+    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
         let create_user = client
-            .create_user(&CreateUser {
-                username: self.username.clone(),
-                ..Default::default()
-            })
+            .create_user(&self.username, "secret", UserStatus::Active, None)
             .await;
         assert!(create_user.is_ok());
         let user = client
-            .get_user(&GetUser {
-                user_id: Identifier::from_str_value(self.username.as_str()).unwrap(),
-            })
+            .get_user(&self.username.clone().try_into().unwrap())
             .await;
         assert!(user.is_ok());
         self.user_id = Some(user.unwrap().id);
@@ -92,11 +86,9 @@ impl IggyCmdTestCase for TestUserPermissionsCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn Client) {
+    async fn verify_server_state(&self, client: &dyn ClientNext) {
         let user = client
-            .get_user(&GetUser {
-                user_id: Identifier::from_str_value(self.username.as_str()).unwrap(),
-            })
+            .get_user(&self.username.clone().try_into().unwrap())
             .await;
         assert!(user.is_ok());
         let user = user.unwrap();

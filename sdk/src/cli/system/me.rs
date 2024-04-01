@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
+use crate::next_client::ClientNext;
 use crate::system::get_me::GetMe;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -7,7 +7,7 @@ use comfy_table::Table;
 use tracing::{event, Level};
 
 pub struct GetMeCmd {
-    get_me: GetMe,
+    _get_me: GetMe,
 }
 
 impl GetMeCmd {
@@ -18,7 +18,7 @@ impl GetMeCmd {
 
 impl Default for GetMeCmd {
     fn default() -> Self {
-        Self { get_me: GetMe {} }
+        Self { _get_me: GetMe {} }
     }
 }
 
@@ -28,9 +28,9 @@ impl CliCommand for GetMeCmd {
         "me command".to_owned()
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let client_info = client
-            .get_me(&self.get_me)
+            .get_me()
             .await
             .with_context(|| "Problem sending get_me command".to_owned())?;
 

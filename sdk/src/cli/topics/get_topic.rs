@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use crate::topics::get_topic::GetTopic;
 use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
@@ -32,13 +32,16 @@ impl CliCommand for GetTopicCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        let topic = client.get_topic(&self.get_topic).await.with_context(|| {
-            format!(
-                "Problem getting topic with ID: {} in stream {}",
-                self.get_topic.topic_id, self.get_topic.stream_id
-            )
-        })?;
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+        let topic = client
+            .get_topic(&self.get_topic.stream_id, &self.get_topic.topic_id)
+            .await
+            .with_context(|| {
+                format!(
+                    "Problem getting topic with ID: {} in stream {}",
+                    self.get_topic.topic_id, self.get_topic.stream_id
+                )
+            })?;
 
         let mut table = Table::new();
 

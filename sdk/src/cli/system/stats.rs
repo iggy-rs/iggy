@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
+use crate::next_client::ClientNext;
 use crate::system::get_stats::GetStats;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -30,7 +30,7 @@ impl Display for GetStatsOutput {
 pub struct GetStatsCmd {
     quiet_mode: bool,
     output: GetStatsOutput,
-    get_stats: GetStats,
+    _get_stats: GetStats,
 }
 
 impl GetStatsCmd {
@@ -38,7 +38,7 @@ impl GetStatsCmd {
         Self {
             quiet_mode,
             output,
-            get_stats: GetStats {},
+            _get_stats: GetStats {},
         }
     }
 }
@@ -49,9 +49,9 @@ impl CliCommand for GetStatsCmd {
         "stats command".to_owned()
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let stats = client
-            .get_stats(&self.get_stats)
+            .get_stats()
             .await
             .with_context(|| "Problem sending get_stats command".to_owned())?;
 

@@ -89,7 +89,7 @@ pub trait UserClientNext {
         &self,
         username: &str,
         password: &str,
-        status: Option<UserStatus>,
+        status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError>;
     /// Delete a user by unique ID or username.

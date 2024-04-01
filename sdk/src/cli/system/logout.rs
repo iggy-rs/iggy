@@ -1,7 +1,6 @@
 use crate::cli::system::session::ServerSession;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
-use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
+use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use tracing::{event, Level};
@@ -24,12 +23,10 @@ impl CliCommand for LogoutCmd {
         "logout command".to_owned()
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         if self.server_session.is_active() {
             client
-                .delete_personal_access_token(&DeletePersonalAccessToken {
-                    name: self.server_session.get_token_name(),
-                })
+                .delete_personal_access_token(&self.server_session.get_token_name())
                 .await
                 .with_context(|| {
                     format!(

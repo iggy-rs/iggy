@@ -87,7 +87,7 @@ pub trait Benchmarkable {
                         &name,
                         partitions_count,
                         CompressionAlgorithm::default(),
-                        Some(1),
+                        None,
                         None,
                         IggyExpiry::NeverExpire,
                         None,

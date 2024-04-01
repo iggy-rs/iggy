@@ -1,8 +1,8 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::consumer::Consumer;
 use crate::identifier::Identifier;
 use crate::messages::poll_messages::{PollMessages, PollingStrategy};
+use crate::next_client::ClientNext;
 use crate::utils::{byte_size::IggyByteSize, duration::IggyDuration, timestamp::IggyTimestamp};
 use anyhow::Context;
 use async_trait::async_trait;
@@ -58,10 +58,18 @@ impl CliCommand for PollMessagesCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let start = std::time::Instant::now();
         let messages = client
-            .poll_messages(&self.poll_messages)
+            .poll_messages(
+                &self.poll_messages.stream_id,
+                &self.poll_messages.topic_id,
+                self.poll_messages.partition_id,
+                &self.poll_messages.consumer,
+                &self.poll_messages.strategy,
+                self.poll_messages.count,
+                self.poll_messages.auto_commit,
+            )
             .await
             .with_context(|| {
                 format!(

@@ -45,7 +45,7 @@ async fn init_system(client: &IggyClientNext) {
             TOPIC_NAME,
             PARTITIONS_COUNT,
             CompressionAlgorithm::default(),
-            Some(1),
+            None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
             None,

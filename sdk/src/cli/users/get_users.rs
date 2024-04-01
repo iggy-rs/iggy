@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
+use crate::next_client::ClientNext;
 use crate::users::get_users::GetUsers;
 use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
@@ -13,14 +13,14 @@ pub enum GetUsersOutput {
 }
 
 pub struct GetUsersCmd {
-    get_users: GetUsers,
+    _get_users: GetUsers,
     output: GetUsersOutput,
 }
 
 impl GetUsersCmd {
     pub fn new(output: GetUsersOutput) -> Self {
         GetUsersCmd {
-            get_users: GetUsers {},
+            _get_users: GetUsers {},
             output,
         }
     }
@@ -29,7 +29,7 @@ impl GetUsersCmd {
 impl Default for GetUsersCmd {
     fn default() -> Self {
         GetUsersCmd {
-            get_users: GetUsers {},
+            _get_users: GetUsers {},
             output: GetUsersOutput::Table,
         }
     }
@@ -45,9 +45,9 @@ impl CliCommand for GetUsersCmd {
         format!("list users in {mode} mode")
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let users = client
-            .get_users(&self.get_users)
+            .get_users()
             .await
             .with_context(|| String::from("Problem getting list of users"))?;
 

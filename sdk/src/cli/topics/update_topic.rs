@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use crate::topics::update_topic::UpdateTopic;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
@@ -35,7 +35,7 @@ impl UpdateTopicCmd {
                 compression_algorithm,
                 message_expiry: message_expiry.clone().into(),
                 max_topic_size: Some(max_topic_size),
-                replication_factor,
+                replication_factor: Some(replication_factor),
             },
             message_expiry,
             max_topic_size,
@@ -50,9 +50,9 @@ impl CliCommand for UpdateTopicCmd {
         format!("{}", self)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         client
-            .update_topic(&self.update_topic)
+            .update_topic(&self.update_topic.stream_id, &self.update_topic.topic_id, &self.update_topic.name, self.update_topic.compression_algorithm, self.replication_factor.into(), self.message_expiry.clone(), Some(self.max_topic_size))
             .await
             .with_context(|| {
                 format!(

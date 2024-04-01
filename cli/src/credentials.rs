@@ -4,11 +4,9 @@ use anyhow::{bail, Context};
 use iggy::args::Args;
 use iggy::cli::system::session::ServerSession;
 use iggy::cli_command::PRINT_TARGET;
-use iggy::client::{PersonalAccessTokenClient, UserClient};
-use iggy::clients::client::IggyClient;
+use iggy::clients::next_client::IggyClientNext;
 use iggy::error::IggyError;
-use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
-use iggy::users::{login_user::LoginUser, logout_user::LogoutUser};
+use iggy::next_client::{PersonalAccessTokenClientNext, UserClientNext};
 use keyring::Entry;
 use passterm::{isatty, prompt_password_stdin, prompt_password_tty, Stream};
 use std::env::var;
@@ -30,7 +28,7 @@ enum Credentials {
 
 pub(crate) struct IggyCredentials<'a> {
     credentials: Option<Credentials>,
-    iggy_client: Option<&'a IggyClient>,
+    iggy_client: Option<&'a IggyClientNext>,
     login_required: bool,
 }
 
@@ -116,7 +114,7 @@ impl<'a> IggyCredentials<'a> {
         }
     }
 
-    pub(crate) fn set_iggy_client(&mut self, iggy_client: &'a IggyClient) {
+    pub(crate) fn set_iggy_client(&mut self, iggy_client: &'a IggyClientNext) {
         self.iggy_client = Some(iggy_client);
     }
 
@@ -127,10 +125,10 @@ impl<'a> IggyCredentials<'a> {
                 match credentials {
                     Credentials::UserNameAndPassword(username_and_password) => {
                         let _ = client
-                            .login_user(&LoginUser {
-                                username: username_and_password.username.clone(),
-                                password: username_and_password.password.clone(),
-                            })
+                            .login_user(
+                                &username_and_password.username,
+                                &username_and_password.password,
+                            )
                             .await
                             .with_context(|| {
                                 format!(
@@ -141,20 +139,15 @@ impl<'a> IggyCredentials<'a> {
                     }
                     Credentials::PersonalAccessToken(token_value) => {
                         let _ = client
-                            .login_with_personal_access_token(&LoginWithPersonalAccessToken {
-                                token: token_value.clone(),
-                            })
+                            .login_with_personal_access_token(token_value)
                             .await
                             .with_context(|| {
-                                format!("Problem with server login with token: {}", &token_value)
+                                format!("Problem with server login with token: {}", token_value)
                             })?;
                     }
                     Credentials::SessionWithToken(token_value, server_address) => {
-                        let login_result = client
-                            .login_with_personal_access_token(&LoginWithPersonalAccessToken {
-                                token: token_value.clone(),
-                            })
-                            .await;
+                        let login_result =
+                            client.login_with_personal_access_token(token_value).await;
                         if let Err(err) = login_result {
                             match err {
                                 IggyError::InvalidResponse(code, _, _) => {
@@ -193,7 +186,7 @@ impl<'a> IggyCredentials<'a> {
         if let Some(client) = self.iggy_client {
             if self.login_required {
                 client
-                    .logout_user(&LogoutUser {})
+                    .logout_user()
                     .await
                     .with_context(|| "Problem with server logout".to_string())?;
             }

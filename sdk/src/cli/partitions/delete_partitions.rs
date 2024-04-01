@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
+use crate::next_client::ClientNext;
 use crate::partitions::delete_partitions::DeletePartitions;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -38,14 +38,18 @@ impl CliCommand for DeletePartitionsCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let mut partitions = String::from("partition");
         if self.delete_partitions.partitions_count > 1 {
             partitions.push('s');
         };
 
         client
-            .delete_partitions(&self.delete_partitions)
+            .delete_partitions(
+                &self.delete_partitions.stream_id,
+                &self.delete_partitions.topic_id,
+                self.delete_partitions.partitions_count,
+            )
             .await
             .with_context(|| {
                 format!(

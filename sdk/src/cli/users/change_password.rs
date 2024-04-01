@@ -1,7 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::client::Client;
 use crate::identifier::Identifier;
-use crate::users::change_password::ChangePassword;
+use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use passterm::{isatty, prompt_password_stdin, prompt_password_tty, Stream};
@@ -41,7 +40,7 @@ impl CliCommand for ChangePasswordCmd {
         self.use_tracing()
     }
 
-    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
         let current_password = match &self.current_password {
             Some(password) => password.clone(),
             None => {
@@ -65,11 +64,7 @@ impl CliCommand for ChangePasswordCmd {
         };
 
         client
-            .change_password(&ChangePassword {
-                user_id: self.user_id.clone(),
-                current_password,
-                new_password,
-            })
+            .change_password(&self.user_id, &current_password, &new_password)
             .await
             .with_context(|| {
                 format!(

@@ -56,7 +56,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 partitions_count: 1,
                 message_expiry: None,
                 max_topic_size: None,
-                replication_factor: 1,
+                replication_factor: None,
             })
             .await?;
 
@@ -69,7 +69,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 partitions_count: 2,
                 message_expiry: None,
                 max_topic_size: None,
-                replication_factor: 1,
+                replication_factor: None,
             })
             .await?;
 
@@ -82,7 +82,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 partitions_count: 3,
                 message_expiry: None,
                 max_topic_size: None,
-                replication_factor: 1,
+                replication_factor: None,
             })
             .await?;
 
@@ -95,7 +95,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 partitions_count: 2,
                 message_expiry: None,
                 max_topic_size: None,
-                replication_factor: 1,
+                replication_factor: None,
             })
             .await?;
 
@@ -108,7 +108,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 partitions_count: 1,
                 message_expiry: None,
                 max_topic_size: None,
-                replication_factor: 1,
+                replication_factor: None,
             })
             .await?;
     }

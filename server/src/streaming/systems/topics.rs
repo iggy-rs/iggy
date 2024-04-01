@@ -45,7 +45,7 @@ impl System {
         message_expiry: Option<u32>,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
-        replication_factor: u8,
+        replication_factor: Option<u8>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
@@ -62,7 +62,7 @@ impl System {
                 message_expiry,
                 compression_algorithm,
                 max_topic_size,
-                replication_factor,
+                replication_factor.unwrap_or(1),
             )
             .await?;
         self.metrics.increment_topics(1);
@@ -81,7 +81,7 @@ impl System {
         message_expiry: Option<u32>,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
-        replication_factor: u8,
+        replication_factor: Option<u8>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
@@ -101,7 +101,7 @@ impl System {
                 message_expiry,
                 compression_algorithm,
                 max_topic_size,
-                replication_factor,
+                replication_factor.unwrap_or(1),
             )
             .await?;
 

@@ -79,7 +79,12 @@ use tracing::{error, info, warn};
 pub use crate::clients::builder::IggyClientBuilder;
 
 /// The main client struct which implements all the `Client` traits and wraps the underlying low-level client for the specific transport.
-/// It also provides additional functionality (outside of the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
+///
+/// It also provides additional functionality (outside the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
+///
+/// **This client will become obsolete starting from version 0.3.0 - instead, use the `IggyClientNext`.**
+///
+/// **In the future release, starting from version 0.4.0, `IggyClientNext` will be renamed to `IggyClient` and will remain the only available client to use.**
 #[derive(Debug)]
 pub struct IggyClient {
     client: IggySharedMut<Box<dyn Client>>,

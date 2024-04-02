@@ -3,11 +3,10 @@ mod seeder;
 use anyhow::Result;
 use clap::Parser;
 use iggy::args::{Args, ArgsOptional};
-use iggy::client::UserClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
-use iggy::users::login_user::LoginUser;
+use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
+use iggy::next_client::UserClientNext;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::error::Error;
 use std::sync::Arc;
@@ -42,18 +41,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let username = args.username.clone();
     let password = args.password.clone();
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(iggy_args)?);
-    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
-    let client = IggyClient::create(
+    let client = client_provider::get_raw_connected_client_next(client_provider_config).await?;
+    let client = IggyClientNext::create(
         client,
-        IggyClientBackgroundConfig::default(),
+        IggyClientNextBackgroundConfig::default(),
         None,
         None,
         encryptor,
     );
-    client
-        .login_user(&LoginUser { username, password })
-        .await
-        .unwrap();
+    client.login_user(&username, &password).await.unwrap();
     info!("Data seeder has started...");
     seeder::seed(&client).await.unwrap();
     info!("Data seeder has finished.");

@@ -1,12 +1,9 @@
-use iggy::client::{MessageClient, StreamClient, TopicClient};
-use iggy::clients::client::IggyClient;
+use iggy::clients::next_client::IggyClientNext;
 use iggy::error::IggyError;
-use iggy::identifier::Identifier;
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
-use iggy::streams::create_stream::CreateStream;
-use iggy::topics::create_topic::CreateTopic;
-use iggy::topics::get_topics::GetTopics;
+use iggy::next_client::{MessageClientNext, StreamClientNext, TopicClientNext};
+use iggy::utils::expiry::IggyExpiry;
 use rand::Rng;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -15,117 +12,102 @@ const PROD_STREAM_ID: u32 = 1;
 const TEST_STREAM_ID: u32 = 2;
 const DEV_STREAM_ID: u32 = 3;
 
-pub async fn seed(client: &IggyClient) -> Result<(), IggyError> {
+pub async fn seed(client: &IggyClientNext) -> Result<(), IggyError> {
     create_streams(client).await?;
     create_topics(client).await?;
     send_messages(client).await?;
     Ok(())
 }
 
-async fn create_streams(client: &IggyClient) -> Result<(), IggyError> {
-    client
-        .create_stream(&CreateStream {
-            stream_id: Some(PROD_STREAM_ID),
-            name: "prod".to_string(),
-        })
-        .await?;
-    client
-        .create_stream(&CreateStream {
-            stream_id: Some(TEST_STREAM_ID),
-            name: "test".to_string(),
-        })
-        .await?;
-    client
-        .create_stream(&CreateStream {
-            stream_id: Some(DEV_STREAM_ID),
-            name: "dev".to_string(),
-        })
-        .await?;
+async fn create_streams(client: &IggyClientNext) -> Result<(), IggyError> {
+    client.create_stream("prod", Some(PROD_STREAM_ID)).await?;
+    client.create_stream("test", Some(TEST_STREAM_ID)).await?;
+    client.create_stream("dev", Some(DEV_STREAM_ID)).await?;
     Ok(())
 }
 
-async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
+async fn create_topics(client: &IggyClientNext) -> Result<(), IggyError> {
     let streams = [PROD_STREAM_ID, TEST_STREAM_ID, DEV_STREAM_ID];
     for stream_id in streams {
+        let stream_id = stream_id.try_into()?;
         client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(stream_id)?,
-                topic_id: Some(1),
-                name: "orders".to_string(),
-                compression_algorithm: Default::default(),
-                partitions_count: 1,
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: None,
-            })
+            .create_topic(
+                &stream_id,
+                "orders",
+                1,
+                Default::default(),
+                None,
+                None,
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await?;
 
         client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(stream_id)?,
-                topic_id: Some(2),
-                name: "users".to_string(),
-                compression_algorithm: Default::default(),
-                partitions_count: 2,
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: None,
-            })
+            .create_topic(
+                &stream_id,
+                "users",
+                2,
+                Default::default(),
+                None,
+                None,
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await?;
 
         client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(stream_id)?,
-                topic_id: Some(3),
-                name: "notifications".to_string(),
-                compression_algorithm: Default::default(),
-                partitions_count: 3,
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: None,
-            })
+            .create_topic(
+                &stream_id,
+                "notifications",
+                3,
+                Default::default(),
+                None,
+                None,
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await?;
 
         client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(stream_id)?,
-                topic_id: Some(4),
-                name: "payments".to_string(),
-                compression_algorithm: Default::default(),
-                partitions_count: 2,
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: None,
-            })
+            .create_topic(
+                &stream_id,
+                "payments",
+                2,
+                Default::default(),
+                None,
+                None,
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await?;
 
         client
-            .create_topic(&CreateTopic {
-                stream_id: Identifier::numeric(stream_id)?,
-                topic_id: Some(5),
-                name: "deliveries".to_string(),
-                compression_algorithm: Default::default(),
-                partitions_count: 1,
-                message_expiry: None,
-                max_topic_size: None,
-                replication_factor: None,
-            })
+            .create_topic(
+                &stream_id,
+                "deliveries",
+                1,
+                Default::default(),
+                None,
+                None,
+                IggyExpiry::NeverExpire,
+                None,
+            )
             .await?;
     }
     Ok(())
 }
 
-async fn send_messages(client: &IggyClient) -> Result<(), IggyError> {
+async fn send_messages(client: &IggyClientNext) -> Result<(), IggyError> {
     let mut rng = rand::thread_rng();
     let streams = [PROD_STREAM_ID, TEST_STREAM_ID, DEV_STREAM_ID];
+    let partitioning = Partitioning::balanced();
     for stream_id in streams {
-        let topics = client
-            .get_topics(&GetTopics {
-                stream_id: Identifier::numeric(stream_id)?,
-            })
-            .await?;
+        let topics = client.get_topics(&stream_id.try_into()?).await?;
 
+        let stream_id = stream_id.try_into()?;
         for topic in topics {
+            let topic_id = topic.id.try_into()?;
             let mut messages = Vec::new();
             let message_batches = rng.gen_range(100..=1000);
             let mut message_id = 1;
@@ -153,12 +135,7 @@ async fn send_messages(client: &IggyClient) -> Result<(), IggyError> {
                     message_id += 1;
                 }
                 client
-                    .send_messages(&mut SendMessages {
-                        stream_id: Identifier::numeric(stream_id)?,
-                        topic_id: Identifier::numeric(topic.id)?,
-                        partitioning: Partitioning::balanced(),
-                        messages,
-                    })
+                    .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
                     .await?;
                 messages = Vec::new();
             }

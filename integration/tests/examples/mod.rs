@@ -4,21 +4,15 @@ mod test_message_envelope;
 mod test_message_headers;
 
 use assert_cmd::Command;
-use iggy::client::Client;
-use iggy::client::StreamClient;
-use iggy::client::SystemClient;
-use iggy::client::TopicClient;
-use iggy::client::UserClient;
-use iggy::clients::client::IggyClient;
-use iggy::clients::client::IggyClientBackgroundConfig;
-use iggy::identifier::Identifier;
-use iggy::streams::create_stream::CreateStream;
-use iggy::system::ping::Ping;
+use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use iggy::next_client::{
+    ClientNext, StreamClientNext, SystemClientNext, TopicClientNext, UserClientNext,
+};
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
-use iggy::topics::create_topic::CreateTopic;
 use iggy::users::defaults::*;
-use iggy::users::login_user::LoginUser;
+use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{IpAddrKind, TestServer};
 use regex::Regex;
 use std::sync::Arc;
@@ -26,7 +20,7 @@ use std::time::Duration;
 
 pub(crate) struct IggyExampleTest<'a> {
     server: TestServer,
-    client: IggyClient,
+    client: IggyClientNext,
     module: &'a str,
 }
 
@@ -97,9 +91,9 @@ impl<'a> IggyExampleTest<'a> {
             ..TcpClientConfig::default()
         };
         let client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
-        let client = IggyClient::create(
+        let client = IggyClientNext::create(
             client,
-            IggyClientBackgroundConfig::default(),
+            IggyClientNextBackgroundConfig::default(),
             None,
             None,
             None,
@@ -114,34 +108,28 @@ impl<'a> IggyExampleTest<'a> {
 
     pub(crate) async fn setup(&mut self, existing_stream_and_topic: bool) {
         self.client.connect().await.unwrap();
-        let ping_result = self.client.ping(&Ping {}).await;
+        let ping_result = self.client.ping().await;
         assert!(ping_result.is_ok());
         self.client
-            .login_user(&LoginUser {
-                username: DEFAULT_ROOT_USERNAME.to_string(),
-                password: DEFAULT_ROOT_PASSWORD.to_string(),
-            })
+            .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
             .await
             .unwrap();
         if existing_stream_and_topic {
             self.client
-                .create_stream(&CreateStream {
-                    stream_id: Some(1),
-                    name: "sample-stream".to_string(),
-                })
+                .create_stream("sample-stream", Some(1))
                 .await
                 .unwrap();
             self.client
-                .create_topic(&CreateTopic {
-                    stream_id: Identifier::numeric(1).unwrap(),
-                    topic_id: Some(1),
-                    partitions_count: 1,
-                    compression_algorithm: Default::default(),
-                    name: "sample-topic".to_string(),
-                    message_expiry: None,
-                    max_topic_size: None,
-                    replication_factor: None,
-                })
+                .create_topic(
+                    &1.try_into().unwrap(),
+                    "sample-topic",
+                    1,
+                    CompressionAlgorithm::default(),
+                    None,
+                    None,
+                    IggyExpiry::NeverExpire,
+                    None,
+                )
                 .await
                 .unwrap();
         }

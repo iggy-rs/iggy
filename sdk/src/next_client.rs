@@ -25,6 +25,10 @@ use std::fmt::Debug;
 /// The next version of the client which is the main interface to the Iggy server.
 /// It consists of multiple modules, each of which is responsible for a specific set of commands.
 /// Except the ping, login and get me, all the other methods require authentication.
+///
+/// **This trait will become the default one starting from version 0.3.0, instead of the currently existing `Client` trait.**
+///
+/// **In the future release, starting from version 0.4.0, `ClientNext` will be renamed to `Client` and will remain the only available client trait to use.**
 #[async_trait]
 pub trait ClientNext:
     SystemClientNext

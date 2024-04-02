@@ -52,7 +52,13 @@ pub const DEFAULT_SEND_MESSAGES_INTERVAL_MS: u64 = 100;
 pub const DEFAULT_POLL_MESSAGES_INTERVAL_MS: u64 = 100;
 
 /// The next version of main client struct which implements all the `ClientNext` traits and wraps the underlying low-level client for the specific transport.
+///
 /// It also provides additional functionality (outside the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
+///
+///
+/// **This client will become the default client starting from version 0.3.0, instead of the currently existing `IggyClient`.**
+///
+/// **In the future release, starting from version 0.4.0, `IggyClientNext` will be renamed to `IggyClient` and will remain the only available client to use.**
 #[derive(Debug)]
 pub struct IggyClientNext {
     client: IggySharedMut<Box<dyn ClientNext>>,

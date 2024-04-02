@@ -1,14 +1,12 @@
 use crate::bench::run_bench_and_wait_for_finish;
-use iggy::{
-    client::SystemClient,
-    clients::client::{IggyClient, IggyClientBackgroundConfig},
-    system::get_stats::GetStats,
-    utils::byte_size::IggyByteSize,
-};
+use iggy::clients::next_client::IggyClientNext;
+use iggy::clients::next_client::IggyClientNextBackgroundConfig;
+use iggy::next_client::SystemClientNext;
+use iggy::utils::byte_size::IggyByteSize;
 use integration::{
     tcp_client::TcpClientFactory,
     test_server::{
-        login_root, ClientFactory, IpAddrKind, TestServer, Transport, SYSTEM_PATH_ENV_VAR,
+        login_root_next, ClientFactoryNext, IpAddrKind, TestServer, Transport, SYSTEM_PATH_ENV_VAR,
     },
 };
 use serial_test::parallel;
@@ -42,17 +40,17 @@ async fn should_fill_data_and_verify_after_restart() {
 
     // 4. Connect and login to newly started server
     let client = TcpClientFactory { server_addr }.create_client().await;
-    let client = IggyClient::create(
+    let client = IggyClientNext::create(
         client,
-        IggyClientBackgroundConfig::default(),
+        IggyClientNextBackgroundConfig::default(),
         None,
         None,
         None,
     );
-    login_root(&client).await;
+    login_root_next(&client).await;
 
     // 5. Save stats from the first server
-    let stats = client.get_stats(&GetStats {}).await.unwrap();
+    let stats = client.get_stats().await.unwrap();
     let expected_messages_size_bytes = stats.messages_size_bytes;
     let expected_streams_count = stats.streams_count;
     let expected_topics_count = stats.topics_count;
@@ -74,21 +72,21 @@ async fn should_fill_data_and_verify_after_restart() {
     let server_addr = test_server.get_raw_tcp_addr().unwrap();
 
     // 8. Connect and login to newly started server
-    let client = IggyClient::create(
+    let client = IggyClientNext::create(
         TcpClientFactory {
             server_addr: server_addr.clone(),
         }
         .create_client()
         .await,
-        IggyClientBackgroundConfig::default(),
+        IggyClientNextBackgroundConfig::default(),
         None,
         None,
         None,
     );
-    login_root(&client).await;
+    login_root_next(&client).await;
 
     // 9. Save stats from the second server
-    let stats = client.get_stats(&GetStats {}).await.unwrap();
+    let stats = client.get_stats().await.unwrap();
     let actual_messages_size_bytes = stats.messages_size_bytes;
     let actual_streams_count = stats.streams_count;
     let actual_topics_count = stats.topics_count;

@@ -110,6 +110,8 @@ pub enum IggyError {
     CannotParseSlice(#[from] std::array::TryFromSliceError) = 204,
     #[error("Cannot parse byte unit")]
     CannotParseByteUnit(#[from] byte_unit::ParseError) = 205,
+    #[error("Connection closed")]
+    ConnectionClosed = 206,
     #[error("HTTP response error, status: {0}, body: {1}")]
     HttpResponseError(u16, String) = 300,
     #[error("Request middleware error")]

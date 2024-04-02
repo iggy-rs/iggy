@@ -27,8 +27,12 @@ pub(crate) async fn handle_connection(
         let read_length = match sender.read(&mut initial_buffer).await {
             Ok(read_length) => read_length,
             Err(error) => {
-                sender.send_error_response(error).await?;
-                continue;
+                if error.as_code() == IggyError::ConnectionClosed.as_code() {
+                    return Err(ServerError::from(error));
+                } else {
+                    sender.send_error_response(error).await?;
+                    continue;
+                }
             }
         };
 
@@ -76,9 +80,14 @@ pub(crate) fn handle_error(error: ServerError) {
                 error!("Connection has failed: {error}");
             }
         },
-        ServerError::SdkError(sdk_error) => {
-            error!("Failure in internal SDK call: {sdk_error}");
-        }
+        ServerError::SdkError(sdk_error) => match sdk_error {
+            IggyError::ConnectionClosed => {
+                debug!("Client closed connection.");
+            }
+            _ => {
+                error!("Failure in internal SDK call: {sdk_error}");
+            }
+        },
         _ => {
             error!("Connection has failed: {error}");
         }

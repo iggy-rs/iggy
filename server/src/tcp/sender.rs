@@ -10,12 +10,17 @@ pub(crate) async fn read<T>(stream: &mut T, buffer: &mut [u8]) -> Result<usize, 
 where
     T: AsyncRead + AsyncWrite + Unpin,
 {
-    let read_bytes = stream.read_exact(buffer).await;
-    if let Err(error) = read_bytes {
-        return Err(IggyError::from(error));
+    match stream.read_exact(buffer).await {
+        Ok(0) => Err(IggyError::ConnectionClosed),
+        Ok(read_bytes) => Ok(read_bytes),
+        Err(error) => {
+            if error.kind() == std::io::ErrorKind::UnexpectedEof {
+                Err(IggyError::ConnectionClosed)
+            } else {
+                Err(IggyError::from(error))
+            }
+        }
     }
-
-    Ok(read_bytes.unwrap())
 }
 
 pub(crate) async fn send_empty_ok_response<T>(stream: &mut T) -> Result<(), IggyError>

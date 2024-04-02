@@ -16,38 +16,40 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             .all_git()
             .all_rustc()
             .emit()?;
+
+        let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
+
+        println!(
+            "cargo:rerun-if-changed={}",
+            workspace_root
+                .join("configs")
+                .canonicalize()
+                .unwrap()
+                .display()
+        );
+
+        let json_config_path = workspace_root
+            .clone()
+            .join("configs")
+            .join(JSON_CONFIG_FILENAME);
+        let toml_config_path = workspace_root.join("configs").join(TOML_CONFIG_FILENAME);
+
+        let json_config: Value = match Figment::new().merge(Json::file(json_config_path)).extract()
+        {
+            Ok(config) => config,
+            Err(e) => panic!("Failed to load {JSON_CONFIG_FILENAME}: {e}"),
+        };
+
+        let toml_config: Value = match Figment::new().merge(Toml::file(toml_config_path)).extract()
+        {
+            Ok(config) => config,
+            Err(e) => panic!("Failed to load {TOML_CONFIG_FILENAME}: {e}"),
+        };
+
+        compare_configs(&json_config, &toml_config, "");
     } else {
         println!("cargo:info=Skipping build script because CI environment variable IGGY_CI_BUILD is not set to 'true'");
     }
-
-    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
-
-    println!(
-        "cargo:rerun-if-changed={}",
-        workspace_root
-            .join("configs")
-            .canonicalize()
-            .unwrap()
-            .display()
-    );
-
-    let json_config_path = workspace_root
-        .clone()
-        .join("configs")
-        .join(JSON_CONFIG_FILENAME);
-    let toml_config_path = workspace_root.join("configs").join(TOML_CONFIG_FILENAME);
-
-    let json_config: Value = match Figment::new().merge(Json::file(json_config_path)).extract() {
-        Ok(config) => config,
-        Err(e) => panic!("Failed to load {JSON_CONFIG_FILENAME}: {e}"),
-    };
-
-    let toml_config: Value = match Figment::new().merge(Toml::file(toml_config_path)).extract() {
-        Ok(config) => config,
-        Err(e) => panic!("Failed to load {TOML_CONFIG_FILENAME}: {e}"),
-    };
-
-    compare_configs(&json_config, &toml_config, "");
 
     Ok(())
 }

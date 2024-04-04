@@ -64,7 +64,7 @@ impl IggyClientNextBuilder {
     }
 
     /// This method provides fluent API for the TCP client configuration.
-    /// It returns the `TcpClientBuilder` instance, which allows to configure the TCP client with custom settings or using defaults.
+    /// It returns the `TcpClientNextBuilder` instance, which allows to configure the TCP client with custom settings or using defaults.
     /// This should be called after the non-protocol specific methods, such as `with_partitioner`, `with_encryptor` or `with_message_handler`.
     pub fn with_tcp(self) -> TcpClientNextBuilder {
         TcpClientNextBuilder {
@@ -74,7 +74,7 @@ impl IggyClientNextBuilder {
     }
 
     /// This method provides fluent API for the QUIC client configuration.
-    /// It returns the `QuicClientBuilder` instance, which allows to configure the QUIC client with custom settings or using defaults.
+    /// It returns the `QuicClientNextBuilder` instance, which allows to configure the QUIC client with custom settings or using defaults.
     /// This should be called after the non-protocol specific methods, such as `with_partitioner`, `with_encryptor` or `with_message_handler`.
     pub fn with_quic(self) -> QuicClientNextBuilder {
         QuicClientNextBuilder {
@@ -84,7 +84,7 @@ impl IggyClientNextBuilder {
     }
 
     /// This method provides fluent API for the HTTP client configuration.
-    /// It returns the `HttpClientBuilder` instance, which allows to configure the HTTP client with custom settings or using defaults.
+    /// It returns the `HttpClientNextBuilder` instance, which allows to configure the HTTP client with custom settings or using defaults.
     /// This should be called after the non-protocol specific methods, such as `with_partitioner`, `with_encryptor` or `with_message_handler`.
     pub fn with_http(self) -> HttpClientNextBuilder {
         HttpClientNextBuilder {

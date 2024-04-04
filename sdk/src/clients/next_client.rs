@@ -35,7 +35,6 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
-pub use crate::clients::builder::IggyClientBuilder;
 use crate::clients::next_builder::IggyClientNextBuilder;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};

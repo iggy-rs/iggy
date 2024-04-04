@@ -61,6 +61,7 @@ use std::fmt::Debug;
 /// **This trait will become obsolete starting from version 0.3.0 - instead, use the `ClientNext`.**
 ///
 /// **In the future release, starting from version 0.4.0, `ClientNext` will be renamed to `Client` and will remain the only available client trait to use.**
+#[deprecated(since = "0.3.0", note = "Use `ClientNext` instead")]
 #[async_trait]
 pub trait Client:
     SystemClient
@@ -85,6 +86,7 @@ pub trait Client:
 }
 
 /// This trait defines the methods to interact with the system module.
+#[deprecated(since = "0.3.0", note = "Use `SystemClientNext` instead")]
 #[async_trait]
 pub trait SystemClient {
     /// Get the stats of the system such as PID, memory usage, streams count etc.
@@ -108,6 +110,7 @@ pub trait SystemClient {
 }
 
 /// This trait defines the methods to interact with the user module.
+#[deprecated(since = "0.3.0", note = "Use `UserClientNext` instead")]
 #[async_trait]
 pub trait UserClient {
     /// Get the info about a specific user by unique ID or username.
@@ -145,6 +148,7 @@ pub trait UserClient {
 }
 
 /// This trait defines the methods to interact with the personal access token module.
+#[deprecated(since = "0.3.0", note = "Use `PersonalAccessTokenClientNext` instead")]
 #[async_trait]
 pub trait PersonalAccessTokenClient {
     /// Get the info about all the personal access tokens of the currently authenticated user.
@@ -170,6 +174,7 @@ pub trait PersonalAccessTokenClient {
 }
 
 /// This trait defines the methods to interact with the stream module.
+#[deprecated(since = "0.3.0", note = "Use `StreamClientNext` instead")]
 #[async_trait]
 pub trait StreamClient {
     /// Get the info about a specific stream by unique ID or name.
@@ -199,6 +204,7 @@ pub trait StreamClient {
 }
 
 /// This trait defines the methods to interact with the topic module.
+#[deprecated(since = "0.3.0", note = "Use `TopicClientNext` instead")]
 #[async_trait]
 pub trait TopicClient {
     /// Get the info about a specific topic by unique ID or name.
@@ -228,6 +234,7 @@ pub trait TopicClient {
 }
 
 /// This trait defines the methods to interact with the partition module.
+#[deprecated(since = "0.3.0", note = "Use `PartitionClientNext` instead")]
 #[async_trait]
 pub trait PartitionClient {
     /// Create new N partitions for a topic by unique ID or name.
@@ -245,6 +252,7 @@ pub trait PartitionClient {
 }
 
 /// This trait defines the methods to interact with the messaging module.
+#[deprecated(since = "0.3.0", note = "Use `MessageClientNext` instead")]
 #[async_trait]
 pub trait MessageClient {
     /// Poll given amount of messages using the specified consumer and strategy from the specified stream and topic by unique IDs or names.
@@ -258,6 +266,7 @@ pub trait MessageClient {
 }
 
 /// This trait defines the methods to interact with the consumer offset module.
+#[deprecated(since = "0.3.0", note = "Use `ConsumerOffsetClientNext` instead")]
 #[async_trait]
 pub trait ConsumerOffsetClient {
     /// Store the consumer offset for a specific consumer or consumer group for the given stream and topic by unique IDs or names.
@@ -274,6 +283,7 @@ pub trait ConsumerOffsetClient {
 }
 
 /// This trait defines the methods to interact with the consumer group module.
+#[deprecated(since = "0.3.0", note = "Use `ConsumerGroupClientNext` instead")]
 #[async_trait]
 pub trait ConsumerGroupClient {
     /// Get the info about a specific consumer group by unique ID or name for the given stream and topic by unique IDs or names.

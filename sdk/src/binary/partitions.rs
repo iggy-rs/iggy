@@ -1,3 +1,4 @@
+#[allow(deprecated)]
 use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
 use crate::binary::{fail_if_not_authenticated, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;

@@ -17,6 +17,7 @@ use crate::identifier::Identifier;
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::next_client::ConsumerGroupClientNext;
 
+#[allow(deprecated)]
 #[async_trait::async_trait]
 impl<B: BinaryClient> ConsumerGroupClient for B {
     async fn get_consumer_group(

@@ -15,6 +15,7 @@ use super::client::{IggyClient, IggyClientBackgroundConfig};
 use tracing::error;
 
 /// The builder for the `IggyClient` instance, which allows to configure and provide custom implementations for the partitioner, encryptor or message handler.
+#[deprecated(since = "0.3.0", note = "Use `IggyClientNextBuilder` instead")]
 #[derive(Debug, Default)]
 pub struct IggyClientBuilder {
     client: Option<Box<dyn Client>>,
@@ -112,6 +113,7 @@ impl IggyClientBuilder {
     }
 }
 
+#[deprecated(since = "0.3.0", note = "Use `TcpClientNextBuilder` instead")]
 pub struct TcpClientBuilder {
     config: TcpClientConfigBuilder,
     parent_builder: IggyClientBuilder,
@@ -158,6 +160,7 @@ impl TcpClientBuilder {
     }
 }
 
+#[deprecated(since = "0.3.0", note = "Use `QuicClientNextBuilder` instead")]
 pub struct QuicClientBuilder {
     config: QuicClientConfigBuilder,
     parent_builder: IggyClientBuilder,
@@ -198,6 +201,7 @@ impl QuicClientBuilder {
     }
 }
 
+#[deprecated(since = "0.3.0", note = "Use `HttpClientNextBuilder` instead")]
 pub struct HttpClientBuilder {
     config: HttpClientConfigBuilder,
     parent_builder: IggyClientBuilder,

@@ -1,5 +1,6 @@
 use crate::client::Client;
 use crate::client_error::ClientError;
+#[allow(deprecated)]
 use crate::clients::client::IggyClient;
 use crate::clients::next_client::IggyClientNext;
 use crate::http::client::HttpClient;
@@ -95,6 +96,8 @@ impl ClientProviderConfig {
     }
 }
 
+#[allow(deprecated)]
+#[deprecated(since = "0.3.0", note = "Use `get_default_client_next` instead")]
 /// Create a default `IggyClient` with the default configuration.
 pub async fn get_default_client() -> Result<IggyClient, ClientError> {
     get_client(Arc::new(ClientProviderConfig::default())).await
@@ -105,6 +108,8 @@ pub async fn get_default_client_next() -> Result<IggyClientNext, ClientError> {
     get_client_next(Arc::new(ClientProviderConfig::default())).await
 }
 
+#[allow(deprecated)]
+#[deprecated(since = "0.3.0", note = "Use `get_client_next` instead")]
 /// Create a `IggyClient` for the specific transport based on the provided configuration.
 pub async fn get_client(config: Arc<ClientProviderConfig>) -> Result<IggyClient, ClientError> {
     let client = get_raw_connected_client(config).await?;
@@ -120,6 +125,7 @@ pub async fn get_client_next(
 }
 
 /// Create a `Client` for the specific transport based on the provided configuration.
+#[deprecated(since = "0.3.0", note = "Use `get_raw_connected_client_next` instead")]
 pub async fn get_raw_connected_client(
     config: Arc<ClientProviderConfig>,
 ) -> Result<Box<dyn Client>, ClientError> {
@@ -133,6 +139,7 @@ pub async fn get_raw_connected_client_next(
     get_raw_client_next(config, true).await
 }
 
+#[deprecated(since = "0.3.0", note = "Use `get_raw_client_next` instead")]
 /// Create a `Client` for the specific transport based on the provided configuration.
 pub async fn get_raw_client(
     config: Arc<ClientProviderConfig>,

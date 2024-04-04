@@ -86,6 +86,7 @@ pub use crate::clients::builder::IggyClientBuilder;
 ///
 /// **In the future release, starting from version 0.4.0, `IggyClientNext` will be renamed to `IggyClient` and will remain the only available client to use.**
 #[derive(Debug)]
+#[deprecated(since = "0.3.0", note = "Use `IggyClientNext` instead")]
 pub struct IggyClient {
     client: IggySharedMut<Box<dyn Client>>,
     config: Option<IggyClientBackgroundConfig>,
@@ -102,6 +103,7 @@ struct SendMessagesBatch {
 }
 
 /// The optional configuration for the `IggyClient` instance, consisting of the optional configuration for sending and polling the messages in the background.
+#[deprecated(since = "0.3.0", note = "Use `IggyClientNextBackgroundConfig` instead")]
 #[derive(Debug, Default)]
 pub struct IggyClientBackgroundConfig {
     /// The configuration for sending the messages in the background.

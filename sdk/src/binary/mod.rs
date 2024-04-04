@@ -2,16 +2,26 @@ use crate::error::IggyError;
 use async_trait::async_trait;
 use bytes::Bytes;
 
+#[allow(deprecated)]
 pub mod binary_client;
+#[allow(deprecated)]
 pub mod consumer_groups;
+#[allow(deprecated)]
 pub mod consumer_offsets;
 mod mapper;
+#[allow(deprecated)]
 pub mod messages;
+#[allow(deprecated)]
 pub mod partitions;
+#[allow(deprecated)]
 pub mod personal_access_tokens;
+#[allow(deprecated)]
 pub mod streams;
+#[allow(deprecated)]
 pub mod system;
+#[allow(deprecated)]
 pub mod topics;
+#[allow(deprecated)]
 pub mod users;
 
 /// The state of the client.

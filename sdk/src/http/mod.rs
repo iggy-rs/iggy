@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use reqwest::{Response, Url};
 use serde::Serialize;
 
+#[allow(deprecated)]
 pub mod client;
 pub mod config;
 pub mod consumer_groups;

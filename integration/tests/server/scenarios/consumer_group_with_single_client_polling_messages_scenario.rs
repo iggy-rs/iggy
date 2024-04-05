@@ -1,103 +1,74 @@
+use crate::server::scenarios::{
+    cleanup, create_client, get_consumer_group, join_consumer_group, CONSUMER_GROUP_ID,
+    CONSUMER_GROUP_NAME, MESSAGES_COUNT, PARTITIONS_COUNT, STREAM_ID, STREAM_NAME, TOPIC_ID,
+    TOPIC_NAME,
+};
 use iggy::client::{ConsumerGroupClient, MessageClient, StreamClient, SystemClient, TopicClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::Consumer;
-use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
-use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
 use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::system::get_me::GetMe;
-use iggy::topics::create_topic::CreateTopic;
+use iggy::messages::poll_messages::PollingStrategy;
+use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{assert_clean_system, login_root, ClientFactory};
 use std::str::{from_utf8, FromStr};
 
-const STREAM_ID: u32 = 1;
-const TOPIC_ID: u32 = 1;
-const STREAM_NAME: &str = "test-stream";
-const TOPIC_NAME: &str = "test-topic";
-const PARTITIONS_COUNT: u32 = 3;
-const CONSUMER_GROUP_ID: u32 = 10;
-const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
-const MESSAGES_COUNT: u32 = 500;
-
 pub async fn run(client_factory: &dyn ClientFactory) {
-    let client = client_factory.create_client().await;
-    let client = IggyClient::create(
-        client,
-        IggyClientBackgroundConfig::default(),
-        None,
-        None,
-        None,
-    );
-
+    let client = create_client(client_factory).await;
     login_root(&client).await;
     init_system(&client).await;
     execute_using_messages_key_key(&client).await;
     client
-        .delete_stream(&DeleteStream {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        })
+        .delete_stream(&Identifier::numeric(STREAM_ID).unwrap())
         .await
         .unwrap();
     init_system(&client).await;
     execute_using_none_key(&client).await;
-    cleanup(&client).await;
+    cleanup(&client, false).await;
     assert_clean_system(&client).await;
 }
 
 async fn init_system(client: &IggyClient) {
     // 1. Create the stream
-    let create_stream = CreateStream {
-        stream_id: Some(STREAM_ID),
-        name: STREAM_NAME.to_string(),
-    };
-    client.create_stream(&create_stream).await.unwrap();
-
-    // 2. Create the topic
-    let create_topic = CreateTopic {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Some(TOPIC_ID),
-        partitions_count: PARTITIONS_COUNT,
-        compression_algorithm: Default::default(),
-        name: TOPIC_NAME.to_string(),
-        message_expiry: None,
-        max_topic_size: None,
-        replication_factor: None,
-    };
-    client.create_topic(&create_topic).await.unwrap();
-
-    // 3. Create the consumer group
-    let create_group = CreateConsumerGroup {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        group_id: Some(CONSUMER_GROUP_ID),
-        name: CONSUMER_GROUP_NAME.to_string(),
-    };
-    client.create_consumer_group(&create_group).await.unwrap();
-
-    let join_group = JoinConsumerGroup {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
-    };
-
-    // 4. Join the consumer group by client
-    client.join_consumer_group(&join_group).await.unwrap();
-
-    // 5. Validate that group contains the single client with all partitions assigned
-    let consumer_group_info = client
-        .get_consumer_group(&GetConsumerGroup {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
-        })
+    client
+        .create_stream(STREAM_NAME, Some(STREAM_ID))
         .await
         .unwrap();
 
-    let client_info = client.get_me(&GetMe {}).await.unwrap();
+    // 2. Create the topic
+    client
+        .create_topic(
+            &Identifier::numeric(STREAM_ID).unwrap(),
+            TOPIC_NAME,
+            PARTITIONS_COUNT,
+            CompressionAlgorithm::default(),
+            None,
+            Some(TOPIC_ID),
+            IggyExpiry::NeverExpire,
+            None,
+        )
+        .await
+        .unwrap();
+
+    // 3. Create the consumer group
+    client
+        .create_consumer_group(
+            &Identifier::numeric(STREAM_ID).unwrap(),
+            &Identifier::numeric(TOPIC_ID).unwrap(),
+            CONSUMER_GROUP_NAME,
+            Some(CONSUMER_GROUP_ID),
+        )
+        .await
+        .unwrap();
+
+    // 4. Join the consumer group by client
+    join_consumer_group(client).await;
+
+    // 5. Validate that group contains the single client with all partitions assigned
+    let consumer_group_info = get_consumer_group(client).await;
+
+    let client_info = client.get_me().await.unwrap();
     assert_eq!(consumer_group_info.id, CONSUMER_GROUP_ID);
 
     assert_eq!(consumer_group_info.members_count, 1);
@@ -112,30 +83,35 @@ async fn execute_using_messages_key_key(client: &IggyClient) {
     // 1. Send messages to the calculated partition ID on the server side by using entity ID as a key
     for entity_id in 1..=MESSAGES_COUNT {
         let message = Message::from_str(&create_message_payload(entity_id)).unwrap();
-        let messages = vec![message];
-        let mut send_messages = SendMessages {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partitioning: Partitioning::messages_key_u32(entity_id),
-            messages,
-        };
-        client.send_messages(&mut send_messages).await.unwrap();
+        let mut messages = vec![message];
+        client
+            .send_messages(
+                &Identifier::numeric(STREAM_ID).unwrap(),
+                &Identifier::numeric(TOPIC_ID).unwrap(),
+                &Partitioning::messages_key_u32(entity_id),
+                &mut messages,
+            )
+            .await
+            .unwrap();
     }
 
     // 2. Poll the messages for the single client which has assigned all partitions in the consumer group
-    let poll_messages = PollMessages {
-        consumer: Consumer::group(Identifier::numeric(CONSUMER_GROUP_ID).unwrap()),
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: None,
-        strategy: PollingStrategy::next(),
-        count: 1,
-        auto_commit: true,
-    };
-
+    let consumer = Consumer::group(Identifier::numeric(CONSUMER_GROUP_ID).unwrap());
     let mut total_read_messages_count = 0;
     for _ in 1..=PARTITIONS_COUNT * MESSAGES_COUNT {
-        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        let polled_messages = client
+            .poll_messages(
+                &Identifier::numeric(STREAM_ID).unwrap(),
+                &Identifier::numeric(TOPIC_ID).unwrap(),
+                None,
+                &consumer,
+                &PollingStrategy::next(),
+                1,
+                true,
+            )
+            .await
+            .unwrap();
+
         total_read_messages_count += polled_messages.messages.len() as u32;
     }
 
@@ -156,32 +132,37 @@ async fn execute_using_none_key(client: &IggyClient) {
 
         let message =
             Message::from_str(&create_extended_message_payload(partition_id, entity_id)).unwrap();
-        let messages = vec![message];
-        let mut send_messages = SendMessages {
-            stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-            topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-            partitioning: Partitioning::balanced(),
-            messages,
-        };
-        client.send_messages(&mut send_messages).await.unwrap();
+        let mut messages = vec![message];
+        client
+            .send_messages(
+                &Identifier::numeric(STREAM_ID).unwrap(),
+                &Identifier::numeric(TOPIC_ID).unwrap(),
+                &Partitioning::balanced(),
+                &mut messages,
+            )
+            .await
+            .unwrap();
     }
 
     // 2. Poll the messages for the single client which has assigned all partitions in the consumer group
-    let poll_messages = PollMessages {
-        consumer: Consumer::group(Identifier::numeric(CONSUMER_GROUP_ID).unwrap()),
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: None,
-        strategy: PollingStrategy::next(),
-        count: 1,
-        auto_commit: true,
-    };
-
+    let consumer = Consumer::group(Identifier::numeric(CONSUMER_GROUP_ID).unwrap());
     let mut partition_id = 1;
     let mut offset = 0;
     let mut entity_id = 1;
     for _ in 1..=PARTITIONS_COUNT * MESSAGES_COUNT {
-        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        let polled_messages = client
+            .poll_messages(
+                &Identifier::numeric(STREAM_ID).unwrap(),
+                &Identifier::numeric(TOPIC_ID).unwrap(),
+                None,
+                &consumer,
+                &PollingStrategy::next(),
+                1,
+                true,
+            )
+            .await
+            .unwrap();
+
         assert_eq!(polled_messages.messages.len(), 1);
         let message = &polled_messages.messages[0];
         assert_eq!(message.offset, offset);
@@ -199,18 +180,22 @@ async fn execute_using_none_key(client: &IggyClient) {
     }
 
     for _ in 1..=PARTITIONS_COUNT {
-        let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
+        let polled_messages = client
+            .poll_messages(
+                &Identifier::numeric(STREAM_ID).unwrap(),
+                &Identifier::numeric(TOPIC_ID).unwrap(),
+                None,
+                &consumer,
+                &PollingStrategy::next(),
+                1,
+                true,
+            )
+            .await
+            .unwrap();
         assert!(polled_messages.messages.is_empty());
     }
 }
 
 fn create_extended_message_payload(partition_id: u32, entity_id: u32) -> String {
     format!("message-{}-{}", partition_id, entity_id)
-}
-
-async fn cleanup(system_client: &IggyClient) {
-    let delete_stream = DeleteStream {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-    };
-    system_client.delete_stream(&delete_stream).await.unwrap();
 }

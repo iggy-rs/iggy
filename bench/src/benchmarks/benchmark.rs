@@ -9,12 +9,12 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::Future;
-use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
+use iggy::client::{StreamClient, TopicClient};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
-use iggy::next_client::{StreamClientNext, TopicClientNext};
 use iggy::utils::expiry::IggyExpiry;
-use integration::test_server::{login_root_next, ClientFactoryNext};
+use integration::test_server::{login_root, ClientFactory};
 use std::{pin::Pin, sync::Arc};
 use tracing::info;
 
@@ -47,7 +47,7 @@ pub trait Benchmarkable {
     async fn run(&mut self) -> BenchmarkFutures;
     fn kind(&self) -> BenchmarkKind;
     fn args(&self) -> &IggyBenchArgs;
-    fn client_factory(&self) -> &Arc<dyn ClientFactoryNext>;
+    fn client_factory(&self) -> &Arc<dyn ClientFactory>;
     fn display_settings(&self);
 
     /// Below methods have common implementation for all benchmarks.
@@ -60,14 +60,14 @@ pub trait Benchmarkable {
         let topic_id: u32 = 1;
         let partitions_count: u32 = 1;
         let client = self.client_factory().create_client().await;
-        let client = IggyClientNext::create(
+        let client = IggyClient::create(
             client,
-            IggyClientNextBackgroundConfig::default(),
+            IggyClientBackgroundConfig::default(),
             None,
             None,
             None,
         );
-        login_root_next(&client).await;
+        login_root(&client).await;
         let streams = client.get_streams().await?;
         for i in 1..=number_of_streams {
             let stream_id = start_stream_id + i;
@@ -102,14 +102,14 @@ pub trait Benchmarkable {
         let start_stream_id = self.args().start_stream_id();
         let number_of_streams = self.args().number_of_streams();
         let client = self.client_factory().create_client().await;
-        let client = IggyClientNext::create(
+        let client = IggyClient::create(
             client,
-            IggyClientNextBackgroundConfig::default(),
+            IggyClientBackgroundConfig::default(),
             None,
             None,
             None,
         );
-        login_root_next(&client).await;
+        login_root(&client).await;
         let streams = client.get_streams().await?;
         for i in 1..=number_of_streams {
             let stream_id = start_stream_id + i;

@@ -6,10 +6,10 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::client::Client;
 use iggy::models::permissions::{Permissions, StreamPermissions, TopicPermissions};
 use iggy::models::user_info::UserId;
 use iggy::models::user_status::UserStatus;
-use iggy::next_client::ClientNext;
 use predicates::str::{is_match, starts_with};
 use serial_test::parallel;
 
@@ -90,7 +90,7 @@ impl TestUserGetCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestUserGetCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         if self.create_user {
             let create_user = client
                 .create_user(
@@ -157,7 +157,7 @@ impl IggyCmdTestCase for TestUserGetCmd {
         }
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         if self.create_user {
             let deleted = client
                 .delete_user(&self.username.as_str().try_into().unwrap())

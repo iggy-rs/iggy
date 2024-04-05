@@ -1,8 +1,8 @@
-use iggy::clients::next_builder::IggyClientNextBuilder;
-use iggy::clients::next_client::IggyClientNext;
+use iggy::client::{Client, StreamClient, TopicClient, UserClient};
+use iggy::clients::builder::IggyClientBuilder;
+use iggy::clients::client::IggyClient;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::send_messages::{Message, Partitioning};
-use iggy::next_client::{ClientNext, StreamClientNext, TopicClientNext, UserClientNext};
 use iggy::users::defaults::*;
 use iggy::utils::expiry::IggyExpiry;
 use std::env;
@@ -21,7 +21,7 @@ const BATCHES_LIMIT: u32 = 5;
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
 
-    let client = IggyClientNextBuilder::new()
+    let client = IggyClientBuilder::new()
         .with_tcp()
         .with_server_address(get_tcp_server_addr())
         .build()?;
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     produce_messages(&client).await
 }
 
-async fn init_system(client: &IggyClientNext) {
+async fn init_system(client: &IggyClient) {
     match client.create_stream("sample-stream", Some(STREAM_ID)).await {
         Ok(_) => info!("Stream was created."),
         Err(_) => warn!("Stream already exists and will not be created again."),
@@ -62,7 +62,7 @@ async fn init_system(client: &IggyClientNext) {
     }
 }
 
-async fn produce_messages(client: &dyn ClientNext) -> Result<(), Box<dyn Error>> {
+async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
     let interval = Duration::from_millis(500);
     info!(
         "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",

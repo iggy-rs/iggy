@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::models::user_status::UserStatus;
-use crate::next_client::ClientNext;
 use crate::users::update_user::UpdateUser;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -53,7 +53,7 @@ impl CliCommand for UpdateUserCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         client
             .update_user(
                 &self.update_user.user_id,

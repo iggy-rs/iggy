@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::identifier::Identifier;
-use crate::next_client::ClientNext;
 use crate::topics::create_topic::CreateTopic;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
@@ -60,7 +60,7 @@ impl CliCommand for CreateTopicCmd {
         format!("{}", self)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         client
             .create_topic(&self.create_topic.stream_id, &self.create_topic.name, self.create_topic.partitions_count, self.create_topic.compression_algorithm, self.create_topic.replication_factor, self.create_topic.topic_id, self.create_topic.message_expiry.into(), self.create_topic.max_topic_size)
             .await

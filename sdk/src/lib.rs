@@ -17,22 +17,18 @@ pub mod consumer;
 pub mod consumer_groups;
 pub mod consumer_offsets;
 pub mod error;
-#[allow(deprecated)]
 pub mod http;
 pub mod identifier;
 pub mod locking;
 pub mod message_handler;
 pub mod messages;
 pub mod models;
-pub mod next_client;
 pub mod partitioner;
 pub mod partitions;
 pub mod personal_access_tokens;
-#[allow(deprecated)]
 pub mod quic;
 pub mod streams;
 pub mod system;
-#[allow(deprecated)]
 pub mod tcp;
 pub mod topics;
 pub mod users;

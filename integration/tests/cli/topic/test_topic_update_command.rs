@@ -5,8 +5,8 @@ use crate::cli::common::{
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
+use iggy::client::Client;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
-use iggy::next_client::ClientNext;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use predicates::str::diff;
@@ -104,7 +104,7 @@ impl TestTopicUpdateCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestTopicUpdateCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream = client
             .create_stream(&self.stream_name, Some(self.stream_id))
             .await;
@@ -180,7 +180,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
         command_state.success().stdout(diff(expected_message));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let topic = client
             .get_topic(
                 &self.stream_id.try_into().unwrap(),

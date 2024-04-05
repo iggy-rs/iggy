@@ -4,7 +4,7 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
@@ -30,7 +30,7 @@ impl TestStreamListCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestStreamListCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream = client.create_stream(&self.name, Some(self.stream_id)).await;
         assert!(stream.is_ok());
     }
@@ -53,7 +53,7 @@ impl IggyCmdTestCase for TestStreamListCmd {
             .stdout(contains(self.name.clone()));
     }
 
-    async fn verify_server_state(&self, _client: &dyn ClientNext) {}
+    async fn verify_server_state(&self, _client: &dyn Client) {}
 }
 
 #[tokio::test]

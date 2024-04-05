@@ -1,7 +1,6 @@
-use crate::test_server::{ClientFactory, ClientFactoryNext};
+use crate::test_server::ClientFactory;
 use async_trait::async_trait;
 use iggy::client::Client;
-use iggy::next_client::ClientNext;
 use iggy::quic::client::QuicClient;
 use iggy::quic::config::QuicClientConfig;
 use std::sync::Arc;
@@ -20,21 +19,6 @@ impl ClientFactory for QuicClientFactory {
         };
         let client = QuicClient::create(Arc::new(config)).unwrap();
         iggy::client::Client::connect(&client).await.unwrap();
-        Box::new(client)
-    }
-}
-
-#[async_trait]
-impl ClientFactoryNext for QuicClientFactory {
-    async fn create_client(&self) -> Box<dyn ClientNext> {
-        let config = QuicClientConfig {
-            server_address: self.server_addr.clone(),
-            ..QuicClientConfig::default()
-        };
-        let client = QuicClient::create(Arc::new(config)).unwrap();
-        iggy::next_client::ClientNext::connect(&client)
-            .await
-            .unwrap();
         Box::new(client)
     }
 }

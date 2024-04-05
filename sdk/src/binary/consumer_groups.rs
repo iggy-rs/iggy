@@ -1,4 +1,4 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
+use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::ConsumerGroupClient;
@@ -15,44 +15,9 @@ use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
-use crate::next_client::ConsumerGroupClientNext;
 
-#[allow(deprecated)]
 #[async_trait::async_trait]
 impl<B: BinaryClient> ConsumerGroupClient for B {
-    async fn get_consumer_group(
-        &self,
-        command: &GetConsumerGroup,
-    ) -> Result<ConsumerGroupDetails, IggyError> {
-        get_consumer_group(self, command).await
-    }
-
-    async fn get_consumer_groups(
-        &self,
-        command: &GetConsumerGroups,
-    ) -> Result<Vec<ConsumerGroup>, IggyError> {
-        get_consumer_groups(self, command).await
-    }
-
-    async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), IggyError> {
-        create_consumer_group(self, command).await
-    }
-
-    async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), IggyError> {
-        delete_consumer_group(self, command).await
-    }
-
-    async fn join_consumer_group(&self, command: &JoinConsumerGroup) -> Result<(), IggyError> {
-        join_consumer_group(self, command).await
-    }
-
-    async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), IggyError> {
-        leave_consumer_group(self, command).await
-    }
-}
-
-#[async_trait::async_trait]
-impl<B: BinaryClientNext> ConsumerGroupClientNext for B {
     async fn get_consumer_group(
         &self,
         stream_id: &Identifier,

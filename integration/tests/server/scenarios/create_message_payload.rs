@@ -2,13 +2,10 @@ use bytes::Bytes;
 use iggy::client::{MessageClient, StreamClient, TopicClient};
 use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::consumer::Consumer;
-use iggy::identifier::Identifier;
-use iggy::messages::poll_messages::{PollMessages, PollingStrategy};
-use iggy::messages::send_messages::{Message, Partitioning, SendMessages};
+use iggy::messages::poll_messages::PollingStrategy;
+use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::topics::create_topic::CreateTopic;
+use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{assert_clean_system, login_root, ClientFactory};
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -48,26 +45,30 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         });
     }
 
-    let mut send_messages = SendMessages {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partitioning: Partitioning::partition_id(PARTITION_ID),
-        messages,
-    };
-    client.send_messages(&mut send_messages).await.unwrap();
+    client
+        .send_messages(
+            &STREAM_ID.try_into().unwrap(),
+            &TOPIC_ID.try_into().unwrap(),
+            &Partitioning::partition_id(PARTITION_ID),
+            &mut messages,
+        )
+        .await
+        .unwrap();
 
     // 2. Poll messages and validate the headers
-    let poll_messages = PollMessages {
-        consumer: Consumer::default(),
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        partition_id: Some(PARTITION_ID),
-        strategy: PollingStrategy::offset(0),
-        count: MESSAGES_COUNT,
-        auto_commit: false,
-    };
+    let polled_messages = client
+        .poll_messages(
+            &STREAM_ID.try_into().unwrap(),
+            &TOPIC_ID.try_into().unwrap(),
+            Some(PARTITION_ID),
+            &Consumer::default(),
+            &PollingStrategy::offset(0),
+            MESSAGES_COUNT,
+            false,
+        )
+        .await
+        .unwrap();
 
-    let polled_messages = client.poll_messages(&poll_messages).await.unwrap();
     assert_eq!(polled_messages.messages.len() as u32, MESSAGES_COUNT);
     for i in 0..MESSAGES_COUNT {
         let message = polled_messages.messages.get(i as usize).unwrap();
@@ -102,31 +103,32 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
 async fn init_system(client: &IggyClient) {
     // 1. Create the stream
-    let create_stream = CreateStream {
-        stream_id: Some(STREAM_ID),
-        name: STREAM_NAME.to_string(),
-    };
-    client.create_stream(&create_stream).await.unwrap();
+    client
+        .create_stream(STREAM_NAME, Some(STREAM_ID))
+        .await
+        .unwrap();
 
     // 2. Create the topic
-    let create_topic = CreateTopic {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Some(TOPIC_ID),
-        partitions_count: PARTITIONS_COUNT,
-        compression_algorithm: Default::default(),
-        name: TOPIC_NAME.to_string(),
-        message_expiry: None,
-        max_topic_size: None,
-        replication_factor: None,
-    };
-    client.create_topic(&create_topic).await.unwrap();
+    client
+        .create_topic(
+            &STREAM_ID.try_into().unwrap(),
+            TOPIC_NAME,
+            PARTITIONS_COUNT,
+            Default::default(),
+            None,
+            None,
+            IggyExpiry::NeverExpire,
+            None,
+        )
+        .await
+        .unwrap();
 }
 
 async fn cleanup_system(client: &IggyClient) {
-    let delete_stream = DeleteStream {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-    };
-    client.delete_stream(&delete_stream).await.unwrap();
+    client
+        .delete_stream(&STREAM_ID.try_into().unwrap())
+        .await
+        .unwrap();
 }
 
 fn create_message_payload(offset: u64) -> Bytes {

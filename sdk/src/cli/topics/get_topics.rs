@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::identifier::Identifier;
-use crate::next_client::ClientNext;
 use crate::topics::get_topics::GetTopics;
 use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
@@ -48,7 +48,7 @@ impl CliCommand for GetTopicsCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let topics = client
             .get_topics(&self.get_topics.stream_id)
             .await

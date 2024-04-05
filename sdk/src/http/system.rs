@@ -4,7 +4,6 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::stats::Stats;
-use crate::next_client::SystemClientNext;
 use crate::system::get_client::GetClient;
 use crate::system::get_clients::GetClients;
 use crate::system::get_me::GetMe;
@@ -18,29 +17,6 @@ const STATS: &str = "/stats";
 
 #[async_trait]
 impl SystemClient for HttpClient {
-    async fn get_stats(&self, command: &GetStats) -> Result<Stats, IggyError> {
-        get_stats(self, command).await
-    }
-
-    async fn get_me(&self, command: &GetMe) -> Result<ClientInfoDetails, IggyError> {
-        get_me(self, command).await
-    }
-
-    async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, IggyError> {
-        get_client(self, command).await
-    }
-
-    async fn get_clients(&self, command: &GetClients) -> Result<Vec<ClientInfo>, IggyError> {
-        get_clients(self, command).await
-    }
-
-    async fn ping(&self, command: &Ping) -> Result<(), IggyError> {
-        ping(self, command).await
-    }
-}
-
-#[async_trait]
-impl SystemClientNext for HttpClient {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
         get_stats(self, &GetStats {}).await
     }

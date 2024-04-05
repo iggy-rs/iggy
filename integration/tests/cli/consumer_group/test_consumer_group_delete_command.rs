@@ -4,7 +4,7 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use iggy::utils::expiry::IggyExpiry;
 use predicates::str::diff;
 use serial_test::parallel;
@@ -69,7 +69,7 @@ impl TestConsumerGroupDeleteCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestConsumerGroupDeleteCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream = client
             .create_stream(&self.stream_name, Some(self.stream_id))
             .await;
@@ -130,7 +130,7 @@ impl IggyCmdTestCase for TestConsumerGroupDeleteCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let consumer_groups = client
             .get_consumer_groups(
                 &self.stream_id.try_into().unwrap(),

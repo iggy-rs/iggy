@@ -1,8 +1,8 @@
 use clap::Parser;
+use iggy::client::Client;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::messages::send_messages::{Message, Partitioning};
-use iggy::next_client::ClientNext;
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::system;
 use std::error::Error;
@@ -19,14 +19,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
-    let client = client_provider::get_raw_connected_client_next(client_provider_config).await?;
+    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
     let client = client.as_ref();
     system::login_root(client).await;
     system::init_by_producer(&args, client).await?;
     produce_messages(&args, client).await
 }
 
-async fn produce_messages(args: &Args, client: &dyn ClientNext) -> Result<(), Box<dyn Error>> {
+async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {
     info!(
         "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.stream_id, args.topic_id, args.partition_id, args.interval

@@ -1,27 +1,18 @@
+use crate::server::scenarios::{
+    cleanup, create_client, join_consumer_group, CONSUMER_GROUP_ID, CONSUMER_GROUP_NAME,
+    PARTITIONS_COUNT, STREAM_ID, STREAM_NAME, TOPIC_ID, TOPIC_NAME, USERNAME_1, USERNAME_2,
+    USERNAME_3,
+};
 use iggy::client::{ConsumerGroupClient, StreamClient, SystemClient, TopicClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
-use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
-use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
+use iggy::clients::client::IggyClient;
+use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use iggy::models::client_info::ClientInfoDetails;
 use iggy::models::consumer_group::ConsumerGroupDetails;
-use iggy::streams::create_stream::CreateStream;
-use iggy::system::get_me::GetMe;
-use iggy::topics::create_topic::CreateTopic;
+use iggy::utils::expiry::IggyExpiry;
 use integration::test_server::{
-    assert_clean_system, create_user, delete_user, login_root, login_user, ClientFactory,
+    assert_clean_system, create_user, login_root, login_user, ClientFactory,
 };
-const STREAM_ID: u32 = 1;
-const TOPIC_ID: u32 = 1;
-const STREAM_NAME: &str = "test-stream";
-const TOPIC_NAME: &str = "test-topic";
-const PARTITIONS_COUNT: u32 = 3;
-const CONSUMER_GROUP_ID: u32 = 10;
-const CONSUMER_GROUP_NAME: &str = "test-consumer-group";
-const USERNAME_1: &str = "user1";
-const USERNAME_2: &str = "user2";
-const USERNAME_3: &str = "user3";
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let system_client = create_client(client_factory).await;
@@ -33,34 +24,34 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     login_root(&system_client).await;
 
     // 1. Create the stream
-    let create_stream = CreateStream {
-        stream_id: Some(STREAM_ID),
-        name: STREAM_NAME.to_string(),
-    };
-    system_client.create_stream(&create_stream).await.unwrap();
+    system_client
+        .create_stream(STREAM_NAME, Some(STREAM_ID))
+        .await
+        .unwrap();
 
     // 2. Create the topic
-    let create_topic = CreateTopic {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Some(TOPIC_ID),
-        partitions_count: PARTITIONS_COUNT,
-        compression_algorithm: Default::default(),
-        name: TOPIC_NAME.to_string(),
-        message_expiry: None,
-        max_topic_size: None,
-        replication_factor: None,
-    };
-    system_client.create_topic(&create_topic).await.unwrap();
+    system_client
+        .create_topic(
+            &Identifier::numeric(STREAM_ID).unwrap(),
+            TOPIC_NAME,
+            PARTITIONS_COUNT,
+            CompressionAlgorithm::default(),
+            None,
+            Some(TOPIC_ID),
+            IggyExpiry::NeverExpire,
+            None,
+        )
+        .await
+        .unwrap();
 
     // 3. Create the consumer group
-    let create_group = CreateConsumerGroup {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        group_id: Some(CONSUMER_GROUP_ID),
-        name: CONSUMER_GROUP_NAME.to_string(),
-    };
     system_client
-        .create_consumer_group(&create_group)
+        .create_consumer_group(
+            &Identifier::numeric(STREAM_ID).unwrap(),
+            &Identifier::numeric(TOPIC_ID).unwrap(),
+            CONSUMER_GROUP_NAME,
+            Some(CONSUMER_GROUP_ID),
+        )
         .await
         .unwrap();
 
@@ -122,22 +113,12 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_ne!(member1.partitions[0], member3.partitions[0]);
     assert_ne!(member2.partitions[0], member3.partitions[0]);
 
-    cleanup(&system_client).await;
+    cleanup(&system_client, true).await;
     assert_clean_system(&system_client).await;
 }
 
-async fn join_consumer_group(client: &IggyClient) {
-    let join_group = JoinConsumerGroup {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
-    };
-    client.join_consumer_group(&join_group).await.unwrap();
-}
-
 async fn get_me_and_validate_consumer_groups(client: &IggyClient) -> ClientInfoDetails {
-    let get_me = GetMe {};
-    let client_info = client.get_me(&get_me).await.unwrap();
+    let client_info = client.get_me().await.unwrap();
 
     assert!(client_info.client_id > 0);
     assert_eq!(client_info.consumer_groups_count, 1);
@@ -155,12 +136,14 @@ async fn get_consumer_group_and_validate_members(
     client: &IggyClient,
     members_count: u32,
 ) -> ConsumerGroupDetails {
-    let get_group = GetConsumerGroup {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-        topic_id: Identifier::numeric(TOPIC_ID).unwrap(),
-        consumer_group_id: Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
-    };
-    let consumer_group = client.get_consumer_group(&get_group).await.unwrap();
+    let consumer_group = client
+        .get_consumer_group(
+            &Identifier::numeric(STREAM_ID).unwrap(),
+            &Identifier::numeric(TOPIC_ID).unwrap(),
+            &Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
+        )
+        .await
+        .unwrap();
 
     assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
     assert_eq!(consumer_group.name, CONSUMER_GROUP_NAME);
@@ -169,26 +152,4 @@ async fn get_consumer_group_and_validate_members(
     assert_eq!(consumer_group.members.len() as u32, members_count);
 
     consumer_group
-}
-
-async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
-    let client = client_factory.create_client().await;
-    IggyClient::create(
-        client,
-        IggyClientBackgroundConfig::default(),
-        None,
-        None,
-        None,
-    )
-}
-
-async fn cleanup(system_client: &IggyClient) {
-    delete_user(system_client, USERNAME_1).await;
-    delete_user(system_client, USERNAME_2).await;
-    delete_user(system_client, USERNAME_3).await;
-
-    let delete_stream = iggy::streams::delete_stream::DeleteStream {
-        stream_id: Identifier::numeric(STREAM_ID).unwrap(),
-    };
-    system_client.delete_stream(&delete_stream).await.unwrap();
 }

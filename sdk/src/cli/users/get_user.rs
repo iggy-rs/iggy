@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::models::permissions::{GlobalPermissions, StreamPermissions, TopicPermissions};
-use crate::next_client::ClientNext;
 use crate::users::get_user::GetUser;
 use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
@@ -136,7 +136,7 @@ impl CliCommand for GetUserCmd {
         format!("get user with ID: {}", self.get_user.user_id)
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let user = client
             .get_user(&self.get_user.user_id)
             .await

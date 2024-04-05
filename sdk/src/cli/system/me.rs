@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::next_client::ClientNext;
+use crate::client::Client;
 use crate::system::get_me::GetMe;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -28,7 +28,7 @@ impl CliCommand for GetMeCmd {
         "me command".to_owned()
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let client_info = client
             .get_me()
             .await

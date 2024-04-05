@@ -1,7 +1,7 @@
 use crate::cli::system::session::ServerSession;
 use crate::cli::utils::login_session_expiry::LoginSessionExpiry;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::next_client::ClientNext;
+use crate::client::Client;
 use anyhow::Context;
 use async_trait::async_trait;
 use tracing::{event, Level};
@@ -28,7 +28,7 @@ impl CliCommand for LoginCmd {
         "login command".to_owned()
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         if self.server_session.is_active() {
             event!(target: PRINT_TARGET, Level::INFO, "Already logged into Iggy server {}", self.server_session.get_server_address());
             return Ok(());

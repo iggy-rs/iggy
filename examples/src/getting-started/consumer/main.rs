@@ -1,8 +1,8 @@
-use iggy::clients::next_builder::IggyClientNextBuilder;
+use iggy::client::{Client, UserClient};
+use iggy::clients::builder::IggyClientBuilder;
 use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
-use iggy::next_client::{ClientNext, UserClientNext};
 use iggy::users::defaults::*;
 use std::env;
 use std::error::Error;
@@ -18,14 +18,14 @@ const BATCHES_LIMIT: u32 = 5;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     tracing_subscriber::fmt::init();
-    let client = IggyClientNextBuilder::new()
+    let client = IggyClientBuilder::new()
         .with_tcp()
         .with_server_address(get_tcp_server_addr())
         .build()?;
 
     // Or, instead of above lines, you can just use below code, which will create a Iggy
     // TCP client with default config (default server address for TCP is 127.0.0.1:8090):
-    // let client = IggyClientNext::default();
+    // let client = IggyClient::default();
 
     client.connect().await?;
     client
@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     consume_messages(&client).await
 }
 
-async fn consume_messages(client: &dyn ClientNext) -> Result<(), Box<dyn Error>> {
+async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
     let interval = Duration::from_millis(500);
     info!(
         "Messages will be consumed from stream: {}, topic: {}, partition: {} with interval {} ms.",

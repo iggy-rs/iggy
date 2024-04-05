@@ -3,7 +3,7 @@ use comfy_table::Table;
 use tracing::{event, Level};
 
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::next_client::ClientNext;
+use crate::client::Client;
 
 use super::common::ContextManager;
 
@@ -56,7 +56,7 @@ impl CliCommand for GetContextsCmd {
         false
     }
 
-    async fn execute_cmd(&mut self, _client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, _client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let mut context_mgr = ContextManager::default();
         let contexts_map = context_mgr.get_contexts().await?;
         let active_context_key = context_mgr.get_active_context_key().await?;

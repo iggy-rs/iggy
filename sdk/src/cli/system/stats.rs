@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::next_client::ClientNext;
+use crate::client::Client;
 use crate::system::get_stats::GetStats;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -49,7 +49,7 @@ impl CliCommand for GetStatsCmd {
         "stats command".to_owned()
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let stats = client
             .get_stats()
             .await

@@ -4,9 +4,9 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::client::Client;
 use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::next_client::ClientNext;
 use iggy::utils::expiry::IggyExpiry;
 use predicates::str::diff;
 use serial_test::parallel;
@@ -121,7 +121,7 @@ impl TestMessageSendCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestMessageSendCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream = client
             .create_stream(&self.stream_name, self.stream_id.into())
             .await;
@@ -174,7 +174,7 @@ impl IggyCmdTestCase for TestMessageSendCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let topic = client
             .get_topic(
                 &self.stream_id.try_into().unwrap(),

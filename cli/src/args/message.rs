@@ -1,5 +1,9 @@
 use clap::{ArgGroup, Args, Subcommand};
+use iggy::error::IggyError;
+use iggy::error::IggyError::InvalidFormat;
 use iggy::identifier::Identifier;
+use iggy::models::header::{HeaderKey, HeaderValue};
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum MessageAction {
@@ -59,6 +63,29 @@ pub(crate) struct SendMessagesArgs {
     /// of each message is defined by the used shell.
     #[clap(verbatim_doc_comment)]
     pub(crate) messages: Option<Vec<String>>,
+
+    /// Comma separated list of key:kind:value, sent as header with the message
+    ///
+    /// Headers are comma seperated key-value pairs that can be sent with the message.
+    /// Kind can be one of the following: raw, string, bool, int8, int16, int32, int64,
+    /// int128, uint8, uint16, uint32, uint64, uint128, float32, float64
+    #[clap(verbatim_doc_comment)]
+    #[clap(short = 'H', long, value_parser = parse_key_val, value_delimiter = ',')]
+    pub(crate) headers: Vec<(HeaderKey, HeaderValue)>,
+}
+
+/// Parse Header Key, Kind and Value from the string separated by a ':'
+fn parse_key_val(s: &str) -> Result<(HeaderKey, HeaderValue), IggyError> {
+    let lower = s.to_lowercase();
+    let parts = lower.split(':').collect::<Vec<_>>();
+
+    if parts.len() != 3 {
+        Err(InvalidFormat)?;
+    }
+
+    let key = HeaderKey::from_str(parts[0])?;
+    let value = HeaderValue::from_kind_str_and_value_str(parts[1], parts[2])?;
+    Ok((key, value))
 }
 
 #[derive(Debug, Clone, Args)]
@@ -115,4 +142,76 @@ pub(crate) struct PollMessagesArgs {
     #[clap(verbatim_doc_comment)]
     #[clap(short, long, default_value_t = Identifier::default(), value_parser = clap::value_parser!(Identifier))]
     pub(crate) consumer: Identifier,
+
+    /// Include the message headers in the output
+    ///
+    /// Flag indicates whether to include headers in the output
+    /// after polling the messages.
+    #[clap(verbatim_doc_comment)]
+    #[clap(short, long, default_value_t = false)]
+    pub(crate) show_headers: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::str::FromStr;
+
+    #[test]
+    fn parse_key_val_should_parse_string() {
+        let expected_value: &str = "value";
+        let result = parse_key_val(&format!("key:String:{}", expected_value));
+        assert!(result.is_ok());
+        let (key, value) = result.unwrap();
+        assert_eq!(key, HeaderKey::from_str("key").unwrap());
+        assert_eq!(value.as_str().unwrap(), expected_value);
+    }
+
+    #[test]
+    fn parse_key_val_should_parse_uint8() {
+        let expected_value: u8 = 4;
+        let result = parse_key_val(&format!("key:uint8:{}", expected_value));
+        assert!(result.is_ok());
+        let (key, value) = result.unwrap();
+        assert_eq!(key, HeaderKey::from_str("key").unwrap());
+        assert_eq!(value.as_uint8().unwrap(), expected_value);
+    }
+
+    #[test]
+    fn parse_key_val_should_parse_float64() {
+        let expected_value: f64 = 42.0;
+        let result = parse_key_val(&format!("key:float64:{}", expected_value));
+        assert!(result.is_ok());
+        let (key, value) = result.unwrap();
+        assert_eq!(key, HeaderKey::from_str("key").unwrap());
+        assert_eq!(value.as_float64().unwrap(), expected_value);
+    }
+
+    #[test]
+    fn parse_key_val_should_parse_bool() {
+        let expected_value = true;
+        let result = parse_key_val(&format!("key:bool:{}", expected_value));
+        assert!(result.is_ok());
+        let (key, value) = result.unwrap();
+        assert_eq!(key, HeaderKey::from_str("key").unwrap());
+        assert_eq!(value.as_bool().unwrap(), expected_value);
+    }
+
+    #[test]
+    fn parse_key_val_to_less_params_should_return_err() {
+        let result = parse_key_val("key:string");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_key_val_wrong_kind_should_return_err() {
+        let result = parse_key_val("key:strin:value");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn parse_key_val_no_matching_value_should_return_err() {
+        let result = parse_key_val("key:uint8:69.42");
+        assert!(result.is_err());
+    }
 }

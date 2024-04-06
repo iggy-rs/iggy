@@ -233,6 +233,7 @@ fn get_command(
                 send_args.partition_id,
                 send_args.message_key.clone(),
                 send_args.messages.clone(),
+                send_args.headers.clone(),
             )),
             MessageAction::Poll(poll_args) => Box::new(PollMessagesCmd::new(
                 poll_args.stream_id.clone(),
@@ -245,6 +246,7 @@ fn get_command(
                 poll_args.last,
                 poll_args.next,
                 poll_args.consumer.clone(),
+                poll_args.show_headers,
             )),
         },
         Command::ConsumerOffset(command) => match command {

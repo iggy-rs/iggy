@@ -2,10 +2,11 @@ use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::messages::send_messages::{Message, Partitioning};
+use crate::models::header::{HeaderKey, HeaderValue};
 use anyhow::Context;
 use async_trait::async_trait;
+use std::collections::HashMap;
 use std::io::{self, Read};
-use std::vec::Vec;
 use tracing::{event, Level};
 
 pub struct SendMessagesCmd {
@@ -13,6 +14,7 @@ pub struct SendMessagesCmd {
     topic_id: Identifier,
     partitioning: Partitioning,
     messages: Option<Vec<String>>,
+    headers: Vec<(HeaderKey, HeaderValue)>,
 }
 
 impl SendMessagesCmd {
@@ -22,6 +24,7 @@ impl SendMessagesCmd {
         partition_id: Option<u32>,
         message_key: Option<String>,
         messages: Option<Vec<String>>,
+        headers: Vec<(HeaderKey, HeaderValue)>,
     ) -> Self {
         let partitioning = match (partition_id, message_key) {
             (Some(_), Some(_)) => unreachable!(),
@@ -40,6 +43,7 @@ impl SendMessagesCmd {
             topic_id,
             partitioning,
             messages,
+            headers,
         }
     }
 
@@ -49,6 +53,13 @@ impl SendMessagesCmd {
         io::stdin().read_to_string(&mut buffer)?;
 
         Ok(buffer)
+    }
+
+    fn get_headers(&self) -> Option<HashMap<HeaderKey, HeaderValue>> {
+        match self.headers.len() {
+            0 => None,
+            _ => Some(self.headers.iter().cloned().collect()),
+        }
     }
 }
 
@@ -65,14 +76,14 @@ impl CliCommand for SendMessagesCmd {
         let mut messages = match &self.messages {
             Some(messages) => messages
                 .iter()
-                .map(|s| Message::new(None, s.clone().into(), None))
+                .map(|s| Message::new(None, s.clone().into(), self.get_headers()))
                 .collect::<Vec<_>>(),
             None => {
                 let input = self.read_message_from_stdin()?;
 
                 input
                     .lines()
-                    .map(|m| Message::new(None, String::from(m).into(), None))
+                    .map(|m| Message::new(None, String::from(m).into(), self.get_headers()))
                     .collect()
             }
         };

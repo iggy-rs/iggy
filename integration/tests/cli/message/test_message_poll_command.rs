@@ -4,12 +4,15 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use bytes::Bytes;
 use iggy::client::Client;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::utils::expiry::IggyExpiry;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
+use std::collections::HashMap;
 use std::str::FromStr;
 
 struct TestMessagePollCmd {
@@ -24,6 +27,8 @@ struct TestMessagePollCmd {
     strategy: PollingStrategy,
     using_stream_id: TestStreamId,
     using_topic_id: TestTopicId,
+    show_headers: bool,
+    headers: (HeaderKey, HeaderValue),
 }
 
 impl TestMessagePollCmd {
@@ -40,6 +45,8 @@ impl TestMessagePollCmd {
         strategy: PollingStrategy,
         using_stream_id: TestStreamId,
         using_topic_id: TestTopicId,
+        show_headers: bool,
+        headers: (HeaderKey, HeaderValue),
     ) -> Self {
         assert!(partition_id <= partitions_count);
         assert!(partition_id > 0);
@@ -56,6 +63,8 @@ impl TestMessagePollCmd {
             strategy,
             using_stream_id,
             using_topic_id,
+            show_headers,
+            headers,
         }
     }
 
@@ -74,6 +83,10 @@ impl TestMessagePollCmd {
             "--message-count".into(),
             format!("{}", self.message_count),
         ]);
+
+        if self.show_headers {
+            command.extend(vec!["--show-headers".into()]);
+        }
 
         command.extend(match self.using_stream_id {
             TestStreamId::Numeric => vec![format!("{}", self.stream_id)],
@@ -116,7 +129,10 @@ impl IggyCmdTestCase for TestMessagePollCmd {
         let mut messages = self
             .messages
             .iter()
-            .filter_map(|s| Message::from_str(s).ok())
+            .map(|s| {
+                let payload = Bytes::from(s.as_bytes().to_vec());
+                Message::new(None, payload, Some(HashMap::from([self.headers.clone()])))
+            })
             .collect::<Vec<_>>();
 
         let send_status = client
@@ -152,7 +168,15 @@ impl IggyCmdTestCase for TestMessagePollCmd {
         let message = format!("Executing poll messages from topic ID: {} and stream with ID: {}\nPolled messages from topic with ID: {} and stream with ID: {} (from partition with ID: {})\nPolled {} messages",
             topic_id, stream_id, topic_id, stream_id, self.partition_id, self.message_count);
 
-        let status = command_state.success().stdout(starts_with(message));
+        let mut status = command_state.success().stdout(starts_with(message));
+
+        if self.show_headers {
+            status = status
+                .stdout(contains(format!("Header: {}", self.headers.0)))
+                .stdout(contains(self.headers.1.kind.to_string()))
+                .stdout(contains(self.headers.1.value_only_to_string()).count(self.message_count))
+        }
+
         // Check if messages are printed based on the strategy
         match self.strategy.kind {
             PollingKind::Offset => {
@@ -219,13 +243,19 @@ pub async fn should_be_successful() {
         "accusantium doloremque laudantium, totam rem aperiam, eaque ipsa".into(),
     ];
 
-    let test_parameters: Vec<(u32, usize, PollingStrategy, TestStreamId, TestTopicId)> = vec![
+    let test_headers = (
+        HeaderKey::from_str("key1").unwrap(),
+        HeaderValue::from_str("value1").unwrap(),
+    );
+
+    let test_parameters: Vec<(u32, usize, PollingStrategy, TestStreamId, TestTopicId, bool)> = vec![
         (
             1,
             1,
             PollingStrategy::offset(0),
             TestStreamId::Numeric,
             TestTopicId::Numeric,
+            true,
         ),
         (
             2,
@@ -233,6 +263,7 @@ pub async fn should_be_successful() {
             PollingStrategy::offset(0),
             TestStreamId::Numeric,
             TestTopicId::Named,
+            true,
         ),
         (
             3,
@@ -240,6 +271,7 @@ pub async fn should_be_successful() {
             PollingStrategy::offset(3),
             TestStreamId::Named,
             TestTopicId::Numeric,
+            true,
         ),
         (
             4,
@@ -247,6 +279,7 @@ pub async fn should_be_successful() {
             PollingStrategy::first(),
             TestStreamId::Named,
             TestTopicId::Named,
+            true,
         ),
         (
             1,
@@ -254,6 +287,7 @@ pub async fn should_be_successful() {
             PollingStrategy::last(),
             TestStreamId::Numeric,
             TestTopicId::Numeric,
+            true,
         ),
         (
             2,
@@ -261,11 +295,13 @@ pub async fn should_be_successful() {
             PollingStrategy::next(),
             TestStreamId::Numeric,
             TestTopicId::Named,
+            false,
         ),
     ];
 
     iggy_cmd_test.setup().await;
-    for (partition_id, message_count, strategy, using_stream_id, using_topic_id) in test_parameters
+    for (partition_id, message_count, strategy, using_stream_id, using_topic_id, show_headers) in
+        test_parameters
     {
         iggy_cmd_test
             .execute_test(TestMessagePollCmd::new(
@@ -280,6 +316,8 @@ pub async fn should_be_successful() {
                 strategy,
                 using_stream_id,
                 using_topic_id,
+                show_headers,
+                test_headers.clone(),
             ))
             .await;
     }
@@ -357,6 +395,12 @@ Options:
 {CLAP_INDENT}
           [default: 1]
 
+  -s, --show-headers
+          Include the message headers in the output
+{CLAP_INDENT}
+          Flag indicates whether to include headers in the output
+          after polling the messages.
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -391,6 +435,7 @@ Options:
   -l, --last                           Polling strategy - start polling from the last message in the partition
   -n, --next                           Polling strategy - start polling from the next message
   -c, --consumer <CONSUMER>            Regular consumer which will poll messages [default: 1]
+  -s, --show-headers                   Include the message headers in the output
   -h, --help                           Print help (see more with '--help')
 "#,
             ),

@@ -1,25 +1,25 @@
 use crate::shared::args::Args;
+use iggy::client::Client;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
-use iggy::next_client::ClientNext;
 use iggy::users::defaults::*;
 use iggy::utils::expiry::IggyExpiry;
 use tracing::info;
 
 type MessageHandler = dyn Fn(&PolledMessage) -> Result<(), Box<dyn std::error::Error>>;
 
-pub async fn login_root(client: &dyn ClientNext) {
+pub async fn login_root(client: &dyn Client) {
     client
         .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
         .await
         .unwrap();
 }
 
-pub async fn init_by_consumer(args: &Args, client: &dyn ClientNext) {
+pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
     let (stream_id, topic_id, partition_id) = (args.stream_id, args.topic_id, args.partition_id);
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
     loop {
@@ -57,7 +57,7 @@ pub async fn init_by_consumer(args: &Args, client: &dyn ClientNext) {
     }
 }
 
-pub async fn init_by_producer(args: &Args, client: &dyn ClientNext) -> Result<(), IggyError> {
+pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), IggyError> {
     let stream = client.get_stream(&args.stream_id.try_into()?).await;
     if stream.is_ok() {
         return Ok(());
@@ -82,7 +82,7 @@ pub async fn init_by_producer(args: &Args, client: &dyn ClientNext) -> Result<()
 
 pub async fn consume_messages(
     args: &Args,
-    client: &dyn ClientNext,
+    client: &dyn Client,
     handle_message: &MessageHandler,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",

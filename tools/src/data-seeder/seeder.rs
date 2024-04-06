@@ -1,8 +1,8 @@
-use iggy::clients::next_client::IggyClientNext;
+use iggy::client::{MessageClient, StreamClient, TopicClient};
+use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
-use iggy::next_client::{MessageClientNext, StreamClientNext, TopicClientNext};
 use iggy::utils::expiry::IggyExpiry;
 use rand::Rng;
 use std::collections::HashMap;
@@ -12,21 +12,21 @@ const PROD_STREAM_ID: u32 = 1;
 const TEST_STREAM_ID: u32 = 2;
 const DEV_STREAM_ID: u32 = 3;
 
-pub async fn seed(client: &IggyClientNext) -> Result<(), IggyError> {
+pub async fn seed(client: &IggyClient) -> Result<(), IggyError> {
     create_streams(client).await?;
     create_topics(client).await?;
     send_messages(client).await?;
     Ok(())
 }
 
-async fn create_streams(client: &IggyClientNext) -> Result<(), IggyError> {
+async fn create_streams(client: &IggyClient) -> Result<(), IggyError> {
     client.create_stream("prod", Some(PROD_STREAM_ID)).await?;
     client.create_stream("test", Some(TEST_STREAM_ID)).await?;
     client.create_stream("dev", Some(DEV_STREAM_ID)).await?;
     Ok(())
 }
 
-async fn create_topics(client: &IggyClientNext) -> Result<(), IggyError> {
+async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
     let streams = [PROD_STREAM_ID, TEST_STREAM_ID, DEV_STREAM_ID];
     for stream_id in streams {
         let stream_id = stream_id.try_into()?;
@@ -98,7 +98,7 @@ async fn create_topics(client: &IggyClientNext) -> Result<(), IggyError> {
     Ok(())
 }
 
-async fn send_messages(client: &IggyClientNext) -> Result<(), IggyError> {
+async fn send_messages(client: &IggyClient) -> Result<(), IggyError> {
     let mut rng = rand::thread_rng();
     let streams = [PROD_STREAM_ID, TEST_STREAM_ID, DEV_STREAM_ID];
     let partitioning = Partitioning::balanced();

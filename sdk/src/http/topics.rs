@@ -5,7 +5,6 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::models::topic::{Topic, TopicDetails};
-use crate::next_client::TopicClientNext;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
@@ -18,33 +17,6 @@ use async_trait::async_trait;
 
 #[async_trait]
 impl TopicClient for HttpClient {
-    async fn get_topic(&self, command: &GetTopic) -> Result<TopicDetails, IggyError> {
-        get_topic(self, command).await
-    }
-
-    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, IggyError> {
-        get_topics(self, command).await
-    }
-
-    async fn create_topic(&self, command: &CreateTopic) -> Result<(), IggyError> {
-        create_topic(self, command).await
-    }
-
-    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), IggyError> {
-        update_topic(self, command).await
-    }
-
-    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), IggyError> {
-        delete_topic(self, command).await
-    }
-
-    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), IggyError> {
-        purge_topic(self, command).await
-    }
-}
-
-#[async_trait]
-impl TopicClientNext for HttpClient {
     async fn get_topic(
         &self,
         stream_id: &Identifier,

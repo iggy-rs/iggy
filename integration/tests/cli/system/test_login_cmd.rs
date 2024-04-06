@@ -2,7 +2,7 @@ use crate::cli::common::{IggyCmdCommand, IggyCmdTestCase};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::cli::system::session::ServerSession;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use predicates::str::diff;
 
@@ -31,7 +31,7 @@ impl TestLoginCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestLoginCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let login_session = ServerSession::new(self.server_address.clone());
         match self.login_type {
             TestLoginCmdType::Success | TestLoginCmdType::SuccessWithTimeout(_) => {
@@ -90,7 +90,7 @@ impl IggyCmdTestCase for TestLoginCmd {
         }
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let login_session = ServerSession::new(self.server_address.clone());
         assert!(login_session.is_active());
 

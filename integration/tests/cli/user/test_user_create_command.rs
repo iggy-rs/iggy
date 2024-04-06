@@ -4,9 +4,9 @@ use crate::cli::common::{
 use crate::cli::user::common::PermissionsTestArgs;
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::client::Client;
 use iggy::models::permissions::{GlobalPermissions, StreamPermissions, TopicPermissions};
 use iggy::models::{permissions::Permissions, user_status::UserStatus};
-use iggy::next_client::ClientNext;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::collections::HashMap;
@@ -77,7 +77,7 @@ impl TestUserCreateCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestUserCreateCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {}
+    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
@@ -94,7 +94,7 @@ impl IggyCmdTestCase for TestUserCreateCmd {
                                             self.username, self.password, self.username, self.password)));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let user = client
             .get_user(&self.username.as_str().try_into().unwrap())
             .await;

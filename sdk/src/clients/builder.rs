@@ -1,21 +1,19 @@
+use crate::client::Client;
+use crate::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use crate::error::IggyError;
+use crate::http::client::HttpClient;
+use crate::http::config::HttpClientConfigBuilder;
+use crate::message_handler::MessageHandler;
+use crate::partitioner::Partitioner;
+use crate::quic::client::QuicClient;
+use crate::quic::config::QuicClientConfigBuilder;
+use crate::tcp::client::TcpClient;
+use crate::tcp::config::TcpClientConfigBuilder;
+use crate::utils::crypto::Encryptor;
 use std::sync::Arc;
-
-use crate::{
-    client::Client,
-    error::IggyError,
-    http::{client::HttpClient, config::HttpClientConfigBuilder},
-    message_handler::MessageHandler,
-    partitioner::Partitioner,
-    quic::{client::QuicClient, config::QuicClientConfigBuilder},
-    tcp::{client::TcpClient, config::TcpClientConfigBuilder},
-    utils::crypto::Encryptor,
-};
-
-use super::client::{IggyClient, IggyClientBackgroundConfig};
 use tracing::error;
 
 /// The builder for the `IggyClient` instance, which allows to configure and provide custom implementations for the partitioner, encryptor or message handler.
-#[deprecated(since = "0.3.0", note = "Use `IggyClientNextBuilder` instead")]
 #[derive(Debug, Default)]
 pub struct IggyClientBuilder {
     client: Option<Box<dyn Client>>,
@@ -28,7 +26,6 @@ pub struct IggyClientBuilder {
 impl IggyClientBuilder {
     /// Creates a new `IggyClientBuilder`.
     /// This is not enough to build the `IggyClient` instance. You need to provide the client configuration or the client implementation for the specific transport.
-    #[must_use]
     pub fn new() -> Self {
         IggyClientBuilder::default()
     }
@@ -113,7 +110,7 @@ impl IggyClientBuilder {
     }
 }
 
-#[deprecated(since = "0.3.0", note = "Use `TcpClientNextBuilder` instead")]
+#[derive(Debug, Default)]
 pub struct TcpClientBuilder {
     config: TcpClientConfigBuilder,
     parent_builder: IggyClientBuilder,
@@ -160,7 +157,7 @@ impl TcpClientBuilder {
     }
 }
 
-#[deprecated(since = "0.3.0", note = "Use `QuicClientNextBuilder` instead")]
+#[derive(Debug, Default)]
 pub struct QuicClientBuilder {
     config: QuicClientConfigBuilder,
     parent_builder: IggyClientBuilder,
@@ -201,7 +198,7 @@ impl QuicClientBuilder {
     }
 }
 
-#[deprecated(since = "0.3.0", note = "Use `HttpClientNextBuilder` instead")]
+#[derive(Debug, Default)]
 pub struct HttpClientBuilder {
     config: HttpClientConfigBuilder,
     parent_builder: IggyClientBuilder,

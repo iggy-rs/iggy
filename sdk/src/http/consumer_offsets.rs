@@ -7,25 +7,10 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
-use crate::next_client::ConsumerOffsetClientNext;
 use async_trait::async_trait;
 
 #[async_trait]
 impl ConsumerOffsetClient for HttpClient {
-    async fn store_consumer_offset(&self, command: &StoreConsumerOffset) -> Result<(), IggyError> {
-        store_consumer_offset(self, command).await
-    }
-
-    async fn get_consumer_offset(
-        &self,
-        command: &GetConsumerOffset,
-    ) -> Result<ConsumerOffsetInfo, IggyError> {
-        get_consumer_offset(self, command).await
-    }
-}
-
-#[async_trait]
-impl ConsumerOffsetClientNext for HttpClient {
     async fn store_consumer_offset(
         &self,
         consumer: &Consumer,

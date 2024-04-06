@@ -4,9 +4,9 @@ use anyhow::{bail, Context};
 use iggy::args::Args;
 use iggy::cli::system::session::ServerSession;
 use iggy::cli_command::PRINT_TARGET;
-use iggy::clients::next_client::IggyClientNext;
+use iggy::client::{PersonalAccessTokenClient, UserClient};
+use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
-use iggy::next_client::{PersonalAccessTokenClientNext, UserClientNext};
 use keyring::Entry;
 use passterm::{isatty, prompt_password_stdin, prompt_password_tty, Stream};
 use std::env::var;
@@ -28,7 +28,7 @@ enum Credentials {
 
 pub(crate) struct IggyCredentials<'a> {
     credentials: Option<Credentials>,
-    iggy_client: Option<&'a IggyClientNext>,
+    iggy_client: Option<&'a IggyClient>,
     login_required: bool,
 }
 
@@ -114,7 +114,7 @@ impl<'a> IggyCredentials<'a> {
         }
     }
 
-    pub(crate) fn set_iggy_client(&mut self, iggy_client: &'a IggyClientNext) {
+    pub(crate) fn set_iggy_client(&mut self, iggy_client: &'a IggyClient) {
         self.iggy_client = Some(iggy_client);
     }
 

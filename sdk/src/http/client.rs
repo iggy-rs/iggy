@@ -4,7 +4,6 @@ use crate::http::config::HttpClientConfig;
 use crate::http::HttpTransport;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::models::identity_info::IdentityInfo;
-use crate::next_client::ClientNext;
 use async_trait::async_trait;
 use reqwest::{Response, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -35,17 +34,6 @@ pub struct HttpClient {
 
 #[async_trait]
 impl Client for HttpClient {
-    async fn connect(&self) -> Result<(), IggyError> {
-        HttpClient::connect(self).await
-    }
-
-    async fn disconnect(&self) -> Result<(), IggyError> {
-        HttpClient::disconnect(self).await
-    }
-}
-
-#[async_trait]
-impl ClientNext for HttpClient {
     async fn connect(&self) -> Result<(), IggyError> {
         HttpClient::connect(self).await
     }

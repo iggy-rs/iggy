@@ -61,7 +61,7 @@ use iggy::cli::{
 };
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider::{self, ClientProviderConfig};
-use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use std::sync::Arc;
@@ -321,11 +321,11 @@ async fn main() -> Result<(), IggyCmdError> {
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(iggy_args.clone())?);
 
     let client =
-        client_provider::get_raw_client_next(client_provider_config, command.connection_required())
+        client_provider::get_raw_client(client_provider_config, command.connection_required())
             .await?;
-    let client = IggyClientNext::create(
+    let client = IggyClient::create(
         client,
-        IggyClientNextBackgroundConfig::default(),
+        IggyClientBackgroundConfig::default(),
         None,
         None,
         encryptor,

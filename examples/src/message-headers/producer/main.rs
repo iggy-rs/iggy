@@ -1,12 +1,12 @@
 use anyhow::Result;
 use bytes::Bytes;
 use clap::Parser;
+use iggy::client::MessageClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::next_client::IggyClientNext;
+use iggy::clients::client::IggyClient;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
-use iggy::next_client::MessageClientNext;
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::messages_generator::MessagesGenerator;
 use iggy_examples::shared::system;
@@ -25,14 +25,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
-    let client = client_provider::get_raw_connected_client_next(client_provider_config).await?;
-    let client = IggyClientNext::builder().with_client(client).build()?;
+    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
+    let client = IggyClient::builder().with_client(client).build()?;
     system::login_root(&client).await;
     system::init_by_producer(&args, &client).await?;
     produce_messages(&args, &client).await
 }
 
-async fn produce_messages(args: &Args, client: &IggyClientNext) -> Result<(), Box<dyn Error>> {
+async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
     info!(
         "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.stream_id, args.topic_id, args.partition_id, args.interval

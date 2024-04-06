@@ -4,7 +4,7 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
@@ -30,7 +30,7 @@ impl TestPatListCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestPatListCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let pat = client
             .create_personal_access_token(&self.name, PersonalAccessTokenExpiry::NeverExpire)
             .await;
@@ -55,7 +55,7 @@ impl IggyCmdTestCase for TestPatListCmd {
             .stdout(contains(self.name.clone()));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let delete = client.delete_personal_access_token(&self.name).await;
         assert!(delete.is_ok());
     }

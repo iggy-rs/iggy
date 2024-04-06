@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::next_client::ClientNext;
+use crate::client::Client;
 use crate::system::ping::Ping;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -98,7 +98,7 @@ impl CliCommand for PingCmd {
         false
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let print_width = (self.count.ilog10() + 1) as usize;
         let mut ping_stats = PingStats::new();
 

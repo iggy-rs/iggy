@@ -1,7 +1,6 @@
-use crate::test_server::{ClientFactory, ClientFactoryNext};
+use crate::test_server::ClientFactory;
 use async_trait::async_trait;
 use iggy::client::Client;
-use iggy::next_client::ClientNext;
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use std::sync::Arc;
@@ -25,31 +24,6 @@ impl ClientFactory for TcpClientFactory {
             )
         });
         iggy::client::Client::connect(&client)
-            .await
-            .unwrap_or_else(|e| {
-                panic!(
-                    "Failed to connect to iggy-server at {}, error: {:?}",
-                    self.server_addr, e
-                )
-            });
-        Box::new(client)
-    }
-}
-
-#[async_trait]
-impl ClientFactoryNext for TcpClientFactory {
-    async fn create_client(&self) -> Box<dyn ClientNext> {
-        let config = TcpClientConfig {
-            server_address: self.server_addr.clone(),
-            ..TcpClientConfig::default()
-        };
-        let client = TcpClient::create(Arc::new(config)).unwrap_or_else(|e| {
-            panic!(
-                "Failed to create TcpClient, iggy-server has address {}, error: {:?}",
-                self.server_addr, e
-            )
-        });
-        iggy::next_client::ClientNext::connect(&client)
             .await
             .unwrap_or_else(|e| {
                 panic!(

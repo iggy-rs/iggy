@@ -1,8 +1,8 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::identifier::Identifier;
-use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -57,7 +57,7 @@ impl CliCommand for GetConsumerOffsetCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let consumer_offset = client.get_consumer_offset(&self.get_consumer_offset.consumer, &self.get_consumer_offset.stream_id, &self.get_consumer_offset.topic_id, self.get_consumer_offset.partition_id).await.with_context(|| {
             format!(
                 "Problem getting consumer offset for {} for stream with ID: {} and topic with ID: {} and partition with ID: {}",

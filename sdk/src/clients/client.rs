@@ -3,21 +3,12 @@ use crate::client::{
     PersonalAccessTokenClient, StreamClient, SystemClient, TopicClient, UserClient,
 };
 use crate::consumer::Consumer;
-use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
-use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
-use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
-use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
-use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
-use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
-use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::locking::IggySharedMut;
 use crate::locking::IggySharedMutFn;
 use crate::message_handler::MessageHandler;
-use crate::messages::poll_messages::{PollMessages, PollingKind};
-use crate::messages::send_messages::{Partitioning, PartitioningKind, SendMessages};
+use crate::messages::send_messages::{Message, Partitioning, PartitioningKind, SendMessages};
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use crate::models::consumer_offset_info::ConsumerOffsetInfo;
@@ -29,43 +20,10 @@ use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::partitioner::Partitioner;
-use crate::partitions::create_partitions::CreatePartitions;
-use crate::partitions::delete_partitions::DeletePartitions;
-use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
-use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
-use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
-use crate::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
-use crate::streams::create_stream::CreateStream;
-use crate::streams::delete_stream::DeleteStream;
-use crate::streams::get_stream::GetStream;
-use crate::streams::get_streams::GetStreams;
-use crate::streams::purge_stream::PurgeStream;
-use crate::streams::update_stream::UpdateStream;
-use crate::system::get_client::GetClient;
-use crate::system::get_clients::GetClients;
-use crate::system::get_me::GetMe;
-use crate::system::get_stats::GetStats;
-use crate::system::ping::Ping;
 use crate::tcp::client::TcpClient;
-use crate::topics::create_topic::CreateTopic;
-use crate::topics::delete_topic::DeleteTopic;
-use crate::topics::get_topic::GetTopic;
-use crate::topics::get_topics::GetTopics;
-use crate::topics::purge_topic::PurgeTopic;
-use crate::topics::update_topic::UpdateTopic;
-use crate::users::change_password::ChangePassword;
-use crate::users::create_user::CreateUser;
-use crate::users::delete_user::DeleteUser;
-use crate::users::get_user::GetUser;
-use crate::users::get_users::GetUsers;
-use crate::users::login_user::LoginUser;
-use crate::users::logout_user::LogoutUser;
-use crate::users::update_permissions::UpdatePermissions;
-use crate::users::update_user::UpdateUser;
 use crate::utils::crypto::Encryptor;
 use async_dropper::AsyncDrop;
 use async_trait::async_trait;
-use bytes::Bytes;
 use flume::{Receiver, Sender};
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -76,17 +34,26 @@ use tokio::task::JoinHandle;
 use tokio::time::sleep;
 use tracing::{error, info, warn};
 
-pub use crate::clients::builder::IggyClientBuilder;
+use crate::clients::builder::IggyClientBuilder;
+use crate::compression::compression_algorithm::CompressionAlgorithm;
+use crate::messages::poll_messages::{PollingKind, PollingStrategy};
+use crate::models::permissions::Permissions;
+use crate::models::user_status::UserStatus;
+use crate::utils::byte_size::IggyByteSize;
+use crate::utils::expiry::IggyExpiry;
+use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
+
+// The default interval between sending the messages as batches in the background.
+pub const DEFAULT_SEND_MESSAGES_INTERVAL_MS: u64 = 100;
+
+// The default interval between polling the messages in the background.
+pub const DEFAULT_POLL_MESSAGES_INTERVAL_MS: u64 = 100;
 
 /// The main client struct which implements all the `Client` traits and wraps the underlying low-level client for the specific transport.
 ///
 /// It also provides additional functionality (outside the shared trait) like sending messages in background, partitioning, client-side encryption or message handling via channels.
-///
-/// **This client will become obsolete starting from version 0.3.0 - instead, use the `IggyClientNext`.**
-///
-/// **In the future release, starting from version 0.4.0, `IggyClientNext` will be renamed to `IggyClient` and will remain the only available client to use.**
 #[derive(Debug)]
-#[deprecated(since = "0.3.0", note = "Use `IggyClientNext` instead")]
+#[allow(dead_code)]
 pub struct IggyClient {
     client: IggySharedMut<Box<dyn Client>>,
     config: Option<IggyClientBackgroundConfig>,
@@ -103,7 +70,6 @@ struct SendMessagesBatch {
 }
 
 /// The optional configuration for the `IggyClient` instance, consisting of the optional configuration for sending and polling the messages in the background.
-#[deprecated(since = "0.3.0", note = "Use `IggyClientNextBackgroundConfig` instead")]
 #[derive(Debug, Default)]
 pub struct IggyClientBackgroundConfig {
     /// The configuration for sending the messages in the background.
@@ -149,7 +115,7 @@ impl Default for SendMessagesConfig {
     fn default() -> Self {
         SendMessagesConfig {
             enabled: false,
-            interval: 100,
+            interval: DEFAULT_SEND_MESSAGES_INTERVAL_MS,
             max_messages: 1000,
         }
     }
@@ -158,7 +124,7 @@ impl Default for SendMessagesConfig {
 impl Default for PollMessagesConfig {
     fn default() -> Self {
         PollMessagesConfig {
-            interval: 100,
+            interval: DEFAULT_POLL_MESSAGES_INTERVAL_MS,
             store_offset_kind: StoreOffsetKind::WhenMessagesAreProcessed,
         }
     }
@@ -190,7 +156,7 @@ impl IggyClient {
     }
 
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport and the optional configuration for sending and polling the messages in the background.
-    /// Additionally it allows to provide the custom implementations for the message handler, partitioner and encryptor.
+    /// Additionally, it allows to provide the custom implementations for the message handler, partitioner and encryptor.
     pub fn create(
         client: Box<dyn Client>,
         config: IggyClientBackgroundConfig,
@@ -238,9 +204,15 @@ impl IggyClient {
     }
 
     /// Starts polling the messages in the background. It returns the `JoinHandle` which can be used to await for the completion of the task.
+    #[allow(clippy::too_many_arguments)]
     pub fn start_polling_messages<F>(
         &self,
-        mut poll_messages: PollMessages,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+        consumer: &Consumer,
+        strategy: &PollingStrategy,
+        count: u32,
         on_message: Option<F>,
         config_override: Option<PollMessagesConfig>,
     ) -> JoinHandle<()>
@@ -248,11 +220,16 @@ impl IggyClient {
         F: Fn(PolledMessage) + Send + Sync + 'static,
     {
         let client = self.client.clone();
-        let mut interval = Duration::from_millis(100);
+        let mut interval = Duration::from_millis(DEFAULT_POLL_MESSAGES_INTERVAL_MS);
         let message_handler = self.message_handler.clone();
         let message_channel_sender = self.message_channel_sender.clone();
         let mut store_offset_after_processing_each_message = false;
         let mut store_offset_when_messages_are_processed = false;
+        let mut auto_commit = false;
+        let mut strategy = *strategy;
+        let consumer = consumer.clone();
+        let stream_id = stream_id.clone();
+        let topic_id = topic_id.clone();
 
         let config = match config_override {
             Some(config) => Some(config),
@@ -264,17 +241,17 @@ impl IggyClient {
             }
             match config.store_offset_kind {
                 StoreOffsetKind::Never => {
-                    poll_messages.auto_commit = false;
+                    auto_commit = false;
                 }
                 StoreOffsetKind::WhenMessagesAreReceived => {
-                    poll_messages.auto_commit = true;
+                    auto_commit = true;
                 }
                 StoreOffsetKind::WhenMessagesAreProcessed => {
-                    poll_messages.auto_commit = false;
+                    auto_commit = false;
                     store_offset_when_messages_are_processed = true;
                 }
                 StoreOffsetKind::AfterProcessingEachMessage => {
-                    poll_messages.auto_commit = false;
+                    auto_commit = false;
                     store_offset_after_processing_each_message = true;
                 }
             }
@@ -284,7 +261,17 @@ impl IggyClient {
             loop {
                 sleep(interval).await;
                 let client = client.read().await;
-                let polled_messages = client.poll_messages(&poll_messages).await;
+                let polled_messages = client
+                    .poll_messages(
+                        &stream_id,
+                        &topic_id,
+                        partition_id,
+                        &consumer,
+                        &strategy,
+                        count,
+                        auto_commit,
+                    )
+                    .await;
                 if let Err(error) = polled_messages {
                     error!("There was an error while polling messages: {:?}", error);
                     continue;
@@ -311,16 +298,38 @@ impl IggyClient {
                         warn!("Received a message with ID: {} at offset: {} which won't be processed. Consider providing the custom `MessageHandler` trait implementation or `on_message` closure.", message.id, message.offset);
                     }
                     if store_offset_after_processing_each_message {
-                        Self::store_offset(client.as_ref(), &poll_messages, current_offset).await;
+                        if let Err(error) = client
+                            .store_consumer_offset(
+                                &consumer,
+                                &stream_id,
+                                &topic_id,
+                                partition_id,
+                                current_offset,
+                            )
+                            .await
+                        {
+                            error!("There was an error while storing offset: {:?}", error);
+                        }
                     }
                 }
 
                 if store_offset_when_messages_are_processed {
-                    Self::store_offset(client.as_ref(), &poll_messages, current_offset).await;
+                    if let Err(error) = client
+                        .store_consumer_offset(
+                            &consumer,
+                            &stream_id,
+                            &topic_id,
+                            partition_id,
+                            current_offset,
+                        )
+                        .await
+                    {
+                        error!("There was an error while storing offset: {:?}", error);
+                    }
                 }
 
-                if poll_messages.strategy.kind == PollingKind::Offset {
-                    poll_messages.strategy.value = current_offset + 1;
+                if strategy.kind == PollingKind::Offset {
+                    strategy.value = current_offset + 1;
                 }
             }
         })
@@ -329,32 +338,17 @@ impl IggyClient {
     /// Sends the provided messages in the background using the custom partitioner implementation.
     pub async fn send_messages_using_partitioner(
         &self,
-        command: &mut SendMessages,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partitioning: &Partitioning,
+        messages: &mut [Message],
         partitioner: &dyn Partitioner,
     ) -> Result<(), IggyError> {
-        let partition_id = partitioner.calculate_partition_id(
-            &command.stream_id,
-            &command.topic_id,
-            &command.partitioning,
-            &command.messages,
-        )?;
-        command.partitioning = Partitioning::partition_id(partition_id);
-        self.send_messages(command).await
-    }
-
-    async fn store_offset(client: &dyn Client, poll_messages: &PollMessages, offset: u64) {
-        let result = client
-            .store_consumer_offset(&StoreConsumerOffset {
-                consumer: Consumer::from_consumer(&poll_messages.consumer),
-                stream_id: Identifier::from_identifier(&poll_messages.stream_id),
-                topic_id: Identifier::from_identifier(&poll_messages.topic_id),
-                partition_id: poll_messages.partition_id,
-                offset,
-            })
-            .await;
-        if let Err(error) = result {
-            error!("There was an error while storing offset: {:?}", error);
-        }
+        let partition_id =
+            partitioner.calculate_partition_id(stream_id, topic_id, partitioning, messages)?;
+        let partitioning = Partitioning::partition_id(partition_id);
+        self.send_messages(stream_id, topic_id, &partitioning, messages)
+            .await
     }
 
     fn send_messages_in_background(
@@ -374,8 +368,8 @@ impl IggyClient {
                 }
 
                 let mut initialized = false;
-                let mut stream_id = Identifier::numeric(1).unwrap();
-                let mut topic_id = Identifier::numeric(1).unwrap();
+                let mut stream_id = Identifier::default();
+                let mut topic_id = Identifier::default();
                 let mut key = Partitioning::partition_id(1);
                 let mut batch_messages = true;
 
@@ -405,7 +399,17 @@ impl IggyClient {
 
                 if !batch_messages {
                     for send_messages in &mut send_messages_batch.commands {
-                        if let Err(error) = client.read().await.send_messages(send_messages).await {
+                        if let Err(error) = client
+                            .read()
+                            .await
+                            .send_messages(
+                                &send_messages.stream_id,
+                                &send_messages.topic_id,
+                                &send_messages.partitioning,
+                                &mut send_messages.messages,
+                            )
+                            .await
+                        {
                             error!("There was an error when sending the messages: {:?}", error);
                         }
                     }
@@ -439,7 +443,16 @@ impl IggyClient {
                         messages,
                     };
 
-                    if let Err(error) = client.read().await.send_messages(&mut send_messages).await
+                    if let Err(error) = client
+                        .read()
+                        .await
+                        .send_messages(
+                            &send_messages.stream_id,
+                            &send_messages.topic_id,
+                            &send_messages.partitioning,
+                            &mut send_messages.messages,
+                        )
+                        .await
                     {
                         error!(
                             "There was an error when sending the messages batch: {:?}",
@@ -459,92 +472,6 @@ impl IggyClient {
 }
 
 #[async_trait]
-impl UserClient for IggyClient {
-    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, IggyError> {
-        self.client.read().await.get_user(command).await
-    }
-
-    async fn get_users(&self, command: &GetUsers) -> Result<Vec<UserInfo>, IggyError> {
-        self.client.read().await.get_users(command).await
-    }
-
-    async fn create_user(&self, command: &CreateUser) -> Result<(), IggyError> {
-        self.client.read().await.create_user(command).await
-    }
-
-    async fn delete_user(&self, command: &DeleteUser) -> Result<(), IggyError> {
-        self.client.read().await.delete_user(command).await
-    }
-
-    async fn update_user(&self, command: &UpdateUser) -> Result<(), IggyError> {
-        self.client.read().await.update_user(command).await
-    }
-
-    async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), IggyError> {
-        self.client.read().await.update_permissions(command).await
-    }
-
-    async fn change_password(&self, command: &ChangePassword) -> Result<(), IggyError> {
-        self.client.read().await.change_password(command).await
-    }
-
-    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, IggyError> {
-        self.client.read().await.login_user(command).await
-    }
-
-    async fn logout_user(&self, command: &LogoutUser) -> Result<(), IggyError> {
-        self.client.read().await.logout_user(command).await
-    }
-}
-
-#[async_trait]
-impl PersonalAccessTokenClient for IggyClient {
-    async fn get_personal_access_tokens(
-        &self,
-        command: &GetPersonalAccessTokens,
-    ) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
-        self.client
-            .read()
-            .await
-            .get_personal_access_tokens(command)
-            .await
-    }
-
-    async fn create_personal_access_token(
-        &self,
-        command: &CreatePersonalAccessToken,
-    ) -> Result<RawPersonalAccessToken, IggyError> {
-        self.client
-            .read()
-            .await
-            .create_personal_access_token(command)
-            .await
-    }
-
-    async fn delete_personal_access_token(
-        &self,
-        command: &DeletePersonalAccessToken,
-    ) -> Result<(), IggyError> {
-        self.client
-            .read()
-            .await
-            .delete_personal_access_token(command)
-            .await
-    }
-
-    async fn login_with_personal_access_token(
-        &self,
-        command: &LoginWithPersonalAccessToken,
-    ) -> Result<IdentityInfo, IggyError> {
-        self.client
-            .read()
-            .await
-            .login_with_personal_access_token(command)
-            .await
-    }
-}
-
-#[async_trait]
 impl Client for IggyClient {
     async fn connect(&self) -> Result<(), IggyError> {
         self.client.read().await.connect().await
@@ -556,176 +483,383 @@ impl Client for IggyClient {
 }
 
 #[async_trait]
+impl UserClient for IggyClient {
+    async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
+        self.client.read().await.get_user(user_id).await
+    }
+
+    async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {
+        self.client.read().await.get_users().await
+    }
+
+    async fn create_user(
+        &self,
+        username: &str,
+        password: &str,
+        status: UserStatus,
+        permissions: Option<Permissions>,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .create_user(username, password, status, permissions)
+            .await
+    }
+
+    async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError> {
+        self.client.read().await.delete_user(user_id).await
+    }
+
+    async fn update_user(
+        &self,
+        user_id: &Identifier,
+        username: Option<&str>,
+        status: Option<UserStatus>,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .update_user(user_id, username, status)
+            .await
+    }
+
+    async fn update_permissions(
+        &self,
+        user_id: &Identifier,
+        permissions: Option<Permissions>,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .update_permissions(user_id, permissions)
+            .await
+    }
+
+    async fn change_password(
+        &self,
+        user_id: &Identifier,
+        current_password: &str,
+        new_password: &str,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .change_password(user_id, current_password, new_password)
+            .await
+    }
+
+    async fn login_user(&self, username: &str, password: &str) -> Result<IdentityInfo, IggyError> {
+        self.client
+            .read()
+            .await
+            .login_user(username, password)
+            .await
+    }
+
+    async fn logout_user(&self) -> Result<(), IggyError> {
+        self.client.read().await.logout_user().await
+    }
+}
+
+#[async_trait]
+impl PersonalAccessTokenClient for IggyClient {
+    async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
+        self.client.read().await.get_personal_access_tokens().await
+    }
+
+    async fn create_personal_access_token(
+        &self,
+        name: &str,
+        expiry: PersonalAccessTokenExpiry,
+    ) -> Result<RawPersonalAccessToken, IggyError> {
+        self.client
+            .read()
+            .await
+            .create_personal_access_token(name, expiry)
+            .await
+    }
+
+    async fn delete_personal_access_token(&self, name: &str) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .delete_personal_access_token(name)
+            .await
+    }
+
+    async fn login_with_personal_access_token(
+        &self,
+        token: &str,
+    ) -> Result<IdentityInfo, IggyError> {
+        self.client
+            .read()
+            .await
+            .login_with_personal_access_token(token)
+            .await
+    }
+}
+
+#[async_trait]
 impl SystemClient for IggyClient {
-    async fn get_stats(&self, command: &GetStats) -> Result<Stats, IggyError> {
-        self.client.read().await.get_stats(command).await
+    async fn get_stats(&self) -> Result<Stats, IggyError> {
+        self.client.read().await.get_stats().await
     }
 
-    async fn get_me(&self, command: &GetMe) -> Result<ClientInfoDetails, IggyError> {
-        self.client.read().await.get_me(command).await
+    async fn get_me(&self) -> Result<ClientInfoDetails, IggyError> {
+        self.client.read().await.get_me().await
     }
 
-    async fn get_client(&self, command: &GetClient) -> Result<ClientInfoDetails, IggyError> {
-        self.client.read().await.get_client(command).await
+    async fn get_client(&self, client_id: u32) -> Result<ClientInfoDetails, IggyError> {
+        self.client.read().await.get_client(client_id).await
     }
 
-    async fn get_clients(&self, command: &GetClients) -> Result<Vec<ClientInfo>, IggyError> {
-        self.client.read().await.get_clients(command).await
+    async fn get_clients(&self) -> Result<Vec<ClientInfo>, IggyError> {
+        self.client.read().await.get_clients().await
     }
 
-    async fn ping(&self, command: &Ping) -> Result<(), IggyError> {
-        self.client.read().await.ping(command).await
+    async fn ping(&self) -> Result<(), IggyError> {
+        self.client.read().await.ping().await
     }
 }
 
 #[async_trait]
 impl StreamClient for IggyClient {
-    async fn get_stream(&self, command: &GetStream) -> Result<StreamDetails, IggyError> {
-        self.client.read().await.get_stream(command).await
+    async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
+        self.client.read().await.get_stream(stream_id).await
     }
 
-    async fn get_streams(&self, command: &GetStreams) -> Result<Vec<Stream>, IggyError> {
-        self.client.read().await.get_streams(command).await
+    async fn get_streams(&self) -> Result<Vec<Stream>, IggyError> {
+        self.client.read().await.get_streams().await
     }
 
-    async fn create_stream(&self, command: &CreateStream) -> Result<(), IggyError> {
-        self.client.read().await.create_stream(command).await
+    async fn create_stream(&self, name: &str, stream_id: Option<u32>) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .create_stream(name, stream_id)
+            .await
     }
 
-    async fn update_stream(&self, command: &UpdateStream) -> Result<(), IggyError> {
-        self.client.read().await.update_stream(command).await
+    async fn update_stream(&self, stream_id: &Identifier, name: &str) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .update_stream(stream_id, name)
+            .await
     }
 
-    async fn delete_stream(&self, command: &DeleteStream) -> Result<(), IggyError> {
-        self.client.read().await.delete_stream(command).await
+    async fn delete_stream(&self, stream_id: &Identifier) -> Result<(), IggyError> {
+        self.client.read().await.delete_stream(stream_id).await
     }
 
-    async fn purge_stream(&self, command: &PurgeStream) -> Result<(), IggyError> {
-        self.client.read().await.purge_stream(command).await
+    async fn purge_stream(&self, stream_id: &Identifier) -> Result<(), IggyError> {
+        self.client.read().await.purge_stream(stream_id).await
     }
 }
 
 #[async_trait]
 impl TopicClient for IggyClient {
-    async fn get_topic(&self, command: &GetTopic) -> Result<TopicDetails, IggyError> {
-        self.client.read().await.get_topic(command).await
+    async fn get_topic(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+    ) -> Result<TopicDetails, IggyError> {
+        self.client
+            .read()
+            .await
+            .get_topic(stream_id, topic_id)
+            .await
     }
 
-    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, IggyError> {
-        self.client.read().await.get_topics(command).await
+    async fn get_topics(&self, stream_id: &Identifier) -> Result<Vec<Topic>, IggyError> {
+        self.client.read().await.get_topics(stream_id).await
     }
 
-    async fn create_topic(&self, command: &CreateTopic) -> Result<(), IggyError> {
-        self.client.read().await.create_topic(command).await
+    async fn create_topic(
+        &self,
+        stream_id: &Identifier,
+        name: &str,
+        partitions_count: u32,
+        compression_algorithm: CompressionAlgorithm,
+        replication_factor: Option<u8>,
+        topic_id: Option<u32>,
+        message_expiry: IggyExpiry,
+        max_topic_size: Option<IggyByteSize>,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .create_topic(
+                stream_id,
+                name,
+                partitions_count,
+                compression_algorithm,
+                replication_factor,
+                topic_id,
+                message_expiry,
+                max_topic_size,
+            )
+            .await
     }
 
-    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), IggyError> {
-        self.client.read().await.update_topic(command).await
+    async fn update_topic(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        name: &str,
+        compression_algorithm: CompressionAlgorithm,
+        replication_factor: Option<u8>,
+        message_expiry: IggyExpiry,
+        max_topic_size: Option<IggyByteSize>,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .update_topic(
+                stream_id,
+                topic_id,
+                name,
+                compression_algorithm,
+                replication_factor,
+                message_expiry,
+                max_topic_size,
+            )
+            .await
     }
 
-    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), IggyError> {
-        self.client.read().await.delete_topic(command).await
+    async fn delete_topic(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .delete_topic(stream_id, topic_id)
+            .await
     }
 
-    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), IggyError> {
-        self.client.read().await.purge_topic(command).await
+    async fn purge_topic(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .purge_topic(stream_id, topic_id)
+            .await
     }
 }
 
 #[async_trait]
 impl PartitionClient for IggyClient {
-    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), IggyError> {
-        self.client.read().await.create_partitions(command).await
+    async fn create_partitions(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partitions_count: u32,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .create_partitions(stream_id, topic_id, partitions_count)
+            .await
     }
 
-    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), IggyError> {
-        self.client.read().await.delete_partitions(command).await
+    async fn delete_partitions(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partitions_count: u32,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .delete_partitions(stream_id, topic_id, partitions_count)
+            .await
     }
 }
 
 #[async_trait]
 impl MessageClient for IggyClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, IggyError> {
-        let mut polled_messages = self.client.read().await.poll_messages(command).await?;
-        if let Some(ref encryptor) = self.encryptor {
-            for message in &mut polled_messages.messages {
-                let payload = encryptor.decrypt(&message.payload)?;
-                message.payload = Bytes::from(payload);
-            }
-        }
-        Ok(polled_messages)
-    }
-
-    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
-        if command.messages.is_empty() {
+    async fn poll_messages(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+        consumer: &Consumer,
+        strategy: &PollingStrategy,
+        count: u32,
+        auto_commit: bool,
+    ) -> Result<PolledMessages, IggyError> {
+        if count == 0 {
             return Err(IggyError::InvalidMessagesCount);
         }
 
-        if let Some(partitioner) = &self.partitioner {
-            let partition_id = partitioner.calculate_partition_id(
-                &command.stream_id,
-                &command.topic_id,
-                &command.partitioning,
-                &command.messages,
-            )?;
-            command.partitioning = Partitioning::partition_id(partition_id);
+        self.client
+            .read()
+            .await
+            .poll_messages(
+                stream_id,
+                topic_id,
+                partition_id,
+                consumer,
+                strategy,
+                count,
+                auto_commit,
+            )
+            .await
+    }
+
+    async fn send_messages(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partitioning: &Partitioning,
+        messages: &mut [Message],
+    ) -> Result<(), IggyError> {
+        if messages.is_empty() {
+            return Err(IggyError::InvalidMessagesCount);
         }
 
-        if let Some(encryptor) = &self.encryptor {
-            for message in &mut command.messages {
-                message.payload = Bytes::from(encryptor.encrypt(&message.payload)?);
-                message.length = message.payload.len() as u32;
-            }
-        }
-
-        let send_messages_now = self.send_messages_batch.is_none()
-            || match &self.config {
-                Some(config) => !config.send_messages.enabled || config.send_messages.interval == 0,
-                None => true,
-            };
-
-        if send_messages_now {
-            return self.client.read().await.send_messages(command).await;
-        }
-
-        let mut messages = Vec::with_capacity(command.messages.len());
-        for message in &command.messages {
-            let message = crate::messages::send_messages::Message {
-                id: message.id,
-                length: message.length,
-                payload: message.payload.clone(),
-                headers: message.headers.clone(),
-            };
-            messages.push(message);
-        }
-        let send_messages = SendMessages {
-            stream_id: Identifier::from_identifier(&command.stream_id),
-            topic_id: Identifier::from_identifier(&command.topic_id),
-            partitioning: Partitioning::from_partitioning(&command.partitioning),
-            messages,
-        };
-
-        let mut batch = self.send_messages_batch.as_ref().unwrap().lock().await;
-        batch.commands.push_back(send_messages);
-        Ok(())
+        self.client
+            .read()
+            .await
+            .send_messages(stream_id, topic_id, partitioning, messages)
+            .await
     }
 }
 
 #[async_trait]
 impl ConsumerOffsetClient for IggyClient {
-    async fn store_consumer_offset(&self, command: &StoreConsumerOffset) -> Result<(), IggyError> {
+    async fn store_consumer_offset(
+        &self,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
+        offset: u64,
+    ) -> Result<(), IggyError> {
         self.client
             .read()
             .await
-            .store_consumer_offset(command)
+            .store_consumer_offset(consumer, stream_id, topic_id, partition_id, offset)
             .await
     }
 
     async fn get_consumer_offset(
         &self,
-        command: &GetConsumerOffset,
+        consumer: &Consumer,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        partition_id: Option<u32>,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
-        self.client.read().await.get_consumer_offset(command).await
+        self.client
+            .read()
+            .await
+            .get_consumer_offset(consumer, stream_id, topic_id, partition_id)
+            .await
     }
 }
 
@@ -733,46 +867,86 @@ impl ConsumerOffsetClient for IggyClient {
 impl ConsumerGroupClient for IggyClient {
     async fn get_consumer_group(
         &self,
-        command: &GetConsumerGroup,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<ConsumerGroupDetails, IggyError> {
-        self.client.read().await.get_consumer_group(command).await
+        self.client
+            .read()
+            .await
+            .get_consumer_group(stream_id, topic_id, group_id)
+            .await
     }
 
     async fn get_consumer_groups(
         &self,
-        command: &GetConsumerGroups,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
     ) -> Result<Vec<ConsumerGroup>, IggyError> {
-        self.client.read().await.get_consumer_groups(command).await
-    }
-
-    async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), IggyError> {
         self.client
             .read()
             .await
-            .create_consumer_group(command)
+            .get_consumer_groups(stream_id, topic_id)
             .await
     }
 
-    async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), IggyError> {
+    async fn create_consumer_group(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        name: &str,
+        group_id: Option<u32>,
+    ) -> Result<(), IggyError> {
         self.client
             .read()
             .await
-            .delete_consumer_group(command)
+            .create_consumer_group(stream_id, topic_id, name, group_id)
             .await
     }
 
-    async fn join_consumer_group(&self, command: &JoinConsumerGroup) -> Result<(), IggyError> {
-        self.client.read().await.join_consumer_group(command).await
+    async fn delete_consumer_group(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .delete_consumer_group(stream_id, topic_id, group_id)
+            .await
     }
 
-    async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), IggyError> {
-        self.client.read().await.leave_consumer_group(command).await
+    async fn join_consumer_group(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .join_consumer_group(stream_id, topic_id, group_id)
+            .await
+    }
+
+    async fn leave_consumer_group(
+        &self,
+        stream_id: &Identifier,
+        topic_id: &Identifier,
+        group_id: &Identifier,
+    ) -> Result<(), IggyError> {
+        self.client
+            .read()
+            .await
+            .leave_consumer_group(stream_id, topic_id, group_id)
+            .await
     }
 }
 
 #[async_trait]
 impl AsyncDrop for IggyClient {
     async fn async_drop(&mut self) {
-        let _ = self.client.read().await.logout_user(&LogoutUser {}).await;
+        let _ = self.client.read().await.logout_user().await;
     }
 }

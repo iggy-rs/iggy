@@ -4,11 +4,9 @@ mod test_message_envelope;
 mod test_message_headers;
 
 use assert_cmd::Command;
-use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
+use iggy::client::{Client, StreamClient, SystemClient, TopicClient, UserClient};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
-use iggy::next_client::{
-    ClientNext, StreamClientNext, SystemClientNext, TopicClientNext, UserClientNext,
-};
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
@@ -20,7 +18,7 @@ use std::time::Duration;
 
 pub(crate) struct IggyExampleTest<'a> {
     server: TestServer,
-    client: IggyClientNext,
+    client: IggyClient,
     module: &'a str,
 }
 
@@ -91,9 +89,9 @@ impl<'a> IggyExampleTest<'a> {
             ..TcpClientConfig::default()
         };
         let client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
-        let client = IggyClientNext::create(
+        let client = IggyClient::create(
             client,
-            IggyClientNextBackgroundConfig::default(),
+            IggyClientBackgroundConfig::default(),
             None,
             None,
             None,

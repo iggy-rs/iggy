@@ -1,4 +1,4 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
+use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::TopicClient;
@@ -10,7 +10,6 @@ use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::topic::{Topic, TopicDetails};
-use crate::next_client::TopicClientNext;
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::delete_topic::DeleteTopic;
 use crate::topics::get_topic::GetTopic;
@@ -22,33 +21,6 @@ use crate::utils::expiry::IggyExpiry;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> TopicClient for B {
-    async fn get_topic(&self, command: &GetTopic) -> Result<TopicDetails, IggyError> {
-        get_topic(self, command).await
-    }
-
-    async fn get_topics(&self, command: &GetTopics) -> Result<Vec<Topic>, IggyError> {
-        get_topics(self, command).await
-    }
-
-    async fn create_topic(&self, command: &CreateTopic) -> Result<(), IggyError> {
-        create_topic(self, command).await
-    }
-
-    async fn update_topic(&self, command: &UpdateTopic) -> Result<(), IggyError> {
-        update_topic(self, command).await
-    }
-
-    async fn delete_topic(&self, command: &DeleteTopic) -> Result<(), IggyError> {
-        delete_topic(self, command).await
-    }
-
-    async fn purge_topic(&self, command: &PurgeTopic) -> Result<(), IggyError> {
-        purge_topic(self, command).await
-    }
-}
-
-#[async_trait::async_trait]
-impl<B: BinaryClientNext> TopicClientNext for B {
     async fn get_topic(
         &self,
         stream_id: &Identifier,

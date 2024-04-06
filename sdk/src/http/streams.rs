@@ -4,7 +4,6 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::models::stream::{Stream, StreamDetails};
-use crate::next_client::StreamClientNext;
 use crate::streams::create_stream::CreateStream;
 use crate::streams::delete_stream::DeleteStream;
 use crate::streams::get_stream::GetStream;
@@ -17,33 +16,6 @@ const PATH: &str = "/streams";
 
 #[async_trait]
 impl StreamClient for HttpClient {
-    async fn get_stream(&self, command: &GetStream) -> Result<StreamDetails, IggyError> {
-        get_stream(self, command).await
-    }
-
-    async fn get_streams(&self, command: &GetStreams) -> Result<Vec<Stream>, IggyError> {
-        get_streams(self, command).await
-    }
-
-    async fn create_stream(&self, command: &CreateStream) -> Result<(), IggyError> {
-        create_stream(self, command).await
-    }
-
-    async fn update_stream(&self, command: &UpdateStream) -> Result<(), IggyError> {
-        update_stream(self, command).await
-    }
-
-    async fn delete_stream(&self, command: &DeleteStream) -> Result<(), IggyError> {
-        delete_stream(self, command).await
-    }
-
-    async fn purge_stream(&self, command: &PurgeStream) -> Result<(), IggyError> {
-        purge_stream(self, command).await
-    }
-}
-
-#[async_trait]
-impl StreamClientNext for HttpClient {
     async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
         get_stream(
             self,

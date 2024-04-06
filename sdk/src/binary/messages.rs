@@ -1,38 +1,17 @@
-#[allow(deprecated)]
-use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
+use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper};
-use crate::bytes_serializable::BytesSerializable;
 use crate::client::MessageClient;
 use crate::command::{POLL_MESSAGES_CODE, SEND_MESSAGES_CODE};
 use crate::consumer::Consumer;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
-use crate::messages::poll_messages::{PollMessages, PollingStrategy};
-use crate::messages::send_messages::{Message, Partitioning, SendMessages};
+use crate::messages::poll_messages::PollingStrategy;
+use crate::messages::send_messages::{Message, Partitioning};
 use crate::messages::{poll_messages, send_messages};
 use crate::models::messages::PolledMessages;
-use crate::next_client::MessageClientNext;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> MessageClient for B {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, IggyError> {
-        fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(POLL_MESSAGES_CODE, command.as_bytes())
-            .await?;
-        mapper::map_polled_messages(response)
-    }
-
-    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
-        fail_if_not_authenticated(self).await?;
-        self.send_with_response(SEND_MESSAGES_CODE, command.as_bytes())
-            .await?;
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl<B: BinaryClientNext> MessageClientNext for B {
     async fn poll_messages(
         &self,
         stream_id: &Identifier,

@@ -7,7 +7,6 @@ use crate::models::identity_info::IdentityInfo;
 use crate::models::permissions::Permissions;
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
-use crate::next_client::UserClientNext;
 use crate::users::change_password::ChangePassword;
 use crate::users::create_user::CreateUser;
 use crate::users::delete_user::DeleteUser;
@@ -23,45 +22,6 @@ const PATH: &str = "/users";
 
 #[async_trait]
 impl UserClient for HttpClient {
-    async fn get_user(&self, command: &GetUser) -> Result<UserInfoDetails, IggyError> {
-        get_user(self, command).await
-    }
-
-    async fn get_users(&self, command: &GetUsers) -> Result<Vec<UserInfo>, IggyError> {
-        get_users(self, command).await
-    }
-
-    async fn create_user(&self, command: &CreateUser) -> Result<(), IggyError> {
-        create_user(self, command).await
-    }
-
-    async fn delete_user(&self, command: &DeleteUser) -> Result<(), IggyError> {
-        delete_user(self, command).await
-    }
-
-    async fn update_user(&self, command: &UpdateUser) -> Result<(), IggyError> {
-        update_user(self, command).await
-    }
-
-    async fn update_permissions(&self, command: &UpdatePermissions) -> Result<(), IggyError> {
-        update_permissions(self, command).await
-    }
-
-    async fn change_password(&self, command: &ChangePassword) -> Result<(), IggyError> {
-        change_password(self, command).await
-    }
-
-    async fn login_user(&self, command: &LoginUser) -> Result<IdentityInfo, IggyError> {
-        login_user(self, command).await
-    }
-
-    async fn logout_user(&self, command: &LogoutUser) -> Result<(), IggyError> {
-        logout_user(self, command).await
-    }
-}
-
-#[async_trait]
-impl UserClientNext for HttpClient {
     async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
         get_user(
             self,

@@ -1,19 +1,19 @@
 use crate::args::simple::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
-use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
+use iggy::client::MessageClient;
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::consumer::Consumer as IggyConsumer;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::next_client::MessageClientNext;
 use iggy::utils::duration::IggyDuration;
-use integration::test_server::{login_root_next, ClientFactoryNext};
+use integration::test_server::{login_root, ClientFactory};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::Instant;
 use tracing::{error, info, warn};
 
 pub struct Consumer {
-    client_factory: Arc<dyn ClientFactoryNext>,
+    client_factory: Arc<dyn ClientFactory>,
     consumer_id: u32,
     stream_id: u32,
     messages_per_batch: u32,
@@ -23,7 +23,7 @@ pub struct Consumer {
 
 impl Consumer {
     pub fn new(
-        client_factory: Arc<dyn ClientFactoryNext>,
+        client_factory: Arc<dyn ClientFactory>,
         consumer_id: u32,
         stream_id: u32,
         messages_per_batch: u32,
@@ -45,14 +45,14 @@ impl Consumer {
         let partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;
         let client = self.client_factory.create_client().await;
-        let client = IggyClientNext::create(
+        let client = IggyClient::create(
             client,
-            IggyClientNextBackgroundConfig::default(),
+            IggyClientBackgroundConfig::default(),
             None,
             None,
             None,
         );
-        login_root_next(&client).await;
+        login_root(&client).await;
         let consumer = IggyConsumer::new(self.consumer_id.try_into().unwrap());
         let stream_id = self.stream_id.try_into().unwrap();
         let topic_id = topic_id.try_into().unwrap();

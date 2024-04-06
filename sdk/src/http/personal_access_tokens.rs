@@ -4,7 +4,6 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
-use crate::next_client::PersonalAccessTokenClientNext;
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
@@ -16,37 +15,6 @@ const PATH: &str = "/personal-access-tokens";
 
 #[async_trait]
 impl PersonalAccessTokenClient for HttpClient {
-    async fn get_personal_access_tokens(
-        &self,
-        command: &GetPersonalAccessTokens,
-    ) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
-        get_personal_access_tokens(self, command).await
-    }
-
-    async fn create_personal_access_token(
-        &self,
-        command: &CreatePersonalAccessToken,
-    ) -> Result<RawPersonalAccessToken, IggyError> {
-        create_personal_access_token(self, command).await
-    }
-
-    async fn delete_personal_access_token(
-        &self,
-        command: &DeletePersonalAccessToken,
-    ) -> Result<(), IggyError> {
-        delete_personal_access_token(self, command).await
-    }
-
-    async fn login_with_personal_access_token(
-        &self,
-        command: &LoginWithPersonalAccessToken,
-    ) -> Result<IdentityInfo, IggyError> {
-        login_with_personal_access_token(self, command).await
-    }
-}
-
-#[async_trait]
-impl PersonalAccessTokenClientNext for HttpClient {
     async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         get_personal_access_tokens(self, &GetPersonalAccessTokens {}).await
     }

@@ -4,8 +4,8 @@ use crate::cli::common::{
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::cli::system::stats::GetStatsOutput;
+use iggy::client::Client;
 use iggy::identifier::Identifier;
-use iggy::next_client::ClientNext;
 use iggy::utils::expiry::IggyExpiry;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
@@ -43,7 +43,7 @@ impl TestStatsCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestStatsCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let stream_id = Identifier::from_str_value("logs").unwrap();
         let stream = client.create_stream(&stream_id.as_string(), Some(1)).await;
         assert!(stream.is_ok());
@@ -117,7 +117,7 @@ impl IggyCmdTestCase for TestStatsCmd {
         }
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let topic = client
             .delete_topic(&1.try_into().unwrap(), &1.try_into().unwrap())
             .await;

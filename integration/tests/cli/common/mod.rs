@@ -5,8 +5,8 @@ pub(crate) use crate::cli::common::help::{TestHelpCmd, CLAP_INDENT, USAGE_PREFIX
 use assert_cmd::assert::{Assert, OutputAssertExt};
 use assert_cmd::prelude::CommandCargoExt;
 use async_trait::async_trait;
-use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
-use iggy::next_client::{ClientNext, SystemClientNext, UserClientNext};
+use iggy::client::{Client, SystemClient, UserClient};
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
@@ -59,13 +59,13 @@ impl OutputFormat {
 
 #[async_trait]
 pub(crate) trait IggyCmdTestCase {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext);
+    async fn prepare_server_state(&mut self, client: &dyn Client);
     fn get_command(&self) -> IggyCmdCommand;
     fn provide_stdin_input(&self) -> Option<Vec<String>> {
         None
     }
     fn verify_command(&self, command_state: Assert);
-    async fn verify_server_state(&self, client: &dyn ClientNext);
+    async fn verify_server_state(&self, client: &dyn Client);
     fn protocol(&self, server: &TestServer) -> Vec<String> {
         vec![
             "--tcp-server-address".into(),
@@ -76,7 +76,7 @@ pub(crate) trait IggyCmdTestCase {
 
 pub(crate) struct IggyCmdTest {
     server: TestServer,
-    client: IggyClientNext,
+    client: IggyClient,
 }
 
 impl IggyCmdTest {
@@ -90,9 +90,9 @@ impl IggyCmdTest {
             ..TcpClientConfig::default()
         };
         let client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
-        let client = IggyClientNext::create(
+        let client = IggyClient::create(
             client,
-            IggyClientNextBackgroundConfig::default(),
+            IggyClientBackgroundConfig::default(),
             None,
             None,
             None,

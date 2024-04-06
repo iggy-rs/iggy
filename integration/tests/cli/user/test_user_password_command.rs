@@ -4,9 +4,9 @@ use crate::cli::common::{
 };
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
+use iggy::client::Client;
 use iggy::models::user_info::UserId;
 use iggy::models::user_status::UserStatus;
-use iggy::next_client::ClientNext;
 use predicates::str::diff;
 use serial_test::parallel;
 
@@ -55,7 +55,7 @@ impl TestUserPasswordCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestUserPasswordCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let create_user = client
             .create_user(&self.username, &self.password, UserStatus::Active, None)
             .await;
@@ -110,7 +110,7 @@ impl IggyCmdTestCase for TestUserPasswordCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let deleted = client
             .delete_user(&self.user_id.unwrap().try_into().unwrap())
             .await;

@@ -1,8 +1,8 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::next_client::ClientNext;
 use anyhow::Context;
 use async_trait::async_trait;
 use std::collections::HashMap;
@@ -72,7 +72,7 @@ impl CliCommand for SendMessagesCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let mut messages = match &self.messages {
             Some(messages) => messages
                 .iter()

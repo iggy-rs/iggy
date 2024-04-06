@@ -3,24 +3,12 @@ use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
-use crate::next_client::PartitionClientNext;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 use async_trait::async_trait;
 
 #[async_trait]
 impl PartitionClient for HttpClient {
-    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), IggyError> {
-        create_partitions(self, command).await
-    }
-
-    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), IggyError> {
-        delete_partitions(self, command).await
-    }
-}
-
-#[async_trait]
-impl PartitionClientNext for HttpClient {
     async fn create_partitions(
         &self,
         stream_id: &Identifier,

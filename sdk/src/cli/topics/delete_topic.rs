@@ -1,6 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::identifier::Identifier;
-use crate::next_client::ClientNext;
 use crate::topics::delete_topic::DeleteTopic;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -30,7 +30,7 @@ impl CliCommand for DeleteTopicCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         client
             .delete_topic(&self.delete_topic.stream_id, &self.delete_topic.topic_id)
             .await

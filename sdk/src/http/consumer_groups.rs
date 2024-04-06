@@ -10,44 +10,10 @@ use crate::http::client::HttpClient;
 use crate::http::HttpTransport;
 use crate::identifier::Identifier;
 use crate::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
-use crate::next_client::ConsumerGroupClientNext;
 use async_trait::async_trait;
 
 #[async_trait]
 impl ConsumerGroupClient for HttpClient {
-    async fn get_consumer_group(
-        &self,
-        command: &GetConsumerGroup,
-    ) -> Result<ConsumerGroupDetails, IggyError> {
-        get_consumer_group(self, command).await
-    }
-
-    async fn get_consumer_groups(
-        &self,
-        command: &GetConsumerGroups,
-    ) -> Result<Vec<ConsumerGroup>, IggyError> {
-        get_consumer_groups(self, command).await
-    }
-
-    async fn create_consumer_group(&self, command: &CreateConsumerGroup) -> Result<(), IggyError> {
-        create_consumer_group(self, command).await
-    }
-
-    async fn delete_consumer_group(&self, command: &DeleteConsumerGroup) -> Result<(), IggyError> {
-        delete_consumer_group(self, command).await
-    }
-
-    async fn join_consumer_group(&self, command: &JoinConsumerGroup) -> Result<(), IggyError> {
-        join_consumer_group(self, command).await
-    }
-
-    async fn leave_consumer_group(&self, command: &LeaveConsumerGroup) -> Result<(), IggyError> {
-        leave_consumer_group(self, command).await
-    }
-}
-
-#[async_trait]
-impl ConsumerGroupClientNext for HttpClient {
     async fn get_consumer_group(
         &self,
         stream_id: &Identifier,

@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::next_client::ClientNext;
+use crate::client::Client;
 use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
 use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
@@ -36,7 +36,7 @@ impl CliCommand for GetPersonalAccessTokensCmd {
         format!("list personal access tokens in {mode} mode")
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let tokens = client
             .get_personal_access_tokens()
             .await

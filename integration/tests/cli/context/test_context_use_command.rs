@@ -6,7 +6,7 @@ use crate::cli::common::{
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::cli::context::common::ContextConfig;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use predicates::str::contains;
 use serial_test::parallel;
 
@@ -27,7 +27,7 @@ impl TestContextUseCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestContextUseCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, _client: &dyn Client) {
         self.test_iggy_context.prepare().await;
     }
 
@@ -50,7 +50,7 @@ impl IggyCmdTestCase for TestContextUseCmd {
         )));
     }
 
-    async fn verify_server_state(&self, _client: &dyn ClientNext) {
+    async fn verify_server_state(&self, _client: &dyn Client) {
         let saved_key = self
             .test_iggy_context
             .read_saved_context_key()

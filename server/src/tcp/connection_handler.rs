@@ -56,7 +56,7 @@ pub(crate) async fn handle_connection(
             }
         };
         debug!("Received a TCP command: {command}, payload size: {length}");
-        command::handle(&command, sender, &session, system.clone()).await?;
+        command::handle(command, sender, &session, system.clone()).await?;
         debug!("Sent a TCP response.");
     }
 }

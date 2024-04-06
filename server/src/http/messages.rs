@@ -67,6 +67,7 @@ async fn send_messages(
     });
     command.validate()?;
 
+    let messages = command.messages;
     let system = state.system.read();
     system
         .append_messages(
@@ -74,7 +75,7 @@ async fn send_messages(
             &command.stream_id,
             &command.topic_id,
             &command.partitioning,
-            &command.messages,
+            messages,
         )
         .await?;
     Ok(StatusCode::CREATED)

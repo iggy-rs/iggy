@@ -377,7 +377,7 @@ impl Partition {
     pub async fn append_messages(
         &mut self,
         appendable_batch_info: AppendableBatchInfo,
-        messages: &Vec<Message>,
+        messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
@@ -536,7 +536,7 @@ mod tests {
             partition_id: partition.partition_id,
         };
         partition
-            .append_messages(appendable_batch_info, &messages)
+            .append_messages(appendable_batch_info, messages)
             .await
             .unwrap();
 
@@ -558,7 +558,7 @@ mod tests {
             partition_id: partition.partition_id,
         };
         partition
-            .append_messages(appendable_batch_info, &messages)
+            .append_messages(appendable_batch_info, messages)
             .await
             .unwrap();
 

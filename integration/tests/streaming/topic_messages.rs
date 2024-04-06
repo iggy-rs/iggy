@@ -78,7 +78,7 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
     }
     let batch_size = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
     topic
-        .append_messages(batch_size, &partitioning, &messages)
+        .append_messages(batch_size, &partitioning, messages)
         .await
         .unwrap();
 
@@ -122,7 +122,7 @@ async fn given_key_none_messages_should_be_appended_to_the_next_partition_using_
             .append_messages(
                 batch_size,
                 &partitioning,
-                &vec![get_message(i as u128, &payload)],
+                vec![get_message(i as u128, &payload)],
             )
             .await
             .unwrap();
@@ -147,7 +147,7 @@ async fn given_key_partition_id_messages_should_be_appended_to_the_chosen_partit
             .append_messages(
                 batch_size,
                 &partitioning,
-                &vec![get_message(i as u128, &payload)],
+                vec![get_message(i as u128, &payload)],
             )
             .await
             .unwrap();
@@ -176,7 +176,7 @@ async fn given_key_messages_key_messages_should_be_appended_to_the_calculated_pa
             .append_messages(
                 batch_size,
                 &partitioning,
-                &vec![get_message(entity_id as u128, &payload)],
+                vec![get_message(entity_id as u128, &payload)],
             )
             .await
             .unwrap();

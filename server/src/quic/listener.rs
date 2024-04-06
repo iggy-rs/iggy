@@ -117,7 +117,7 @@ async fn handle_stream(
         send: send_stream,
         recv: recv_stream,
     };
-    command::handle(&command, &mut sender, session.as_ref(), system.clone())
+    command::handle(command, &mut sender, session.as_ref(), system.clone())
         .await
         .with_context(|| "Error when handling the QUIC request.")
 }

@@ -66,7 +66,7 @@ impl Topic {
         &self,
         batch_size: u64,
         partitioning: &Partitioning,
-        messages: &Vec<Message>,
+        messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
@@ -94,7 +94,7 @@ impl Topic {
     async fn append_messages_to_partition(
         &self,
         appendable_batch_info: AppendableBatchInfo,
-        messages: &Vec<Message>,
+        messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         let partition = self.partitions.get(&appendable_batch_info.partition_id);
         partition
@@ -272,7 +272,7 @@ mod tests {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(batch_size, &partitioning, &messages)
+                .append_messages(batch_size, &partitioning, messages)
                 .await
                 .unwrap();
         }
@@ -301,7 +301,7 @@ mod tests {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(batch_size, &partitioning, &messages)
+                .append_messages(batch_size, &partitioning, messages)
                 .await
                 .unwrap();
         }

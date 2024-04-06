@@ -111,12 +111,12 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         partition.partition_id,
     );
     partition
-        .append_messages(appendable_batch_info, &messages)
+        .append_messages(appendable_batch_info, messages)
         .await
         .unwrap();
     let test_timestamp = IggyTimestamp::now().to_micros();
     partition
-        .append_messages(appendable_batch_info_two, &messages_two)
+        .append_messages(appendable_batch_info_two, messages_two)
         .await
         .unwrap();
 
@@ -213,7 +213,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         partition.partition_id,
     );
     partition
-        .append_messages(appendable_batch_info, &messages)
+        .append_messages(appendable_batch_info, messages)
         .await
         .unwrap();
     assert_eq!(partition.unsaved_messages_count, 0);

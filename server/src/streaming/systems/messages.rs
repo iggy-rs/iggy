@@ -91,14 +91,14 @@ impl System {
     pub async fn append_messages(
         &self,
         session: &Session,
-        stream_id: &Identifier,
-        topic_id: &Identifier,
-        partitioning: &Partitioning,
+        stream_id: Identifier,
+        topic_id: Identifier,
+        partitioning: Partitioning,
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let stream = self.get_stream(&stream_id)?;
+        let topic = stream.get_topic(&topic_id)?;
         self.permissioner.append_messages(
             session.get_user_id(),
             stream.stream_id,

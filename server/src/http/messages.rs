@@ -68,13 +68,16 @@ async fn send_messages(
     command.validate()?;
 
     let messages = command.messages;
+    let stream_id = command.stream_id;
+    let topic_id = command.topic_id;
+    let partitioning = command.partitioning;
     let system = state.system.read();
     system
         .append_messages(
             &Session::stateless(identity.user_id, identity.ip_address),
-            &command.stream_id,
-            &command.topic_id,
-            &command.partitioning,
+            stream_id,
+            topic_id,
+            partitioning,
             messages,
         )
         .await?;

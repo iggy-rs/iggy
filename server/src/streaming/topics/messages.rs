@@ -65,7 +65,7 @@ impl Topic {
     pub async fn append_messages(
         &self,
         batch_size: u64,
-        partitioning: &Partitioning,
+        partitioning: Partitioning,
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
@@ -272,7 +272,7 @@ mod tests {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(batch_size, &partitioning, messages)
+                .append_messages(batch_size, partitioning.clone(), messages)
                 .await
                 .unwrap();
         }
@@ -301,7 +301,7 @@ mod tests {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
             let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
             topic
-                .append_messages(batch_size, &partitioning, messages)
+                .append_messages(batch_size, partitioning, messages)
                 .await
                 .unwrap();
         }

@@ -1,3 +1,4 @@
+use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
@@ -8,7 +9,6 @@ use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::{PolledMessage, PolledMessages};
 use iggy::{error::IggyError, identifier::Identifier};
 use tracing::{error, trace};
-use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 
 impl System {
     pub async fn poll_messages(

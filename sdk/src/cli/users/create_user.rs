@@ -1,7 +1,7 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
+use crate::client::Client;
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
-use crate::next_client::ClientNext;
 use crate::users::create_user::CreateUser;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -38,7 +38,7 @@ impl CliCommand for CreateUserCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         client
             .create_user(
                 &self.create_user.username,

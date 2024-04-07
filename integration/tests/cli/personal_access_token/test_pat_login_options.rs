@@ -1,7 +1,7 @@
 use crate::cli::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use keyring::Entry;
 use predicates::str::{contains, starts_with};
@@ -61,7 +61,7 @@ impl TestLoginOptions {
 
 #[async_trait]
 impl IggyCmdTestCase for TestLoginOptions {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let token = client
             .create_personal_access_token(&self.token_name, PersonalAccessTokenExpiry::NeverExpire)
             .await;
@@ -85,7 +85,7 @@ impl IggyCmdTestCase for TestLoginOptions {
             .stdout(contains(String::from("Transport | TCP")));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let token = client.delete_personal_access_token(&self.token_name).await;
         assert!(token.is_ok());
 

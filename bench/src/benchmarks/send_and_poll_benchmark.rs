@@ -7,18 +7,18 @@ use async_trait::async_trait;
 use colored::Colorize;
 use human_format::Formatter;
 use iggy::utils::byte_size::IggyByteSize;
-use integration::test_server::ClientFactoryNext;
+use integration::test_server::ClientFactory;
 use std::fmt::Display;
 use std::sync::Arc;
 use tracing::info;
 
 pub struct SendAndPollMessagesBenchmark {
     args: Arc<IggyBenchArgs>,
-    client_factory: Arc<dyn ClientFactoryNext>,
+    client_factory: Arc<dyn ClientFactory>,
 }
 
 impl SendAndPollMessagesBenchmark {
-    pub fn new(args: Arc<IggyBenchArgs>, client_factory: Arc<dyn ClientFactoryNext>) -> Self {
+    pub fn new(args: Arc<IggyBenchArgs>, client_factory: Arc<dyn ClientFactory>) -> Self {
         Self {
             args,
             client_factory,
@@ -113,7 +113,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
         &self.args
     }
 
-    fn client_factory(&self) -> &Arc<dyn ClientFactoryNext> {
+    fn client_factory(&self) -> &Arc<dyn ClientFactory> {
         &self.client_factory
     }
 

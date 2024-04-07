@@ -3,17 +3,17 @@ use crate::args::common::IggyBenchArgs;
 use crate::args::simple::BenchmarkKind;
 use crate::producer::Producer;
 use async_trait::async_trait;
-use integration::test_server::ClientFactoryNext;
+use integration::test_server::ClientFactory;
 use std::sync::Arc;
 use tracing::info;
 
 pub struct SendMessagesBenchmark {
     args: Arc<IggyBenchArgs>,
-    client_factory: Arc<dyn ClientFactoryNext>,
+    client_factory: Arc<dyn ClientFactory>,
 }
 
 impl SendMessagesBenchmark {
-    pub fn new(args: Arc<IggyBenchArgs>, client_factory: Arc<dyn ClientFactoryNext>) -> Self {
+    pub fn new(args: Arc<IggyBenchArgs>, client_factory: Arc<dyn ClientFactory>) -> Self {
         Self {
             args,
             client_factory,
@@ -78,7 +78,7 @@ impl Benchmarkable for SendMessagesBenchmark {
         &self.args
     }
 
-    fn client_factory(&self) -> &Arc<dyn ClientFactoryNext> {
+    fn client_factory(&self) -> &Arc<dyn ClientFactory> {
         &self.client_factory
     }
 

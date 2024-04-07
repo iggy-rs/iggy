@@ -1,12 +1,12 @@
 use crate::bench::run_bench_and_wait_for_finish;
-use iggy::clients::next_client::IggyClientNext;
-use iggy::clients::next_client::IggyClientNextBackgroundConfig;
-use iggy::next_client::SystemClientNext;
+use iggy::client::SystemClient;
+use iggy::clients::client::IggyClient;
+use iggy::clients::client::IggyClientBackgroundConfig;
 use iggy::utils::byte_size::IggyByteSize;
 use integration::{
     tcp_client::TcpClientFactory,
     test_server::{
-        login_root_next, ClientFactoryNext, IpAddrKind, TestServer, Transport, SYSTEM_PATH_ENV_VAR,
+        login_root, ClientFactory, IpAddrKind, TestServer, Transport, SYSTEM_PATH_ENV_VAR,
     },
 };
 use serial_test::parallel;
@@ -40,14 +40,14 @@ async fn should_fill_data_and_verify_after_restart() {
 
     // 4. Connect and login to newly started server
     let client = TcpClientFactory { server_addr }.create_client().await;
-    let client = IggyClientNext::create(
+    let client = IggyClient::create(
         client,
-        IggyClientNextBackgroundConfig::default(),
+        IggyClientBackgroundConfig::default(),
         None,
         None,
         None,
     );
-    login_root_next(&client).await;
+    login_root(&client).await;
 
     // 5. Save stats from the first server
     let stats = client.get_stats().await.unwrap();
@@ -72,18 +72,18 @@ async fn should_fill_data_and_verify_after_restart() {
     let server_addr = test_server.get_raw_tcp_addr().unwrap();
 
     // 8. Connect and login to newly started server
-    let client = IggyClientNext::create(
+    let client = IggyClient::create(
         TcpClientFactory {
             server_addr: server_addr.clone(),
         }
         .create_client()
         .await,
-        IggyClientNextBackgroundConfig::default(),
+        IggyClientBackgroundConfig::default(),
         None,
         None,
         None,
     );
-    login_root_next(&client).await;
+    login_root(&client).await;
 
     // 9. Save stats from the second server
     let stats = client.get_stats().await.unwrap();

@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::next_client::ClientNext;
+use crate::client::Client;
 use crate::users::get_users::GetUsers;
 use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
@@ -45,7 +45,7 @@ impl CliCommand for GetUsersCmd {
         format!("list users in {mode} mode")
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let users = client
             .get_users()
             .await

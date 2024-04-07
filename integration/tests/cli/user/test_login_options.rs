@@ -1,7 +1,7 @@
 use crate::cli::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
@@ -26,7 +26,7 @@ impl TestLoginOptions {
 
 #[async_trait]
 impl IggyCmdTestCase for TestLoginOptions {
-    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {}
+    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         match self.use_credentials {
@@ -52,7 +52,7 @@ impl IggyCmdTestCase for TestLoginOptions {
             .stdout(contains(String::from("Transport | TCP")));
     }
 
-    async fn verify_server_state(&self, _client: &dyn ClientNext) {}
+    async fn verify_server_state(&self, _client: &dyn Client) {}
 }
 
 #[tokio::test]

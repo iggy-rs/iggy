@@ -3,10 +3,10 @@ mod seeder;
 use anyhow::Result;
 use clap::Parser;
 use iggy::args::{Args, ArgsOptional};
+use iggy::client::UserClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::next_client::{IggyClientNext, IggyClientNextBackgroundConfig};
-use iggy::next_client::UserClientNext;
+use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::error::Error;
 use std::sync::Arc;
@@ -41,10 +41,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let username = args.username.clone();
     let password = args.password.clone();
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(iggy_args)?);
-    let client = client_provider::get_raw_connected_client_next(client_provider_config).await?;
-    let client = IggyClientNext::create(
+    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
+    let client = IggyClient::create(
         client,
-        IggyClientNextBackgroundConfig::default(),
+        IggyClientBackgroundConfig::default(),
         None,
         None,
         encryptor,

@@ -1,8 +1,7 @@
-use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
+use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
 use crate::client::Client;
 use crate::error::IggyError;
-use crate::next_client::ClientNext;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -51,17 +50,6 @@ impl Client for QuicClient {
 }
 
 #[async_trait]
-impl ClientNext for QuicClient {
-    async fn connect(&self) -> Result<(), IggyError> {
-        QuicClient::connect(self).await
-    }
-
-    async fn disconnect(&self) -> Result<(), IggyError> {
-        QuicClient::disconnect(self).await
-    }
-}
-
-#[async_trait]
 impl BinaryTransport for QuicClient {
     async fn get_state(&self) -> ClientState {
         *self.state.lock().await
@@ -97,8 +85,6 @@ impl BinaryTransport for QuicClient {
 }
 
 impl BinaryClient for QuicClient {}
-
-impl BinaryClientNext for QuicClient {}
 
 impl QuicClient {
     /// Creates a new QUIC client for the provided client and server addresses.

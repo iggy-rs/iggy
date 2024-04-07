@@ -1,28 +1,16 @@
 #[allow(deprecated)]
-use crate::binary::binary_client::{BinaryClient, BinaryClientNext};
+use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, BinaryTransport};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::PartitionClient;
 use crate::command::{CREATE_PARTITIONS_CODE, DELETE_PARTITIONS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
-use crate::next_client::PartitionClientNext;
 use crate::partitions::create_partitions::CreatePartitions;
 use crate::partitions::delete_partitions::DeletePartitions;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> PartitionClient for B {
-    async fn create_partitions(&self, command: &CreatePartitions) -> Result<(), IggyError> {
-        create_partitions(self, command).await
-    }
-
-    async fn delete_partitions(&self, command: &DeletePartitions) -> Result<(), IggyError> {
-        delete_partitions(self, command).await
-    }
-}
-
-#[async_trait::async_trait]
-impl<B: BinaryClientNext> PartitionClientNext for B {
     async fn create_partitions(
         &self,
         stream_id: &Identifier,

@@ -1,7 +1,7 @@
 use crate::cli::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use predicates::str::diff;
 use serial_test::parallel;
 
@@ -31,7 +31,7 @@ impl TestStreamCreateCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestStreamCreateCmd {
-    async fn prepare_server_state(&mut self, _client: &dyn ClientNext) {}
+    async fn prepare_server_state(&mut self, _client: &dyn Client) {}
 
     fn get_command(&self) -> IggyCmdCommand {
         IggyCmdCommand::new()
@@ -55,7 +55,7 @@ impl IggyCmdTestCase for TestStreamCreateCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let stream = client
             .get_stream(&self.name.clone().try_into().unwrap())
             .await;

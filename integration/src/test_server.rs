@@ -16,18 +16,11 @@ use uuid::Uuid;
 
 use iggy::client::{Client, StreamClient, UserClient};
 use iggy::clients::client::IggyClient;
-use iggy::clients::next_client::IggyClientNext;
 use iggy::identifier::Identifier;
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus::Active;
-use iggy::next_client::{ClientNext, StreamClientNext, UserClientNext};
-use iggy::streams::get_streams::GetStreams;
-use iggy::users::create_user::CreateUser;
 use iggy::users::defaults::*;
-use iggy::users::delete_user::DeleteUser;
-use iggy::users::get_users::GetUsers;
-use iggy::users::login_user::LoginUser;
 use server::configs::config_provider::{ConfigProvider, FileConfigProvider};
 
 pub const SYSTEM_PATH_ENV_VAR: &str = "IGGY_SYSTEM_PATH";
@@ -46,11 +39,6 @@ pub enum IpAddrKind {
 #[async_trait]
 pub trait ClientFactory: Sync + Send {
     async fn create_client(&self) -> Box<dyn Client>;
-}
-
-#[async_trait]
-pub trait ClientFactoryNext: Sync + Send {
-    async fn create_client(&self) -> Box<dyn ClientNext>;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Display)]
@@ -454,32 +442,6 @@ impl Default for TestServer {
 
 pub async fn create_user(client: &IggyClient, username: &str) {
     client
-        .create_user(&CreateUser {
-            username: username.to_string(),
-            password: USER_PASSWORD.to_string(),
-            status: Active,
-            permissions: Some(Permissions {
-                global: GlobalPermissions {
-                    manage_servers: true,
-                    read_servers: true,
-                    manage_users: true,
-                    read_users: true,
-                    manage_streams: true,
-                    read_streams: true,
-                    manage_topics: true,
-                    read_topics: true,
-                    poll_messages: true,
-                    send_messages: true,
-                },
-                streams: None,
-            }),
-        })
-        .await
-        .unwrap();
-}
-
-pub async fn create_user_next(client: &IggyClientNext, username: &str) {
-    client
         .create_user(
             username,
             USER_PASSWORD,
@@ -506,60 +468,23 @@ pub async fn create_user_next(client: &IggyClientNext, username: &str) {
 
 pub async fn delete_user(client: &IggyClient, username: &str) {
     client
-        .delete_user(&DeleteUser {
-            user_id: Identifier::named(username).unwrap(),
-        })
-        .await
-        .unwrap();
-}
-
-pub async fn delete_user_next(client: &IggyClientNext, username: &str) {
-    client
         .delete_user(&Identifier::named(username).unwrap())
         .await
         .unwrap();
 }
 
-pub async fn login_root(client: &IggyClient) {
-    client
-        .login_user(&LoginUser {
-            username: DEFAULT_ROOT_USERNAME.to_string(),
-            password: DEFAULT_ROOT_PASSWORD.to_string(),
-        })
-        .await
-        .unwrap();
-}
-
-pub async fn login_root_next(client: &IggyClientNext) -> IdentityInfo {
+pub async fn login_root(client: &IggyClient) -> IdentityInfo {
     client
         .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
         .await
         .unwrap()
 }
 
-pub async fn login_user(client: &IggyClient, username: &str) {
-    client
-        .login_user(&LoginUser {
-            username: username.to_string(),
-            password: USER_PASSWORD.to_string(),
-        })
-        .await
-        .unwrap();
-}
-
-pub async fn login_user_next(client: &IggyClientNext, username: &str) -> IdentityInfo {
+pub async fn login_user(client: &IggyClient, username: &str) -> IdentityInfo {
     client.login_user(username, USER_PASSWORD).await.unwrap()
 }
 
 pub async fn assert_clean_system(system_client: &IggyClient) {
-    let streams = system_client.get_streams(&GetStreams {}).await.unwrap();
-    assert!(streams.is_empty());
-
-    let users = system_client.get_users(&GetUsers {}).await.unwrap();
-    assert_eq!(users.len(), 1);
-}
-
-pub async fn assert_clean_system_next(system_client: &IggyClientNext) {
     let streams = system_client.get_streams().await.unwrap();
     assert!(streams.is_empty());
 

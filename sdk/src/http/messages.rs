@@ -7,22 +7,10 @@ use crate::identifier::Identifier;
 use crate::messages::poll_messages::{PollMessages, PollingStrategy};
 use crate::messages::send_messages::{Message, Partitioning, SendMessages};
 use crate::models::messages::PolledMessages;
-use crate::next_client::MessageClientNext;
 use async_trait::async_trait;
 
 #[async_trait]
 impl MessageClient for HttpClient {
-    async fn poll_messages(&self, command: &PollMessages) -> Result<PolledMessages, IggyError> {
-        poll_messages(self, command).await
-    }
-
-    async fn send_messages(&self, command: &mut SendMessages) -> Result<(), IggyError> {
-        send_messages(self, command).await
-    }
-}
-
-#[async_trait]
-impl MessageClientNext for HttpClient {
     async fn poll_messages(
         &self,
         stream_id: &Identifier,

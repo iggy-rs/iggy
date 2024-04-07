@@ -1,7 +1,7 @@
 use crate::cli::common::{IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, USAGE_PREFIX};
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
-use iggy::next_client::ClientNext;
+use iggy::client::Client;
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use predicates::str::diff;
 use serial_test::parallel;
@@ -22,7 +22,7 @@ impl TestPatDeleteCmd {
 
 #[async_trait]
 impl IggyCmdTestCase for TestPatDeleteCmd {
-    async fn prepare_server_state(&mut self, client: &dyn ClientNext) {
+    async fn prepare_server_state(&mut self, client: &dyn Client) {
         let pat = client
             .create_personal_access_token(&self.name, PersonalAccessTokenExpiry::NeverExpire)
             .await;
@@ -44,7 +44,7 @@ impl IggyCmdTestCase for TestPatDeleteCmd {
         command_state.success().stdout(diff(message));
     }
 
-    async fn verify_server_state(&self, client: &dyn ClientNext) {
+    async fn verify_server_state(&self, client: &dyn Client) {
         let tokens = client.get_personal_access_tokens().await;
 
         assert!(tokens.is_ok());

@@ -1,5 +1,5 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
-use crate::next_client::ClientNext;
+use crate::client::Client;
 use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use anyhow::Context;
@@ -52,7 +52,7 @@ impl CliCommand for CreatePersonalAccessTokenCmd {
         )
     }
 
-    async fn execute_cmd(&mut self, client: &dyn ClientNext) -> anyhow::Result<(), anyhow::Error> {
+    async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let token = client
             .create_personal_access_token(&self.create_token.name, self.create_token.expiry.into())
             .await

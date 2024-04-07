@@ -47,7 +47,7 @@ impl TryFrom<RetainedMessage> for PolledMessage {
 }
 
 impl RetainedMessage {
-    pub fn new(offset: u64, timestamp: u64, message: &Message) -> Self {
+    pub fn new(offset: u64, timestamp: u64, message: Message) -> Self {
         RetainedMessage {
             offset,
             timestamp,

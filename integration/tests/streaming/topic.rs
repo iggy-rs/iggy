@@ -180,7 +180,7 @@ async fn should_purge_existing_topic_on_disk() {
         let messages_count = messages.len();
         let batch_size = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
         topic
-            .append_messages(batch_size, &Partitioning::partition_id(1), &messages)
+            .append_messages(batch_size, Partitioning::partition_id(1), messages)
             .await
             .unwrap();
         let loaded_messages = topic

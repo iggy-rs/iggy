@@ -167,7 +167,7 @@ async fn should_purge_existing_partition_on_disk() {
             partition.partition_id,
         );
         partition
-            .append_messages(appendable_batch_info, &messages)
+            .append_messages(appendable_batch_info, messages)
             .await
             .unwrap();
         let loaded_messages = partition.get_messages_by_offset(0, 100).await.unwrap();

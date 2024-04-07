@@ -92,14 +92,14 @@ impl System {
     pub async fn append_messages(
         &self,
         session: &Session,
-        stream_id: &Identifier,
-        topic_id: &Identifier,
-        partitioning: &Partitioning,
-        messages: &Vec<Message>,
+        stream_id: Identifier,
+        topic_id: Identifier,
+        partitioning: Partitioning,
+        messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let stream = self.get_stream(&stream_id)?;
+        let topic = stream.get_topic(&topic_id)?;
         self.permissioner.append_messages(
             session.get_user_id(),
             stream.stream_id,
@@ -107,52 +107,36 @@ impl System {
         )?;
 
         let mut batch_size_bytes = 0;
+        let mut messages = messages;
         if let Some(encryptor) = &self.encryptor {
-            let mut encrypted_messages = Vec::with_capacity(messages.len());
-            for message in messages.iter() {
-                let payload = encryptor.encrypt(&message.payload);
+            for message in messages.iter_mut() {
+                let payload = encryptor.decrypt(&message.payload);
                 match payload {
                     Ok(payload) => {
-                        let msg = Message::new(
-                            Some(message.id),
-                            Bytes::from(payload),
-                            message.headers.clone(),
-                        );
-                        batch_size_bytes += msg.get_size_bytes() as u64;
-                        encrypted_messages.push(msg);
+                        message.payload = Bytes::from(payload);
+                        batch_size_bytes += message.get_size_bytes() as u64;
                     }
                     Err(error) => {
-                        error!("Cannot encrypt the message. Error: {}", error);
-                        return Err(IggyError::CannotEncryptData);
+                        error!("Cannot decrypt the message. Error: {}", error);
+                        return Err(IggyError::CannotDecryptData);
                     }
                 }
             }
-            if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
-                if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
-                    self.clean_cache(batch_size_bytes).await;
-                }
-            }
-
-            topic
-                .append_messages(batch_size_bytes, partitioning, &encrypted_messages)
-                .await?;
-            self.metrics
-                .increment_messages(encrypted_messages.len() as u64);
-            Ok(())
         } else {
             batch_size_bytes = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
-            if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
-                if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
-                    self.clean_cache(batch_size_bytes).await;
-                }
-            }
-
-            topic
-                .append_messages(batch_size_bytes, partitioning, messages)
-                .await?;
-            self.metrics.increment_messages(messages.len() as u64);
-            Ok(())
         }
+
+        if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
+            if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
+                self.clean_cache(batch_size_bytes).await;
+            }
+        }
+        let messages_count = messages.len() as u64;
+        topic
+            .append_messages(batch_size_bytes, partitioning, messages)
+            .await?;
+        self.metrics.increment_messages(messages_count);
+        Ok(())
     }
 }
 

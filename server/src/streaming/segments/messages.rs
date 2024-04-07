@@ -296,8 +296,8 @@ impl Segment {
             return Ok(0);
         }
 
-        let unsaved_messages_number = unsaved_batches.first().unwrap().base_offset
-            + unsaved_batches.last().unwrap().get_last_offset();
+        let unsaved_messages_number = (unsaved_batches.last().unwrap().get_last_offset() + 1)
+            - unsaved_batches.first().unwrap().base_offset;
 
         trace!(
             "Saving {} messages on disk in segment with start offset: {} for partition with ID: {}...",

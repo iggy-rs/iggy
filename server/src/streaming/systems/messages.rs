@@ -8,6 +8,7 @@ use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::{PolledMessage, PolledMessages};
 use iggy::{error::IggyError, identifier::Identifier};
 use tracing::{error, trace};
+use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 
 impl System {
     pub async fn poll_messages(
@@ -125,6 +126,11 @@ impl System {
             batch_size_bytes = messages.iter().map(|msg| msg.get_size_bytes() as u64).sum();
         }
 
+        if let Some(memory_tracker) = CacheMemoryTracker::get_instance() {
+            if !memory_tracker.will_fit_into_cache(batch_size_bytes) {
+                self.clean_cache(batch_size_bytes).await;
+            }
+        }
         let messages_count = messages.len() as u64;
         topic
             .append_messages(batch_size_bytes, partitioning, messages)

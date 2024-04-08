@@ -1,6 +1,6 @@
 #[allow(deprecated)]
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::{fail_if_not_authenticated, BinaryTransport};
+use crate::binary::fail_if_not_authenticated;
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::PartitionClient;
 use crate::command::{CREATE_PARTITIONS_CODE, DELETE_PARTITIONS_CODE};
@@ -17,15 +17,18 @@ impl<B: BinaryClient> PartitionClient for B {
         topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), IggyError> {
-        create_partitions(
-            self,
-            &CreatePartitions {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            CREATE_PARTITIONS_CODE,
+            CreatePartitions {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 partitions_count,
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn delete_partitions(
@@ -34,36 +37,17 @@ impl<B: BinaryClient> PartitionClient for B {
         topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), IggyError> {
-        delete_partitions(
-            self,
-            &DeletePartitions {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            DELETE_PARTITIONS_CODE,
+            DeletePartitions {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 partitions_count,
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
-}
-
-async fn create_partitions<T: BinaryTransport>(
-    transport: &T,
-    command: &CreatePartitions,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(CREATE_PARTITIONS_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn delete_partitions<T: BinaryTransport>(
-    transport: &T,
-    command: &DeletePartitions,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(DELETE_PARTITIONS_CODE, command.as_bytes())
-        .await?;
-    Ok(())
 }

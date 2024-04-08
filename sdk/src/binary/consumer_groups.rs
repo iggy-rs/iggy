@@ -1,5 +1,5 @@
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
+use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::ConsumerGroupClient;
 use crate::command::{
@@ -24,15 +24,19 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         topic_id: &Identifier,
         group_id: &Identifier,
     ) -> Result<ConsumerGroupDetails, IggyError> {
-        get_consumer_group(
-            self,
-            &GetConsumerGroup {
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-                consumer_group_id: group_id.clone(),
-            },
-        )
-        .await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(
+                GET_CONSUMER_GROUP_CODE,
+                GetConsumerGroup {
+                    stream_id: stream_id.clone(),
+                    topic_id: topic_id.clone(),
+                    consumer_group_id: group_id.clone(),
+                }
+                .as_bytes(),
+            )
+            .await?;
+        mapper::map_consumer_group(response)
     }
 
     async fn get_consumer_groups(
@@ -40,14 +44,18 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<Vec<ConsumerGroup>, IggyError> {
-        get_consumer_groups(
-            self,
-            &GetConsumerGroups {
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-            },
-        )
-        .await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(
+                GET_CONSUMER_GROUPS_CODE,
+                GetConsumerGroups {
+                    stream_id: stream_id.clone(),
+                    topic_id: topic_id.clone(),
+                }
+                .as_bytes(),
+            )
+            .await?;
+        mapper::map_consumer_groups(response)
     }
 
     async fn create_consumer_group(
@@ -57,16 +65,19 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         name: &str,
         group_id: Option<u32>,
     ) -> Result<(), IggyError> {
-        create_consumer_group(
-            self,
-            &CreateConsumerGroup {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            CREATE_CONSUMER_GROUP_CODE,
+            CreateConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 name: name.to_string(),
                 group_id,
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn delete_consumer_group(
@@ -75,15 +86,18 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         topic_id: &Identifier,
         group_id: &Identifier,
     ) -> Result<(), IggyError> {
-        delete_consumer_group(
-            self,
-            &DeleteConsumerGroup {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            DELETE_CONSUMER_GROUP_CODE,
+            DeleteConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 consumer_group_id: group_id.clone(),
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn join_consumer_group(
@@ -92,15 +106,18 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         topic_id: &Identifier,
         group_id: &Identifier,
     ) -> Result<(), IggyError> {
-        join_consumer_group(
-            self,
-            &JoinConsumerGroup {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            JOIN_CONSUMER_GROUP_CODE,
+            JoinConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 consumer_group_id: group_id.clone(),
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn leave_consumer_group(
@@ -109,80 +126,17 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         topic_id: &Identifier,
         group_id: &Identifier,
     ) -> Result<(), IggyError> {
-        leave_consumer_group(
-            self,
-            &LeaveConsumerGroup {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            LEAVE_CONSUMER_GROUP_CODE,
+            LeaveConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 consumer_group_id: group_id.clone(),
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
-}
-
-async fn get_consumer_group<T: BinaryTransport>(
-    transport: &T,
-    command: &GetConsumerGroup,
-) -> Result<ConsumerGroupDetails, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_CONSUMER_GROUP_CODE, command.as_bytes())
-        .await?;
-    mapper::map_consumer_group(response)
-}
-
-async fn get_consumer_groups<T: BinaryTransport>(
-    transport: &T,
-    command: &GetConsumerGroups,
-) -> Result<Vec<ConsumerGroup>, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_CONSUMER_GROUPS_CODE, command.as_bytes())
-        .await?;
-    mapper::map_consumer_groups(response)
-}
-
-async fn create_consumer_group<T: BinaryTransport>(
-    transport: &T,
-    command: &CreateConsumerGroup,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(CREATE_CONSUMER_GROUP_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn delete_consumer_group<T: BinaryTransport>(
-    transport: &T,
-    command: &DeleteConsumerGroup,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(DELETE_CONSUMER_GROUP_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn join_consumer_group<T: BinaryTransport>(
-    transport: &T,
-    command: &JoinConsumerGroup,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(JOIN_CONSUMER_GROUP_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn leave_consumer_group<T: BinaryTransport>(
-    transport: &T,
-    command: &LeaveConsumerGroup,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(LEAVE_CONSUMER_GROUP_CODE, command.as_bytes())
-        .await?;
-    Ok(())
 }

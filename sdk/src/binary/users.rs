@@ -1,5 +1,5 @@
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport, ClientState};
+use crate::binary::{fail_if_not_authenticated, mapper, ClientState};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::UserClient;
 use crate::command::*;
@@ -22,17 +22,25 @@ use crate::users::update_user::UpdateUser;
 #[async_trait::async_trait]
 impl<B: BinaryClient> UserClient for B {
     async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
-        get_user(
-            self,
-            &GetUser {
-                user_id: user_id.clone(),
-            },
-        )
-        .await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(
+                GET_USER_CODE,
+                GetUser {
+                    user_id: user_id.clone(),
+                }
+                .as_bytes(),
+            )
+            .await?;
+        mapper::map_user(response)
     }
 
     async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {
-        get_users(self, &GetUsers {}).await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(GET_USERS_CODE, GetUsers {}.as_bytes())
+            .await?;
+        mapper::map_users(response)
     }
 
     async fn create_user(
@@ -42,26 +50,32 @@ impl<B: BinaryClient> UserClient for B {
         status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
-        create_user(
-            self,
-            &CreateUser {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            CREATE_USER_CODE,
+            CreateUser {
                 username: username.to_string(),
                 password: password.to_string(),
                 status,
                 permissions,
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError> {
-        delete_user(
-            self,
-            &DeleteUser {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            DELETE_USER_CODE,
+            DeleteUser {
                 user_id: user_id.clone(),
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn update_user(
@@ -70,15 +84,18 @@ impl<B: BinaryClient> UserClient for B {
         username: Option<&str>,
         status: Option<UserStatus>,
     ) -> Result<(), IggyError> {
-        update_user(
-            self,
-            &UpdateUser {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            UPDATE_USER_CODE,
+            UpdateUser {
                 user_id: user_id.clone(),
                 username: username.map(|s| s.to_string()),
                 status,
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn update_permissions(
@@ -86,14 +103,17 @@ impl<B: BinaryClient> UserClient for B {
         user_id: &Identifier,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
-        update_permissions(
-            self,
-            &UpdatePermissions {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            UPDATE_PERMISSIONS_CODE,
+            UpdatePermissions {
                 user_id: user_id.clone(),
                 permissions,
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn change_password(
@@ -102,129 +122,40 @@ impl<B: BinaryClient> UserClient for B {
         current_password: &str,
         new_password: &str,
     ) -> Result<(), IggyError> {
-        change_password(
-            self,
-            &ChangePassword {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            CHANGE_PASSWORD_CODE,
+            ChangePassword {
                 user_id: user_id.clone(),
                 current_password: current_password.to_string(),
                 new_password: new_password.to_string(),
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn login_user(&self, username: &str, password: &str) -> Result<IdentityInfo, IggyError> {
-        login_user(
-            self,
-            &LoginUser {
-                username: username.to_string(),
-                password: password.to_string(),
-            },
-        )
-        .await
+        let response = self
+            .send_with_response(
+                LOGIN_USER_CODE,
+                LoginUser {
+                    username: username.to_string(),
+                    password: password.to_string(),
+                }
+                .as_bytes(),
+            )
+            .await?;
+        self.set_state(ClientState::Authenticated).await;
+        mapper::map_identity_info(response)
     }
 
     async fn logout_user(&self) -> Result<(), IggyError> {
-        logout_user(self, &LogoutUser {}).await
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(LOGOUT_USER_CODE, LogoutUser {}.as_bytes())
+            .await?;
+        self.set_state(ClientState::Connected).await;
+        Ok(())
     }
-}
-
-async fn get_user<T: BinaryTransport>(
-    transport: &T,
-    command: &GetUser,
-) -> Result<UserInfoDetails, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_USER_CODE, command.as_bytes())
-        .await?;
-    mapper::map_user(response)
-}
-
-async fn get_users<T: BinaryTransport>(
-    transport: &T,
-    command: &GetUsers,
-) -> Result<Vec<UserInfo>, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_USERS_CODE, command.as_bytes())
-        .await?;
-    mapper::map_users(response)
-}
-
-async fn create_user<T: BinaryTransport>(
-    transport: &T,
-    command: &CreateUser,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(CREATE_USER_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn delete_user<T: BinaryTransport>(
-    transport: &T,
-    command: &DeleteUser,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(DELETE_USER_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn update_user<T: BinaryTransport>(
-    transport: &T,
-    command: &UpdateUser,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(UPDATE_USER_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn update_permissions<T: BinaryTransport>(
-    transport: &T,
-    command: &UpdatePermissions,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(UPDATE_PERMISSIONS_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn change_password<T: BinaryTransport>(
-    transport: &T,
-    command: &ChangePassword,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(CHANGE_PASSWORD_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn login_user<T: BinaryTransport>(
-    transport: &T,
-    command: &LoginUser,
-) -> Result<IdentityInfo, IggyError> {
-    let response = transport
-        .send_with_response(LOGIN_USER_CODE, command.as_bytes())
-        .await?;
-    transport.set_state(ClientState::Authenticated).await;
-    mapper::map_identity_info(response)
-}
-
-async fn logout_user<T: BinaryTransport>(
-    transport: &T,
-    command: &LogoutUser,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(LOGOUT_USER_CODE, command.as_bytes())
-        .await?;
-    transport.set_state(ClientState::Connected).await;
-    Ok(())
 }

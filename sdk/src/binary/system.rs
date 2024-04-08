@@ -1,5 +1,5 @@
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
+use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::SystemClient;
 use crate::command::{GET_CLIENTS_CODE, GET_CLIENT_CODE, GET_ME_CODE, GET_STATS_CODE, PING_CODE};
@@ -15,73 +15,40 @@ use crate::system::ping::Ping;
 #[async_trait::async_trait]
 impl<B: BinaryClient> SystemClient for B {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
-        get_stats(self, &GetStats {}).await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(GET_STATS_CODE, GetStats {}.as_bytes())
+            .await?;
+        mapper::map_stats(response)
     }
 
     async fn get_me(&self) -> Result<ClientInfoDetails, IggyError> {
-        get_me(self, &GetMe {}).await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(GET_ME_CODE, GetMe {}.as_bytes())
+            .await?;
+        mapper::map_client(response)
     }
 
     async fn get_client(&self, client_id: u32) -> Result<ClientInfoDetails, IggyError> {
-        get_client(self, &GetClient { client_id }).await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(GET_CLIENT_CODE, GetClient { client_id }.as_bytes())
+            .await?;
+        mapper::map_client(response)
     }
 
     async fn get_clients(&self) -> Result<Vec<ClientInfo>, IggyError> {
-        get_clients(self, &GetClients {}).await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(GET_CLIENTS_CODE, GetClients {}.as_bytes())
+            .await?;
+        mapper::map_clients(response)
     }
 
     async fn ping(&self) -> Result<(), IggyError> {
-        ping(self, &Ping {}).await
+        self.send_with_response(PING_CODE, Ping {}.as_bytes())
+            .await?;
+        Ok(())
     }
-}
-
-async fn get_stats<T: BinaryTransport>(
-    transport: &T,
-    command: &GetStats,
-) -> Result<Stats, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_STATS_CODE, command.as_bytes())
-        .await?;
-    mapper::map_stats(response)
-}
-
-async fn get_me<T: BinaryTransport>(
-    transport: &T,
-    command: &GetMe,
-) -> Result<ClientInfoDetails, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_ME_CODE, command.as_bytes())
-        .await?;
-    mapper::map_client(response)
-}
-
-async fn get_client<T: BinaryTransport>(
-    transport: &T,
-    command: &GetClient,
-) -> Result<ClientInfoDetails, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_CLIENT_CODE, command.as_bytes())
-        .await?;
-    mapper::map_client(response)
-}
-
-async fn get_clients<T: BinaryTransport>(
-    transport: &T,
-    command: &GetClients,
-) -> Result<Vec<ClientInfo>, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_CLIENTS_CODE, command.as_bytes())
-        .await?;
-    mapper::map_clients(response)
-}
-
-async fn ping<T: BinaryTransport>(transport: &T, command: &Ping) -> Result<(), IggyError> {
-    transport
-        .send_with_response(PING_CODE, command.as_bytes())
-        .await?;
-    Ok(())
 }

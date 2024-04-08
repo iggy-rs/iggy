@@ -1,5 +1,5 @@
 use crate::binary::binary_client::BinaryClient;
-use crate::binary::{fail_if_not_authenticated, mapper, BinaryTransport};
+use crate::binary::{fail_if_not_authenticated, mapper};
 use crate::bytes_serializable::BytesSerializable;
 use crate::client::StreamClient;
 use crate::command::{
@@ -19,124 +19,78 @@ use crate::streams::update_stream::UpdateStream;
 #[async_trait::async_trait]
 impl<B: BinaryClient> StreamClient for B {
     async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
-        get_stream(
-            self,
-            &GetStream {
-                stream_id: stream_id.clone(),
-            },
-        )
-        .await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(
+                GET_STREAM_CODE,
+                GetStream {
+                    stream_id: stream_id.clone(),
+                }
+                .as_bytes(),
+            )
+            .await?;
+        mapper::map_stream(response)
     }
 
     async fn get_streams(&self) -> Result<Vec<Stream>, IggyError> {
-        get_streams(self, &GetStreams {}).await
+        fail_if_not_authenticated(self).await?;
+        let response = self
+            .send_with_response(GET_STREAMS_CODE, GetStreams {}.as_bytes())
+            .await?;
+        mapper::map_streams(response)
     }
 
     async fn create_stream(&self, name: &str, stream_id: Option<u32>) -> Result<(), IggyError> {
-        create_stream(
-            self,
-            &CreateStream {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            CREATE_STREAM_CODE,
+            CreateStream {
                 name: name.to_string(),
                 stream_id,
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn update_stream(&self, stream_id: &Identifier, name: &str) -> Result<(), IggyError> {
-        update_stream(
-            self,
-            &UpdateStream {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            UPDATE_STREAM_CODE,
+            UpdateStream {
                 stream_id: stream_id.clone(),
                 name: name.to_string(),
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn delete_stream(&self, stream_id: &Identifier) -> Result<(), IggyError> {
-        delete_stream(
-            self,
-            &DeleteStream {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            DELETE_STREAM_CODE,
+            DeleteStream {
                 stream_id: stream_id.clone(),
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn purge_stream(&self, stream_id: &Identifier) -> Result<(), IggyError> {
-        purge_stream(
-            self,
-            &PurgeStream {
+        fail_if_not_authenticated(self).await?;
+        self.send_with_response(
+            PURGE_STREAM_CODE,
+            PurgeStream {
                 stream_id: stream_id.clone(),
-            },
+            }
+            .as_bytes(),
         )
-        .await
+        .await?;
+        Ok(())
     }
-}
-
-async fn get_stream<T: BinaryTransport>(
-    transport: &T,
-    command: &GetStream,
-) -> Result<StreamDetails, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_STREAM_CODE, command.as_bytes())
-        .await?;
-    mapper::map_stream(response)
-}
-
-async fn get_streams<T: BinaryTransport>(
-    transport: &T,
-    command: &GetStreams,
-) -> Result<Vec<Stream>, IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    let response = transport
-        .send_with_response(GET_STREAMS_CODE, command.as_bytes())
-        .await?;
-    mapper::map_streams(response)
-}
-
-async fn create_stream<T: BinaryTransport>(
-    transport: &T,
-    command: &CreateStream,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(CREATE_STREAM_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn update_stream<T: BinaryTransport>(
-    transport: &T,
-    command: &UpdateStream,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(UPDATE_STREAM_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn delete_stream<T: BinaryTransport>(
-    transport: &T,
-    command: &DeleteStream,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(DELETE_STREAM_CODE, command.as_bytes())
-        .await?;
-    Ok(())
-}
-
-async fn purge_stream<T: BinaryTransport>(
-    transport: &T,
-    command: &PurgeStream,
-) -> Result<(), IggyError> {
-    fail_if_not_authenticated(transport).await?;
-    transport
-        .send_with_response(PURGE_STREAM_CODE, command.as_bytes())
-        .await?;
-    Ok(())
 }

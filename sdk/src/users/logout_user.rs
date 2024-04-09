@@ -6,7 +6,7 @@ use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
-/// `LogoutUser` command is used to logout the authenticated user.
+/// `LogoutUser` command is used to log out the authenticated user.
 /// It has no additional payload.
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct LogoutUser {}

@@ -6,7 +6,7 @@ use crate::http::shared::AppState;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::routing::{get, post, put};
+use axum::routing::{delete, get, post, put};
 use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
 use iggy::models::identity_info::IdentityInfo;
@@ -14,7 +14,6 @@ use iggy::models::user_info::{UserInfo, UserInfoDetails};
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
 use iggy::users::login_user::LoginUser;
-use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 use iggy::validatable::Validatable;
@@ -31,7 +30,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/users/:user_id/permissions", put(update_permissions))
         .route("/users/:user_id/password", put(change_password))
         .route("/users/login", post(login_user))
-        .route("/users/logout", post(logout_user))
+        .route("/users/logout", delete(logout_user))
         .route("/users/refresh-token", post(refresh_token))
         .with_state(state)
 }
@@ -175,9 +174,7 @@ async fn login_user(
 async fn logout_user(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
-    Json(command): Json<LogoutUser>,
 ) -> Result<StatusCode, CustomError> {
-    command.validate()?;
     let system = state.system.read();
     system
         .logout_user(&Session::stateless(identity.user_id, identity.ip_address))

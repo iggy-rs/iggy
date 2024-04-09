@@ -15,15 +15,16 @@ impl PartitionClient for HttpClient {
         topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), IggyError> {
-        create_partitions(
-            self,
+        self.post(
+            &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
             &CreatePartitions {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 partitions_count,
             },
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn delete_partitions(
@@ -32,48 +33,17 @@ impl PartitionClient for HttpClient {
         topic_id: &Identifier,
         partitions_count: u32,
     ) -> Result<(), IggyError> {
-        delete_partitions(
-            self,
+        self.delete_with_query(
+            &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
             &DeletePartitions {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 partitions_count,
             },
         )
-        .await
+        .await?;
+        Ok(())
     }
-}
-
-async fn create_partitions<T: HttpTransport>(
-    transport: &T,
-    command: &CreatePartitions,
-) -> Result<(), IggyError> {
-    transport
-        .post(
-            &get_path(
-                &command.stream_id.as_cow_str(),
-                &command.topic_id.as_cow_str(),
-            ),
-            &command,
-        )
-        .await?;
-    Ok(())
-}
-
-async fn delete_partitions<T: HttpTransport>(
-    transport: &T,
-    command: &DeletePartitions,
-) -> Result<(), IggyError> {
-    transport
-        .delete_with_query(
-            &get_path(
-                &command.stream_id.as_cow_str(),
-                &command.topic_id.as_cow_str(),
-            ),
-            &command,
-        )
-        .await?;
-    Ok(())
 }
 
 fn get_path(stream_id: &str, topic_id: &str) -> String {

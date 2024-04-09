@@ -35,7 +35,7 @@ impl System {
             consumer_groups = client
                 .consumer_groups
                 .iter()
-                .map(|c| (c.stream_id, c.topic_id, c.consumer_group_id))
+                .map(|c| (c.stream_id, c.topic_id, c.group_id))
                 .collect();
         }
 

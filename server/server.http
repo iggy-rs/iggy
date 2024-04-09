@@ -60,12 +60,8 @@ Content-Type: application/json
 }
 
 ###
-POST {{url}}/users/logout
+DELETE {{url}}/users/logout
 Authorization: Bearer {{access_token}}
-Content-Type: application/json
-
-{
-}
 
 ###
 POST {{url}}/users

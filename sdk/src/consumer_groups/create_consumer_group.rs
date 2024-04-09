@@ -14,7 +14,7 @@ use std::str::from_utf8;
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
-/// - `consumer_group_id` - unique consumer group ID.
+/// - `group_id` - unique consumer group ID.
 /// - `name` - unique consumer group name, max length is 255 characters. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct CreateConsumerGroup {
@@ -152,7 +152,7 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
-        let consumer_group_id = 3u32;
+        let group_id = 3u32;
         let name = "test".to_string();
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
@@ -160,7 +160,7 @@ mod tests {
             BytesMut::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);
-        bytes.put_u32_le(consumer_group_id);
+        bytes.put_u32_le(group_id);
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.put_slice(name.as_bytes());
@@ -170,7 +170,7 @@ mod tests {
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.group_id.unwrap(), consumer_group_id);
+        assert_eq!(command.group_id.unwrap(), group_id);
         assert_eq!(command.name, name);
     }
 }

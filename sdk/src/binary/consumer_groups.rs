@@ -31,7 +31,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
                 GetConsumerGroup {
                     stream_id: stream_id.clone(),
                     topic_id: topic_id.clone(),
-                    consumer_group_id: group_id.clone(),
+                    group_id: group_id.clone(),
                 }
                 .as_bytes(),
             )
@@ -92,7 +92,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
             DeleteConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
-                consumer_group_id: group_id.clone(),
+                group_id: group_id.clone(),
             }
             .as_bytes(),
         )
@@ -112,7 +112,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
             JoinConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
-                consumer_group_id: group_id.clone(),
+                group_id: group_id.clone(),
             }
             .as_bytes(),
         )
@@ -132,7 +132,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
             LeaveConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
-                consumer_group_id: group_id.clone(),
+                group_id: group_id.clone(),
             }
             .as_bytes(),
         )

@@ -352,9 +352,9 @@ fn get_topic_key(stream_id: u32, topic_id: u32) -> String {
     format!("streams:{}:topics:{}", stream_id, topic_id)
 }
 
-fn get_consumer_group_key(stream_id: u32, topic_id: u32, consumer_group_id: u32) -> String {
+fn get_consumer_group_key(stream_id: u32, topic_id: u32, group_id: u32) -> String {
     format!(
-        "{}:{consumer_group_id}",
+        "{}:{group_id}",
         get_consumer_groups_key_prefix(stream_id, topic_id)
     )
 }

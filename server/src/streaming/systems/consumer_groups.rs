@@ -12,7 +12,7 @@ impl System {
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        consumer_group_id: &Identifier,
+        group_id: &Identifier,
     ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         self.ensure_authenticated(session)?;
         let stream = self.get_stream(stream_id)?;
@@ -23,7 +23,7 @@ impl System {
             topic.topic_id,
         )?;
 
-        topic.get_consumer_group(consumer_group_id)
+        topic.get_consumer_group(group_id)
     }
 
     pub fn get_consumer_groups(

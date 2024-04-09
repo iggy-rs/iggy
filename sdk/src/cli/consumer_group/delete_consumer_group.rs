@@ -11,12 +11,12 @@ pub struct DeleteConsumerGroupCmd {
 }
 
 impl DeleteConsumerGroupCmd {
-    pub fn new(stream_id: Identifier, topic_id: Identifier, consumer_group_id: Identifier) -> Self {
+    pub fn new(stream_id: Identifier, topic_id: Identifier, group_id: Identifier) -> Self {
         Self {
             delete_consumer_group: DeleteConsumerGroup {
                 stream_id,
                 topic_id,
-                consumer_group_id,
+                group_id,
             },
         }
     }
@@ -27,7 +27,7 @@ impl CliCommand for DeleteConsumerGroupCmd {
     fn explain(&self) -> String {
         format!(
             "delete consumer group with ID: {} for topic with ID: {} and stream with ID: {}",
-            self.delete_consumer_group.consumer_group_id,
+            self.delete_consumer_group.group_id,
             self.delete_consumer_group.topic_id,
             self.delete_consumer_group.stream_id,
         )
@@ -35,18 +35,18 @@ impl CliCommand for DeleteConsumerGroupCmd {
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         client
-            .delete_consumer_group(&self.delete_consumer_group.stream_id, &self.delete_consumer_group.topic_id, &self.delete_consumer_group.consumer_group_id)
+            .delete_consumer_group(&self.delete_consumer_group.stream_id, &self.delete_consumer_group.topic_id, &self.delete_consumer_group.group_id)
             .await
             .with_context(|| {
                 format!(
                     "Problem deleting consumer group with ID: {} for topic with ID: {} and stream with ID: {}",
-                    self.delete_consumer_group.consumer_group_id, self.delete_consumer_group.topic_id, self.delete_consumer_group.stream_id
+                    self.delete_consumer_group.group_id, self.delete_consumer_group.topic_id, self.delete_consumer_group.stream_id
                 )
             })?;
 
         event!(target: PRINT_TARGET, Level::INFO,
             "Consumer group with ID: {} deleted for topic with ID: {} and stream with ID: {}",
-            self.delete_consumer_group.consumer_group_id,
+            self.delete_consumer_group.group_id,
             self.delete_consumer_group.topic_id,
             self.delete_consumer_group.stream_id,
         );

@@ -20,7 +20,7 @@ pub fn router(state: Arc<AppState>) -> Router {
             get(get_consumer_groups).post(create_consumer_group),
         )
         .route(
-            "/streams/:stream_id/topics/:topic_id/consumer-groups/:consumer_group_id",
+            "/streams/:stream_id/topics/:topic_id/consumer-groups/:group_id",
             get(get_consumer_group).delete(delete_consumer_group),
         )
         .with_state(state)
@@ -29,17 +29,17 @@ pub fn router(state: Arc<AppState>) -> Router {
 async fn get_consumer_group(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
-    Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, String)>,
+    Path((stream_id, topic_id, group_id)): Path<(String, String, String)>,
 ) -> Result<Json<ConsumerGroupDetails>, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let consumer_group_id = Identifier::from_str_value(&consumer_group_id)?;
+    let group_id = Identifier::from_str_value(&group_id)?;
     let system = state.system.read();
     let consumer_group = system.get_consumer_group(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
         &topic_id,
-        &consumer_group_id,
+        &group_id,
     )?;
     let consumer_group = consumer_group.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;
@@ -88,18 +88,18 @@ async fn create_consumer_group(
 async fn delete_consumer_group(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
-    Path((stream_id, topic_id, consumer_group_id)): Path<(String, String, String)>,
+    Path((stream_id, topic_id, group_id)): Path<(String, String, String)>,
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let consumer_group_id = Identifier::from_str_value(&consumer_group_id)?;
+    let group_id = Identifier::from_str_value(&group_id)?;
     let mut system = state.system.write();
     system
         .delete_consumer_group(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
             &topic_id,
-            &consumer_group_id,
+            &group_id,
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

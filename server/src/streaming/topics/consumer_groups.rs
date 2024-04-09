@@ -42,15 +42,15 @@ impl Topic {
         &self,
         name: &str,
     ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
-        let consumer_group_id = self.consumer_groups_ids.get(name);
-        if consumer_group_id.is_none() {
+        let group_id = self.consumer_groups_ids.get(name);
+        if group_id.is_none() {
             return Err(IggyError::ConsumerGroupNameNotFound(
                 name.to_string(),
                 self.topic_id,
             ));
         }
 
-        self.get_consumer_group_by_id(*consumer_group_id.unwrap())
+        self.get_consumer_group_by_id(*group_id.unwrap())
     }
 
     pub fn get_consumer_group_by_id(&self, id: u32) -> Result<&RwLock<ConsumerGroup>, IggyError> {
@@ -121,19 +121,16 @@ impl Topic {
         &mut self,
         id: &Identifier,
     ) -> Result<RwLock<ConsumerGroup>, IggyError> {
-        let consumer_group_id;
+        let group_id;
         {
             let consumer_group = self.get_consumer_group(id)?;
             let consumer_group = consumer_group.read().await;
-            consumer_group_id = consumer_group.group_id;
+            group_id = consumer_group.group_id;
         }
 
-        let consumer_group = self.consumer_groups.remove(&consumer_group_id);
+        let consumer_group = self.consumer_groups.remove(&group_id);
         if consumer_group.is_none() {
-            return Err(IggyError::ConsumerGroupIdNotFound(
-                consumer_group_id,
-                self.topic_id,
-            ));
+            return Err(IggyError::ConsumerGroupIdNotFound(group_id, self.topic_id));
         }
         let consumer_group = consumer_group.unwrap();
         {
@@ -162,30 +159,30 @@ impl Topic {
 
     pub async fn join_consumer_group(
         &self,
-        consumer_group_id: &Identifier,
+        group_id: &Identifier,
         member_id: u32,
     ) -> Result<(), IggyError> {
-        let consumer_group = self.get_consumer_group(consumer_group_id)?;
+        let consumer_group = self.get_consumer_group(group_id)?;
         let mut consumer_group = consumer_group.write().await;
         consumer_group.add_member(member_id).await;
         info!(
             "Member with ID: {} has joined consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
-            member_id, consumer_group_id, self.topic_id, self.stream_id
+            member_id, group_id, self.topic_id, self.stream_id
         );
         Ok(())
     }
 
     pub async fn leave_consumer_group(
         &self,
-        consumer_group_id: &Identifier,
+        group_id: &Identifier,
         member_id: u32,
     ) -> Result<(), IggyError> {
-        let consumer_group = self.get_consumer_group(consumer_group_id)?;
+        let consumer_group = self.get_consumer_group(group_id)?;
         let mut consumer_group = consumer_group.write().await;
         consumer_group.delete_member(member_id).await;
         info!(
             "Member with ID: {} has left consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
-            member_id, consumer_group_id, self.topic_id, self.stream_id
+            member_id, group_id, self.topic_id, self.stream_id
         );
         Ok(())
     }

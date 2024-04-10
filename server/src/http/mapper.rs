@@ -154,7 +154,7 @@ pub async fn map_client(client: &Client) -> iggy::models::client_info::ClientInf
             .map(|consumer_group| ConsumerGroupInfo {
                 stream_id: consumer_group.stream_id,
                 topic_id: consumer_group.topic_id,
-                consumer_group_id: consumer_group.consumer_group_id,
+                group_id: consumer_group.group_id,
             })
             .collect(),
     };

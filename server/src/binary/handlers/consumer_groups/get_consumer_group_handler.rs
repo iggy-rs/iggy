@@ -19,7 +19,7 @@ pub async fn handle(
         session,
         &command.stream_id,
         &command.topic_id,
-        &command.consumer_group_id,
+        &command.group_id,
     )?;
     let consumer_group = consumer_group.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;

@@ -21,19 +21,22 @@ impl MessageClient for HttpClient {
         count: u32,
         auto_commit: bool,
     ) -> Result<PolledMessages, IggyError> {
-        poll_messages(
-            self,
-            &PollMessages {
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-                partition_id,
-                consumer: consumer.clone(),
-                strategy: *strategy,
-                count,
-                auto_commit,
-            },
-        )
-        .await
+        let response = self
+            .get_with_query(
+                &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
+                &PollMessages {
+                    stream_id: stream_id.clone(),
+                    topic_id: topic_id.clone(),
+                    partition_id,
+                    consumer: consumer.clone(),
+                    strategy: *strategy,
+                    count,
+                    auto_commit,
+                },
+            )
+            .await?;
+        let messages = response.json().await?;
+        Ok(messages)
     }
 
     async fn send_messages(
@@ -43,50 +46,18 @@ impl MessageClient for HttpClient {
         partitioning: &Partitioning,
         messages: &mut [Message],
     ) -> Result<(), IggyError> {
-        send_messages(
-            self,
-            &mut SendMessages {
+        self.post(
+            &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
+            &SendMessages {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 partitioning: partitioning.clone(),
                 messages: messages.to_vec(),
             },
         )
-        .await
+        .await?;
+        Ok(())
     }
-}
-
-async fn poll_messages<T: HttpTransport>(
-    transport: &T,
-    command: &PollMessages,
-) -> Result<PolledMessages, IggyError> {
-    let response = transport
-        .get_with_query(
-            &get_path(
-                &command.stream_id.as_cow_str(),
-                &command.topic_id.as_cow_str(),
-            ),
-            &command,
-        )
-        .await?;
-    let messages = response.json().await?;
-    Ok(messages)
-}
-
-async fn send_messages<T: HttpTransport>(
-    transport: &T,
-    command: &mut SendMessages,
-) -> Result<(), IggyError> {
-    transport
-        .post(
-            &get_path(
-                &command.stream_id.as_cow_str(),
-                &command.topic_id.as_cow_str(),
-            ),
-            &command,
-        )
-        .await?;
-    Ok(())
 }
 
 fn get_path(stream_id: &str, topic_id: &str) -> String {

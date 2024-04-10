@@ -119,14 +119,14 @@ impl IggyCmdTestCase for TestConsumerGroupGetCmd {
             TestTopicId::Named => self.topic_name.clone(),
         };
 
-        let consumer_group_id = match self.using_group_id {
+        let group_id = match self.using_group_id {
             TestConsumerGroupId::Numeric => format!("{}", self.group_id),
             TestConsumerGroupId::Named => self.group_name.clone(),
         };
 
         let start_message = format!(
             "Executing get consumer group with ID: {} for topic with ID: {} and stream with ID: {}",
-            consumer_group_id, topic_id, stream_id
+            group_id, topic_id, stream_id
         );
 
         command_state

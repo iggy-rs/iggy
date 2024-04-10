@@ -59,7 +59,7 @@ pub async fn map_client(client: &Client) -> Bytes {
     for consumer_group in &client.consumer_groups {
         bytes.put_u32_le(consumer_group.stream_id);
         bytes.put_u32_le(consumer_group.topic_id);
-        bytes.put_u32_le(consumer_group.consumer_group_id);
+        bytes.put_u32_le(consumer_group.group_id);
     }
     bytes.freeze()
 }

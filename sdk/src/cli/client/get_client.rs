@@ -64,7 +64,7 @@ impl CliCommand for GetClientCmd {
                 consumer_groups.add_row(vec![
                     format!("{}", consumer_group.stream_id).as_str(),
                     format!("{}", consumer_group.topic_id).as_str(),
-                    format!("{}", consumer_group.consumer_group_id).as_str(),
+                    format!("{}", consumer_group.group_id).as_str(),
                 ]);
             }
 

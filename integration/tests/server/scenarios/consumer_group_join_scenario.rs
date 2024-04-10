@@ -127,7 +127,7 @@ async fn get_me_and_validate_consumer_groups(client: &IggyClient) -> ClientInfoD
     let consumer_group = &client_info.consumer_groups[0];
     assert_eq!(consumer_group.stream_id, STREAM_ID);
     assert_eq!(consumer_group.topic_id, TOPIC_ID);
-    assert_eq!(consumer_group.consumer_group_id, CONSUMER_GROUP_ID);
+    assert_eq!(consumer_group.group_id, CONSUMER_GROUP_ID);
 
     client_info
 }

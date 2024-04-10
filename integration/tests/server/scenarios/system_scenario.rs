@@ -458,7 +458,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             let consumer_group = &me.consumer_groups[0];
             assert_eq!(consumer_group.stream_id, STREAM_ID);
             assert_eq!(consumer_group.topic_id, TOPIC_ID);
-            assert_eq!(consumer_group.consumer_group_id, CONSUMER_GROUP_ID);
+            assert_eq!(consumer_group.group_id, CONSUMER_GROUP_ID);
 
             leave_consumer_group(&client).await;
 

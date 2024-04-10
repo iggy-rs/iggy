@@ -19,8 +19,8 @@ impl ConsumerOffsetClient for HttpClient {
         partition_id: Option<u32>,
         offset: u64,
     ) -> Result<(), IggyError> {
-        store_consumer_offset(
-            self,
+        self.put(
+            &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
             &StoreConsumerOffset {
                 consumer: consumer.clone(),
                 stream_id: stream_id.clone(),
@@ -29,7 +29,8 @@ impl ConsumerOffsetClient for HttpClient {
                 offset,
             },
         )
-        .await
+        .await?;
+        Ok(())
     }
 
     async fn get_consumer_offset(
@@ -39,50 +40,20 @@ impl ConsumerOffsetClient for HttpClient {
         topic_id: &Identifier,
         partition_id: Option<u32>,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
-        get_consumer_offset(
-            self,
-            &GetConsumerOffset {
-                consumer: consumer.clone(),
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-                partition_id,
-            },
-        )
-        .await
+        let response = self
+            .get_with_query(
+                &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
+                &GetConsumerOffset {
+                    consumer: consumer.clone(),
+                    stream_id: stream_id.clone(),
+                    topic_id: topic_id.clone(),
+                    partition_id,
+                },
+            )
+            .await?;
+        let offset = response.json().await?;
+        Ok(offset)
     }
-}
-
-async fn store_consumer_offset<T: HttpTransport>(
-    transport: &T,
-    command: &StoreConsumerOffset,
-) -> Result<(), IggyError> {
-    transport
-        .put(
-            &get_path(
-                &command.stream_id.as_cow_str(),
-                &command.topic_id.as_cow_str(),
-            ),
-            &command,
-        )
-        .await?;
-    Ok(())
-}
-
-async fn get_consumer_offset<T: HttpTransport>(
-    transport: &T,
-    command: &GetConsumerOffset,
-) -> Result<ConsumerOffsetInfo, IggyError> {
-    let response = transport
-        .get_with_query(
-            &get_path(
-                &command.stream_id.as_cow_str(),
-                &command.topic_id.as_cow_str(),
-            ),
-            &command,
-        )
-        .await?;
-    let offset = response.json().await?;
-    Ok(offset)
 }
 
 fn get_path(stream_id: &str, topic_id: &str) -> String {

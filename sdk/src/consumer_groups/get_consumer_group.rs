@@ -11,7 +11,7 @@ use std::fmt::Display;
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
-/// - `consumer_group_id` - unique consumer group ID (numeric or name).
+/// - `group_id` - unique consumer group ID (numeric or name).
 #[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
 pub struct GetConsumerGroup {
     /// Unique stream ID (numeric or name).
@@ -22,7 +22,7 @@ pub struct GetConsumerGroup {
     pub topic_id: Identifier,
     /// Unique consumer group ID (numeric or name).
     #[serde(skip)]
-    pub consumer_group_id: Identifier,
+    pub group_id: Identifier,
 }
 
 impl CommandPayload for GetConsumerGroup {}
@@ -37,13 +37,13 @@ impl BytesSerializable for GetConsumerGroup {
     fn as_bytes(&self) -> Bytes {
         let stream_id_bytes = self.stream_id.as_bytes();
         let topic_id_bytes = self.topic_id.as_bytes();
-        let consumer_group_id_bytes = self.consumer_group_id.as_bytes();
+        let group_id_bytes = self.group_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(
-            stream_id_bytes.len() + topic_id_bytes.len() + consumer_group_id_bytes.len(),
+            stream_id_bytes.len() + topic_id_bytes.len() + group_id_bytes.len(),
         );
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);
-        bytes.put_slice(&consumer_group_id_bytes);
+        bytes.put_slice(&group_id_bytes);
         bytes.freeze()
     }
 
@@ -57,11 +57,11 @@ impl BytesSerializable for GetConsumerGroup {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(bytes.slice(position..))?;
         position += topic_id.get_size_bytes() as usize;
-        let consumer_group_id = Identifier::from_bytes(bytes.slice(position..))?;
+        let group_id = Identifier::from_bytes(bytes.slice(position..))?;
         let command = GetConsumerGroup {
             stream_id,
             topic_id,
-            consumer_group_id,
+            group_id,
         };
         command.validate()?;
         Ok(command)
@@ -70,11 +70,7 @@ impl BytesSerializable for GetConsumerGroup {
 
 impl Display for GetConsumerGroup {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}|{}|{}",
-            self.stream_id, self.topic_id, self.consumer_group_id
-        )
+        write!(f, "{}|{}|{}", self.stream_id, self.topic_id, self.group_id)
     }
 }
 
@@ -87,7 +83,7 @@ mod tests {
         let command = GetConsumerGroup {
             stream_id: Identifier::numeric(1).unwrap(),
             topic_id: Identifier::numeric(2).unwrap(),
-            consumer_group_id: Identifier::numeric(3).unwrap(),
+            group_id: Identifier::numeric(3).unwrap(),
         };
 
         let bytes = command.as_bytes();
@@ -96,34 +92,34 @@ mod tests {
         position += stream_id.get_size_bytes() as usize;
         let topic_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
         position += topic_id.get_size_bytes() as usize;
-        let consumer_group_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
+        let group_id = Identifier::from_bytes(bytes.slice(position..)).unwrap();
 
         assert!(!bytes.is_empty());
         assert_eq!(stream_id, command.stream_id);
         assert_eq!(topic_id, command.topic_id);
-        assert_eq!(consumer_group_id, command.consumer_group_id);
+        assert_eq!(group_id, command.group_id);
     }
 
     #[test]
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
-        let consumer_group_id = Identifier::numeric(3).unwrap();
+        let group_id = Identifier::numeric(3).unwrap();
         let stream_id_bytes = stream_id.as_bytes();
         let topic_id_bytes = topic_id.as_bytes();
-        let consumer_group_id_bytes = consumer_group_id.as_bytes();
+        let group_id_bytes = group_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(
-            stream_id_bytes.len() + topic_id_bytes.len() + consumer_group_id_bytes.len(),
+            stream_id_bytes.len() + topic_id_bytes.len() + group_id_bytes.len(),
         );
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);
-        bytes.put_slice(&consumer_group_id_bytes);
+        bytes.put_slice(&group_id_bytes);
         let command = GetConsumerGroup::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.stream_id, stream_id);
         assert_eq!(command.topic_id, topic_id);
-        assert_eq!(command.consumer_group_id, consumer_group_id);
+        assert_eq!(command.group_id, group_id);
     }
 }

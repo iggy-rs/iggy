@@ -35,11 +35,8 @@ impl System {
 
         let partition_id = match consumer {
             PollingConsumer::Consumer(_, partition_id) => partition_id,
-            PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
-                let consumer_group = topic
-                    .get_consumer_group_by_id(consumer_group_id)?
-                    .read()
-                    .await;
+            PollingConsumer::ConsumerGroup(group_id, member_id) => {
+                let consumer_group = topic.get_consumer_group_by_id(group_id)?.read().await;
                 consumer_group.calculate_partition_id(member_id).await?
             }
         };

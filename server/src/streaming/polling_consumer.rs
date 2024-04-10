@@ -89,19 +89,16 @@ mod tests {
 
     #[test]
     fn given_consumer_group_with_numeric_id_polling_consumer_group_should_be_created() {
-        let consumer_group_id = 1;
+        let group_id = 1;
         let client_id = 2;
-        let consumer = Consumer::group(Identifier::numeric(consumer_group_id).unwrap());
+        let consumer = Consumer::group(Identifier::numeric(group_id).unwrap());
         let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
 
         assert_eq!(
             polling_consumer,
-            PollingConsumer::ConsumerGroup(consumer_group_id, client_id)
+            PollingConsumer::ConsumerGroup(group_id, client_id)
         );
-        assert_eq!(
-            consumer_group_id,
-            PollingConsumer::resolve_consumer_id(&consumer.id)
-        );
+        assert_eq!(group_id, PollingConsumer::resolve_consumer_id(&consumer.id));
     }
 
     #[test]

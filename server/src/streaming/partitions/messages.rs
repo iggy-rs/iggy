@@ -177,9 +177,7 @@ impl Partition {
     ) -> Result<Vec<RetainedMessage>, IggyError> {
         let (consumer_offsets, consumer_id) = match consumer {
             PollingConsumer::Consumer(consumer_id, _) => (&self.consumer_offsets, consumer_id),
-            PollingConsumer::ConsumerGroup(consumer_group_id, _) => {
-                (&self.consumer_group_offsets, consumer_group_id)
-            }
+            PollingConsumer::ConsumerGroup(group_id, _) => (&self.consumer_group_offsets, group_id),
         };
 
         let consumer_offset = consumer_offsets.get(&consumer_id);

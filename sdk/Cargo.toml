@@ -38,7 +38,7 @@ passterm = { version = "2.0.1", optional = true }
 quinn = { version = "0.10.2" }
 regex = "1.10.4"
 reqwest = { version = "0.11.27", features = ["json"] }
-reqwest-middleware = "0.2.5"
+reqwest-middleware = "0.3.0"
 reqwest-retry = "0.4.0"
 rustls = { version = "0.21.10", features = ["dangerous_configuration"] }
 serde = { version = "1.0.197", features = ["derive", "rc"] }

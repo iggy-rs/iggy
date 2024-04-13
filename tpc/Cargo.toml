@@ -4,23 +4,25 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.78"
-async-trait = "0.1.76"
-bytes = "1.4.0"
-chrono = "0.4.30"
-clap = { version = "4.4.12", features = ["derive"] }
+anyhow = "1.0.82"
+async-trait = "0.1.80"
+bytes = "1.6.0"
+chrono = "0.4.37"
+clap = { version = "4.5.4", features = ["derive"] }
 figlet-rs = "0.1.5"
-figment = { version = "0.10.8", features = ["toml", "env"] }
+figment = { version = "0.10.16", features = ["toml", "env"] }
 flume = "0.11.0"
 futures = "0.3.30"
-serde = { version = "1.0.193", features = ["derive", "rc"] }
+iggy = { path = "../sdk" }
 sled = "0.34.7"
-thiserror = "1.0.53"
-toml = "0.8.8"
-tracing = { version = "0.1.37" }
+serde = { version = "1.0.197", features = ["derive", "rc"] }
+server = { path = "../server" }
+thiserror = "1.0.58"
+toml = "0.8.12"
+tracing = { version = "0.1.40" }
 tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
 tracing-appender = "0.2.3"
-monoio = { version = "0.2.1", features = ["signal"] }
+monoio = { version = "0.2.3", features = ["async-cancel", "sync", "signal", "tracing", "zero-copy", "bytes", "legacy", "macros", "utils", "io-uring", "iouring"] }
 
 [[bin]]
 name = "iggy-tpc"

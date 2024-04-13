@@ -5,17 +5,7 @@ use iggy::error::IggyError;
 use iggy::models::messages::PolledMessage;
 use iggy::utils::checksum;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
-
-// It's the same as PolledMessages from Iggy models, but with the Arc<Message> instead of Message.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct PolledMessages {
-    pub partition_id: u32,
-    pub current_offset: u64,
-    pub messages: Vec<Arc<PolledMessage>>,
-}
 
 #[derive(Debug)]
 pub struct RetainedMessage {

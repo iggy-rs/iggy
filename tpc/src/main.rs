@@ -1,12 +1,12 @@
+use clap::Parser;
 use figlet_rs::FIGfont;
 use monoio::utils::CtrlC;
-use std::error::Error;
-use clap::Parser;
-use tracing::info;
 use server::args::Args;
 use server::configs::config_provider;
 use server::configs::server::ServerConfig;
 use server::streaming::systems::system::{SharedSystem, System};
+use std::error::Error;
+use tracing::info;
 
 #[monoio::main(timer_enabled = true)]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -14,7 +14,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy TPC");
     println!("{}", figure.unwrap());
-
 
     let args = Args::parse();
 

@@ -65,7 +65,7 @@ impl MessagesCleaner {
 impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: CleanMessagesCommand) {
         let now = IggyTimestamp::now().to_micros();
-        let system = system.write();
+        let system = system.read();
         let streams = system.get_streams();
         for stream in streams {
             let topics = stream.get_topics();

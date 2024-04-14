@@ -3827,7 +3827,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.18"
+version = "0.2.19"
 dependencies = [
  "aes-gcm",
  "anyhow",

@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::{error, info, warn};
 
 static USER_ID: AtomicU32 = AtomicU32::new(1);
+const MAX_USERS: usize = u32::MAX as usize;
 
 impl System {
     pub(crate) async fn load_users(&mut self) -> Result<(), IggyError> {
@@ -31,6 +32,7 @@ impl System {
         let current_user_id = users.iter().map(|user| user.id).max().unwrap_or(1);
         USER_ID.store(current_user_id + 1, Ordering::SeqCst);
         self.permissioner.init(users);
+        self.metrics.increment_users(users_count as u32);
         info!("Initialized {} user(s).", users_count);
         Ok(())
     }
@@ -121,6 +123,12 @@ impl System {
             error!("User: {username} already exists.");
             return Err(IggyError::UserAlreadyExists);
         }
+
+        if self.storage.user.load_all().await?.len() > MAX_USERS {
+            error!("Available users limit reached.");
+            return Err(IggyError::UsersLimitReached);
+        }
+
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
         let user = User::new(user_id, &username, password, status, permissions);

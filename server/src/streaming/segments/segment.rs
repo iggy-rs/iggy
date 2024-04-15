@@ -133,7 +133,8 @@ impl Segment {
         }
 
         let last_message = &last_messages[0];
-        let message_expiry = (self.message_expiry.unwrap() * 1000) as u64;
+        // Message expiry is in seconds, and timestamp is in microseconds
+        let message_expiry = (self.message_expiry.unwrap() * 1000000) as u64;
         (last_message.timestamp + message_expiry) <= now
     }
 

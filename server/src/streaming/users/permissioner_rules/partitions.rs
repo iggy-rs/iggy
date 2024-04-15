@@ -2,7 +2,7 @@ use crate::streaming::users::permissioner::Permissioner;
 use iggy::error::IggyError;
 
 impl Permissioner {
-    pub fn create_partitons(
+    pub fn create_partitions(
         &self,
         user_id: u32,
         stream_id: u32,

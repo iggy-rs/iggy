@@ -70,6 +70,8 @@ pub enum IggyError {
     InvalidPersonalAccessToken = 53,
     #[error("Personal access token: {0} for user with ID: {1} has expired.")]
     PersonalAccessTokenExpired(String, u32) = 54,
+    #[error("Users limit reached.")]
+    UsersLimitReached = 55,
     #[error("Not connected")]
     NotConnected = 61,
     #[error("Request error")]

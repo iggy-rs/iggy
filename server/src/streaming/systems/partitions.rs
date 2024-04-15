@@ -15,7 +15,7 @@ impl System {
         {
             let stream = self.get_stream(stream_id)?;
             let topic = stream.get_topic(topic_id)?;
-            self.permissioner.create_partitons(
+            self.permissioner.create_partitions(
                 session.get_user_id(),
                 stream.stream_id,
                 topic.topic_id,

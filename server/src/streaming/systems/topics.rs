@@ -134,6 +134,7 @@ impl System {
             .get_stream_mut(stream_id)?
             .delete_topic(topic_id)
             .await?;
+
         self.metrics.decrement_topics(1);
         self.metrics
             .decrement_partitions(topic.get_partitions_count());

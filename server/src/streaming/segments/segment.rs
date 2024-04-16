@@ -122,7 +122,7 @@ impl Segment {
             return false;
         }
 
-        let last_messages = self.get_messages(self.end_offset, 1).await;
+        let last_messages = self.get_messages(self.current_offset, 1).await;
         if last_messages.is_err() {
             return false;
         }

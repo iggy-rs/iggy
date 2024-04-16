@@ -26,7 +26,7 @@ impl Partition {
     pub async fn get_expired_segments_start_offsets(&self, now: u64) -> Vec<u64> {
         let mut expired_segments = Vec::new();
         for segment in &self.segments {
-            if segment.is_expired(now).await {
+            if segment.is_closed && segment.is_expired(now).await {
                 expired_segments.push(segment.start_offset);
             }
         }

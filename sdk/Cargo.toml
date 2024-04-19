@@ -37,7 +37,7 @@ openssl = { version = "0.10.64", features = ["vendored"] }
 passterm = { version = "2.0.1", optional = true }
 quinn = { version = "0.10.2" }
 regex = "1.10.4"
-reqwest = { version = "0.12.3", features = ["json"] }
+reqwest = { version = "0.12.4", features = ["json"] }
 reqwest-middleware = { version = "0.3.0", features = ["json"] }
 reqwest-retry = "0.5.0"
 rustls = { version = "0.21.10", features = ["dangerous_configuration"] }

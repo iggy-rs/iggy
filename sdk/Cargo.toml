@@ -37,12 +37,12 @@ openssl = { version = "0.10.64", features = ["vendored"] }
 passterm = { version = "2.0.1", optional = true }
 quinn = { version = "0.10.2" }
 regex = "1.10.4"
-reqwest = { version = "0.12.3", features = ["json"] }
+reqwest = { version = "0.12.4", features = ["json"] }
 reqwest-middleware = { version = "0.3.0", features = ["json"] }
 reqwest-retry = "0.5.0"
-rustls = { version = "0.21.10", features = ["dangerous_configuration"] }
-serde = { version = "1.0.197", features = ["derive", "rc"] }
-serde_json = "1.0.115"
+rustls = { version = "0.21.11", features = ["dangerous_configuration"] }
+serde = { version = "1.0.198", features = ["derive", "rc"] }
+serde_json = "1.0.116"
 serde_with = { version = "3.7.0", features = ["base64"] }
 strum = { version = "0.26.2", features = ["derive"] }
 thiserror = "1.0.58"
@@ -54,8 +54,8 @@ uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 
 [build-dependencies]
 convert_case = "0.6.0"
-rmp-serde = "1.1.2"
-serde = { version = "1.0.197", features = ["derive", "rc"] }
+rmp-serde = "1.2.0"
+serde = { version = "1.0.198", features = ["derive", "rc"] }
 serde_derive = "1.0.194"
 
 [features]

@@ -2,7 +2,7 @@ use crate::binary::sender::Sender;
 use crate::tcp::sender;
 use async_trait::async_trait;
 use iggy::error::IggyError;
-use tokio::net::TcpStream;
+use monoio::net::TcpStream;
 
 #[derive(Debug)]
 pub struct TcpSender {

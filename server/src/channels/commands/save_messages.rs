@@ -5,7 +5,7 @@ use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use iggy::utils::duration::IggyDuration;
-use tokio::time;
+use monoio::time;
 use tracing::{error, info, warn};
 
 pub struct MessagesSaver {
@@ -47,7 +47,7 @@ impl MessagesSaver {
             interval, enforce_fsync
         );
 
-        tokio::spawn(async move {
+        monoio::spawn(async move {
             let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
@@ -93,7 +93,7 @@ impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
         _config: &ServerConfig,
         receiver: Receiver<SaveMessagesCommand>,
     ) {
-        tokio::spawn(async move {
+        monoio::spawn(async move {
             let system = system.clone();
             while let Ok(command) = receiver.recv_async().await {
                 self.execute(&system, command).await;

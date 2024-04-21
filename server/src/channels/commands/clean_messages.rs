@@ -7,7 +7,7 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
-use tokio::time;
+use monoio::time;
 use tracing::{error, info};
 
 struct DeletedSegments {
@@ -49,7 +49,7 @@ impl MessagesCleaner {
             interval
         );
 
-        tokio::spawn(async move {
+        monoio::spawn(async move {
             let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
@@ -107,7 +107,7 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
         _config: &crate::configs::server::ServerConfig,
         receiver: flume::Receiver<CleanMessagesCommand>,
     ) {
-        tokio::spawn(async move {
+        monoio::spawn(async move {
             let system = system.clone();
             while let Ok(command) = receiver.recv_async().await {
                 self.execute(&system, command).await;

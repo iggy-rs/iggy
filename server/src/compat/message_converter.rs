@@ -3,16 +3,16 @@ use crate::compat::samplers::retained_batch_sampler::RetainedMessageBatchSampler
 use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, BytesMut};
+use futures::AsyncWriteExt;
 use iggy::error::IggyError;
 
 use crate::streaming::segments::storage::{INDEX_SIZE, TIME_INDEX_SIZE};
-use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 pub trait Extendable {
     fn extend(&self, bytes: &mut BytesMut);
 }
 
-pub trait MessageFormatConverterPersister<W: AsyncWrite> {
+pub trait MessageFormatConverterPersister<W: AsyncWriteExt> {
     async fn persist(&self, writer: &mut W) -> Result<(), IggyError>;
     async fn persist_index(
         &self,
@@ -28,7 +28,7 @@ pub trait MessageFormatConverterPersister<W: AsyncWrite> {
     ) -> Result<(), IggyError>;
 }
 
-impl<W: AsyncWrite + Unpin, T> MessageFormatConverterPersister<W> for T
+impl<W: AsyncWriteExt + Unpin, T> MessageFormatConverterPersister<W> for T
 where
     T: Sizeable + Extendable,
 {

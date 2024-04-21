@@ -260,7 +260,7 @@ mod tests {
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[monoio::test]
     async fn given_partition_id_key_messages_should_be_appended_only_to_the_chosen_partition() {
         let partition_id = 1;
         let partitioning = Partitioning::partition_id(partition_id);
@@ -290,7 +290,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn given_messages_key_key_messages_should_be_appended_to_the_calculated_partitions() {
         let partitions_count = 3;
         let messages_count = 1000;

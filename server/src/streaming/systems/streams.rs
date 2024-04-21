@@ -8,7 +8,6 @@ use iggy::locking::IggySharedMutFn;
 use iggy::utils::text;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU32, Ordering};
-use tokio::fs::read_dir;
 use tracing::{error, info};
 
 static CURRENT_STREAM_ID: AtomicU32 = AtomicU32::new(1);
@@ -17,14 +16,15 @@ impl System {
     pub(crate) async fn load_streams(&mut self) -> Result<(), IggyError> {
         info!("Loading streams from disk...");
         let mut unloaded_streams = Vec::new();
-        let dir_entries = read_dir(&self.config.get_streams_path()).await;
+        let dir_entries = std::fs::read_dir(&self.config.get_streams_path());
         if let Err(error) = dir_entries {
             error!("Cannot read streams directory: {}", error);
             return Err(IggyError::CannotReadStreams);
         }
 
         let mut dir_entries = dir_entries.unwrap();
-        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
+        while let Some(dir_entry) = dir_entries.next() {
+            let dir_entry = dir_entry.unwrap();
             let name = dir_entry.file_name().into_string().unwrap();
             let stream_id = name.parse::<u32>();
             if stream_id.is_err() {
@@ -300,7 +300,7 @@ mod tests {
         sync::Arc,
     };
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_get_stream_by_id_and_name() {
         let stream_id = 1;
         let stream_name = "test";

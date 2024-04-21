@@ -16,9 +16,9 @@ use crate::streaming::utils::file;
 use futures::{pin_mut, TryStreamExt};
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
+use monoio::io::AsyncWriteRent;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
 use tracing::{info, trace};
 
 pub const LOG_EXTENSION: &str = "log";
@@ -157,8 +157,7 @@ impl Segment {
 
         match schema {
             BinarySchema::RetainedMessageSchema => {
-                let file = file::open(&self.log_path).await?;
-                let file_size = file.metadata().await?.len();
+                let file_size = std::fs::metadata(&self.log_path).unwrap().len();
                 if file_size == 0 {
                     return Ok(());
                 }
@@ -177,6 +176,7 @@ impl Segment {
                     file::append(&conversion_writer.alt_time_index_path).await?,
                 );
 
+                let file = file::open(&self.log_path).await?;
                 let stream = RetainedMessageStream::new(file, file_size).into_stream();
                 pin_mut!(stream);
                 let (_, mut retained_batch_writer) = stream
@@ -229,7 +229,7 @@ mod tests {
     use crate::configs::system::SegmentConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_be_created_given_valid_parameters() {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;

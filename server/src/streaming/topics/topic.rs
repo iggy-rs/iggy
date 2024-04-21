@@ -3,6 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
+use fast_async_mutex::rwlock::RwLock;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -11,7 +12,6 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
-use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub struct Topic {
@@ -168,7 +168,7 @@ mod tests {
     use super::*;
     use crate::streaming::storage::tests::get_test_system_storage;
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_be_created_given_valid_parameters() {
         let storage = Arc::new(get_test_system_storage());
         let stream_id = 1;

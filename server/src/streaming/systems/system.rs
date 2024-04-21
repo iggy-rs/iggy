@@ -12,10 +12,10 @@ use iggy::error::IggyError;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use sled::Db;
 use std::collections::HashMap;
+use std::fs::{create_dir, remove_dir_all};
 use std::path::Path;
 use std::sync::Arc;
-use tokio::fs::{create_dir, remove_dir_all};
-use tokio::time::Instant;
+use std::time::Instant;
 use tracing::{info, trace};
 
 use iggy::locking::IggySharedMut;
@@ -129,21 +129,21 @@ impl System {
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let system_path = self.config.get_system_path();
 
-        if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
+        if !Path::new(&system_path).exists() && create_dir(&system_path).is_err() {
             return Err(IggyError::CannotCreateBaseDirectory(system_path));
         }
 
         let streams_path = self.config.get_streams_path();
-        if !Path::new(&streams_path).exists() && create_dir(&streams_path).await.is_err() {
+        if !Path::new(&streams_path).exists() && create_dir(&streams_path).is_err() {
             return Err(IggyError::CannotCreateStreamsDirectory(streams_path));
         }
 
         let runtime_path = self.config.get_runtime_path();
-        if Path::new(&runtime_path).exists() && remove_dir_all(&runtime_path).await.is_err() {
+        if Path::new(&runtime_path).exists() && remove_dir_all(&runtime_path).is_err() {
             return Err(IggyError::CannotRemoveRuntimeDirectory(runtime_path));
         }
 
-        if create_dir(&runtime_path).await.is_err() {
+        if create_dir(&runtime_path).is_err() {
             return Err(IggyError::CannotCreateRuntimeDirectory(runtime_path));
         }
 
@@ -192,7 +192,7 @@ impl System {
         for stream in self.streams.values() {
             for topic in stream.get_topics() {
                 for partition in topic.get_partitions().into_iter() {
-                    tokio::task::spawn(async move {
+                    monoio::spawn(async move {
                         let memory_tracker = CacheMemoryTracker::get_instance().unwrap();
                         let mut partition_guard = partition.write().await;
                         let cache = &mut partition_guard.cache.as_mut().unwrap();

@@ -5,8 +5,8 @@ use std::time::Duration;
 use tracing::{error, trace};
 
 pub fn start_expired_tokens_cleaner(app_state: Arc<AppState>) {
-    tokio::spawn(async move {
-        let mut interval_timer = tokio::time::interval(Duration::from_secs(300));
+    monoio::spawn(async move {
+        let mut interval_timer = monoio::time::interval(Duration::from_secs(300));
         loop {
             interval_timer.tick().await;
             trace!("Deleting expired tokens...");

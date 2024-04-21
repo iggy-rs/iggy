@@ -1,10 +1,10 @@
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
+use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::text;
 use std::sync::atomic::Ordering;
-use tokio::sync::RwLock;
 use tracing::info;
 
 impl Topic {
@@ -197,7 +197,7 @@ mod tests {
     use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_be_created_given_valid_parameters() {
         let group_id = 1;
         let name = "test";
@@ -218,7 +218,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_not_be_created_given_already_existing_group_with_same_id() {
         let group_id = 1;
         let name = "test";
@@ -233,7 +233,7 @@ mod tests {
         assert!(matches!(err, IggyError::ConsumerGroupIdAlreadyExists(_, _)));
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_not_be_created_given_already_existing_group_with_same_name() {
         let group_id = 1;
         let name = "test";
@@ -252,7 +252,7 @@ mod tests {
         ));
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_be_deleted_given_already_existing_group_with_same_id() {
         let group_id = 1;
         let name = "test";
@@ -267,7 +267,7 @@ mod tests {
         assert!(topic.consumer_groups.is_empty());
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_not_be_deleted_given_non_existing_group_with_same_id() {
         let group_id = 1;
         let name = "test";
@@ -283,7 +283,7 @@ mod tests {
         assert_eq!(topic.consumer_groups.len(), 1);
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_be_joined_by_new_member() {
         let group_id = 1;
         let name = "test";
@@ -306,7 +306,7 @@ mod tests {
         assert_eq!(members.len(), 1);
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_be_left_by_existing_member() {
         let group_id = 1;
         let name = "test";

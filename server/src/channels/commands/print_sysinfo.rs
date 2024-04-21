@@ -5,7 +5,7 @@ use crate::{
 use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use iggy::utils::duration::IggyDuration;
-use tokio::time::{self};
+use monoio::time;
 use tracing::{error, info, warn};
 
 #[derive(Debug, Default, Clone)]
@@ -36,7 +36,7 @@ impl SysInfoPrinter {
             interval.as_secs()
         );
 
-        tokio::spawn(async move {
+        monoio::spawn(async move {
             let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
@@ -94,7 +94,7 @@ impl ServerCommand<SysInfoPrintCommand> for SysInfoPrintExecutor {
         _config: &ServerConfig,
         receiver: Receiver<SysInfoPrintCommand>,
     ) {
-        tokio::spawn(async move {
+        monoio::spawn(async move {
             let system = system.clone();
             while let Ok(command) = receiver.recv_async().await {
                 self.execute(&system, command).await;

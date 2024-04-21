@@ -5,7 +5,7 @@ use crate::server_error::ServerError;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
-use tokio::io::AsyncReadExt;
+use std::fs;
 
 pub struct MessageSampler {
     pub segment_start_offset: u64,
@@ -28,20 +28,18 @@ unsafe impl Sync for MessageSampler {}
 #[async_trait]
 impl BinarySchemaSampler for MessageSampler {
     async fn try_sample(&self) -> Result<BinarySchema, ServerError> {
-        let mut index_file = file::open(&self.index_path).await?;
-        let mut log_file = file::open(&self.log_path).await?;
-        let log_file_size = log_file.metadata().await?.len();
-
-        if log_file_size == 0 {
+        if fs::metadata(&self.log_path).unwrap().len() == 0 {
             return Ok(BinarySchema::RetainedMessageSchema);
         }
 
+        let mut index_file = file::open(&self.index_path).await?;
         let _ = index_file.read_u32_le().await?;
         let end_position = index_file.read_u32_le().await?;
 
         let buffer_size = end_position as usize;
         let mut buffer = BytesMut::with_capacity(buffer_size);
         buffer.put_bytes(0, buffer_size);
+        let mut log_file = file::open(&self.log_path).await?;
         let _ = log_file.read_exact(&mut buffer).await?;
 
         let message = MessageSnapshot::try_from(buffer.freeze())?;

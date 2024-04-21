@@ -8,7 +8,7 @@ use axum::{
     response::Response,
 };
 use std::net::SocketAddr;
-use tokio::time::Instant;
+use monoio::time::Instant;
 use tracing::{debug, error};
 
 pub async fn request_diagnostics(

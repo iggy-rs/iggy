@@ -1,5 +1,5 @@
-use tokio::fs::File;
-use tokio::io::BufWriter;
+use monoio::fs::File;
+use monoio::io::BufWriter;
 
 const BUF_WRITER_CAPACITY_BYTES: usize = 512 * 1000;
 

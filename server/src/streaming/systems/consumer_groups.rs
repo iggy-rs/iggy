@@ -1,10 +1,10 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
+use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
-use tokio::sync::RwLock;
 
 impl System {
     pub fn get_consumer_group(

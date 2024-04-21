@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use flume::Sender;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
-use tokio::time;
+use monoio::time;
 use tracing::{debug, error, info};
 
 pub struct PersonalAccessTokenCleaner {
@@ -45,7 +45,7 @@ impl PersonalAccessTokenCleaner {
             interval
         );
 
-        tokio::spawn(async move {
+        monoio::spawn(async move {
             let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
@@ -135,7 +135,7 @@ impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessToke
         _config: &crate::configs::server::ServerConfig,
         receiver: flume::Receiver<CleanPersonalAccessTokensCommand>,
     ) {
-        tokio::spawn(async move {
+        monoio::spawn(async move {
             let system = system.clone();
             while let Ok(command) = receiver.recv_async().await {
                 self.execute(&system, command).await;

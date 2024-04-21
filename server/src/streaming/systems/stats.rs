@@ -1,11 +1,11 @@
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
+use fast_async_mutex::mutex::Mutex;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
 use std::sync::OnceLock;
 use sysinfo::{Pid, System as SysinfoSystem};
-use tokio::sync::Mutex;
 
 fn sysinfo() -> &'static Mutex<SysinfoSystem> {
     static SYSINFO: OnceLock<Mutex<SysinfoSystem>> = OnceLock::new();

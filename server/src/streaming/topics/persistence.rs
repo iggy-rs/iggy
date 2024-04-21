@@ -1,8 +1,8 @@
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
+use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
-use tokio::sync::RwLock;
 
 impl Topic {
     pub async fn load(&mut self) -> Result<(), IggyError> {

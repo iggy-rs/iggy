@@ -2,8 +2,8 @@ use crate::binary::sender::Sender;
 use crate::tcp::sender;
 use async_trait::async_trait;
 use iggy::error::IggyError;
-use tokio::net::TcpStream;
-use tokio_native_tls::TlsStream;
+use monoio::net::TcpStream;
+use monoio_native_tls::TlsStream;
 
 #[derive(Debug)]
 pub struct TcpTlsSender {

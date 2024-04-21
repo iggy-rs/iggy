@@ -38,9 +38,9 @@ impl<'w> ConversionWriter<'w> {
     }
 
     pub async fn create_alt_directories(&self) -> Result<(), IggyError> {
-        tokio::fs::File::create(&self.alt_log_path).await?;
-        tokio::fs::File::create(&self.alt_index_path).await?;
-        tokio::fs::File::create(&self.alt_time_index_path).await?;
+        monoio::fs::File::create(&self.alt_log_path).await?;
+        monoio::fs::File::create(&self.alt_index_path).await?;
+        monoio::fs::File::create(&self.alt_time_index_path).await?;
 
         trace!(
             "Created temporary files for conversion, log: {}, index: {}, time_index: {}",
@@ -71,23 +71,14 @@ impl<'w> ConversionWriter<'w> {
         let log_path_last_idx = log_backup_path.rfind('/').unwrap();
         let index_path_last_idx = index_backup_path.rfind('/').unwrap();
         let time_index_path_last_idx = time_index_backup_path.rfind('/').unwrap();
-        if tokio::fs::metadata(&log_backup_path[..log_path_last_idx])
-            .await
-            .is_err()
-        {
-            tokio::fs::create_dir_all(&log_backup_path[..log_path_last_idx]).await?;
+        if std::fs::metadata(&log_backup_path[..log_path_last_idx]).is_err() {
+            std::fs::create_dir_all(&log_backup_path[..log_path_last_idx])?;
         }
-        if tokio::fs::metadata(&index_backup_path[..index_path_last_idx])
-            .await
-            .is_err()
-        {
-            tokio::fs::create_dir_all(&index_backup_path[..index_path_last_idx]).await?;
+        if std::fs::metadata(&index_backup_path[..index_path_last_idx]).is_err() {
+            std::fs::create_dir_all(&index_backup_path[..index_path_last_idx])?;
         }
-        if tokio::fs::metadata(&time_index_backup_path[..time_index_path_last_idx])
-            .await
-            .is_err()
-        {
-            tokio::fs::create_dir_all(&time_index_backup_path[..time_index_path_last_idx]).await?;
+        if std::fs::metadata(&time_index_backup_path[..time_index_path_last_idx]).is_err() {
+            std::fs::create_dir_all(&time_index_backup_path[..time_index_path_last_idx])?;
         }
         file::rename(self.log_path, log_backup_path).await?;
         file::rename(self.index_path, index_backup_path).await?;

@@ -2,8 +2,6 @@ use crate::streaming::utils::file;
 use async_trait::async_trait;
 use iggy::error::IggyError;
 use std::fmt::Debug;
-use tokio::fs;
-use tokio::io::AsyncWriteExt;
 
 #[async_trait]
 pub trait Persister: Sync + Send {
@@ -47,7 +45,7 @@ impl Persister for FilePersister {
     }
 
     async fn delete(&self, path: &str) -> Result<(), IggyError> {
-        fs::remove_file(path).await?;
+        std::fs::remove_file(path)?;
         Ok(())
     }
 }
@@ -69,7 +67,7 @@ impl Persister for FileWithSyncPersister {
     }
 
     async fn delete(&self, path: &str) -> Result<(), IggyError> {
-        fs::remove_file(path).await?;
+        std::fs::remove_file(path)?;
         Ok(())
     }
 }

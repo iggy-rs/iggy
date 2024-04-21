@@ -4,5 +4,4 @@ codegen-units = 1
 
 [workspace]
 resolver = "2"
-members = ["bench", "cli", "examples", "integration", "sdk", "server", "tools", "tpc"]
-exclude = ["tpc"]
+members = ["bench", "cli", "examples", "integration", "sdk", "server", "tools"]

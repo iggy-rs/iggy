@@ -4,6 +4,7 @@ use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
 use async_trait::async_trait;
+use fast_async_mutex::mutex::Mutex;
 use futures::future::join_all;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
@@ -14,9 +15,6 @@ use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::fs;
-use tokio::fs::create_dir;
-use tokio::sync::Mutex;
 use tracing::{error, info};
 
 #[derive(Debug)]
@@ -184,7 +182,7 @@ impl Storage<Topic> for FileTopicStorage {
         topic.max_topic_size = topic_data.max_topic_size;
         topic.replication_factor = topic_data.replication_factor;
 
-        let dir_entries = fs::read_dir(&topic.partitions_path).await
+        let dir_entries = std::fs::read_dir(&topic.partitions_path)
             .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} for topic with ID: {} and path: {}",
             topic.topic_id, topic.stream_id, topic.topic_id, &topic.partitions_path));
         if let Err(err) = dir_entries {
@@ -193,8 +191,9 @@ impl Storage<Topic> for FileTopicStorage {
 
         let mut unloaded_partitions = Vec::new();
         let mut dir_entries = dir_entries.unwrap();
-        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
-            let metadata = dir_entry.metadata().await;
+        while let Some(dir_entry) = dir_entries.next() {
+            let dir_entry = dir_entry.unwrap();
+            let metadata = dir_entry.metadata();
             if metadata.is_err() || metadata.unwrap().is_file() {
                 continue;
             }
@@ -230,7 +229,7 @@ impl Storage<Topic> for FileTopicStorage {
         let mut load_partitions = Vec::new();
         for mut partition in unloaded_partitions {
             let loaded_partitions = loaded_partitions.clone();
-            let load_partition = tokio::spawn(async move {
+            let load_partition = monoio::spawn(async move {
                 match partition.load().await {
                     Ok(_) => {
                         loaded_partitions.lock().await.push(partition);
@@ -261,7 +260,7 @@ impl Storage<Topic> for FileTopicStorage {
     }
 
     async fn save(&self, topic: &Topic) -> Result<(), IggyError> {
-        if !Path::new(&topic.path).exists() && create_dir(&topic.path).await.is_err() {
+        if !Path::new(&topic.path).exists() && std::fs::create_dir(&topic.path).is_err() {
             return Err(IggyError::CannotCreateTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,
@@ -270,7 +269,7 @@ impl Storage<Topic> for FileTopicStorage {
         }
 
         if !Path::new(&topic.partitions_path).exists()
-            && create_dir(&topic.partitions_path).await.is_err()
+            && std::fs::create_dir(&topic.partitions_path).is_err()
         {
             return Err(IggyError::CannotCreatePartitionsDirectory(
                 topic.stream_id,
@@ -331,7 +330,7 @@ impl Storage<Topic> for FileTopicStorage {
             let consumer_group = consumer_group.read().await;
             self.delete_consumer_group(topic, &consumer_group).await?;
         }
-        if fs::remove_dir_all(&topic.path).await.is_err() {
+        if std::fs::remove_dir_all(&topic.path).is_err() {
             return Err(IggyError::CannotDeleteTopicDirectory(
                 topic.topic_id,
                 topic.stream_id,

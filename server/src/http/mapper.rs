@@ -5,6 +5,7 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::user::User;
+use fast_async_mutex::rwlock::RwLock;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::client_info::ConsumerGroupInfo;
@@ -14,7 +15,6 @@ use iggy::models::personal_access_token::PersonalAccessTokenInfo;
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
-use tokio::sync::RwLock;
 
 pub async fn map_stream(stream: &Stream) -> StreamDetails {
     let topics = map_topics(&stream.get_topics()).await;

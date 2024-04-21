@@ -7,21 +7,20 @@ use futures::Stream;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::models::messages::MessageState;
+use monoio::fs::File;
 use std::collections::HashMap;
-use tokio::fs::File;
-use tokio::io::{AsyncReadExt, BufReader};
 
-const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
-
+// TODO: monoio: used raw file instead of BufReader
 pub struct RetainedMessageStream {
-    pub reader: BufReader<File>,
+    pub file: File,
     read_length: u64,
     read_bytes: u64,
 }
+
 impl RetainedMessageStream {
     pub fn new(file: File, read_length: u64) -> RetainedMessageStream {
         RetainedMessageStream {
-            reader: BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file),
+            file,
             read_bytes: 0,
             read_length,
         }
@@ -34,23 +33,28 @@ impl MessageStream for RetainedMessageStream {
     fn into_stream(mut self) -> impl Stream<Item = Self::Item> {
         try_stream! {
             while self.read_bytes < self.read_length {
-                let offset = self.reader.read_u64_le().await?;
+                // let mut buffer = [0u8, 8];
+                let buffer = Vec::with_capacity(8);
+                let (result, buffer) = self.file.read_exact_at(buffer, 0).await;
+                let offset = u64::from_le_bytes(buffer.try_into().unwrap());
                 self.read_bytes += 8;
 
-                let state = self.reader.read_u8().await?;
+                let buffer = Vec::with_capacity(1);
+                let (result, buffer) = self.file.read_exact_at(buffer, self.read_bytes).await;
+                let state  = u8::from_le_bytes(buffer.try_into().unwrap());
                 self.read_bytes += 1;
 
                 let state = MessageState::from_code(state)?;
-                let timestamp = self.reader.read_u64_le().await?;
+                let timestamp = self.file.read_u64_le().await?;
                 self.read_bytes += 8;
 
-                let id = self.reader.read_u128_le().await?;
+                let id = self.file.read_u128_le().await?;
                 self.read_bytes += 16;
 
-                let checksum = self.reader.read_u32_le().await?;
+                let checksum = self.file.read_u32_le().await?;
                 self.read_bytes += 4;
 
-                let headers_length = self.reader.read_u32_le().await?;
+                let headers_length = self.file.read_u32_le().await?;
                 self.read_bytes += 4;
 
                 let headers = match headers_length {
@@ -58,7 +62,7 @@ impl MessageStream for RetainedMessageStream {
                     _ => {
                         let mut headers_payload = BytesMut::with_capacity(headers_length as usize);
                         headers_payload.put_bytes(0, headers_length as usize);
-                        self.reader.read_exact(&mut headers_payload).await?;
+                        self.file.read_exact(&mut headers_payload).await?;
 
                         let headers = HashMap::from_bytes(headers_payload.freeze())?;
                         Some(headers)
@@ -66,11 +70,11 @@ impl MessageStream for RetainedMessageStream {
                 };
                 self.read_bytes += headers_length as u64;
 
-                let payload_len = self.reader.read_u32_le().await?;
+                let payload_len = self.file.read_u32_le().await?;
 
                 let mut payload = BytesMut::with_capacity(payload_len as usize);
                 payload.put_bytes(0, payload_len as usize);
-                self.reader.read_exact(&mut payload).await?;
+                self.file.read_exact(&mut payload).await?;
                 self.read_bytes += 4 + payload_len as u64;
 
                 let message =

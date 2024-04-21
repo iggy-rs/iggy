@@ -15,11 +15,11 @@ use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
+use monoio::io::{AsyncReadRentExt, BufReader};
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncSeekExt, BufReader};
 use tracing::{error, info, trace, warn};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
@@ -574,12 +574,12 @@ async fn load_batches_by_range(
     index_range: &IndexRange,
     mut on_batch: impl FnMut(RetainedMessageBatch) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
-    let file = file::open(&segment.log_path).await?;
-    let file_size = file.metadata().await?.len();
+    let file_size = std::fs::metadata(&segment.log_path).unwrap().len();
     if file_size == 0 {
         return Ok(());
     }
 
+    let file = file::open(&segment.log_path).await?;
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     reader
         .seek(SeekFrom::Start(index_range.start.position as u64))
@@ -636,8 +636,7 @@ async fn load_messages_by_size(
     size_bytes: u64,
     mut on_batch: impl FnMut(RetainedMessageBatch) -> Result<(), IggyError>,
 ) -> Result<(), IggyError> {
-    let file = file::open(&segment.log_path).await?;
-    let file_size = file.metadata().await?.len();
+    let file_size = std::fs::metadata(&segment.log_path).unwrap().len();
     if file_size == 0 {
         return Ok(());
     }
@@ -645,6 +644,7 @@ async fn load_messages_by_size(
     let threshold = file_size.saturating_sub(size_bytes);
     let mut accumulated_size: u64 = 0;
 
+    let file = file::open(&segment.log_path).await?;
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     loop {
         let batch_base_offset = reader

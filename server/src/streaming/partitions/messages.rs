@@ -524,7 +524,7 @@ mod tests {
     use crate::streaming::partitions::create_messages;
     use crate::streaming::storage::tests::get_test_system_storage;
 
-    #[tokio::test]
+    #[monoio::test]
     async fn given_disabled_message_deduplication_all_messages_should_be_appended() {
         let mut partition = create_partition(false);
         let messages = create_messages();
@@ -545,7 +545,7 @@ mod tests {
         assert_eq!(loaded_messages.len(), messages_count as usize);
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn given_enabled_message_deduplication_only_messages_with_unique_id_should_be_appended() {
         let mut partition = create_partition(true);
         let messages = create_messages();

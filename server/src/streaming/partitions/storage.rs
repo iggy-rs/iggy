@@ -11,8 +11,6 @@ use sled::Db;
 use std::path::Path;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tokio::fs;
-use tokio::fs::create_dir;
 use tracing::{error, info, trace, warn};
 
 #[derive(Debug)]
@@ -146,9 +144,8 @@ impl Storage<Partition> for FilePartitionStorage {
             "Loading partition with ID: {} for stream with ID: {} and topic with ID: {}, for path: {} from disk...",
             partition.partition_id, partition.stream_id, partition.topic_id, partition.path
         );
-        let dir_entries = fs::read_dir(&partition.path).await;
-        if let Err(err) = fs::read_dir(&partition.path)
-            .await
+        let dir_entries = std::fs::read_dir(&partition.path);
+        if let Err(err) = std::fs::read_dir(&partition.path)
             .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}", partition.partition_id, partition.stream_id, partition.topic_id, partition.path))
         {
             return Err(IggyError::CannotReadPartitions(err));
@@ -187,8 +184,9 @@ impl Storage<Partition> for FilePartitionStorage {
         partition.created_at = partition_data.created_at;
 
         let mut dir_entries = dir_entries.unwrap();
-        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
-            let metadata = dir_entry.metadata().await.unwrap();
+        while let Some(dir_entry) = dir_entries.next() {
+            let dir_entry = dir_entry.unwrap();
+            let metadata = dir_entry.metadata().unwrap();
             if metadata.is_dir() {
                 continue;
             }
@@ -336,7 +334,7 @@ impl Storage<Partition> for FilePartitionStorage {
             "Saving partition with start ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id
         );
-        if !Path::new(&partition.path).exists() && create_dir(&partition.path).await.is_err() {
+        if !Path::new(&partition.path).exists() && std::fs::create_dir(&partition.path).is_err() {
             return Err(IggyError::CannotCreatePartitionDirectory(
                 partition.partition_id,
                 partition.stream_id,
@@ -446,7 +444,7 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        if fs::remove_dir_all(&partition.path).await.is_err() {
+        if std::fs::remove_dir_all(&partition.path).is_err() {
             error!("Cannot delete partition directory: {} for partition with ID: {} for topic with ID: {} for stream with ID: {}.", partition.path, partition.partition_id, partition.topic_id, partition.stream_id);
             return Err(IggyError::CannotDeletePartitionDirectory(
                 partition.partition_id,

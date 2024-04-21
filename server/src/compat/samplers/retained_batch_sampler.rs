@@ -5,7 +5,7 @@ use crate::server_error::ServerError;
 use crate::streaming::utils::file;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
-use tokio::io::AsyncReadExt;
+use std::fs;
 
 pub struct RetainedMessageBatchSampler {
     pub segment_start_offset: u64,
@@ -33,20 +33,18 @@ unsafe impl Sync for RetainedMessageBatchSampler {}
 #[async_trait]
 impl BinarySchemaSampler for RetainedMessageBatchSampler {
     async fn try_sample(&self) -> Result<BinarySchema, ServerError> {
-        let mut index_file = file::open(&self.index_path).await?;
-        let mut log_file = file::open(&self.log_path).await?;
-        let log_file_size = log_file.metadata().await?.len();
-
-        if log_file_size == 0 {
+        if fs::metadata(&self.log_path).unwrap().len() == 0 {
             return Ok(BinarySchema::RetainedMessageBatchSchema);
         }
 
+        let mut index_file = file::open(&self.index_path).await?;
         let _ = index_file.read_u32_le().await?;
         let _ = index_file.read_u32_le().await?;
         let second_index_offset = index_file.read_u32_le().await;
         let second_end_position = index_file.read_u32_le().await;
 
         let mut buffer = Vec::new();
+        let mut log_file = file::open(&self.log_path).await?;
         if second_index_offset.is_err() && second_end_position.is_err() {
             let _ = log_file.read_to_end(&mut buffer).await?;
         } else {

@@ -229,7 +229,7 @@ mod tests {
     use crate::streaming::storage::tests::get_test_system_storage;
     use std::sync::Arc;
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_get_topic_by_id_and_name() {
         let stream_id = 1;
         let stream_name = "test_stream";

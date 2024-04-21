@@ -14,6 +14,7 @@ use axum_server::tls_rustls::RustlsConfig;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
+use monoio::net::TcpListener;
 use tower_http::cors::{AllowOrigin, CorsLayer};
 use tracing::{error, info};
 
@@ -54,14 +55,13 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
     app = app.layer(middleware::from_fn(request_diagnostics));
 
     if !config.tls.enabled {
-        let listener = tokio::net::TcpListener::bind(config.address.clone())
-            .await
+        let listener = TcpListener::bind(config.address.clone())
             .unwrap_or_else(|_| panic!("Failed to bind to HTTP address {}", config.address));
         let address = listener
             .local_addr()
             .expect("Failed to get local address for HTTP server");
         info!("Started {api_name} on: {address}");
-        tokio::task::spawn(async move {
+        monoio::spawn(async move {
             if let Err(error) = axum::serve(
                 listener,
                 app.into_make_service_with_connect_info::<SocketAddr>(),
@@ -88,7 +88,7 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
 
         info!("Started {api_name} on: {address}");
 
-        tokio::task::spawn(async move {
+        monoio::spawn(async move {
             if let Err(error) = axum_server::from_tcp_rustls(listener, tls_config)
                 .serve(app.into_make_service_with_connect_info::<SocketAddr>())
                 .await

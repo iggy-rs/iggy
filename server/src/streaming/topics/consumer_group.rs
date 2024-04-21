@@ -1,6 +1,6 @@
+use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
 use std::collections::HashMap;
-use tokio::sync::RwLock;
 use tracing::trace;
 
 #[derive(Debug)]
@@ -151,7 +151,7 @@ impl ConsumerGroupMember {
 mod tests {
     use super::*;
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_calculate_partition_id_using_round_robin() {
         let member_id = 123;
         let mut consumer_group = ConsumerGroup {
@@ -172,7 +172,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_assign_all_partitions_to_the_only_single_member() {
         let member_id = 123;
         let mut consumer_group = ConsumerGroup {
@@ -196,7 +196,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_assign_partitions_to_the_multiple_members() {
         let member1_id = 123;
         let member2_id = 456;
@@ -233,7 +233,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
+    #[monoio::test]
     async fn should_assign_only_single_partition_to_the_only_single_member() {
         let member1_id = 123;
         let member2_id = 456;

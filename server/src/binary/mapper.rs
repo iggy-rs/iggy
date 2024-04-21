@@ -6,13 +6,13 @@ use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::user::User;
 use bytes::{BufMut, Bytes, BytesMut};
+use fast_async_mutex::rwlock::RwLock;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::locking::{IggySharedMut, IggySharedMutFn};
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::models::messages::PolledMessages;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
-use tokio::sync::RwLock;
 
 pub fn map_stats(stats: &Stats) -> Bytes {
     let mut bytes = BytesMut::with_capacity(104);

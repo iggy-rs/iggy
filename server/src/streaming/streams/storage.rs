@@ -3,6 +3,7 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
 use async_trait::async_trait;
+use fast_async_mutex::mutex::Mutex;
 use futures::future::join_all;
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -10,9 +11,6 @@ use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::fs;
-use tokio::fs::create_dir;
-use tokio::sync::Mutex;
 use tracing::{error, info};
 
 #[derive(Debug)]
@@ -79,13 +77,14 @@ impl Storage<Stream> for FileStreamStorage {
         stream.name = stream_data.name;
         stream.created_at = stream_data.created_at;
         let mut unloaded_topics = Vec::new();
-        let dir_entries = fs::read_dir(&stream.topics_path).await;
+        let dir_entries = std::fs::read_dir(&stream.topics_path);
         if dir_entries.is_err() {
             return Err(IggyError::CannotReadTopics(stream.stream_id));
         }
 
         let mut dir_entries = dir_entries.unwrap();
-        while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
+        while let Some(dir_entry) = dir_entries.next() {
+            let dir_entry = dir_entry.unwrap();
             let name = dir_entry.file_name().into_string().unwrap();
             let topic_id = name.parse::<u32>();
             if topic_id.is_err() {
@@ -110,7 +109,7 @@ impl Storage<Stream> for FileStreamStorage {
         let mut load_topics = Vec::new();
         for mut topic in unloaded_topics {
             let loaded_topics = loaded_topics.clone();
-            let load_stream = tokio::spawn(async move {
+            let load_stream = monoio::spawn(async move {
                 match topic.load().await {
                     Ok(_) => loaded_topics.lock().await.push(topic),
                     Err(error) => error!(
@@ -153,7 +152,7 @@ impl Storage<Stream> for FileStreamStorage {
     }
 
     async fn save(&self, stream: &Stream) -> Result<(), IggyError> {
-        if !Path::new(&stream.path).exists() && create_dir(&stream.path).await.is_err() {
+        if !Path::new(&stream.path).exists() && std::fs::create_dir(&stream.path).is_err() {
             return Err(IggyError::CannotCreateStreamDirectory(
                 stream.stream_id,
                 stream.path.clone(),
@@ -161,7 +160,7 @@ impl Storage<Stream> for FileStreamStorage {
         }
 
         if !Path::new(&stream.topics_path).exists()
-            && create_dir(&stream.topics_path).await.is_err()
+            && std::fs::create_dir(&stream.topics_path).is_err()
         {
             return Err(IggyError::CannotCreateTopicsDirectory(
                 stream.stream_id,
@@ -205,7 +204,7 @@ impl Storage<Stream> for FileStreamStorage {
         {
             return Err(IggyError::CannotDeleteResource(err));
         }
-        if fs::remove_dir_all(&stream.path).await.is_err() {
+        if std::fs::remove_dir_all(&stream.path).is_err() {
             return Err(IggyError::CannotDeleteStreamDirectory(stream.stream_id));
         }
         info!("Deleted stream with ID: {}.", stream.stream_id);

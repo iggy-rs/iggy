@@ -33,6 +33,7 @@ impl Metrics {
 
         metrics.register_counter("http_requests", metrics.http_requests.clone());
         metrics.register_gauge("streams", metrics.streams.clone());
+        metrics.register_gauge("topics", metrics.topics.clone());
         metrics.register_gauge("partitions", metrics.partitions.clone());
         metrics.register_gauge("segments", metrics.segments.clone());
         metrics.register_gauge("messages", metrics.messages.clone());

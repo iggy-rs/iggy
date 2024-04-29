@@ -15,7 +15,7 @@ use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
-use monoio::io::{AsyncReadRentExt, BufReader};
+use monoio::io::BufReader;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;

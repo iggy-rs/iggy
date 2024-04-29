@@ -33,16 +33,31 @@ impl BinarySchemaSampler for MessageSampler {
         }
 
         let mut index_file = file::open(&self.index_path).await?;
-        let _ = index_file.read_u32_le().await?;
-        let end_position = index_file.read_u32_le().await?;
+        let buffer = Vec::with_capacity(4);
+        let (result, buffer) = index_file.read_exact_at(buffer, 0).await;
+        if result.is_err() {
+            return Err(ServerError::InvalidMessageOffsetFormatConversion);
+        }
 
+        let _ = u32::from_le_bytes(buffer.try_into().unwrap());
+        let buffer = Vec::with_capacity(4);
+        let (result, buffer) = index_file.read_exact_at(buffer, 4).await;
+        if result.is_err() {
+            return Err(ServerError::InvalidMessageOffsetFormatConversion);
+        }
+
+        let end_position = u32::from_le_bytes(buffer.try_into().unwrap());
         let buffer_size = end_position as usize;
-        let mut buffer = BytesMut::with_capacity(buffer_size);
+        let mut buffer = Vec::with_capacity(buffer_size);
         buffer.put_bytes(0, buffer_size);
         let mut log_file = file::open(&self.log_path).await?;
-        let _ = log_file.read_exact(&mut buffer).await?;
+        let buffer = BytesMut::with_capacity(buffer_size);
+        let (result, buffer) = log_file.read_exact_at(buffer, 8).await;
+        if result.is_err() {
+            return Err(ServerError::InvalidMessageOffsetFormatConversion);
+        }
 
-        let message = MessageSnapshot::try_from(buffer.freeze())?;
+        let message = MessageSnapshot::try_from(buffer)?;
         if message.offset != self.segment_start_offset {
             return Err(ServerError::InvalidMessageOffsetFormatConversion);
         }

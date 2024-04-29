@@ -16,7 +16,6 @@ use crate::streaming::utils::file;
 use futures::{pin_mut, TryStreamExt};
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
-use monoio::io::AsyncWriteRent;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tracing::{info, trace};

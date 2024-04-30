@@ -16,10 +16,10 @@ futures = "0.3.30"
 humantime = "2.1.0"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.2"
-libc = "0.2.153"
+libc = "0.2.154"
 predicates = "3.1.0"
 regex = "1.10.4"
-serial_test = "3.1.0"
+serial_test = "3.1.1"
 server = { path = "../server" }
 sled = "0.34.7"
 tempfile = "3.10.1"

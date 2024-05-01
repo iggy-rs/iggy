@@ -34,13 +34,17 @@ unsafe impl Sync for FileWithSyncPersister {}
 impl Persister for FilePersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
         let mut file = file::append(path).await?;
-        file.write_all(bytes).await?;
+        let stat = file::metadata(path).await?;
+
+        file.write_all_at(bytes, stat.len()).await.0?;
         Ok(())
     }
 
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
         let mut file = file::overwrite(path).await?;
-        file.write_all(bytes).await?;
+        let stat = file::metadata(path).await?;
+
+        file.write_all_at(bytes, stat.len()).await.0?;
         Ok(())
     }
 
@@ -54,14 +58,18 @@ impl Persister for FilePersister {
 impl Persister for FileWithSyncPersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
         let mut file = file::append(path).await?;
-        file.write_all(bytes).await?;
+        let stat = file::metadata(path).await?;
+
+        file.write_all_at(bytes, stat.len()).await.0?;
         file.sync_all().await?;
         Ok(())
     }
 
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
         let mut file = file::overwrite(path).await?;
-        file.write_all(bytes).await?;
+        let stat = file::metadata(path).await?;
+
+        file.write_all_at(bytes, stat.len()).await.0?;
         file.sync_all().await?;
         Ok(())
     }

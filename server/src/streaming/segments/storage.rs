@@ -1,3 +1,4 @@
+use crate::io_utils::reader::{IggyFile, IggyReader};
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
@@ -15,7 +16,7 @@ use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
-use monoio::io::BufReader;
+use monoio::io::AsyncReadRentExt;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -51,7 +52,7 @@ impl Storage<Segment> for FileSegmentStorage {
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id
         );
         let log_file = file::open(&segment.log_path).await?;
-        let file_size = log_file.metadata().await.unwrap().len() as u64;
+        let file_size = file::metadata(&segment.log_path).await.unwrap().len() as u64;
         segment.size_bytes = file_size as u32;
 
         if segment.config.segment.cache_indexes {
@@ -315,7 +316,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn load_all_indexes(&self, segment: &Segment) -> Result<Vec<Index>, IggyError> {
         trace!("Loading indexes from file...");
         let file = file::open(&segment.index_path).await?;
-        let file_size = file.metadata().await?.len() as usize;
+        let file_size = file::metadata(&segment.index_path).await?.len() as usize;
         if file_size == 0 {
             trace!("Index file is empty.");
             return Ok(EMPTY_INDEXES);
@@ -323,7 +324,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         let indexes_count = file_size / INDEX_SIZE as usize;
         let mut indexes = Vec::with_capacity(indexes_count);
-        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        let mut reader = IggyReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for idx_num in 0..indexes_count {
             let offset = reader.read_u32_le().await.map_err(|error| {
                 error!(
@@ -380,7 +381,7 @@ impl SegmentStorage for FileSegmentStorage {
         }
 
         let file = file::open(&segment.index_path).await?;
-        let file_length = file.metadata().await?.len() as u32;
+        let file_length = file::metadata(&segment.index_path).await?.len() as u32;
         if file_length == 0 {
             trace!("Index file is empty.");
             return Ok(None);
@@ -398,7 +399,7 @@ impl SegmentStorage for FileSegmentStorage {
         let mut index_range = IndexRange::default();
         let mut read_bytes = 0;
 
-        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        let mut reader = IggyReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         loop {
             let relative_offset = reader.read_u32_le().await?;
             let position = reader.read_u32_le().await?;
@@ -452,13 +453,13 @@ impl SegmentStorage for FileSegmentStorage {
     ) -> Result<Option<TimeIndex>, IggyError> {
         trace!("Loading time indexes from file...");
         let file = file::open(&segment.time_index_path).await?;
-        let file_size = file.metadata().await?.len() as usize;
+        let file_size = file::metadata(&segment.time_index_path).await?.len() as usize;
         if file_size == 0 {
             trace!("Time index file is empty.");
             return Ok(Some(TimeIndex::default()));
         }
 
-        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        let mut reader = IggyReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         let mut read_bytes = 0;
         let mut idx_pred = HeadTailBuffer::new();
         loop {
@@ -482,7 +483,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError> {
         trace!("Loading time indexes from file...");
         let file = file::open(&segment.time_index_path).await?;
-        let file_size = file.metadata().await?.len() as usize;
+        let file_size = file::metadata(&segment.time_index_path).await?.len() as usize;
         if file_size == 0 {
             trace!("Time index file is empty.");
             return Ok(EMPTY_TIME_INDEXES);
@@ -490,7 +491,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         let indexes_count = file_size / TIME_INDEX_SIZE as usize;
         let mut indexes = Vec::with_capacity(indexes_count);
-        let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+        let mut reader = IggyReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         for idx_num in 0..indexes_count {
             let offset = reader.read_u32_le().await.map_err(|error| {
                 error!(
@@ -530,15 +531,15 @@ impl SegmentStorage for FileSegmentStorage {
     ) -> Result<Option<TimeIndex>, IggyError> {
         trace!("Loading last time index from file...");
         let mut file = file::open(&segment.time_index_path).await?;
-        let file_size = file.metadata().await?.len() as usize;
+        let mut file = IggyFile::new(file);
+        let file_size = file::metadata(&segment.time_index_path).await?.len() as usize;
         if file_size == 0 {
             trace!("Time index file is empty.");
             return Ok(None);
         }
 
         let last_index_position = file_size - TIME_INDEX_SIZE as usize;
-        file.seek(SeekFrom::Start(last_index_position as u64))
-            .await?;
+        file.seek(SeekFrom::Start(last_index_position as u64));
         let index_offset = file.read_u32_le().await?;
         let timestamp = file.read_u64_le().await?;
         let index = TimeIndex {
@@ -580,10 +581,8 @@ async fn load_batches_by_range(
     }
 
     let file = file::open(&segment.log_path).await?;
-    let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
-    reader
-        .seek(SeekFrom::Start(index_range.start.position as u64))
-        .await?;
+    let mut reader = IggyReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+    reader.seek(SeekFrom::Start(index_range.start.position as u64));
 
     let mut read_bytes: u64 = 0;
     let mut last_batch_to_read = false;
@@ -611,10 +610,8 @@ async fn load_batches_by_range(
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);
         payload.put_bytes(0, payload_len);
-        reader
-            .read_exact(&mut payload)
-            .await
-            .map_err(|_| IggyError::CannotReadBatchPayload)?;
+        let (result, payload) = reader.read_exact(payload).await;
+        result.map_err(|_| IggyError::CannotReadBatchPayload)?;
 
         read_bytes += 8 + 4 + 4 + 8 + payload_len as u64;
         last_batch_to_read = read_bytes == file_size || last_offset == index_last_offset;
@@ -645,7 +642,7 @@ async fn load_messages_by_size(
     let mut accumulated_size: u64 = 0;
 
     let file = file::open(&segment.log_path).await?;
-    let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
+    let mut reader = IggyReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     loop {
         let batch_base_offset = reader
             .read_u64_le()
@@ -667,10 +664,8 @@ async fn load_messages_by_size(
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);
         payload.put_bytes(0, payload_len);
-        reader
-            .read_exact(&mut payload)
-            .await
-            .map_err(|_| IggyError::CannotReadBatchPayload)?;
+        let (result, payload) = reader.read_exact(payload).await;
+        result.map_err(|_| IggyError::CannotReadBatchPayload)?;
 
         let batch = RetainedMessageBatch::new(
             batch_base_offset,

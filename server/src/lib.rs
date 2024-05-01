@@ -13,6 +13,7 @@ pub mod binary;
 pub mod channels;
 pub(crate) mod compat;
 pub mod configs;
+pub(crate) mod io_utils;
 
 // TODO: monoio: enable HTTP API
 // pub mod http;

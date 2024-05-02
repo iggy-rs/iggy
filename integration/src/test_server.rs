@@ -46,9 +46,6 @@ pub enum Transport {
     #[display(fmt = "http")]
     Http,
 
-    #[display(fmt = "quic")]
-    Quic,
-
     #[display(fmt = "tcp")]
     Tcp,
 }
@@ -60,9 +57,6 @@ enum ServerProtocolAddr {
 
     #[display(fmt = "HTTP_TCP:{_0}")]
     HttpTcp(SocketAddr),
-
-    #[display(fmt = "QUIC_UDP:{_0}")]
-    QuicUdp(SocketAddr),
 }
 
 #[derive(Debug)]
@@ -122,10 +116,6 @@ impl TestServer {
 
         if let Some(http_addr) = envs.get("IGGY_HTTP_ADDRESS") {
             server_addrs.push(ServerProtocolAddr::HttpTcp(http_addr.parse().unwrap()));
-        }
-
-        if let Some(quic_addr) = envs.get("IGGY_QUIC_ADDRESS") {
-            server_addrs.push(ServerProtocolAddr::QuicUdp(quic_addr.parse().unwrap()));
         }
 
         if server_addrs.is_empty() {
@@ -250,7 +240,6 @@ impl TestServer {
     fn get_server_ipv4_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
         let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
         vec![
-            ServerProtocolAddr::QuicUdp(addr),
             ServerProtocolAddr::RawTcp(addr),
             ServerProtocolAddr::HttpTcp(addr),
         ]
@@ -259,7 +248,6 @@ impl TestServer {
     fn get_server_ipv6_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
         let addr = SocketAddr::new(Ipv6Addr::LOCALHOST.into(), 0);
         vec![
-            ServerProtocolAddr::QuicUdp(addr),
             ServerProtocolAddr::RawTcp(addr),
             ServerProtocolAddr::HttpTcp(addr),
         ]
@@ -273,9 +261,6 @@ impl TestServer {
                 }
                 ServerProtocolAddr::HttpTcp(addr) => {
                     ("IGGY_HTTP_ADDRESS".to_string(), addr.to_string())
-                }
-                ServerProtocolAddr::QuicUdp(addr) => {
-                    ("IGGY_QUIC_ADDRESS".to_string(), addr.to_string())
                 }
             };
 
@@ -315,10 +300,6 @@ impl TestServer {
         });
 
         if let Some(config) = config {
-            self.server_addrs.push(ServerProtocolAddr::QuicUdp(
-                config.quic.address.parse().unwrap(),
-            ));
-
             self.server_addrs.push(ServerProtocolAddr::RawTcp(
                 config.tcp.address.parse().unwrap(),
             ));
@@ -380,21 +361,8 @@ impl TestServer {
         None
     }
 
-    pub fn get_quic_udp_addr(&self) -> Option<String> {
-        for server_protocol_addr in &self.server_addrs {
-            if let ServerProtocolAddr::QuicUdp(a) = server_protocol_addr {
-                return Some(a.to_string());
-            }
-        }
-        None
-    }
-
     pub fn get_server_ip_addr(&self) -> Option<String> {
-        if let Some(server_address) = self
-            .get_raw_tcp_addr()
-            .or_else(|| self.get_http_api_addr())
-            .or_else(|| self.get_quic_udp_addr())
-        {
+        if let Some(server_address) = self.get_raw_tcp_addr().or_else(|| self.get_http_api_addr()) {
             server_address
                 .split(':')
                 .map(|s| s.to_string())

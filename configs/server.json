@@ -60,22 +60,6 @@
       "password": "iggy123"
     }
   },
-  "quic": {
-    "enabled": true,
-    "address": "0.0.0.0:8080",
-    "max_concurrent_bidi_streams": 10000,
-    "datagram_send_buffer_size": "100 KB",
-    "initial_mtu": "8 KB",
-    "send_window": "100 KB",
-    "receive_window": "100 KB",
-    "keep_alive_interval": "5 s",
-    "max_idle_timeout": "10 s",
-    "certificate": {
-      "self_signed": true,
-      "cert_file": "certs/iggy_cert.pem",
-      "key_file": "certs/iggy_key.pem"
-    }
-  },
   "message_cleaner": {
     "enabled": true,
     "interval": "1 m"

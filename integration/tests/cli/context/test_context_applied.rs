@@ -64,10 +64,6 @@ impl IggyCmdTestCase for TestContextApplied {
 
         match transport {
             Some(protocol) => match protocol.as_str() {
-                "quic" => vec![
-                    "--quic-server-address".into(),
-                    server.get_quic_udp_addr().unwrap(),
-                ],
                 _ => vec![
                     "--tcp-server-address".into(),
                     server.get_raw_tcp_addr().unwrap(),
@@ -126,7 +122,7 @@ pub async fn should_apply_context() {
     iggy_cmd_test.setup().await;
 
     iggy_cmd_test
-        .execute_test(TestContextApplied::new(Some("quic".to_string()), None))
+        .execute_test(TestContextApplied::new(Some("tcp".to_string()), None))
         .await;
 }
 
@@ -137,9 +133,6 @@ pub async fn should_allow_args_to_override_context() {
     iggy_cmd_test.setup().await;
 
     iggy_cmd_test
-        .execute_test(TestContextApplied::new(
-            Some("quic".to_string()),
-            Some("tcp".to_string()),
-        ))
+        .execute_test(TestContextApplied::new(Some("tcp".to_string())))
         .await;
 }

@@ -5,8 +5,6 @@ use crate::http::client::HttpClient;
 use crate::http::config::HttpClientConfigBuilder;
 use crate::message_handler::MessageHandler;
 use crate::partitioner::Partitioner;
-use crate::quic::client::QuicClient;
-use crate::quic::config::QuicClientConfigBuilder;
 use crate::tcp::client::TcpClient;
 use crate::tcp::config::TcpClientConfigBuilder;
 use crate::utils::crypto::Encryptor;
@@ -70,16 +68,6 @@ impl IggyClientBuilder {
         }
     }
 
-    /// This method provides fluent API for the QUIC client configuration.
-    /// It returns the `QuicClientBuilder` instance, which allows to configure the QUIC client with custom settings or using defaults.
-    /// This should be called after the non-protocol specific methods, such as `with_partitioner`, `with_encryptor` or `with_message_handler`.
-    pub fn with_quic(self) -> QuicClientBuilder {
-        QuicClientBuilder {
-            config: QuicClientConfigBuilder::default(),
-            parent_builder: self,
-        }
-    }
-
     /// This method provides fluent API for the HTTP client configuration.
     /// It returns the `HttpClientBuilder` instance, which allows to configure the HTTP client with custom settings or using defaults.
     /// This should be called after the non-protocol specific methods, such as `with_partitioner`, `with_encryptor` or `with_message_handler`.
@@ -93,7 +81,7 @@ impl IggyClientBuilder {
     /// Build the `IggyClient` instance.
     /// This method returns an error if the client is not provided.
     /// If the client is provided, it creates the `IggyClient` instance with the provided configuration.
-    /// To provide the client configuration, use the `with_tcp`, `with_quic` or `with_http` methods.
+    /// To provide the client configuration, use the `with_tcp` or `with_http` methods.
     pub fn build(self) -> Result<IggyClient, IggyError> {
         let Some(client) = self.client else {
             error!("Client is not provided");
@@ -152,47 +140,6 @@ impl TcpClientBuilder {
     /// Builds the parent `IggyClient` with TCP configuration.
     pub fn build(self) -> Result<IggyClient, IggyError> {
         let client = TcpClient::create(Arc::new(self.config.build()))?;
-        let client = self.parent_builder.with_client(Box::new(client)).build()?;
-        Ok(client)
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct QuicClientBuilder {
-    config: QuicClientConfigBuilder,
-    parent_builder: IggyClientBuilder,
-}
-
-impl QuicClientBuilder {
-    /// Sets the server address for the QUIC client.
-    pub fn with_server_address(mut self, server_address: String) -> Self {
-        self.config = self.config.with_server_address(server_address);
-        self
-    }
-
-    /// Sets the number of retries when connecting to the server.
-    pub fn with_reconnection_retries(mut self, reconnection_retries: u32) -> Self {
-        self.config = self.config.with_reconnection_retries(reconnection_retries);
-        self
-    }
-
-    /// Sets the interval between retries when connecting to the server.
-    pub fn with_reconnection_interval(mut self, reconnection_interval: u64) -> Self {
-        self.config = self
-            .config
-            .with_reconnection_interval(reconnection_interval);
-        self
-    }
-
-    /// Sets the server name for the QUIC client.
-    pub fn with_server_name(mut self, server_name: String) -> Self {
-        self.config = self.config.with_server_name(server_name);
-        self
-    }
-
-    /// Builds the parent `IggyClient` with QUIC configuration.
-    pub fn build(self) -> Result<IggyClient, IggyError> {
-        let client = QuicClient::create(Arc::new(self.config.build()))?;
         let client = self.parent_builder.with_client(Box::new(client)).build()?;
         Ok(client)
     }

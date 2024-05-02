@@ -10,7 +10,6 @@ use tracing::{info, warn};
 struct ServerConfig {
     http: ConfigAddress,
     tcp: ConfigAddress,
-    quic: ConfigAddress,
 }
 
 #[derive(Debug, Deserialize)]
@@ -36,7 +35,6 @@ pub async fn start_server_if_needed(args: &mut IggyBenchArgs) -> Option<TestServ
                     default_config.http.address.to_owned(),
                 ),
                 ("IGGY_TCP_ENABLED".to_owned(), "false".to_owned()),
-                ("IGGY_QUIC_ENABLED".to_owned(), "false".to_owned()),
             ]);
             (
                 addresses_are_equivalent(&args_http_address, &config_http_address)
@@ -54,29 +52,10 @@ pub async fn start_server_if_needed(args: &mut IggyBenchArgs) -> Option<TestServ
                     default_config.tcp.address.to_owned(),
                 ),
                 ("IGGY_HTTP_ENABLED".to_owned(), "false".to_owned()),
-                ("IGGY_QUIC_ENABLED".to_owned(), "false".to_owned()),
             ]);
             (
                 addresses_are_equivalent(&args_tcp_address, &config_tcp_address)
                     && !is_tcp_addr_in_use(&args_tcp_address).await,
-                envs,
-            )
-        }
-        Transport::Quic => {
-            let args_quic_address = args.server_address().parse::<SocketAddr>().unwrap();
-            let config_quic_address = default_config.quic.address.parse::<SocketAddr>().unwrap();
-            let envs = HashMap::from([
-                (
-                    "IGGY_QUIC_ADDRESS".to_owned(),
-                    default_config.quic.address.to_owned(),
-                ),
-                ("IGGY_HTTP_ENABLED".to_owned(), "false".to_owned()),
-                ("IGGY_TCP_ENABLED".to_owned(), "false".to_owned()),
-            ]);
-
-            (
-                addresses_are_equivalent(&args_quic_address, &config_quic_address)
-                    && !is_udp_addr_in_use(&args_quic_address).await,
                 envs,
             )
         }

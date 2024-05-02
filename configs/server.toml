@@ -133,51 +133,6 @@ certificate = "certs/iggy.pfx"
 # Password for the TLS certificate, required for accessing the private key.
 password = "iggy123"
 
-# QUIC protocol configuration.
-[quic]
-# Controls whether the QUIC server is enabled.
-# `true` enables QUIC for fast, secure connections.
-# `false` disables QUIC, possibly for compatibility or simplicity.
-enabled = true
-
-# Network address and port for the QUIC server.
-# For example, "0.0.0.0:8080" binds to all interfaces on port 8080.
-address = "0.0.0.0:8080"
-
-# Maximum number of simultaneous bidirectional streams in QUIC.
-max_concurrent_bidi_streams = 10_000
-
-# Size of the buffer for sending datagrams in QUIC.
-datagram_send_buffer_size = "100 KB"
-
-# Initial Maximum Transmission Unit (MTU) for QUIC connections.
-initial_mtu = "8 KB"
-
-# Size of the sending window in QUIC, controlling data flow.
-send_window = "100 KB"
-
-# Size of the receiving window in QUIC, controlling data flow.
-receive_window = "100 KB"
-
-# Interval for sending keep-alive messages in QUIC.
-keep_alive_interval = "5 s"
-
-# Maximum idle time before a QUIC connection is closed.
-max_idle_timeout = "10 s"
-
-# QUIC certificate configuration.
-[quic.certificate]
-# Indicates whether the QUIC certificate is self-signed.
-# `true` for self-signed certificates, often used in internal or testing environments.
-# `false` for certificates issued by a certificate authority, common in production.
-self_signed = true
-
-# Path to the QUIC TLS certificate file.
-cert_file = "certs/iggy_cert.pem"
-
-# Path to the QUIC TLS key file.
-key_file = "certs/iggy_key.pem"
-
 # Message cleaner configuration.
 [message_cleaner]
 # Enables or disables the background process for deleting expired messages.

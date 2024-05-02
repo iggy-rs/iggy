@@ -102,8 +102,6 @@ pub enum IggyError {
     InvalidClientId = 101,
     #[error("IO error")]
     IoError(#[from] std::io::Error) = 200,
-    #[error("Write error")]
-    WriteError(#[from] quinn::WriteError) = 201,
     #[error("Cannot parse UTF8")]
     CannotParseUtf8(#[from] std::str::Utf8Error) = 202,
     #[error("Cannot parse integer")]
@@ -134,12 +132,6 @@ pub enum IggyError {
     EmptyResponse = 305,
     #[error("Cannot parse address")]
     CannotParseAddress(#[from] std::net::AddrParseError) = 306,
-    #[error("Read error")]
-    ReadError(#[from] quinn::ReadError) = 307,
-    #[error("Connection error")]
-    ConnectionError(#[from] quinn::ConnectionError) = 308,
-    #[error("Read to end error")]
-    ReadToEndError(#[from] quinn::ReadToEndError) = 309,
     #[error("Cannot create streams directory, Path: {0}")]
     CannotCreateStreamsDirectory(String) = 1000,
     #[error("Cannot create stream with ID: {0} directory, Path: {1}")]

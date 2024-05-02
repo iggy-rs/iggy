@@ -1,6 +1,5 @@
 use crate::configs::config_provider::ConfigProvider;
 use crate::configs::http::HttpConfig;
-use crate::configs::quic::QuicConfig;
 use crate::configs::system::SystemConfig;
 use crate::configs::tcp::TcpConfig;
 use crate::server_error::ServerError;
@@ -17,7 +16,6 @@ pub struct ServerConfig {
     pub message_saver: MessageSaverConfig,
     pub personal_access_token: PersonalAccessTokenConfig,
     pub system: Arc<SystemConfig>,
-    pub quic: QuicConfig,
     pub tcp: TcpConfig,
     pub http: HttpConfig,
 }

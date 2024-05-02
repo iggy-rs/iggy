@@ -248,7 +248,6 @@ fn extend_client(client: &Client, bytes: &mut BytesMut) {
     bytes.put_u32_le(client.user_id.unwrap_or(0));
     let transport: u8 = match client.transport {
         Transport::Tcp => 1,
-        Transport::Quic => 2,
     };
     bytes.put_u8(transport);
     let address = client.address.to_string();

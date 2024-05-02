@@ -1,7 +1,6 @@
 use crate::configs::http::{
     HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig,
 };
-use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
     MessageCleanerConfig, MessageSaverConfig, PersonalAccessTokenCleanerConfig,
     PersonalAccessTokenConfig, ServerConfig,
@@ -26,40 +25,8 @@ impl Default for ServerConfig {
             message_saver: MessageSaverConfig::default(),
             personal_access_token: PersonalAccessTokenConfig::default(),
             system: Arc::new(SystemConfig::default()),
-            quic: QuicConfig::default(),
             tcp: TcpConfig::default(),
             http: HttpConfig::default(),
-        }
-    }
-}
-
-impl Default for QuicConfig {
-    fn default() -> QuicConfig {
-        QuicConfig {
-            enabled: true,
-            address: SERVER_CONFIG.quic.address.parse().unwrap(),
-            max_concurrent_bidi_streams: SERVER_CONFIG.quic.max_concurrent_bidi_streams as u64,
-            datagram_send_buffer_size: SERVER_CONFIG
-                .quic
-                .datagram_send_buffer_size
-                .parse()
-                .unwrap(),
-            initial_mtu: SERVER_CONFIG.quic.initial_mtu.parse().unwrap(),
-            send_window: SERVER_CONFIG.quic.send_window.parse().unwrap(),
-            receive_window: SERVER_CONFIG.quic.receive_window.parse().unwrap(),
-            keep_alive_interval: SERVER_CONFIG.quic.keep_alive_interval.parse().unwrap(),
-            max_idle_timeout: SERVER_CONFIG.quic.max_idle_timeout.parse().unwrap(),
-            certificate: QuicCertificateConfig::default(),
-        }
-    }
-}
-
-impl Default for QuicCertificateConfig {
-    fn default() -> QuicCertificateConfig {
-        QuicCertificateConfig {
-            self_signed: SERVER_CONFIG.quic.certificate.self_signed,
-            cert_file: SERVER_CONFIG.quic.certificate.cert_file.parse().unwrap(),
-            key_file: SERVER_CONFIG.quic.certificate.key_file.parse().unwrap(),
         }
     }
 }

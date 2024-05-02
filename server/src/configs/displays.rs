@@ -1,4 +1,3 @@
-use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::system::MessageDeduplicationConfig;
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
@@ -63,35 +62,6 @@ impl Display for HttpTlsConfig {
     }
 }
 
-impl Display for QuicConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-          f,
-          "{{ enabled: {}, address: {}, max_concurrent_bidi_streams: {}, datagram_send_buffer_size: {}, initial_mtu: {}, send_window: {}, receive_window: {}, keep_alive_interval: {}, max_idle_timeout: {}, certificate: {} }}",
-          self.enabled,
-          self.address,
-          self.max_concurrent_bidi_streams,
-          self.datagram_send_buffer_size,
-          self.initial_mtu,
-          self.send_window,
-          self.receive_window,
-          self.keep_alive_interval,
-          self.max_idle_timeout,
-          self.certificate
-      )
-    }
-}
-
-impl Display for QuicCertificateConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{{ self_signed: {}, cert_file: {}, key_file: {} }}",
-            self.self_signed, self.cert_file, self.key_file
-        )
-    }
-}
-
 impl Display for MemoryResourceQuota {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -115,8 +85,8 @@ impl Display for ServerConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ message_cleaner: {}, message_saver: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
-            self.message_cleaner, self.message_saver, self.system, self.quic, self.tcp, self.http
+            "{{ message_cleaner: {}, message_saver: {}, system: {}, tcp: {}, http: {} }}",
+            self.message_cleaner, self.message_saver, self.system, self.tcp, self.http
         )
     }
 }

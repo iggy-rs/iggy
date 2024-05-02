@@ -8,7 +8,6 @@ use std::num::NonZeroU32;
 pub enum BenchmarkTransportCommand {
     Http(HttpArgs),
     Tcp(TcpArgs),
-    Quic(QuicArgs),
 }
 
 impl BenchmarkTransportProps for BenchmarkTransportCommand {
@@ -36,7 +35,6 @@ impl BenchmarkTransportProps for BenchmarkTransportCommand {
         match self {
             BenchmarkTransportCommand::Http(args) => args,
             BenchmarkTransportCommand::Tcp(args) => args,
-            BenchmarkTransportCommand::Quic(args) => args,
         }
     }
 }
@@ -104,50 +102,5 @@ impl BenchmarkTransportProps for TcpArgs {
 
     fn client_address(&self) -> &str {
         panic!("Setting client address for TCP transport is not supported!")
-    }
-}
-
-#[derive(Parser, Debug)]
-pub struct QuicArgs {
-    /// Address to which the QUIC client will bind
-    #[arg(long, default_value_t = DEFAULT_QUIC_CLIENT_ADDRESS.to_owned())]
-    pub client_address: String,
-
-    /// Address of the QUIC server
-    #[arg(long, default_value_t = DEFAULT_QUIC_SERVER_ADDRESS.to_owned())]
-    pub server_address: String,
-
-    /// Server name
-    #[arg(long, default_value_t = DEFAULT_QUIC_SERVER_NAME.to_owned())]
-    pub server_name: String,
-
-    /// Flag, enables certificate validation
-    #[arg(long, default_value_t = DEFAULT_QUIC_VALIDATE_CERTIFICATE)]
-    pub validate_certificate: bool,
-
-    /// Start stream id
-    #[arg(long, default_value_t = DEFAULT_QUIC_START_STREAM_ID)]
-    pub start_stream_id: NonZeroU32,
-}
-
-impl BenchmarkTransportProps for QuicArgs {
-    fn transport(&self) -> &Transport {
-        &Transport::Quic
-    }
-
-    fn server_address(&self) -> &str {
-        &self.server_address
-    }
-
-    fn start_stream_id(&self) -> u32 {
-        self.start_stream_id.get()
-    }
-
-    fn validate_certificate(&self) -> bool {
-        self.validate_certificate
-    }
-
-    fn client_address(&self) -> &str {
-        &self.client_address
     }
 }

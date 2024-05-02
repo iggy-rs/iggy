@@ -561,7 +561,6 @@ fn map_to_client_info(
     let transport = payload[position + 8];
     let transport = match transport {
         1 => "TCP",
-        2 => "QUIC",
         _ => "Unknown",
     }
     .to_string();

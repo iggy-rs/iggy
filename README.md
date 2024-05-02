@@ -28,7 +28,7 @@
 
 ---
 
-**Iggy** is the persistent message streaming platform written in Rust, supporting [QUIC](https://www.chromium.org/quic/), TCP (custom binary specification) and HTTP (regular REST API) transport protocols. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The **messages are stored on disk as an append-only log**, and are persisted between restarts.
+**Iggy** is the persistent message streaming platform written in Rust, supporting TCP (custom binary specification) and HTTP (regular REST API) transport protocols. Currently, running as a single server, it allows creating streams, topics, partitions and segments, and send/receive messages to/from them. The **messages are stored on disk as an append-only log**, and are persisted between restarts.
 
 The goal of the project is to make a distributed streaming platform (running as a cluster), which will be able to scale horizontally and handle **millions of messages per second** (actually, **it's already very fast**, see the benchmarks below).
 
@@ -49,7 +49,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 - **Low latency and predictable resource usage** thanks to the Rust compiled language (no GC)
 - **Users authentication and authorization** with granular permissions and PAT (Personal Access Tokens)
 - Support for multiple streams, topics and partitions
-- Support for **multiple transport protocols** (QUIC, TCP, HTTP)
+- Support for **multiple transport protocols** (TCP, HTTP)
 - Fully operational RESTful API which can be optionally enabled
 - Available client SDK in multiple languages
 - **Works directly with the binary data** (lack of enforced schema and serialization/deserialization)
@@ -64,7 +64,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 - **Consumer groups** providing the message ordering and horizontal scaling across the connected clients
 - **Message expiry** with auto deletion based on the configurable **retention policy**
 - Additional features such as **server side message deduplication**
-- **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
+- **TLS** support for all transport protocols (TCP, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM
 - Optional metadata support in the form of **message headers**
 - Built-in **CLI** to manage the streaming server
@@ -153,7 +153,7 @@ Start the server:
 
 *Please note that all commands below are using `iggy` binary, which is part of release (`cli` sub-crate).*
 
-Create a stream with ID 1 named `dev` using default credentials and `tcp` transport (available transports: `quic`, `tcp`, `http`, default `tcp`):
+Create a stream with ID 1 named `dev` using default credentials and `tcp` transport (available transports: `tcp`, `http`, default `tcp`):
 
 `cargo r --bin iggy -- --transport tcp --username iggy --password iggy stream create 1 dev`
 
@@ -250,6 +250,6 @@ Then, run the benchmarking app with the desired options:
 These benchmarks would start the server with the default configuration, create a stream, topic and partition, and then send or poll the messages. The default configuration is optimized for the best performance, so you might want to tweak it for your needs. If you need more options, please refer to `iggy-bench` subcommands `help` and `examples`.
 For example, to run the benchmark for the already started server, provide the additional argument `--server-address 0.0.0.0:8090`.
 
-Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. These results have been achieved on Apple M1 Max with 64 GB RAM.
+Depending on the hardware, transport protocol (`tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. These results have been achieved on Apple M1 Max with 64 GB RAM.
 
 ---

@@ -31,14 +31,12 @@ pub struct ConsumerGroup {
 #[derive(Debug, Clone, Copy)]
 pub enum Transport {
     Tcp,
-    Quic,
 }
 
 impl Display for Transport {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Transport::Tcp => write!(f, "TCP"),
-            Transport::Quic => write!(f, "QUIC"),
         }
     }
 }

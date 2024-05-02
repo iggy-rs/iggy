@@ -11,7 +11,6 @@ use std::fmt::Display;
 pub(super) enum Protocol {
     #[default]
     Tcp,
-    Quic,
 }
 
 #[derive(Debug, Default)]
@@ -27,7 +26,6 @@ impl Protocol {
     fn as_arg(&self) -> Vec<&str> {
         match self {
             Self::Tcp => vec!["--transport", "tcp"],
-            Self::Quic => vec!["--transport", "quic"],
         }
     }
 }
@@ -36,7 +34,6 @@ impl Display for Protocol {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Tcp => write!(f, "TCP"),
-            Self::Quic => write!(f, "QUIC"),
         }
     }
 }
@@ -95,10 +92,6 @@ impl IggyCmdTestCase for TestMeCmd {
                 "--tcp-server-address".into(),
                 server.get_raw_tcp_addr().unwrap(),
             ],
-            Protocol::Quic => vec![
-                "--quic-server-address".into(),
-                server.get_quic_udp_addr().unwrap(),
-            ],
         }
     }
 }
@@ -121,20 +114,6 @@ pub async fn should_be_successful_using_transport_tcp() {
     iggy_cmd_test
         .execute_test(TestMeCmd::new(
             Protocol::Tcp,
-            Scenario::SuccessWithCredentials,
-        ))
-        .await;
-}
-
-#[tokio::test]
-#[parallel]
-pub async fn should_be_successful_using_transport_quic() {
-    let mut iggy_cmd_test = IggyCmdTest::default();
-
-    iggy_cmd_test.setup().await;
-    iggy_cmd_test
-        .execute_test(TestMeCmd::new(
-            Protocol::Quic,
             Scenario::SuccessWithCredentials,
         ))
         .await;

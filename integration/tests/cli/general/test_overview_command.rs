@@ -21,7 +21,7 @@ pub async fn should_help_match() {
  |___|  \__, |  \__, |  \__, |    \____| |_____| |___|
         |___/   |___/   |___/{FIGLET_FILL}
 
-Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second.
+Iggy is the persistent message streaming platform written in Rust, supporting TCP and HTTP transport protocols, capable of processing millions of messages per second.
 
 Usage: iggy [OPTIONS] [COMMAND]
 

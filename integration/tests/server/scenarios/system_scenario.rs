@@ -718,7 +718,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let streams = client.get_streams().await.unwrap();
     assert!(streams.is_empty());
 
-    // 44. Get clients and ensure that there's 0 (HTTP) or 1 (TCP, QUIC) client
+    // 44. Get clients and ensure that there's 0 (HTTP) or 1 (TCP) client
     let clients = client.get_clients().await.unwrap();
 
     assert!(clients.len() <= 1);

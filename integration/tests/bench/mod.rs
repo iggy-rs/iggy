@@ -1,5 +1,4 @@
 mod http;
-mod quic;
 mod tcp;
 
 use assert_cmd::prelude::CommandCargoExt;

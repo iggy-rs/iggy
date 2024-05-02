@@ -1,4 +1,3 @@
-use std::io::SeekFrom;
 use futures::Future;
 use monoio::{
     buf::{IoBufMut, IoVecBufMut},
@@ -6,6 +5,7 @@ use monoio::{
     io::{AsyncReadRent, BufReader},
     BufResult,
 };
+use std::io::SeekFrom;
 
 pub struct IggyReader<R: AsyncReadRent> {
     inner: BufReader<R>,
@@ -21,7 +21,7 @@ impl IggyFile {
     pub fn new(file: File) -> Self {
         Self { file, position: 0 }
     }
-    
+
     // Maintaining the api compatibility, this is mostly used with the Start variant.
     /// This method doesn't verify the file bounds, it just sets the position.
     pub fn seek(&mut self, pos: SeekFrom) {

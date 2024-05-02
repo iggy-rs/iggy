@@ -224,7 +224,7 @@ impl System {
         {
             let stream = self.get_stream_mut(id)?;
             old_name = stream.name.clone();
-            stream.name = updated_name.clone();
+            stream.name.clone_from(&updated_name);
             stream.persist().await?;
         }
 

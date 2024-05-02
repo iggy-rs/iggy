@@ -3,8 +3,8 @@ use crate::compat::samplers::retained_batch_sampler::RetainedMessageBatchSampler
 use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, BytesMut};
-use futures::AsyncWriteExt;
 use iggy::error::IggyError;
+use monoio::io::AsyncWriteRentExt;
 
 use crate::streaming::segments::storage::{INDEX_SIZE, TIME_INDEX_SIZE};
 
@@ -12,7 +12,7 @@ pub trait Extendable {
     fn extend(&self, bytes: &mut BytesMut);
 }
 
-pub trait MessageFormatConverterPersister<W: AsyncWriteExt> {
+pub trait MessageFormatConverterPersister<W: AsyncWriteRentExt> {
     async fn persist(&self, writer: &mut W) -> Result<(), IggyError>;
     async fn persist_index(
         &self,
@@ -28,7 +28,7 @@ pub trait MessageFormatConverterPersister<W: AsyncWriteExt> {
     ) -> Result<(), IggyError>;
 }
 
-impl<W: AsyncWriteExt + Unpin, T> MessageFormatConverterPersister<W> for T
+impl<W: AsyncWriteRentExt + Unpin, T> MessageFormatConverterPersister<W> for T
 where
     T: Sizeable + Extendable,
 {
@@ -37,7 +37,7 @@ where
         let mut batch_bytes = BytesMut::with_capacity(size as usize);
         self.extend(&mut batch_bytes);
 
-        writer.write_all(&batch_bytes).await?;
+        writer.write_all(batch_bytes).await.0?;
         Ok(())
     }
 
@@ -51,7 +51,7 @@ where
         index_bytes.put_u32_le(relative_offset);
         index_bytes.put_u32_le(position);
 
-        writer.write_all(&index_bytes).await?;
+        writer.write_all(index_bytes).await.0?;
         Ok(())
     }
 
@@ -65,7 +65,7 @@ where
         time_index_bytes.put_u32_le(relative_offset);
         time_index_bytes.put_u64_le(timestamp);
 
-        writer.write_all(&time_index_bytes).await?;
+        writer.write_all(time_index_bytes).await.0?;
         Ok(())
     }
 }

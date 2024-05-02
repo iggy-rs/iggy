@@ -9,7 +9,6 @@ use std::io::SeekFrom;
 
 pub struct IggyReader<R: AsyncReadRent> {
     inner: BufReader<R>,
-    file: IggyFile,
 }
 
 pub struct IggyFile {
@@ -38,7 +37,6 @@ impl IggyReader<IggyFile> {
         let file = IggyFile::new(file);
         Self {
             inner: BufReader::new(file),
-            file,
         }
     }
 
@@ -46,17 +44,17 @@ impl IggyReader<IggyFile> {
         let file = IggyFile::new(file);
         Self {
             inner: BufReader::with_capacity(capacity, file),
-            file,
         }
     }
 
     // Maintaining the api compatibility, this is mostly used with the Start variant.
     /// This method doesn't verify the file bounds, it just sets the position.
     pub fn seek(&mut self, pos: SeekFrom) {
-        self.file.position = match pos {
+        let file  = self.inner.get_mut();
+        file.position = match pos {
             SeekFrom::Start(n) => n as i64,
             SeekFrom::End(n) => n,
-            SeekFrom::Current(n) => self.file.position as i64 + n,
+            SeekFrom::Current(n) => file.position as i64 + n,
         } as u64;
     }
 }

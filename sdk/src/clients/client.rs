@@ -382,7 +382,7 @@ impl IggyClient {
 
                         stream_id = Identifier::from_identifier(&send_messages.stream_id);
                         topic_id = Identifier::from_identifier(&send_messages.topic_id);
-                        key.value = send_messages.partitioning.value.clone();
+                        key.value.clone_from(&send_messages.partitioning.value);
                         initialized = true;
                     }
 

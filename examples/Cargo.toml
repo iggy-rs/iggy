@@ -41,7 +41,7 @@ bytes = "1.6.0"
 clap = { version = "4.5.4", features = ["derive"] }
 iggy = { path = "../sdk" }
 rand = "0.8.5"
-serde = { version = "1.0.198", features = ["derive", "rc"] }
+serde = { version = "1.0.200", features = ["derive", "rc"] }
 serde_json = "1.0.116"
 thiserror = "1.0.59"
 tokio = { version = "1.37.0", features = ["full"] }

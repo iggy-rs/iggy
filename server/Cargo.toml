@@ -43,9 +43,9 @@ rcgen = "0.13.1"
 ring = "0.17.8"
 rmp-serde = "1.2.0"
 rustls-pemfile = "2.1.2"
-serde = { version = "1.0.198", features = ["derive", "rc"] }
+serde = { version = "1.0.200", features = ["derive", "rc"] }
 serde_json = "1.0.116"
-serde_with = { version = "3.7.0", features = ["base64", "macros"] }
+serde_with = { version = "3.8.1", features = ["base64", "macros"] }
 sled = "0.34.7"
 static-toml = "1.2.0"
 strip-ansi-escapes = "0.2.0"
@@ -87,6 +87,5 @@ name = "iggy-server"
 path = "src/main.rs"
 
 # This is a workaround for cargo-udeps to ignore these dependencies
-# in case if feature 'tokio-console' is enabled.
 [package.metadata.cargo-udeps.ignore]
 normal = ["tracing-appender", "strip-ansi-escapes"]

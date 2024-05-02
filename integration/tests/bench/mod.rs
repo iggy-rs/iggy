@@ -52,7 +52,7 @@ pub fn run_bench_and_wait_for_finish(
         &message_size.to_string(),
         &format!("{}", transport),
         "--server-address",
-        &server_addr,
+        server_addr,
     ]);
 
     // By default, all iggy-bench logs are redirected to files,

@@ -10,7 +10,6 @@ use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::{SegmentStorage, Storage};
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
-use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
@@ -43,7 +42,6 @@ unsafe impl Send for FileSegmentStorage {}
 unsafe impl Sync for FileSegmentStorage {}
 
 // TODO: Split into smaller components.
-#[async_trait]
 impl Storage<Segment> for FileSegmentStorage {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError> {
         info!(
@@ -210,7 +208,6 @@ impl Storage<Segment> for FileSegmentStorage {
     }
 }
 
-#[async_trait]
 impl SegmentStorage for FileSegmentStorage {
     async fn load_message_batches(
         &self,
@@ -525,9 +522,7 @@ impl SegmentStorage for FileSegmentStorage {
     }
 
     async fn load_last_time_index(
-        &self,
-        segment: &Segment,
-    ) -> Result<Option<TimeIndex>, IggyError> {
+        &self,segment: &Segment,) -> Result<Option<TimeIndex>, IggyError> {
         trace!("Loading last time index from file...");
         let file = file::open(&segment.time_index_path).await?;
         let mut file = IggyFile::new(file);

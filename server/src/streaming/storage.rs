@@ -130,7 +130,7 @@ trait SystemStorageTrait {
     type PS: PartitionStorage;
     type SG: SegmentStorage;
 }
-struct FileSystemStorage {}
+pub struct FileSystemStorage {}
 
 impl SystemStorageTrait for FileSystemStorage {
     type SI = FileSystemInfoStorage;

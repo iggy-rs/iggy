@@ -1,7 +1,6 @@
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::storage::{PersonalAccessTokenStorage, Storage};
 use anyhow::Context;
-use async_trait::async_trait;
 use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use sled::Db;
@@ -25,7 +24,6 @@ impl FilePersonalAccessTokenStorage {
 unsafe impl Send for FilePersonalAccessTokenStorage {}
 unsafe impl Sync for FilePersonalAccessTokenStorage {}
 
-#[async_trait]
 impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
     async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, IggyError> {
         let mut personal_access_tokens = Vec::new();
@@ -151,7 +149,6 @@ impl PersonalAccessTokenStorage for FilePersonalAccessTokenStorage {
     }
 }
 
-#[async_trait]
 impl Storage<PersonalAccessToken> for FilePersonalAccessTokenStorage {
     async fn load(&self, personal_access_token: &mut PersonalAccessToken) -> Result<(), IggyError> {
         self.load_by_name(personal_access_token.user_id, &personal_access_token.name)

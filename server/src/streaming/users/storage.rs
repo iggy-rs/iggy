@@ -1,7 +1,6 @@
 use crate::streaming::storage::{Storage, UserStorage};
 use crate::streaming::users::user::User;
 use anyhow::Context;
-use async_trait::async_trait;
 use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use sled::Db;
@@ -21,10 +20,6 @@ impl FileUserStorage {
     }
 }
 
-unsafe impl Send for FileUserStorage {}
-unsafe impl Sync for FileUserStorage {}
-
-#[async_trait]
 impl UserStorage for FileUserStorage {
     async fn load_by_id(&self, id: UserId) -> Result<User, IggyError> {
         let mut user = User::empty(id);
@@ -86,7 +81,6 @@ impl UserStorage for FileUserStorage {
     }
 }
 
-#[async_trait]
 impl Storage<User> for FileUserStorage {
     async fn load(&self, user: &mut User) -> Result<(), IggyError> {
         let key = get_key(user.id);

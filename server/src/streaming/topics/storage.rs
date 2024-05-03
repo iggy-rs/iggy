@@ -3,7 +3,6 @@ use crate::streaming::storage::{Storage, TopicStorage};
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
-use async_trait::async_trait;
 use fast_async_mutex::mutex::Mutex;
 use futures::future::join_all;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
@@ -37,7 +36,6 @@ struct ConsumerGroupData {
     name: String,
 }
 
-#[async_trait]
 impl TopicStorage for FileTopicStorage {
     async fn save_consumer_group(
         &self,
@@ -143,7 +141,6 @@ struct TopicData {
     replication_factor: u8,
 }
 
-#[async_trait]
 impl Storage<Topic> for FileTopicStorage {
     async fn load(&self, topic: &mut Topic) -> Result<(), IggyError> {
         info!("Loading topic {} from disk...", topic);

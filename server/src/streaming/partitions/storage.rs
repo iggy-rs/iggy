@@ -1,9 +1,8 @@
-use crate::compat::message_converter::MessageFormatConverter;
+//use crate::compat::message_converter::MessageFormatConverter;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
 use crate::streaming::storage::{PartitionStorage, Storage};
 use anyhow::Context;
-use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use serde::{Deserialize, Serialize};
@@ -27,7 +26,6 @@ impl FilePartitionStorage {
 unsafe impl Send for FilePartitionStorage {}
 unsafe impl Sync for FilePartitionStorage {}
 
-#[async_trait]
 impl PartitionStorage for FilePartitionStorage {
     async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError> {
         // The stored value is just the offset, so we don't need to serialize the whole struct.
@@ -137,7 +135,6 @@ struct PartitionData {
     created_at: u64,
 }
 
-#[async_trait]
 impl Storage<Partition> for FilePartitionStorage {
     async fn load(&self, partition: &mut Partition) -> Result<(), IggyError> {
         info!(
@@ -220,6 +217,8 @@ impl Storage<Partition> for FilePartitionStorage {
                 partition.messages_count.clone(),
             );
 
+            //TODO(numinex) - Reimplement this once the io_uring development phase is over.
+            /* 
             let log_path = segment.log_path.to_owned();
             let index_path = segment.index_path.to_owned();
             let message_format_converter =
@@ -253,6 +252,7 @@ impl Storage<Partition> for FilePartitionStorage {
                     _ => {}
                 }
             }
+            */
 
             segment.load().await?;
             if !segment.is_closed {

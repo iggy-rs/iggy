@@ -1,5 +1,5 @@
-use monoio::fs::File;
 use crate::io_utils::reader::{IggyFile, IggyWriter};
+use monoio::fs::File;
 
 const BUF_WRITER_CAPACITY_BYTES: usize = 512 * 1000;
 
@@ -14,7 +14,10 @@ impl RetainedBatchWriter {
         RetainedBatchWriter {
             log_writer: IggyWriter::with_capacity(BUF_WRITER_CAPACITY_BYTES, log_file),
             index_writer: IggyWriter::with_capacity(BUF_WRITER_CAPACITY_BYTES, index_file),
-            time_index_writer: IggyWriter::with_capacity(BUF_WRITER_CAPACITY_BYTES, time_index_file),
+            time_index_writer: IggyWriter::with_capacity(
+                BUF_WRITER_CAPACITY_BYTES,
+                time_index_file,
+            ),
         }
     }
 }

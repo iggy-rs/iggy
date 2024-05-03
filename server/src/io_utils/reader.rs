@@ -92,11 +92,8 @@ impl AsyncReadRent for IggyFile {
 }
 
 impl AsyncWriteRent for IggyFile {
-    async fn write<T: monoio::buf::IoBuf>(
-        &mut self,
-        buf: T,
-    ) -> BufResult<usize, T> {
-        let (res, buf) =  self.file.write_at(buf, self.position).await;
+    async fn write<T: monoio::buf::IoBuf>(&mut self, buf: T) -> BufResult<usize, T> {
+        let (res, buf) = self.file.write_at(buf, self.position).await;
         let n = match res {
             Ok(n) => n,
             Err(e) => return (Err(e), buf),
@@ -119,16 +116,16 @@ impl AsyncWriteRent for IggyFile {
         self.file.sync_all().await
     }
 
-    //TODO(numinex) - How to implement this ? 
+    //TODO(numinex) - How to implement this ?
     async fn shutdown(&mut self) -> std::io::Result<()> {
         panic!("shutdown is not supported for IggyFile");
         /*
-        self.file.sync_all().await;
-        unsafe {
-            let file = *self.file;
-            file.close().await
-        }
-*/
+                self.file.sync_all().await;
+                unsafe {
+                    let file = *self.file;
+                    file.close().await
+                }
+        */
     }
 }
 
@@ -145,14 +142,21 @@ where
     }
 }
 
-
 impl<W> AsyncWriteRent for IggyWriter<W>
-where W: AsyncWriteRent {
-    fn write<T: monoio::buf::IoBuf>(&mut self, buf: T) -> impl Future<Output = BufResult<usize, T>> {
+where
+    W: AsyncWriteRent,
+{
+    fn write<T: monoio::buf::IoBuf>(
+        &mut self,
+        buf: T,
+    ) -> impl Future<Output = BufResult<usize, T>> {
         self.inner.write(buf)
     }
 
-    fn writev<T: monoio::buf::IoVecBuf>(&mut self, buf_vec: T) -> impl Future<Output = BufResult<usize, T>> {
+    fn writev<T: monoio::buf::IoVecBuf>(
+        &mut self,
+        buf_vec: T,
+    ) -> impl Future<Output = BufResult<usize, T>> {
         self.inner.writev(buf_vec)
     }
 

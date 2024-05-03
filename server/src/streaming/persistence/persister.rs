@@ -9,22 +9,11 @@ pub trait Persister {
     async fn delete(&self, path: &str) -> Result<(), IggyError>;
 }
 
-/*
-impl Debug for dyn Persister {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Persister")
-            .field("type", &"Persister")
-            .finish()
-    }
-}
-*/
-
 #[derive(Debug)]
 pub struct FilePersister;
 
 #[derive(Debug)]
 pub struct FileWithSyncPersister;
-
 
 //TODO(numminex) - Maybe change Persister api to take position(u64) as argument, instead of statting the file
 impl Persister for FilePersister {
@@ -72,5 +61,34 @@ impl Persister for FileWithSyncPersister {
     async fn delete(&self, path: &str) -> Result<(), IggyError> {
         std::fs::remove_file(path)?;
         Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub enum StoragePersister {
+    File(FilePersister),
+    FileWithSync(FileWithSyncPersister),
+}
+
+impl Persister for StoragePersister {
+    async fn append(&self, path: &str, bytes: bytes::Bytes) -> Result<(), IggyError> {
+        match self {
+            StoragePersister::File(persister) => persister.append(path, bytes).await,
+            StoragePersister::FileWithSync(persister) => persister.append(path, bytes).await,
+        }
+    }
+
+    async fn overwrite(&self, path: &str, bytes: bytes::Bytes) -> Result<(), IggyError> {
+        match self {
+            StoragePersister::File(persister) => persister.overwrite(path, bytes).await,
+            StoragePersister::FileWithSync(persister) => persister.overwrite(path, bytes).await,
+        }
+    }
+
+    async fn delete(&self, path: &str) -> Result<(), IggyError> {
+        match self {
+            StoragePersister::File(persister) => persister.delete(path).await,
+            StoragePersister::FileWithSync(persister) => persister.delete(path).await,
+        }
     }
 }

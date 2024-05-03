@@ -2,7 +2,7 @@ use crate::io_utils::reader::{IggyFile, IggyReader};
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
-use crate::streaming::persistence::persister::Persister;
+use crate::streaming::persistence::persister::{Persister, StoragePersister};
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
@@ -10,7 +10,6 @@ use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::{SegmentStorage, Storage};
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
-use anyhow::Context;
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
@@ -31,11 +30,11 @@ const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
 pub struct FileSegmentStorage {
-    persister: Arc<dyn Persister>,
+    persister: Arc<StoragePersister>,
 }
 
 impl FileSegmentStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
+    pub fn new(persister: Arc<StoragePersister>) -> Self {
         Self { persister }
     }
 }

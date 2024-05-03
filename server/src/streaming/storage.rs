@@ -1,7 +1,7 @@
 use super::batching::message_batch::RetainedMessageBatch;
+use super::persistence::persister::StoragePersister;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
-use crate::streaming::persistence::persister::Persister;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::personal_access_tokens::storage::FilePersonalAccessTokenStorage;
 use crate::streaming::segments::index::{Index, IndexRange};
@@ -17,32 +17,27 @@ use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::storage::FileUserStorage;
 use crate::streaming::users::user::User;
-use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use sled::Db;
-use std::fmt::{Debug, Formatter};
+use std::fmt::Debug;
 use std::sync::Arc;
 
-#[async_trait]
-pub trait Storage<T>: Sync + Send {
+pub trait Storage<T> {
     async fn load(&self, component: &mut T) -> Result<(), IggyError>;
     async fn save(&self, component: &T) -> Result<(), IggyError>;
     async fn delete(&self, component: &T) -> Result<(), IggyError>;
 }
 
-#[async_trait]
 pub trait SystemInfoStorage: Storage<SystemInfo> {}
 
-#[async_trait]
 pub trait UserStorage: Storage<User> {
     async fn load_by_id(&self, id: UserId) -> Result<User, IggyError>;
     async fn load_by_username(&self, username: &str) -> Result<User, IggyError>;
     async fn load_all(&self) -> Result<Vec<User>, IggyError>;
 }
 
-#[async_trait]
 pub trait PersonalAccessTokenStorage: Storage<PersonalAccessToken> {
     async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, IggyError>;
     async fn load_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, IggyError>;
@@ -55,10 +50,8 @@ pub trait PersonalAccessTokenStorage: Storage<PersonalAccessToken> {
     async fn delete_for_user(&self, user_id: UserId, name: &str) -> Result<(), IggyError>;
 }
 
-#[async_trait]
 pub trait StreamStorage: Storage<Stream> {}
 
-#[async_trait]
 pub trait TopicStorage: Storage<Topic> {
     async fn save_consumer_group(
         &self,
@@ -73,7 +66,6 @@ pub trait TopicStorage: Storage<Topic> {
     ) -> Result<(), IggyError>;
 }
 
-#[async_trait]
 pub trait PartitionStorage: Storage<Partition> {
     async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError>;
     async fn load_consumer_offsets(
@@ -92,7 +84,6 @@ pub trait PartitionStorage: Storage<Partition> {
     ) -> Result<(), IggyError>;
 }
 
-#[async_trait]
 pub trait SegmentStorage: Storage<Segment> {
     async fn load_message_batches(
         &self,
@@ -130,19 +121,40 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn save_time_index(&self, segment: &Segment) -> Result<(), IggyError>;
 }
 
-#[derive(Debug)]
-pub struct SystemStorage {
-    pub info: Arc<dyn SystemInfoStorage>,
-    pub user: Arc<dyn UserStorage>,
-    pub personal_access_token: Arc<dyn PersonalAccessTokenStorage>,
-    pub stream: Arc<dyn StreamStorage>,
-    pub topic: Arc<dyn TopicStorage>,
-    pub partition: Arc<dyn PartitionStorage>,
-    pub segment: Arc<dyn SegmentStorage>,
+trait SystemStorageTrait {
+    type SI: SystemInfoStorage;
+    type US: UserStorage;
+    type PAT: PersonalAccessTokenStorage;
+    type SS: StreamStorage;
+    type TS: TopicStorage;
+    type PS: PartitionStorage;
+    type SG: SegmentStorage;
+}
+struct FileSystemStorage {}
+
+impl SystemStorageTrait for FileSystemStorage {
+    type SI = FileSystemInfoStorage;
+    type US = FileUserStorage;
+    type PAT = FilePersonalAccessTokenStorage;
+    type SS = FileStreamStorage;
+    type TS = FileTopicStorage;
+    type PS = FilePartitionStorage;
+    type SG = FileSegmentStorage;
 }
 
-impl SystemStorage {
-    pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
+#[derive(Debug)]
+pub struct SystemStorage<ST: SystemStorageTrait> {
+    pub info: Arc<ST::SI>,
+    pub user: Arc<ST::US>,
+    pub personal_access_token: Arc<ST::PAT>,
+    pub stream: Arc<ST::SS>,
+    pub topic: Arc<ST::TS>,
+    pub partition: Arc<ST::PS>,
+    pub segment: Arc<ST::SG>,
+}
+
+impl SystemStorage<FileSystemStorage> {
+    pub fn new(db: Arc<Db>, persister: Arc<StoragePersister>) -> Self {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(db.clone())),
             user: Arc::new(FileUserStorage::new(db.clone())),
@@ -150,50 +162,8 @@ impl SystemStorage {
             stream: Arc::new(FileStreamStorage::new(db.clone())),
             topic: Arc::new(FileTopicStorage::new(db.clone())),
             partition: Arc::new(FilePartitionStorage::new(db.clone())),
-            segment: Arc::new(FileSegmentStorage::new(persister.clone())),
+            segment: Arc::new(FileSegmentStorage::new(persister)),
         }
-    }
-}
-
-impl Debug for dyn SystemInfoStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SystemInfoStorage")
-    }
-}
-
-impl Debug for dyn UserStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UserStorage")
-    }
-}
-
-impl Debug for dyn PersonalAccessTokenStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PersonalAccessTokenStorage")
-    }
-}
-
-impl Debug for dyn StreamStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "StreamStorage")
-    }
-}
-
-impl Debug for dyn TopicStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "TopicStorage")
-    }
-}
-
-impl Debug for dyn PartitionStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PartitionStorage")
-    }
-}
-
-impl Debug for dyn SegmentStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "SegmentStorage")
     }
 }
 
@@ -206,7 +176,6 @@ pub(crate) mod tests {
     use crate::streaming::storage::*;
     use crate::streaming::streams::stream::Stream;
     use crate::streaming::topics::topic::Topic;
-    use async_trait::async_trait;
     use std::sync::Arc;
 
     struct TestSystemInfoStorage {}
@@ -217,7 +186,6 @@ pub(crate) mod tests {
     struct TestPartitionStorage {}
     struct TestSegmentStorage {}
 
-    #[async_trait]
     impl Storage<SystemInfo> for TestSystemInfoStorage {
         async fn load(&self, _system_info: &mut SystemInfo) -> Result<(), IggyError> {
             Ok(())
@@ -232,10 +200,8 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl SystemInfoStorage for TestSystemInfoStorage {}
 
-    #[async_trait]
     impl Storage<User> for TestUserStorage {
         async fn load(&self, _user: &mut User) -> Result<(), IggyError> {
             Ok(())
@@ -250,7 +216,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl UserStorage for TestUserStorage {
         async fn load_by_id(&self, _id: UserId) -> Result<User, IggyError> {
             Ok(User::default())
@@ -265,7 +230,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl Storage<PersonalAccessToken> for TestPersonalAccessTokenStorage {
         async fn load(
             &self,
@@ -289,7 +253,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl PersonalAccessTokenStorage for TestPersonalAccessTokenStorage {
         async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, IggyError> {
             Ok(vec![])
@@ -319,7 +282,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl Storage<Stream> for TestStreamStorage {
         async fn load(&self, _stream: &mut Stream) -> Result<(), IggyError> {
             Ok(())
@@ -336,7 +298,6 @@ pub(crate) mod tests {
 
     impl StreamStorage for TestStreamStorage {}
 
-    #[async_trait]
     impl Storage<Topic> for TestTopicStorage {
         async fn load(&self, _topic: &mut Topic) -> Result<(), IggyError> {
             Ok(())
@@ -351,7 +312,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl TopicStorage for TestTopicStorage {
         async fn save_consumer_group(
             &self,
@@ -377,7 +337,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl Storage<Partition> for TestPartitionStorage {
         async fn load(&self, _partition: &mut Partition) -> Result<(), IggyError> {
             Ok(())
@@ -392,7 +351,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl PartitionStorage for TestPartitionStorage {
         async fn save_consumer_offset(&self, _offset: &ConsumerOffset) -> Result<(), IggyError> {
             Ok(())
@@ -419,7 +377,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl Storage<Segment> for TestSegmentStorage {
         async fn load(&self, _segment: &mut Segment) -> Result<(), IggyError> {
             Ok(())
@@ -434,7 +391,6 @@ pub(crate) mod tests {
         }
     }
 
-    #[async_trait]
     impl SegmentStorage for TestSegmentStorage {
         async fn load_message_batches(
             &self,
@@ -509,18 +465,6 @@ pub(crate) mod tests {
 
         async fn save_time_index(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
-        }
-    }
-
-    pub fn get_test_system_storage() -> SystemStorage {
-        SystemStorage {
-            info: Arc::new(TestSystemInfoStorage {}),
-            user: Arc::new(TestUserStorage {}),
-            personal_access_token: Arc::new(TestPersonalAccessTokenStorage {}),
-            stream: Arc::new(TestStreamStorage {}),
-            topic: Arc::new(TestTopicStorage {}),
-            partition: Arc::new(TestPartitionStorage {}),
-            segment: Arc::new(TestSegmentStorage {}),
         }
     }
 }

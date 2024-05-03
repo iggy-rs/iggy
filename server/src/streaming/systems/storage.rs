@@ -1,7 +1,6 @@
 use crate::streaming::storage::{Storage, SystemInfoStorage};
 use crate::streaming::systems::info::SystemInfo;
 use anyhow::Context;
-use async_trait::async_trait;
 use iggy::error::IggyError;
 use sled::Db;
 use std::sync::Arc;
@@ -25,7 +24,6 @@ unsafe impl Sync for FileSystemInfoStorage {}
 
 impl SystemInfoStorage for FileSystemInfoStorage {}
 
-#[async_trait]
 impl Storage<SystemInfo> for FileSystemInfoStorage {
     async fn load(&self, system_info: &mut SystemInfo) -> Result<(), IggyError> {
         let data = match self

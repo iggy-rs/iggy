@@ -530,7 +530,7 @@ impl SegmentStorage for FileSegmentStorage {
         segment: &Segment,
     ) -> Result<Option<TimeIndex>, IggyError> {
         trace!("Loading last time index from file...");
-        let mut file = file::open(&segment.time_index_path).await?;
+        let file = file::open(&segment.time_index_path).await?;
         let mut file = IggyFile::new(file);
         let file_size = file::metadata(&segment.time_index_path).await?.len() as usize;
         if file_size == 0 {

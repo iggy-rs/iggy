@@ -1,13 +1,6 @@
 use crate::streaming::utils::file;
 use async_trait::async_trait;
-use futures::Future;
 use iggy::error::IggyError;
-use monoio::{
-    buf::{IoBufMut, IoVecBufMut},
-    fs::File,
-    io::{AsyncReadRent, AsyncReadRentExt},
-    BufResult,
-};
 use std::fmt::Debug;
 
 #[async_trait]
@@ -41,7 +34,7 @@ unsafe impl Sync for FileWithSyncPersister {}
 #[async_trait]
 impl Persister for FilePersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::append(path).await?;
+        let file = file::append(path).await?;
         let stat = file::metadata(path).await?;
 
         file.write_all_at(bytes, stat.len()).await.0?;
@@ -49,7 +42,7 @@ impl Persister for FilePersister {
     }
 
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::overwrite(path).await?;
+        let file = file::overwrite(path).await?;
         let stat = file::metadata(path).await?;
 
         file.write_all_at(bytes, stat.len()).await.0?;
@@ -65,7 +58,7 @@ impl Persister for FilePersister {
 #[async_trait]
 impl Persister for FileWithSyncPersister {
     async fn append(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::append(path).await?;
+        let file = file::append(path).await?;
         let stat = file::metadata(path).await?;
 
         file.write_all_at(bytes, stat.len()).await.0?;
@@ -74,7 +67,7 @@ impl Persister for FileWithSyncPersister {
     }
 
     async fn overwrite(&self, path: &str, bytes: &[u8]) -> Result<(), IggyError> {
-        let mut file = file::overwrite(path).await?;
+        let file = file::overwrite(path).await?;
         let stat = file::metadata(path).await?;
 
         file.write_all_at(bytes, stat.len()).await.0?;

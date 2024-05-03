@@ -50,7 +50,7 @@ impl IggyReader<IggyFile> {
     // Maintaining the api compatibility, this is mostly used with the Start variant.
     /// This method doesn't verify the file bounds, it just sets the position.
     pub fn seek(&mut self, pos: SeekFrom) {
-        let file  = self.inner.get_mut();
+        let file = self.inner.get_mut();
         file.position = match pos {
             SeekFrom::Start(n) => n as i64,
             SeekFrom::End(n) => n,

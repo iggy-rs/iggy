@@ -38,4 +38,6 @@ pub enum ServerError {
     CannotRemoveOldSegmentFiles,
     #[error("Cannot persist new segment files")]
     CannotPersistNewSegmentFiles,
+    #[error("Cannot read from file")]
+    CannotReadFromFile,
 }

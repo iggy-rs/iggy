@@ -11,7 +11,7 @@ use tracing::debug;
 
 pub async fn handle(
     command: &PollMessages,
-    sender: &mut dyn Sender,
+    sender: &mut impl Sender,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

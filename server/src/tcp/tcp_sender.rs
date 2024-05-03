@@ -1,6 +1,5 @@
 use crate::binary::sender::Sender;
 use crate::tcp::sender;
-use async_trait::async_trait;
 use iggy::error::IggyError;
 use monoio::net::TcpStream;
 
@@ -12,7 +11,6 @@ pub struct TcpSender {
 unsafe impl Send for TcpSender {}
 unsafe impl Sync for TcpSender {}
 
-#[async_trait]
 impl Sender for TcpSender {
     async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
         sender::read(&mut self.stream, buffer).await

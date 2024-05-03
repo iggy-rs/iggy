@@ -26,7 +26,7 @@ use tracing::{debug, error};
 
 pub async fn handle(
     command: Command,
-    sender: &mut dyn Sender,
+    sender: &mut impl Sender,
     session: &Session,
     system: SharedSystem,
 ) -> Result<(), IggyError> {
@@ -44,7 +44,7 @@ pub async fn handle(
 
 async fn try_handle(
     command: Command,
-    sender: &mut dyn Sender,
+    sender: &mut impl Sender,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {

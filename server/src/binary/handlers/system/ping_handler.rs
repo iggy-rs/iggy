@@ -7,7 +7,7 @@ use tracing::debug;
 
 pub async fn handle(
     command: &Ping,
-    sender: &mut dyn Sender,
+    sender: &mut impl Sender,
     session: &Session,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");

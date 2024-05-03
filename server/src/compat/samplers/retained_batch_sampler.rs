@@ -3,7 +3,6 @@ use crate::compat::schema_sampler::BinarySchemaSampler;
 use crate::compat::snapshots::retained_batch_snapshot::RetainedMessageBatchSnapshot;
 use crate::server_error::ServerError;
 use crate::streaming::utils::file;
-use async_trait::async_trait;
 use bytes::{BufMut, Bytes};
 use std::fs;
 
@@ -30,7 +29,6 @@ impl RetainedMessageBatchSampler {
 unsafe impl Send for RetainedMessageBatchSampler {}
 unsafe impl Sync for RetainedMessageBatchSampler {}
 
-#[async_trait]
 impl BinarySchemaSampler for RetainedMessageBatchSampler {
     async fn try_sample(&self) -> Result<BinarySchema, ServerError> {
         let size = fs::metadata(&self.log_path).unwrap().len() as usize;

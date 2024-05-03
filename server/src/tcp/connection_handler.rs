@@ -16,7 +16,7 @@ const INITIAL_BYTES_LENGTH: usize = 4;
 
 pub(crate) async fn handle_connection(
     address: SocketAddr,
-    sender: &mut dyn Sender,
+    sender: &mut impl Sender,
     system: SharedSystem,
 ) -> Result<(), ServerError> {
     let client_id = system.read().add_client(&address, Transport::Tcp).await;

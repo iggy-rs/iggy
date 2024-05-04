@@ -24,8 +24,8 @@ pub(crate) async fn handle_connection(
 
     let session = Session::from_client_id(client_id, address);
     loop {
-        let initial_buffer = vec![0u8; INITIAL_BYTES_LENGTH];
-        let (read_length, mut initial_buffer) = match sender.read(initial_buffer).await {
+        let initial_buffer = BytesMut::with_capacity(INITIAL_BYTES_LENGTH);
+        let (read_length, initial_buffer) = match sender.read(initial_buffer).await {
             (Ok(read_length), buffer) => (read_length, buffer),
             (Err(error), _) => {
                 if error.as_code() == IggyError::ConnectionClosed.as_code() {
@@ -43,19 +43,15 @@ pub(crate) async fn handle_connection(
             ))).await?;
             continue;
         }
-        let bufer_ptr = initial_buffer.write_ptr();
-        let initial_buffer =
-            unsafe { Vec::from_raw_parts(bufer_ptr, INITIAL_BYTES_LENGTH, INITIAL_BYTES_LENGTH) };
 
-        let length = u32::from_le_bytes(initial_buffer.try_into().unwrap());
+        let initial_buffer = initial_buffer.freeze();
+        let length = u32::from_le_bytes(initial_buffer[0..4].try_into().unwrap());
         debug!("Received a TCP request, length: {length}");
         let mut command_buffer = BytesMut::with_capacity(length as usize);
         command_buffer.put_bytes(0, length as usize);
-        let (res, mut command_buffer) = sender.read(command_buffer).await;
-        let res_size = res?;
-        let command_buffer_ptr = command_buffer.write_ptr();
-        let command_buffer = unsafe { Vec::from_raw_parts(command_buffer_ptr, res_size, res_size) };
-        let command_buffer = Bytes::from(command_buffer);
+        let (res, command_buffer) = sender.read(command_buffer).await;
+        let _ = res?;
+        let command_buffer = command_buffer.freeze();
         let command = match Command::from_bytes(command_buffer) {
             Ok(command) => command,
             Err(error) => {

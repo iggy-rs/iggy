@@ -1,7 +1,7 @@
 use crate::binary::sender::Sender;
 use crate::tcp::sender;
+use bytes::BytesMut;
 use iggy::error::IggyError;
-use monoio::buf::IoBufMut;
 use monoio::net::TcpStream;
 use monoio_native_tls::TlsStream;
 
@@ -14,10 +14,7 @@ unsafe impl Send for TcpTlsSender {}
 unsafe impl Sync for TcpTlsSender {}
 
 impl Sender for TcpTlsSender {
-    async fn read(
-        &mut self,
-        buffer: impl IoBufMut + Unpin + 'static,
-    ) -> (Result<usize, IggyError>, impl IoBufMut) {
+    async fn read(&mut self, buffer: BytesMut) -> (Result<usize, IggyError>, BytesMut) {
         sender::read(&mut self.stream, buffer).await
     }
 

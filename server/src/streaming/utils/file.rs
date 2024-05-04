@@ -4,10 +4,13 @@ use std::fs::{remove_file, Metadata};
 use std::path::{Path, PathBuf};
 
 pub async fn metadata(path: &str) -> std::io::Result<Metadata> {
+    /*
     let path = path.to_owned();
     monoio::spawn_blocking(move || std::fs::metadata(&path))
         .await
         .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "Failed to get metadata"))?
+    */
+    std::fs::metadata(&path)
 }
 
 pub async fn open(path: &str) -> Result<File, std::io::Error> {

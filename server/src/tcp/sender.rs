@@ -1,18 +1,12 @@
-use bytes::{BufMut, BytesMut};
+use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
-use monoio::{
-    buf::IoBufMut,
-    io::{AsyncReadRent, AsyncReadRentExt, AsyncWriteRent, AsyncWriteRentExt},
-};
+use monoio::io::{AsyncReadRent, AsyncReadRentExt, AsyncWriteRent, AsyncWriteRentExt};
 use std::mem::size_of;
 use tracing::debug;
 
 const STATUS_OK: &[u8] = &[0; 4];
 
-pub(crate) async fn read<T>(
-    stream: &mut T,
-    buffer: impl IoBufMut + Unpin + 'static,
-) -> (Result<usize, IggyError>, impl IoBufMut)
+pub(crate) async fn read<T>(stream: &mut T, buffer: BytesMut) -> (Result<usize, IggyError>, BytesMut)
 where
     T: AsyncReadRent + AsyncWriteRent + Unpin,
 {

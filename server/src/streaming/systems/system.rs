@@ -85,9 +85,9 @@ impl System {
                 Arc::new(db.unwrap())
             }
         };
-        let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
-            true => Arc::new(FileWithSyncPersister {}),
-            false => Arc::new(FilePersister {}),
+        let persister: Arc<StoragePersister> = match config.partition.enforce_fsync {
+            true => Arc::new(StoragePersister::FileWithSync(FileWithSyncPersister {})),
+            false => Arc::new(StoragePersister::File(FilePersister {})),
         };
         Self::create(
             config,

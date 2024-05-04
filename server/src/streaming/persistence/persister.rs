@@ -1,11 +1,11 @@
 use crate::streaming::utils::file;
-use bytes::Bytes;
 use iggy::error::IggyError;
+use monoio::buf::IoBuf;
 use std::fmt::Debug;
 
 pub trait Persister {
-    async fn append(&self, path: &str, bytes: Bytes) -> Result<(), IggyError>;
-    async fn overwrite(&self, path: &str, bytes: Bytes) -> Result<(), IggyError>;
+    async fn append<T: IoBuf>(&self, path: &str, bytes: T) -> Result<(), IggyError>;
+    async fn overwrite<T: IoBuf>(&self, path: &str, bytes: T) -> Result<(), IggyError>;
     async fn delete(&self, path: &str) -> Result<(), IggyError>;
 }
 
@@ -17,7 +17,7 @@ pub struct FileWithSyncPersister;
 
 //TODO(numminex) - Maybe change Persister api to take position(u64) as argument, instead of statting the file
 impl Persister for FilePersister {
-    async fn append(&self, path: &str, bytes: Bytes) -> Result<(), IggyError> {
+    async fn append<T: IoBuf>(&self, path: &str, bytes: T) -> Result<(), IggyError> {
         let file = file::append(path).await?;
         let stat = file::metadata(path).await?;
 
@@ -25,7 +25,7 @@ impl Persister for FilePersister {
         Ok(())
     }
 
-    async fn overwrite(&self, path: &str, bytes: Bytes) -> Result<(), IggyError> {
+    async fn overwrite<T: IoBuf>(&self, path: &str, bytes: T) -> Result<(), IggyError> {
         let file = file::overwrite(path).await?;
         let stat = file::metadata(path).await?;
 
@@ -40,7 +40,7 @@ impl Persister for FilePersister {
 }
 
 impl Persister for FileWithSyncPersister {
-    async fn append(&self, path: &str, bytes: Bytes) -> Result<(), IggyError> {
+    async fn append<T: IoBuf>(&self, path: &str, bytes: T) -> Result<(), IggyError> {
         let file = file::append(path).await?;
         let stat = file::metadata(path).await?;
 
@@ -49,7 +49,7 @@ impl Persister for FileWithSyncPersister {
         Ok(())
     }
 
-    async fn overwrite(&self, path: &str, bytes: Bytes) -> Result<(), IggyError> {
+    async fn overwrite<T: IoBuf>(&self, path: &str, bytes: T) -> Result<(), IggyError> {
         let file = file::overwrite(path).await?;
         let stat = file::metadata(path).await?;
 
@@ -68,20 +68,26 @@ impl Persister for FileWithSyncPersister {
 pub enum StoragePersister {
     File(FilePersister),
     FileWithSync(FileWithSyncPersister),
+    #[cfg(test)]
+    Test,
 }
 
 impl Persister for StoragePersister {
-    async fn append(&self, path: &str, bytes: bytes::Bytes) -> Result<(), IggyError> {
+    async fn append<T: IoBuf>(&self, path: &str, bytes: T) -> Result<(), IggyError> {
         match self {
             StoragePersister::File(persister) => persister.append(path, bytes).await,
             StoragePersister::FileWithSync(persister) => persister.append(path, bytes).await,
+            #[cfg(test)]
+            StoragePersister::Test => Ok(()),
         }
     }
 
-    async fn overwrite(&self, path: &str, bytes: bytes::Bytes) -> Result<(), IggyError> {
+    async fn overwrite<T: IoBuf>(&self, path: &str, bytes: T) -> Result<(), IggyError> {
         match self {
             StoragePersister::File(persister) => persister.overwrite(path, bytes).await,
             StoragePersister::FileWithSync(persister) => persister.overwrite(path, bytes).await,
+            #[cfg(test)]
+            StoragePersister::Test => Ok(()),
         }
     }
 
@@ -89,6 +95,8 @@ impl Persister for StoragePersister {
         match self {
             StoragePersister::File(persister) => persister.delete(path).await,
             StoragePersister::FileWithSync(persister) => persister.delete(path).await,
+            #[cfg(test)]
+            StoragePersister::Test => Ok(()),
         }
     }
 }

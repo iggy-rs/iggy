@@ -69,9 +69,11 @@ where
 {
     debug!("Sending response with status: {:?}...", status);
     let length = (payload.len() as u32).to_le_bytes();
-    stream
-        .write_all(&[status, &length, payload].as_slice().concat())
-        .await?;
+    let result = stream.write_all([status, &length, payload].concat()).await;
+
+    if result.0.is_err() {
+        return Err(IggyError::from(result.0.unwrap_err()));
+    }
     debug!("Sent response with status: {:?}", status);
     Ok(())
 }

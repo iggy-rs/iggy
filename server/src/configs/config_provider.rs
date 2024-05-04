@@ -1,6 +1,5 @@
 use crate::configs::server::ServerConfig;
 use crate::server_error::ServerError;
-use async_trait::async_trait;
 use figment::{
     providers::{Format, Json, Toml},
     value::{Dict, Map as FigmentMap, Tag, Value as FigmentValue},
@@ -13,7 +12,6 @@ use tracing::{debug, info};
 const DEFAULT_CONFIG_PROVIDER: &str = "file";
 const DEFAULT_CONFIG_PATH: &str = "configs/server.toml";
 
-#[async_trait]
 pub trait ConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ServerError>;
 }
@@ -202,12 +200,12 @@ impl Provider for CustomEnvProvider {
     }
 }
 
-pub fn resolve(config_provider_type: &str) -> Result<Box<dyn ConfigProvider>, ServerError> {
+pub fn resolve(config_provider_type: &str) -> Result<impl ConfigProvider, ServerError> {
     match config_provider_type {
         DEFAULT_CONFIG_PROVIDER => {
             let path =
                 env::var("IGGY_CONFIG_PATH").unwrap_or_else(|_| DEFAULT_CONFIG_PATH.to_string());
-            Ok(Box::new(FileConfigProvider::new(path)))
+            Ok(FileConfigProvider::new(path))
         }
         _ => Err(ServerError::InvalidConfigurationProvider(
             config_provider_type.to_string(),
@@ -242,7 +240,6 @@ fn file_exists<P: AsRef<Path>>(path: P) -> bool {
     }
 }
 
-#[async_trait]
 impl ConfigProvider for FileConfigProvider {
     async fn load_config(&self) -> Result<ServerConfig, ServerError> {
         info!("Loading config from path: '{}'...", self.path);

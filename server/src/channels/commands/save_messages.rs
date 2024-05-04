@@ -2,7 +2,6 @@ use crate::channels::server_command::ServerCommand;
 use crate::configs::server::MessageSaverConfig;
 use crate::configs::server::ServerConfig;
 use crate::streaming::systems::system::SharedSystem;
-use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use iggy::utils::duration::IggyDuration;
 use monoio::time;
@@ -60,7 +59,6 @@ impl MessagesSaver {
     }
 }
 
-#[async_trait]
 impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: SaveMessagesCommand) {
         let saved_messages_count = system.read().persist_messages().await;

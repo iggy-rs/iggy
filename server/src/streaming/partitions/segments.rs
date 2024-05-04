@@ -2,6 +2,7 @@ use std::sync::atomic::Ordering;
 
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::segments::segment::Segment;
+use crate::streaming::storage::Storage;
 use iggy::error::IggyError;
 use tracing::info;
 

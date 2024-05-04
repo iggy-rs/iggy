@@ -5,6 +5,7 @@ use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
+use crate::streaming::storage::SegmentStorage;
 use bytes::BufMut;
 use iggy::error::IggyError;
 use std::sync::atomic::Ordering;
@@ -307,9 +308,9 @@ impl Segment {
         );
 
         let saved_bytes = storage.save_batches(self, unsaved_batches).await?;
-        storage.save_index(self).await?;
+        storage.save_indexes(self).await?;
         self.unsaved_indexes.clear();
-        storage.save_time_index(self).await?;
+        storage.save_time_indexes(self).await?;
         self.unsaved_timestamps.clear();
 
         trace!(

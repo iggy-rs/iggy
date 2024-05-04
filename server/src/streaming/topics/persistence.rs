@@ -1,3 +1,4 @@
+use crate::streaming::storage::{Storage, TopicStorage};
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use fast_async_mutex::rwlock::RwLock;

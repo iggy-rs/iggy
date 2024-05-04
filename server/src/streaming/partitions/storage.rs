@@ -1,7 +1,7 @@
 //use crate::compat::message_converter::MessageFormatConverter;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
-use crate::streaming::storage::{PartitionStorage, Storage};
+use crate::streaming::storage::{PartitionStorage, SegmentStorage, Storage};
 use anyhow::Context;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
@@ -218,7 +218,7 @@ impl Storage<Partition> for FilePartitionStorage {
             );
 
             //TODO(numinex) - Reimplement this once the io_uring development phase is over.
-            /* 
+            /*
             let log_path = segment.log_path.to_owned();
             let index_path = segment.index_path.to_owned();
             let message_format_converter =

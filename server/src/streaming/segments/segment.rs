@@ -13,6 +13,7 @@ use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::utils::file;
+use bytes::BytesMut;
 use futures::{pin_mut, TryStreamExt};
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -50,8 +51,8 @@ pub struct Segment {
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,
-    pub(crate) unsaved_indexes: Vec<u8>,
-    pub(crate) unsaved_timestamps: Vec<u8>,
+    pub(crate) unsaved_indexes: BytesMut,
+    pub(crate) unsaved_timestamps: BytesMut,
     pub(crate) storage: Arc<SystemStorage>,
 }
 
@@ -94,8 +95,8 @@ impl Segment {
                 true => Some(Vec::new()),
                 false => None,
             },
-            unsaved_indexes: Vec::new(),
-            unsaved_timestamps: Vec::new(),
+            unsaved_indexes: BytesMut::new(),
+            unsaved_timestamps: BytesMut::new(),
             unsaved_batches: None,
             is_closed: false,
             size_of_parent_stream,

@@ -1,3 +1,4 @@
+use crate::streaming::storage::Storage;
 use crate::streaming::streams::stream::Stream;
 use iggy::error::IggyError;
 

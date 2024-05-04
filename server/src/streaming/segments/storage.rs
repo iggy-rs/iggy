@@ -10,7 +10,8 @@ use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::{SegmentStorage, Storage};
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
-use bytes::{BufMut, BytesMut};
+use anyhow::Context;
+use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
@@ -49,7 +50,7 @@ impl Storage<Segment> for FileSegmentStorage {
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id
         );
         let log_file = file::open(&segment.log_path).await?;
-        let file_size = file::metadata(&segment.log_path).await.unwrap().len() as u64;
+        let file_size = file::metadata(&segment.log_path).await.unwrap().len();
         segment.size_bytes = file_size as u32;
 
         if segment.config.segment.cache_indexes {
@@ -133,7 +134,7 @@ impl Storage<Segment> for FileSegmentStorage {
         if !Path::new(&segment.log_path).exists()
             && self
                 .persister
-                .overwrite(&segment.log_path, &[])
+                .overwrite(&segment.log_path, Bytes::new())
                 .await
                 .is_err()
         {
@@ -145,7 +146,7 @@ impl Storage<Segment> for FileSegmentStorage {
         if !Path::new(&segment.time_index_path).exists()
             && self
                 .persister
-                .overwrite(&segment.time_index_path, &[])
+                .overwrite(&segment.time_index_path, Bytes::new())
                 .await
                 .is_err()
         {
@@ -157,7 +158,7 @@ impl Storage<Segment> for FileSegmentStorage {
         if !Path::new(&segment.index_path).exists()
             && self
                 .persister
-                .overwrite(&segment.index_path, &[])
+                .overwrite(&segment.index_path, Bytes::new())
                 .await
                 .is_err()
         {
@@ -260,7 +261,7 @@ impl SegmentStorage for FileSegmentStorage {
 
         if let Err(err) = self
             .persister
-            .append(&segment.log_path, &bytes)
+            .append(&segment.log_path, bytes.freeze())
             .await
             .with_context(|| format!("Failed to save messages to segment: {}", segment.log_path))
         {
@@ -429,10 +430,10 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(Some(index_range))
     }
 
-    async fn save_index(&self, segment: &Segment) -> Result<(), IggyError> {
+    async fn save_indexes(&self, segment: &Segment) -> Result<(), IggyError> {
         if let Err(err) = self
             .persister
-            .append(&segment.index_path, &segment.unsaved_indexes)
+            .append(&segment.index_path, segment.unsaved_indexes.clone())
             .await
             .with_context(|| format!("Failed to save index to segment: {}", segment.index_path))
         {
@@ -522,7 +523,9 @@ impl SegmentStorage for FileSegmentStorage {
     }
 
     async fn load_last_time_index(
-        &self,segment: &Segment,) -> Result<Option<TimeIndex>, IggyError> {
+        &self,
+        segment: &Segment,
+    ) -> Result<Option<TimeIndex>, IggyError> {
         trace!("Loading last time index from file...");
         let file = file::open(&segment.time_index_path).await?;
         let mut file = IggyFile::new(file);
@@ -545,10 +548,10 @@ impl SegmentStorage for FileSegmentStorage {
         Ok(Some(index))
     }
 
-    async fn save_time_index(&self, segment: &Segment) -> Result<(), IggyError> {
+    async fn save_time_indexes(&self, segment: &Segment) -> Result<(), IggyError> {
         if let Err(err) = self
             .persister
-            .append(&segment.time_index_path, &segment.unsaved_timestamps)
+            .append(&segment.time_index_path, segment.unsaved_timestamps.clone())
             .await
             .with_context(|| {
                 format!(

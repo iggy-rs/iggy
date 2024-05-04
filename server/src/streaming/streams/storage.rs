@@ -2,7 +2,6 @@ use crate::streaming::storage::{Storage, StreamStorage};
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
-use async_trait::async_trait;
 use fast_async_mutex::mutex::Mutex;
 use futures::future::join_all;
 use iggy::error::IggyError;

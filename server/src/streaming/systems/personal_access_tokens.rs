@@ -1,5 +1,6 @@
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
+use crate::streaming::storage::{PersonalAccessTokenStorage, Storage, UserStorage};
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
 use iggy::error::IggyError;

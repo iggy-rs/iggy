@@ -1,5 +1,6 @@
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::polling_consumer::PollingConsumer;
+use crate::streaming::storage::PartitionStorage;
 use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;

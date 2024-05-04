@@ -5,6 +5,7 @@ use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
+use crate::streaming::storage::SegmentStorage;
 use bytes::BytesMut;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;

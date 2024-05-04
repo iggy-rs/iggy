@@ -1,6 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use crate::streaming::partitions::partition::Partition;
+use crate::streaming::storage::{PartitionStorage, Storage};
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 

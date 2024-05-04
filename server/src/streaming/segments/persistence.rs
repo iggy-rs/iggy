@@ -1,4 +1,5 @@
 use crate::streaming::segments::segment::Segment;
+use crate::streaming::storage::Storage;
 use iggy::error::IggyError;
 
 impl Segment {

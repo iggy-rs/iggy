@@ -1,7 +1,6 @@
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
 use crate::{channels::server_command::ServerCommand, configs::server::MessageCleanerConfig};
-use async_trait::async_trait;
 use flume::Sender;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
@@ -61,7 +60,6 @@ impl MessagesCleaner {
     }
 }
 
-#[async_trait]
 impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: CleanMessagesCommand) {
         let now = IggyTimestamp::now().to_micros();

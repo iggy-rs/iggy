@@ -1,7 +1,7 @@
 use crate::channels::server_command::ServerCommand;
 use crate::configs::server::PersonalAccessTokenCleanerConfig;
+use crate::streaming::storage::PersonalAccessTokenStorage;
 use crate::streaming::systems::system::SharedSystem;
-use async_trait::async_trait;
 use flume::Sender;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -62,7 +62,6 @@ impl PersonalAccessTokenCleaner {
     }
 }
 
-#[async_trait]
 impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessTokensExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: CleanPersonalAccessTokensCommand) {
         let system = system.read();

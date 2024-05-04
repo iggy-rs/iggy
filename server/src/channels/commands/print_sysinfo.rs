@@ -2,7 +2,6 @@ use crate::{
     channels::server_command::ServerCommand, configs::server::ServerConfig,
     streaming::systems::system::SharedSystem,
 };
-use async_trait::async_trait;
 use flume::{Receiver, Sender};
 use iggy::utils::duration::IggyDuration;
 use monoio::time;
@@ -49,7 +48,6 @@ impl SysInfoPrinter {
     }
 }
 
-#[async_trait]
 impl ServerCommand<SysInfoPrintCommand> for SysInfoPrintExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: SysInfoPrintCommand) {
         let stats = match system.read().get_stats_bypass_auth().await {

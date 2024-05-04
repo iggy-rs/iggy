@@ -109,7 +109,7 @@ pub trait SegmentStorage: Storage<Segment> {
         index_start_offset: u64,
         index_end_offset: u64,
     ) -> Result<Option<IndexRange>, IggyError>;
-    async fn save_index(&self, segment: &Segment) -> Result<(), IggyError>;
+    async fn save_indexes(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn try_load_time_index_for_timestamp(
         &self,
         segment: &Segment,
@@ -118,42 +118,21 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
     async fn load_last_time_index(&self, segment: &Segment)
         -> Result<Option<TimeIndex>, IggyError>;
-    async fn save_time_index(&self, segment: &Segment) -> Result<(), IggyError>;
-}
-
-trait SystemStorageTrait {
-    type SI: SystemInfoStorage;
-    type US: UserStorage;
-    type PAT: PersonalAccessTokenStorage;
-    type SS: StreamStorage;
-    type TS: TopicStorage;
-    type PS: PartitionStorage;
-    type SG: SegmentStorage;
-}
-pub struct FileSystemStorage {}
-
-impl SystemStorageTrait for FileSystemStorage {
-    type SI = FileSystemInfoStorage;
-    type US = FileUserStorage;
-    type PAT = FilePersonalAccessTokenStorage;
-    type SS = FileStreamStorage;
-    type TS = FileTopicStorage;
-    type PS = FilePartitionStorage;
-    type SG = FileSegmentStorage;
+    async fn save_time_indexes(&self, segment: &Segment) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]
-pub struct SystemStorage<ST: SystemStorageTrait> {
-    pub info: Arc<ST::SI>,
-    pub user: Arc<ST::US>,
-    pub personal_access_token: Arc<ST::PAT>,
-    pub stream: Arc<ST::SS>,
-    pub topic: Arc<ST::TS>,
-    pub partition: Arc<ST::PS>,
-    pub segment: Arc<ST::SG>,
+pub struct SystemStorage {
+    pub info: Arc<FileSystemInfoStorage>,
+    pub user: Arc<FileUserStorage>,
+    pub personal_access_token: Arc<FilePersonalAccessTokenStorage>,
+    pub stream: Arc<FileStreamStorage>,
+    pub topic: Arc<FileTopicStorage>,
+    pub partition: Arc<FilePartitionStorage>,
+    pub segment: Arc<FileSegmentStorage>,
 }
 
-impl SystemStorage<FileSystemStorage> {
+impl SystemStorage {
     pub fn new(db: Arc<Db>, persister: Arc<StoragePersister>) -> Self {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(db.clone())),
@@ -177,6 +156,12 @@ pub(crate) mod tests {
     use crate::streaming::streams::stream::Stream;
     use crate::streaming::topics::topic::Topic;
     use std::sync::Arc;
+
+    pub fn get_test_system_storage() -> SystemStorage {
+        let db = sled::Config::new().temporary(true).open().unwrap();
+        let persister = Arc::new(StoragePersister::Test);
+        SystemStorage::new(Arc::new(db), persister)
+    }
 
     struct TestSystemInfoStorage {}
     struct TestUserStorage {}
@@ -437,7 +422,7 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_index(&self, _segment: &Segment) -> Result<(), IggyError> {
+        async fn save_indexes(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -463,7 +448,7 @@ pub(crate) mod tests {
             Ok(None)
         }
 
-        async fn save_time_index(&self, _segment: &Segment) -> Result<(), IggyError> {
+        async fn save_time_indexes(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
     }

@@ -1,23 +1,23 @@
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
-use monoio::io::{AsyncReadRent, AsyncReadRentExt, AsyncWriteRent, AsyncWriteRentExt};
+use monoio::{buf::{IoBuf, IoBufMut}, io::{AsyncReadRent, AsyncReadRentExt, AsyncWriteRent, AsyncWriteRentExt}};
 use std::mem::size_of;
 use tracing::debug;
 
 const STATUS_OK: &[u8] = &[0; 4];
 
-pub(crate) async fn read<T>(stream: &mut T, buffer: &mut [u8]) -> Result<usize, IggyError>
+pub(crate) async fn read<T>(stream: &mut T, buffer: impl IoBuf + IoBufMut + Unpin + 'static) -> (Result<usize, IggyError>, impl IoBufMut + IoBuf)
 where
     T: AsyncReadRent + AsyncWriteRent + Unpin,
 {
     match stream.read_exact(buffer).await {
-        Ok(0) => Err(IggyError::ConnectionClosed),
-        Ok(read_bytes) => Ok(read_bytes),
-        Err(error) => {
+        (Ok(0), buffer) => (Err(IggyError::ConnectionClosed), buffer),
+        (Ok(read_bytes), buffer) => (Ok(read_bytes), buffer),
+        (Err(error), buffer) => {
             if error.kind() == std::io::ErrorKind::UnexpectedEof {
-                Err(IggyError::ConnectionClosed)
+                (Err(IggyError::ConnectionClosed), buffer)
             } else {
-                Err(IggyError::from(error))
+                (Err(IggyError::from(error)), buffer)
             }
         }
     }

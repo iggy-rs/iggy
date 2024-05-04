@@ -1,6 +1,7 @@
 use crate::binary::sender::Sender;
 use crate::tcp::sender;
 use iggy::error::IggyError;
+use monoio::buf::{IoBuf, IoBufMut};
 use monoio::net::TcpStream;
 
 #[derive(Debug)]
@@ -12,7 +13,7 @@ unsafe impl Send for TcpSender {}
 unsafe impl Sync for TcpSender {}
 
 impl Sender for TcpSender {
-    async fn read(&mut self, buffer: &mut [u8]) -> Result<usize, IggyError> {
+    async fn read(&mut self, buffer: impl IoBuf + IoBufMut + Unpin + 'static) -> (Result<usize, IggyError>, impl IoBufMut + IoBuf) {
         sender::read(&mut self.stream, buffer).await
     }
 

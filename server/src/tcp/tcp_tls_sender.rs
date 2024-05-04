@@ -14,7 +14,10 @@ unsafe impl Send for TcpTlsSender {}
 unsafe impl Sync for TcpTlsSender {}
 
 impl Sender for TcpTlsSender {
-    async fn read(&mut self, buffer: impl IoBufMut + Unpin + 'static) -> (Result<usize, IggyError>, impl IoBufMut ) {
+    async fn read(
+        &mut self,
+        buffer: impl IoBufMut + Unpin + 'static,
+    ) -> (Result<usize, IggyError>, impl IoBufMut) {
         sender::read(&mut self.stream, buffer).await
     }
 

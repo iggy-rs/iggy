@@ -8,9 +8,9 @@ use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use iggy::error::IggyError;
+use monoio::buf::IoBufMut;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
-use monoio::buf::IoBufMut;
 use tracing::{debug, error, info};
 
 const INITIAL_BYTES_LENGTH: usize = 4;
@@ -44,7 +44,8 @@ pub(crate) async fn handle_connection(
             continue;
         }
         let bufer_ptr = initial_buffer.write_ptr();
-        let initial_buffer = unsafe { Vec::from_raw_parts(bufer_ptr, INITIAL_BYTES_LENGTH, INITIAL_BYTES_LENGTH) };
+        let initial_buffer =
+            unsafe { Vec::from_raw_parts(bufer_ptr, INITIAL_BYTES_LENGTH, INITIAL_BYTES_LENGTH) };
 
         let length = u32::from_le_bytes(initial_buffer.try_into().unwrap());
         debug!("Received a TCP request, length: {length}");

@@ -13,7 +13,10 @@ unsafe impl Send for TcpSender {}
 unsafe impl Sync for TcpSender {}
 
 impl Sender for TcpSender {
-    async fn read(&mut self, buffer: impl IoBufMut + Unpin + 'static) -> (Result<usize, IggyError>, impl IoBufMut) {
+    async fn read(
+        &mut self,
+        buffer: impl IoBufMut + Unpin + 'static,
+    ) -> (Result<usize, IggyError>, impl IoBufMut) {
         sender::read(&mut self.stream, buffer).await
     }
 

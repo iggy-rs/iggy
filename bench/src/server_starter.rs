@@ -111,10 +111,6 @@ async fn is_tcp_addr_in_use(addr: &SocketAddr) -> bool {
     TcpStream::connect(addr).await.is_ok()
 }
 
-async fn is_udp_addr_in_use(addr: &SocketAddr) -> bool {
-    UdpSocket::bind(addr).await.is_err()
-}
-
 fn addresses_are_equivalent(first: &SocketAddr, second: &SocketAddr) -> bool {
     if first.ip().is_unspecified() || second.ip().is_unspecified() {
         first.port() == second.port()

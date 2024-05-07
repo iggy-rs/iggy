@@ -4,6 +4,7 @@ use crate::streaming::topics::topic::Topic;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
+use std::fmt;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -22,6 +23,15 @@ pub struct Stream {
     pub(crate) topics_ids: HashMap<String, u32>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
+}
+
+impl fmt::Display for Stream {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ID: {}, ", self.stream_id)?;
+        write!(f, "name: {}, ", self.name)?;
+        write!(f, "size bytes: {:?}, ", self.size_bytes)?;
+        write!(f, "messages count: {:?}", self.messages_count)
+    }
 }
 
 impl Stream {
@@ -81,5 +91,6 @@ mod tests {
         assert_eq!(stream.path, path);
         assert_eq!(stream.topics_path, topics_path);
         assert!(stream.topics.is_empty());
+        assert_eq!("ID: 1, name: test, size bytes: 0, messages count: 0", format!("{}", stream));
     }
 }

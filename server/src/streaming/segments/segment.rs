@@ -16,8 +16,8 @@ use crate::streaming::utils::file;
 use futures::{pin_mut, TryStreamExt};
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::{fmt, sync::atomic::AtomicU64};
 use tokio::io::AsyncWriteExt;
 use tracing::{info, trace};
 
@@ -53,6 +53,14 @@ pub struct Segment {
     pub(crate) unsaved_indexes: Vec<u8>,
     pub(crate) unsaved_timestamps: Vec<u8>,
     pub(crate) storage: Arc<SystemStorage>,
+}
+
+impl fmt::Display for Segment {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "stream ID: {}, ", self.stream_id)?;
+        write!(f, "topic ID: {}, ", self.topic_id)?;
+        write!(f, "partition ID: {}", self.partition_id)
+    }
 }
 
 impl Segment {
@@ -265,6 +273,10 @@ mod tests {
             messages_count_of_parent_partition,
         );
 
+        assert_eq!(
+            "stream ID: 1, topic ID: 2, partition ID: 3",
+            format!("{}", segment)
+        );
         assert_eq!(segment.stream_id, stream_id);
         assert_eq!(segment.topic_id, topic_id);
         assert_eq!(segment.partition_id, partition_id);

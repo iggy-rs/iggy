@@ -12,7 +12,7 @@ on:
   pull_request:
     branches:
       - master
-    types: [opened, synchronize, reopened]
+    types: [ opened, synchronize, reopened ]
 
 env:
   CRATE_NAME: iggy
@@ -94,12 +94,16 @@ jobs:
           args: "--verbose"
         if: ${{ !matrix.platform.skip_tests && !contains(matrix.platform.os_name, 'macOS')}}
 
+      - name: Check CLI examples from README
+        run: ./scripts/run-examples-from-readme.sh
+        if: ${{ contains(matrix.platform.os_name, 'musl') }}
+
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }
         if: runner.os != 'Windows'
 
-# TODO: below job is nonblocking: temporary solution until we decide whether
-#       we want to use the new M1 macs for CI, determine cost and performance
+  # TODO: below job is nonblocking: temporary solution until we decide whether
+  #       we want to use the new M1 macs for CI, determine cost and performance
   build_and_test_macos:
     needs: sanity
     name: build and test macOS-aarch64

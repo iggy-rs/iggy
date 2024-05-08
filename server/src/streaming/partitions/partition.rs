@@ -9,6 +9,7 @@ use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
+use std::fmt;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -39,6 +40,16 @@ pub struct Partition {
     pub(crate) segments: Vec<Segment>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) storage: Arc<SystemStorage>,
+}
+
+impl fmt::Display for Partition {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "ID: {}, ", self.partition_id)?;
+        write!(f, "segments count: {}, ", self.get_segments_count())?;
+        write!(f, "current offset: {}, ", self.current_offset)?;
+        write!(f, "size bytes: {}, ", self.get_size_bytes())?;
+        write!(f, "messages count: {}", self.get_messages_count())
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -211,6 +222,10 @@ mod tests {
             Arc::new(AtomicU32::new(0)),
         );
 
+        assert_eq!(
+            "ID: 3, segments count: 1, current offset: 0, size bytes: 0, messages count: 0",
+            format!("{}", partition)
+        );
         assert_eq!(partition.stream_id, stream_id);
         assert_eq!(partition.topic_id, topic_id);
         assert_eq!(partition.partition_id, partition_id);

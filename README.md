@@ -153,39 +153,39 @@ Start the server:
 
 *Please note that all commands below are using `iggy` binary, which is part of release (`cli` sub-crate).*
 
-Create a stream with ID 1 named `dev` using default credentials and `tcp` transport (available transports: `quic`, `tcp`, `http`, default `tcp`):
+Create a stream with name `dev` (numerical ID will be assigned by server automatically) using default credentials and `tcp` transport (available transports: `quic`, `tcp`, `http`, default `tcp`):
 
-`cargo r --bin iggy -- --transport tcp --username iggy --password iggy stream create 1 dev`
+`cargo r --bin iggy -- --transport tcp --username iggy --password iggy stream create dev`
 
 List available streams:
 
 `cargo r --bin iggy -- --username iggy --password iggy stream list`
 
-Get stream details (ID 1):
+Get `dev` stream details:
 
-`cargo r --bin iggy -- -u iggy -p iggy stream get 1`
+`cargo r --bin iggy -- -u iggy -p iggy stream get dev`
 
-Create a topic for stream `dev` (ID 1), with ID 1, 2 partitions (IDs 1 and 2), disabled message expiry (0 seconds), named `sample`:
+Create a topic named `sample` (numerical ID will be assigned by server automatically) for stream `dev`, with 2 partitions (IDs 1 and 2), disabled compression (`none`) and disabled message expiry (skipped optional parameter):
 
-`cargo r --bin iggy -- -u iggy -p iggy topic create dev 1 2 sample`
+`cargo r --bin iggy -- -u iggy -p iggy topic create dev sample 2 none`
 
-List available topics for stream `dev` (ID 1):
+List available topics for stream `dev`:
 
 `cargo r --bin iggy -- -u iggy -p iggy topic list dev`
 
-Get topic details (ID 1) for stream `dev` (ID 1):
+Get topic details for topic `sample` in stream `dev`:
 
-`cargo r --bin iggy -- -u iggy -p iggy topic get 1 1`
+`cargo r --bin iggy -- -u iggy -p iggy topic get dev sample`
 
-Send a message 'hello world' (ID 1) to the stream `dev` (ID 1) to topic `sample` (ID 1) and partition 1:
+Send a message 'hello world' (message ID 1) to the stream `dev` to topic `sample` and partition 1:
 
 `cargo r --bin iggy -- -u iggy -p iggy message send --partition-id 1 dev sample "hello world"`
 
-Send another message 'lorem ipsum' (ID 2) to the same stream, topic and partition:
+Send another message 'lorem ipsum' (message ID 2) to the same stream, topic and partition:
 
 `cargo r --bin iggy -- -u iggy -p iggy message send --partition-id 1 dev sample "lorem ipsum"`
 
-Poll messages by a regular consumer with ID 1 from the stream `dev` (ID 1) for topic `sample` (ID 1) and partition with ID 1, starting with offset 0, messages count 2, without auto commit (storing consumer offset on server):
+Poll messages by a regular consumer with ID 1 from the stream `dev` for topic `sample` and partition with ID 1, starting with offset 0, messages count 2, without auto commit (storing consumer offset on server):
 
 `cargo r --bin iggy -- -u iggy -p iggy message poll --consumer 1 --offset 0 --message-count 2 --auto-commit dev sample 1`
 

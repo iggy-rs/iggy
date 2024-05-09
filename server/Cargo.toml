@@ -11,7 +11,7 @@ tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 
 [dependencies]
 aes-gcm = "0.10.3"
-anyhow = "1.0.82"
+anyhow = "1.0.83"
 async-stream = "0.3.5"
 async-trait = "0.1.80"
 atone = "0.3.7"

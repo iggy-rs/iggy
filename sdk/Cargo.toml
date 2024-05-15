@@ -48,7 +48,7 @@ strum = { version = "0.26.2", features = ["derive"] }
 thiserror = "1.0.60"
 tokio = { version = "1.37.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
-toml = "0.8.12"
+toml = "0.8.13"
 tracing = { version = "0.1.40" }
 uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 

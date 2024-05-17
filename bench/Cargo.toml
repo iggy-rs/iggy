@@ -17,7 +17,7 @@ integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
 quinn = { version = "0.10.2" }
 rustls = { version = "0.21.11" }
-serde = { version = "1.0.201", features = ["derive"] }
+serde = { version = "1.0.202", features = ["derive"] }
 thiserror = "1.0.60"
 tokio = { version = "1.37.0", features = ["full"] }
 toml = "0.8.13"

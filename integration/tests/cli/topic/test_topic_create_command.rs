@@ -252,16 +252,16 @@ pub async fn should_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "create", "--help"],
             format!(
-                r#"Create topic with given name, number of partitions and expiry time for given stream ID
+                r#"Create topic with given name, number of partitions, compression algorithm and expiry time for given stream ID
 
 Stream ID can be specified as a stream name or ID
 If topic ID is not provided then the server will automatically assign it
 
 Examples
- iggy topic create 1 sensor1 2 15days
- iggy topic create prod sensor2 2
- iggy topic create test debugs 2 1day 1hour 1min 1sec
- iggy topic create -t 3 1 sensor3 2 unlimited
+ iggy topic create 1 sensor1 2 gzip 15days
+ iggy topic create prod sensor2 2 none
+ iggy topic create test debugs 2 gzip 1day 1hour 1min 1sec
+ iggy topic create -t 3 1 sensor3 2 none unlimited
 
 {USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
@@ -318,7 +318,7 @@ pub async fn should_short_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "create", "-h"],
             format!(
-                r#"Create topic with given name, number of partitions and expiry time for given stream ID
+                r#"Create topic with given name, number of partitions, compression algorithm and expiry time for given stream ID
 
 {USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 

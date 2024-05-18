@@ -8,16 +8,16 @@ use std::convert::From;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum TopicAction {
-    /// Create topic with given name, number of partitions and expiry time for given stream ID
+    /// Create topic with given name, number of partitions, compression algorithm and expiry time for given stream ID
     ///
     /// Stream ID can be specified as a stream name or ID
     /// If topic ID is not provided then the server will automatically assign it
     ///
     /// Examples
-    ///  iggy topic create 1 sensor1 2 15days
-    ///  iggy topic create prod sensor2 2
-    ///  iggy topic create test debugs 2 1day 1hour 1min 1sec
-    ///  iggy topic create -t 3 1 sensor3 2 unlimited
+    ///  iggy topic create 1 sensor1 2 gzip 15days
+    ///  iggy topic create prod sensor2 2 none
+    ///  iggy topic create test debugs 2 gzip 1day 1hour 1min 1sec
+    ///  iggy topic create -t 3 1 sensor3 2 none unlimited
     #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(TopicCreateArgs),
     /// Delete topic with given ID in given stream ID
@@ -32,17 +32,17 @@ pub(crate) enum TopicAction {
     ///  iggy topic delete 2 debugs
     #[clap(verbatim_doc_comment, visible_alias = "d")]
     Delete(TopicDeleteArgs),
-    /// Update topic name a message expiry time for given topic ID in given stream ID
+    /// Update topic name, compression algorithm and message expiry time for given topic ID in given stream ID
     ///
     /// Stream ID can be specified as a stream name or ID
     /// Topic ID can be specified as a topic name or ID
     ///
     /// Examples
-    ///  iggy update 1 1 sensor3
-    ///  iggy update prod sensor3 old-sensor
-    ///  iggy update test debugs ready 15days
-    ///  iggy update 1 1 new-name
-    ///  iggy update 1 2 new-name 1day 1hour 1min 1sec
+    ///  iggy update 1 1 sensor3 none
+    ///  iggy update prod sensor3 old-sensor none
+    ///  iggy update test debugs ready gzip 15days
+    ///  iggy update 1 1 new-name gzip
+    ///  iggy update 1 2 new-name none 1day 1hour 1min 1sec
     #[clap(verbatim_doc_comment, visible_alias = "u")]
     Update(TopicUpdateArgs),
     /// Get topic detail for given topic ID and stream ID

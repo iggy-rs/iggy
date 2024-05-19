@@ -361,17 +361,17 @@ pub async fn should_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "update", "--help"],
             format!(
-                r#"Update topic name a message expiry time for given topic ID in given stream ID
+                r#"Update topic name, compression algorithm and message expiry time for given topic ID in given stream ID
 
 Stream ID can be specified as a stream name or ID
 Topic ID can be specified as a topic name or ID
 
 Examples
- iggy update 1 1 sensor3
- iggy update prod sensor3 old-sensor
- iggy update test debugs ready 15days
- iggy update 1 1 new-name
- iggy update 1 2 new-name 1day 1hour 1min 1sec
+ iggy update 1 1 sensor3 none
+ iggy update prod sensor3 old-sensor none
+ iggy update test debugs ready gzip 15days
+ iggy update 1 1 new-name gzip
+ iggy update 1 2 new-name none 1day 1hour 1min 1sec
 
 {USAGE_PREFIX} topic update [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
@@ -428,7 +428,7 @@ pub async fn should_short_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "update", "-h"],
             format!(
-                r#"Update topic name a message expiry time for given topic ID in given stream ID
+                r#"Update topic name, compression algorithm and message expiry time for given topic ID in given stream ID
 
 {USAGE_PREFIX} topic update [OPTIONS] <STREAM_ID> <TOPIC_ID> <NAME> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 

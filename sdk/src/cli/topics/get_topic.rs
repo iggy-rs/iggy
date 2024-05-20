@@ -56,6 +56,10 @@ impl CliCommand for GetTopicCmd {
         table.add_row(vec!["Topic name", topic.name.as_str()]);
         table.add_row(vec!["Topic size", format!("{}", topic.size).as_str()]);
         table.add_row(vec![
+            "Compression",
+            topic.compression_algorithm.to_string().as_str(),
+        ]);
+        table.add_row(vec![
             "Message expiry",
             match topic.message_expiry {
                 Some(value) => format!("{}", value),

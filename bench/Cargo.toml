@@ -15,7 +15,7 @@ human_format = "1.1.0"
 iggy = { path = "../sdk" }
 integration = { path = "../integration" }
 nonzero_lit = "0.1.2"
-quinn = { version = "0.10.2" }
+quinn = { version = "0.11.0" }
 rustls = { version = "0.21.11" }
 serde = { version = "1.0.202", features = ["derive"] }
 thiserror = "1.0.60"

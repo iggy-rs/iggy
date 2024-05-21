@@ -37,7 +37,7 @@ jsonwebtoken = "9.3.0"
 keepcalm = "0.3.5"
 moka = { version = "0.12.5", features = ["future"] }
 prometheus-client = "0.22.2"
-quinn = { version = "0.10.2" }
+quinn = { version = "0.11.0" }
 rcgen = "0.12.1"
 ring = "0.17.8"
 rmp-serde = "1.3.0"

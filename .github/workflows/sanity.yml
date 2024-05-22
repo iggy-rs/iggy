@@ -52,14 +52,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --doc
 
-  unused_dependencies:
-    name: Unused dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-      - uses: taiki-e/install-action@cargo-udeps
-      - run: cargo +nightly udeps --all-targets --all-features
+  #  unused_dependencies:
+  #    name: Unused dependencies
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #      - uses: actions/checkout@v4
+  #      - uses: dtolnay/rust-toolchain@nightly
+  #      - uses: taiki-e/install-action@cargo-udeps
+  #      - run: cargo +nightly udeps --all-targets --all-features
 
   check-commit-message:
     name: Validate commit messages

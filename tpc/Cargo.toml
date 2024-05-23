@@ -4,22 +4,9 @@ version = "0.0.1"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.78"
-async-trait = "0.1.76"
-bytes = "1.4.0"
-chrono = "0.4.30"
-clap = { version = "4.4.12", features = ["derive"] }
 figlet-rs = "0.1.5"
-figment = { version = "0.10.8", features = ["toml", "env"] }
-flume = "0.11.0"
-futures = "0.3.30"
-serde = { version = "1.0.193", features = ["derive", "rc"] }
-sled = "0.34.7"
-thiserror = "1.0.53"
-toml = "0.8.8"
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
-tracing-appender = "0.2.3"
 monoio = { version = "0.2.1", features = ["signal"] }
 
 [[bin]]

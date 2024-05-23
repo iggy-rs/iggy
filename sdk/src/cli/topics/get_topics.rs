@@ -69,6 +69,7 @@ impl CliCommand for GetTopicsCmd {
                     "Name",
                     "Size (B)",
                     "Max Topic Size (B)",
+                    "Compression",
                     "Message Expiry (s)",
                     "Messages Count",
                     "Partitions Count",
@@ -84,6 +85,7 @@ impl CliCommand for GetTopicsCmd {
                             Some(value) => format!("{}", value),
                             None => String::from("unlimited"),
                         },
+                        topic.compression_algorithm.to_string(),
                         match topic.message_expiry {
                             Some(value) => format!("{}", value),
                             None => String::from("unlimited"),
@@ -98,7 +100,7 @@ impl CliCommand for GetTopicsCmd {
             GetTopicsOutput::List => {
                 topics.iter().for_each(|topic| {
                     event!(target: PRINT_TARGET, Level::INFO,
-                        "{}|{}|{}|{}|{}|{}|{}|{}",
+                        "{}|{}|{}|{}|{}|{}|{}|{}|{}",
                         topic.id,
                         IggyTimestamp::from(topic.created_at).to_utc_string("%Y-%m-%d %H:%M:%S"),
                         topic.name,
@@ -107,6 +109,7 @@ impl CliCommand for GetTopicsCmd {
                             Some(value) => format!("{}", value),
                             None => String::from("unlimited"),
                         },
+                        topic.compression_algorithm.to_string(),
                         match topic.message_expiry {
                             Some(value) => format!("{}", value),
                             None => String::from("unlimited"),

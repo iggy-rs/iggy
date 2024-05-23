@@ -6,3 +6,6 @@ codegen-units = 1
 resolver = "2"
 members = ["bench", "cli", "examples", "integration", "sdk", "server", "tools"]
 exclude = ["tpc"]
+
+[workspace.metadata.cargo-machete]
+ignored = ["openssl"]

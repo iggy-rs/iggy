@@ -36,7 +36,7 @@ name = "message-headers-producer"
 path = "src/message-headers/producer/main.rs"
 
 [dependencies]
-anyhow = "1.0.83"
+anyhow = "1.0.86"
 bytes = "1.6.0"
 clap = { version = "4.5.4", features = ["derive"] }
 iggy = { path = "../sdk" }

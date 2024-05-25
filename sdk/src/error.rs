@@ -140,6 +140,8 @@ pub enum IggyError {
     ConnectionError(#[from] quinn::ConnectionError) = 308,
     #[error("Read to end error")]
     ReadToEndError(#[from] quinn::ReadToEndError) = 309,
+    #[error("Closed error")]
+    ClosedError(#[from] quinn::ClosedStream) = 310,
     #[error("Cannot create streams directory, Path: {0}")]
     CannotCreateStreamsDirectory(String) = 1000,
     #[error("Cannot create stream with ID: {0} directory, Path: {1}")]

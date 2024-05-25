@@ -57,7 +57,7 @@ impl QuicSender {
         self.send
             .write_all(&[status, &length, payload].as_slice().concat())
             .await?;
-        self.send.finish().await?;
+        self.send.finish()?;
         debug!("Sent response with status: {:?}", status);
         Ok(())
     }

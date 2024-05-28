@@ -63,7 +63,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.id, STREAM_ID);
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
-    assert_eq!(stream.size_bytes, 0);
+    assert_eq!(stream.size, 0);
     assert_eq!(stream.messages_count, 0);
 
     // 5. Get stream details by ID
@@ -75,7 +75,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
     assert!(stream.topics.is_empty());
-    assert_eq!(stream.size_bytes, 0);
+    assert_eq!(stream.size, 0);
     assert_eq!(stream.messages_count, 0);
 
     // 6. Get stream details by name
@@ -146,7 +146,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     for topic_partition in topic.partitions {
         assert_eq!(topic_partition.id, id);
         assert_eq!(topic_partition.segments_count, 1);
-        assert_eq!(topic_partition.size_bytes, 0);
+        assert_eq!(topic_partition.size, 0);
         assert_eq!(topic_partition.current_offset, 0);
         assert_eq!(topic_partition.messages_count, 0);
         id += 1;
@@ -284,7 +284,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topic_partition = topic.partitions.get((PARTITION_ID - 1) as usize).unwrap();
     assert_eq!(topic_partition.id, PARTITION_ID);
     assert_eq!(topic_partition.segments_count, 1);
-    assert!(topic_partition.size_bytes > 0);
+    assert!(topic_partition.size > 0);
     assert_eq!(topic_partition.current_offset, (MESSAGES_COUNT - 1) as u64);
     assert_eq!(topic_partition.messages_count, MESSAGES_COUNT as u64);
 

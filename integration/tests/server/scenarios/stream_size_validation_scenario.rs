@@ -201,7 +201,7 @@ async fn validate_stream(
         .unwrap();
 
     // 2. Validate stream size and number of messages
-    assert_eq!(stream.size_bytes, expected_size);
+    assert_eq!(stream.size, expected_size);
     assert_eq!(stream.messages_count, expected_messages_count);
 }
 

@@ -19,7 +19,7 @@ pub struct Stream {
     /// The unique name of the stream.
     pub name: String,
     /// The total size of the stream in bytes.
-    pub size_bytes: IggyByteSize,
+    pub size: IggyByteSize,
     /// The total number of messages in the stream.
     pub messages_count: u64,
     /// The total number of topics in the stream.
@@ -44,7 +44,7 @@ pub struct StreamDetails {
     /// The unique name of the stream.
     pub name: String,
     /// The total size of the stream in bytes.
-    pub size_bytes: IggyByteSize,
+    pub size: IggyByteSize,
     /// The total number of messages in the stream.
     pub messages_count: u64,
     /// The total number of topics in the stream.

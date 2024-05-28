@@ -68,7 +68,7 @@ impl CliCommand for GetStreamsCmd {
                         format!("{}", stream.id),
                         format!("{}", stream.created_at),
                         stream.name.clone(),
-                        format!("{}", stream.size_bytes),
+                        format!("{}", stream.size),
                         format!("{}", stream.messages_count),
                         format!("{}", stream.topics_count),
                     ]);
@@ -83,7 +83,7 @@ impl CliCommand for GetStreamsCmd {
                         stream.id,
                         stream.created_at,
                         stream.name,
-                        stream.size_bytes,
+                        stream.size,
                         stream.messages_count,
                         stream.topics_count
                     );

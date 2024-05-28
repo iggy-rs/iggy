@@ -42,10 +42,7 @@ impl CliCommand for GetStreamCmd {
         table.add_row(vec!["Stream ID", format!("{}", stream.id).as_str()]);
         table.add_row(vec!["Created", format!("{}", stream.created_at).as_str()]);
         table.add_row(vec!["Stream name", stream.name.as_str()]);
-        table.add_row(vec![
-            "Stream size",
-            format!("{}", stream.size_bytes).as_str(),
-        ]);
+        table.add_row(vec!["Stream size", format!("{}", stream.size).as_str()]);
         table.add_row(vec![
             "Stream message count",
             format!("{}", stream.messages_count).as_str(),

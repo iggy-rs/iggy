@@ -1,6 +1,7 @@
 use humantime::format_duration;
 use humantime::Duration as HumanDuration;
-use serde::{Deserialize, Serialize};
+use serde::de::Visitor;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     fmt::{Display, Formatter},
     ops::Add,
@@ -8,7 +9,7 @@ use std::{
     time::Duration,
 };
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct IggyDuration {
     duration: Duration,
 }
@@ -130,6 +131,41 @@ impl Add for IggyDuration {
         IggyDuration {
             duration: self.duration + rhs.duration,
         }
+    }
+}
+
+impl Serialize for IggyDuration {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_u32(self.as_secs())
+    }
+}
+
+struct IggyDurationVisitor;
+
+impl<'de> Deserialize<'de> for IggyDuration {
+    fn deserialize<D>(deserializer: D) -> Result<IggyDuration, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_u64(IggyDurationVisitor)
+    }
+}
+
+impl<'de> Visitor<'de> for IggyDurationVisitor {
+    type Value = IggyDuration;
+
+    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+        formatter.write_str("a duration in seconds")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(IggyDuration::new(Duration::from_secs(value)))
     }
 }
 

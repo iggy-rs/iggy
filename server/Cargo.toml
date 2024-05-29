@@ -10,7 +10,7 @@ jemalloc = ["dep:tikv-jemallocator"]
 tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 
 [dependencies]
-anyhow = "1.0.83"
+anyhow = "1.0.86"
 async-stream = "0.3.5"
 async-trait = "0.1.80"
 atone = "0.3.7"

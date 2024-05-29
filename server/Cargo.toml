@@ -44,7 +44,7 @@ sled = "0.34.7"
 static-toml = "1.2.0"
 strip-ansi-escapes = "0.2.0"
 sysinfo = "0.30.12"
-thiserror = "1.0.60"
+thiserror = "1.0.61"
 tokio = { version = "1.37.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
 toml = "0.8.13"

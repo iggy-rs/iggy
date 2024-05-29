@@ -20,7 +20,7 @@ pub struct Partition {
     /// The current offset of the partition.
     pub current_offset: u64,
     /// The size of the partition in bytes.
-    pub size_bytes: IggyByteSize,
+    pub size: IggyByteSize,
     /// The number of messages in the partition.
     pub messages_count: u64,
 }

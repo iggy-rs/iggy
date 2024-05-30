@@ -226,6 +226,7 @@ Content-Type: application/json
 {
   "topic_id": {{topic_id}},
   "name": "topic1",
+  "compression_algorithm": "none",
   "partitions_count": 3,
   "message_expiry": 0
 }
@@ -237,6 +238,7 @@ Content-Type: application/json
 
 {
   "name": "topic1",
+  "compression_algorithm": "none",
   "message_expiry": 1000
 }
 
@@ -320,7 +322,7 @@ Content-Type: application/json
 
 {
   "consumer_group_id": {{consumer_group_id}},
-  "name": "consumer_group_1",
+  "name": "consumer_group_1"
 }
 
 ###

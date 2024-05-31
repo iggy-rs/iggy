@@ -48,7 +48,7 @@ impl CliCommand for CreateConsumerGroupCmd {
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        let result = client
+        client
             .create_consumer_group(&self.create_consumer_group.stream_id, &self.create_consumer_group.topic_id, &self.create_consumer_group.name, self.create_consumer_group.group_id)
             .await
             .with_context(|| {
@@ -60,7 +60,7 @@ impl CliCommand for CreateConsumerGroupCmd {
 
         event!(target: PRINT_TARGET, Level::INFO,
             "Consumer group: {}, name: {} created for topic with ID: {} and stream with ID: {}",
-            result.id,
+            self.get_group_id_info(),
             self.create_consumer_group.name,
             self.create_consumer_group.topic_id,
             self.create_consumer_group.stream_id,

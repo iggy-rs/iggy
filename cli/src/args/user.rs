@@ -3,7 +3,6 @@ use crate::args::permissions::stream::StreamPermissionsArg;
 use crate::args::permissions::UserStatusArg;
 use clap::{Args, Subcommand};
 use iggy::identifier::Identifier;
-use std::convert::From;
 
 use super::permissions::global::GlobalPermissionsArg;
 

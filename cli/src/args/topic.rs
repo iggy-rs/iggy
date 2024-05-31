@@ -4,7 +4,6 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
-use std::convert::From;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum TopicAction {

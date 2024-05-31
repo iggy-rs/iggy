@@ -66,7 +66,7 @@ impl Topic {
         &mut self,
         group_id: Option<u32>,
         name: &str,
-    ) -> Result<(), IggyError> {
+    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         let name = text::to_lowercase_non_whitespace(name);
         if self.consumer_groups_ids.contains_key(&name) {
             return Err(IggyError::ConsumerGroupNameAlreadyExists(
@@ -105,16 +105,16 @@ impl Topic {
         self.consumer_groups.insert(id, RwLock::new(consumer_group));
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;
-        let consumer_group = consumer_group.read().await;
+        let consumer_group_guard = consumer_group.read().await;
         self.storage
             .topic
-            .save_consumer_group(self, &consumer_group)
+            .save_consumer_group(self, &consumer_group_guard)
             .await?;
         info!(
             "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
             id, self.topic_id, self.stream_id
         );
-        Ok(())
+        Ok(consumer_group)
     }
 
     pub async fn delete_consumer_group(

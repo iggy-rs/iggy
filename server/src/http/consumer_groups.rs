@@ -68,12 +68,12 @@ async fn create_consumer_group(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     Json(mut command): Json<CreateConsumerGroup>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<(StatusCode, Json<ConsumerGroupDetails>), CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
     let mut system = state.system.write();
-    system
+    let consumer_group = system
         .create_consumer_group(
             &Session::stateless(identity.user_id, identity.ip_address),
             &command.stream_id,
@@ -82,7 +82,9 @@ async fn create_consumer_group(
             &command.name,
         )
         .await?;
-    Ok(StatusCode::CREATED)
+    let consumer_group = consumer_group.read().await;
+    let consumer_group = mapper::map_consumer_group(&consumer_group).await;
+    Ok((StatusCode::CREATED, Json(consumer_group)))
 }
 
 async fn delete_consumer_group(

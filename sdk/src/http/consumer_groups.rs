@@ -44,18 +44,20 @@ impl ConsumerGroupClient for HttpClient {
         topic_id: &Identifier,
         name: &str,
         group_id: Option<u32>,
-    ) -> Result<(), IggyError> {
-        self.post(
-            &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
-            &CreateConsumerGroup {
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-                name: name.to_string(),
-                group_id,
-            },
-        )
-        .await?;
-        Ok(())
+    ) -> Result<ConsumerGroupDetails, IggyError> {
+        let response = self
+            .post(
+                &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
+                &CreateConsumerGroup {
+                    stream_id: stream_id.clone(),
+                    topic_id: topic_id.clone(),
+                    name: name.to_string(),
+                    group_id,
+                },
+            )
+            .await?;
+        let consumer_group = response.json().await?;
+        Ok(consumer_group)
     }
 
     async fn delete_consumer_group(

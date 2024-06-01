@@ -1,7 +1,6 @@
 use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
-use std::convert::From;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum PersonalAccessTokenAction {

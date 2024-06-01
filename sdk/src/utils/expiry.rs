@@ -4,8 +4,8 @@ use humantime::Duration as HumanDuration;
 use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::Add;
+use std::str::FromStr;
 use std::time::Duration;
-use std::{convert::From, str::FromStr};
 
 /// Helper enum for various time-based expiry related functionalities
 #[derive(Debug, Clone, Eq, PartialEq)]

@@ -51,7 +51,7 @@ impl System {
         topic_id: &Identifier,
         group_id: Option<u32>,
         name: &str,
-    ) -> Result<(), IggyError> {
+    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id)?;
@@ -64,8 +64,7 @@ impl System {
         }
 
         let topic = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id)?;
-        topic.create_consumer_group(group_id, name).await?;
-        Ok(())
+        topic.create_consumer_group(group_id, name).await
     }
 
     pub async fn delete_consumer_group(

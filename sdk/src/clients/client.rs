@@ -896,7 +896,7 @@ impl ConsumerGroupClient for IggyClient {
         topic_id: &Identifier,
         name: &str,
         group_id: Option<u32>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<ConsumerGroupDetails, IggyError> {
         self.client
             .read()
             .await

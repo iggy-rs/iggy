@@ -6,7 +6,6 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::header::{self, HeaderKey, HeaderValue};
 use iggy::models::messages::MessageState;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub struct MessageSnapshot {

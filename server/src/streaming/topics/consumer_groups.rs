@@ -66,7 +66,7 @@ impl Topic {
         &mut self,
         group_id: Option<u32>,
         name: &str,
-    ) -> Result<(), IggyError> {
+    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         let name = text::to_lowercase_non_whitespace(name);
         if self.consumer_groups_ids.contains_key(&name) {
             return Err(IggyError::ConsumerGroupNameAlreadyExists(
@@ -105,16 +105,16 @@ impl Topic {
         self.consumer_groups.insert(id, RwLock::new(consumer_group));
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;
-        let consumer_group = consumer_group.read().await;
+        let consumer_group_guard = consumer_group.read().await;
         self.storage
             .topic
-            .save_consumer_group(self, &consumer_group)
+            .save_consumer_group(self, &consumer_group_guard)
             .await?;
         info!(
             "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
             id, self.topic_id, self.stream_id
         );
-        Ok(())
+        Ok(consumer_group)
     }
 
     pub async fn delete_consumer_group(
@@ -202,8 +202,16 @@ mod tests {
         let group_id = 1;
         let name = "test";
         let mut topic = get_topic();
+        let topic_id = topic.topic_id;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_ok());
+        {
+            let created_consumer_group = result.unwrap().read().await;
+            assert_eq!(created_consumer_group.group_id, group_id);
+            assert_eq!(created_consumer_group.name, name);
+            assert_eq!(created_consumer_group.topic_id, topic_id);
+        }
+
         assert_eq!(topic.consumer_groups.len(), 1);
         let consumer_group = topic
             .get_consumer_group(&Identifier::numeric(group_id).unwrap())
@@ -211,7 +219,7 @@ mod tests {
         let consumer_group = consumer_group.read().await;
         assert_eq!(consumer_group.group_id, group_id);
         assert_eq!(consumer_group.name, name);
-        assert_eq!(consumer_group.topic_id, topic.topic_id);
+        assert_eq!(consumer_group.topic_id, topic_id);
         assert_eq!(
             consumer_group.partitions_count,
             topic.partitions.len() as u32
@@ -228,9 +236,9 @@ mod tests {
         assert_eq!(topic.consumer_groups.len(), 1);
         let result = topic.create_consumer_group(Some(group_id), "test2").await;
         assert!(result.is_err());
-        assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
         assert!(matches!(err, IggyError::ConsumerGroupIdAlreadyExists(_, _)));
+        assert_eq!(topic.consumer_groups.len(), 1);
     }
 
     #[tokio::test]
@@ -244,12 +252,12 @@ mod tests {
         let group_id = group_id + 1;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_err());
-        assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
         assert!(matches!(
             err,
             IggyError::ConsumerGroupNameAlreadyExists(_, _)
         ));
+        assert_eq!(topic.consumer_groups.len(), 1);
     }
 
     #[tokio::test]

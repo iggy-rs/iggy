@@ -350,7 +350,7 @@ pub trait ConsumerGroupClient {
         topic_id: &Identifier,
         name: &str,
         group_id: Option<u32>,
-    ) -> Result<(), IggyError>;
+    ) -> Result<ConsumerGroupDetails, IggyError>;
     /// Delete a consumer group by unique ID or name for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to manage the streams or topics.

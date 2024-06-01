@@ -64,20 +64,21 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         topic_id: &Identifier,
         name: &str,
         group_id: Option<u32>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<ConsumerGroupDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
-            CREATE_CONSUMER_GROUP_CODE,
-            CreateConsumerGroup {
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-                name: name.to_string(),
-                group_id,
-            }
-            .as_bytes(),
-        )
-        .await?;
-        Ok(())
+        let response = self
+            .send_with_response(
+                CREATE_CONSUMER_GROUP_CODE,
+                CreateConsumerGroup {
+                    stream_id: stream_id.clone(),
+                    topic_id: topic_id.clone(),
+                    name: name.to_string(),
+                    group_id,
+                }
+                .as_bytes(),
+            )
+            .await?;
+        mapper::map_consumer_group(response)
     }
 
     async fn delete_consumer_group(

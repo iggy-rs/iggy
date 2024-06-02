@@ -28,6 +28,15 @@ pub fn start(endpoint: Endpoint, system: SharedSystem) {
                     incoming_connection.remote_address()
                 );
                 let system = system.clone();
+                let incoming_connection = incoming_connection.accept();
+                if incoming_connection.is_err() {
+                    error!(
+                        "Error when accepting incoming connection: {:?}",
+                        incoming_connection
+                    );
+                    continue;
+                }
+                let incoming_connection = incoming_connection.unwrap();
                 tokio::spawn(async move {
                     if let Err(error) = handle_connection(incoming_connection, system).await {
                         error!("Connection has failed: {error}");

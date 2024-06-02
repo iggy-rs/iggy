@@ -5,12 +5,15 @@ use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
 use bytes::Bytes;
+use quinn::crypto::rustls::QuicClientConfig as QuinnQuicClientConfig;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
-use rustls::client::{ServerCertVerified, ServerCertVerifier};
-use rustls::{Certificate, ServerName};
+use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
+use rustls::crypto::CryptoProvider;
+use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+use rustls::{DigitallySignedStruct, Error, SignatureScheme};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
+use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tracing::{error, info, trace};
@@ -74,7 +77,7 @@ impl BinaryTransport for QuicClient {
                 .await?;
             send.write_all(&command.to_le_bytes()).await?;
             send.write_all(&payload).await?;
-            send.finish().await?;
+            send.finish()?;
             trace!("Sent a QUIC request, waiting for a response...");
             return self.handle_response(&mut recv).await;
         }
@@ -271,14 +274,27 @@ fn configure(config: &QuicClientConfig) -> Result<ClientConfig, IggyError> {
         transport.max_idle_timeout(Some(max_idle_timeout.unwrap()));
     }
 
+    if CryptoProvider::get_default().is_none() {
+        rustls::crypto::ring::default_provider()
+            .install_default()
+            .expect("Failed to install rustls crypto provider");
+    }
     let mut client_config = match config.validate_certificate {
-        true => ClientConfig::with_native_roots(),
-        false => ClientConfig::new(Arc::new(
-            rustls::ClientConfig::builder()
-                .with_safe_defaults()
-                .with_custom_certificate_verifier(SkipServerVerification::new())
-                .with_no_client_auth(),
-        )),
+        true => ClientConfig::with_platform_verifier(),
+        false => {
+            match QuinnQuicClientConfig::try_from(
+                rustls::ClientConfig::builder()
+                    .dangerous()
+                    .with_custom_certificate_verifier(SkipServerVerification::new())
+                    .with_no_client_auth(),
+            ) {
+                Ok(config) => ClientConfig::new(Arc::new(config)),
+                Err(error) => {
+                    error!("Failed to create QUIC client configuration: {error}");
+                    return Err(IggyError::InvalidConfiguration);
+                }
+            }
+        }
     };
     client_config.transport_config(Arc::new(transport));
     Ok(client_config)
@@ -296,13 +312,35 @@ impl SkipServerVerification {
 impl ServerCertVerifier for SkipServerVerification {
     fn verify_server_cert(
         &self,
-        _: &Certificate,
-        _: &[Certificate],
-        _: &ServerName,
-        _: &mut dyn Iterator<Item = &[u8]>,
-        _: &[u8],
-        _: SystemTime,
-    ) -> Result<ServerCertVerified, rustls::Error> {
+        _end_entity: &CertificateDer<'_>,
+        _intermediates: &[CertificateDer<'_>],
+        _server_name: &ServerName<'_>,
+        _ocsp_response: &[u8],
+        _now: UnixTime,
+    ) -> Result<ServerCertVerified, Error> {
         Ok(ServerCertVerified::assertion())
+    }
+
+    fn verify_tls12_signature(
+        &self,
+        _message: &[u8],
+        _cert: &CertificateDer<'_>,
+        _dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, Error> {
+        Ok(HandshakeSignatureValid::assertion())
+    }
+
+    fn verify_tls13_signature(
+        &self,
+        _message: &[u8],
+        _cert: &CertificateDer<'_>,
+        _dss: &DigitallySignedStruct,
+    ) -> Result<HandshakeSignatureValid, Error> {
+        Ok(HandshakeSignatureValid::assertion())
+    }
+
+    fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        // Signature used by the server to sign self-signed certificate (using rcgen)
+        vec![SignatureScheme::ECDSA_NISTP256_SHA256]
     }
 }

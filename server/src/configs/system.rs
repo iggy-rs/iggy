@@ -123,6 +123,10 @@ impl SystemConfig {
         self.path.to_string()
     }
 
+    pub fn get_metadata_path(&self) -> String {
+        format!("{}/store", self.get_system_path())
+    }
+
     pub fn get_backup_path(&self) -> String {
         format!("{}/{}", self.get_system_path(), self.backup.path)
     }

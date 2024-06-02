@@ -292,6 +292,7 @@ mod tests {
     use super::*;
     use crate::configs::server::PersonalAccessTokenConfig;
     use crate::configs::system::SystemConfig;
+    use crate::sourcing::metadata::TestMetadata;
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
     use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
@@ -306,8 +307,13 @@ mod tests {
         let stream_name = "test";
         let config = Arc::new(SystemConfig::default());
         let storage = get_test_system_storage();
-        let mut system =
-            System::create(config, storage, None, PersonalAccessTokenConfig::default());
+        let mut system = System::create(
+            config,
+            storage,
+            None,
+            Arc::new(TestMetadata::default()),
+            PersonalAccessTokenConfig::default(),
+        );
         let root = User::root(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD);
         let session = Session::new(
             1,

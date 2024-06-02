@@ -25,7 +25,7 @@ async fn should_initialize_system_and_base_directories() {
         names.push(entry.file_name().into_string().unwrap());
     }
 
-    assert_eq!(names.len(), 3);
+    assert_eq!(names.len(), 4);
     assert!(names.contains(&setup.config.stream.path));
     assert!(names.contains(&setup.config.database.path));
 }

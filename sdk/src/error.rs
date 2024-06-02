@@ -28,6 +28,8 @@ pub enum IggyError {
     CannotCreateRuntimeDirectory(String) = 11,
     #[error("Cannot remove runtime directory, Path: {0}")]
     CannotRemoveRuntimeDirectory(String) = 12,
+    #[error("Cannot create metadata directory, Path: {0}")]
+    CannotCreateMetadataDirectory(String) = 13,
     #[error("Resource with key: {0} was not found.")]
     ResourceNotFound(String) = 20,
     #[error("Cannot load resource. Reason: {0:#}")]

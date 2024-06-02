@@ -18,6 +18,7 @@ use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
 use tracing::{info, trace};
 
+use crate::sourcing::metadata::{FileMetadata, Metadata};
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
@@ -62,6 +63,7 @@ pub struct System {
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
     pub(crate) db: Option<Arc<Db>>,
+    pub(crate) metadata: Arc<dyn Metadata>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
 
@@ -89,10 +91,15 @@ impl System {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };
+        let metadata = Arc::new(FileMetadata::new(
+            &config.get_metadata_path(),
+            persister.clone(),
+        ));
         Self::create(
             config,
             SystemStorage::new(db.clone(), persister),
             Some(db),
+            metadata,
             pat_config,
         )
     }
@@ -101,6 +108,7 @@ impl System {
         config: Arc<SystemConfig>,
         storage: SystemStorage,
         db: Option<Arc<Db>>,
+        metadata: Arc<dyn Metadata>,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         info!(
@@ -122,6 +130,7 @@ impl System {
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
             db,
+            metadata,
             personal_access_token: pat_config,
         }
     }
@@ -155,6 +164,7 @@ impl System {
         self.load_version().await?;
         self.load_users().await?;
         self.load_streams().await?;
+        self.metadata.init().await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
     }

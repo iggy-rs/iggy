@@ -3,6 +3,7 @@ use crate::quic::listener;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
 use quinn::{Endpoint, IdleTimeout, VarInt};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
@@ -14,19 +15,20 @@ use tracing::info;
 /// Returns the address the server is listening on.
 pub fn start(config: QuicConfig, system: SharedSystem) -> SocketAddr {
     info!("Initializing Iggy QUIC server...");
-    let quic_config = configure_quic(&config);
+    let address = config.address.parse().unwrap();
+    let quic_config = configure_quic(config);
     if let Err(error) = quic_config {
         panic!("Error when configuring QUIC: {:?}", error);
     }
 
-    let endpoint = Endpoint::server(quic_config.unwrap(), config.address.parse().unwrap()).unwrap();
+    let endpoint = Endpoint::server(quic_config.unwrap(), address).unwrap();
     let addr = endpoint.local_addr().unwrap();
     listener::start(endpoint, system);
     info!("Iggy QUIC server has started on: {:?}", addr);
     addr
 }
 
-fn configure_quic(config: &QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Error>> {
+fn configure_quic(config: QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Error>> {
     let (certificate, key) = match config.certificate.self_signed {
         true => generate_self_signed_cert()?,
         false => load_certificates(&config.certificate.cert_file, &config.certificate.key_file)?,
@@ -51,28 +53,29 @@ fn configure_quic(config: &QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Er
     Ok(server_config)
 }
 
-fn generate_self_signed_cert(
-) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey), Box<dyn Error>> {
+fn generate_self_signed_cert<'a>(
+) -> Result<(Vec<CertificateDer<'a>>, PrivateKeyDer<'a>), Box<dyn Error>> {
     let certificate = rcgen::generate_simple_self_signed(vec!["localhost".into()]).unwrap();
     let certificate_der = certificate.serialize_der().unwrap();
     let private_key = certificate.serialize_private_key_der();
-    let private_key = rustls::PrivateKey(private_key);
-    let cert_chain = vec![rustls::Certificate(certificate_der)];
+    let private_key = PrivateKeyDer::try_from(private_key)?;
+    let cert_chain = vec![CertificateDer::from(certificate_der)];
     Ok((cert_chain, private_key))
 }
 
 fn load_certificates(
     cert_file: &str,
     key_file: &str,
-) -> Result<(Vec<rustls::Certificate>, rustls::PrivateKey), Box<dyn Error>> {
+) -> Result<(Vec<CertificateDer<'static>>, PrivateKeyDer<'static>), Box<dyn Error>> {
     let mut cert_chain_reader = BufReader::new(File::open(cert_file)?);
     let certs = rustls_pemfile::certs(&mut cert_chain_reader)
-        .map(|x| rustls::Certificate(x.unwrap().to_vec()))
+        .map(|x| CertificateDer::from(x.unwrap().to_vec()))
         .collect();
     let mut key_reader = BufReader::new(File::open(key_file)?);
     let mut keys = rustls_pemfile::rsa_private_keys(&mut key_reader)
-        .map(|x| rustls::PrivateKey(x.unwrap().secret_pkcs1_der().to_vec()))
-        .collect::<Vec<_>>();
-    let key = rustls::PrivateKey(keys.remove(0).0);
+        .filter(|key| key.is_ok())
+        .map(|key| PrivateKeyDer::try_from(key.unwrap().secret_pkcs1_der().to_vec()))
+        .collect::<Result<Vec<_>, _>>()?;
+    let key = keys.remove(0);
     Ok((certs, key))
 }

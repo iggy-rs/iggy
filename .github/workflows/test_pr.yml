@@ -49,13 +49,11 @@ jobs:
             target: x86_64-unknown-linux-musl
             cargo_command: cargo
             skip_tests: false
-            cross: false
 
           - os_name: Windows-x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
             skip_tests: true
-            cross: false
 
         toolchain:
           - stable
@@ -74,16 +72,27 @@ jobs:
           sudo apt-get update --yes && sudo apt-get install --yes musl-tools gnome-keyring keyutils
           rm -f $HOME/.local/share/keyrings/*
           echo -n "test" | gnome-keyring-daemon --unlock
-        if: ${{ contains(matrix.platform.os_name, 'musl') }}
+        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
-      - name: Build binary
+      - name: Build binary (Linux)
         uses: houseabsolute/actions-rust-cross@v0
         with:
           command: "build"
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
           args: "--verbose"
-        if: ${{ !contains(matrix.platform.os_name, 'macOS') }}
+        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
+
+      - name: Build binary (Windows)
+        uses: houseabsolute/actions-rust-cross@v0
+        env:
+          AWS_LC_SYS_NO_ASM: 1
+        with:
+          command: "build"
+          target: ${{ matrix.platform.target }}
+          toolchain: ${{ matrix.toolchain }}
+          args: "--verbose"
+        if: ${{ matrix.platform.os == 'windows-latest' }}
 
       - name: Run tests
         uses: houseabsolute/actions-rust-cross@v0
@@ -92,15 +101,15 @@ jobs:
           target: ${{ matrix.platform.target }}
           toolchain: ${{ matrix.toolchain }}
           args: "--verbose"
-        if: ${{ !matrix.platform.skip_tests && !contains(matrix.platform.os_name, 'macOS')}}
+        if: ${{ !matrix.platform.skip_tests }}
 
       - name: Check CLI examples from README
         run: ./scripts/run-examples-from-readme.sh
-        if: ${{ contains(matrix.platform.os_name, 'musl') }}
+        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
       - name: Check if workspace is clean
         run: git status | grep "working tree clean" || { git status ; exit 1; }
-        if: runner.os != 'Windows'
+        if: ${{ matrix.platform.os == 'ubuntu-latest' }}
 
   # TODO: below job is nonblocking: temporary solution until we decide whether
   #       we want to use the new M1 macs for CI, determine cost and performance

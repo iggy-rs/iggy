@@ -2,6 +2,8 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::UPDATE_USER_CODE;
 use iggy::error::IggyError;
 use iggy::users::update_user::UpdateUser;
 use tracing::debug;
@@ -21,6 +23,10 @@ pub async fn handle(
             command.username.clone(),
             command.status,
         )
+        .await?;
+    system
+        .metadata
+        .apply(UPDATE_USER_CODE, &command.as_bytes())
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

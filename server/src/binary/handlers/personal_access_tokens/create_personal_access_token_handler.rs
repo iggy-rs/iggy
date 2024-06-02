@@ -3,6 +3,8 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::CREATE_PERSONAL_ACCESS_TOKEN_CODE;
 use iggy::error::IggyError;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use tracing::debug;
@@ -19,6 +21,10 @@ pub async fn handle(
         .create_personal_access_token(session, &command.name, command.expiry)
         .await?;
     let bytes = mapper::map_raw_pat(&token);
+    system
+        .metadata
+        .apply(CREATE_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
+        .await?;
     sender.send_ok_response(&bytes).await?;
     Ok(())
 }

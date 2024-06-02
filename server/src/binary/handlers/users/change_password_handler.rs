@@ -2,6 +2,8 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::CHANGE_PASSWORD_CODE;
 use iggy::error::IggyError;
 use iggy::users::change_password::ChangePassword;
 use tracing::debug;
@@ -21,6 +23,10 @@ pub async fn handle(
             &command.current_password,
             &command.new_password,
         )
+        .await?;
+    system
+        .metadata
+        .apply(CHANGE_PASSWORD_CODE, &command.as_bytes())
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

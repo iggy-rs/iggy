@@ -1,15 +1,17 @@
-use crate::configs::quic::QuicConfig;
-use crate::quic::listener;
-use crate::streaming::systems::system::SharedSystem;
-use anyhow::Result;
-use quinn::{Endpoint, IdleTimeout, VarInt};
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::net::SocketAddr;
 use std::sync::Arc;
+
+use anyhow::Result;
+use quinn::{Endpoint, IdleTimeout, VarInt};
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use tracing::info;
+
+use crate::configs::quic::QuicConfig;
+use crate::quic::listener;
+use crate::streaming::systems::system::SharedSystem;
 
 /// Starts the QUIC server.
 /// Returns the address the server is listening on.
@@ -56,10 +58,10 @@ fn configure_quic(config: QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Err
 fn generate_self_signed_cert<'a>(
 ) -> Result<(Vec<CertificateDer<'a>>, PrivateKeyDer<'a>), Box<dyn Error>> {
     let certificate = rcgen::generate_simple_self_signed(vec!["localhost".into()]).unwrap();
-    let certificate_der = certificate.serialize_der().unwrap();
-    let private_key = certificate.serialize_private_key_der();
+    let certificate_der = certificate.cert.der();
+    let private_key = certificate.key_pair.serialize_der();
     let private_key = PrivateKeyDer::try_from(private_key)?;
-    let cert_chain = vec![CertificateDer::from(certificate_der)];
+    let cert_chain = vec![certificate_der.clone()];
     Ok((cert_chain, private_key))
 }
 

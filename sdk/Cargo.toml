@@ -53,6 +53,7 @@ tracing = { version = "0.1.40" }
 uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
 
 [build-dependencies]
+bindgen-cli = "0.69.4"
 convert_case = "0.6.0"
 rmp-serde = "1.3.0"
 serde = { version = "1.0.202", features = ["derive", "rc"] }

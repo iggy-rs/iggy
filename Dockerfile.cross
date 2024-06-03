@@ -7,7 +7,7 @@ ARG CROSS_CONTAINER_GID
 
 USER root
 RUN apt-get update \
-    && apt-get install gnome-keyring \
+    && apt-get install gnome-keyring curl \
     --yes --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -20,6 +20,9 @@ RUN chmod +x /usr/local/bin/cross-docker-entrypoint.sh
 # Add user with specified UID and GID
 RUN groupadd -g $CROSS_CONTAINER_GID $USER
 RUN useradd -r -u $CROSS_CONTAINER_UID -g $CROSS_CONTAINER_GID -m $USER
+
+# Add bindgen cli tools
+RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-lang/rust-bindgen/releases/download/v0.69.4/bindgen-cli-installer.sh | sh
 
 # Set the entry point
 ENTRYPOINT ["/usr/local/bin/cross-docker-entrypoint.sh"]

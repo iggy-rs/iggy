@@ -17,6 +17,11 @@ readonly USER_NAME
 echo "Preparing ${CROSS_TOML_FILE} file for user ${USER_NAME} with UID ${USER_UID} and GID ${USER_GID}."
 
 cat << EOF > "${CROSS_TOML_FILE}"
+[workspace.metadata.cross.arm-unknown-linux-musleabi]
+pre-build = [
+    "curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-lang/rust-bindgen/releases/download/v0.69.4/bindgen-cli-installer.sh | sh",
+    "ls -l ${HOME}/.cargo/bin"
+]
 [build.env]
 passthrough = ["IGGY_SYSTEM_PATH", "IGGY_CI_BUILD", "RUST_BACKTRACE=1"]
 

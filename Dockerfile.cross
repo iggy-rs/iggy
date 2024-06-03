@@ -24,8 +24,8 @@ RUN useradd -r -u $CROSS_CONTAINER_UID -g $CROSS_CONTAINER_GID -m $USER
 # Add bindgen cli tools
 RUN curl --proto '=https' --tlsv1.2 -LsSf https://github.com/rust-lang/rust-bindgen/releases/download/v0.69.4/bindgen-cli-installer.sh | sh
 
-# Enable cargo paths
-RUN source "$HOME/.cargo/env"
+# Extend the PATH to cargo bin folder
+ENV PATH="${PATH}:${HOME}/.cargo/bin"
 
 # Set the entry point
 ENTRYPOINT ["/usr/local/bin/cross-docker-entrypoint.sh"]

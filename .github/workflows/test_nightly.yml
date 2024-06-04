@@ -104,9 +104,4 @@ jobs:
         run: exit 0
       - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') && github.event_name != 'workflow_dispatch' }}
-        uses: JasonEtco/create-an-issue@v2.9.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_BOT_CONTEXT_STRING: "nightly test suite"
-        with:
-          filename: .github/BOT_ISSUE_TEMPLATE.md
+        run: exit 1

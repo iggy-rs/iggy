@@ -1,8 +1,8 @@
-name: test_nightly
+name: test_daily
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 23 * * *'  # At 11:00 PM UTC, which is 10:00 PM CET
+    - cron: '0 8 * * *'  # At 8:00 AM UTC, which is 9:00 AM CET
 
 env:
   CRATE_NAME: iggy
@@ -46,8 +46,7 @@ jobs:
             cross: true
 
         toolchain:
-          - nightly
-          - beta
+          - stable
     steps:
       - uses: actions/checkout@v4
 
@@ -104,4 +103,9 @@ jobs:
         run: exit 0
       - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') && github.event_name != 'workflow_dispatch' }}
-        run: exit 1
+        uses: JasonEtco/create-an-issue@v2.9.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_BOT_CONTEXT_STRING: "nightly test suite"
+        with:
+          filename: .github/BOT_ISSUE_TEMPLATE.md

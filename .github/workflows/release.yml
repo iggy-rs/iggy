@@ -81,16 +81,6 @@ jobs:
             docker_arch: linux/amd64
             cross: false
 
-          - os_name: Linux-arm
-            os: ubuntu-latest
-            target: arm-unknown-linux-musleabi
-            bin:
-              - iggy-server
-              - iggy
-            name: iggy-Linux-arm-musl.tar.gz
-            docker_arch: linux/arm/v7
-            cross: true
-
           - os_name: Linux-aarch64-musl
             os: ubuntu-latest
             target: aarch64-unknown-linux-musl

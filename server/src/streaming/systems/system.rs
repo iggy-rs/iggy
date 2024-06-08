@@ -19,6 +19,7 @@ use tokio::time::Instant;
 use tracing::{info, trace};
 
 use crate::sourcing::metadata::{FileMetadata, Metadata};
+use crate::sourcing::views::SystemView;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
@@ -164,7 +165,9 @@ impl System {
         self.load_version().await?;
         self.load_users().await?;
         self.load_streams().await?;
-        self.metadata.init().await?;
+        let metadata_entries = self.metadata.init().await?;
+        let system_view = SystemView::init(metadata_entries).await?;
+        info!("System view: {system_view}");
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
     }

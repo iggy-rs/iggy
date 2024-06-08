@@ -1,8 +1,12 @@
 use crate::sourcing::metadata::MetadataEntry;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::*;
+use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::models::permissions::Permissions;
+use iggy::models::user_status::UserStatus;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::streams::create_stream::CreateStream;
@@ -11,6 +15,11 @@ use iggy::streams::update_stream::UpdateStream;
 use iggy::topics::create_topic::CreateTopic;
 use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::update_topic::UpdateTopic;
+use iggy::users::change_password::ChangePassword;
+use iggy::users::create_user::CreateUser;
+use iggy::users::delete_user::DeleteUser;
+use iggy::users::update_permissions::UpdatePermissions;
+use iggy::users::update_user::UpdateUser;
 use std::collections::HashMap;
 use std::fmt::Display;
 use tracing::{info, warn};
@@ -18,6 +27,7 @@ use tracing::{info, warn};
 #[derive(Debug)]
 pub struct SystemView {
     pub streams: HashMap<Identifier, StreamView>,
+    pub users: HashMap<Identifier, UserView>,
 }
 
 #[derive(Debug)]
@@ -33,6 +43,8 @@ pub struct TopicView {
     pub id: u32,
     pub name: String,
     pub partitions: HashMap<Identifier, PartitionView>,
+    pub consumer_groups: HashMap<Identifier, ConsumerGroupView>,
+    current_consumer_group_id: u32,
 }
 
 #[derive(Debug)]
@@ -40,10 +52,29 @@ pub struct PartitionView {
     pub id: u32,
 }
 
+#[derive(Debug)]
+pub struct UserView {
+    pub id: u32,
+    pub username: String,
+    pub password_hash: String,
+    pub status: UserStatus,
+    pub permissions: Option<Permissions>,
+}
+
+#[derive(Debug)]
+pub struct ConsumerGroupView {
+    pub id: u32,
+    pub name: String,
+}
+
+// TODO: Add PATs, also consider handling stream and topic purge
+
 impl SystemView {
     pub async fn init(entries: Vec<MetadataEntry>) -> Result<Self, IggyError> {
         let mut streams = HashMap::new();
+        let mut users = HashMap::new();
         let mut current_stream_id = 0;
+        let mut current_user_id = 1;
         for entry in entries {
             info!(
                 "Processing metadata entry code: {}, name: {}",
@@ -84,6 +115,8 @@ impl SystemView {
                     let topic = TopicView {
                         id: topic_id,
                         name: command.name,
+                        consumer_groups: HashMap::new(),
+                        current_consumer_group_id: 0,
                         partitions: if command.partitions_count == 0 {
                             HashMap::new()
                         } else {
@@ -127,12 +160,70 @@ impl SystemView {
                         topic.partitions.remove(&id.try_into().unwrap());
                     }
                 }
+                CREATE_CONSUMER_GROUP_CODE => {
+                    let command = CreateConsumerGroup::from_bytes(entry.data)?;
+                    let stream = streams.get_mut(&command.stream_id).unwrap();
+                    let topic = stream.topics.get_mut(&command.topic_id).unwrap();
+                    let consumer_group_id = command.group_id.unwrap_or_else(|| {
+                        topic.current_consumer_group_id += 1;
+                        topic.current_consumer_group_id
+                    });
+                    let consumer_group = ConsumerGroupView {
+                        id: consumer_group_id,
+                        name: command.name,
+                    };
+                    topic
+                        .consumer_groups
+                        .insert(consumer_group.id.try_into()?, consumer_group);
+                }
+                DELETE_CONSUMER_GROUP_CODE => {
+                    let command = DeleteConsumerGroup::from_bytes(entry.data)?;
+                    let stream = streams.get_mut(&command.stream_id).unwrap();
+                    let topic = stream.topics.get_mut(&command.topic_id).unwrap();
+                    topic.consumer_groups.remove(&command.group_id);
+                }
+                CREATE_USER_CODE => {
+                    let command = CreateUser::from_bytes(entry.data)?;
+                    current_user_id += 1;
+                    let user = UserView {
+                        id: current_user_id,
+                        username: command.username,
+                        password_hash: command.password, // This is already hashed
+                        status: command.status,
+                        permissions: command.permissions,
+                    };
+                    users.insert(user.id.try_into()?, user);
+                }
+                UPDATE_USER_CODE => {
+                    let command = UpdateUser::from_bytes(entry.data)?;
+                    let user = users.get_mut(&command.user_id).unwrap();
+                    if let Some(username) = &command.username {
+                        user.username = username.clone();
+                    }
+                    if let Some(status) = &command.status {
+                        user.status = status.clone();
+                    }
+                }
+                DELETE_USER_CODE => {
+                    let command = DeleteUser::from_bytes(entry.data)?;
+                    users.remove(&command.user_id);
+                }
+                CHANGE_PASSWORD_CODE => {
+                    let command = ChangePassword::from_bytes(entry.data)?;
+                    let user = users.get_mut(&command.user_id).unwrap();
+                    user.password_hash = command.new_password // This is already hashed
+                }
+                UPDATE_PERMISSIONS_CODE => {
+                    let command = UpdatePermissions::from_bytes(entry.data)?;
+                    let user = users.get_mut(&command.user_id).unwrap();
+                    user.permissions = command.permissions;
+                }
                 code => {
                     warn!("Unsupported metadata entry code: {code}");
                 }
             }
         }
-        Ok(SystemView { streams })
+        Ok(SystemView { streams, users })
     }
 }
 
@@ -143,7 +234,33 @@ impl Display for SystemView {
             write!(f, "\n================\n")?;
             write!(f, "{}\n", stream.1)?;
         }
+        write!(f, "Users:")?;
+        for user in self.users.iter() {
+            write!(f, "\n================\n")?;
+            write!(f, "{}\n", user.1)?;
+        }
         Ok(())
+    }
+}
+
+impl Display for ConsumerGroupView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ConsumerGroup -> ID: {}, Name: {}", self.id, self.name)
+    }
+}
+
+impl Display for UserView {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let permissions = if let Some(permissions) = &self.permissions {
+            permissions.to_string()
+        } else {
+            "no_permissions".to_string()
+        };
+        write!(
+            f,
+            "User -> ID: {}, Username: {}, Status: {}, Permissions: {}",
+            self.id, self.username, self.status, permissions
+        )
     }
 }
 
@@ -162,6 +279,10 @@ impl Display for TopicView {
         write!(f, "Topic -> ID: {}, Name: {}", self.id, self.name,)?;
         for partition in self.partitions.iter() {
             write!(f, "\n  {}", partition.1)?;
+        }
+        write!(f, "\nConsumer Groups:")?;
+        for consumer_group in self.consumer_groups.iter() {
+            write!(f, "\n  {}", consumer_group.1)?;
         }
         Ok(())
     }

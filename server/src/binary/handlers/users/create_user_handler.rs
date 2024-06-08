@@ -1,6 +1,7 @@
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
+use crate::streaming::utils::crypto;
 use anyhow::Result;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::CREATE_USER_CODE;
@@ -25,6 +26,14 @@ pub async fn handle(
             command.permissions.clone(),
         )
         .await?;
+
+    // For the security of the system, we hash the password before storing it in metadata.
+    let command = CreateUser {
+        username: command.username.to_owned(),
+        password: crypto::hash_password(&command.password),
+        status: command.status,
+        permissions: command.permissions.clone(),
+    };
     system
         .metadata
         .apply(CREATE_USER_CODE, &command.as_bytes())

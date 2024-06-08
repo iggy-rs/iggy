@@ -1,6 +1,7 @@
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
+use crate::streaming::utils::crypto;
 use anyhow::Result;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::CHANGE_PASSWORD_CODE;
@@ -24,6 +25,13 @@ pub async fn handle(
             &command.new_password,
         )
         .await?;
+
+    // For the security of the system, we hash the password before storing it in metadata.
+    let command = ChangePassword {
+        user_id: command.user_id.to_owned(),
+        current_password: "".into(),
+        new_password: crypto::hash_password(&command.new_password),
+    };
     system
         .metadata
         .apply(CHANGE_PASSWORD_CODE, &command.as_bytes())

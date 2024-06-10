@@ -12,7 +12,6 @@ mod stream;
 mod system;
 mod topic;
 mod topic_messages;
-mod user;
 
 fn create_messages() -> Vec<Message> {
     vec![

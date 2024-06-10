@@ -5,7 +5,7 @@ use iggy::users::defaults::*;
 use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
     pub id: UserId,
     pub status: UserStatus,
@@ -43,10 +43,26 @@ impl User {
         status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Self {
+        Self::with_password(
+            id,
+            username,
+            crypto::hash_password(password),
+            status,
+            permissions,
+        )
+    }
+
+    pub fn with_password(
+        id: u32,
+        username: &str,
+        password: String,
+        status: UserStatus,
+        permissions: Option<Permissions>,
+    ) -> Self {
         Self {
             id,
-            username: username.to_string(),
-            password: crypto::hash_password(password),
+            username: username.into(),
+            password,
             created_at: IggyTimestamp::now().to_micros(),
             status,
             permissions,

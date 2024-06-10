@@ -111,7 +111,7 @@ pub fn map_user(user: &User) -> UserInfoDetails {
     }
 }
 
-pub fn map_users(users: &[User]) -> Vec<UserInfo> {
+pub fn map_users(users: &[&User]) -> Vec<UserInfo> {
     let mut users_data = Vec::with_capacity(users.len());
     for user in users {
         let user = UserInfo {

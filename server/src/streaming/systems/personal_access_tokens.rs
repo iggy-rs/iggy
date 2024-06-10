@@ -93,7 +93,7 @@ impl System {
         &self,
         token: &str,
         session: Option<&Session>,
-    ) -> Result<User, IggyError> {
+    ) -> Result<&User, IggyError> {
         let token_hash = PersonalAccessToken::hash_token(token);
         let personal_access_token = self
             .storage
@@ -111,11 +111,7 @@ impl System {
             ));
         }
 
-        let user = self
-            .storage
-            .user
-            .load_by_id(personal_access_token.user_id)
-            .await?;
+        let user = self.get_user(&personal_access_token.user_id.try_into()?)?;
         self.login_user_with_credentials(&user.username, None, session)
             .await
     }

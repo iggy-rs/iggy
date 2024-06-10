@@ -15,7 +15,6 @@ use crate::streaming::systems::storage::FileSystemInfoStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
-use crate::streaming::users::storage::FileUserStorage;
 use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
@@ -133,7 +132,6 @@ pub trait SegmentStorage: Storage<Segment> {
 #[derive(Debug)]
 pub struct SystemStorage {
     pub info: Arc<dyn SystemInfoStorage>,
-    pub user: Arc<dyn UserStorage>,
     pub personal_access_token: Arc<dyn PersonalAccessTokenStorage>,
     pub stream: Arc<dyn StreamStorage>,
     pub topic: Arc<dyn TopicStorage>,
@@ -145,7 +143,6 @@ impl SystemStorage {
     pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(db.clone())),
-            user: Arc::new(FileUserStorage::new(db.clone())),
             personal_access_token: Arc::new(FilePersonalAccessTokenStorage::new(db.clone())),
             stream: Arc::new(FileStreamStorage::new(db.clone())),
             topic: Arc::new(FileTopicStorage::new(db.clone())),
@@ -210,7 +207,6 @@ pub(crate) mod tests {
     use std::sync::Arc;
 
     struct TestSystemInfoStorage {}
-    struct TestUserStorage {}
     struct TestPersonalAccessTokenStorage {}
     struct TestStreamStorage {}
     struct TestTopicStorage {}
@@ -234,36 +230,6 @@ pub(crate) mod tests {
 
     #[async_trait]
     impl SystemInfoStorage for TestSystemInfoStorage {}
-
-    #[async_trait]
-    impl Storage<User> for TestUserStorage {
-        async fn load(&self, _user: &mut User) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn save(&self, _user: &User) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn delete(&self, _user: &User) -> Result<(), IggyError> {
-            Ok(())
-        }
-    }
-
-    #[async_trait]
-    impl UserStorage for TestUserStorage {
-        async fn load_by_id(&self, _id: UserId) -> Result<User, IggyError> {
-            Ok(User::default())
-        }
-
-        async fn load_by_username(&self, _username: &str) -> Result<User, IggyError> {
-            Ok(User::default())
-        }
-
-        async fn load_all(&self) -> Result<Vec<User>, IggyError> {
-            Ok(vec![])
-        }
-    }
 
     #[async_trait]
     impl Storage<PersonalAccessToken> for TestPersonalAccessTokenStorage {
@@ -515,7 +481,6 @@ pub(crate) mod tests {
     pub fn get_test_system_storage() -> SystemStorage {
         SystemStorage {
             info: Arc::new(TestSystemInfoStorage {}),
-            user: Arc::new(TestUserStorage {}),
             personal_access_token: Arc::new(TestPersonalAccessTokenStorage {}),
             stream: Arc::new(TestStreamStorage {}),
             topic: Arc::new(TestTopicStorage {}),

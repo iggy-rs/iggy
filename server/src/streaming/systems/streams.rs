@@ -315,12 +315,15 @@ mod tests {
             PersonalAccessTokenConfig::default(),
         );
         let root = User::root(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD);
+        let permissions = root.permissions.clone();
         let session = Session::new(
             1,
             root.id,
             SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234),
         );
-        system.permissioner.init_permissions_for_user(root);
+        system
+            .permissioner
+            .init_permissions_for_user(root.id, permissions);
         system
             .create_stream(&session, Some(stream_id), stream_name)
             .await

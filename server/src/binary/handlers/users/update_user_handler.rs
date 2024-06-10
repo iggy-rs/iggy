@@ -15,7 +15,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let mut system = system.write();
     system
         .update_user(
             session,

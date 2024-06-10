@@ -42,13 +42,11 @@ async fn get_user(
 ) -> Result<Json<UserInfoDetails>, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
     let system = state.system.read();
-    let user = system
-        .find_user(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &user_id,
-        )
-        .await?;
-    let user = mapper::map_user(&user);
+    let user = system.find_user(
+        &Session::stateless(identity.user_id, identity.ip_address),
+        &user_id,
+    )?;
+    let user = mapper::map_user(user);
     Ok(Json(user))
 }
 
@@ -91,7 +89,7 @@ async fn update_user(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let system = state.system.read();
+    let mut system = state.system.write();
     system
         .update_user(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -130,7 +128,7 @@ async fn change_password(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let system = state.system.read();
+    let mut system = state.system.write();
     system
         .change_password(
             &Session::stateless(identity.user_id, identity.ip_address),

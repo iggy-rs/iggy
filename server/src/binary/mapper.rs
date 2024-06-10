@@ -88,7 +88,7 @@ pub fn map_user(user: &User) -> Bytes {
     bytes.freeze()
 }
 
-pub fn map_users(users: &[User]) -> Bytes {
+pub fn map_users(users: &[&User]) -> Bytes {
     let mut bytes = BytesMut::new();
     for user in users {
         extend_user(user, &mut bytes);

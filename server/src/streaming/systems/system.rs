@@ -20,8 +20,10 @@ use tracing::{info, trace};
 
 use crate::sourcing::metadata::{FileMetadata, Metadata};
 use crate::sourcing::views::SystemView;
+use crate::streaming::users::user::User;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
+use iggy::models::user_info::UserId;
 use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
 
 #[derive(Debug)]
@@ -59,6 +61,7 @@ pub struct System {
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) streams: HashMap<u32, Stream>,
     pub(crate) streams_ids: HashMap<String, u32>,
+    pub(crate) users: HashMap<UserId, User>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
@@ -130,6 +133,7 @@ impl System {
             client_manager: IggySharedMut::new(ClientManager::default()),
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
+            users: HashMap::new(),
             db,
             metadata,
             personal_access_token: pat_config,
@@ -161,13 +165,15 @@ impl System {
             "Initializing system, data will be stored at: {}",
             self.config.get_system_path()
         );
-        let now = Instant::now();
-        self.load_version().await?;
-        self.load_users().await?;
-        self.load_streams().await?;
+
         let metadata_entries = self.metadata.init().await?;
         let system_view = SystemView::init(metadata_entries).await?;
         info!("System view: {system_view}");
+
+        let now = Instant::now();
+        self.load_version().await?;
+        self.load_users(&system_view).await?;
+        self.load_streams().await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
     }

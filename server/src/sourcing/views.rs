@@ -68,13 +68,12 @@ pub struct ConsumerGroupView {
 }
 
 // TODO: Add PATs, also consider handling stream and topic purge
-
 impl SystemView {
     pub async fn init(entries: Vec<MetadataEntry>) -> Result<Self, IggyError> {
         let mut streams = HashMap::new();
         let mut users = HashMap::new();
         let mut current_stream_id = 0;
-        let mut current_user_id = 1;
+        let mut current_user_id = 0;
         for entry in entries {
             info!(
                 "Processing metadata entry code: {}, name: {}",
@@ -142,8 +141,7 @@ impl SystemView {
                     let command = CreatePartitions::from_bytes(entry.data)?;
                     let stream = streams.get_mut(&command.stream_id).unwrap();
                     let topic = stream.topics.get_mut(&command.topic_id).unwrap();
-                    let last_partition_id =
-                        topic.partitions.iter().map(|(_, p)| p.id).max().unwrap();
+                    let last_partition_id = topic.partitions.values().map(|p| p.id).max().unwrap();
                     for id in last_partition_id + 1..=last_partition_id + command.partitions_count {
                         topic
                             .partitions
@@ -154,8 +152,7 @@ impl SystemView {
                     let command = DeletePartitions::from_bytes(entry.data)?;
                     let stream = streams.get_mut(&command.stream_id).unwrap();
                     let topic = stream.topics.get_mut(&command.topic_id).unwrap();
-                    let last_partition_id =
-                        topic.partitions.iter().map(|(_, p)| p.id).max().unwrap();
+                    let last_partition_id = topic.partitions.values().map(|p| p.id).max().unwrap();
                     for id in last_partition_id - command.partitions_count + 1..=last_partition_id {
                         topic.partitions.remove(&id.try_into().unwrap());
                     }
@@ -198,10 +195,10 @@ impl SystemView {
                     let command = UpdateUser::from_bytes(entry.data)?;
                     let user = users.get_mut(&command.user_id).unwrap();
                     if let Some(username) = &command.username {
-                        user.username = username.clone();
+                        user.username.clone_from(username);
                     }
                     if let Some(status) = &command.status {
-                        user.status = status.clone();
+                        user.status = *status;
                     }
                 }
                 DELETE_USER_CODE => {
@@ -232,12 +229,12 @@ impl Display for SystemView {
         write!(f, "Streams:")?;
         for stream in self.streams.iter() {
             write!(f, "\n================\n")?;
-            write!(f, "{}\n", stream.1)?;
+            write!(f, "{}", stream.1)?;
         }
         write!(f, "Users:")?;
         for user in self.users.iter() {
             write!(f, "\n================\n")?;
-            write!(f, "{}\n", user.1)?;
+            write!(f, "{}", user.1)?;
         }
         Ok(())
     }

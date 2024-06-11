@@ -26,7 +26,12 @@ pub async fn handle(
         .await?;
     system
         .metadata
-        .apply(UPDATE_USER_CODE, &command.as_bytes())
+        .apply(
+            UPDATE_USER_CODE,
+            session.get_user_id(),
+            &command.as_bytes(),
+            None,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

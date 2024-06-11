@@ -19,7 +19,12 @@ pub async fn handle(
     system.delete_user(session, &command.user_id).await?;
     system
         .metadata
-        .apply(DELETE_USER_CODE, &command.as_bytes())
+        .apply(
+            DELETE_USER_CODE,
+            session.get_user_id(),
+            &command.as_bytes(),
+            None,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

@@ -34,6 +34,15 @@ impl PersonalAccessToken {
         )
     }
 
+    pub fn raw(user_id: UserId, name: &str, token_hash: &str, expiry: Option<u64>) -> Self {
+        Self {
+            user_id,
+            name: name.into(),
+            token: token_hash.into(),
+            expiry,
+        }
+    }
+
     pub fn is_expired(&self, now: u64) -> bool {
         match self.expiry {
             Some(expiry) => now > expiry,

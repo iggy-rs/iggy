@@ -292,7 +292,7 @@ mod tests {
     use super::*;
     use crate::configs::server::PersonalAccessTokenConfig;
     use crate::configs::system::SystemConfig;
-    use crate::sourcing::metadata::TestMetadata;
+    use crate::state::metadata::TestMetadata;
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
     use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};

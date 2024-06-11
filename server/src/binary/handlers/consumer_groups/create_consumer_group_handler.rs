@@ -35,7 +35,12 @@ pub async fn handle(
         let system = system.read();
         system
             .metadata
-            .apply(CREATE_CONSUMER_GROUP_CODE, &command.as_bytes())
+            .apply(
+                CREATE_CONSUMER_GROUP_CODE,
+                session.get_user_id(),
+                &command.as_bytes(),
+                None,
+            )
             .await?;
     }
 

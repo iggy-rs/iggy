@@ -19,7 +19,12 @@ pub async fn handle(
     system.purge_stream(session, &command.stream_id).await?;
     system
         .metadata
-        .apply(PURGE_STREAM_CODE, &command.as_bytes())
+        .apply(
+            PURGE_STREAM_CODE,
+            session.get_user_id(),
+            &command.as_bytes(),
+            None,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

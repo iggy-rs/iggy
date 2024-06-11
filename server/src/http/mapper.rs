@@ -127,7 +127,7 @@ pub fn map_users(users: &[&User]) -> Vec<UserInfo> {
 }
 
 pub fn map_personal_access_tokens(
-    personal_access_tokens: &[PersonalAccessToken],
+    personal_access_tokens: &[&PersonalAccessToken],
 ) -> Vec<PersonalAccessTokenInfo> {
     let mut personal_access_tokens_data = Vec::with_capacity(personal_access_tokens.len());
     for personal_access_token in personal_access_tokens {

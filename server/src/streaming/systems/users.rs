@@ -1,4 +1,5 @@
-use crate::sourcing::views::SystemView;
+use crate::state::states::SystemState;
+use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
@@ -21,9 +22,9 @@ static USER_ID: AtomicU32 = AtomicU32::new(1);
 const MAX_USERS: usize = u32::MAX as usize;
 
 impl System {
-    pub(crate) async fn load_users(&mut self, view: &SystemView) -> Result<(), IggyError> {
+    pub(crate) async fn load_users(&mut self, state: &SystemState) -> Result<(), IggyError> {
         info!("Loading users...");
-        if view.users.is_empty() {
+        if state.users.is_empty() {
             info!("No users found, creating the root user...");
             let root = Self::create_root_user();
             let command = CreateUser {
@@ -33,22 +34,38 @@ impl System {
                 permissions: root.permissions.clone(),
             };
             self.metadata
-                .apply(CREATE_USER_CODE, &command.as_bytes())
+                .apply(CREATE_USER_CODE, 0, &command.as_bytes(), None)
                 .await?;
 
             self.users.insert(root.id, root);
             info!("Created the root user.");
         }
 
-        for (_, user_view) in view.users.iter() {
-            let user = User::with_password(
-                user_view.id,
-                &user_view.username,
-                user_view.password_hash.to_owned(),
-                user_view.status,
-                user_view.permissions.clone(),
+        for (_, user_state) in state.users.iter() {
+            let mut user = User::with_password(
+                user_state.id,
+                &user_state.username,
+                user_state.password_hash.to_owned(),
+                user_state.status,
+                user_state.permissions.clone(),
             );
-            self.users.insert(user_view.id, user);
+
+            user.personal_access_tokens = user_state
+                .personal_access_tokens
+                .values()
+                .map(|token| {
+                    (
+                        token.token_hash.clone(),
+                        PersonalAccessToken::raw(
+                            user_state.id,
+                            &token.name,
+                            &token.token_hash,
+                            token.expiry,
+                        ),
+                    )
+                })
+                .collect();
+            self.users.insert(user_state.id, user);
         }
 
         let users_count = self.users.len();

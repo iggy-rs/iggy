@@ -6,7 +6,6 @@ mod consumer_group;
 mod consumer_offset;
 mod messages;
 mod partition;
-mod personal_access_token;
 mod segment;
 mod stream;
 mod system;

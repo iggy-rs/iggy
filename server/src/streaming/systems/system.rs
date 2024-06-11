@@ -18,8 +18,8 @@ use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
 use tracing::{info, trace};
 
-use crate::sourcing::metadata::{FileMetadata, Metadata};
-use crate::sourcing::views::SystemView;
+use crate::state::metadata::{FileMetadata, Metadata};
+use crate::state::states::SystemState;
 use crate::streaming::users::user::User;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
@@ -166,13 +166,12 @@ impl System {
             self.config.get_system_path()
         );
 
-        let metadata_entries = self.metadata.init().await?;
-        let system_view = SystemView::init(metadata_entries).await?;
-        info!("System view: {system_view}");
-
+        let entries = self.metadata.init().await?;
+        let state = SystemState::init(entries).await?;
+        info!("{state}");
         let now = Instant::now();
         self.load_version().await?;
-        self.load_users(&system_view).await?;
+        self.load_users(&state).await?;
         self.load_streams().await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())

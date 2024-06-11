@@ -20,7 +20,13 @@ const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 #[async_trait]
 pub trait Metadata: Send + Sync + Debug {
     async fn init(&self) -> Result<Vec<MetadataEntry>, IggyError>;
-    async fn apply(&self, code: u32, data: &[u8]) -> Result<(), IggyError>;
+    async fn apply(
+        &self,
+        code: u32,
+        user_id: u32,
+        command: &[u8],
+        data: Option<&[u8]>,
+    ) -> Result<(), IggyError>;
 }
 
 #[derive(Debug)]
@@ -28,32 +34,40 @@ pub struct MetadataEntry {
     pub index: u64,
     pub term: u64,
     pub timestamp: IggyTimestamp,
+    pub user_id: u32,
     pub code: u32,
-    pub data: Bytes,
+    pub command: Bytes,
+    pub data: Bytes, // Optional data e.g. used to enrich the command with additional information
 }
 
 impl Display for MetadataEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "MetadataEntry {{ index: {}, term: {}, timestamp: {}, code: {}, name: {}, size: {} }}",
+            "MetadataEntry {{ index: {}, term: {}, timestamp: {}, user ID: {}, code: {}, name: {}, size: {} }}",
             self.index,
             self.term,
             self.timestamp,
+            self.user_id,
             self.code,
             command::get_name_from_code(self.code).unwrap_or("invalid_command"),
-            IggyByteSize::from(self.data.len() as u64).as_human_string()
+            IggyByteSize::from(self.command.len() as u64).as_human_string()
         )
     }
 }
 
 impl BytesSerializable for MetadataEntry {
     fn as_bytes(&self) -> Bytes {
-        let mut bytes = BytesMut::with_capacity(8 + 8 + 8 + 4 + 4 + self.data.len());
+        let mut bytes = BytesMut::with_capacity(
+            8 + 8 + 8 + 4 + 4 + 4 + self.command.len() + 4 + self.data.len(),
+        );
         bytes.put_u64_le(self.index);
         bytes.put_u64_le(self.term);
         bytes.put_u64_le(self.timestamp.to_micros());
+        bytes.put_u32_le(self.user_id);
         bytes.put_u32_le(self.code);
+        bytes.put_u32_le(self.command.len() as u32);
+        bytes.put_slice(&self.command);
         bytes.put_u32_le(self.data.len() as u32);
         bytes.put_slice(&self.data);
         bytes.freeze()
@@ -66,14 +80,21 @@ impl BytesSerializable for MetadataEntry {
         let index = bytes.slice(0..8).get_u64_le();
         let term = bytes.slice(8..16).get_u64_le();
         let timestamp = IggyTimestamp::from(bytes.slice(16..24).get_u64_le());
-        let code = bytes.slice(24..28).get_u32_le();
-        let length = bytes.slice(28..32).get_u32_le() as usize;
-        let data = bytes.slice(32..32 + length);
+        let user_id = bytes.slice(24..28).get_u32_le();
+        let code = bytes.slice(28..32).get_u32_le();
+        let command_length = bytes.slice(32..36).get_u32_le() as usize;
+        let command = bytes.slice(36..36 + command_length);
+        let data_length = bytes
+            .slice(36 + command_length..40 + command_length)
+            .get_u32_le() as usize;
+        let data = bytes.slice(40 + command_length..40 + command_length + data_length);
         Ok(MetadataEntry {
             index,
             term,
             timestamp,
+            user_id,
             code,
+            command,
             data,
         })
     }
@@ -97,7 +118,7 @@ impl Metadata for TestMetadata {
         Ok(Vec::new())
     }
 
-    async fn apply(&self, _: u32, _: &[u8]) -> Result<(), IggyError> {
+    async fn apply(&self, _: u32, _: u32, _: &[u8], _: Option<&[u8]>) -> Result<(), IggyError> {
         Ok(())
     }
 }
@@ -147,21 +168,28 @@ impl Metadata for FileMetadata {
             let index = reader.read_u64_le().await?;
             let term = reader.read_u64_le().await?;
             let timestamp = IggyTimestamp::from(reader.read_u64_le().await?);
+            let user_id = reader.read_u32_le().await?;
             let code = reader.read_u32_le().await?;
-            let length = reader.read_u32_le().await? as usize;
-            let mut data = BytesMut::with_capacity(length);
-            data.put_bytes(0, length);
+            let command_length = reader.read_u32_le().await? as usize;
+            let mut command = BytesMut::with_capacity(command_length);
+            command.put_bytes(0, command_length);
+            reader.read_exact(&mut command).await?;
+            let data_length = reader.read_u32_le().await? as usize;
+            let mut data = BytesMut::with_capacity(data_length);
+            data.put_bytes(0, data_length);
             reader.read_exact(&mut data).await?;
             let entry = MetadataEntry {
                 index,
                 term,
                 timestamp,
+                user_id,
                 code,
+                command: command.freeze(),
                 data: data.freeze(),
             };
             info!("Read metadata entry: {entry}");
             entries.push(entry);
-            total_size += 8 + 8 + 8 + 4 + 4 + length as u64;
+            total_size += 8 + 8 + 8 + 4 + 4 + 4 + command_length as u64 + 4 + data_length as u64;
             if total_size == file_size {
                 break;
             }
@@ -173,13 +201,22 @@ impl Metadata for FileMetadata {
         Ok(entries)
     }
 
-    async fn apply(&self, code: u32, data: &[u8]) -> Result<(), IggyError> {
+    async fn apply(
+        &self,
+        code: u32,
+        user_id: u32,
+        command: &[u8],
+        data: Option<&[u8]>,
+    ) -> Result<(), IggyError> {
+        info!("Applying metadata entry: code: {code}, user ID: {user_id}");
         let metadata = MetadataEntry {
             index: self.current_index.load(Ordering::SeqCst),
             term: self.term.load(Ordering::SeqCst),
             timestamp: IggyTimestamp::now(),
+            user_id,
             code,
-            data: Bytes::copy_from_slice(data),
+            command: Bytes::copy_from_slice(command),
+            data: data.map_or(Bytes::new(), Bytes::copy_from_slice),
         };
 
         self.persister

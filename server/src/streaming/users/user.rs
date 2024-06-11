@@ -1,9 +1,11 @@
+use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::utils::crypto;
 use iggy::models::user_status::UserStatus;
 use iggy::models::{permissions::Permissions, user_info::UserId};
 use iggy::users::defaults::*;
 use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct User {
@@ -13,6 +15,7 @@ pub struct User {
     pub password: String,
     pub created_at: u64,
     pub permissions: Option<Permissions>,
+    pub personal_access_tokens: HashMap<String, PersonalAccessToken>,
 }
 
 impl Default for User {
@@ -24,6 +27,7 @@ impl Default for User {
             password: "secret".to_string(),
             created_at: IggyTimestamp::now().to_micros(),
             permissions: None,
+            personal_access_tokens: HashMap::new(),
         }
     }
 }
@@ -66,6 +70,7 @@ impl User {
             created_at: IggyTimestamp::now().to_micros(),
             status,
             permissions,
+            personal_access_tokens: HashMap::new(),
         }
     }
 

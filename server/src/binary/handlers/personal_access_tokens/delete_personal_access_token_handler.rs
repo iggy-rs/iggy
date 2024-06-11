@@ -15,13 +15,18 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let mut system = system.write();
     system
         .delete_personal_access_token(session, &command.name)
         .await?;
     system
         .metadata
-        .apply(DELETE_PERSONAL_ACCESS_TOKEN_CODE, &command.as_bytes())
+        .apply(
+            DELETE_PERSONAL_ACCESS_TOKEN_CODE,
+            session.get_user_id(),
+            &command.as_bytes(),
+            None,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

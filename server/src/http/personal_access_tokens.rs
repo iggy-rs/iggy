@@ -3,14 +3,18 @@ use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::mapper::map_generated_tokens_to_identity_info;
 use crate::http::shared::AppState;
+use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post};
 use axum::{Extension, Json, Router};
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::{CREATE_PERSONAL_ACCESS_TOKEN_CODE, DELETE_PERSONAL_ACCESS_TOKEN_CODE};
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
+use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
@@ -50,12 +54,24 @@ async fn create_personal_access_token(
     Json(command): Json<CreatePersonalAccessToken>,
 ) -> Result<Json<RawPersonalAccessToken>, CustomError> {
     command.validate()?;
-    let system = state.system.read();
+    let mut system = state.system.write();
     let token = system
         .create_personal_access_token(
             &Session::stateless(identity.user_id, identity.ip_address),
             &command.name,
             command.expiry,
+        )
+        .await?;
+
+    // TODO: Move this to system
+    let token_hash = PersonalAccessToken::hash_token(&token);
+    system
+        .metadata
+        .apply(
+            CREATE_PERSONAL_ACCESS_TOKEN_CODE,
+            identity.user_id,
+            &command.as_bytes(),
+            Some(token_hash.as_bytes()),
         )
         .await?;
     Ok(Json(RawPersonalAccessToken { token }))
@@ -66,11 +82,23 @@ async fn delete_personal_access_token(
     Extension(identity): Extension<Identity>,
     Path(name): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    let system = state.system.read();
+    let mut system = state.system.write();
     system
         .delete_personal_access_token(
             &Session::stateless(identity.user_id, identity.ip_address),
             &name,
+        )
+        .await?;
+
+    // TODO: Move this to system
+    let command = DeletePersonalAccessToken { name };
+    system
+        .metadata
+        .apply(
+            DELETE_PERSONAL_ACCESS_TOKEN_CODE,
+            identity.user_id,
+            &command.as_bytes(),
+            None,
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

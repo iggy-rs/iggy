@@ -26,7 +26,12 @@ pub async fn handle(
         .await?;
     system
         .metadata
-        .apply(DELETE_CONSUMER_GROUP_CODE, &command.as_bytes())
+        .apply(
+            DELETE_CONSUMER_GROUP_CODE,
+            session.get_user_id(),
+            &command.as_bytes(),
+            None,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

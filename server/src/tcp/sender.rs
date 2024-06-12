@@ -6,7 +6,10 @@ use tracing::debug;
 
 const STATUS_OK: &[u8] = &[0; 4];
 
-pub(crate) async fn read<T>(stream: &mut T, buffer: BytesMut) -> (Result<usize, IggyError>, BytesMut)
+pub(crate) async fn read<T>(
+    stream: &mut T,
+    buffer: BytesMut,
+) -> (Result<usize, IggyError>, BytesMut)
 where
     T: AsyncReadRent + AsyncWriteRent + Unpin,
 {

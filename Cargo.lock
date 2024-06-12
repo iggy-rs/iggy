@@ -2494,6 +2494,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "murmur3"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9252111cf132ba0929b6f8e030cac2a24b507f3a4d6db6fb2896f27b354c714b"
+
+[[package]]
 name = "nanorand"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3882,6 +3888,7 @@ dependencies = [
  "moka",
  "monoio",
  "monoio-native-tls",
+ "murmur3",
  "native-tls",
  "prometheus-client",
  "rcgen",

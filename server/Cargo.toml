@@ -68,6 +68,7 @@ ulid = "1.1.2"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.10", features = ["xxh32"] }
 native-tls = "0.2.11"
+murmur3 = "0.5.2"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = { version = "0.5", optional = true }

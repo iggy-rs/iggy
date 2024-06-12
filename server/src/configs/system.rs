@@ -123,8 +123,16 @@ impl SystemConfig {
         self.path.to_string()
     }
 
-    pub fn get_metadata_path(&self) -> String {
-        format!("{}/store", self.get_system_path())
+    pub fn get_state_path(&self) -> String {
+        format!("{}/state", self.get_system_path())
+    }
+
+    pub fn get_state_log_path(&self) -> String {
+        format!("{}/log", self.get_state_path())
+    }
+
+    pub fn get_state_info_path(&self) -> String {
+        format!("{}/info", self.get_state_path())
     }
 
     pub fn get_backup_path(&self) -> String {

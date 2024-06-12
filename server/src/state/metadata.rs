@@ -11,7 +11,6 @@ use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
-use tokio::fs::create_dir;
 use tokio::io::{AsyncReadExt, BufReader};
 use tracing::info;
 
@@ -104,7 +103,6 @@ impl BytesSerializable for MetadataEntry {
 pub struct FileMetadata {
     current_index: AtomicU64,
     term: AtomicU64,
-    directory: String,
     path: String,
     persister: Arc<dyn Persister>,
 }
@@ -128,8 +126,7 @@ impl FileMetadata {
         Self {
             current_index: AtomicU64::new(0),
             term: AtomicU64::new(1),
-            directory: path.into(),
-            path: format!("{}/metadata", path),
+            path: path.into(),
             persister,
         }
     }
@@ -138,14 +135,8 @@ impl FileMetadata {
 #[async_trait]
 impl Metadata for FileMetadata {
     async fn init(&self) -> Result<Vec<MetadataEntry>, IggyError> {
-        if !Path::new(&self.directory).exists() && create_dir(&self.directory).await.is_err() {
-            return Err(IggyError::CannotCreateMetadataDirectory(
-                self.directory.to_owned(),
-            ));
-        }
-
         if !Path::new(&self.path).exists() {
-            info!("Metadata file does not exist, creating a new one");
+            info!("Store file does not exist, creating a new one");
             self.persister.overwrite(&self.path, &[]).await?;
             return Ok(Vec::new());
         }
@@ -153,7 +144,7 @@ impl Metadata for FileMetadata {
         let file = file::open(&self.path).await?;
         let file_size = file.metadata().await?.len();
         if file_size == 0 {
-            info!("Metadata file is empty");
+            info!("Store file is empty");
             return Ok(Vec::new());
         }
 

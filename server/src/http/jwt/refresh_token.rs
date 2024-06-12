@@ -65,7 +65,7 @@ mod tests {
     #[test]
     fn refresh_access_token_should_be_expired_given_passed_expiry() {
         let user_id = 1;
-        let now = IggyTimestamp::now().to_secs();
+        let now = IggyTimestamp::now().to_micros();
         let expiry = 1;
         let (refresh_token, _) = RefreshToken::new(user_id, now, expiry);
         assert!(refresh_token.is_expired(now + expiry + 1));

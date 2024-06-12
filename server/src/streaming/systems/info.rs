@@ -11,6 +11,7 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct SystemInfo {
+    pub path: String,
     pub version: Version,
     pub migrations: Vec<Migration>,
 }
@@ -38,8 +39,11 @@ pub struct SemanticVersion {
 
 impl System {
     pub(crate) async fn load_version(&mut self) -> Result<(), IggyError> {
-        info!("Loading system info...");
-        let mut system_info = SystemInfo::default();
+        let mut system_info = SystemInfo {
+            path: self.config.get_state_info_path(),
+            ..Default::default()
+        };
+        info!("Loading system info from path: {}", system_info.path);
         if let Err(err) = self.storage.info.load(&mut system_info).await {
             match err {
                 IggyError::ResourceNotFound(_) => {

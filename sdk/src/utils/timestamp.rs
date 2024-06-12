@@ -57,7 +57,7 @@ impl From<u64> for IggyTimestamp {
 
 impl From<IggyTimestamp> for u64 {
     fn from(timestamp: IggyTimestamp) -> u64 {
-        timestamp.to_secs()
+        timestamp.to_micros()
     }
 }
 

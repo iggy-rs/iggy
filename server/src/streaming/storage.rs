@@ -140,7 +140,7 @@ pub struct SystemStorage {
 impl SystemStorage {
     pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
         Self {
-            info: Arc::new(FileSystemInfoStorage::new(db.clone())),
+            info: Arc::new(FileSystemInfoStorage::new(persister.clone())),
             stream: Arc::new(FileStreamStorage::new(db.clone())),
             topic: Arc::new(FileTopicStorage::new(db.clone())),
             partition: Arc::new(FilePartitionStorage::new(db.clone())),

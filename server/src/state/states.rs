@@ -24,10 +24,11 @@ use iggy::users::delete_user::DeleteUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::from_utf8;
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 #[derive(Debug)]
 pub struct SystemState {
@@ -268,6 +269,15 @@ impl SystemState {
                     let expiry = command
                         .expiry
                         .map(|e| entry.timestamp.to_micros() + e as u64 * 1_000_000);
+
+                    let now = IggyTimestamp::now().to_micros();
+                    if let Some(expiry) = expiry {
+                        if expiry < now {
+                            debug!("Personal access token: {token_hash} has already expired.");
+                            continue;
+                        }
+                    }
+
                     user.personal_access_tokens.insert(
                         command.name.clone(),
                         PersonalAccessTokenState {

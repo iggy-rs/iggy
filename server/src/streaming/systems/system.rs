@@ -96,7 +96,7 @@ impl System {
             false => Arc::new(FilePersister {}),
         };
         let metadata = Arc::new(FileMetadata::new(
-            &config.get_metadata_path(),
+            &config.get_state_log_path(),
             persister.clone(),
         ));
         Self::create(
@@ -142,9 +142,13 @@ impl System {
 
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let system_path = self.config.get_system_path();
-
         if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
             return Err(IggyError::CannotCreateBaseDirectory(system_path));
+        }
+
+        let state_path = self.config.get_state_path();
+        if !Path::new(&state_path).exists() && create_dir(&state_path).await.is_err() {
+            return Err(IggyError::CannotCreateStateDirectory(state_path));
         }
 
         let streams_path = self.config.get_streams_path();

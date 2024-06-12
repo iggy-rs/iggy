@@ -63,7 +63,6 @@ async fn create_personal_access_token(
         )
         .await?;
 
-    // TODO: Move this to system
     let token_hash = PersonalAccessToken::hash_token(&token);
     system
         .metadata
@@ -89,15 +88,12 @@ async fn delete_personal_access_token(
             &name,
         )
         .await?;
-
-    // TODO: Move this to system
-    let command = DeletePersonalAccessToken { name };
     system
         .metadata
         .apply(
             DELETE_PERSONAL_ACCESS_TOKEN_CODE,
             identity.user_id,
-            &command.as_bytes(),
+            &DeletePersonalAccessToken { name }.as_bytes(),
             None,
         )
         .await?;

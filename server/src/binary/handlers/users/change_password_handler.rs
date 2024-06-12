@@ -27,17 +27,17 @@ pub async fn handle(
         .await?;
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let command = ChangePassword {
-        user_id: command.user_id.to_owned(),
-        current_password: "".into(),
-        new_password: crypto::hash_password(&command.new_password),
-    };
     system
         .metadata
         .apply(
             CHANGE_PASSWORD_CODE,
             session.get_user_id(),
-            &command.as_bytes(),
+            &ChangePassword {
+                user_id: command.user_id.to_owned(),
+                current_password: "".into(),
+                new_password: crypto::hash_password(&command.new_password),
+            }
+            .as_bytes(),
             None,
         )
         .await?;

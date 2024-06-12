@@ -28,18 +28,18 @@ pub async fn handle(
         .await?;
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let command = CreateUser {
-        username: command.username.to_owned(),
-        password: crypto::hash_password(&command.password),
-        status: command.status,
-        permissions: command.permissions.clone(),
-    };
     system
         .metadata
         .apply(
             CREATE_USER_CODE,
             session.get_user_id(),
-            &command.as_bytes(),
+            &CreateUser {
+                username: command.username.to_owned(),
+                password: crypto::hash_password(&command.password),
+                status: command.status,
+                permissions: command.permissions.clone(),
+            }
+            .as_bytes(),
             None,
         )
         .await?;

@@ -84,7 +84,7 @@ pub struct ConsumerGroupState {
     pub name: String,
 }
 
-// TODO: Add PATs, also consider handling stream and topic purge
+// TODO: Consider handling stream and topic purge
 impl SystemState {
     pub async fn init(entries: Vec<MetadataEntry>) -> Result<Self, IggyError> {
         let mut streams = HashMap::new();

@@ -7,7 +7,10 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::{CREATE_CONSUMER_GROUP_CODE, DELETE_CONSUMER_GROUP_CODE};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::identifier::Identifier;
 use iggy::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use iggy::validatable::Validatable;
@@ -72,19 +75,34 @@ async fn create_consumer_group(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    let mut system = state.system.write();
-    let consumer_group = system
-        .create_consumer_group(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.stream_id,
-            &command.topic_id,
-            command.group_id,
-            &command.name,
-        )
-        .await?;
-    let consumer_group = consumer_group.read().await;
-    let consumer_group = mapper::map_consumer_group(&consumer_group).await;
-    Ok((StatusCode::CREATED, Json(consumer_group)))
+    let consumer_group_details;
+    {
+        let mut system = state.system.write();
+        let consumer_group = system
+            .create_consumer_group(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.stream_id,
+                &command.topic_id,
+                command.group_id,
+                &command.name,
+            )
+            .await?;
+        let consumer_group = consumer_group.read().await;
+        consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
+    }
+    {
+        let system = state.system.read();
+        system
+            .metadata
+            .apply(
+                CREATE_CONSUMER_GROUP_CODE,
+                identity.user_id,
+                &command.as_bytes(),
+                None,
+            )
+            .await?;
+    }
+    Ok((StatusCode::CREATED, Json(consumer_group_details)))
 }
 
 async fn delete_consumer_group(
@@ -104,5 +122,20 @@ async fn delete_consumer_group(
             &group_id,
         )
         .await?;
+    system
+        .metadata
+        .apply(
+            DELETE_CONSUMER_GROUP_CODE,
+            identity.user_id,
+            &DeleteConsumerGroup {
+                stream_id,
+                topic_id,
+                group_id,
+            }
+            .as_bytes(),
+            None,
+        )
+        .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }

@@ -4,15 +4,22 @@ use crate::http::mapper;
 use crate::http::mapper::map_generated_tokens_to_identity_info;
 use crate::http::shared::AppState;
 use crate::streaming::session::Session;
+use crate::streaming::utils::crypto;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post, put};
 use axum::{Extension, Json, Router};
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::{
+    CHANGE_PASSWORD_CODE, CREATE_USER_CODE, DELETE_USER_CODE, UPDATE_PERMISSIONS_CODE,
+    UPDATE_USER_CODE,
+};
 use iggy::identifier::Identifier;
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
+use iggy::users::delete_user::DeleteUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
@@ -78,6 +85,23 @@ async fn create_user(
             command.permissions.clone(),
         )
         .await?;
+
+    // For the security of the system, we hash the password before storing it in metadata.
+    system
+        .metadata
+        .apply(
+            CREATE_USER_CODE,
+            identity.user_id,
+            &CreateUser {
+                username: command.username.to_owned(),
+                password: crypto::hash_password(&command.password),
+                status: command.status,
+                permissions: command.permissions.clone(),
+            }
+            .as_bytes(),
+            None,
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -89,6 +113,7 @@ async fn update_user(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
+    let bytes = command.as_bytes();
     let mut system = state.system.write();
     system
         .update_user(
@@ -97,6 +122,10 @@ async fn update_user(
             command.username,
             command.status,
         )
+        .await?;
+    system
+        .metadata
+        .apply(UPDATE_USER_CODE, identity.user_id, &bytes, None)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -109,6 +138,7 @@ async fn update_permissions(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
+    let bytes = command.as_bytes();
     let mut system = state.system.write();
     system
         .update_permissions(
@@ -116,6 +146,10 @@ async fn update_permissions(
             &command.user_id,
             command.permissions,
         )
+        .await?;
+    system
+        .metadata
+        .apply(UPDATE_PERMISSIONS_CODE, identity.user_id, &bytes, None)
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -137,6 +171,21 @@ async fn change_password(
             &command.new_password,
         )
         .await?;
+    // For the security of the system, we hash the password before storing it in metadata.
+    system
+        .metadata
+        .apply(
+            CHANGE_PASSWORD_CODE,
+            identity.user_id,
+            &ChangePassword {
+                user_id: command.user_id.to_owned(),
+                current_password: "".into(),
+                new_password: crypto::hash_password(&command.new_password),
+            }
+            .as_bytes(),
+            None,
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -151,6 +200,15 @@ async fn delete_user(
         .delete_user(
             &Session::stateless(identity.user_id, identity.ip_address),
             &user_id,
+        )
+        .await?;
+    system
+        .metadata
+        .apply(
+            DELETE_USER_CODE,
+            identity.user_id,
+            &DeleteUser { user_id }.as_bytes(),
+            None,
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

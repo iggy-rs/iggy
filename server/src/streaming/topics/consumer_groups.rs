@@ -105,11 +105,6 @@ impl Topic {
         self.consumer_groups.insert(id, RwLock::new(consumer_group));
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;
-        let consumer_group_guard = consumer_group.read().await;
-        self.storage
-            .topic
-            .save_consumer_group(self, &consumer_group_guard)
-            .await?;
         info!(
             "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
             id, self.topic_id, self.stream_id
@@ -137,11 +132,6 @@ impl Topic {
             let consumer_group = consumer_group.read().await;
             let group_id = consumer_group.group_id;
             self.consumer_groups_ids.remove(&consumer_group.name);
-            self.storage
-                .topic
-                .delete_consumer_group(self, &consumer_group)
-                .await?;
-
             let current_group_id = self.current_consumer_group_id.load(Ordering::SeqCst);
             if current_group_id > group_id {
                 self.current_consumer_group_id

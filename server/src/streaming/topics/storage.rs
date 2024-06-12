@@ -252,6 +252,7 @@ impl Storage<Topic> for FileTopicStorage {
                 .insert(partition.partition_id, IggySharedMut::new(partition));
         }
 
+        // TODO: Add consumer groups to the topic
         self.load_consumer_groups(topic).await?;
         topic.load_messages_from_disk_to_cache().await?;
 
@@ -326,10 +327,6 @@ impl Storage<Topic> for FileTopicStorage {
             .with_context(|| format!("Failed to delete topic with key: {key}"))
         {
             return Err(IggyError::CannotDeleteResource(err));
-        }
-        for consumer_group in topic.consumer_groups.values() {
-            let consumer_group = consumer_group.read().await;
-            self.delete_consumer_group(topic, &consumer_group).await?;
         }
         if fs::remove_dir_all(&topic.path).await.is_err() {
             return Err(IggyError::CannotDeleteTopicDirectory(

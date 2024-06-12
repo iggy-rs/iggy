@@ -2,7 +2,6 @@ use bytes::Bytes;
 use iggy::messages::send_messages::Message;
 
 mod common;
-mod consumer_group;
 mod consumer_offset;
 mod messages;
 mod partition;

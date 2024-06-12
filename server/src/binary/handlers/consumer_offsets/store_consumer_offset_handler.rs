@@ -17,6 +17,8 @@ pub async fn handle(
     let system = system.read();
     let consumer =
         PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
+
+    // TODO: Consumer offset should be stored to a single file, not the existing DB.
     system
         .store_consumer_offset(
             session,

@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::default::Default;
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
@@ -7,6 +8,7 @@ use crate::streaming::create_messages;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
+use server::state::states::{PartitionState, TopicState};
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
 use tokio::fs;
@@ -84,13 +86,32 @@ async fn should_load_existing_topic_from_disk() {
         let mut loaded_topic = Topic::empty(
             stream_id,
             topic_id,
+            &name,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
             setup.config.clone(),
             setup.storage.clone(),
         );
-        loaded_topic.load().await.unwrap();
+        let topic_state = TopicState {
+            id: topic_id,
+            name,
+            partitions: if partitions_count == 0 {
+                HashMap::new()
+            } else {
+                (1..=partitions_count)
+                    .map(|id| (id, PartitionState { id }))
+                    .collect()
+            },
+            consumer_groups: Default::default(),
+            compression_algorithm: Default::default(),
+            message_expiry: None,
+            max_topic_size: None,
+            replication_factor: Some(1),
+            created_at: Default::default(),
+            current_consumer_group_id: 0,
+        };
+        loaded_topic.load(topic_state).await.unwrap();
 
         assert_eq!(loaded_topic.stream_id, topic.stream_id);
         assert_eq!(loaded_topic.topic_id, topic.topic_id);

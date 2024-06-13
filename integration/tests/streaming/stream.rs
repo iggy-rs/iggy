@@ -3,8 +3,11 @@ use crate::streaming::create_messages;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
+use iggy::utils::timestamp::IggyTimestamp;
+use server::state::states::StreamState;
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::streams::stream::Stream;
+use std::collections::HashMap;
 use tokio::fs;
 
 #[tokio::test]
@@ -43,9 +46,20 @@ async fn should_load_existing_stream_from_disk() {
         stream.persist().await.unwrap();
         assert_persisted_stream(&stream.path, &setup.config.topic.path).await;
 
-        let mut loaded_stream =
-            Stream::empty(stream_id, setup.config.clone(), setup.storage.clone());
-        loaded_stream.load().await.unwrap();
+        let mut loaded_stream = Stream::empty(
+            stream_id,
+            &name,
+            setup.config.clone(),
+            setup.storage.clone(),
+        );
+        let state = StreamState {
+            id: stream_id,
+            name: name.clone(),
+            created_at: IggyTimestamp::now(),
+            topics: HashMap::new(),
+            current_topic_id: 0,
+        };
+        loaded_stream.load(state).await.unwrap();
 
         assert_eq!(loaded_stream.stream_id, stream.stream_id);
         assert_eq!(loaded_stream.name, stream.name);

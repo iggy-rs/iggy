@@ -25,8 +25,13 @@ pub struct Stream {
 }
 
 impl Stream {
-    pub fn empty(id: u32, config: Arc<SystemConfig>, storage: Arc<SystemStorage>) -> Self {
-        Stream::create(id, "", config, storage)
+    pub fn empty(
+        id: u32,
+        name: &str,
+        config: Arc<SystemConfig>,
+        storage: Arc<SystemStorage>,
+    ) -> Self {
+        Stream::create(id, name, config, storage)
     }
 
     pub fn create(

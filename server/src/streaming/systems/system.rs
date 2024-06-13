@@ -175,8 +175,9 @@ impl System {
         info!("{state}");
         let now = Instant::now();
         self.load_version().await?;
-        self.load_users(&state).await?;
-        self.load_streams().await?;
+        self.load_users(state.users.into_values().collect()).await?;
+        self.load_streams(state.streams.into_values().collect())
+            .await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
     }

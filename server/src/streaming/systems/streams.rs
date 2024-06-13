@@ -1,3 +1,4 @@
+use crate::state::states::StreamState;
 use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::system::System;
@@ -7,6 +8,7 @@ use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::text;
 use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 use tokio::fs::read_dir;
 use tracing::{error, info};
@@ -14,7 +16,10 @@ use tracing::{error, info};
 static CURRENT_STREAM_ID: AtomicU32 = AtomicU32::new(1);
 
 impl System {
-    pub(crate) async fn load_streams(&mut self) -> Result<(), IggyError> {
+    pub(crate) async fn load_streams(
+        &mut self,
+        streams: Vec<StreamState>,
+    ) -> Result<(), IggyError> {
         info!("Loading streams from disk...");
         let mut unloaded_streams = Vec::new();
         let dir_entries = read_dir(&self.config.get_streams_path()).await;
@@ -33,14 +38,51 @@ impl System {
             }
 
             let stream_id = stream_id.unwrap();
-            let stream = Stream::empty(stream_id, self.config.clone(), self.storage.clone());
+            let stream_state = streams.iter().find(|s| s.id == stream_id);
+            if stream_state.is_none() {
+                error!("Stream with ID: '{stream_id}' was not found in state, but exists on disk.");
+                continue;
+            }
+
+            let stream_state = stream_state.unwrap();
+            let mut stream = Stream::empty(
+                stream_id,
+                &stream_state.name,
+                self.config.clone(),
+                self.storage.clone(),
+            );
+            stream.created_at = stream_state.created_at;
             unloaded_streams.push(stream);
         }
 
+        let state_stream_ids = streams
+            .iter()
+            .map(|stream| stream.id)
+            .collect::<HashSet<u32>>();
+        let unloaded_stream_ids = unloaded_streams
+            .iter()
+            .map(|stream| stream.stream_id)
+            .collect::<HashSet<u32>>();
+        let missing_ids = state_stream_ids
+            .difference(&unloaded_stream_ids)
+            .copied()
+            .collect::<HashSet<u32>>();
+        if missing_ids.is_empty() {
+            info!("All streams found on disk were found in state.");
+        } else {
+            error!("Streams with IDs: '{missing_ids:?}' were not found on disk.");
+            return Err(IggyError::MissingStreams);
+        }
+
+        let mut streams_states = streams
+            .into_iter()
+            .map(|s| (s.id, s))
+            .collect::<HashMap<_, _>>();
         let loaded_streams = RefCell::new(Vec::new());
         let load_stream_tasks = unloaded_streams.into_iter().map(|mut stream| {
+            let state = streams_states.remove(&stream.stream_id).unwrap();
             let load_stream_task = async {
-                stream.load().await?;
+                stream.load(state).await?;
                 loaded_streams.borrow_mut().push(stream);
                 Result::<(), IggyError>::Ok(())
             };

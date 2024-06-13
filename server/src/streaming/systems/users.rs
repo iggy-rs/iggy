@@ -1,4 +1,4 @@
-use crate::state::states::SystemState;
+use crate::state::states::UserState;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
@@ -22,9 +22,9 @@ static USER_ID: AtomicU32 = AtomicU32::new(1);
 const MAX_USERS: usize = u32::MAX as usize;
 
 impl System {
-    pub(crate) async fn load_users(&mut self, state: &SystemState) -> Result<(), IggyError> {
+    pub(crate) async fn load_users(&mut self, users: Vec<UserState>) -> Result<(), IggyError> {
         info!("Loading users...");
-        if state.users.is_empty() {
+        if users.is_empty() {
             info!("No users found, creating the root user...");
             let root = Self::create_root_user();
             let command = CreateUser {
@@ -41,18 +41,18 @@ impl System {
             info!("Created the root user.");
         }
 
-        for (_, user_state) in state.users.iter() {
+        for user_state in users.into_iter() {
             let mut user = User::with_password(
                 user_state.id,
                 &user_state.username,
-                user_state.password_hash.to_owned(),
+                user_state.password_hash,
                 user_state.status,
-                user_state.permissions.clone(),
+                user_state.permissions,
             );
 
             user.personal_access_tokens = user_state
                 .personal_access_tokens
-                .values()
+                .into_values()
                 .map(|token| {
                     (
                         token.token_hash.clone(),

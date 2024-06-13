@@ -40,9 +40,11 @@ pub struct Topic {
 }
 
 impl Topic {
+    #[allow(clippy::too_many_arguments)]
     pub fn empty(
         stream_id: u32,
         topic_id: u32,
+        name: &str,
         size_of_parent_stream: Arc<AtomicU64>,
         messages_count_of_parent_stream: Arc<AtomicU64>,
         segments_count_of_parent_stream: Arc<AtomicU32>,
@@ -52,7 +54,7 @@ impl Topic {
         Topic::create(
             stream_id,
             topic_id,
-            "",
+            name,
             0,
             config,
             storage,

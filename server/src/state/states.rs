@@ -40,8 +40,9 @@ pub struct SystemState {
 pub struct StreamState {
     pub id: u32,
     pub name: String,
+    pub created_at: IggyTimestamp,
     pub topics: HashMap<u32, TopicState>,
-    current_topic_id: u32,
+    pub current_topic_id: u32,
 }
 
 #[derive(Debug)]
@@ -54,7 +55,8 @@ pub struct TopicState {
     pub message_expiry: Option<u32>,
     pub max_topic_size: Option<IggyByteSize>,
     pub replication_factor: Option<u8>,
-    current_consumer_group_id: u32,
+    pub created_at: IggyTimestamp,
+    pub current_consumer_group_id: u32,
 }
 
 #[derive(Debug)]
@@ -110,6 +112,7 @@ impl SystemState {
                         name: command.name.clone(),
                         topics: HashMap::new(),
                         current_topic_id: 0,
+                        created_at: entry.timestamp,
                     };
                     streams.insert(stream.id, stream);
                 }
@@ -141,6 +144,7 @@ impl SystemState {
                         message_expiry: command.message_expiry,
                         max_topic_size: command.max_topic_size,
                         replication_factor: command.replication_factor,
+                        created_at: entry.timestamp,
                         partitions: if command.partitions_count == 0 {
                             HashMap::new()
                         } else {

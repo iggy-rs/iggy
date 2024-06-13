@@ -1,4 +1,5 @@
 use super::batching::message_batch::RetainedMessageBatch;
+use crate::state::states::{StreamState, TopicState};
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
 use crate::streaming::persistence::persister::Persister;
@@ -11,7 +12,6 @@ use crate::streaming::streams::storage::FileStreamStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::systems::storage::FileSystemInfoStorage;
-use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::user::User;
@@ -54,21 +54,17 @@ pub trait PersonalAccessTokenStorage: Storage<PersonalAccessToken> {
 }
 
 #[async_trait]
-pub trait StreamStorage: Storage<Stream> {}
+pub trait StreamStorage: Send + Sync {
+    async fn load(&self, stream: &mut Stream, state: StreamState) -> Result<(), IggyError>;
+    async fn save(&self, stream: &Stream) -> Result<(), IggyError>;
+    async fn delete(&self, stream: &Stream) -> Result<(), IggyError>;
+}
 
 #[async_trait]
-pub trait TopicStorage: Storage<Topic> {
-    async fn save_consumer_group(
-        &self,
-        topic: &Topic,
-        consumer_group: &ConsumerGroup,
-    ) -> Result<(), IggyError>;
-    async fn load_consumer_groups(&self, topic: &Topic) -> Result<Vec<ConsumerGroup>, IggyError>;
-    async fn delete_consumer_group(
-        &self,
-        topic: &Topic,
-        consumer_group: &ConsumerGroup,
-    ) -> Result<(), IggyError>;
+pub trait TopicStorage: Send + Sync {
+    async fn load(&self, topic: &mut Topic, state: TopicState) -> Result<(), IggyError>;
+    async fn save(&self, topic: &Topic) -> Result<(), IggyError>;
+    async fn delete(&self, topic: &Topic) -> Result<(), IggyError>;
 }
 
 #[async_trait]
@@ -141,8 +137,8 @@ impl SystemStorage {
     pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(persister.clone())),
-            stream: Arc::new(FileStreamStorage::new(db.clone())),
-            topic: Arc::new(FileTopicStorage::new(db.clone())),
+            stream: Arc::new(FileStreamStorage),
+            topic: Arc::new(FileTopicStorage),
             partition: Arc::new(FilePartitionStorage::new(db.clone())),
             segment: Arc::new(FileSegmentStorage::new(persister.clone())),
         }
@@ -228,8 +224,8 @@ pub(crate) mod tests {
     impl SystemInfoStorage for TestSystemInfoStorage {}
 
     #[async_trait]
-    impl Storage<Stream> for TestStreamStorage {
-        async fn load(&self, _stream: &mut Stream) -> Result<(), IggyError> {
+    impl StreamStorage for TestStreamStorage {
+        async fn load(&self, _stream: &mut Stream, _state: StreamState) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -242,11 +238,9 @@ pub(crate) mod tests {
         }
     }
 
-    impl StreamStorage for TestStreamStorage {}
-
     #[async_trait]
-    impl Storage<Topic> for TestTopicStorage {
-        async fn load(&self, _topic: &mut Topic) -> Result<(), IggyError> {
+    impl TopicStorage for TestTopicStorage {
+        async fn load(&self, _topic: &mut Topic, _state: TopicState) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -255,32 +249,6 @@ pub(crate) mod tests {
         }
 
         async fn delete(&self, _topic: &Topic) -> Result<(), IggyError> {
-            Ok(())
-        }
-    }
-
-    #[async_trait]
-    impl TopicStorage for TestTopicStorage {
-        async fn save_consumer_group(
-            &self,
-            _topic: &Topic,
-            _consumer_group: &ConsumerGroup,
-        ) -> Result<(), IggyError> {
-            Ok(())
-        }
-
-        async fn load_consumer_groups(
-            &self,
-            _topic: &Topic,
-        ) -> Result<Vec<ConsumerGroup>, IggyError> {
-            Ok(vec![])
-        }
-
-        async fn delete_consumer_group(
-            &self,
-            _topic: &Topic,
-            _consumer_group: &ConsumerGroup,
-        ) -> Result<(), IggyError> {
             Ok(())
         }
     }

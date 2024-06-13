@@ -176,6 +176,10 @@ pub enum IggyError {
     InvalidStreamId = 1014,
     #[error("Cannot read streams")]
     CannotReadStreams = 1015,
+    #[error("Missing streams")]
+    MissingStreams = 1016,
+    #[error("Missing topics for stream with ID: {0}")]
+    MissingTopics(u32) = 1017,
     #[error("Cannot create topics directory for stream with ID: {0}, Path: {1}")]
     CannotCreateTopicsDirectory(u32, String) = 2000,
     #[error(

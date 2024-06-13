@@ -1,10 +1,11 @@
+use crate::state::states::StreamState;
 use crate::streaming::streams::stream::Stream;
 use iggy::error::IggyError;
 
 impl Stream {
-    pub async fn load(&mut self) -> Result<(), IggyError> {
+    pub async fn load(&mut self, state: StreamState) -> Result<(), IggyError> {
         let storage = self.storage.clone();
-        storage.stream.load(self).await
+        storage.stream.load(self, state).await
     }
 
     pub async fn persist(&self) -> Result<(), IggyError> {

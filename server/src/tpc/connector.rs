@@ -5,15 +5,18 @@ use std::{
     task::Poll,
 };
 
-pub struct ShardConnector<T> {
+pub type StopSender = local_sync::mpsc::bounded::Tx<()>;
+pub type StopReceiver = local_sync::mpsc::bounded::Rx<()>;
+
+pub struct ShardConnector<T: Clone> {
     pub id: u16,
     pub sender: Sender<T>,
     pub receiver: Receiver<T>,
 }
 
-impl<T> ShardConnector<T> {
-    pub fn new(id: u16) -> Self {
-        let channel = Arc::new(ShardedChannel::new(1));
+impl<T: Clone> ShardConnector<T> {
+    pub fn new(id: u16, max_concurrent_thread_count: usize) -> Self {
+        let channel = Arc::new(ShardedChannel::new(max_concurrent_thread_count));
         let (sender, receiver) = channel.unbounded();
         Self {
             id,
@@ -28,16 +31,16 @@ impl<T> ShardConnector<T> {
 }
 
 #[derive(Clone)]
-pub struct Receiver<T> {
+pub struct Receiver<T: Clone> {
     channel: Arc<ShardedChannel<T>>,
 }
 
 #[derive(Clone)]
-pub struct Sender<T> {
+pub struct Sender<T: Clone> {
     channel: Arc<ShardedChannel<T>>,
 }
 
-impl<T> Sender<T> {
+impl<T: Clone> Sender<T> {
     pub fn send(&self, data: T) {
         self.channel
             .task_queue
@@ -65,13 +68,13 @@ impl<T> ShardedChannel<T> {
     }
 }
 
-pub trait ShardedChannelsSplit<T> {
+pub trait ShardedChannelsSplit<T: Clone> {
     fn unbounded(&self) -> (Sender<T>, Receiver<T>);
 
     fn sender(&self) -> Sender<T>;
 }
 
-impl<T> ShardedChannelsSplit<T> for Arc<ShardedChannel<T>> {
+impl<T: Clone> ShardedChannelsSplit<T> for Arc<ShardedChannel<T>> {
     fn unbounded(&self) -> (Sender<T>, Receiver<T>) {
         let tx = self.sender();
         let rx = Receiver {
@@ -88,7 +91,7 @@ impl<T> ShardedChannelsSplit<T> for Arc<ShardedChannel<T>> {
     }
 }
 
-impl<T> Stream for Receiver<T> {
+impl<T: Clone> Stream for Receiver<T> {
     type Item = T;
     fn poll_next(
         self: std::pin::Pin<&mut Self>,

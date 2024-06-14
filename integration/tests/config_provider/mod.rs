@@ -35,7 +35,6 @@ async fn validate_server_config_json_from_repository() {
 #[serial]
 #[tokio::test]
 async fn validate_custom_env_provider() {
-    let expected_database_path = "awesome_database_path";
     let expected_datagram_send_buffer_size = "1.00 KB";
     let expected_quic_certificate_self_signed = false;
     let expected_http_enabled = false;
@@ -43,7 +42,6 @@ async fn validate_custom_env_provider() {
     let expected_message_saver_enabled = false;
     let expected_message_expiry = "10s";
 
-    env::set_var("IGGY_SYSTEM_DATABASE_PATH", expected_database_path);
     env::set_var(
         "IGGY_QUIC_DATAGRAM_SEND_BUFFER_SIZE",
         expected_datagram_send_buffer_size,
@@ -67,7 +65,6 @@ async fn validate_custom_env_provider() {
         .await
         .expect("Failed to load default server.toml config");
 
-    assert_eq!(config.system.database.path, expected_database_path);
     assert_eq!(
         config.quic.datagram_send_buffer_size.to_string(),
         expected_datagram_send_buffer_size
@@ -84,7 +81,6 @@ async fn validate_custom_env_provider() {
         expected_message_expiry
     );
 
-    env::remove_var("IGGY_SYSTEM_DATABASE_PATH");
     env::remove_var("IGGY_QUIC_DATAGRAM_SEND_BUFFER_SIZE");
     env::remove_var("IGGY_QUIC_CERTIFICATE_SELF_SIGNED");
     env::remove_var("IGGY_HTTP_ENABLED");

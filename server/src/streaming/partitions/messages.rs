@@ -593,6 +593,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
+            IggyTimestamp::now().to_micros(),
         )
     }
 }

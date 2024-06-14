@@ -7,9 +7,9 @@ use crate::configs::server::{
     PersonalAccessTokenConfig, ServerConfig,
 };
 use crate::configs::system::{
-    BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, DatabaseConfig,
-    EncryptionConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig,
-    RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
+    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RetentionPolicyConfig,
+    RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -233,7 +233,6 @@ impl Default for SystemConfig {
         SystemConfig {
             path: SERVER_CONFIG.system.path.parse().unwrap(),
             backup: BackupConfig::default(),
-            database: DatabaseConfig::default(),
             runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),
@@ -268,14 +267,6 @@ impl Default for CompatibilityConfig {
                 .path
                 .parse()
                 .unwrap(),
-        }
-    }
-}
-
-impl Default for DatabaseConfig {
-    fn default() -> DatabaseConfig {
-        DatabaseConfig {
-            path: SERVER_CONFIG.system.database.path.parse().unwrap(),
         }
     }
 }

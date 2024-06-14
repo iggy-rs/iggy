@@ -83,14 +83,11 @@ impl Partition {
             return Ok(());
         }
 
-        let consumer_offset = ConsumerOffset::new(
-            kind,
-            consumer_id,
-            offset,
-            self.stream_id,
-            self.topic_id,
-            self.partition_id,
-        );
+        let path = match kind {
+            ConsumerKind::Consumer => &self.consumer_offsets_path,
+            ConsumerKind::ConsumerGroup => &self.consumer_group_offsets_path,
+        };
+        let consumer_offset = ConsumerOffset::new(kind, consumer_id, offset, path);
         self.storage
             .partition
             .save_consumer_offset(&consumer_offset)
@@ -116,10 +113,14 @@ impl Partition {
         &self,
         kind: ConsumerKind,
     ) -> Result<(), IggyError> {
+        let path = match kind {
+            ConsumerKind::Consumer => &self.consumer_offsets_path,
+            ConsumerKind::ConsumerGroup => &self.consumer_group_offsets_path,
+        };
         let loaded_consumer_offsets = self
             .storage
             .partition
-            .load_consumer_offsets(kind, self.stream_id, self.topic_id, self.partition_id)
+            .load_consumer_offsets(kind, path)
             .await?;
         let consumer_offsets = self.get_consumer_offsets(kind);
         for consumer_offset in loaded_consumer_offsets {

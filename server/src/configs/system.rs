@@ -11,7 +11,6 @@ use serde_with::DisplayFromStr;
 pub struct SystemConfig {
     pub path: String,
     pub backup: BackupConfig,
-    pub database: DatabaseConfig,
     pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
     pub cache: CacheConfig,
@@ -23,11 +22,6 @@ pub struct SystemConfig {
     pub encryption: EncryptionConfig,
     pub compression: CompressionConfig,
     pub message_deduplication: MessageDeduplicationConfig,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct DatabaseConfig {
-    pub path: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -134,6 +128,9 @@ impl SystemConfig {
     pub fn get_state_info_path(&self) -> String {
         format!("{}/info", self.get_state_path())
     }
+    pub fn get_state_tokens_path(&self) -> String {
+        format!("{}/tokens", self.get_state_path())
+    }
 
     pub fn get_backup_path(&self) -> String {
         format!("{}/{}", self.get_system_path(), self.backup.path)
@@ -145,10 +142,6 @@ impl SystemConfig {
             self.get_backup_path(),
             self.backup.compatibility.path
         )
-    }
-
-    pub fn get_database_path(&self) -> String {
-        format!("{}/{}", self.get_system_path(), self.database.path)
     }
 
     pub fn get_runtime_path(&self) -> String {
@@ -184,6 +177,37 @@ impl SystemConfig {
             "{}/{}",
             self.get_partitions_path(stream_id, topic_id),
             partition_id
+        )
+    }
+
+    pub fn get_offsets_path(&self, stream_id: u32, topic_id: u32, partition_id: u32) -> String {
+        format!(
+            "{}/offsets",
+            self.get_partition_path(stream_id, topic_id, partition_id)
+        )
+    }
+
+    pub fn get_consumer_offsets_path(
+        &self,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> String {
+        format!(
+            "{}/consumers",
+            self.get_offsets_path(stream_id, topic_id, partition_id)
+        )
+    }
+
+    pub fn get_consumer_group_offsets_path(
+        &self,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> String {
+        format!(
+            "{}/groups",
+            self.get_offsets_path(stream_id, topic_id, partition_id)
         )
     }
 

@@ -1,5 +1,5 @@
 use super::batching::message_batch::RetainedMessageBatch;
-use crate::state::states::{StreamState, TopicState};
+use crate::state::states::{PartitionState, StreamState, TopicState};
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
 use crate::streaming::persistence::persister::Persister;
@@ -19,7 +19,6 @@ use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
-use sled::Db;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -68,22 +67,18 @@ pub trait TopicStorage: Send + Sync {
 }
 
 #[async_trait]
-pub trait PartitionStorage: Storage<Partition> {
+pub trait PartitionStorage: Send + Sync {
+    async fn load(&self, partition: &mut Partition, state: PartitionState)
+        -> Result<(), IggyError>;
+    async fn save(&self, partition: &Partition) -> Result<(), IggyError>;
+    async fn delete(&self, partition: &Partition) -> Result<(), IggyError>;
     async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError>;
     async fn load_consumer_offsets(
         &self,
         kind: ConsumerKind,
-        stream_id: u32,
-        topic_id: u32,
-        partition_id: u32,
+        path: &str,
     ) -> Result<Vec<ConsumerOffset>, IggyError>;
-    async fn delete_consumer_offsets(
-        &self,
-        kind: ConsumerKind,
-        stream_id: u32,
-        topic_id: u32,
-        partition_id: u32,
-    ) -> Result<(), IggyError>;
+    async fn delete_consumer_offsets(&self, path: &str) -> Result<(), IggyError>;
 }
 
 #[async_trait]
@@ -131,16 +126,18 @@ pub struct SystemStorage {
     pub topic: Arc<dyn TopicStorage>,
     pub partition: Arc<dyn PartitionStorage>,
     pub segment: Arc<dyn SegmentStorage>,
+    pub persister: Arc<dyn Persister>,
 }
 
 impl SystemStorage {
-    pub fn new(db: Arc<Db>, persister: Arc<dyn Persister>) -> Self {
+    pub fn new(persister: Arc<dyn Persister>) -> Self {
         Self {
             info: Arc::new(FileSystemInfoStorage::new(persister.clone())),
             stream: Arc::new(FileStreamStorage),
             topic: Arc::new(FileTopicStorage),
-            partition: Arc::new(FilePartitionStorage::new(db.clone())),
+            partition: Arc::new(FilePartitionStorage::new(persister.clone())),
             segment: Arc::new(FileSegmentStorage::new(persister.clone())),
+            persister,
         }
     }
 }
@@ -154,12 +151,6 @@ impl Debug for dyn SystemInfoStorage {
 impl Debug for dyn UserStorage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "UserStorage")
-    }
-}
-
-impl Debug for dyn PersonalAccessTokenStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "PersonalAccessTokenStorage")
     }
 }
 
@@ -199,11 +190,27 @@ pub(crate) mod tests {
     use async_trait::async_trait;
     use std::sync::Arc;
 
+    struct TestPersister {}
     struct TestSystemInfoStorage {}
     struct TestStreamStorage {}
     struct TestTopicStorage {}
     struct TestPartitionStorage {}
     struct TestSegmentStorage {}
+
+    #[async_trait]
+    impl Persister for TestPersister {
+        async fn append(&self, _path: &str, _bytes: &[u8]) -> Result<(), IggyError> {
+            Ok(())
+        }
+
+        async fn overwrite(&self, _path: &str, _bytes: &[u8]) -> Result<(), IggyError> {
+            Ok(())
+        }
+
+        async fn delete(&self, _path: &str) -> Result<(), IggyError> {
+            Ok(())
+        }
+    }
 
     #[async_trait]
     impl Storage<SystemInfo> for TestSystemInfoStorage {
@@ -254,8 +261,12 @@ pub(crate) mod tests {
     }
 
     #[async_trait]
-    impl Storage<Partition> for TestPartitionStorage {
-        async fn load(&self, _partition: &mut Partition) -> Result<(), IggyError> {
+    impl PartitionStorage for TestPartitionStorage {
+        async fn load(
+            &self,
+            _partition: &mut Partition,
+            _state: PartitionState,
+        ) -> Result<(), IggyError> {
             Ok(())
         }
 
@@ -266,10 +277,7 @@ pub(crate) mod tests {
         async fn delete(&self, _partition: &Partition) -> Result<(), IggyError> {
             Ok(())
         }
-    }
 
-    #[async_trait]
-    impl PartitionStorage for TestPartitionStorage {
         async fn save_consumer_offset(&self, _offset: &ConsumerOffset) -> Result<(), IggyError> {
             Ok(())
         }
@@ -277,20 +285,12 @@ pub(crate) mod tests {
         async fn load_consumer_offsets(
             &self,
             _kind: ConsumerKind,
-            _stream_id: u32,
-            _topic_id: u32,
-            _partition_id: u32,
+            _path: &str,
         ) -> Result<Vec<ConsumerOffset>, IggyError> {
             Ok(vec![])
         }
 
-        async fn delete_consumer_offsets(
-            &self,
-            _kind: ConsumerKind,
-            _stream_id: u32,
-            _topic_id: u32,
-            _partition_id: u32,
-        ) -> Result<(), IggyError> {
+        async fn delete_consumer_offsets(&self, _path: &str) -> Result<(), IggyError> {
             Ok(())
         }
     }
@@ -395,6 +395,7 @@ pub(crate) mod tests {
             topic: Arc::new(TestTopicStorage {}),
             partition: Arc::new(TestPartitionStorage {}),
             segment: Arc::new(TestSegmentStorage {}),
+            persister: Arc::new(TestPersister {}),
         }
     }
 }

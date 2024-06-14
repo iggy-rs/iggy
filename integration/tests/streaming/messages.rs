@@ -5,6 +5,7 @@ use iggy::messages::send_messages::Message;
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::utils::timestamp::IggyTimestamp;
 use server::configs::system::{PartitionConfig, SystemConfig};
+use server::state::states::PartitionState;
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;
@@ -41,6 +42,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU32::new(0)),
+        IggyTimestamp::now().to_micros(),
     );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
@@ -170,6 +172,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU32::new(0)),
+        IggyTimestamp::now().to_micros(),
     );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
@@ -231,8 +234,12 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU32::new(0)),
+        IggyTimestamp::now().to_micros(),
     );
-    loaded_partition.load().await.unwrap();
+    let partition_state = PartitionState {
+        id: partition.partition_id,
+    };
+    loaded_partition.load(partition_state).await.unwrap();
     let loaded_messages = loaded_partition
         .get_messages_by_offset(0, messages_count)
         .await

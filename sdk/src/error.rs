@@ -92,10 +92,10 @@ pub enum IggyError {
     JwtMissing = 75,
     #[error("Cannot generate JWT")]
     CannotGenerateJwt = 76,
-    #[error("Refresh token is missing")]
-    RefreshTokenMissing = 77,
-    #[error("Invalid refresh token")]
-    InvalidRefreshToken = 78,
+    #[error("Access token is missing")]
+    AccessTokenMissing = 77,
+    #[error("Invalid access token")]
+    InvalidAccessToken = 78,
     #[error("Refresh token expired")]
     RefreshTokenExpired = 79,
     #[error("Client with ID: {0} was not found.")]
@@ -180,6 +180,8 @@ pub enum IggyError {
     MissingStreams = 1016,
     #[error("Missing topics for stream with ID: {0}")]
     MissingTopics(u32) = 1017,
+    #[error("Missing partitions for topic with ID: {0} for stream with ID: {1}.")]
+    MissingPartitions(u32, u32) = 1018,
     #[error("Cannot create topics directory for stream with ID: {0}, Path: {1}")]
     CannotCreateTopicsDirectory(u32, String) = 2000,
     #[error(
@@ -244,6 +246,10 @@ pub enum IggyError {
     PartitionNotFound(u32, u32, u32) = 3007,
     #[error("Topic with ID: {0} for stream with ID: {1} has no partitions.")]
     NoPartitions(u32, u32) = 3008,
+    #[error("Failed to delete consumer offsets directory for path: {0}")]
+    CannotDeleteConsumerOffsetsDirectory(String) = 3010,
+    #[error("Failed to read consumers offsets from path: {0}")]
+    CannotReadConsumerOffsets(String) = 3011,
     #[error("Segment not found")]
     SegmentNotFound = 4000,
     #[error("Segment with start offset: {0} and partition with ID: {1} is closed")]
@@ -306,8 +312,6 @@ pub enum IggyError {
     CommandLengthError(String) = 4029,
     #[error("Invalid offset: {0}")]
     InvalidOffset(u64) = 4100,
-    #[error("Failed to read consumers offsets for partition with ID: {0}")]
-    CannotReadConsumerOffsets(u32) = 4101,
     #[error("Consumer group with ID: {0} for topic with ID: {1} was not found.")]
     ConsumerGroupIdNotFound(u32, u32) = 5000,
     #[error("Consumer group with ID: {0} for topic with ID: {1} already exists.")]

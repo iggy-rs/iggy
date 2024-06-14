@@ -10,7 +10,6 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::permissioner::Permissioner;
 use iggy::error::IggyError;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
-use sled::Db;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -66,7 +65,6 @@ pub struct System {
     pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
-    pub(crate) db: Option<Arc<Db>>,
     pub(crate) metadata: Arc<dyn Metadata>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
@@ -76,21 +74,7 @@ pub struct System {
 const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 
 impl System {
-    pub fn new(
-        config: Arc<SystemConfig>,
-        db: Option<Arc<Db>>,
-        pat_config: PersonalAccessTokenConfig,
-    ) -> System {
-        let db = match db {
-            Some(db) => db,
-            None => {
-                let db = sled::open(config.get_database_path());
-                if db.is_err() {
-                    panic!("Cannot open database at: {}", config.get_database_path());
-                }
-                Arc::new(db.unwrap())
-            }
-        };
+    pub fn new(config: Arc<SystemConfig>, pat_config: PersonalAccessTokenConfig) -> System {
         let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
@@ -99,19 +83,12 @@ impl System {
             &config.get_state_log_path(),
             persister.clone(),
         ));
-        Self::create(
-            config,
-            SystemStorage::new(db.clone(), persister),
-            Some(db),
-            metadata,
-            pat_config,
-        )
+        Self::create(config, SystemStorage::new(persister), metadata, pat_config)
     }
 
     pub fn create(
         config: Arc<SystemConfig>,
         storage: SystemStorage,
-        db: Option<Arc<Db>>,
         metadata: Arc<dyn Metadata>,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
@@ -134,7 +111,6 @@ impl System {
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
             users: HashMap::new(),
-            db,
             metadata,
             personal_access_token: pat_config,
         }

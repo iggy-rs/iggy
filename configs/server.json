@@ -94,9 +94,6 @@
   },
   "system": {
     "path": "local_data",
-    "database": {
-      "path": "database"
-    },
     "backup": {
       "path": "backup",
       "compatibility": {

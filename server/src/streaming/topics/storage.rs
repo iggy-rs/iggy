@@ -11,7 +11,9 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs;
@@ -33,7 +35,7 @@ struct ConsumerGroupData {
 
 #[async_trait]
 impl TopicStorage for FileTopicStorage {
-    async fn load(&self, topic: &mut Topic, state: TopicState) -> Result<(), IggyError> {
+    async fn load(&self, topic: &mut Topic, mut state: TopicState) -> Result<(), IggyError> {
         info!("Loading topic {} from disk...", topic);
         if !Path::new(&topic.path).exists() {
             return Err(IggyError::TopicIdNotFound(topic.topic_id, topic.stream_id));
@@ -80,6 +82,13 @@ impl TopicStorage for FileTopicStorage {
             }
 
             let partition_id = partition_id.unwrap();
+            let partition_state = state.partitions.get(&partition_id);
+            if partition_state.is_none() {
+                error!("Partition with ID: '{}' for stream with ID: '{}' and topic with ID: '{}' was not found in state, but exists on disk.",
+                           partition_id, topic.topic_id, topic.stream_id);
+                continue;
+            }
+
             let partition = Partition::create(
                 topic.stream_id,
                 topic.topic_id,
@@ -93,8 +102,34 @@ impl TopicStorage for FileTopicStorage {
                 topic.size_of_parent_stream.clone(),
                 topic.size_bytes.clone(),
                 topic.segments_count_of_parent_stream.clone(),
+                IggyTimestamp::now().to_micros(),
             );
             unloaded_partitions.push(partition);
+        }
+
+        let state_partition_ids = state.partitions.keys().copied().collect::<HashSet<u32>>();
+        let unloaded_partition_ids = unloaded_partitions
+            .iter()
+            .map(|partition| partition.partition_id)
+            .collect::<HashSet<u32>>();
+        let missing_ids = state_partition_ids
+            .difference(&unloaded_partition_ids)
+            .copied()
+            .collect::<HashSet<u32>>();
+        if missing_ids.is_empty() {
+            info!(
+                "All partitions for topic with ID: '{}' for stream with ID: '{}' found on disk were found in state.",
+                topic.topic_id, topic.stream_id
+            );
+        } else {
+            error!(
+                "Partitions with IDs: '{missing_ids:?}' for topic with ID: '{topic_id}' for stream with ID: '{stream_id}' were not found on disk.",
+                topic_id = topic.topic_id, stream_id = topic.stream_id
+            );
+            return Err(IggyError::MissingPartitions(
+                topic.topic_id,
+                topic.stream_id,
+            ));
         }
 
         let stream_id = topic.stream_id;
@@ -103,8 +138,9 @@ impl TopicStorage for FileTopicStorage {
         let mut load_partitions = Vec::new();
         for mut partition in unloaded_partitions {
             let loaded_partitions = loaded_partitions.clone();
+            let partition_state = state.partitions.remove(&partition.partition_id).unwrap();
             let load_partition = tokio::spawn(async move {
-                match partition.load().await {
+                match partition.load(partition_state).await {
                     Ok(_) => {
                         loaded_partitions.lock().await.push(partition);
                     }

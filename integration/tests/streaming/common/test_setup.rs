@@ -1,7 +1,6 @@
 use server::configs::system::SystemConfig;
 use server::streaming::persistence::persister::FilePersister;
 use server::streaming::storage::SystemStorage;
-use sled::Db;
 use std::sync::Arc;
 use tokio::fs;
 use uuid::Uuid;
@@ -9,7 +8,6 @@ use uuid::Uuid;
 pub struct TestSetup {
     pub config: Arc<SystemConfig>,
     pub storage: Arc<SystemStorage>,
-    pub db: Arc<Db>,
 }
 
 impl TestSetup {
@@ -23,13 +21,8 @@ impl TestSetup {
         let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();
         let persister = FilePersister {};
-        let db = Arc::new(sled::open(config.get_database_path()).unwrap());
-        let storage = Arc::new(SystemStorage::new(db.clone(), Arc::new(persister)));
-        TestSetup {
-            config,
-            storage,
-            db,
-        }
+        let storage = Arc::new(SystemStorage::new(Arc::new(persister)));
+        TestSetup { config, storage }
     }
 
     pub async fn create_streams_directory(&self) {

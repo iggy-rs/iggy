@@ -1,7 +1,7 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
-use crate::http::mapper::map_generated_tokens_to_identity_info;
+use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
@@ -110,5 +110,5 @@ async fn login_with_personal_access_token(
         .login_with_personal_access_token(&command.token, None)
         .await?;
     let tokens = state.jwt_manager.generate(user.id)?;
-    Ok(Json(map_generated_tokens_to_identity_info(tokens)))
+    Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }

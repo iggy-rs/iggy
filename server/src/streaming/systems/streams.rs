@@ -352,7 +352,6 @@ mod tests {
         let mut system = System::create(
             config,
             storage,
-            None,
             Arc::new(TestMetadata::default()),
             PersonalAccessTokenConfig::default(),
         );

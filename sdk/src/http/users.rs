@@ -119,14 +119,13 @@ impl UserClient for HttpClient {
             )
             .await?;
         let identity_info = response.json().await?;
-        self.set_tokens_from_identity(&identity_info).await?;
+        self.set_token_from_identity(&identity_info).await?;
         Ok(identity_info)
     }
 
     async fn logout_user(&self) -> Result<(), IggyError> {
         self.delete(&format!("{PATH}/logout")).await?;
         self.set_access_token(None).await;
-        self.set_refresh_token(None).await;
         Ok(())
     }
 }

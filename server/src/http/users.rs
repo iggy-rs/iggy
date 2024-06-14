@@ -1,7 +1,7 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
-use crate::http::mapper::map_generated_tokens_to_identity_info;
+use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
 use crate::streaming::session::Session;
 use crate::streaming::utils::crypto;
@@ -224,7 +224,7 @@ async fn login_user(
         .login_user(&command.username, &command.password, None)
         .await?;
     let tokens = state.jwt_manager.generate(user.id)?;
-    Ok(Json(map_generated_tokens_to_identity_info(tokens)))
+    Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }
 
 async fn logout_user(
@@ -246,11 +246,11 @@ async fn refresh_token(
     State(state): State<Arc<AppState>>,
     Json(command): Json<RefreshToken>,
 ) -> Result<Json<IdentityInfo>, CustomError> {
-    let tokens = state.jwt_manager.refresh_token(&command.refresh_token)?;
-    Ok(Json(map_generated_tokens_to_identity_info(tokens)))
+    let token = state.jwt_manager.refresh_token(&command.token).await?;
+    Ok(Json(map_generated_access_token_to_identity_info(token)))
 }
 
 #[derive(Debug, Deserialize)]
 struct RefreshToken {
-    refresh_token: String,
+    token: String,
 }

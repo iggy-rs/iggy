@@ -18,13 +18,6 @@ pub fn start_expired_tokens_cleaner(app_state: Arc<AppState>) {
                 .unwrap_or_else(|err| {
                     error!("Failed to delete expired revoked access tokens. Error: {err}",);
                 });
-            app_state
-                .jwt_manager
-                .delete_expired_refresh_tokens(now)
-                .await
-                .unwrap_or_else(|err: iggy::error::IggyError| {
-                    error!("Failed to delete expired refresh tokens. Error: {}", err);
-                });
         }
     });
 }

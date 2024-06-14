@@ -1,4 +1,4 @@
-use local_sync::mpsc::SendError;
+use flume::SendError;
 
 use super::{
     connector::{Receiver, ShardConnector, StopReceiver, StopSender},
@@ -23,8 +23,11 @@ impl IggyShard {
             .iter()
             .filter(|c| c.id == id)
             .map(|c| {
-                let (stop_sender, stop_receiver) = local_sync::mpsc::bounded::channel(1);
-                (stop_sender, stop_receiver, c.receiver.clone())
+                (
+                    c.stop_sender.clone(),
+                    c.stop_receiver.clone(),
+                    c.receiver.clone(),
+                )
             })
             .next()
             .unwrap();
@@ -46,8 +49,8 @@ impl IggyShard {
         }
     }
 
-    pub async fn stop(self) -> Result<(), SendError> {
-        self.stop_sender.send(()).await?;
+    pub async fn stop(self) -> Result<(), SendError<()>> {
+        self.stop_sender.send_async(()).await?;
         Ok(())
     }
 }
@@ -60,6 +63,9 @@ pub struct Shard<T: Clone> {
 impl<T: Clone> Shard<T> {
     pub fn new(name: String, connection: ShardConnector<T>) -> Self {
         let hash = hash_string(&name).unwrap();
-        Self { hash, connection }
+        Self {
+            hash,
+            connection,
+        }
     }
 }

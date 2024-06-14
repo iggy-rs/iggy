@@ -5,23 +5,28 @@ use std::{
     task::Poll,
 };
 
-pub type StopSender = local_sync::mpsc::bounded::Tx<()>;
-pub type StopReceiver = local_sync::mpsc::bounded::Rx<()>;
+pub type StopSender = flume::Sender<()>;
+pub type StopReceiver = flume::Receiver<()>;
 
 pub struct ShardConnector<T: Clone> {
     pub id: u16,
     pub sender: Sender<T>,
     pub receiver: Receiver<T>,
+    pub stop_receiver: StopReceiver,
+    pub stop_sender: StopSender,
 }
 
 impl<T: Clone> ShardConnector<T> {
     pub fn new(id: u16, max_concurrent_thread_count: usize) -> Self {
         let channel = Arc::new(ShardedChannel::new(max_concurrent_thread_count));
         let (sender, receiver) = channel.unbounded();
+        let (stop_sender, stop_receiver) = flume::bounded(1);
         Self {
             id,
             receiver,
             sender,
+            stop_receiver,
+            stop_sender,
         }
     }
 

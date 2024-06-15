@@ -96,8 +96,6 @@ pub enum IggyError {
     AccessTokenMissing = 77,
     #[error("Invalid access token")]
     InvalidAccessToken = 78,
-    #[error("Refresh token expired")]
-    RefreshTokenExpired = 79,
     #[error("Client with ID: {0} was not found.")]
     ClientNotFound(u32) = 100,
     #[error("Invalid client ID")]

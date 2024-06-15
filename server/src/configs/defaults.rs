@@ -157,7 +157,6 @@ impl Default for HttpJwtConfig {
                 .map(|s| s.parse().unwrap())
                 .collect(),
             access_token_expiry: SERVER_CONFIG.http.jwt.access_token_expiry.parse().unwrap(),
-            refresh_token_expiry: SERVER_CONFIG.http.jwt.refresh_token_expiry.parse().unwrap(),
             clock_skew: SERVER_CONFIG.http.jwt.clock_skew.parse().unwrap(),
             not_before: SERVER_CONFIG.http.jwt.not_before.parse().unwrap(),
             encoding_secret: SERVER_CONFIG.http.jwt.encoding_secret.parse().unwrap(),

@@ -7,6 +7,7 @@ use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
 use iggy::utils::duration::IggyDuration;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use jsonwebtoken::{encode, Algorithm, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use std::collections::HashMap;
@@ -16,8 +17,7 @@ use tracing::{debug, error, info};
 pub struct IssuerOptions {
     pub issuer: String,
     pub audience: String,
-    pub access_token_expiry: IggyDuration,
-    pub refresh_token_expiry: IggyDuration,
+    pub access_token_expiry: IggyExpiry,
     pub not_before: IggyDuration,
     pub key: EncodingKey,
     pub algorithm: Algorithm,
@@ -70,8 +70,7 @@ impl JwtManager {
         let issuer = IssuerOptions {
             issuer: config.issuer.clone(),
             audience: config.audience.clone(),
-            access_token_expiry: config.access_token_expiry,
-            refresh_token_expiry: config.refresh_token_expiry,
+            access_token_expiry: config.access_token_expiry.clone(),
             not_before: config.not_before,
             key: config.get_encoding_key()?,
             algorithm,
@@ -142,10 +141,14 @@ impl JwtManager {
 
     pub fn generate(&self, user_id: UserId) -> Result<GeneratedToken, IggyError> {
         let header = Header::new(self.issuer.algorithm);
-        let now = IggyTimestamp::now().to_micros();
+        let now = IggyTimestamp::now().to_secs();
         let iat = now;
-        let exp = iat + self.issuer.access_token_expiry.as_micros();
-        let nbf = iat + self.issuer.not_before.as_micros();
+        let exp = iat
+            + (match self.issuer.access_token_expiry {
+                IggyExpiry::NeverExpire => 1_000_000_000,
+                IggyExpiry::ExpireDuration(duration) => duration.as_secs(),
+            }) as u64;
+        let nbf = iat + self.issuer.not_before.as_secs() as u64;
         let claims = JwtClaims {
             jti: uuid::Uuid::new_v4().to_string(),
             sub: user_id,

@@ -64,10 +64,7 @@ valid_issuers = ["iggy.rs"]
 valid_audiences = ["iggy.rs"]
 
 # Expiry time for access tokens.
-access_token_expiry = "1 h"
-
-# Expiry time for refresh tokens.
-refresh_token_expiry = "1 d"
+access_token_expiry = "10 s"
 
 # Tolerance for timing discrepancies during token validation.
 clock_skew = "5 s"

@@ -2,6 +2,7 @@ use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::get_topics::GetTopics;
+use crate::utils::expiry::IggyExpiry;
 use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
@@ -87,8 +88,8 @@ impl CliCommand for GetTopicsCmd {
                         },
                         topic.compression_algorithm.to_string(),
                         match topic.message_expiry {
-                            Some(value) => format!("{}", value),
-                            None => String::from("unlimited"),
+                            IggyExpiry::NeverExpire => String::from("unlimited"),
+                            IggyExpiry::ExpireDuration(value) => format!("{}", value),
                         },
                         format!("{}", topic.messages_count),
                         format!("{}", topic.partitions_count),
@@ -111,8 +112,8 @@ impl CliCommand for GetTopicsCmd {
                         },
                         topic.compression_algorithm.to_string(),
                         match topic.message_expiry {
-                            Some(value) => format!("{}", value),
-                            None => String::from("unlimited"),
+                IggyExpiry::NeverExpire => String::from("unlimited"),
+                IggyExpiry::ExpireDuration(value) => format!("{}", value),
                         },
                         topic.messages_count,
                         topic.partitions_count

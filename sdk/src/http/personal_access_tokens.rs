@@ -29,7 +29,7 @@ impl PersonalAccessTokenClient for HttpClient {
                 PATH,
                 &CreatePersonalAccessToken {
                     name: name.to_string(),
-                    expiry: expiry.into(),
+                    expiry,
                 },
             )
             .await?;

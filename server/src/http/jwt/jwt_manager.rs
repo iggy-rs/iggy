@@ -70,7 +70,7 @@ impl JwtManager {
         let issuer = IssuerOptions {
             issuer: config.issuer.clone(),
             audience: config.audience.clone(),
-            access_token_expiry: config.access_token_expiry.clone(),
+            access_token_expiry: config.access_token_expiry,
             not_before: config.not_before,
             key: config.get_encoding_key()?,
             algorithm,
@@ -110,7 +110,7 @@ impl JwtManager {
         let mut tokens_to_delete = Vec::new();
         let revoked_tokens = self.revoked_tokens.read().await;
         for (id, expiry) in revoked_tokens.iter() {
-            if expiry < &now {
+            if expiry <= &now {
                 tokens_to_delete.push(id.to_string());
             }
         }

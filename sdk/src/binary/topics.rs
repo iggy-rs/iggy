@@ -75,7 +75,7 @@ impl<B: BinaryClient> TopicClient for B {
                 compression_algorithm,
                 replication_factor,
                 topic_id,
-                message_expiry: message_expiry.into(),
+                message_expiry,
                 max_topic_size,
             }
             .as_bytes(),
@@ -103,7 +103,7 @@ impl<B: BinaryClient> TopicClient for B {
                 name: name.to_string(),
                 compression_algorithm,
                 replication_factor,
-                message_expiry: message_expiry.into(),
+                message_expiry,
                 max_topic_size,
             }
             .as_bytes(),

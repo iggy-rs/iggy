@@ -266,10 +266,10 @@ size = "4 GB"
 # Data retention policy configuration.
 [system.retention_policy]
 # Configures the message time-based expiry setting.
-# "disabled" means messages are kept indefinitely.
+# "none" means messages are kept indefinitely.
 # A time value in human-readable format determines the lifespan of messages.
 # Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
-message_expiry = "disabled"
+message_expiry = "none"
 
 # Configures the topic size-based expiry setting.
 # "unlimited" or "0" means topics are kept indefinitely.

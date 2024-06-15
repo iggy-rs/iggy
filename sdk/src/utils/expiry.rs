@@ -1,6 +1,9 @@
 use crate::utils::duration::IggyDuration;
 use humantime::format_duration;
 use humantime::Duration as HumanDuration;
+use serde::de::Visitor;
+use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
+use std::fmt;
 use std::fmt::Display;
 use std::iter::Sum;
 use std::ops::Add;
@@ -8,11 +11,12 @@ use std::str::FromStr;
 use std::time::Duration;
 
 /// Helper enum for various time-based expiry related functionalities
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Copy, Default, Clone, Eq, PartialEq)]
 pub enum IggyExpiry {
     /// Set expiry time to given value
     ExpireDuration(IggyDuration),
     /// Never expire
+    #[default]
     NeverExpire,
 }
 
@@ -22,10 +26,10 @@ impl IggyExpiry {
     }
 }
 
-impl From<&IggyExpiry> for Option<u32> {
+impl From<&IggyExpiry> for Option<u64> {
     fn from(value: &IggyExpiry) -> Self {
         match value {
-            IggyExpiry::ExpireDuration(value) => Some(value.as_secs()),
+            IggyExpiry::ExpireDuration(value) => Some(value.as_micros()),
             IggyExpiry::NeverExpire => None,
         }
     }
@@ -87,11 +91,20 @@ impl FromStr for IggyExpiry {
     }
 }
 
-impl From<IggyExpiry> for Option<u32> {
+impl From<IggyExpiry> for Option<u64> {
     fn from(val: IggyExpiry) -> Self {
         match val {
-            IggyExpiry::ExpireDuration(value) => Some(value.as_secs()),
+            IggyExpiry::ExpireDuration(value) => Some(value.as_micros()),
             IggyExpiry::NeverExpire => None,
+        }
+    }
+}
+
+impl From<IggyExpiry> for u64 {
+    fn from(val: IggyExpiry) -> Self {
+        match val {
+            IggyExpiry::ExpireDuration(value) => value.as_micros(),
+            IggyExpiry::NeverExpire => 0,
         }
     }
 }
@@ -106,12 +119,60 @@ impl From<Vec<IggyExpiry>> for IggyExpiry {
     }
 }
 
-impl From<Option<u32>> for IggyExpiry {
-    fn from(value: Option<u32>) -> Self {
+impl From<u64> for IggyExpiry {
+    fn from(value: u64) -> Self {
         match value {
-            Some(value) => IggyExpiry::ExpireDuration(IggyDuration::from(value as u64)),
+            0 => IggyExpiry::NeverExpire,
+            value => IggyExpiry::ExpireDuration(IggyDuration::from(value)),
+        }
+    }
+}
+
+impl From<Option<u64>> for IggyExpiry {
+    fn from(value: Option<u64>) -> Self {
+        match value {
+            Some(value) => IggyExpiry::ExpireDuration(IggyDuration::from(value)),
             None => IggyExpiry::NeverExpire,
         }
+    }
+}
+
+impl Serialize for IggyExpiry {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let expiry = match self {
+            IggyExpiry::ExpireDuration(value) => value.as_micros(),
+            IggyExpiry::NeverExpire => 0,
+        };
+        serializer.serialize_u64(expiry)
+    }
+}
+
+impl<'de> Deserialize<'de> for IggyExpiry {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_u64(IggyExpiryVisitor)
+    }
+}
+
+struct IggyExpiryVisitor;
+
+impl<'de> Visitor<'de> for IggyExpiryVisitor {
+    type Value = IggyExpiry;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a microsecond expiry as a u64")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(IggyExpiry::from(value))
     }
 }
 
@@ -127,19 +188,25 @@ mod tests {
         );
         assert_eq!(
             IggyExpiry::from_str("15days").unwrap(),
-            IggyExpiry::ExpireDuration(IggyDuration::from(60 * 60 * 24 * 15))
+            IggyExpiry::ExpireDuration(IggyDuration::from(1000000 * 60 * 60 * 24 * 15))
         );
         assert_eq!(
             IggyExpiry::from_str("2min").unwrap(),
-            IggyExpiry::ExpireDuration(IggyDuration::from(60 * 2))
+            IggyExpiry::ExpireDuration(IggyDuration::from(1000000 * 60 * 2))
+        );
+        assert_eq!(
+            IggyExpiry::from_str("1ms").unwrap(),
+            IggyExpiry::ExpireDuration(IggyDuration::from(1000))
         );
         assert_eq!(
             IggyExpiry::from_str("1s").unwrap(),
-            IggyExpiry::ExpireDuration(IggyDuration::from(1))
+            IggyExpiry::ExpireDuration(IggyDuration::from(1000000))
         );
         assert_eq!(
             IggyExpiry::from_str("15days 2min 2s").unwrap(),
-            IggyExpiry::ExpireDuration(IggyDuration::from(60 * 60 * 24 * 15 + 60 * 2 + 2))
+            IggyExpiry::ExpireDuration(IggyDuration::from(
+                1000000 * (60 * 60 * 24 * 15 + 60 * 2 + 2)
+            ))
         );
     }
 
@@ -198,7 +265,7 @@ mod tests {
     fn should_check_display_expiry() {
         assert_eq!(IggyExpiry::NeverExpire.to_string(), "none");
         assert_eq!(
-            IggyExpiry::ExpireDuration(IggyDuration::from(333333)).to_string(),
+            IggyExpiry::ExpireDuration(IggyDuration::from(333333000000)).to_string(),
             "3days 20h 35m 33s"
         );
     }
@@ -206,7 +273,7 @@ mod tests {
     #[test]
     fn should_calculate_none_from_never_expiry() {
         let expiry = IggyExpiry::NeverExpire;
-        let result: Option<u32> = From::from(&expiry);
+        let result: Option<u64> = From::from(&expiry);
         assert_eq!(result, None);
     }
 
@@ -214,8 +281,8 @@ mod tests {
     fn should_calculate_some_seconds_from_message_expire() {
         let duration = IggyDuration::new(Duration::new(42, 0));
         let expiry = IggyExpiry::ExpireDuration(duration);
-        let result: Option<u32> = From::from(&expiry);
-        assert_eq!(result, Some(42));
+        let result: Option<u64> = From::from(&expiry);
+        assert_eq!(result, Some(42000000));
     }
 
     #[test]

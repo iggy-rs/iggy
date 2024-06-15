@@ -210,10 +210,7 @@ async fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
     bytes.put_u32_le(topic.topic_id);
     bytes.put_u64_le(topic.created_at);
     bytes.put_u32_le(topic.get_partitions().len() as u32);
-    match topic.message_expiry {
-        Some(message_expiry) => bytes.put_u32_le(message_expiry),
-        None => bytes.put_u32_le(0),
-    };
+    bytes.put_u64_le(topic.message_expiry.into());
     bytes.put_u8(topic.compression_algorithm.as_code());
     match topic.max_topic_size {
         Some(max_topic_size) => bytes.put_u64_le(max_topic_size.as_bytes_u64()),
@@ -268,5 +265,12 @@ fn extend_user(user: &User, bytes: &mut BytesMut) {
 fn extend_pat(personal_access_token: &PersonalAccessToken, bytes: &mut BytesMut) {
     bytes.put_u8(personal_access_token.name.len() as u8);
     bytes.put_slice(personal_access_token.name.as_bytes());
-    bytes.put_u64_le(personal_access_token.expiry.unwrap_or(0));
+    match &personal_access_token.expiry_at {
+        Some(expiry_at) => {
+            bytes.put_u64_le(expiry_at.to_micros());
+        }
+        None => {
+            bytes.put_u64_le(0);
+        }
+    }
 }

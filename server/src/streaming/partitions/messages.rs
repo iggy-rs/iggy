@@ -517,6 +517,7 @@ impl Partition {
 
 #[cfg(test)]
 mod tests {
+    use iggy::utils::expiry::IggyExpiry;
     use std::sync::atomic::{AtomicU32, AtomicU64};
 
     use super::*;
@@ -587,7 +588,7 @@ mod tests {
             with_segment,
             config,
             storage,
-            None,
+            IggyExpiry::NeverExpire,
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),

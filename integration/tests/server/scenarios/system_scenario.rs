@@ -124,7 +124,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.compression_algorithm, CompressionAlgorithm::default());
     assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
-    assert_eq!(topic.message_expiry, None);
+    assert_eq!(topic.message_expiry, IggyExpiry::NeverExpire);
     assert_eq!(topic.max_topic_size, None);
     assert_eq!(topic.replication_factor, 1);
 
@@ -566,7 +566,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(updated_topic.name, updated_topic_name);
     assert_eq!(
         updated_topic.message_expiry,
-        Some(updated_message_expiry as u32)
+        IggyExpiry::ExpireDuration(message_expiry_duration)
     );
     assert_eq!(
         updated_topic.compression_algorithm,

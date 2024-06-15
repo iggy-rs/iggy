@@ -155,7 +155,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
                 .unwrap();
             assert_eq!(
                 topic_details.message_expiry,
-                Some(duration.as_secs() as u32)
+                IggyExpiry::ExpireDuration(duration.into())
             );
         }
 

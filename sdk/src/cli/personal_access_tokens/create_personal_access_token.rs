@@ -27,8 +27,8 @@ impl CreatePersonalAccessTokenCmd {
             create_token: CreatePersonalAccessToken {
                 name,
                 expiry: match &pat_expiry {
-                    None => None,
-                    Some(value) => value.into(),
+                    None => PersonalAccessTokenExpiry::NeverExpire,
+                    Some(value) => *value,
                 },
             },
             token_expiry: pat_expiry,
@@ -54,7 +54,7 @@ impl CliCommand for CreatePersonalAccessTokenCmd {
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         let token = client
-            .create_personal_access_token(&self.create_token.name, self.create_token.expiry.into())
+            .create_personal_access_token(&self.create_token.name, self.create_token.expiry)
             .await
             .with_context(|| {
                 format!(

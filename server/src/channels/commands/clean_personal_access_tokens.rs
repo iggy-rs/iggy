@@ -67,7 +67,7 @@ impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessToke
     async fn execute(&mut self, system: &SharedSystem, _command: CleanPersonalAccessTokensCommand) {
         // TODO: System write lock, investigate if it's necessary.
         let mut system = system.write();
-        let now = IggyTimestamp::now().to_micros();
+        let now = IggyTimestamp::now();
         let mut deleted_tokens_count = 0;
         for (_, user) in system.users.iter_mut() {
             let expired_tokens = user

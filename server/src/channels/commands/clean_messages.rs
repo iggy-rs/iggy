@@ -64,7 +64,7 @@ impl MessagesCleaner {
 #[async_trait]
 impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: CleanMessagesCommand) {
-        let now = IggyTimestamp::now().to_micros();
+        let now = IggyTimestamp::now();
         let system = system.read();
         let streams = system.get_streams();
         for stream in streams {
@@ -119,7 +119,7 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
 
 async fn delete_expired_segments(
     topic: &Topic,
-    now: u64,
+    now: IggyTimestamp,
 ) -> Result<Option<DeletedSegments>, IggyError> {
     let expired_segments = topic
         .get_expired_segments_start_offsets_per_partition(now)

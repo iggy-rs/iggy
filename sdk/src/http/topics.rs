@@ -54,7 +54,7 @@ impl TopicClient for HttpClient {
                 compression_algorithm,
                 replication_factor,
                 topic_id,
-                message_expiry: message_expiry.into(),
+                message_expiry,
                 max_topic_size,
             },
         )
@@ -80,7 +80,7 @@ impl TopicClient for HttpClient {
                 name: name.to_string(),
                 compression_algorithm,
                 replication_factor,
-                message_expiry: message_expiry.into(),
+                message_expiry,
                 max_topic_size,
             },
         )

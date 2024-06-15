@@ -122,7 +122,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let raw_pat1 = client
         .create_personal_access_token(
             pat_name1,
-            PersonalAccessTokenExpiry::ExpireDuration(3600.into()),
+            PersonalAccessTokenExpiry::ExpireDuration((1000000 * 3600).into()),
         )
         .await
         .unwrap();

@@ -6,6 +6,7 @@ use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
 
 impl System {
     pub fn find_topic(
@@ -42,7 +43,7 @@ impl System {
         topic_id: Option<u32>,
         name: &str,
         partitions_count: u32,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: Option<u8>,
@@ -78,7 +79,7 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
         name: &str,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: Option<u8>,

@@ -36,7 +36,7 @@ impl CreateTopicCmd {
                 partitions_count,
                 compression_algorithm,
                 name,
-                message_expiry: message_expiry.clone().into(),
+                message_expiry,
                 max_topic_size: Some(max_topic_size),
                 replication_factor: Some(replication_factor),
             },
@@ -62,7 +62,7 @@ impl CliCommand for CreateTopicCmd {
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         client
-            .create_topic(&self.create_topic.stream_id, &self.create_topic.name, self.create_topic.partitions_count, self.create_topic.compression_algorithm, self.create_topic.replication_factor, self.create_topic.topic_id, self.create_topic.message_expiry.into(), self.create_topic.max_topic_size)
+            .create_topic(&self.create_topic.stream_id, &self.create_topic.name, self.create_topic.partitions_count, self.create_topic.compression_algorithm, self.create_topic.replication_factor, self.create_topic.topic_id, self.create_topic.message_expiry, self.create_topic.max_topic_size)
             .await
             .with_context(|| {
                 format!(

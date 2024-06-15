@@ -3,6 +3,7 @@ use bytes::Bytes;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::messages::send_messages::Message;
 use iggy::models::header::{HeaderKey, HeaderValue};
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use server::configs::system::{PartitionConfig, SystemConfig};
 use server::state::states::PartitionState;
@@ -36,7 +37,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         true,
         config.clone(),
         setup.storage.clone(),
-        None,
+        IggyExpiry::NeverExpire,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -166,7 +167,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         true,
         config.clone(),
         setup.storage.clone(),
-        None,
+        IggyExpiry::NeverExpire,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
@@ -228,7 +229,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         false,
         config.clone(),
         setup.storage.clone(),
-        None,
+        IggyExpiry::NeverExpire,
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),

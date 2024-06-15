@@ -33,7 +33,7 @@ impl UpdateTopicCmd {
                 topic_id,
                 name,
                 compression_algorithm,
-                message_expiry: message_expiry.clone().into(),
+                message_expiry,
                 max_topic_size: Some(max_topic_size),
                 replication_factor: Some(replication_factor),
             },
@@ -52,7 +52,7 @@ impl CliCommand for UpdateTopicCmd {
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
         client
-            .update_topic(&self.update_topic.stream_id, &self.update_topic.topic_id, &self.update_topic.name, self.update_topic.compression_algorithm, self.replication_factor.into(), self.message_expiry.clone(), Some(self.max_topic_size))
+            .update_topic(&self.update_topic.stream_id, &self.update_topic.topic_id, &self.update_topic.name, self.update_topic.compression_algorithm, self.replication_factor.into(), self.message_expiry, Some(self.max_topic_size))
             .await
             .with_context(|| {
                 format!(

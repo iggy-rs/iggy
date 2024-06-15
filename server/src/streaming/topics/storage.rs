@@ -6,11 +6,9 @@ use crate::streaming::topics::topic::Topic;
 use anyhow::Context;
 use async_trait::async_trait;
 use futures::future::join_all;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -217,14 +215,4 @@ impl TopicStorage for FileTopicStorage {
 
         Ok(())
     }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct TopicData {
-    name: String,
-    created_at: u64,
-    message_expiry: Option<u32>,
-    compression_algorithm: CompressionAlgorithm,
-    max_topic_size: Option<IggyByteSize>,
-    replication_factor: u8,
 }

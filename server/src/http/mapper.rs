@@ -133,7 +133,7 @@ pub fn map_personal_access_tokens(
     for personal_access_token in personal_access_tokens {
         let personal_access_token = PersonalAccessTokenInfo {
             name: personal_access_token.name.clone(),
-            expiry: personal_access_token.expiry,
+            expiry_at: personal_access_token.expiry_at,
         };
         personal_access_tokens_data.push(personal_access_token);
     }

@@ -1,4 +1,5 @@
 use crate::compression::compression_algorithm::CompressionAlgorithm;
+use crate::utils::expiry::IggyExpiry;
 use crate::{models::partition::Partition, utils::byte_size::IggyByteSize};
 use serde::{Deserialize, Serialize};
 
@@ -23,8 +24,8 @@ pub struct Topic {
     pub name: String,
     /// The total size of the topic in bytes.
     pub size: IggyByteSize,
-    /// The optional expiry of the messages in the topic in seconds.
-    pub message_expiry: Option<u32>,
+    /// The expiry of the messages in the topic.
+    pub message_expiry: IggyExpiry,
     /// Compression algorithm for the topic.
     pub compression_algorithm: CompressionAlgorithm,
     /// The optional maximum size of the topic.
@@ -60,8 +61,8 @@ pub struct TopicDetails {
     pub name: String,
     /// The total size of the topic.
     pub size: IggyByteSize,
-    /// The optional expiry of the messages in the topic.
-    pub message_expiry: Option<u32>,
+    /// The expiry of the messages in the topic.
+    pub message_expiry: IggyExpiry,
     /// Compression algorithm for the topic.
     pub compression_algorithm: CompressionAlgorithm,
     /// The optional maximum size of the topic.

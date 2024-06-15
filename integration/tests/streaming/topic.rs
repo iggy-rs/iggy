@@ -8,6 +8,7 @@ use crate::streaming::create_messages;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
+use iggy::utils::expiry::IggyExpiry;
 use server::state::states::{PartitionState, TopicState};
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
@@ -32,7 +33,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            None,
+            IggyExpiry::NeverExpire,
             CompressionAlgorithm::default(),
             None,
             1,
@@ -69,7 +70,7 @@ async fn should_load_existing_topic_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            None,
+            IggyExpiry::NeverExpire,
             CompressionAlgorithm::default(),
             None,
             1,
@@ -105,7 +106,7 @@ async fn should_load_existing_topic_from_disk() {
             },
             consumer_groups: Default::default(),
             compression_algorithm: Default::default(),
-            message_expiry: None,
+            message_expiry: IggyExpiry::NeverExpire,
             max_topic_size: None,
             replication_factor: Some(1),
             created_at: Default::default(),
@@ -144,7 +145,7 @@ async fn should_delete_existing_topic_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            None,
+            IggyExpiry::NeverExpire,
             CompressionAlgorithm::default(),
             None,
             1,
@@ -183,7 +184,7 @@ async fn should_purge_existing_topic_on_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            None,
+            IggyExpiry::NeverExpire,
             CompressionAlgorithm::default(),
             None,
             1,

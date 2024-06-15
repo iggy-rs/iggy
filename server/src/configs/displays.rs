@@ -151,7 +151,7 @@ impl Display for RetentionPolicyConfig {
         write!(
             f,
             "{{ message_expiry {}, max_topic_size: {} }}",
-            self.message_expiry.as_secs(),
+            self.message_expiry,
             self.max_topic_size.as_human_string_with_zero_as_unlimited()
         )
     }

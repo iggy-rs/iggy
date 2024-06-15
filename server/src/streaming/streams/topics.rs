@@ -5,6 +5,7 @@ use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::text;
 use std::sync::atomic::Ordering;
 use tracing::{debug, info};
@@ -20,7 +21,7 @@ impl Stream {
         topic_id: Option<u32>,
         name: &str,
         partitions_count: u32,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
@@ -79,7 +80,7 @@ impl Stream {
         &mut self,
         id: &Identifier,
         name: &str,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
@@ -124,7 +125,6 @@ impl Stream {
             }
             topic.max_topic_size = max_topic_size;
             topic.replication_factor = replication_factor;
-
             topic.persist().await?;
             info!("Updated topic: {topic}");
         }
@@ -235,7 +235,7 @@ mod tests {
         let stream_name = "test_stream";
         let topic_id = 2;
         let topic_name = "test_topic";
-        let message_expiry = Some(10);
+        let message_expiry = IggyExpiry::NeverExpire;
         let compression_algorithm = CompressionAlgorithm::None;
         let max_topic_size = Some(IggyByteSize::from(100));
         let config = Arc::new(SystemConfig::default());

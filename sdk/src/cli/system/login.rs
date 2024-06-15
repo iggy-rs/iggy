@@ -6,7 +6,7 @@ use anyhow::Context;
 use async_trait::async_trait;
 use tracing::{event, Level};
 
-const DEFAULT_LOGIN_SESSION_TIMEOUT: u32 = 15 * 60;
+const DEFAULT_LOGIN_SESSION_TIMEOUT: u64 = 1000 * 15 * 60;
 
 pub struct LoginCmd {
     server_session: ServerSession,
@@ -64,7 +64,7 @@ impl CliCommand for LoginCmd {
                 &self.server_session.get_token_name(),
                 match &self.login_session_expiry {
                     None => Some(DEFAULT_LOGIN_SESSION_TIMEOUT).into(),
-                    Some(value) => value.clone(),
+                    Some(value) => *value,
                 },
             )
             .await

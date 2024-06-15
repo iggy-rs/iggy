@@ -7,6 +7,7 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
@@ -32,7 +33,7 @@ pub struct Topic {
     pub(crate) consumer_groups_ids: HashMap<String, u32>,
     pub(crate) current_consumer_group_id: AtomicU32,
     pub(crate) current_partition_id: AtomicU32,
-    pub message_expiry: Option<u32>,
+    pub message_expiry: IggyExpiry,
     pub compression_algorithm: CompressionAlgorithm,
     pub max_topic_size: Option<IggyByteSize>,
     pub replication_factor: u8,
@@ -61,7 +62,7 @@ impl Topic {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
+            IggyExpiry::NeverExpire,
             Default::default(),
             None,
             1,
@@ -80,7 +81,7 @@ impl Topic {
         size_of_parent_stream: Arc<AtomicU64>,
         messages_count_of_parent_stream: Arc<AtomicU64>,
         segments_count_of_parent_stream: Arc<AtomicU32>,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
@@ -104,15 +105,9 @@ impl Topic {
             consumer_groups_ids: HashMap::new(),
             current_consumer_group_id: AtomicU32::new(1),
             current_partition_id: AtomicU32::new(1),
-            message_expiry: match message_expiry {
-                Some(expiry) => match expiry {
-                    0 => None,
-                    _ => Some(expiry),
-                },
-                None => match config.retention_policy.message_expiry.as_secs() {
-                    0 => None,
-                    expiry => Some(expiry),
-                },
+            message_expiry: match config.retention_policy.message_expiry {
+                IggyExpiry::NeverExpire => message_expiry,
+                value => value,
             },
             compression_algorithm,
             max_topic_size,
@@ -177,7 +172,7 @@ mod tests {
         let topic_id = 2;
         let name = "test";
         let partitions_count = 3;
-        let message_expiry = 10;
+        let message_expiry = IggyExpiry::NeverExpire;
         let compression_algorithm = CompressionAlgorithm::None;
         let max_topic_size = IggyByteSize::from_str("2 GB").unwrap();
         let replication_factor = 1;
@@ -197,7 +192,7 @@ mod tests {
             messages_count_of_parent_stream,
             size_of_parent_stream,
             segments_count_of_parent_stream,
-            Some(message_expiry),
+            message_expiry,
             compression_algorithm,
             Some(max_topic_size),
             replication_factor,
@@ -209,7 +204,7 @@ mod tests {
         assert_eq!(topic.path, path);
         assert_eq!(topic.name, name);
         assert_eq!(topic.partitions.len(), partitions_count as usize);
-        assert_eq!(topic.message_expiry, Some(message_expiry));
+        assert_eq!(topic.message_expiry, message_expiry);
 
         for (id, partition) in topic.partitions {
             let partition = partition.read().await;

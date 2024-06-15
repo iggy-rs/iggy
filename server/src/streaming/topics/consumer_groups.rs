@@ -184,6 +184,7 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
+    use iggy::utils::expiry::IggyExpiry;
     use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
 
@@ -353,7 +354,7 @@ mod tests {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
+            IggyExpiry::NeverExpire,
             compression_algorithm,
             None,
             1,

@@ -10,6 +10,8 @@ use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
 use iggy::models::messages::PolledMessages;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
@@ -230,21 +232,18 @@ impl Topic {
 
     pub async fn get_expired_segments_start_offsets_per_partition(
         &self,
-        now: u64,
+        now: IggyTimestamp,
     ) -> HashMap<u32, Vec<u64>> {
         let mut expired_segments = HashMap::new();
-        if self.message_expiry.is_none() {
-            return expired_segments;
-        }
-
-        for (_, partition) in self.partitions.iter() {
-            let partition = partition.read().await;
-            let segments = partition.get_expired_segments_start_offsets(now).await;
-            if !segments.is_empty() {
-                expired_segments.insert(partition.partition_id, segments);
+        if let IggyExpiry::ExpireDuration(_) = self.message_expiry {
+            for (_, partition) in self.partitions.iter() {
+                let partition = partition.read().await;
+                let segments = partition.get_expired_segments_start_offsets(now).await;
+                if !segments.is_empty() {
+                    expired_segments.insert(partition.partition_id, segments);
+                }
             }
         }
-
         expired_segments
     }
 }
@@ -378,7 +377,7 @@ mod tests {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
+            IggyExpiry::NeverExpire,
             compression_algorithm,
             None,
             1,

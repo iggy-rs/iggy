@@ -111,12 +111,12 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
         assert!(stream.is_ok());
 
         let message_expiry = match &self.message_expiry {
-            None => None,
+            None => IggyExpiry::NeverExpire,
             Some(message_expiry) => {
                 let duration: Duration =
                     *message_expiry.join(" ").parse::<HumanDuration>().unwrap();
 
-                Some(duration.as_secs() as u32)
+                IggyExpiry::ExpireDuration(duration.into())
             }
         };
 
@@ -203,7 +203,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
                 .unwrap();
             assert_eq!(
                 topic_details.message_expiry,
-                Some(duration.as_secs() as u32)
+                IggyExpiry::ExpireDuration(duration.into())
             );
         }
 

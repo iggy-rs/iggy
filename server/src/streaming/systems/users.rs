@@ -60,7 +60,7 @@ impl System {
                             user_state.id,
                             &token.name,
                             &token.token_hash,
-                            token.expiry,
+                            token.expiry_at,
                         ),
                     )
                 })

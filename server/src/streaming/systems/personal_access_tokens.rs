@@ -3,6 +3,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
 use iggy::error::IggyError;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::text;
 use iggy::utils::timestamp::IggyTimestamp;
 use tracing::{error, info};
@@ -28,7 +29,7 @@ impl System {
         &mut self,
         session: &Session,
         name: &str,
-        expiry: Option<u32>,
+        expiry: IggyExpiry,
     ) -> Result<String, IggyError> {
         self.ensure_authenticated(session)?;
         let user_id = session.get_user_id();
@@ -60,7 +61,7 @@ impl System {
 
         info!("Creating personal access token: {name} for user with ID: {user_id}...");
         let (personal_access_token, token) =
-            PersonalAccessToken::new(user_id, &name, IggyTimestamp::now().to_micros(), expiry);
+            PersonalAccessToken::new(user_id, &name, IggyTimestamp::now(), expiry);
         user.personal_access_tokens
             .insert(personal_access_token.token.clone(), personal_access_token);
         info!("Created personal access token: {name} for user with ID: {user_id}.");
@@ -117,7 +118,7 @@ impl System {
         }
 
         let personal_access_token = personal_access_token.unwrap();
-        if personal_access_token.is_expired(IggyTimestamp::now().to_micros()) {
+        if personal_access_token.is_expired(IggyTimestamp::now()) {
             error!(
                 "Personal access token: {} for user with ID: {} has expired.",
                 personal_access_token.name, personal_access_token.user_id

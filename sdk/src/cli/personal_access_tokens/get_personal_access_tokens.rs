@@ -1,7 +1,6 @@
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
-use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -51,11 +50,9 @@ impl CliCommand for GetPersonalAccessTokensCmd {
                 tokens.iter().for_each(|token| {
                     table.add_row(vec![
                         format!("{}", token.name.clone()),
-                        match token.expiry {
-                            Some(value) => {
-                                IggyTimestamp::from(value).to_local_string("%Y-%m-%d %H:%M:%S")
-                            }
+                        match token.expiry_at {
                             None => String::from("unlimited"),
+                            Some(value) => value.to_local_string("%Y-%m-%d %H:%M:%S"),
                         },
                     ]);
                 });
@@ -67,9 +64,9 @@ impl CliCommand for GetPersonalAccessTokensCmd {
                     event!(target: PRINT_TARGET, Level::INFO,
                         "{}|{}",
                         token.name,
-                        match token.expiry {
-                            Some(value) => IggyTimestamp::from(value).to_local_string("%Y-%m-%d %H:%M:%S"),
+                        match token.expiry_at {
                             None => String::from("unlimited"),
+                            Some(value) => value.to_local_string("%Y-%m-%d %H:%M:%S"),
                         },
                     );
                 });

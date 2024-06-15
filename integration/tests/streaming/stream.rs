@@ -3,6 +3,7 @@ use crate::streaming::create_messages;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use server::state::states::StreamState;
 use server::streaming::polling_consumer::PollingConsumer;
@@ -108,7 +109,15 @@ async fn should_purge_existing_stream_on_disk() {
 
         let topic_id = 1;
         stream
-            .create_topic(Some(topic_id), "test", 1, None, Default::default(), None, 1)
+            .create_topic(
+                Some(topic_id),
+                "test",
+                1,
+                IggyExpiry::NeverExpire,
+                Default::default(),
+                None,
+                1,
+            )
             .await
             .unwrap();
 

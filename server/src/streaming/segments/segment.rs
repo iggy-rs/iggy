@@ -15,6 +15,7 @@ use crate::streaming::storage::SystemStorage;
 use crate::streaming::utils::file;
 use futures::{pin_mut, TryStreamExt};
 use iggy::error::IggyError;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
@@ -45,7 +46,7 @@ pub struct Segment {
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
     pub messages_count_of_parent_partition: Arc<AtomicU64>,
     pub is_closed: bool,
-    pub(crate) message_expiry: Option<u32>,
+    pub(crate) message_expiry: IggyExpiry,
     pub(crate) unsaved_batches: Option<Vec<Arc<RetainedMessageBatch>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
@@ -64,7 +65,7 @@ impl Segment {
         start_offset: u64,
         config: Arc<SystemConfig>,
         storage: Arc<SystemStorage>,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         size_of_parent_stream: Arc<AtomicU64>,
         size_of_parent_topic: Arc<AtomicU64>,
         size_of_parent_partition: Arc<AtomicU64>,
@@ -114,28 +115,28 @@ impl Segment {
             return true;
         }
 
-        self.is_expired(IggyTimestamp::now().to_micros()).await
+        self.is_expired(IggyTimestamp::now()).await
     }
 
-    pub async fn is_expired(&self, now: u64) -> bool {
-        if self.message_expiry.is_none() {
-            return false;
-        }
+    pub async fn is_expired(&self, now: IggyTimestamp) -> bool {
+        match self.message_expiry {
+            IggyExpiry::NeverExpire => false,
+            IggyExpiry::ExpireDuration(expiry) => {
+                let last_messages = self.get_messages(self.current_offset, 1).await;
+                if last_messages.is_err() {
+                    return false;
+                }
 
-        let last_messages = self.get_messages(self.current_offset, 1).await;
-        if last_messages.is_err() {
-            return false;
-        }
+                let last_messages = last_messages.unwrap();
+                if last_messages.is_empty() {
+                    return false;
+                }
 
-        let last_messages = last_messages.unwrap();
-        if last_messages.is_empty() {
-            return false;
+                let last_message = &last_messages[0];
+                let last_message_timestamp: IggyTimestamp = last_message.timestamp.into();
+                last_message_timestamp.to_micros() + expiry.as_micros() <= now.to_micros()
+            }
         }
-
-        let last_message = &last_messages[0];
-        // Message expiry is in seconds, and timestamp is in microseconds
-        let message_expiry = (self.message_expiry.unwrap() * 1000000) as u64;
-        (last_message.timestamp + message_expiry) <= now
     }
 
     fn get_log_path(path: &str) -> String {
@@ -228,6 +229,7 @@ mod tests {
     use super::*;
     use crate::configs::system::SegmentConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
+    use iggy::utils::duration::IggyDuration;
 
     #[tokio::test]
     async fn should_be_created_given_valid_parameters() {
@@ -241,7 +243,7 @@ mod tests {
         let log_path = Segment::get_log_path(&path);
         let index_path = Segment::get_index_path(&path);
         let time_index_path = Segment::get_time_index_path(&path);
-        let message_expiry = Some(10);
+        let message_expiry = IggyExpiry::ExpireDuration(IggyDuration::from(10));
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let size_of_parent_topic = Arc::new(AtomicU64::new(0));
         let size_of_parent_partition = Arc::new(AtomicU64::new(0));
@@ -297,7 +299,7 @@ mod tests {
             },
             ..Default::default()
         });
-        let message_expiry = None;
+        let message_expiry = IggyExpiry::NeverExpire;
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let size_of_parent_topic = Arc::new(AtomicU64::new(0));
         let size_of_parent_partition = Arc::new(AtomicU64::new(0));
@@ -338,7 +340,7 @@ mod tests {
             },
             ..Default::default()
         });
-        let message_expiry = None;
+        let message_expiry = IggyExpiry::NeverExpire;
         let size_of_parent_stream = Arc::new(AtomicU64::new(0));
         let size_of_parent_topic = Arc::new(AtomicU64::new(0));
         let size_of_parent_partition = Arc::new(AtomicU64::new(0));

@@ -1,3 +1,28 @@
+use std::path::PathBuf;
+
+use clap::{Args, Command as ClapCommand};
+use clap::{Parser, Subcommand};
+use clap_complete::{generate, Generator, Shell};
+use figlet_rs::FIGfont;
+
+use iggy::args::{Args as IggyArgs, ArgsOptional as IggyArgsOptional};
+use iggy::cli::context::common::ContextConfig;
+
+use crate::args::{
+    client::ClientAction,
+    consumer_group::ConsumerGroupAction,
+    consumer_offset::ConsumerOffsetAction,
+    context::ContextAction,
+    message::MessageAction,
+    partition::PartitionAction,
+    personal_access_token::PersonalAccessTokenAction,
+    stream::StreamAction,
+    system::{LoginArgs, PingArgs, StatsArgs},
+    topic::TopicAction,
+};
+
+use self::user::UserAction;
+
 pub(crate) mod client;
 pub(crate) mod common;
 pub(crate) mod consumer_group;
@@ -11,27 +36,6 @@ pub(crate) mod stream;
 pub(crate) mod system;
 pub(crate) mod topic;
 pub(crate) mod user;
-
-use self::user::UserAction;
-use crate::args::{
-    client::ClientAction,
-    consumer_group::ConsumerGroupAction,
-    consumer_offset::ConsumerOffsetAction,
-    context::ContextAction,
-    message::MessageAction,
-    partition::PartitionAction,
-    personal_access_token::PersonalAccessTokenAction,
-    stream::StreamAction,
-    system::{LoginArgs, PingArgs, StatsArgs},
-    topic::TopicAction,
-};
-use clap::{Args, Command as ClapCommand};
-use clap::{Parser, Subcommand};
-use clap_complete::{generate, Generator, Shell};
-use figlet_rs::FIGfont;
-use iggy::args::{Args as IggyArgs, ArgsOptional as IggyArgsOptional};
-use iggy::cli::context::common::ContextConfig;
-use std::path::PathBuf;
 
 static CARGO_BIN_NAME: &str = env!("CARGO_BIN_NAME");
 static CARGO_PKG_HOMEPAGE: &str = env!("CARGO_PKG_HOMEPAGE");
@@ -204,7 +208,6 @@ impl IggyConsoleArgs {
 pub struct IggyMergedConsoleArgs {
     pub iggy: IggyArgs,
     pub cli: CliOptions,
-    pub command: Option<Command>,
 }
 
 impl IggyMergedConsoleArgs {
@@ -222,7 +225,6 @@ impl IggyMergedConsoleArgs {
         Self {
             iggy: IggyArgs::from(vec![context.iggy, args.iggy]),
             cli: merged_cli_options,
-            command: args.command,
         }
     }
 }

@@ -47,7 +47,7 @@ sysinfo = "0.30.12"
 thiserror = "1.0.61"
 tokio = { version = "1.38.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
-toml = "0.8.13"
+toml = "0.8.14"
 tower-http = { version = "0.5.2", features = [
     "add-extension",
     "cors",

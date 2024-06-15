@@ -8,6 +8,7 @@ use std::{
 pub type StopSender = flume::Sender<()>;
 pub type StopReceiver = flume::Receiver<()>;
 
+#[derive(Clone)]
 pub struct ShardConnector<T: Clone> {
     pub id: u16,
     pub sender: Sender<T>,
@@ -30,7 +31,7 @@ impl<T: Clone> ShardConnector<T> {
         }
     }
 
-    pub fn send(&self, source_id: u16, data: T) {
+    pub fn send(&self, data: T) {
         self.sender.send(data);
     }
 }

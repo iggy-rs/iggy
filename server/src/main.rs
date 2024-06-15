@@ -1,5 +1,9 @@
+use std::panic;
+use std::thread::available_parallelism;
+
 use clap::Parser;
 use figlet_rs::FIGfont;
+use iggy::error::IggyError;
 use monoio::time::Instant;
 use monoio::utils::CtrlC;
 use server::args::Args;
@@ -14,10 +18,13 @@ use server::log::logger::Logging;
 use server::server_error::ServerError;
 use server::streaming::systems::system::{SharedSystem, System};
 use server::tcp::tcp_server;
+use server::tpc::bootstrap::{create_shard, shard_executor};
+use server::tpc::connector::ShardConnector;
+use server::tpc::shard_frame::ShardFrame;
 use tracing::{error, info};
 
-#[monoio::main(driver = "uring", timer_enabled = true)]
-async fn main() -> Result<(), ServerError> {
+fn main() -> Result<(), ServerError> {
+    let available_cpus = available_parallelism().unwrap().into();
     let startup_timestamp = Instant::now();
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
@@ -33,20 +40,68 @@ async fn main() -> Result<(), ServerError> {
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
+    let cpu_set = 0..available_cpus;
+    let connections = cpu_set
+        .clone()
+        .into_iter()
+        .map(|cpu| {
+            let cpu = cpu as u16;
+            let connector: ShardConnector<ShardFrame> = ShardConnector::new(cpu, available_cpus);
+            connector
+        })
+        .collect::<Vec<_>>();
+
+    let handles = cpu_set
+        .into_iter()
+        .map(|cpu| {
+            let cpu = cpu as u16;
+            std::thread::spawn(move || {
+                monoio::utils::bind_to_cpu_set(Some(cpu as usize)).expect("Cannot bind to CPU set");
+                let mut rt = monoio::RuntimeBuilder::<monoio::IoUringDriver>::new()
+                    .enable_timer()
+                    .with_blocking_strategy(monoio::blocking::BlockingStrategy::ExecuteLocal)
+                    .build()
+                    .expect("Cannot build runtime");
+
+                rt.block_on(async move {
+                    let connections = connections.clone();
+                    let shard = create_shard(cpu, connections);
+                    if let Err(e) = shard_executor(shard, cpu == 0).await {
+                        error!("Failed to start shard executor with error: {}", e);
+                    }
+                })
+            })
+        })
+        .collect::<Vec<_>>();
+
+    handles
+    .into_iter()
+    .map(|handle| match handle.join() {
+        Err(e) => panic::resume_unwind(e),
+        _ => {}
+    }).collect::<Vec<_>>();
+
+    /*
     let system = SharedSystem::new(System::new(
         config.system.clone(),
         None,
         config.personal_access_token,
     ));
+    */
 
+    // For now no bg handlers.
+    /*
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)
         .install_handler(SaveMessagesExecutor)
         .install_handler(CleanMessagesExecutor)
         .install_handler(CleanPersonalAccessTokensExecutor)
         .install_handler(SysInfoPrintExecutor);
+    */
 
+    /* 
     system.write().get_stats_bypass_auth().await?;
     system.write().init().await?;
+    */
 
     // #[cfg(unix)]
     //     let (mut ctrl_c, mut sigterm) = {
@@ -57,6 +112,7 @@ async fn main() -> Result<(), ServerError> {
     //     )
     // };
 
+    /*
     let mut current_config = config.clone();
 
     if config.tcp.enabled {
@@ -104,6 +160,7 @@ async fn main() -> Result<(), ServerError> {
         "Iggy server has shutdown successfully. Shutdown took {} ms.",
         elapsed_time.as_millis()
     );
+    */
 
     Ok(())
 }

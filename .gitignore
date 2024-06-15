@@ -7,3 +7,4 @@ bench_*
 /sdk/errors_table/
 /rust-clippy-results.sarif
 /Cross.toml
+result

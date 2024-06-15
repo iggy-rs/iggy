@@ -205,6 +205,70 @@ To see the detailed logs from the CLI/server, run it with `RUST_LOG=trace` envir
 
 ---
 
+## Nix
+
+This repo provides a [Nix](https://github.com/DeterminateSystems/nix-installer) managed development environment. To start the development shell, run:
+
+```console
+> nix develop -c $SHELL
+```
+
+This will provide you with the development environment, including the Rust toolchain and the necessary dependencies.
+
+```console
+> cargo run --bin iggy
+```
+
+The Nix flake defines derivations for the cargo workspace packages `sdk`, `cli`, `server`, `bench` & `tools`. You can build and run
+these derivations with:
+
+```console
+> nix build .#sdk
+> nix build .#cli
+> nix build .#server
+> nix build .#bench
+> nix build .#tools
+```
+
+We also export an overlay so that you can use `iggy` in your own Nix flake project:
+
+```nix
+# flake.nix
+{
+  description = "My Iggy project";
+
+  inputs.nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
+  inputs.flake-utils.url = "github:numtide/flake-utils";
+  inputs.iggy.url = "github:iggy-rs/iggy";
+
+  outputs = {
+    self,
+    nixpkgs,
+    flake-utils,
+    iggy,
+    ...
+  }: let
+    systems = ["x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin"];
+    outputs = flake-utils.lib.eachSystem systems (system: let
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          iggy.overlay
+        ];
+      };
+    in {
+      devShells.default = pkgs.mkShell {
+        packages = [
+          pkgs.iggy-pkgs.cli
+          pkgs.iggy-pkgs.server
+        ];
+      };
+    });
+}
+```
+
+---
+
 ## Examples
 
 You can find the sample consumer & producer applications under `examples` directory. The purpose of these apps is to showcase the usage of the client SDK. To find out more about building the applications, please refer to the [getting started](https://docs.iggy.rs/introduction/getting-started) guide.

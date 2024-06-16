@@ -19,7 +19,7 @@ use tracing::{error, info};
 
 /// Starts the HTTP API server.
 /// Returns the address the server is listening on.
-pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
+pub async fn start(config: HttpConfig, system: SharedSystem) {
     let api_name = if config.tls.enabled {
         "HTTP API (TLS)"
     } else {
@@ -71,8 +71,6 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
                 error!("Failed to start {api_name} server, error {}", error);
             }
         });
-
-        address
     } else {
         let tls_config = RustlsConfig::from_pem_file(
             PathBuf::from(config.tls.cert_file),
@@ -96,8 +94,6 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
                 error!("Failed to start {api_name} server, error: {}", error);
             }
         });
-
-        address
     }
 }
 

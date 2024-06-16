@@ -66,21 +66,18 @@ async fn main() -> Result<(), ServerError> {
         )
     };
 
-    let mut current_config = config.clone();
+    let current_config = config.clone();
 
     if config.http.enabled {
-        let http_addr = http_server::start(config.http, system.clone()).await;
-        current_config.http.address = http_addr.to_string();
+        http_server::start(config.http, system.clone()).await;
     }
 
     if config.quic.enabled {
-        let quic_addr = quic_server::start(config.quic, system.clone());
-        current_config.quic.address = quic_addr.to_string();
+        quic_server::start(config.quic, system.clone());
     }
 
     if config.tcp.enabled {
-        let tcp_addr = tcp_server::start(config.tcp, system.clone()).await;
-        current_config.tcp.address = tcp_addr.to_string();
+        tcp_server::start(config.tcp, system.clone()).await;
     }
 
     let runtime_path = current_config.system.get_runtime_path();

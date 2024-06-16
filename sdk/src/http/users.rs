@@ -115,6 +115,8 @@ impl UserClient for HttpClient {
                 &LoginUser {
                     username: username.to_string(),
                     password: password.to_string(),
+                    version: "0.5.0".to_string(),
+                    context: "".to_string(),
                 },
             )
             .await?;

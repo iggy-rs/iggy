@@ -20,7 +20,7 @@ use server::streaming::systems::system::{SharedSystem, System};
 use server::tcp::tcp_server;
 use server::tpc::bootstrap::{create_shard, shard_executor};
 use server::tpc::connector::ShardConnector;
-use server::tpc::shard_frame::ShardFrame;
+use server::tpc::shard::shard_frame::ShardFrame;
 use tracing::{error, info};
 
 fn main() -> Result<(), ServerError> {
@@ -56,16 +56,16 @@ fn main() -> Result<(), ServerError> {
         .map(|cpu| {
             let cpu = cpu as u16;
             std::thread::spawn(move || {
-                monoio::utils::bind_to_cpu_set(Some(cpu as usize)).expect("Cannot bind to CPU set");
+                monoio::utils::bind_to_cpu_set(Some(cpu as usize)).expect("Failed set thread affinity");
                 let mut rt = monoio::RuntimeBuilder::<monoio::IoUringDriver>::new()
                     .enable_timer()
                     .with_blocking_strategy(monoio::blocking::BlockingStrategy::ExecuteLocal)
                     .build()
-                    .expect("Cannot build runtime");
+                    .expect("Failed to build monoio runtime");
 
                 rt.block_on(async move {
                     let connections = connections.clone();
-                    let shard = create_shard(cpu, connections);
+                    let shard = create_shard(cpu, &config, connections);
                     if let Err(e) = shard_executor(shard, cpu == 0).await {
                         error!("Failed to start shard executor with error: {}", e);
                     }
@@ -75,19 +75,18 @@ fn main() -> Result<(), ServerError> {
         .collect::<Vec<_>>();
 
     handles
-    .into_iter()
-    .map(|handle| match handle.join() {
-        Err(e) => panic::resume_unwind(e),
-        _ => {}
-    }).collect::<Vec<_>>();
+        .into_iter()
+        .map(|handle| match handle.join() {
+            Err(e) => panic::resume_unwind(e),
+            _ => {}
+        })
+        .collect::<Vec<_>>();
 
-    /*
     let system = SharedSystem::new(System::new(
         config.system.clone(),
         None,
         config.personal_access_token,
     ));
-    */
 
     // For now no bg handlers.
     /*
@@ -98,10 +97,8 @@ fn main() -> Result<(), ServerError> {
         .install_handler(SysInfoPrintExecutor);
     */
 
-    /* 
     system.write().get_stats_bypass_auth().await?;
     system.write().init().await?;
-    */
 
     // #[cfg(unix)]
     //     let (mut ctrl_c, mut sigterm) = {
@@ -112,13 +109,13 @@ fn main() -> Result<(), ServerError> {
     //     )
     // };
 
-    /*
     let mut current_config = config.clone();
 
     if config.tcp.enabled {
         let tcp_addr = tcp_server::start(config.tcp, system.clone()).await;
         current_config.tcp.address = tcp_addr.to_string();
     }
+    /*
 
     let runtime_path = current_config.system.get_runtime_path();
     let current_config_path = format!("{}/current_config.toml", runtime_path);

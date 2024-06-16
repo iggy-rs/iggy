@@ -1,4 +1,5 @@
-use super::connector::Receiver;
+use crate::tpc::connector::Receiver;
+
 
 #[derive(Clone)]
 pub enum ShardMessage {

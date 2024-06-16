@@ -13,7 +13,9 @@ humantime = "2.1.0"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.3"
 libc = "0.2.154"
+port_scanner = "0.1.5"
 predicates = "3.1.0"
+rand = "0.8.5"
 regex = "1.10.4"
 serial_test = "3.1.1"
 server = { path = "../server" }

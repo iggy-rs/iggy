@@ -12,6 +12,8 @@ use assert_cmd::prelude::CommandCargoExt;
 use async_trait::async_trait;
 use derive_more::Display;
 use futures::executor::block_on;
+use port_scanner::local_port_available;
+use rand::Rng;
 use uuid::Uuid;
 
 use iggy::client::{Client, StreamClient, UserClient};
@@ -247,21 +249,40 @@ impl TestServer {
         }
     }
 
+    fn generate_random_port() -> u16 {
+        let mut rng = rand::thread_rng();
+        let mut port: u16 = rng.gen();
+        while !local_port_available(port) {
+            port = rng.gen();
+        }
+        port
+    }
+
     fn get_server_ipv4_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
-        let addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 0);
+        let tcp_port: u16 = Self::generate_random_port();
+        let quic_port: u16 = Self::generate_random_port();
+        let http_port: u16 = Self::generate_random_port();
+        let tcp_addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), tcp_port);
+        let quic_addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), quic_port);
+        let http_addr = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), http_port);
         vec![
-            ServerProtocolAddr::QuicUdp(addr),
-            ServerProtocolAddr::RawTcp(addr),
-            ServerProtocolAddr::HttpTcp(addr),
+            ServerProtocolAddr::QuicUdp(quic_addr),
+            ServerProtocolAddr::RawTcp(tcp_addr),
+            ServerProtocolAddr::HttpTcp(http_addr),
         ]
     }
 
     fn get_server_ipv6_addrs_with_random_port() -> Vec<ServerProtocolAddr> {
-        let addr = SocketAddr::new(Ipv6Addr::LOCALHOST.into(), 0);
+        let tcp_port: u16 = Self::generate_random_port();
+        let quic_port: u16 = Self::generate_random_port();
+        let http_port: u16 = Self::generate_random_port();
+        let tcp_addr = SocketAddr::new(Ipv6Addr::LOCALHOST.into(), tcp_port);
+        let quic_addr = SocketAddr::new(Ipv6Addr::LOCALHOST.into(), quic_port);
+        let http_addr = SocketAddr::new(Ipv6Addr::LOCALHOST.into(), http_port);
         vec![
-            ServerProtocolAddr::QuicUdp(addr),
-            ServerProtocolAddr::RawTcp(addr),
-            ServerProtocolAddr::HttpTcp(addr),
+            ServerProtocolAddr::QuicUdp(quic_addr),
+            ServerProtocolAddr::RawTcp(tcp_addr),
+            ServerProtocolAddr::HttpTcp(http_addr),
         ]
     }
 

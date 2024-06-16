@@ -4,6 +4,7 @@ use iggy::error::IggyError;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use rand::Rng;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -39,7 +40,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 None,
                 None,
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await?;
 
@@ -52,7 +53,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 None,
                 None,
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await?;
 
@@ -65,7 +66,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 None,
                 None,
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await?;
 
@@ -78,7 +79,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 None,
                 None,
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await?;
 
@@ -91,7 +92,7 @@ async fn create_topics(client: &IggyClient) -> Result<(), IggyError> {
                 None,
                 None,
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await?;
     }

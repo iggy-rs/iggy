@@ -39,6 +39,7 @@ pub struct Segment {
     pub log_path: String,
     pub time_index_path: String,
     pub size_bytes: u32,
+    pub max_size_bytes: u32,
     pub size_of_parent_stream: Arc<AtomicU64>,
     pub size_of_parent_topic: Arc<AtomicU64>,
     pub size_of_parent_partition: Arc<AtomicU64>,
@@ -86,6 +87,7 @@ impl Segment {
             index_path: Self::get_index_path(&path),
             time_index_path: Self::get_time_index_path(&path),
             size_bytes: 0,
+            max_size_bytes: config.segment.size.as_bytes_u64() as u32,
             message_expiry,
             indexes: match config.segment.cache_indexes {
                 true => Some(Vec::new()),
@@ -111,7 +113,7 @@ impl Segment {
     }
 
     pub async fn is_full(&self) -> bool {
-        if self.size_bytes >= self.config.segment.size.as_bytes_u64() as u32 {
+        if self.size_bytes >= self.max_size_bytes {
             return true;
         }
 

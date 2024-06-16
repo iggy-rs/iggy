@@ -4,9 +4,9 @@ use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::topics::{MAX_NAME_LENGTH, MAX_PARTITIONS_COUNT};
-use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::text;
+use crate::utils::topic_size::MaxTopicSize;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -36,8 +36,8 @@ pub struct CreateTopic {
     pub compression_algorithm: CompressionAlgorithm,
     /// Optional message expiry.
     pub message_expiry: IggyExpiry,
-    /// The optional maximum size of the topic.
-    pub max_topic_size: Option<IggyByteSize>,
+    /// The maximum size of the topic.
+    pub max_topic_size: MaxTopicSize,
     /// Replication factor for the topic.
     pub replication_factor: Option<u8>,
     /// Unique topic name, max length is 255 characters.
@@ -54,7 +54,7 @@ impl Default for CreateTopic {
             partitions_count: 1,
             compression_algorithm: CompressionAlgorithm::None,
             message_expiry: IggyExpiry::NeverExpire,
-            max_topic_size: None,
+            max_topic_size: MaxTopicSize::ServerDefault,
             replication_factor: None,
             name: "topic".to_string(),
         }
@@ -100,10 +100,7 @@ impl BytesSerializable for CreateTopic {
         bytes.put_u32_le(self.partitions_count);
         bytes.put_u8(self.compression_algorithm.as_code());
         bytes.put_u64_le(self.message_expiry.into());
-        match self.max_topic_size {
-            Some(max_topic_size) => bytes.put_u64_le(max_topic_size.as_bytes_u64()),
-            None => bytes.put_u64_le(0),
-        }
+        bytes.put_u64_le(self.max_topic_size.into());
         match self.replication_factor {
             Some(replication_factor) => bytes.put_u8(replication_factor),
             None => bytes.put_u8(0),
@@ -127,11 +124,8 @@ impl BytesSerializable for CreateTopic {
         let compression_algorithm = CompressionAlgorithm::from_code(bytes[position + 8])?;
         let message_expiry = u64::from_le_bytes(bytes[position + 9..position + 17].try_into()?);
         let message_expiry: IggyExpiry = message_expiry.into();
-        let max_topic_size =
-            match u64::from_le_bytes(bytes[position + 17..position + 25].try_into()?) {
-                0 => None,
-                size => Some(IggyByteSize::from(size)),
-            };
+        let max_topic_size = u64::from_le_bytes(bytes[position + 17..position + 25].try_into()?);
+        let max_topic_size: MaxTopicSize = max_topic_size.into();
         let replication_factor = match bytes[position + 25] {
             0 => None,
             factor => Some(factor),
@@ -159,10 +153,6 @@ impl BytesSerializable for CreateTopic {
 
 impl Display for CreateTopic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let max_topic_size = match self.max_topic_size {
-            Some(max_topic_size) => max_topic_size.to_string(),
-            None => "unlimited".to_string(),
-        };
         write!(
             f,
             "{}|{}|{}|{}|{}|{}|{}",
@@ -170,7 +160,7 @@ impl Display for CreateTopic {
             self.topic_id.unwrap_or(0),
             self.partitions_count,
             self.message_expiry,
-            max_topic_size,
+            self.max_topic_size,
             self.replication_factor.unwrap_or(0),
             self.name
         )
@@ -190,7 +180,7 @@ mod tests {
             partitions_count: 3,
             message_expiry: IggyExpiry::NeverExpire,
             compression_algorithm: CompressionAlgorithm::None,
-            max_topic_size: Some(IggyByteSize::from(100)),
+            max_topic_size: MaxTopicSize::ServerDefault,
             replication_factor: Some(1),
             name: "test".to_string(),
         };
@@ -206,10 +196,8 @@ mod tests {
             u64::from_le_bytes(bytes[position + 9..position + 17].try_into().unwrap());
         let message_expiry: IggyExpiry = message_expiry.into();
         let max_topic_size =
-            match u64::from_le_bytes(bytes[position + 17..position + 25].try_into().unwrap()) {
-                0 => None,
-                size => Some(IggyByteSize::from(size)),
-            };
+            u64::from_le_bytes(bytes[position + 17..position + 25].try_into().unwrap());
+        let max_topic_size: MaxTopicSize = max_topic_size.into();
         let replication_factor = bytes[position + 25];
         let name_length = bytes[position + 26];
         let name = from_utf8(&bytes[position + 27..(position + 27 + name_length as usize)])
@@ -236,7 +224,7 @@ mod tests {
         let compression_algorithm = CompressionAlgorithm::None;
         let name = "test".to_string();
         let message_expiry = IggyExpiry::NeverExpire;
-        let max_topic_size = IggyByteSize::from(100);
+        let max_topic_size = MaxTopicSize::ServerDefault;
         let replication_factor = 1;
         let stream_id_bytes = stream_id.as_bytes();
         let mut bytes = BytesMut::with_capacity(14 + stream_id_bytes.len() + name.len());
@@ -261,7 +249,7 @@ mod tests {
         assert_eq!(command.partitions_count, partitions_count);
         assert_eq!(command.compression_algorithm, compression_algorithm);
         assert_eq!(command.message_expiry, message_expiry);
-        assert_eq!(command.max_topic_size, Some(max_topic_size));
+        assert_eq!(command.max_topic_size, max_topic_size);
         assert_eq!(command.replication_factor.unwrap(), replication_factor);
         assert_eq!(command.partitions_count, partitions_count);
     }

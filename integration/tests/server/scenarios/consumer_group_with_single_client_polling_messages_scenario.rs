@@ -11,6 +11,7 @@ use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use integration::test_server::{assert_clean_system, login_root, ClientFactory};
 use std::str::{from_utf8, FromStr};
 
@@ -46,7 +47,7 @@ async fn init_system(client: &IggyClient) {
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
         .unwrap();

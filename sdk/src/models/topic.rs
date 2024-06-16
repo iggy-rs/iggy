@@ -1,5 +1,6 @@
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::utils::expiry::IggyExpiry;
+use crate::utils::topic_size::MaxTopicSize;
 use crate::{models::partition::Partition, utils::byte_size::IggyByteSize};
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +31,7 @@ pub struct Topic {
     pub compression_algorithm: CompressionAlgorithm,
     /// The optional maximum size of the topic.
     /// Can't be lower than segment size in the config.
-    pub max_topic_size: Option<IggyByteSize>,
+    pub max_topic_size: MaxTopicSize,
     /// Replication factor for the topic.
     pub replication_factor: u8,
     /// The total number of messages in the topic.
@@ -67,7 +68,7 @@ pub struct TopicDetails {
     pub compression_algorithm: CompressionAlgorithm,
     /// The optional maximum size of the topic.
     /// Can't be lower than segment size in the config.
-    pub max_topic_size: Option<IggyByteSize>,
+    pub max_topic_size: MaxTopicSize,
     /// Replication factor for the topic.
     pub replication_factor: u8,
     /// The total number of messages in the topic.

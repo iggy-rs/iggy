@@ -7,8 +7,8 @@ use crate::identifier::Identifier;
 use crate::models::topic::{Topic, TopicDetails};
 use crate::topics::create_topic::CreateTopic;
 use crate::topics::update_topic::UpdateTopic;
-use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
+use crate::utils::topic_size::MaxTopicSize;
 use async_trait::async_trait;
 
 #[async_trait]
@@ -43,7 +43,7 @@ impl TopicClient for HttpClient {
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError> {
         self.post(
             &get_path(&stream_id.as_cow_str()),
@@ -70,7 +70,7 @@ impl TopicClient for HttpClient {
         compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         message_expiry: IggyExpiry,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError> {
         self.put(
             &get_details_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),

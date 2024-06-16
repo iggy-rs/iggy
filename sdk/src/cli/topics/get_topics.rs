@@ -82,10 +82,7 @@ impl CliCommand for GetTopicsCmd {
                         IggyTimestamp::from(topic.created_at).to_utc_string("%Y-%m-%d %H:%M:%S"),
                         topic.name.clone(),
                         format!("{}", topic.size),
-                        match topic.max_topic_size {
-                            Some(value) => format!("{}", value),
-                            None => String::from("unlimited"),
-                        },
+                        format!("{}", topic.max_topic_size),
                         topic.compression_algorithm.to_string(),
                         match topic.message_expiry {
                             IggyExpiry::NeverExpire => String::from("unlimited"),
@@ -106,10 +103,7 @@ impl CliCommand for GetTopicsCmd {
                         IggyTimestamp::from(topic.created_at).to_utc_string("%Y-%m-%d %H:%M:%S"),
                         topic.name,
                         topic.size,
-                        match topic.max_topic_size {
-                            Some(value) => format!("{}", value),
-                            None => String::from("unlimited"),
-                        },
+                        topic.max_topic_size,
                         topic.compression_algorithm.to_string(),
                         match topic.message_expiry {
                 IggyExpiry::NeverExpire => String::from("unlimited"),

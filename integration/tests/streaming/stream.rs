@@ -5,6 +5,7 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
+use iggy::utils::topic_size::MaxTopicSize;
 use server::state::states::StreamState;
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::streams::stream::Stream;
@@ -115,7 +116,7 @@ async fn should_purge_existing_stream_on_disk() {
                 1,
                 IggyExpiry::NeverExpire,
                 Default::default(),
-                None,
+                MaxTopicSize::ServerDefault,
                 1,
             )
             .await

@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
 use iggy::client::Client;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
-use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::time::Duration;
@@ -21,7 +21,7 @@ struct TestTopicCreateCmd {
     partitions_count: u32,
     compression_algorithm: CompressionAlgorithm,
     message_expiry: Option<Vec<String>>,
-    max_topic_size: Option<IggyByteSize>,
+    max_topic_size: MaxTopicSize,
     replication_factor: u8,
     using_identifier: TestStreamId,
 }
@@ -36,7 +36,7 @@ impl TestTopicCreateCmd {
         partitions_count: u32,
         compression_algorithm: CompressionAlgorithm,
         message_expiry: Option<Vec<String>>,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
         using_identifier: TestStreamId,
     ) -> Self {
@@ -111,11 +111,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
         })
         .to_string();
 
-        let max_topic_size = (match &self.max_topic_size {
-            Some(value) => value.as_human_string_with_zero_as_unlimited(),
-            None => IggyByteSize::default().as_human_string_with_zero_as_unlimited(),
-        })
-        .to_string();
+        let max_topic_size = self.max_topic_size.to_string();
 
         let replication_factor = self.replication_factor;
 
@@ -189,7 +185,7 @@ pub async fn should_be_successful() {
             1,
             Default::default(),
             None,
-            None,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Numeric,
         ))
@@ -203,7 +199,7 @@ pub async fn should_be_successful() {
             5,
             Default::default(),
             None,
-            None,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Named,
         ))
@@ -217,7 +213,7 @@ pub async fn should_be_successful() {
             1,
             Default::default(),
             Some(vec![String::from("3days"), String::from("5s")]),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Named,
         ))
@@ -236,7 +232,7 @@ pub async fn should_be_successful() {
                 String::from("1m"),
                 String::from("1s"),
             ]),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Numeric,
         ))

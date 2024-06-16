@@ -185,6 +185,7 @@ mod tests {
     use crate::streaming::storage::tests::get_test_system_storage;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
     use iggy::utils::expiry::IggyExpiry;
+    use iggy::utils::topic_size::MaxTopicSize;
     use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
 
@@ -356,7 +357,7 @@ mod tests {
             segments_count_of_parent_stream,
             IggyExpiry::NeverExpire,
             compression_algorithm,
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap()

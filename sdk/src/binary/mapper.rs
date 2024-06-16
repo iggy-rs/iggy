@@ -16,6 +16,7 @@ use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
 use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
+use crate::utils::topic_size::MaxTopicSize;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
@@ -410,11 +411,8 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
         message_expiry => message_expiry.into(),
     };
     let compression_algorithm = CompressionAlgorithm::from_code(payload[position + 24])?;
-    let max_topic_size = match u64::from_le_bytes(payload[position + 25..position + 33].try_into()?)
-    {
-        0 => None,
-        max_topic_size => Some(IggyByteSize::from(max_topic_size)),
-    };
+    let max_topic_size = u64::from_le_bytes(payload[position + 25..position + 33].try_into()?);
+    let max_topic_size: MaxTopicSize = max_topic_size.into();
     let replication_factor = payload[position + 33];
     let size_bytes = IggyByteSize::from(u64::from_le_bytes(
         payload[position + 34..position + 42].try_into()?,

@@ -9,6 +9,7 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use server::state::states::{PartitionState, TopicState};
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
@@ -35,7 +36,7 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
             Arc::new(AtomicU32::new(0)),
             IggyExpiry::NeverExpire,
             CompressionAlgorithm::default(),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap();
@@ -72,7 +73,7 @@ async fn should_load_existing_topic_from_disk() {
             Arc::new(AtomicU32::new(0)),
             IggyExpiry::NeverExpire,
             CompressionAlgorithm::default(),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap();
@@ -107,7 +108,7 @@ async fn should_load_existing_topic_from_disk() {
             consumer_groups: Default::default(),
             compression_algorithm: Default::default(),
             message_expiry: IggyExpiry::NeverExpire,
-            max_topic_size: None,
+            max_topic_size: MaxTopicSize::ServerDefault,
             replication_factor: Some(1),
             created_at: Default::default(),
             current_consumer_group_id: 0,
@@ -147,7 +148,7 @@ async fn should_delete_existing_topic_from_disk() {
             Arc::new(AtomicU32::new(0)),
             IggyExpiry::NeverExpire,
             CompressionAlgorithm::default(),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap();
@@ -186,7 +187,7 @@ async fn should_purge_existing_topic_on_disk() {
             Arc::new(AtomicU32::new(0)),
             IggyExpiry::NeverExpire,
             CompressionAlgorithm::default(),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap();

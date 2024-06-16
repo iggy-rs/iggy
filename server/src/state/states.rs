@@ -24,9 +24,9 @@ use iggy::users::create_user::CreateUser;
 use iggy::users::delete_user::DeleteUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
-use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
+use iggy::utils::topic_size::MaxTopicSize;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::from_utf8;
@@ -55,7 +55,7 @@ pub struct TopicState {
     pub consumer_groups: HashMap<u32, ConsumerGroupState>,
     pub compression_algorithm: CompressionAlgorithm,
     pub message_expiry: IggyExpiry,
-    pub max_topic_size: Option<IggyByteSize>,
+    pub max_topic_size: MaxTopicSize,
     pub replication_factor: Option<u8>,
     pub created_at: IggyTimestamp,
     pub current_consumer_group_id: u32,

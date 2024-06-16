@@ -52,8 +52,8 @@ pub struct PersonalAccessTokenCleanerConfig {
 }
 
 impl ServerConfig {
-    pub async fn load(config_provider: &impl ConfigProvider) -> Result<ServerConfig, ServerError> {
-        let server_config = config_provider.load_config().await?;
+    pub fn load(config_provider: &impl ConfigProvider) -> Result<ServerConfig, ServerError> {
+        let server_config = config_provider.load_config()?;
         server_config.validate()?;
         Ok(server_config)
     }

@@ -1,18 +1,37 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    fs::{create_dir, remove_dir_all},
+    path::Path,
+    sync::{Arc, OnceLock},
+    time::Instant,
+};
+use sysinfo::{Pid, System as SysinfoSystem};
+use tracing::info;
 
 use crate::{
     configs::{server::PersonalAccessTokenConfig, system::SystemConfig},
     streaming::{
-        clients::client_manager::ClientManager, diagnostics::metrics::Metrics, persistence::persister::StoragePersister, storage::SystemStorage, streams::stream::Stream, users::permissioner::Permissioner
-    }, tpc::{connector::{Receiver, ShardConnector, StopReceiver, StopSender}, utils::hash_string},
+        clients::client_manager::ClientManager, diagnostics::metrics::Metrics,
+        persistence::persister::StoragePersister, storage::SystemStorage, streams::stream::Stream,
+        users::permissioner::Permissioner,
+    },
+    tpc::{
+        connector::{Receiver, ShardConnector, StopReceiver, StopSender},
+        utils::hash_string,
+    },
 };
 
-use super::{
-    shard_frame::ShardFrame,
-};
+use super::shard_frame::ShardFrame;
+use fast_async_mutex::mutex::Mutex;
 use flume::SendError;
-use iggy::{locking::{IggySharedMut, IggySharedMutFn}, utils::crypto::{Aes256GcmEncryptor, Encryptor}};
+use iggy::{
+    error::IggyError,
+    locking::{IggySharedMut, IggySharedMutFn},
+    models::stats::Stats,
+    utils::crypto::{Aes256GcmEncryptor, Encryptor},
+};
 use sled::Db;
+use sysinfo::System;
 pub const SHARD_NAME: &str = "iggy_shard";
 
 pub struct IggyShard {
@@ -20,15 +39,15 @@ pub struct IggyShard {
     pub hash: u32,
     shards: Vec<Shard>,
 
-    permissioner: Permissioner,
-    storage: Arc<SystemStorage>,
-    streams: HashMap<u32, Stream>,
-    streams_ids: HashMap<String, u32>,
+    pub(crate) permissioner: Permissioner,
+    pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) streams: HashMap<u32, Stream>,
+    pub(crate) streams_ids: HashMap<String, u32>,
+    // TODO - get rid of this dynamic dispatch.
     encryptor: Option<Box<dyn Encryptor>>,
-    system_config: Arc<SystemConfig>,
+    pub(crate) system_config: Arc<SystemConfig>,
     client_manager: IggySharedMut<ClientManager>,
-    // TODO - remove this dynamic dispatch
-    metrics: Metrics,
+    pub(crate) metrics: Metrics,
     db: Arc<Db>,
     pat_config: PersonalAccessTokenConfig,
     message_receiver: Receiver<ShardFrame>,
@@ -72,6 +91,118 @@ impl IggyShard {
             stop_receiver,
             stop_sender,
         }
+    }
+
+    pub async fn get_stats_bypass_auth(&self) -> Result<Stats, IggyError> {
+        fn sysinfo() -> &'static Mutex<SysinfoSystem> {
+            static SYSINFO: OnceLock<Mutex<SysinfoSystem>> = OnceLock::new();
+            SYSINFO.get_or_init(|| {
+                let mut sys = SysinfoSystem::new_all();
+                sys.refresh_all();
+                Mutex::new(sys)
+            })
+        }
+
+        let mut sys = sysinfo().lock().await;
+        let process_id = std::process::id();
+        sys.refresh_cpu();
+        sys.refresh_memory();
+        sys.refresh_process(Pid::from_u32(process_id));
+
+        let total_cpu_usage = sys.global_cpu_info().cpu_usage();
+        let total_memory = sys.total_memory().into();
+        let available_memory = sys.available_memory().into();
+        let clients_count = self.client_manager.read().await.get_clients().len() as u32;
+        let hostname = sysinfo::System::host_name().unwrap_or("unknown_hostname".to_string());
+        let os_name = sysinfo::System::name().unwrap_or("unknown_os_name".to_string());
+        let os_version =
+            sysinfo::System::long_os_version().unwrap_or("unknown_os_version".to_string());
+        let kernel_version =
+            sysinfo::System::kernel_version().unwrap_or("unknown_kernel_version".to_string());
+
+        let mut stats = Stats {
+            process_id,
+            total_cpu_usage,
+            total_memory,
+            available_memory,
+            clients_count,
+            hostname,
+            os_name,
+            os_version,
+            kernel_version,
+            ..Default::default()
+        };
+
+        if let Some(process) = sys
+            .processes()
+            .values()
+            .find(|p| p.pid() == Pid::from_u32(process_id))
+        {
+            stats.process_id = process.pid().as_u32();
+            stats.cpu_usage = process.cpu_usage();
+            stats.memory_usage = process.memory().into();
+            stats.run_time = process.run_time().into();
+            stats.start_time = process.start_time().into();
+
+            let disk_usage = process.disk_usage();
+            stats.read_bytes = disk_usage.total_read_bytes.into();
+            stats.written_bytes = disk_usage.total_written_bytes.into();
+        }
+
+        drop(sys);
+
+        for stream in self.streams.values() {
+            stats.messages_count += stream.get_messages_count();
+            stats.segments_count += stream.get_segments_count();
+            stats.messages_size_bytes += stream.get_size();
+            stats.streams_count += 1;
+            stats.topics_count += stream.topics.len() as u32;
+            stats.partitions_count += stream
+                .topics
+                .values()
+                .map(|t| t.partitions.len() as u32)
+                .sum::<u32>();
+            stats.consumer_groups_count += stream
+                .topics
+                .values()
+                .map(|t| t.consumer_groups.len() as u32)
+                .sum::<u32>();
+        }
+
+        Ok(stats)
+    }
+
+    pub async fn init(&mut self) -> Result<(), IggyError> {
+        let system_path = self.system_config.get_system_path();
+
+        if !Path::new(&system_path).exists() && create_dir(&system_path).is_err() {
+            return Err(IggyError::CannotCreateBaseDirectory(system_path));
+        }
+
+        let streams_path = self.system_config.get_streams_path();
+        if !Path::new(&streams_path).exists() && create_dir(&streams_path).is_err() {
+            return Err(IggyError::CannotCreateStreamsDirectory(streams_path));
+        }
+
+        let runtime_path = self.system_config.get_runtime_path();
+        if Path::new(&runtime_path).exists() && remove_dir_all(&runtime_path).is_err() {
+            return Err(IggyError::CannotRemoveRuntimeDirectory(runtime_path));
+        }
+
+        if create_dir(&runtime_path).is_err() {
+            return Err(IggyError::CannotCreateRuntimeDirectory(runtime_path));
+        }
+
+        info!(
+            "Initializing system, data will be stored at: {}",
+            self.system_config.get_system_path()
+        );
+        let now = Instant::now();
+        self.load_version().await?;
+        self.load_users().await?;
+        self.load_streams().await?;
+        info!("Initialized system in {} ms.", now.elapsed().as_millis());
+        Ok(())
     }
 
     pub async fn stop(self) -> Result<(), SendError<()>> {

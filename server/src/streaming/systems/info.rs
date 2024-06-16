@@ -74,15 +74,6 @@ impl System {
     }
 }
 
-impl SystemInfo {
-    pub fn update_version(&mut self, version: &str) {
-        self.version.version = version.to_string();
-        let mut hasher = DefaultHasher::new();
-        self.version.hash.hash(&mut hasher);
-        self.version.hash = hasher.finish().to_string();
-    }
-}
-
 impl Hash for SystemInfo {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.version.version.hash(state);

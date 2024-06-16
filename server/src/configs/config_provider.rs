@@ -13,7 +13,7 @@ const DEFAULT_CONFIG_PROVIDER: &str = "file";
 const DEFAULT_CONFIG_PATH: &str = "configs/server.toml";
 
 pub trait ConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ServerError>;
+    fn load_config(&self) -> Result<ServerConfig, ServerError>;
 }
 
 #[derive(Debug)]
@@ -241,7 +241,7 @@ fn file_exists<P: AsRef<Path>>(path: P) -> bool {
 }
 
 impl ConfigProvider for FileConfigProvider {
-    async fn load_config(&self) -> Result<ServerConfig, ServerError> {
+    fn load_config(&self) -> Result<ServerConfig, ServerError> {
         info!("Loading config from path: '{}'...", self.path);
 
         if !file_exists(&self.path) {

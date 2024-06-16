@@ -1,18 +1,27 @@
-use std::sync::Arc;
+use std::{borrow::BorrowMut, sync::Arc};
 
 use iggy::error::IggyError;
+use sled::Db;
 
 use crate::{
     configs::server::ServerConfig,
-    streaming::{persistence::persister::{FilePersister, FileWithSyncPersister, StoragePersister}, storage::SystemStorage},
+    streaming::{
+        persistence::persister::{FilePersister, FileWithSyncPersister, StoragePersister},
+        storage::SystemStorage,
+    },
 };
 
 use super::{
-    connector::ShardConnector, shard::{shard::{IggyShard, Shard, SHARD_NAME}, shard_frame::ShardFrame},
+    connector::ShardConnector,
+    shard::{
+        shard::{IggyShard, Shard, SHARD_NAME},
+        shard_frame::ShardFrame,
+    },
 };
 
 pub fn create_shard(
     id: u16,
+    db: Arc<Db>,
     config: &ServerConfig,
     connections: Vec<ShardConnector<ShardFrame>>,
 ) -> IggyShard {
@@ -38,10 +47,6 @@ pub fn create_shard(
 
     let system_config = config.system.clone();
     let pat_config = config.personal_access_token.clone();
-    let db_path = system_config.get_database_path();
-    let db = Arc::new(
-        sled::open(&db_path).expect(format!("Cannot open database at: {}", db_path).as_ref()),
-    );
     let persister = match system_config.partition.enforce_fsync {
         true => Arc::new(StoragePersister::FileWithSync(FileWithSyncPersister {})),
         false => Arc::new(StoragePersister::File(FilePersister {})),
@@ -60,8 +65,10 @@ pub fn create_shard(
     )
 }
 
-pub async fn shard_executor(shard: IggyShard, is_main_shard: bool) -> Result<(), IggyError> {
+pub async fn shard_executor(mut shard: IggyShard, is_main_shard: bool) -> Result<(), IggyError> {
     // Initialize system ?
+    shard.get_stats_bypass_auth().await?;
+    shard.init().await?;
     // Create all tasks (tcp listener, http listener, command processor, in the future also the background handlers).
     // If its main thread, add to the list of joined tasks the task that will wait for the stop signal.
     // join_all all tasks, if it fails, then we can move to the graceful shutdown stage,

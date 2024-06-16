@@ -98,7 +98,7 @@
       "sysinfo_print_interval": "10 s"
     },
     "cache": {
-      "enabled": true,
+      "enabled": false,
       "size": "4 GB"
     },
     "retention_policy": {

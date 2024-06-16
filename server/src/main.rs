@@ -1,4 +1,5 @@
 use std::panic;
+use std::sync::Arc;
 use std::thread::available_parallelism;
 
 use clap::Parser;
@@ -36,9 +37,14 @@ fn main() -> Result<(), ServerError> {
     let args = Args::parse();
 
     let config_provider = config_provider::resolve(&args.config_provider)?;
-    let config = ServerConfig::load(&config_provider).await?;
+    let config = ServerConfig::load(&config_provider)?;
 
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
+
+    let db_path = &config.system.get_database_path();
+    let db = Arc::new(
+        sled::open(&db_path).expect(format!("Cannot open database at: {}", db_path).as_ref()),
+    );
 
     let cpu_set = 0..available_cpus;
     let connections = cpu_set
@@ -55,8 +61,13 @@ fn main() -> Result<(), ServerError> {
         .into_iter()
         .map(|cpu| {
             let cpu = cpu as u16;
+            let db = db.clone();
+            let connections = connections.clone();
+            let config = config.clone();
             std::thread::spawn(move || {
-                monoio::utils::bind_to_cpu_set(Some(cpu as usize)).expect("Failed set thread affinity");
+                let connections = connections.clone();
+                monoio::utils::bind_to_cpu_set(Some(cpu as usize))
+                    .expect("Failed set thread affinity");
                 let mut rt = monoio::RuntimeBuilder::<monoio::IoUringDriver>::new()
                     .enable_timer()
                     .with_blocking_strategy(monoio::blocking::BlockingStrategy::ExecuteLocal)
@@ -64,8 +75,7 @@ fn main() -> Result<(), ServerError> {
                     .expect("Failed to build monoio runtime");
 
                 rt.block_on(async move {
-                    let connections = connections.clone();
-                    let shard = create_shard(cpu, &config, connections);
+                    let shard = create_shard(cpu, db, &config, connections);
                     if let Err(e) = shard_executor(shard, cpu == 0).await {
                         error!("Failed to start shard executor with error: {}", e);
                     }
@@ -74,19 +84,19 @@ fn main() -> Result<(), ServerError> {
         })
         .collect::<Vec<_>>();
 
-    handles
+    let _ = handles
         .into_iter()
         .map(|handle| match handle.join() {
-            Err(e) => panic::resume_unwind(e),
-            _ => {}
+            Err(err) => {
+                if let Some(panic_message) = err.downcast_ref::<&str>() {
+                    panic!("Thread panicked with message: {}", panic_message);
+                } else {
+                    panic!("Thread panicked with unknown type of message.");
+                }
+            }
+            _ => { () }
         })
         .collect::<Vec<_>>();
-
-    let system = SharedSystem::new(System::new(
-        config.system.clone(),
-        None,
-        config.personal_access_token,
-    ));
 
     // For now no bg handlers.
     /*
@@ -96,9 +106,6 @@ fn main() -> Result<(), ServerError> {
         .install_handler(CleanPersonalAccessTokensExecutor)
         .install_handler(SysInfoPrintExecutor);
     */
-
-    system.write().get_stats_bypass_auth().await?;
-    system.write().init().await?;
 
     // #[cfg(unix)]
     //     let (mut ctrl_c, mut sigterm) = {
@@ -111,10 +118,12 @@ fn main() -> Result<(), ServerError> {
 
     let mut current_config = config.clone();
 
+    /*
     if config.tcp.enabled {
         let tcp_addr = tcp_server::start(config.tcp, system.clone()).await;
         current_config.tcp.address = tcp_addr.to_string();
     }
+    */
     /*
 
     let runtime_path = current_config.system.get_runtime_path();

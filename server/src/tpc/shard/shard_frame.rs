@@ -1,6 +1,5 @@
 use crate::tpc::connector::Receiver;
 
-
 #[derive(Clone)]
 pub enum ShardMessage {
     Request,

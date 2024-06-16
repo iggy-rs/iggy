@@ -128,7 +128,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
                 self.compression_algorithm,
                 Some(self.replication_factor),
                 Some(self.topic_id),
-                message_expiry.into(),
+                message_expiry,
                 self.max_topic_size,
             )
             .await;

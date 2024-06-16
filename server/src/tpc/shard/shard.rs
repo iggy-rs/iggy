@@ -9,7 +9,7 @@ use sysinfo::{Pid, System as SysinfoSystem};
 use tracing::info;
 
 use crate::{
-    configs::{server::PersonalAccessTokenConfig, system::SystemConfig},
+    configs::{server::PersonalAccessTokenConfig, system::SystemConfig, tcp::TcpConfig},
     streaming::{
         clients::client_manager::ClientManager, diagnostics::metrics::Metrics,
         persistence::persister::StoragePersister, storage::SystemStorage, streams::stream::Stream,
@@ -46,6 +46,7 @@ pub struct IggyShard {
     // TODO - get rid of this dynamic dispatch.
     encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) system_config: Arc<SystemConfig>,
+    pub(crate) tcp_config: Arc<TcpConfig>,
     client_manager: IggySharedMut<ClientManager>,
     pub(crate) metrics: Metrics,
     db: Arc<Db>,
@@ -60,6 +61,7 @@ impl IggyShard {
         id: u16,
         shards: Vec<Shard>,
         system_config: Arc<SystemConfig>,
+        tcp_config: TcpConfig,
         pat_config: PersonalAccessTokenConfig,
         db: Arc<Db>,
         storage: Arc<SystemStorage>,
@@ -83,6 +85,7 @@ impl IggyShard {
                 false => None,
             },
             system_config,
+            tcp_config,
             client_manager: IggySharedMut::new(ClientManager::default()),
             metrics: Metrics::init(),
             db,
@@ -93,6 +96,38 @@ impl IggyShard {
         }
     }
 
+    pub async fn init(&mut self) -> Result<(), IggyError> {
+        info!(
+            "Initializing system, data will be stored at: {}",
+            self.system_config.get_system_path()
+        );
+        let now = Instant::now();
+        self.load_version().await?;
+        self.load_users().await?;
+        self.load_streams().await?;
+        info!("Initialized system in {} ms.", now.elapsed().as_millis());
+        Ok(())
+    }
+
+    pub async fn stop(self) -> Result<(), SendError<()>> {
+        self.stop_sender.send_async(()).await?;
+        Ok(())
+    }
+}
+
+pub struct Shard {
+    hash: u32,
+    connection: ShardConnector<ShardFrame>,
+}
+
+impl Shard {
+    pub fn new(name: String, connection: ShardConnector<ShardFrame>) -> Self {
+        let hash = hash_string(&name).unwrap();
+        Self { hash, connection }
+    }
+}
+
+impl IggyShard {
     pub async fn get_stats_bypass_auth(&self) -> Result<Stats, IggyError> {
         fn sysinfo() -> &'static Mutex<SysinfoSystem> {
             static SYSINFO: OnceLock<Mutex<SysinfoSystem>> = OnceLock::new();
@@ -170,55 +205,5 @@ impl IggyShard {
         }
 
         Ok(stats)
-    }
-
-    pub async fn init(&mut self) -> Result<(), IggyError> {
-        let system_path = self.system_config.get_system_path();
-
-        if !Path::new(&system_path).exists() && create_dir(&system_path).is_err() {
-            return Err(IggyError::CannotCreateBaseDirectory(system_path));
-        }
-
-        let streams_path = self.system_config.get_streams_path();
-        if !Path::new(&streams_path).exists() && create_dir(&streams_path).is_err() {
-            return Err(IggyError::CannotCreateStreamsDirectory(streams_path));
-        }
-
-        let runtime_path = self.system_config.get_runtime_path();
-        if Path::new(&runtime_path).exists() && remove_dir_all(&runtime_path).is_err() {
-            return Err(IggyError::CannotRemoveRuntimeDirectory(runtime_path));
-        }
-
-        if create_dir(&runtime_path).is_err() {
-            return Err(IggyError::CannotCreateRuntimeDirectory(runtime_path));
-        }
-
-        info!(
-            "Initializing system, data will be stored at: {}",
-            self.system_config.get_system_path()
-        );
-        let now = Instant::now();
-        self.load_version().await?;
-        self.load_users().await?;
-        self.load_streams().await?;
-        info!("Initialized system in {} ms.", now.elapsed().as_millis());
-        Ok(())
-    }
-
-    pub async fn stop(self) -> Result<(), SendError<()>> {
-        self.stop_sender.send_async(()).await?;
-        Ok(())
-    }
-}
-
-pub struct Shard {
-    hash: u32,
-    connection: ShardConnector<ShardFrame>,
-}
-
-impl Shard {
-    pub fn new(name: String, connection: ShardConnector<ShardFrame>) -> Self {
-        let hash = hash_string(&name).unwrap();
-        Self { hash, connection }
     }
 }

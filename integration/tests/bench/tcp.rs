@@ -2,14 +2,18 @@ use super::run_bench_and_wait_for_finish;
 use iggy::utils::byte_size::IggyByteSize;
 use integration::test_server::{IpAddrKind, TestServer, Transport};
 use serial_test::parallel;
-use std::str::FromStr;
+use std::{str::FromStr, sync::Mutex};
 
 #[test]
 #[parallel]
 fn tcp_ipv4_bench() {
     let mut test_server = TestServer::default();
-    test_server.start();
-    let server_addr = test_server.get_raw_tcp_addr().unwrap();
+    let xd = Mutex::new(test_server);
+    let mut guard = xd.lock().unwrap();
+    guard.start();
+    //test_server.start();
+    let server_addr = guard.get_raw_tcp_addr().unwrap();
+    drop(guard);
     run_bench_and_wait_for_finish(
         &server_addr,
         Transport::Tcp,

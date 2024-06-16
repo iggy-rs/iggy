@@ -1,9 +1,18 @@
-use std::{env, sync::atomic::{AtomicU32, Ordering}};
-use iggy::{error::IggyError, users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME, MAX_PASSWORD_LENGTH, MAX_USERNAME_LENGTH, MIN_PASSWORD_LENGTH, MIN_USERNAME_LENGTH}};
-use tracing::info;
-use crate::streaming::users::user::User;
 use super::shard::IggyShard;
 use crate::streaming::storage::{Storage, UserStorage};
+use crate::streaming::users::user::User;
+use iggy::{
+    error::IggyError,
+    users::defaults::{
+        DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME, MAX_PASSWORD_LENGTH, MAX_USERNAME_LENGTH,
+        MIN_PASSWORD_LENGTH, MIN_USERNAME_LENGTH,
+    },
+};
+use std::{
+    env,
+    sync::atomic::{AtomicU32, Ordering},
+};
+use tracing::info;
 
 static USER_ID: AtomicU32 = AtomicU32::new(1);
 const MAX_USERS: usize = u32::MAX as usize;
@@ -61,5 +70,4 @@ impl IggyShard {
 
         User::root(&username, &password)
     }
-
 }

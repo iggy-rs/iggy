@@ -1,4 +1,6 @@
+use std::fs::{create_dir, remove_dir_all};
 use std::panic;
+use std::path::Path;
 use std::sync::Arc;
 use std::thread::available_parallelism;
 
@@ -30,22 +32,18 @@ fn main() -> Result<(), ServerError> {
     let standard_font = FIGfont::standard().unwrap();
     let figure = standard_font.convert("Iggy Server");
     println!("{}", figure.unwrap());
-
     let mut logging = Logging::new();
     logging.early_init();
-
     let args = Args::parse();
-
     let config_provider = config_provider::resolve(&args.config_provider)?;
     let config = ServerConfig::load(&config_provider)?;
-
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
     let db_path = &config.system.get_database_path();
     let db = Arc::new(
         sled::open(&db_path).expect(format!("Cannot open database at: {}", db_path).as_ref()),
     );
-
+    create_directories(&config)?;
     let cpu_set = 0..available_cpus;
     let connections = cpu_set
         .clone()
@@ -75,7 +73,7 @@ fn main() -> Result<(), ServerError> {
                     .expect("Failed to build monoio runtime");
 
                 rt.block_on(async move {
-                    let shard = create_shard(cpu, db, &config, connections);
+                    let shard = create_shard(cpu, db, config, connections);
                     if let Err(e) = shard_executor(shard, cpu == 0).await {
                         error!("Failed to start shard executor with error: {}", e);
                     }
@@ -94,7 +92,7 @@ fn main() -> Result<(), ServerError> {
                     panic!("Thread panicked with unknown type of message.");
                 }
             }
-            _ => { () }
+            _ => (),
         })
         .collect::<Vec<_>>();
 
@@ -116,15 +114,13 @@ fn main() -> Result<(), ServerError> {
     //     )
     // };
 
-    let mut current_config = config.clone();
+    //let mut current_config = config.clone();
 
     /*
     if config.tcp.enabled {
         let tcp_addr = tcp_server::start(config.tcp, system.clone()).await;
         current_config.tcp.address = tcp_addr.to_string();
     }
-    */
-    /*
 
     let runtime_path = current_config.system.get_runtime_path();
     let current_config_path = format!("{}/current_config.toml", runtime_path);
@@ -168,5 +164,28 @@ fn main() -> Result<(), ServerError> {
     );
     */
 
+    Ok(())
+}
+
+fn create_directories(config: &ServerConfig) -> Result<(), IggyError> {
+    let system_path = config.system.get_system_path();
+
+    if !Path::new(&system_path).exists() && create_dir(&system_path).is_err() {
+        return Err(IggyError::CannotCreateBaseDirectory(system_path));
+    }
+
+    let streams_path = config.system.get_streams_path();
+    if !Path::new(&streams_path).exists() && create_dir(&streams_path).is_err() {
+        return Err(IggyError::CannotCreateStreamsDirectory(streams_path));
+    }
+
+    let runtime_path = config.system.get_runtime_path();
+    if Path::new(&runtime_path).exists() && remove_dir_all(&runtime_path).is_err() {
+        return Err(IggyError::CannotRemoveRuntimeDirectory(runtime_path));
+    }
+
+    if create_dir(&runtime_path).is_err() {
+        return Err(IggyError::CannotCreateRuntimeDirectory(runtime_path));
+    }
     Ok(())
 }

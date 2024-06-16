@@ -1,10 +1,13 @@
-use std::{hash::{DefaultHasher, Hash, Hasher}, str::FromStr};
+use std::{
+    hash::{DefaultHasher, Hash, Hasher},
+    str::FromStr,
+};
 
 use super::shard::IggyShard;
+use crate::streaming::storage::Storage;
 use crate::streaming::systems::info::{SemanticVersion, SystemInfo};
 use iggy::error::IggyError;
 use tracing::info;
-use crate::streaming::storage::Storage;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 

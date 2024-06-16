@@ -1,12 +1,13 @@
 use crate::streaming::systems::system::SharedSystem;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::tcp_sender::TcpSender;
+use crate::tpc::shard::shard::IggyShard;
 use futures::channel::oneshot;
 use monoio::net::TcpListener;
 use std::net::SocketAddr;
 use tracing::{error, info};
 
-pub async fn start(address: &str, system: SharedSystem) -> SocketAddr {
+pub async fn start(address: &str, shard: IggyShard) -> SocketAddr {
     let address = address.to_string();
     let (tx, rx) = oneshot::channel();
     monoio::spawn(async move {

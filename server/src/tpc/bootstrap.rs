@@ -4,11 +4,12 @@ use iggy::error::IggyError;
 use sled::Db;
 
 use crate::{
-    configs::server::ServerConfig,
+    configs::{server::ServerConfig, system::SystemConfig, tcp::TcpConfig},
     streaming::{
         persistence::persister::{FilePersister, FileWithSyncPersister, StoragePersister},
         storage::SystemStorage,
     },
+    tcp::tcp_server,
 };
 
 use super::{
@@ -22,7 +23,7 @@ use super::{
 pub fn create_shard(
     id: u16,
     db: Arc<Db>,
-    config: &ServerConfig,
+    config: ServerConfig,
     connections: Vec<ShardConnector<ShardFrame>>,
 ) -> IggyShard {
     let (stop_sender, stop_receiver, receiver) = connections
@@ -46,6 +47,7 @@ pub fn create_shard(
         .collect::<Vec<_>>();
 
     let system_config = config.system.clone();
+    let tcp_config = config.tcp.clone();
     let pat_config = config.personal_access_token.clone();
     let persister = match system_config.partition.enforce_fsync {
         true => Arc::new(StoragePersister::FileWithSync(FileWithSyncPersister {})),
@@ -56,6 +58,7 @@ pub fn create_shard(
         id,
         shards,
         system_config,
+        tcp_config,
         pat_config,
         db,
         storage,
@@ -65,12 +68,23 @@ pub fn create_shard(
     )
 }
 
-pub async fn shard_executor(mut shard: IggyShard, is_main_shard: bool) -> Result<(), IggyError> {
+pub async fn shard_executor(mut shard: IggyShard, is_prime_thread: bool) -> Result<(), IggyError> {
     // Initialize system ?
     shard.get_stats_bypass_auth().await?;
     shard.init().await?;
     // Create all tasks (tcp listener, http listener, command processor, in the future also the background handlers).
+    let mut tasks = vec![];
     // If its main thread, add to the list of joined tasks the task that will wait for the stop signal.
     // join_all all tasks, if it fails, then we can move to the graceful shutdown stage,
+
+    // Write the toml config to disk only on one thread
+    Ok(())
+}
+
+async fn start_tcp_server(shard: IggyShard, config: &mut TcpConfig) -> Result<(), IggyError> {
+    if config.tcp.enabled {
+    let tcp_addr = tcp_server::start(shard).await;
+        current_config.tcp.address = tcp_addr.to_string();
+    }
     Ok(())
 }

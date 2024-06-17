@@ -6,7 +6,7 @@ use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
-use crate::streaming::storage::{SegmentStorage, Storage};
+use crate::streaming::storage::SegmentStorage;
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
@@ -42,9 +42,8 @@ impl FileSegmentStorage {
 unsafe impl Send for FileSegmentStorage {}
 unsafe impl Sync for FileSegmentStorage {}
 
-// TODO: Split into smaller components.
 #[async_trait]
-impl Storage<Segment> for FileSegmentStorage {
+impl SegmentStorage for FileSegmentStorage {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError> {
         info!(
             "Loading segment from disk for start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {} ...",
@@ -208,10 +207,7 @@ impl Storage<Segment> for FileSegmentStorage {
         );
         Ok(())
     }
-}
 
-#[async_trait]
-impl SegmentStorage for FileSegmentStorage {
     async fn load_message_batches(
         &self,
         segment: &Segment,

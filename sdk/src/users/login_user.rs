@@ -19,7 +19,9 @@ pub struct LoginUser {
     pub username: String,
     /// Password, must be between 3 and 100 characters long.
     pub password: String,
+    // Version metadata added by SDK.
     pub version: String,
+    // Context metadata added by SDK.
     pub context: String,
 }
 

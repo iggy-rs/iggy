@@ -1,9 +1,9 @@
 use super::batching::message_batch::RetainedMessageBatch;
+use crate::configs::system::SystemConfig;
 use crate::state::states::{PartitionState, StreamState, TopicState};
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
 use crate::streaming::persistence::persister::Persister;
-use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::storage::FileSegmentStorage;
@@ -14,42 +14,16 @@ use crate::streaming::systems::info::SystemInfo;
 use crate::streaming::systems::storage::FileSystemInfoStorage;
 use crate::streaming::topics::storage::FileTopicStorage;
 use crate::streaming::topics::topic::Topic;
-use crate::streaming::users::user::User;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::models::user_info::UserId;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
 #[async_trait]
-pub trait Storage<T>: Sync + Send {
-    async fn load(&self, component: &mut T) -> Result<(), IggyError>;
-    async fn save(&self, component: &T) -> Result<(), IggyError>;
-    async fn delete(&self, component: &T) -> Result<(), IggyError>;
-}
-
-#[async_trait]
-pub trait SystemInfoStorage: Storage<SystemInfo> {}
-
-#[async_trait]
-pub trait UserStorage: Storage<User> {
-    async fn load_by_id(&self, id: UserId) -> Result<User, IggyError>;
-    async fn load_by_username(&self, username: &str) -> Result<User, IggyError>;
-    async fn load_all(&self) -> Result<Vec<User>, IggyError>;
-}
-
-#[async_trait]
-pub trait PersonalAccessTokenStorage: Storage<PersonalAccessToken> {
-    async fn load_all(&self) -> Result<Vec<PersonalAccessToken>, IggyError>;
-    async fn load_for_user(&self, user_id: UserId) -> Result<Vec<PersonalAccessToken>, IggyError>;
-    async fn load_by_token(&self, token: &str) -> Result<PersonalAccessToken, IggyError>;
-    async fn load_by_name(
-        &self,
-        user_id: UserId,
-        name: &str,
-    ) -> Result<PersonalAccessToken, IggyError>;
-    async fn delete_for_user(&self, user_id: UserId, name: &str) -> Result<(), IggyError>;
+pub trait SystemInfoStorage: Sync + Send {
+    async fn load(&self) -> Result<SystemInfo, IggyError>;
+    async fn save(&self, system_info: &SystemInfo) -> Result<(), IggyError>;
 }
 
 #[async_trait]
@@ -82,7 +56,10 @@ pub trait PartitionStorage: Send + Sync {
 }
 
 #[async_trait]
-pub trait SegmentStorage: Storage<Segment> {
+pub trait SegmentStorage: Send + Sync {
+    async fn load(&self, segment: &mut Segment) -> Result<(), IggyError>;
+    async fn save(&self, segment: &Segment) -> Result<(), IggyError>;
+    async fn delete(&self, segment: &Segment) -> Result<(), IggyError>;
     async fn load_message_batches(
         &self,
         segment: &Segment,
@@ -130,9 +107,12 @@ pub struct SystemStorage {
 }
 
 impl SystemStorage {
-    pub fn new(persister: Arc<dyn Persister>) -> Self {
+    pub fn new(config: Arc<SystemConfig>, persister: Arc<dyn Persister>) -> Self {
         Self {
-            info: Arc::new(FileSystemInfoStorage::new(persister.clone())),
+            info: Arc::new(FileSystemInfoStorage::new(
+                config.get_state_info_path(),
+                persister.clone(),
+            )),
             stream: Arc::new(FileStreamStorage),
             topic: Arc::new(FileTopicStorage),
             partition: Arc::new(FilePartitionStorage::new(persister.clone())),
@@ -145,12 +125,6 @@ impl SystemStorage {
 impl Debug for dyn SystemInfoStorage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "SystemInfoStorage")
-    }
-}
-
-impl Debug for dyn UserStorage {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "UserStorage")
     }
 }
 
@@ -213,22 +187,15 @@ pub(crate) mod tests {
     }
 
     #[async_trait]
-    impl Storage<SystemInfo> for TestSystemInfoStorage {
-        async fn load(&self, _system_info: &mut SystemInfo) -> Result<(), IggyError> {
-            Ok(())
+    impl SystemInfoStorage for TestSystemInfoStorage {
+        async fn load(&self) -> Result<SystemInfo, IggyError> {
+            Ok(SystemInfo::default())
         }
 
         async fn save(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
             Ok(())
         }
-
-        async fn delete(&self, _system_info: &SystemInfo) -> Result<(), IggyError> {
-            Ok(())
-        }
     }
-
-    #[async_trait]
-    impl SystemInfoStorage for TestSystemInfoStorage {}
 
     #[async_trait]
     impl StreamStorage for TestStreamStorage {
@@ -296,7 +263,7 @@ pub(crate) mod tests {
     }
 
     #[async_trait]
-    impl Storage<Segment> for TestSegmentStorage {
+    impl SegmentStorage for TestSegmentStorage {
         async fn load(&self, _segment: &mut Segment) -> Result<(), IggyError> {
             Ok(())
         }
@@ -308,10 +275,7 @@ pub(crate) mod tests {
         async fn delete(&self, _segment: &Segment) -> Result<(), IggyError> {
             Ok(())
         }
-    }
 
-    #[async_trait]
-    impl SegmentStorage for TestSegmentStorage {
         async fn load_message_batches(
             &self,
             _segment: &Segment,

@@ -83,7 +83,12 @@ impl System {
             &config.get_state_log_path(),
             persister.clone(),
         ));
-        Self::create(config, SystemStorage::new(persister), metadata, pat_config)
+        Self::create(
+            config.clone(),
+            SystemStorage::new(config, persister),
+            metadata,
+            pat_config,
+        )
     }
 
     pub fn create(

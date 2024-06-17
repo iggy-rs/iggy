@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -14,7 +15,7 @@ use crate::streaming::systems::system::SharedSystem;
 
 /// Starts the QUIC server.
 /// Returns the address the server is listening on.
-pub fn start(config: QuicConfig, system: SharedSystem) {
+pub fn start(config: QuicConfig, system: SharedSystem) -> SocketAddr {
     info!("Initializing Iggy QUIC server...");
     let address = config.address.parse().unwrap();
     let quic_config = configure_quic(config);
@@ -26,6 +27,7 @@ pub fn start(config: QuicConfig, system: SharedSystem) {
     let addr = endpoint.local_addr().unwrap();
     listener::start(endpoint, system);
     info!("Iggy QUIC server has started on: {:?}", addr);
+    addr
 }
 
 fn configure_quic(config: QuicConfig) -> Result<quinn::ServerConfig, Box<dyn Error>> {

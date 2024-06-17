@@ -1,4 +1,4 @@
-use crate::compat::message_converter::MessageFormatConverter;
+use crate::compat::message_conversion::message_converter::MessageFormatConverter;
 use crate::state::states::PartitionState;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;

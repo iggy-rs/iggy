@@ -1,5 +1,5 @@
-use crate::compat::message_stream::MessageStream;
-use crate::compat::snapshots::message_snapshot::MessageSnapshot;
+use crate::compat::message_conversion::message_stream::MessageStream;
+use crate::compat::message_conversion::snapshots::message_snapshot::MessageSnapshot;
 
 use async_stream::try_stream;
 use bytes::{BufMut, BytesMut};

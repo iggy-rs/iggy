@@ -1,4 +1,4 @@
-use crate::compat::message_converter::Extendable;
+use crate::compat::message_conversion::message_converter::Extendable;
 use crate::server_error::ServerError;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};

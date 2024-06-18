@@ -100,7 +100,7 @@
       }
     },
     "database": {
-      "path": "database",
+      "path": "database"
     },
     "runtime": {
       "path": "runtime"

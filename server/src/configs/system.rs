@@ -127,11 +127,9 @@ impl SystemConfig {
     }
 
     pub fn get_database_path(&self) -> Option<String> {
-        if let Some(database) = self.database.as_ref() {
-            Some(format!("{}/{}", self.get_system_path(), database.path))
-        } else {
-            None
-        }
+        self.database
+            .as_ref()
+            .map(|database| format!("{}/{}", self.get_system_path(), database.path))
     }
 
     pub fn get_state_path(&self) -> String {

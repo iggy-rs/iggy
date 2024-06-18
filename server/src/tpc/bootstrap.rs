@@ -1,10 +1,11 @@
-use std::{borrow::BorrowMut, sync::Arc};
-
+use futures::future::try_join_all;
 use iggy::error::IggyError;
+use monoio::task::JoinHandle;
 use sled::Db;
+use std::{rc::Rc, sync::Arc};
 
 use crate::{
-    configs::{server::ServerConfig, system::SystemConfig, tcp::TcpConfig},
+    configs::server::ServerConfig,
     streaming::{
         persistence::persister::{FilePersister, FileWithSyncPersister, StoragePersister},
         storage::SystemStorage,
@@ -46,10 +47,7 @@ pub fn create_shard(
         })
         .collect::<Vec<_>>();
 
-    let system_config = config.system.clone();
-    let tcp_config = config.tcp.clone();
-    let pat_config = config.personal_access_token.clone();
-    let persister = match system_config.partition.enforce_fsync {
+    let persister = match config.system.partition.enforce_fsync {
         true => Arc::new(StoragePersister::FileWithSync(FileWithSyncPersister {})),
         false => Arc::new(StoragePersister::File(FilePersister {})),
     };
@@ -57,9 +55,7 @@ pub fn create_shard(
     IggyShard::new(
         id,
         shards,
-        system_config,
-        tcp_config,
-        pat_config,
+        config,
         db,
         storage,
         receiver,
@@ -68,12 +64,19 @@ pub fn create_shard(
     )
 }
 
-pub async fn shard_executor(mut shard: IggyShard, is_prime_thread: bool) -> Result<(), IggyError> {
-    // Initialize system ?
+pub async fn shard_executor(shard: Rc<IggyShard>, is_prime_thread: bool) -> Result<(), IggyError> {
+    // Workaround to ensure that the statistics are initialized before the server
+    // loads streams and starts accepting connections. This is necessary to
+    // have the correct statistics when the server starts.
     shard.get_stats_bypass_auth().await?;
+    // TODO - make the init collections a Cell, so they can be mutated while being borrowed.
     shard.init().await?;
     // Create all tasks (tcp listener, http listener, command processor, in the future also the background handlers).
     let mut tasks = vec![];
+    if shard.config.tcp.enabled {
+        tasks.push(spawn_tcp_server(shard.clone()));
+    }
+    let result = try_join_all(tasks).await;
     // If its main thread, add to the list of joined tasks the task that will wait for the stop signal.
     // join_all all tasks, if it fails, then we can move to the graceful shutdown stage,
 
@@ -81,10 +84,6 @@ pub async fn shard_executor(mut shard: IggyShard, is_prime_thread: bool) -> Resu
     Ok(())
 }
 
-async fn start_tcp_server(shard: IggyShard, config: &mut TcpConfig) -> Result<(), IggyError> {
-    if config.tcp.enabled {
-    let tcp_addr = tcp_server::start(shard).await;
-        current_config.tcp.address = tcp_addr.to_string();
-    }
-    Ok(())
+async fn spawn_tcp_server(shard: Rc<IggyShard>) -> Result<(), IggyError> {
+    tcp_server::start(shard).await
 }

@@ -1,27 +1,18 @@
-use crate::configs::tcp::TcpConfig;
-use crate::streaming::systems::system::SharedSystem;
+use std::rc::Rc;
+
 use crate::tcp::{tcp_listener, tcp_tls_listener};
 use crate::tpc::shard::shard::IggyShard;
-use std::net::SocketAddr;
-use tracing::info;
+use iggy::error::IggyError;
 
 /// Starts the TCP server.
-/// Returns the address the server is listening on.
-pub async fn start(shard: IggyShard) -> SocketAddr {
-    /*
-    let server_name = if config.tls.enabled {
+pub async fn start(shard: Rc<IggyShard>) -> Result<(), IggyError> {
+    let server_name = if shard.config.tcp.tls.enabled {
         "Iggy TCP TLS"
     } else {
         "Iggy TCP"
     };
-    info!("Initializing {server_name} server...");
-    let addr = match config.tls.enabled {
-        true => tcp_tls_listener::start(&config.address, config.tls, system).await,
-        false => tcp_listener::start(&config.address, system).await,
-    };
-    */
-    let server_name = "Iggy TCP";
-    let addr = tcp_listener::start("127.0.0.1:2137", shard).await;
-    info!("{server_name} server has started on: {:?}", addr);
-    addr
+    match shard.config.tcp.tls.enabled {
+        true => tcp_tls_listener::start(server_name, shard).await,
+        false => tcp_listener::start(server_name, shard).await,
+    }
 }

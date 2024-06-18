@@ -9,7 +9,11 @@ use sysinfo::{Pid, System as SysinfoSystem};
 use tracing::info;
 
 use crate::{
-    configs::{server::PersonalAccessTokenConfig, system::SystemConfig, tcp::TcpConfig},
+    configs::{
+        server::{PersonalAccessTokenConfig, ServerConfig},
+        system::SystemConfig,
+        tcp::TcpConfig,
+    },
     streaming::{
         clients::client_manager::ClientManager, diagnostics::metrics::Metrics,
         persistence::persister::StoragePersister, storage::SystemStorage, streams::stream::Stream,
@@ -31,7 +35,6 @@ use iggy::{
     utils::crypto::{Aes256GcmEncryptor, Encryptor},
 };
 use sled::Db;
-use sysinfo::System;
 pub const SHARD_NAME: &str = "iggy_shard";
 
 pub struct IggyShard {
@@ -45,12 +48,10 @@ pub struct IggyShard {
     pub(crate) streams_ids: HashMap<String, u32>,
     // TODO - get rid of this dynamic dispatch.
     encryptor: Option<Box<dyn Encryptor>>,
-    pub(crate) system_config: Arc<SystemConfig>,
-    pub(crate) tcp_config: Arc<TcpConfig>,
+    pub(crate) config: ServerConfig,
     client_manager: IggySharedMut<ClientManager>,
     pub(crate) metrics: Metrics,
     db: Arc<Db>,
-    pat_config: PersonalAccessTokenConfig,
     message_receiver: Receiver<ShardFrame>,
     stop_receiver: StopReceiver,
     stop_sender: StopSender,
@@ -60,9 +61,7 @@ impl IggyShard {
     pub fn new(
         id: u16,
         shards: Vec<Shard>,
-        system_config: Arc<SystemConfig>,
-        tcp_config: TcpConfig,
-        pat_config: PersonalAccessTokenConfig,
+        config: ServerConfig,
         db: Arc<Db>,
         storage: Arc<SystemStorage>,
         shard_messages_receiver: Receiver<ShardFrame>,
@@ -78,18 +77,16 @@ impl IggyShard {
             storage,
             streams: HashMap::new(),
             streams_ids: HashMap::new(),
-            encryptor: match system_config.encryption.enabled {
+            encryptor: match config.system.encryption.enabled {
                 true => Some(Box::new(
-                    Aes256GcmEncryptor::from_base64_key(&system_config.encryption.key).unwrap(),
+                    Aes256GcmEncryptor::from_base64_key(&config.system.encryption.key).unwrap(),
                 )),
                 false => None,
             },
-            system_config,
-            tcp_config,
+            config,
             client_manager: IggySharedMut::new(ClientManager::default()),
             metrics: Metrics::init(),
             db,
-            pat_config,
             message_receiver: shard_messages_receiver,
             stop_receiver,
             stop_sender,
@@ -99,7 +96,7 @@ impl IggyShard {
     pub async fn init(&mut self) -> Result<(), IggyError> {
         info!(
             "Initializing system, data will be stored at: {}",
-            self.system_config.get_system_path()
+            self.config.system.get_system_path()
         );
         let now = Instant::now();
         self.load_version().await?;

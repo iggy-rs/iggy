@@ -1,16 +1,15 @@
-use crate::binary::command;
+use crate::{binary::command, tpc::shard::shard::IggyShard};
 use crate::binary::sender::Sender;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
-use crate::streaming::systems::system::SharedSystem;
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use iggy::error::IggyError;
-use monoio::buf::IoBufMut;
+use monoio::net::unix::SocketAddr;
 use std::io::ErrorKind;
-use std::net::SocketAddr;
+use std::rc::Rc;
 use tracing::{debug, error, info};
 
 const INITIAL_BYTES_LENGTH: usize = 4;
@@ -18,7 +17,7 @@ const INITIAL_BYTES_LENGTH: usize = 4;
 pub(crate) async fn handle_connection(
     address: SocketAddr,
     sender: &mut impl Sender,
-    system: SharedSystem,
+    shard: Rc<IggyShard>,
 ) -> Result<(), ServerError> {
     let client_id = system.read().add_client(&address, Transport::Tcp).await;
 

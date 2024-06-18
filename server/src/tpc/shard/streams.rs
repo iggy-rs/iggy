@@ -17,7 +17,7 @@ impl IggyShard {
     pub(crate) async fn load_streams(&mut self) -> Result<(), IggyError> {
         info!("Loading streams from disk...");
         let mut unloaded_streams = Vec::new();
-        let dir_entries = std::fs::read_dir(&self.system_config.get_streams_path());
+        let dir_entries = std::fs::read_dir(&self.config.system.get_streams_path());
         if let Err(error) = dir_entries {
             error!("Cannot read streams directory: {}", error);
             return Err(IggyError::CannotReadStreams);
@@ -34,7 +34,7 @@ impl IggyShard {
             }
 
             let stream_id = stream_id.unwrap();
-            let stream = Stream::empty(stream_id, self.system_config.clone(), self.storage.clone());
+            let stream = Stream::empty(stream_id, self.config.system.clone(), self.storage.clone());
             unloaded_streams.push(stream);
         }
 

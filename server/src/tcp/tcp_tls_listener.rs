@@ -1,45 +1,44 @@
-use futures::channel::oneshot;
+use crate::tcp::connection_handler::{handle_connection, handle_error};
+use crate::tcp::persist_tcp_address;
+use crate::tcp::tcp_tls_sender::TcpTlsSender;
+use crate::tpc::shard::shard::IggyShard;
+use iggy::error::IggyError;
 use monoio::net::TcpListener;
 use monoio_native_tls::TlsAcceptor;
 use native_tls::Identity;
-use std::net::SocketAddr;
-
-use crate::configs::tcp::TcpTlsConfig;
-use crate::streaming::systems::system::SharedSystem;
-use crate::tcp::connection_handler::{handle_connection, handle_error};
-use crate::tcp::tcp_tls_sender::TcpTlsSender;
+use std::rc::Rc;
 use tracing::{error, info};
 
-pub(crate) async fn start(address: &str, config: TcpTlsConfig, system: SharedSystem) -> SocketAddr {
-    let address = address.to_string();
-    let (tx, rx) = oneshot::channel();
+pub(crate) async fn start(server_name: &str, shard: Rc<IggyShard>) -> Result<(), IggyError> {
+    let address = shard.config.tcp.address;
+    let tls_config = shard.config.tcp.tls;
     monoio::spawn(async move {
-        let certificate = std::fs::read(config.certificate.clone());
+        let certificate = std::fs::read(tls_config.certificate.clone());
         if certificate.is_err() {
             panic!("Unable to read certificate file.");
         }
 
-        let certificate = certificate.unwrap();
-        let identity = Identity::from_pkcs12(&certificate, &config.password);
+        let certificate = certificate?;
+        let identity = Identity::from_pkcs12(&certificate, &tls_config.password);
         if identity.is_err() {
             panic!("Unable to create identity from certificate.");
         }
 
-        let identity = identity.unwrap();
-        let raw_acceptor = native_tls::TlsAcceptor::new(identity).unwrap();
+        let identity = identity?;
+        let raw_acceptor = native_tls::TlsAcceptor::new(identity)?;
         let acceptor = TlsAcceptor::from(raw_acceptor);
-        let listener = TcpListener::bind(&address).expect("Unable to start TCP TLS server.");
+        let listener =
+            TcpListener::bind(&address).expect(format!("Unable to start {server_name}.").as_ref());
 
         let local_addr = listener
             .local_addr()
-            .expect("Failed to get local address for TCP TLS listener");
-
-        tx.send(local_addr).unwrap_or_else(|_| {
-            panic!(
-                "Failed to send the local address {:?} for TCP TLS listener",
-                local_addr
-            )
-        });
+            .expect("Failed to get local address for TCP TLS listener")
+            .to_string();
+        info!("{server_name} server has started on: {:?}", local_addr);
+        // This is required for the integration tests client to know where to connect to.
+        // Since we bind to port 0 when creating server in order to get a random non-used port,
+        // we have to store the address in the default_config.toml file.
+        persist_tcp_address(&shard, local_addr);
 
         loop {
             match listener.accept().await {
@@ -47,7 +46,7 @@ pub(crate) async fn start(address: &str, config: TcpTlsConfig, system: SharedSys
                     info!("Accepted new TCP TLS connection: {}", address);
                     let acceptor = acceptor.clone();
                     let stream = acceptor.accept(stream).await.unwrap();
-                    let system = system.clone();
+                    let shard = shard.clone();
                     let mut sender = TcpTlsSender { stream };
                     monoio::spawn(async move {
                         if let Err(error) =
@@ -62,8 +61,5 @@ pub(crate) async fn start(address: &str, config: TcpTlsConfig, system: SharedSys
             }
         }
     });
-    match rx.await {
-        Ok(addr) => addr,
-        Err(_) => panic!("Failed to get the local address for TCP TLS listener"),
-    }
+    Ok(())
 }

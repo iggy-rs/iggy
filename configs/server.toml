@@ -230,6 +230,12 @@ path = "backup"
 # Subpath of the backup directory where converted segment data is stored after compatibility conversion.
 path = "compatibility"
 
+# Database configuration.
+[system.database]
+# Path for storing database files.
+# Specifies the directory where database files are stored, relative to `system.path`.
+path = "database"
+
 # Runtime configuration.
 [system.runtime]
 # Path for storing runtime data.

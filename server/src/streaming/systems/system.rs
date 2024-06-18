@@ -17,6 +17,7 @@ use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
 use tracing::{info, trace};
 
+use crate::compat;
 use crate::state::metadata::{FileMetadata, Metadata};
 use crate::state::states::SystemState;
 use crate::streaming::users::user::User;
@@ -150,6 +151,8 @@ impl System {
             "Initializing system, data will be stored at: {}",
             self.config.get_system_path()
         );
+
+        compat::storage_conversion::init(self.config.clone()).await?;
 
         let entries = self.metadata.init().await?;
         let state = SystemState::init(entries).await?;

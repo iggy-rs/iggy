@@ -13,6 +13,7 @@ use serde_with::DisplayFromStr;
 pub struct SystemConfig {
     pub path: String,
     pub backup: BackupConfig,
+    pub database: Option<DatabaseConfig>,
     pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
     pub cache: CacheConfig,
@@ -34,6 +35,11 @@ pub struct BackupConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CompatibilityConfig {
+    pub path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DatabaseConfig {
     pub path: String,
 }
 
@@ -118,6 +124,14 @@ pub struct SegmentConfig {
 impl SystemConfig {
     pub fn get_system_path(&self) -> String {
         self.path.to_string()
+    }
+
+    pub fn get_database_path(&self) -> Option<String> {
+        if let Some(database) = self.database.as_ref() {
+            Some(format!("{}/{}", self.get_system_path(), database.path))
+        } else {
+            None
+        }
     }
 
     pub fn get_state_path(&self) -> String {

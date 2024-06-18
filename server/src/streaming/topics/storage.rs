@@ -9,7 +9,6 @@ use futures::future::join_all;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::Path;
@@ -39,7 +38,7 @@ impl TopicStorage for FileTopicStorage {
             return Err(IggyError::TopicIdNotFound(topic.topic_id, topic.stream_id));
         }
 
-        topic.created_at = state.created_at.to_micros();
+        topic.created_at = state.created_at;
         topic.message_expiry = state.message_expiry;
         topic.compression_algorithm = state.compression_algorithm;
         topic.max_topic_size = state.max_topic_size;
@@ -87,6 +86,7 @@ impl TopicStorage for FileTopicStorage {
                 continue;
             }
 
+            let partition_state = partition_state.unwrap();
             let partition = Partition::create(
                 topic.stream_id,
                 topic.topic_id,
@@ -100,7 +100,7 @@ impl TopicStorage for FileTopicStorage {
                 topic.size_of_parent_stream.clone(),
                 topic.size_bytes.clone(),
                 topic.segments_count_of_parent_stream.clone(),
-                IggyTimestamp::now().to_micros(),
+                partition_state.created_at,
             );
             unloaded_partitions.push(partition);
         }

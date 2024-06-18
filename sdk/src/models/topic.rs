@@ -1,7 +1,9 @@
 use crate::compression::compression_algorithm::CompressionAlgorithm;
+use crate::models::partition::Partition;
+use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
+use crate::utils::timestamp::IggyTimestamp;
 use crate::utils::topic_size::MaxTopicSize;
-use crate::{models::partition::Partition, utils::byte_size::IggyByteSize};
 use serde::{Deserialize, Serialize};
 
 /// `Topic` represents the medium level of logical separation of data as it's a part of the stream.
@@ -20,7 +22,7 @@ pub struct Topic {
     /// The unique identifier (numeric) of the topic.
     pub id: u32,
     /// The timestamp when the topic was created.
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     /// The unique name of the topic.
     pub name: String,
     /// The total size of the topic in bytes.
@@ -57,7 +59,7 @@ pub struct TopicDetails {
     /// The unique identifier (numeric) of the topic.
     pub id: u32,
     /// The timestamp when the topic was created.
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     /// The unique name of the topic.
     pub name: String,
     /// The total size of the topic.

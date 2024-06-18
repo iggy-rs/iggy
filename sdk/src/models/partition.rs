@@ -1,4 +1,5 @@
 use crate::utils::byte_size::IggyByteSize;
+use crate::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 
 /// `Partition` represents the information about a partition.
@@ -14,7 +15,7 @@ pub struct Partition {
     /// Unique identifier of the partition.
     pub id: u32,
     /// The timestamp of the partition creation.
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     /// The number of segments in the partition.
     pub segments_count: u32,
     /// The current offset of the partition.

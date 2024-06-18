@@ -3,7 +3,6 @@ use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::get_topic::GetTopic;
 use crate::utils::expiry::IggyExpiry;
-use crate::utils::timestamp::IggyTimestamp;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -50,9 +49,7 @@ impl CliCommand for GetTopicCmd {
         table.add_row(vec!["Topic id", format!("{}", topic.id).as_str()]);
         table.add_row(vec![
             "Created",
-            IggyTimestamp::from(topic.created_at)
-                .to_utc_string("%Y-%m-%d %H:%M:%S")
-                .as_str(),
+            topic.created_at.to_utc_string("%Y-%m-%d %H:%M:%S").as_str(),
         ]);
         table.add_row(vec!["Topic name", topic.name.as_str()]);
         table.add_row(vec!["Topic size", format!("{}", topic.size).as_str()]);

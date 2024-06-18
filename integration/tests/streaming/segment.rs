@@ -152,10 +152,10 @@ async fn should_persist_and_load_segment_with_messages() {
     .await;
     let messages_count = 10;
     let mut base_offset = 0;
-    let mut last_timestamp = 0;
+    let mut last_timestamp = IggyTimestamp::zero();
     let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
-        let message = create_message(i, "test", IggyTimestamp::now().to_micros());
+        let message = create_message(i, "test", IggyTimestamp::now());
         if i == 0 {
             base_offset = message.offset;
         }
@@ -246,13 +246,13 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     .await;
     let messages_count = 10;
     let now = IggyTimestamp::now();
-    let mut expired_timestamp = now.to_micros() - 2 * message_expiry_ms;
+    let mut expired_timestamp = (now.to_micros() - 2 * message_expiry_ms).into();
     let mut base_offset = 0;
-    let mut last_timestamp = 0;
+    let mut last_timestamp = IggyTimestamp::zero();
     let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
-        expired_timestamp += 1;
+        expired_timestamp = (expired_timestamp.to_micros() + 1).into();
         if i == 0 {
             base_offset = message.offset;
         }
@@ -324,8 +324,8 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     )
     .await;
     let now = IggyTimestamp::now();
-    let expired_timestamp = now.to_micros() - 2 * message_expiry_ms;
-    let not_expired_timestamp = now.to_micros() - message_expiry_ms + 1;
+    let expired_timestamp = (now.to_micros() - 2 * message_expiry_ms).into();
+    let not_expired_timestamp = (now.to_micros() - message_expiry_ms + 1).into();
     let expired_message = create_message(0, "test", expired_timestamp);
     let not_expired_message = create_message(1, "test", not_expired_timestamp);
 
@@ -387,7 +387,7 @@ async fn assert_persisted_segment(partition_path: &str, start_offset: u64) {
     assert!(fs::metadata(&time_index_path).await.is_ok());
 }
 
-fn create_message(offset: u64, payload: &str, timestamp: u64) -> PolledMessage {
+fn create_message(offset: u64, payload: &str, timestamp: IggyTimestamp) -> PolledMessage {
     let payload = Bytes::from(payload.to_string());
     let checksum = checksum::calculate(payload.as_ref());
     PolledMessage::create(

@@ -32,7 +32,7 @@ async fn should_persist_partition_with_segment() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now().to_micros(),
+            IggyTimestamp::now(),
         );
 
         partition.persist().await.unwrap();
@@ -63,11 +63,12 @@ async fn should_load_existing_partition_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now().to_micros(),
+            IggyTimestamp::now(),
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.partition_path, with_segment).await;
 
+        let now = IggyTimestamp::now();
         let mut loaded_partition = Partition::create(
             stream_id,
             topic_id,
@@ -81,10 +82,11 @@ async fn should_load_existing_partition_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now().to_micros(),
+            now,
         );
         let partition_state = PartitionState {
             id: partition.partition_id,
+            created_at: now,
         };
         loaded_partition.load(partition_state).await.unwrap();
 
@@ -134,7 +136,7 @@ async fn should_delete_existing_partition_from_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now().to_micros(),
+            IggyTimestamp::now(),
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.partition_path, with_segment).await;
@@ -167,7 +169,7 @@ async fn should_purge_existing_partition_on_disk() {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now().to_micros(),
+            IggyTimestamp::now(),
         );
         partition.persist().await.unwrap();
         assert_persisted_partition(&partition.partition_path, with_segment).await;

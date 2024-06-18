@@ -4,6 +4,7 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::models::messages::PolledMessage;
 use iggy::utils::checksum;
+use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -21,7 +22,7 @@ pub struct PolledMessages {
 pub struct RetainedMessage {
     pub id: u128,
     pub offset: u64,
-    pub timestamp: u64,
+    pub timestamp: IggyTimestamp,
     pub checksum: u32,
     pub message_state: MessageState,
     pub headers: Option<Bytes>,
@@ -47,7 +48,7 @@ impl TryFrom<RetainedMessage> for PolledMessage {
 }
 
 impl RetainedMessage {
-    pub fn new(offset: u64, timestamp: u64, message: Message) -> Self {
+    pub fn new(offset: u64, timestamp: IggyTimestamp, message: Message) -> Self {
         RetainedMessage {
             offset,
             timestamp,
@@ -72,7 +73,7 @@ impl RetainedMessage {
         bytes.put_u32_le(length);
         bytes.put_u64_le(offset);
         bytes.put_u8(message_state.as_code());
-        bytes.put_u64_le(timestamp);
+        bytes.put_u64_le(timestamp.into());
         bytes.put_u128_le(id);
         bytes.put_u32_le(checksum);
         if let Some(headers) = headers {
@@ -89,6 +90,7 @@ impl RetainedMessage {
         let offset = u64::from_le_bytes(bytes[..8].try_into()?);
         let message_state = MessageState::from_code(bytes[8])?;
         let timestamp = u64::from_le_bytes(bytes[9..17].try_into()?);
+        let timestamp = timestamp.into();
         let id = u128::from_le_bytes(bytes[17..33].try_into()?);
         let checksum = u32::from_le_bytes(bytes[33..37].try_into()?);
         let headers_length = u32::from_le_bytes(bytes[37..41].try_into()?);

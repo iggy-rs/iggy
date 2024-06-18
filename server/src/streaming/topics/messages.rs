@@ -47,7 +47,11 @@ impl Topic {
         let value = strategy.value;
         let messages = match strategy.kind {
             PollingKind::Offset => partition.get_messages_by_offset(value, count).await,
-            PollingKind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
+            PollingKind::Timestamp => {
+                partition
+                    .get_messages_by_timestamp(value.into(), count)
+                    .await
+            }
             PollingKind::First => partition.get_first_messages(count).await,
             PollingKind::Last => partition.get_last_messages(count).await,
             PollingKind::Next => partition.get_next_messages(consumer, count).await,

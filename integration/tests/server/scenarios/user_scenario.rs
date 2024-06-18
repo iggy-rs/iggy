@@ -28,7 +28,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     // 5. Get user details
     let user = users.first().unwrap();
     assert_eq!(user.id, 1);
-    assert!(user.created_at > 0);
+    assert!(user.created_at.to_micros() > 0);
     assert_eq!(user.username, DEFAULT_ROOT_USERNAME);
     assert_eq!(user.status, UserStatus::Active);
 
@@ -38,7 +38,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         .unwrap();
 
     assert_eq!(user.id, 1);
-    assert!(user.created_at > 0);
+    assert!(user.created_at.to_micros() > 0);
     assert_eq!(user.username, DEFAULT_ROOT_USERNAME);
     assert_eq!(user.status, UserStatus::Active);
     assert!(user.permissions.is_some());

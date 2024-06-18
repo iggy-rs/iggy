@@ -38,7 +38,7 @@ pub struct Topic {
     pub compression_algorithm: CompressionAlgorithm,
     pub max_topic_size: MaxTopicSize,
     pub replication_factor: u8,
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
 }
 
 impl Topic {
@@ -120,7 +120,7 @@ impl Topic {
             },
             replication_factor,
             config,
-            created_at: IggyTimestamp::now().to_micros(),
+            created_at: IggyTimestamp::now(),
         };
 
         topic.add_partitions(partitions_count)?;

@@ -208,7 +208,7 @@ async fn extend_stream(stream: &Stream, bytes: &mut BytesMut) {
 
 async fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
     bytes.put_u32_le(topic.topic_id);
-    bytes.put_u64_le(topic.created_at);
+    bytes.put_u64_le(topic.created_at.into());
     bytes.put_u32_le(topic.get_partitions().len() as u32);
     bytes.put_u64_le(topic.message_expiry.into());
     bytes.put_u8(topic.compression_algorithm.as_code());
@@ -222,7 +222,7 @@ async fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
 
 fn extend_partition(partition: &Partition, bytes: &mut BytesMut) {
     bytes.put_u32_le(partition.partition_id);
-    bytes.put_u64_le(partition.created_at);
+    bytes.put_u64_le(partition.created_at.into());
     bytes.put_u32_le(partition.get_segments().len() as u32);
     bytes.put_u64_le(partition.current_offset);
     bytes.put_u64_le(partition.get_size_bytes());
@@ -253,7 +253,7 @@ fn extend_client(client: &Client, bytes: &mut BytesMut) {
 
 fn extend_user(user: &User, bytes: &mut BytesMut) {
     bytes.put_u32_le(user.id);
-    bytes.put_u64_le(user.created_at);
+    bytes.put_u64_le(user.created_at.into());
     bytes.put_u8(user.status.as_code());
     bytes.put_u8(user.username.len() as u8);
     bytes.put_slice(user.username.as_bytes());

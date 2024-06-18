@@ -9,6 +9,7 @@ use dashmap::DashMap;
 use iggy::consumer::ConsumerKind;
 use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -27,7 +28,7 @@ pub struct Partition {
     pub message_deduplicator: Option<MessageDeduplicator>,
     pub unsaved_messages_count: u32,
     pub should_increment_offset: bool,
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     pub avg_timestamp_delta: IggyDuration,
     pub messages_count_of_parent_stream: Arc<AtomicU64>,
     pub messages_count_of_parent_topic: Arc<AtomicU64>,
@@ -61,15 +62,6 @@ impl ConsumerOffset {
             path: format!("{path}/{consumer_id}"),
         }
     }
-
-    pub fn get_key_prefix(
-        kind: ConsumerKind,
-        stream_id: u32,
-        topic_id: u32,
-        partition_id: u32,
-    ) -> String {
-        format!("{kind}_offsets:{stream_id}:{topic_id}:{partition_id}")
-    }
 }
 
 impl Partition {
@@ -87,7 +79,7 @@ impl Partition {
         size_of_parent_stream: Arc<AtomicU64>,
         size_of_parent_topic: Arc<AtomicU64>,
         segments_count_of_parent_stream: Arc<AtomicU32>,
-        created_at: u64,
+        created_at: IggyTimestamp,
     ) -> Partition {
         let partition_path = config.get_partition_path(stream_id, topic_id, partition_id);
         let offsets_path = config.get_offsets_path(stream_id, topic_id, partition_id);
@@ -214,7 +206,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now().to_micros(),
+            IggyTimestamp::now(),
         );
 
         assert_eq!(partition.stream_id, stream_id);
@@ -254,7 +246,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now().to_micros(),
+            IggyTimestamp::now(),
         );
         assert!(partition.cache.is_none());
     }
@@ -276,7 +268,7 @@ mod tests {
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU64::new(0)),
             Arc::new(AtomicU32::new(0)),
-            IggyTimestamp::now().to_micros(),
+            IggyTimestamp::now(),
         );
         assert!(partition.segments.is_empty());
     }

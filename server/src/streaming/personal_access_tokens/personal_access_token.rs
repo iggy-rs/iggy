@@ -4,10 +4,11 @@ use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::text::as_base64;
 use iggy::utils::timestamp::IggyTimestamp;
 use ring::rand::SecureRandom;
+use serde::{Deserialize, Serialize};
 
 const SIZE: usize = 50;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct PersonalAccessToken {
     pub user_id: UserId,
     pub name: String,

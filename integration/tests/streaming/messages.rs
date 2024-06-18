@@ -43,7 +43,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU32::new(0)),
-        IggyTimestamp::now().to_micros(),
+        IggyTimestamp::now(),
     );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
@@ -117,7 +117,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         .append_messages(appendable_batch_info, messages)
         .await
         .unwrap();
-    let test_timestamp = IggyTimestamp::now().to_micros();
+    let test_timestamp = IggyTimestamp::now();
     partition
         .append_messages(appendable_batch_info_two, messages_two)
         .await
@@ -134,7 +134,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         let appended_message = &appended_messages[index];
         assert_eq!(loaded_message.id, appended_message.id);
         assert_eq!(loaded_message.payload, appended_message.payload);
-        assert!(loaded_message.timestamp >= test_timestamp);
+        assert!(loaded_message.timestamp.to_micros() >= test_timestamp.to_micros());
         assert_eq!(
             loaded_message
                 .headers
@@ -173,7 +173,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU32::new(0)),
-        IggyTimestamp::now().to_micros(),
+        IggyTimestamp::now(),
     );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
@@ -222,6 +222,7 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         .unwrap();
     assert_eq!(partition.unsaved_messages_count, 0);
 
+    let now = IggyTimestamp::now();
     let mut loaded_partition = Partition::create(
         stream_id,
         topic_id,
@@ -235,10 +236,11 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU64::new(0)),
         Arc::new(AtomicU32::new(0)),
-        IggyTimestamp::now().to_micros(),
+        now,
     );
     let partition_state = PartitionState {
         id: partition.partition_id,
+        created_at: now,
     };
     loaded_partition.load(partition_state).await.unwrap();
     let loaded_messages = loaded_partition

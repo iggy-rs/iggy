@@ -249,6 +249,7 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
         let offset = u64::from_le_bytes(payload[position..position + 8].try_into()?);
         let state = MessageState::from_code(payload[position + 8])?;
         let timestamp = u64::from_le_bytes(payload[position + 9..position + 17].try_into()?);
+        let timestamp = timestamp.into();
         let id = u128::from_le_bytes(payload[position + 17..position + 33].try_into()?);
         let checksum = u32::from_le_bytes(payload[position + 33..position + 37].try_into()?);
         let headers_length = u32::from_le_bytes(payload[position + 37..position + 41].try_into()?);
@@ -404,6 +405,7 @@ pub fn map_topic(payload: Bytes) -> Result<TopicDetails, IggyError> {
 fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let created_at = created_at.into();
     let partitions_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
     let message_expiry = match u64::from_le_bytes(payload[position + 16..position + 24].try_into()?)
     {
@@ -442,6 +444,7 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
 fn map_to_partition(payload: Bytes, position: usize) -> Result<(Partition, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let created_at = created_at.into();
     let segments_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
     let current_offset = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
     let size_bytes = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?).into();
@@ -587,6 +590,7 @@ fn map_to_client_info(
 fn map_to_user_info(payload: Bytes, position: usize) -> Result<(UserInfo, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let created_at = created_at.into();
     let status = payload[position + 12];
     let status = UserStatus::from_code(status)?;
     let username_length = payload[position + 13];

@@ -9,6 +9,7 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Partitioning;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
 use server::state::states::{PartitionState, TopicState};
 use server::streaming::polling_consumer::PollingConsumer;
@@ -85,6 +86,7 @@ async fn should_load_existing_topic_from_disk() {
         )
         .await;
 
+        let created_at = IggyTimestamp::now();
         let mut loaded_topic = Topic::empty(
             stream_id,
             topic_id,
@@ -102,7 +104,7 @@ async fn should_load_existing_topic_from_disk() {
                 HashMap::new()
             } else {
                 (1..=partitions_count)
-                    .map(|id| (id, PartitionState { id }))
+                    .map(|id| (id, PartitionState { id, created_at }))
                     .collect()
             },
             consumer_groups: Default::default(),

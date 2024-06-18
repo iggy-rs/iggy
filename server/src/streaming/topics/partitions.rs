@@ -41,7 +41,7 @@ impl Topic {
                 self.size_of_parent_stream.clone(),
                 self.size_bytes.clone(),
                 self.segments_count_of_parent_stream.clone(),
-                IggyTimestamp::now().to_micros(),
+                IggyTimestamp::now(),
             );
             self.partitions
                 .insert(partition_id, IggySharedMut::new(partition));

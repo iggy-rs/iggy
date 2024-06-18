@@ -35,12 +35,13 @@ impl PartitionStorage for FilePartitionStorage {
     async fn load(
         &self,
         partition: &mut Partition,
-        _state: PartitionState,
+        state: PartitionState,
     ) -> Result<(), IggyError> {
         info!(
             "Loading partition with ID: {} for stream with ID: {} and topic with ID: {}, for path: {} from disk...",
             partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path
         );
+        partition.created_at = state.created_at;
         let dir_entries = fs::read_dir(&partition.partition_path).await;
         if let Err(err) = fs::read_dir(&partition.partition_path)
                 .await

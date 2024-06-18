@@ -64,6 +64,7 @@ pub struct TopicState {
 #[derive(Debug)]
 pub struct PartitionState {
     pub id: u32,
+    pub created_at: IggyTimestamp,
 }
 
 #[derive(Debug)]
@@ -147,12 +148,20 @@ impl SystemState {
                         max_topic_size: command.max_topic_size,
                         replication_factor: command.replication_factor,
                         created_at: entry.timestamp,
-                        partitions: if command.partitions_count == 0 {
-                            HashMap::new()
+                        partitions: if command.partitions_count > 0 {
+                            let mut partitions = HashMap::new();
+                            for i in 1..=command.partitions_count {
+                                partitions.insert(
+                                    i,
+                                    PartitionState {
+                                        id: i,
+                                        created_at: entry.timestamp,
+                                    },
+                                );
+                            }
+                            partitions
                         } else {
-                            (1..=command.partitions_count)
-                                .map(|id| (id, PartitionState { id }))
-                                .collect()
+                            HashMap::new()
                         },
                     };
                     stream.topics.insert(topic.id, topic);
@@ -183,8 +192,14 @@ impl SystemState {
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
                     let topic = stream.topics.get_mut(&topic_id).unwrap();
                     let last_partition_id = topic.partitions.values().map(|p| p.id).max().unwrap();
-                    for id in last_partition_id + 1..=last_partition_id + command.partitions_count {
-                        topic.partitions.insert(id, PartitionState { id });
+                    for i in 1..=command.partitions_count {
+                        topic.partitions.insert(
+                            last_partition_id + i,
+                            PartitionState {
+                                id: last_partition_id + i,
+                                created_at: entry.timestamp,
+                            },
+                        );
                     }
                 }
                 DELETE_PARTITIONS_CODE => {
@@ -194,8 +209,8 @@ impl SystemState {
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
                     let topic = stream.topics.get_mut(&topic_id).unwrap();
                     let last_partition_id = topic.partitions.values().map(|p| p.id).max().unwrap();
-                    for id in last_partition_id - command.partitions_count + 1..=last_partition_id {
-                        topic.partitions.remove(&id);
+                    for i in 0..command.partitions_count {
+                        topic.partitions.remove(&(last_partition_id - i));
                     }
                 }
                 CREATE_CONSUMER_GROUP_CODE => {
@@ -412,6 +427,10 @@ impl Display for TopicState {
 
 impl Display for PartitionState {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Partition -> ID: {}", self.id)
+        write!(
+            f,
+            "Partition -> ID: {}, Created At: {}",
+            self.id, self.created_at
+        )
     }
 }

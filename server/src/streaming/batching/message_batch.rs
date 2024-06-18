@@ -9,13 +9,14 @@ use iggy::error::IggyError::{
     MissingLengthRetainedMessageBatch, MissingMaxTimestampRetainedMessageBatch,
     MissingPayloadRetainedMessageBatch,
 };
+use iggy::utils::timestamp::IggyTimestamp;
 
 use crate::streaming::sizeable::Sizeable;
 #[derive(Debug, Clone)]
 pub struct RetainedMessageBatch {
     pub base_offset: u64,
     pub last_offset_delta: u32,
-    pub max_timestamp: u64,
+    pub max_timestamp: IggyTimestamp,
     pub length: u32,
     pub bytes: Bytes,
 }
@@ -24,7 +25,7 @@ impl RetainedMessageBatch {
     pub fn new(
         base_offset: u64,
         last_offset_delta: u32,
-        max_timestamp: u64,
+        max_timestamp: IggyTimestamp,
         length: u32,
         bytes: Bytes,
     ) -> Self {
@@ -59,7 +60,7 @@ impl RetainedMessageBatch {
         bytes.put_u64_le(self.base_offset);
         bytes.put_u32_le(self.length);
         bytes.put_u32_le(self.last_offset_delta);
-        bytes.put_u64_le(self.max_timestamp);
+        bytes.put_u64_le(self.max_timestamp.into());
         bytes.put_slice(&self.bytes);
     }
 }
@@ -104,7 +105,7 @@ where
 pub struct RetainedMessageBatchBuilder {
     base_offset: Option<u64>,
     last_offset_delta: Option<u32>,
-    max_timestamp: Option<u64>,
+    max_timestamp: Option<IggyTimestamp>,
     length: Option<u32>,
     payload: Option<Bytes>,
 }
@@ -130,7 +131,7 @@ impl RetainedMessageBatchBuilder {
         self
     }
 
-    pub fn max_timestamp(mut self, max_timestamp: u64) -> Self {
+    pub fn max_timestamp(mut self, max_timestamp: IggyTimestamp) -> Self {
         self.max_timestamp = Some(max_timestamp);
         self
     }

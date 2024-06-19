@@ -69,7 +69,7 @@ impl IggyShard {
         stop_sender: StopSender,
     ) -> Self {
         let name = &format!("{}_{}", SHARD_NAME, id);
-        Self {
+        let this = Self {
             id,
             hash: hash_string(&name).unwrap(),
             shards,
@@ -90,7 +90,9 @@ impl IggyShard {
             message_receiver: shard_messages_receiver,
             stop_receiver,
             stop_sender,
-        }
+        };
+        // For now like this, TODO - make the Vec<Shards> a Cell.
+        this.sort_consistent_hash_ring()
     }
 
     pub async fn init(&mut self) -> Result<(), IggyError> {
@@ -104,6 +106,22 @@ impl IggyShard {
         self.load_streams().await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
+    }
+
+    fn sort_consistent_hash_ring(mut self) -> Self {
+        self.shards.sort_unstable_by(|a, b| {
+            let x = a.hash;
+            let y = b.hash;
+            let threshold = self.hash;
+            if x < threshold && y >= threshold {
+                std::cmp::Ordering::Greater
+            } else if x >= threshold && y < threshold {
+                std::cmp::Ordering::Less
+            } else {
+                x.cmp(&y)
+            }
+        });
+        self
     }
 
     pub async fn stop(self) -> Result<(), SendError<()>> {

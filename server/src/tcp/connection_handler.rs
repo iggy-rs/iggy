@@ -7,8 +7,8 @@ use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use iggy::error::IggyError;
-use monoio::net::unix::SocketAddr;
 use std::io::ErrorKind;
+use std::net::SocketAddr;
 use std::rc::Rc;
 use tracing::{debug, error, info};
 

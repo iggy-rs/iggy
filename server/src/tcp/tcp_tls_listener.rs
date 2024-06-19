@@ -9,8 +9,9 @@ use native_tls::Identity;
 use std::rc::Rc;
 use tracing::{error, info};
 
-pub(crate) async fn start(server_name: &str, shard: Rc<IggyShard>) -> Result<(), IggyError> {
-    let address = shard.config.tcp.address;
+pub(crate) async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), IggyError> {
+    /* 
+    let address = shard.config.tcp.clone().address;
     let tls_config = shard.config.tcp.tls;
     monoio::spawn(async move {
         let certificate = std::fs::read(tls_config.certificate.clone());
@@ -28,17 +29,18 @@ pub(crate) async fn start(server_name: &str, shard: Rc<IggyShard>) -> Result<(),
         let raw_acceptor = native_tls::TlsAcceptor::new(identity)?;
         let acceptor = TlsAcceptor::from(raw_acceptor);
         let listener =
-            TcpListener::bind(&address).expect(format!("Unable to start {server_name}.").as_ref());
+            TcpListener::bind(address).expect(format!("Unable to start {server_name}.").as_ref());
 
         let local_addr = listener
             .local_addr()
-            .expect("Failed to get local address for TCP TLS listener")
-            .to_string();
+            .expect("Failed to get local address for TCP TLS listener");
         info!("{server_name} server has started on: {:?}", local_addr);
         // This is required for the integration tests client to know where to connect to.
         // Since we bind to port 0 when creating server in order to get a random non-used port,
         // we have to store the address in the default_config.toml file.
-        persist_tcp_address(&shard, local_addr);
+        if let Err(e) = persist_tcp_address(&shard, local_addr.to_string()).await {
+            return e;
+        }
 
         loop {
             match listener.accept().await {
@@ -50,10 +52,10 @@ pub(crate) async fn start(server_name: &str, shard: Rc<IggyShard>) -> Result<(),
                     let mut sender = TcpTlsSender { stream };
                     monoio::spawn(async move {
                         if let Err(error) =
-                            handle_connection(address, &mut sender, system.clone()).await
+                            handle_connection(address, &mut sender, shard).await
                         {
                             handle_error(error);
-                            system.read().delete_client(&address).await;
+                            //system.read().delete_client(&address).await;
                         }
                     });
                 }
@@ -61,5 +63,6 @@ pub(crate) async fn start(server_name: &str, shard: Rc<IggyShard>) -> Result<(),
             }
         }
     });
+    */
     Ok(())
 }

@@ -1,3 +1,4 @@
+use crate::streaming::systems::system::{SharedSystem, System};
 use crate::{binary::command, tpc::shard::shard::IggyShard};
 use crate::binary::sender::Sender;
 use crate::server_error::ServerError;
@@ -19,8 +20,7 @@ pub(crate) async fn handle_connection(
     sender: &mut impl Sender,
     shard: Rc<IggyShard>,
 ) -> Result<(), ServerError> {
-    let client_id = system.read().add_client(&address, Transport::Tcp).await;
-
+    let client_id = shard.add_client(&address, Transport::Tcp).await;
     let session = Session::from_client_id(client_id, address);
     loop {
         let initial_buffer = BytesMut::with_capacity(INITIAL_BYTES_LENGTH);
@@ -58,9 +58,12 @@ pub(crate) async fn handle_connection(
                 continue;
             }
         };
+        // We've got the command now we need to route it to appropiate thread.
+        /*
         debug!("Received a TCP command: {command}, payload size: {length}");
         command::handle(command, sender, &session, system.clone()).await?;
         debug!("Sent a TCP response.");
+        */
     }
 }
 

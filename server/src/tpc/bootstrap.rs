@@ -25,7 +25,7 @@ pub fn create_shard(
     db: Arc<Db>,
     config: ServerConfig,
     connections: Vec<ShardConnector<ShardFrame>>,
-) -> IggyShard {
+) -> Rc<IggyShard> {
     let (stop_sender, stop_receiver, receiver) = connections
         .iter()
         .filter(|c| c.id == id)
@@ -51,7 +51,7 @@ pub fn create_shard(
         false => Arc::new(StoragePersister::File(FilePersister {})),
     };
     let storage = Arc::new(SystemStorage::new(db.clone(), persister));
-    IggyShard::new(
+    Rc::new(IggyShard::new(
         id,
         shards,
         config,
@@ -60,7 +60,7 @@ pub fn create_shard(
         receiver,
         stop_receiver,
         stop_sender,
-    )
+    ))
 }
 
 pub async fn shard_executor(shard: Rc<IggyShard>, is_prime_thread: bool) -> Result<(), IggyError> {

@@ -15,9 +15,7 @@ use crate::{
         tcp::TcpConfig,
     },
     streaming::{
-        clients::client_manager::ClientManager, diagnostics::metrics::Metrics,
-        persistence::persister::StoragePersister, storage::SystemStorage, streams::stream::Stream,
-        users::permissioner::Permissioner,
+        cache::memory_tracker::CacheMemoryTracker, clients::client_manager::ClientManager, diagnostics::metrics::Metrics, persistence::persister::StoragePersister, session::Session, storage::SystemStorage, streams::stream::Stream, users::permissioner::Permissioner
     },
     tpc::{
         connector::{Receiver, ShardConnector, StopReceiver, StopSender},
@@ -37,6 +35,10 @@ use iggy::{
 use sled::Db;
 pub const SHARD_NAME: &str = "iggy_shard";
 
+/// For each cache eviction, we want to remove more than the size we need.
+/// This is done on purpose to avoid evicting messages on every write.
+const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
+
 pub struct IggyShard {
     pub id: u16,
     pub hash: u32,
@@ -47,9 +49,9 @@ pub struct IggyShard {
     pub(crate) streams: HashMap<u32, Stream>,
     pub(crate) streams_ids: HashMap<String, u32>,
     // TODO - get rid of this dynamic dispatch.
-    encryptor: Option<Box<dyn Encryptor>>,
+    pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) config: ServerConfig,
-    client_manager: IggySharedMut<ClientManager>,
+    pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) metrics: Metrics,
     db: Arc<Db>,
     message_receiver: Receiver<ShardFrame>,
@@ -128,6 +130,39 @@ impl IggyShard {
         self.stop_sender.send_async(()).await?;
         Ok(())
     }
+
+    pub fn ensure_authenticated(&self, session: &Session) -> Result<(), IggyError> {
+        match session.is_authenticated() {
+            true => Ok(()),
+            false => Err(IggyError::Unauthenticated),
+        }
+    }
+
+    fn map_toggle_str<'a>(enabled: bool) -> &'a str {
+        match enabled {
+            true => "enabled",
+            false => "disabled",
+        }
+    }
+
+    pub async fn clean_cache(&self, size_to_clean: u64) {
+        for stream in self.streams.values() {
+            for topic in stream.get_topics() {
+                for partition in topic.get_partitions().into_iter() {
+                    monoio::spawn(async move {
+                        let memory_tracker = CacheMemoryTracker::get_instance().unwrap();
+                        let mut partition_guard = partition.write().await;
+                        let cache = &mut partition_guard.cache.as_mut().unwrap();
+                        let size_to_remove = (cache.current_size() as f64
+                            / memory_tracker.usage_bytes() as f64
+                            * size_to_clean as f64)
+                            .ceil() as u64;
+                        cache.evict_by_size(size_to_remove * CACHE_OVER_EVICTION_FACTOR);
+                    });
+                }
+            }
+        }
+    }
 }
 
 pub struct Shard {
@@ -139,86 +174,5 @@ impl Shard {
     pub fn new(name: String, connection: ShardConnector<ShardFrame>) -> Self {
         let hash = hash_string(&name).unwrap();
         Self { hash, connection }
-    }
-}
-
-impl IggyShard {
-    pub async fn get_stats_bypass_auth(&self) -> Result<Stats, IggyError> {
-        fn sysinfo() -> &'static Mutex<SysinfoSystem> {
-            static SYSINFO: OnceLock<Mutex<SysinfoSystem>> = OnceLock::new();
-            SYSINFO.get_or_init(|| {
-                let mut sys = SysinfoSystem::new_all();
-                sys.refresh_all();
-                Mutex::new(sys)
-            })
-        }
-
-        let mut sys = sysinfo().lock().await;
-        let process_id = std::process::id();
-        sys.refresh_cpu();
-        sys.refresh_memory();
-        sys.refresh_process(Pid::from_u32(process_id));
-
-        let total_cpu_usage = sys.global_cpu_info().cpu_usage();
-        let total_memory = sys.total_memory().into();
-        let available_memory = sys.available_memory().into();
-        let clients_count = self.client_manager.read().await.get_clients().len() as u32;
-        let hostname = sysinfo::System::host_name().unwrap_or("unknown_hostname".to_string());
-        let os_name = sysinfo::System::name().unwrap_or("unknown_os_name".to_string());
-        let os_version =
-            sysinfo::System::long_os_version().unwrap_or("unknown_os_version".to_string());
-        let kernel_version =
-            sysinfo::System::kernel_version().unwrap_or("unknown_kernel_version".to_string());
-
-        let mut stats = Stats {
-            process_id,
-            total_cpu_usage,
-            total_memory,
-            available_memory,
-            clients_count,
-            hostname,
-            os_name,
-            os_version,
-            kernel_version,
-            ..Default::default()
-        };
-
-        if let Some(process) = sys
-            .processes()
-            .values()
-            .find(|p| p.pid() == Pid::from_u32(process_id))
-        {
-            stats.process_id = process.pid().as_u32();
-            stats.cpu_usage = process.cpu_usage();
-            stats.memory_usage = process.memory().into();
-            stats.run_time = process.run_time().into();
-            stats.start_time = process.start_time().into();
-
-            let disk_usage = process.disk_usage();
-            stats.read_bytes = disk_usage.total_read_bytes.into();
-            stats.written_bytes = disk_usage.total_written_bytes.into();
-        }
-
-        drop(sys);
-
-        for stream in self.streams.values() {
-            stats.messages_count += stream.get_messages_count();
-            stats.segments_count += stream.get_segments_count();
-            stats.messages_size_bytes += stream.get_size();
-            stats.streams_count += 1;
-            stats.topics_count += stream.topics.len() as u32;
-            stats.partitions_count += stream
-                .topics
-                .values()
-                .map(|t| t.partitions.len() as u32)
-                .sum::<u32>();
-            stats.consumer_groups_count += stream
-                .topics
-                .values()
-                .map(|t| t.consumer_groups.len() as u32)
-                .sum::<u32>();
-        }
-
-        Ok(stats)
     }
 }

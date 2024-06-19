@@ -230,7 +230,7 @@ path = "backup"
 # Subpath of the backup directory where converted segment data is stored after compatibility conversion.
 path = "compatibility"
 
-# Database configuration.
+# Legacy database configuration - used only for the migration purposes.
 [system.database]
 # Path for storing database files.
 # Specifies the directory where database files are stored, relative to `system.path`.

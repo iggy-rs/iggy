@@ -30,6 +30,8 @@ pub enum IggyError {
     CannotRemoveRuntimeDirectory(String) = 12,
     #[error("Cannot create state directory, Path: {0}")]
     CannotCreateStateDirectory(String) = 13,
+    #[error("Cannot open database, Path: {0}")]
+    CannotOpenDatabase(String) = 19,
     #[error("Resource with key: {0} was not found.")]
     ResourceNotFound(String) = 20,
     #[error("Cannot load resource. Reason: {0:#}")]

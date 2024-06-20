@@ -7,6 +7,7 @@ use iggy::command;
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
+use log::debug;
 use std::fmt::{Debug, Display, Formatter};
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -178,7 +179,7 @@ impl Metadata for FileMetadata {
                 command: command.freeze(),
                 data: data.freeze(),
             };
-            info!("Read metadata entry: {entry}");
+            debug!("Read metadata entry: {entry}");
             entries.push(entry);
             total_size += 8 + 8 + 8 + 4 + 4 + 4 + command_length as u64 + 4 + data_length as u64;
             if total_size == file_size {
@@ -199,7 +200,7 @@ impl Metadata for FileMetadata {
         command: &[u8],
         data: Option<&[u8]>,
     ) -> Result<(), IggyError> {
-        info!("Applying metadata entry: code: {code}, user ID: {user_id}");
+        debug!("Applying metadata entry: code: {code}, user ID: {user_id}");
         let metadata = MetadataEntry {
             index: self.current_index.load(Ordering::SeqCst),
             term: self.term.load(Ordering::SeqCst),
@@ -214,7 +215,7 @@ impl Metadata for FileMetadata {
             .append(&self.path, &metadata.as_bytes())
             .await?;
         self.current_index.fetch_add(1, Ordering::SeqCst);
-        info!("Applied metadata entry: {}", metadata);
+        debug!("Applied metadata entry: {}", metadata);
         Ok(())
     }
 }

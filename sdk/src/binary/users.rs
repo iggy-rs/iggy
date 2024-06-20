@@ -143,8 +143,8 @@ impl<B: BinaryClient> UserClient for B {
                 LoginUser {
                     username: username.to_string(),
                     password: password.to_string(),
-                    version: "0.5.0".to_string(),
-                    context: "".to_string(),
+                    version: Some("0.5.0".to_string()),
+                    context: Some("".to_string()),
                 }
                 .as_bytes(),
             )

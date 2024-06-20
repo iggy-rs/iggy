@@ -60,6 +60,7 @@ tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
 ulid = "1.1.2"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.10", features = ["xxh32"] }
+log = "0.4.20"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = { version = "0.5", optional = true }

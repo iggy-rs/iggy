@@ -64,7 +64,7 @@ valid_issuers = ["iggy.rs"]
 valid_audiences = ["iggy.rs"]
 
 # Expiry time for access tokens.
-access_token_expiry = "10 s"
+access_token_expiry = "1 h"
 
 # Tolerance for timing discrepancies during token validation.
 clock_skew = "5 s"
@@ -231,10 +231,10 @@ path = "backup"
 path = "compatibility"
 
 # Legacy database configuration - used only for the migration purposes.
-[system.database]
-# Path for storing database files.
-# Specifies the directory where database files are stored, relative to `system.path`.
-path = "database"
+#[system.database]
+## Path for storing database files.
+## Specifies the directory where database files are stored, relative to `system.path`.
+#path = "database"
 
 # Runtime configuration.
 [system.runtime]

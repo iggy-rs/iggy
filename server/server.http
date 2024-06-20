@@ -13,7 +13,7 @@
 @root_password = iggy
 @user1_username = user1
 @user1_password = secret
-@access_token = secret
+@access_token = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI4MzE4NmI4OS1lNjc3LTRkOTItYTg0NS05ZDg5ZGY1MDUxZTMiLCJpc3MiOiJpZ2d5LnJzIiwiYXVkIjoiaWdneS5ycyIsInN1YiI6MSwiaWF0IjoxNzE4OTA3NDM2LCJleHAiOjE3MTg5MTEwMzYsIm5iZiI6MTcxODkwNzQzNn0.V2qgkAWUvidxCl31kNbS3BsbXGHkm96i1zzxdrQhmpw
 @root_id = 1
 @user1_id = 2
 @pat_name = dev_token

@@ -17,8 +17,10 @@ use iggy::topics::create_topic::CreateTopic;
 use iggy::users::create_user::CreateUser;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
+use std::path::Path;
 use std::sync::Arc;
-use tracing::info;
+use tokio::fs::create_dir;
+use tracing::{error, info};
 
 pub async fn convert(
     metadata: Arc<dyn Metadata>,
@@ -142,6 +144,55 @@ pub async fn convert(
             );
             for partition in topic.partitions.into_values() {
                 let partition = partition.read().await;
+
+                if !Path::new(&partition.offsets_path).exists()
+                    && create_dir(&partition.offsets_path).await.is_err()
+                {
+                    error!(
+                "Failed to create offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                partition.partition_id, partition.stream_id, partition.topic_id
+            );
+                    return Err(IggyError::CannotCreatePartition(
+                        partition.partition_id,
+                        partition.stream_id,
+                        partition.topic_id,
+                    ));
+                }
+
+                info!("Creating consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}, path: {}",
+                    partition.partition_id, partition.stream_id, partition.topic_id, partition.consumer_offsets_path);
+                if !Path::new(&partition.consumer_offsets_path).exists()
+                    && create_dir(&partition.consumer_offsets_path).await.is_err()
+                {
+                    error!(
+                "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                partition.partition_id, partition.stream_id, partition.topic_id
+            );
+                    return Err(IggyError::CannotCreatePartition(
+                        partition.partition_id,
+                        partition.stream_id,
+                        partition.topic_id,
+                    ));
+                }
+
+                info!("Creating consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}, path: {}",
+                    partition.partition_id, partition.stream_id, partition.topic_id, partition.consumer_group_offsets_path);
+                if !Path::new(&partition.consumer_group_offsets_path).exists()
+                    && create_dir(&partition.consumer_group_offsets_path)
+                        .await
+                        .is_err()
+                {
+                    error!(
+                "Failed to create consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                partition.partition_id, partition.stream_id, partition.topic_id
+            );
+                    return Err(IggyError::CannotCreatePartition(
+                        partition.partition_id,
+                        partition.stream_id,
+                        partition.topic_id,
+                    ));
+                }
+
                 for offset in partition.consumer_offsets.iter() {
                     storage.partition.save_consumer_offset(&offset).await?;
                 }

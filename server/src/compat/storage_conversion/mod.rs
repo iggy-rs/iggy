@@ -23,7 +23,7 @@ use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::path::Path;
 use std::sync::Arc;
-use tokio::fs::read_dir;
+use tokio::fs::{read_dir, rename};
 use tracing::{error, info};
 
 pub async fn init(
@@ -93,7 +93,11 @@ pub async fn init(
 
     let users = users::load_all(&db).await?;
     let personal_access_tokens = personal_access_tokens::load_all(&db).await?;
-    converter::convert(metadata, storage, streams, users, personal_access_tokens).await
+    converter::convert(metadata, storage, streams, users, personal_access_tokens).await?;
+    let old_database_path = format!("{database_path}_old");
+    rename(&database_path, &old_database_path).await?;
+    info!("Storage migration completed, old database moved to: {old_database_path} and new state log created.");
+    Ok(())
 }
 
 struct NoopPersister {}

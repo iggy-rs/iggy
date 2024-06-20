@@ -99,9 +99,6 @@
         "path": "compatibility"
       }
     },
-    "database": {
-      "path": "database"
-    },
     "runtime": {
       "path": "runtime"
     },

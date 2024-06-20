@@ -4,10 +4,9 @@ use iggy::models::user_status::UserStatus;
 use iggy::models::{permissions::Permissions, user_info::UserId};
 use iggy::users::defaults::*;
 use iggy::utils::timestamp::IggyTimestamp;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct User {
     pub id: UserId,
     pub status: UserStatus,

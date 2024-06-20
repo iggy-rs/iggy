@@ -8,9 +8,10 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
+use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
-use iggy::utils::topic_size::MaxTopicSize;
 use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
@@ -94,9 +95,12 @@ pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(
 
     topic.name = topic_data.name;
     topic.created_at = topic_data.created_at;
-    topic.message_expiry = topic_data.message_expiry;
+    topic.message_expiry = match topic_data.message_expiry {
+        Some(expiry) => IggyExpiry::ExpireDuration(IggyDuration::from(expiry as u64 * 1000000)),
+        None => IggyExpiry::NeverExpire,
+    };
     topic.compression_algorithm = topic_data.compression_algorithm;
-    topic.max_topic_size = topic_data.max_topic_size;
+    topic.max_topic_size = topic_data.max_topic_size.into();
     topic.replication_factor = topic_data.replication_factor;
 
     let dir_entries = fs::read_dir(&topic.partitions_path).await
@@ -154,9 +158,9 @@ pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(
 struct TopicData {
     name: String,
     created_at: IggyTimestamp,
-    message_expiry: IggyExpiry,
+    message_expiry: Option<u32>,
     compression_algorithm: CompressionAlgorithm,
-    max_topic_size: MaxTopicSize,
+    max_topic_size: Option<IggyByteSize>,
     replication_factor: u8,
 }
 

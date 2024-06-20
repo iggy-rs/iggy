@@ -160,7 +160,6 @@ impl System {
         .await?;
         let entries = self.metadata.init().await?;
         let state = SystemState::init(entries).await?;
-        info!("{state}");
         let now = Instant::now();
         self.load_version().await?;
         self.load_users(state.users.into_values().collect()).await?;

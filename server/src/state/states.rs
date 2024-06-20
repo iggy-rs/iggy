@@ -30,7 +30,7 @@ use iggy::utils::topic_size::MaxTopicSize;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::str::from_utf8;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 #[derive(Debug)]
 pub struct SystemState {
@@ -98,7 +98,7 @@ impl SystemState {
         let mut current_stream_id = 0;
         let mut current_user_id = 0;
         for entry in entries {
-            info!(
+            debug!(
                 "Processing metadata entry code: {}, name: {}",
                 entry.code,
                 get_name_from_code(entry.code).unwrap_or("invalid_command")
@@ -316,7 +316,12 @@ impl SystemState {
                 }
             }
         }
-        Ok(SystemState { streams, users })
+
+        let state = SystemState { streams, users };
+        debug!("+++ State +++");
+        debug!("{state}");
+        debug!("+++ State +++");
+        Ok(state)
     }
 }
 

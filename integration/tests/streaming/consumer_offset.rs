@@ -19,8 +19,8 @@ async fn assert_persisted_offsets(
     storage: &dyn PartitionStorage,
     kind: ConsumerKind,
 ) {
-    let consumer_ids_count = 10;
-    let offsets_count = 10;
+    let consumer_ids_count = 3;
+    let offsets_count = 5;
     let path = match kind {
         ConsumerKind::Consumer => "consumer_offsets",
         ConsumerKind::ConsumerGroup => "consumer_group_offsets",

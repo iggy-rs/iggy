@@ -152,8 +152,12 @@ impl System {
             self.config.get_system_path()
         );
 
-        compat::storage_conversion::init(self.config.clone(), self.storage.clone()).await?;
-
+        compat::storage_conversion::init(
+            self.config.clone(),
+            self.metadata.clone(),
+            self.storage.clone(),
+        )
+        .await?;
         let entries = self.metadata.init().await?;
         let state = SystemState::init(entries).await?;
         info!("{state}");

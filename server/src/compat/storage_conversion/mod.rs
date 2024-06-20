@@ -1,9 +1,9 @@
+mod converter;
 mod persistency;
 
-use crate::compat::storage_conversion::persistency::{
-    personal_access_tokens, streams, systems, users,
-};
+use crate::compat::storage_conversion::persistency::{personal_access_tokens, streams, users};
 use crate::configs::system::SystemConfig;
+use crate::state::metadata::Metadata;
 use crate::state::states::{PartitionState, StreamState, TopicState};
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
@@ -26,7 +26,11 @@ use std::sync::Arc;
 use tokio::fs::read_dir;
 use tracing::{error, info};
 
-pub async fn init(config: Arc<SystemConfig>, storage: Arc<SystemStorage>) -> Result<(), IggyError> {
+pub async fn init(
+    config: Arc<SystemConfig>,
+    metadata: Arc<dyn Metadata>,
+    storage: Arc<SystemStorage>,
+) -> Result<(), IggyError> {
     if Path::new(&config.get_state_log_path()).exists() {
         info!("State log already exists, skipping storage migration");
         return Ok(());
@@ -63,7 +67,7 @@ pub async fn init(config: Arc<SystemConfig>, storage: Arc<SystemStorage>) -> Res
         return Err(IggyError::CannotReadStreams);
     }
 
-    let storage = SystemStorage {
+    let noop_storage = SystemStorage {
         info: Arc::new(NoopSystemInfoStorage {}),
         stream: Arc::new(NoopStreamStorage {}),
         topic: Arc::new(NoopTopicStorage {}),
@@ -71,7 +75,7 @@ pub async fn init(config: Arc<SystemConfig>, storage: Arc<SystemStorage>) -> Res
         segment: Arc::new(NoopSegmentStorage {}),
         persister: Arc::new(NoopPersister {}),
     };
-    let storage = Arc::new(storage);
+    let noop_storage = Arc::new(noop_storage);
     let mut dir_entries = dir_entries.unwrap();
     while let Some(dir_entry) = dir_entries.next_entry().await.unwrap_or(None) {
         let name = dir_entry.file_name().into_string().unwrap();
@@ -82,16 +86,14 @@ pub async fn init(config: Arc<SystemConfig>, storage: Arc<SystemStorage>) -> Res
         }
 
         let stream_id = stream_id.unwrap();
-        let mut stream = Stream::empty(stream_id, "stream", config.clone(), storage.clone());
+        let mut stream = Stream::empty(stream_id, "stream", config.clone(), noop_storage.clone());
         streams::load(&config, &db, &mut stream).await?;
         streams.push(stream);
     }
 
-    let system = systems::load(&db).await?;
     let users = users::load_all(&db).await?;
     let personal_access_tokens = personal_access_tokens::load_all(&db).await?;
-
-    Ok(())
+    converter::convert(metadata, storage, streams, users, personal_access_tokens).await
 }
 
 struct NoopPersister {}

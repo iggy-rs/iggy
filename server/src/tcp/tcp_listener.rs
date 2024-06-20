@@ -1,10 +1,10 @@
-use std::rc::Rc;
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::persist_tcp_address;
 use crate::tcp::tcp_sender::TcpSender;
 use crate::tpc::shard::shard::IggyShard;
 use iggy::error::IggyError;
 use monoio::net::TcpListener;
+use std::rc::Rc;
 use tracing::{error, info};
 
 pub async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), IggyError> {
@@ -31,9 +31,7 @@ pub async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), Iggy
                     let shard = shard.clone();
                     let mut sender = TcpSender { stream };
                     monoio::spawn(async move {
-                        if let Err(error) =
-                            handle_connection(address, &mut sender, shard).await
-                        {
+                        if let Err(error) = handle_connection(address, &mut sender, shard).await {
                             handle_error(error);
                             //system.read().delete_client(&address).await;
                         }
@@ -45,4 +43,3 @@ pub async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), Iggy
     });
     Ok(())
 }
-

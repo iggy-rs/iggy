@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::validatable::Validatable;
@@ -18,6 +18,11 @@ pub struct LoginWithPersonalAccessToken {
 }
 
 impl CommandPayload for LoginWithPersonalAccessToken {}
+impl HashableCommand for LoginWithPersonalAccessToken {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Default for LoginWithPersonalAccessToken {
     fn default() -> Self {

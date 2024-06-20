@@ -1,4 +1,4 @@
-use crate::bytes_serializable::BytesSerializable;
+use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -26,6 +26,11 @@ pub struct CreatePartitions {
 }
 
 impl CommandPayload for CreatePartitions {}
+impl HashableCommand for CreatePartitions {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Default for CreatePartitions {
     fn default() -> Self {

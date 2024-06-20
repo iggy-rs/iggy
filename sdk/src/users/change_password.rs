@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::users::defaults::*;
@@ -26,6 +26,11 @@ pub struct ChangePassword {
 }
 
 impl CommandPayload for ChangePassword {}
+impl HashableCommand for ChangePassword {
+    fn hash(&self) -> Option<u32> {
+        self.user_id.hash()
+    }
+}
 
 impl Default for ChangePassword {
     fn default() -> Self {

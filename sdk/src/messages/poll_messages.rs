@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -105,6 +105,11 @@ impl Default for PollingStrategy {
 }
 
 impl CommandPayload for PollMessages {}
+impl HashableCommand for PollMessages {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 fn default_partition_id() -> Option<u32> {
     Some(1)

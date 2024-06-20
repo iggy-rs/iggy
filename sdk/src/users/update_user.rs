@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::user_status::UserStatus;
@@ -25,6 +25,11 @@ pub struct UpdateUser {
 }
 
 impl CommandPayload for UpdateUser {}
+impl HashableCommand for UpdateUser {
+    fn hash(&self) -> Option<u32> {
+        self.user_id.hash()
+    }
+}
 
 impl Validatable<IggyError> for UpdateUser {
     fn validate(&self) -> Result<(), IggyError> {

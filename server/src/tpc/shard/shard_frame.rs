@@ -1,11 +1,14 @@
+use iggy::command::Command;
+
 use crate::tpc::connector::Receiver;
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ShardMessage {
-    Request,
+    Request(Command),
+    Event,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ShardResponse {
     Response,
 }

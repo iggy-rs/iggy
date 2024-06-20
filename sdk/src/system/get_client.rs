@@ -1,4 +1,4 @@
-use crate::bytes_serializable::BytesSerializable;
+use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::validatable::Validatable;
@@ -16,6 +16,11 @@ pub struct GetClient {
 }
 
 impl CommandPayload for GetClient {}
+impl HashableCommand for GetClient {
+    fn hash(&self) -> Option<u32> {
+        Some(self.client_id)
+    }
+}
 
 impl Default for GetClient {
     fn default() -> Self {

@@ -1,8 +1,15 @@
-use std::net::SocketAddr;
-use iggy::{error::IggyError, identifier::Identifier, locking::{IggySharedMut, IggySharedMutFn}};
-use tracing::{error, info};
-use crate::streaming::{clients::client_manager::{Client, Transport}, session::Session};
 use super::shard::IggyShard;
+use crate::streaming::{
+    clients::client_manager::{Client, Transport},
+    session::Session,
+};
+use iggy::{
+    error::IggyError,
+    identifier::Identifier,
+    locking::{IggySharedMut, IggySharedMutFn},
+};
+use std::net::SocketAddr;
+use tracing::{error, info};
 
 impl IggyShard {
     pub async fn add_client(&self, address: &SocketAddr, transport: Transport) -> u32 {

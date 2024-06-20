@@ -43,7 +43,11 @@ use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
 use crate::users::update_user::UpdateUser;
 use bytes::{BufMut, Bytes, BytesMut};
-use std::fmt::{Display, Formatter};
+use enum_dispatch::enum_dispatch;
+use std::{
+    default,
+    fmt::{Display, Formatter},
+};
 use strum::EnumString;
 
 pub const PING: &str = "ping";
@@ -131,6 +135,12 @@ pub const JOIN_CONSUMER_GROUP_CODE: u32 = 604;
 pub const LEAVE_CONSUMER_GROUP: &str = "consumer_group.leave";
 pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 605;
 
+#[enum_dispatch(Command)]
+pub trait HashableCommand {
+    fn hash(&self) -> Option<u32>;
+}
+
+#[enum_dispatch]
 #[derive(Debug, PartialEq, EnumString)]
 pub enum Command {
     Ping(Ping),
@@ -258,6 +268,7 @@ impl BytesSerializable for Command {
         }
     }
 
+    // TODO(numminex) - Replace the Command:: with an .into() call.
     fn from_bytes(bytes: Bytes) -> Result<Self, IggyError> {
         let command = u32::from_le_bytes(bytes[..4].try_into()?);
         let payload = bytes.slice(4..);

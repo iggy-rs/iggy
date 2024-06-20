@@ -1,4 +1,4 @@
-use crate::bytes_serializable::BytesSerializable;
+use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -22,6 +22,11 @@ pub struct DeleteTopic {
 }
 
 impl CommandPayload for DeleteTopic {}
+impl HashableCommand for DeleteTopic {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Validatable<IggyError> for DeleteTopic {
     fn validate(&self) -> Result<(), IggyError> {

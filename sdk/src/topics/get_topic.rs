@@ -1,4 +1,4 @@
-use crate::bytes_serializable::BytesSerializable;
+use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -22,6 +22,11 @@ pub struct GetTopic {
 }
 
 impl CommandPayload for GetTopic {}
+impl HashableCommand for GetTopic {
+    fn hash(&self) -> Option<u32> {
+        self.stream_id.hash()
+    }
+}
 
 impl Validatable<IggyError> for GetTopic {
     fn validate(&self) -> Result<(), IggyError> {

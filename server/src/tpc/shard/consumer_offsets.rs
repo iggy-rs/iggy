@@ -1,9 +1,9 @@
+use super::shard::IggyShard;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
-use super::shard::IggyShard;
 
 impl IggyShard {
     pub async fn store_consumer_offset(

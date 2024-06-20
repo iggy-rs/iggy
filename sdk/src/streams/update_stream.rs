@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::streams::MAX_NAME_LENGTH;
@@ -24,6 +24,11 @@ pub struct UpdateStream {
 }
 
 impl CommandPayload for UpdateStream {}
+impl HashableCommand for UpdateStream {
+    fn hash(&self) -> Option<u32> {
+        self.stream_id.hash()
+    }
+}
 
 impl Default for UpdateStream {
     fn default() -> Self {

@@ -10,7 +10,7 @@ use std::rc::Rc;
 use tracing::{error, info};
 
 pub(crate) async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), IggyError> {
-    /* 
+    /*
     let address = shard.config.tcp.clone().address;
     let tls_config = shard.config.tcp.tls;
     monoio::spawn(async move {

@@ -1,4 +1,4 @@
-use crate::bytes_serializable::BytesSerializable;
+use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -26,6 +26,11 @@ pub struct JoinConsumerGroup {
 }
 
 impl CommandPayload for JoinConsumerGroup {}
+impl HashableCommand for JoinConsumerGroup {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Validatable<IggyError> for JoinConsumerGroup {
     fn validate(&self) -> Result<(), IggyError> {

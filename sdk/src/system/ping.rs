@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::Bytes;
@@ -12,6 +12,11 @@ use std::fmt::Display;
 pub struct Ping {}
 
 impl CommandPayload for Ping {}
+impl HashableCommand for Ping {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Validatable<IggyError> for Ping {
     fn validate(&self) -> Result<(), IggyError> {

@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -45,6 +45,11 @@ impl Default for StoreConsumerOffset {
 }
 
 impl CommandPayload for StoreConsumerOffset {}
+impl HashableCommand for StoreConsumerOffset {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Validatable<IggyError> for StoreConsumerOffset {
     fn validate(&self) -> Result<(), IggyError> {

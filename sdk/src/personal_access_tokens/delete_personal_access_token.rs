@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
@@ -19,6 +19,11 @@ pub struct DeletePersonalAccessToken {
 }
 
 impl CommandPayload for DeletePersonalAccessToken {}
+impl HashableCommand for DeletePersonalAccessToken {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Default for DeletePersonalAccessToken {
     fn default() -> Self {

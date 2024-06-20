@@ -1,4 +1,4 @@
-use crate::bytes_serializable::BytesSerializable;
+use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::validatable::Validatable;
@@ -12,6 +12,11 @@ use std::fmt::Display;
 pub struct GetStreams {}
 
 impl CommandPayload for GetStreams {}
+impl HashableCommand for GetStreams {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Validatable<IggyError> for GetStreams {
     fn validate(&self) -> Result<(), IggyError> {

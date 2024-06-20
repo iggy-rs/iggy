@@ -1,10 +1,10 @@
-use crate::bytes_serializable::BytesSerializable;
+use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
-use std::fmt::Display;
+use std::{fmt::Display, hash::Hash};
 
 /// `LogoutUser` command is used to log out the authenticated user.
 /// It has no additional payload.
@@ -12,6 +12,11 @@ use std::fmt::Display;
 pub struct LogoutUser {}
 
 impl CommandPayload for LogoutUser {}
+impl HashableCommand for LogoutUser {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Validatable<IggyError> for LogoutUser {
     fn validate(&self) -> Result<(), IggyError> {

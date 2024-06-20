@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::consumer_groups::MAX_NAME_LENGTH;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -31,6 +31,11 @@ pub struct CreateConsumerGroup {
 }
 
 impl CommandPayload for CreateConsumerGroup {}
+impl HashableCommand for CreateConsumerGroup {
+    fn hash(&self) -> Option<u32> {
+        self.stream_id.hash()
+    }
+}
 
 impl Default for CreateConsumerGroup {
     fn default() -> Self {

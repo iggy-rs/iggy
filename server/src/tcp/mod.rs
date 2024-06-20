@@ -12,8 +12,10 @@ pub mod tcp_server;
 pub mod tcp_tls_listener;
 pub mod tcp_tls_sender;
 
-
-pub(crate) async fn persist_tcp_address(shard: &Rc<IggyShard>, local_addr: String) -> Result<(), IggyError> {
+pub(crate) async fn persist_tcp_address(
+    shard: &Rc<IggyShard>,
+    local_addr: String,
+) -> Result<(), IggyError> {
     let mut current_config = shard.config.clone();
     current_config.tcp.address = local_addr;
     let runtime_path = shard.config.system.get_runtime_path();

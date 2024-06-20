@@ -1,13 +1,15 @@
-use crate::streaming::systems::system::{SharedSystem, System};
-use crate::{binary::command, tpc::shard::shard::IggyShard};
 use crate::binary::sender::Sender;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
+use crate::streaming::systems::system::{SharedSystem, System};
+use crate::tpc::shard::shard_frame::ShardMessage;
+use crate::{binary::command, tpc::shard::shard::IggyShard};
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::Command;
+use iggy::command::{Command, ShardCommand};
 use iggy::error::IggyError;
+use iggy::system::ping::Ping;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::rc::Rc;
@@ -51,6 +53,7 @@ pub(crate) async fn handle_connection(
         let (res, command_buffer) = sender.read(command_buffer).await;
         let _ = res?;
         let command_buffer = command_buffer.freeze();
+        // We've got the command now we need to route it to appropiate thread.
         let command = match Command::from_bytes(command_buffer) {
             Ok(command) => command,
             Err(error) => {
@@ -58,7 +61,21 @@ pub(crate) async fn handle_connection(
                 continue;
             }
         };
-        // We've got the command now we need to route it to appropiate thread.
+
+        let ping = Ping {};
+        let cmd: Command = ping.into();
+
+        /*
+        match shard_command {
+            ShardCommand::Routable(command) => {
+                // Here we can have to hash the request and route it to appropiate shard.
+
+            },
+            ShardCommand::NonRoutable(command) => {
+                // use current shard to process the request
+            }
+        }
+        */
         /*
         debug!("Received a TCP command: {command}, payload size: {length}");
         command::handle(command, sender, &session, system.clone()).await?;

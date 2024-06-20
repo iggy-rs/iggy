@@ -1,4 +1,4 @@
-use crate::bytes_serializable::BytesSerializable;
+use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
 use crate::command::CommandPayload;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -18,6 +18,11 @@ pub struct GetUser {
 }
 
 impl CommandPayload for GetUser {}
+impl HashableCommand for GetUser {
+    fn hash(&self) -> Option<u32> {
+        self.user_id.hash()
+    }
+}
 
 impl Validatable<IggyError> for GetUser {
     fn validate(&self) -> Result<(), IggyError> {

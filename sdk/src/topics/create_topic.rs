@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{CommandPayload, HashableCommand};
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -44,6 +44,11 @@ pub struct CreateTopic {
 }
 
 impl CommandPayload for CreateTopic {}
+impl HashableCommand for CreateTopic {
+    fn hash(&self) -> Option<u32> {
+        None
+    }
+}
 
 impl Default for CreateTopic {
     fn default() -> Self {

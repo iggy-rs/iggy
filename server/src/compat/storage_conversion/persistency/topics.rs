@@ -16,52 +16,13 @@ use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::path::Path;
 use tokio::fs;
+use tokio::sync::RwLock;
 use tracing::{error, info};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct ConsumerGroupData {
     id: u32,
     name: String,
-}
-
-pub async fn load_consumer_groups(db: &Db, topic: &Topic) -> Result<Vec<ConsumerGroup>, IggyError> {
-    info!("Loading consumer groups for topic {} from disk...", topic);
-    let key_prefix = get_consumer_groups_key_prefix(topic.stream_id, topic.topic_id);
-    let mut consumer_groups = Vec::new();
-    for data in db.scan_prefix(format!("{}:", key_prefix)) {
-        let consumer_group = match data.with_context(|| {
-            format!(
-                "Failed to load consumer group when searching for key: {}",
-                key_prefix
-            )
-        }) {
-            Ok((_, value)) => {
-                match rmp_serde::from_slice::<ConsumerGroupData>(&value).with_context(|| {
-                    format!(
-                        "Failed to deserialize consumer group with key: {}",
-                        key_prefix
-                    )
-                }) {
-                    Ok(user) => user,
-                    Err(err) => {
-                        return Err(IggyError::CannotDeserializeResource(err));
-                    }
-                }
-            }
-            Err(err) => {
-                return Err(IggyError::CannotLoadResource(err));
-            }
-        };
-        let consumer_group = ConsumerGroup::new(
-            topic.topic_id,
-            consumer_group.id,
-            &consumer_group.name,
-            topic.get_partitions_count(),
-        );
-        consumer_groups.push(consumer_group);
-    }
-
-    Ok(consumer_groups)
 }
 
 pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(), IggyError> {
@@ -146,12 +107,57 @@ pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(
             .insert(partition.partition_id, IggySharedMut::new(partition));
     }
 
-    load_consumer_groups(db, topic).await?;
-    topic.load_messages_from_disk_to_cache().await?;
-
+    let consumer_groups = load_consumer_groups(db, topic).await?;
+    topic.consumer_groups = consumer_groups
+        .into_iter()
+        .map(|group| (group.group_id, RwLock::new(group)))
+        .collect();
     info!("Loaded topic {topic}");
-
     Ok(())
+}
+
+pub async fn load_consumer_groups(db: &Db, topic: &Topic) -> Result<Vec<ConsumerGroup>, IggyError> {
+    info!("Loading consumer groups for topic {} from disk...", topic);
+    let key_prefix = get_consumer_groups_key_prefix(topic.stream_id, topic.topic_id);
+    let mut consumer_groups = Vec::new();
+    for data in db.scan_prefix(format!("{}:", key_prefix)) {
+        let consumer_group = match data.with_context(|| {
+            format!(
+                "Failed to load consumer group when searching for key: {}",
+                key_prefix
+            )
+        }) {
+            Ok((_, value)) => {
+                match rmp_serde::from_slice::<ConsumerGroupData>(&value).with_context(|| {
+                    format!(
+                        "Failed to deserialize consumer group with key: {}",
+                        key_prefix
+                    )
+                }) {
+                    Ok(user) => user,
+                    Err(err) => {
+                        return Err(IggyError::CannotDeserializeResource(err));
+                    }
+                }
+            }
+            Err(err) => {
+                return Err(IggyError::CannotLoadResource(err));
+            }
+        };
+        let consumer_group = ConsumerGroup::new(
+            topic.topic_id,
+            consumer_group.id,
+            &consumer_group.name,
+            topic.get_partitions_count(),
+        );
+        consumer_groups.push(consumer_group);
+    }
+    info!(
+        "Loaded {} consumer groups for topic {}",
+        consumer_groups.len(),
+        topic
+    );
+    Ok(consumer_groups)
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -33,7 +33,7 @@ pub async fn convert(
     metadata.init().await?;
     streams.sort_by(|a, b| a.stream_id.cmp(&b.stream_id));
     users.sort_by(|a, b| a.id.cmp(&b.id));
-    info!("Converting users");
+    info!("Converting {} users", users.len());
     for user in users {
         metadata
             .apply(
@@ -51,7 +51,10 @@ pub async fn convert(
             .await?;
     }
 
-    info!("Converting personal access tokens");
+    info!(
+        "Converting {} personal access tokens",
+        personal_access_tokens.len()
+    );
     for personal_access_token in personal_access_tokens {
         let now = IggyTimestamp::now();
         let mut expiry = IggyExpiry::NeverExpire;
@@ -76,7 +79,7 @@ pub async fn convert(
             .await?;
     }
 
-    info!("Converting streams");
+    info!("Converting {} streams", streams.len());
     for stream in streams {
         metadata
             .apply(
@@ -91,7 +94,11 @@ pub async fn convert(
             )
             .await?;
 
-        info!("Converting topics for stream with ID: {}", stream.stream_id);
+        info!(
+            "Converting {} topics for stream with ID: {}",
+            stream.topics.len(),
+            stream.stream_id
+        );
         for topic in stream.topics.into_values() {
             metadata
                 .apply(
@@ -117,8 +124,9 @@ pub async fn convert(
                 .await?;
 
             info!(
-                "Converting consumer groups for topic with ID: {}",
-                topic.topic_id
+                "Converting {} consumer groups for topic with ID: {}",
+                topic.consumer_groups.len(),
+                topic.topic_id,
             );
             for group in topic.consumer_groups.into_values() {
                 let group = group.read().await;
@@ -139,8 +147,9 @@ pub async fn convert(
             }
 
             info!(
-                "Converting partitions for topic with ID: {}",
-                topic.topic_id
+                "Converting {} partitions for topic with ID: {}",
+                topic.partitions.len(),
+                topic.topic_id,
             );
             for partition in topic.partitions.into_values() {
                 let partition = partition.read().await;
@@ -193,10 +202,14 @@ pub async fn convert(
                     ));
                 }
 
+                info!("Converting {} consumer offsets for partition with ID: {} for stream with ID: {} and topic with ID: {}",
+                    partition.consumer_offsets.len(), partition.partition_id, partition.stream_id, partition.topic_id);
                 for offset in partition.consumer_offsets.iter() {
                     storage.partition.save_consumer_offset(&offset).await?;
                 }
 
+                info!("Converting {} consumer group offsets for partition with ID: {} for stream with ID: {} and topic with ID: {}",
+                    partition.consumer_group_offsets.len(), partition.partition_id, partition.stream_id, partition.topic_id);
                 for offset in partition.consumer_group_offsets.iter() {
                     storage.partition.save_consumer_offset(&offset).await?;
                 }

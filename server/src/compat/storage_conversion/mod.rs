@@ -196,6 +196,10 @@ impl PartitionStorage for NoopPartitionStorage {
     async fn delete_consumer_offsets(&self, _path: &str) -> Result<(), IggyError> {
         Ok(())
     }
+
+    async fn delete_consumer_offset(&self, _path: &str) -> Result<(), IggyError> {
+        Ok(())
+    }
 }
 
 #[async_trait]

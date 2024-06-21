@@ -248,8 +248,10 @@ pub enum IggyError {
     NoPartitions(u32, u32) = 3008,
     #[error("Failed to delete consumer offsets directory for path: {0}")]
     CannotDeleteConsumerOffsetsDirectory(String) = 3010,
+    #[error("Failed to delete consumer offset file for path: {0}")]
+    CannotDeleteConsumerOffsetFile(String) = 3011,
     #[error("Failed to read consumers offsets from path: {0}")]
-    CannotReadConsumerOffsets(String) = 3011,
+    CannotReadConsumerOffsets(String) = 3020,
     #[error("Segment not found")]
     SegmentNotFound = 4000,
     #[error("Segment with start offset: {0} and partition with ID: {1} is closed")]

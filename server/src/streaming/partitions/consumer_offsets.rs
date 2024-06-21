@@ -69,13 +69,8 @@ impl Partition {
         offset: u64,
     ) -> Result<(), IggyError> {
         let consumer_offsets = self.get_consumer_offsets(kind);
-        let consumer_offset = consumer_offsets
-            .get_mut(&consumer_id)
-            .map(|mut consumer_offset| {
-                consumer_offset.offset = offset;
-                consumer_offset.clone()
-            });
-        if let Some(consumer_offset) = consumer_offset {
+        if let Some(mut consumer_offset) = consumer_offsets.get_mut(&consumer_id) {
+            consumer_offset.offset = offset;
             self.storage
                 .partition
                 .save_consumer_offset(&consumer_offset)

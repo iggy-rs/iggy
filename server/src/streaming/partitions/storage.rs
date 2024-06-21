@@ -390,4 +390,17 @@ impl PartitionStorage for FilePartitionStorage {
         }
         Ok(())
     }
+
+    async fn delete_consumer_offset(&self, path: &str) -> Result<(), IggyError> {
+        if !Path::new(path).exists() {
+            trace!("Consumer offset file does not exist: {path}.");
+            return Ok(());
+        }
+
+        if fs::remove_file(path).await.is_err() {
+            error!("Cannot delete consumer offset file: {path}.");
+            return Err(IggyError::CannotDeleteConsumerOffsetFile(path.to_owned()));
+        }
+        Ok(())
+    }
 }

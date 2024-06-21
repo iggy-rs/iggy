@@ -54,6 +54,7 @@ pub trait PartitionStorage: Send + Sync {
         path: &str,
     ) -> Result<Vec<ConsumerOffset>, IggyError>;
     async fn delete_consumer_offsets(&self, path: &str) -> Result<(), IggyError>;
+    async fn delete_consumer_offset(&self, path: &str) -> Result<(), IggyError>;
 }
 
 #[async_trait]
@@ -259,6 +260,10 @@ pub(crate) mod tests {
         }
 
         async fn delete_consumer_offsets(&self, _path: &str) -> Result<(), IggyError> {
+            Ok(())
+        }
+
+        async fn delete_consumer_offset(&self, _path: &str) -> Result<(), IggyError> {
             Ok(())
         }
     }

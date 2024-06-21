@@ -2,6 +2,7 @@ use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
+use iggy::locking::IggySharedMutFn;
 use iggy::utils::text;
 use std::sync::atomic::Ordering;
 use tokio::sync::RwLock;
@@ -136,6 +137,16 @@ impl Topic {
             if current_group_id > group_id {
                 self.current_consumer_group_id
                     .store(group_id, Ordering::SeqCst);
+            }
+
+            for (_, partition) in self.partitions.iter() {
+                let partition = partition.read().await;
+                if let Some((_, offset)) = partition.consumer_group_offsets.remove(&group_id) {
+                    self.storage
+                        .partition
+                        .delete_consumer_offset(&offset.path)
+                        .await?;
+                }
             }
 
             info!(

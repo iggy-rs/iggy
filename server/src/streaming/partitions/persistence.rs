@@ -1,6 +1,6 @@
 use std::sync::atomic::Ordering;
 
-use crate::state::states::PartitionState;
+use crate::state::system::PartitionState;
 use crate::streaming::partitions::partition::Partition;
 use iggy::error::IggyError;
 

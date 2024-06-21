@@ -34,7 +34,7 @@ pub async fn handle(
     {
         let system = system.read();
         system
-            .metadata
+            .state
             .apply(
                 CREATE_CONSUMER_GROUP_CODE,
                 session.get_user_id(),

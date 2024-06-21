@@ -15,7 +15,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{info, trace, warn};
+use tracing::{debug, info, trace, warn};
 
 impl Topic {
     pub fn get_messages_count(&self) -> u64 {
@@ -191,6 +191,14 @@ impl Topic {
             let messages = partition
                 .get_newest_messages_by_size(size_to_fetch_from_disk)
                 .await?;
+
+            if messages.is_empty() {
+                debug!(
+                    "No messages found on disk for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}",
+                    partition.partition_id, partition.topic_id, partition.stream_id, end_offset
+                );
+                continue;
+            }
 
             let sum: u64 = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
             if !Self::cache_integrity_check(&messages) {

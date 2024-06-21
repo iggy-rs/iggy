@@ -20,7 +20,7 @@ pub async fn handle(
         .delete_topic(session, &command.stream_id, &command.topic_id)
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_TOPIC_CODE,
             session.get_user_id(),

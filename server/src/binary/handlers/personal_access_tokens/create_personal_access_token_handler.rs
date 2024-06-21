@@ -24,7 +24,7 @@ pub async fn handle(
     let bytes = mapper::map_raw_pat(&token);
     let token_hash = PersonalAccessToken::hash_token(&token);
     system
-        .metadata
+        .state
         .apply(
             CREATE_PERSONAL_ACCESS_TOKEN_CODE,
             session.get_user_id(),

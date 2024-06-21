@@ -1,4 +1,4 @@
-use crate::state::states::UserState;
+use crate::state::system::UserState;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
@@ -33,7 +33,7 @@ impl System {
                 status: root.status,
                 permissions: root.permissions.clone(),
             };
-            self.metadata
+            self.state
                 .apply(CREATE_USER_CODE, 0, &command.as_bytes(), None)
                 .await?;
 

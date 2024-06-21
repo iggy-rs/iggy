@@ -20,7 +20,7 @@ pub async fn handle(
         .update_permissions(session, &command.user_id, command.permissions.clone())
         .await?;
     system
-        .metadata
+        .state
         .apply(
             UPDATE_PERMISSIONS_CODE,
             session.get_user_id(),

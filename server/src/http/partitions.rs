@@ -42,7 +42,7 @@ async fn create_partitions(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             CREATE_PARTITIONS_CODE,
             identity.user_id,
@@ -72,7 +72,7 @@ async fn delete_partitions(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_PARTITIONS_CODE,
             identity.user_id,

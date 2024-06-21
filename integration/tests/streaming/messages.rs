@@ -6,7 +6,7 @@ use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use server::configs::system::{PartitionConfig, SystemConfig};
-use server::state::states::PartitionState;
+use server::state::system::PartitionState;
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;

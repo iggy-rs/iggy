@@ -18,7 +18,7 @@ pub async fn handle(
     let system = system.read();
     system.purge_stream(session, &command.stream_id).await?;
     system
-        .metadata
+        .state
         .apply(
             PURGE_STREAM_CODE,
             session.get_user_id(),

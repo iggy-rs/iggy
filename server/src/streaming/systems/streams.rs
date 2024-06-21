@@ -1,4 +1,4 @@
-use crate::state::states::StreamState;
+use crate::state::system::StreamState;
 use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::systems::system::System;
@@ -334,9 +334,10 @@ mod tests {
     use super::*;
     use crate::configs::server::PersonalAccessTokenConfig;
     use crate::configs::system::SystemConfig;
-    use crate::state::metadata::TestMetadata;
+    use crate::state::{State, StateEntry};
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
+    use async_trait::async_trait;
     use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
     use std::{
         net::{Ipv4Addr, SocketAddr},
@@ -352,7 +353,7 @@ mod tests {
         let mut system = System::create(
             config,
             storage,
-            Arc::new(TestMetadata::default()),
+            Arc::new(TestState::default()),
             PersonalAccessTokenConfig::default(),
         );
         let root = User::root(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD);
@@ -381,5 +382,19 @@ mod tests {
         let stream = stream.unwrap();
         assert_eq!(stream.stream_id, stream_id);
         assert_eq!(stream.name, stream_name);
+    }
+
+    #[derive(Debug, Default)]
+    struct TestState {}
+
+    #[async_trait]
+    impl State for TestState {
+        async fn init(&self) -> Result<Vec<StateEntry>, IggyError> {
+            Ok(Vec::new())
+        }
+
+        async fn apply(&self, _: u32, _: u32, _: &[u8], _: Option<&[u8]>) -> Result<(), IggyError> {
+            Ok(())
+        }
     }
 }

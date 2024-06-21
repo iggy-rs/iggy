@@ -29,7 +29,7 @@ pub async fn handle(
 
     // For the security of the system, we hash the password before storing it in metadata.
     system
-        .metadata
+        .state
         .apply(
             CREATE_USER_CODE,
             session.get_user_id(),

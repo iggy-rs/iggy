@@ -1,4 +1,4 @@
-use crate::state::states::StreamState;
+use crate::state::system::StreamState;
 use crate::streaming::streams::stream::Stream;
 use iggy::error::IggyError;
 

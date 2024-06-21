@@ -1,4 +1,4 @@
-use crate::state::metadata::MetadataEntry;
+use crate::state::StateEntry;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::*;
@@ -92,20 +92,20 @@ pub struct ConsumerGroupState {
 
 // TODO: Consider handling stream and topic purge
 impl SystemState {
-    pub async fn init(entries: Vec<MetadataEntry>) -> Result<Self, IggyError> {
+    pub async fn init(entries: Vec<StateEntry>) -> Result<Self, IggyError> {
         let mut streams = HashMap::new();
         let mut users = HashMap::new();
         let mut current_stream_id = 0;
         let mut current_user_id = 0;
         for entry in entries {
             debug!(
-                "Processing metadata entry code: {}, name: {}",
+                "Processing state entry with code: {}, name: {}",
                 entry.code,
                 get_name_from_code(entry.code).unwrap_or("invalid_command")
             );
             match entry.code {
                 CREATE_STREAM_CODE => {
-                    let command = CreateStream::from_bytes(entry.command)?;
+                    let command = CreateStream::from_bytes(entry.payload)?;
                     let stream_id = command.stream_id.unwrap_or_else(|| {
                         current_stream_id += 1;
                         current_stream_id
@@ -120,18 +120,18 @@ impl SystemState {
                     streams.insert(stream.id, stream);
                 }
                 UPDATE_STREAM_CODE => {
-                    let command = UpdateStream::from_bytes(entry.command)?;
+                    let command = UpdateStream::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams.get_mut(&stream_id).unwrap();
                     stream.name = command.name;
                 }
                 DELETE_STREAM_CODE => {
-                    let command = DeleteStream::from_bytes(entry.command)?;
+                    let command = DeleteStream::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     streams.remove(&stream_id);
                 }
                 CREATE_TOPIC_CODE => {
-                    let command = CreateTopic::from_bytes(entry.command)?;
+                    let command = CreateTopic::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams.get_mut(&stream_id).unwrap();
                     let topic_id = command.topic_id.unwrap_or_else(|| {
@@ -167,7 +167,7 @@ impl SystemState {
                     stream.topics.insert(topic.id, topic);
                 }
                 UPDATE_TOPIC_CODE => {
-                    let command = UpdateTopic::from_bytes(entry.command)?;
+                    let command = UpdateTopic::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams.get_mut(&stream_id).unwrap();
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
@@ -179,14 +179,14 @@ impl SystemState {
                     topic.replication_factor = command.replication_factor;
                 }
                 DELETE_TOPIC_CODE => {
-                    let command = DeleteTopic::from_bytes(entry.command)?;
+                    let command = DeleteTopic::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams.get_mut(&stream_id).unwrap();
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
                     stream.topics.remove(&topic_id);
                 }
                 CREATE_PARTITIONS_CODE => {
-                    let command = CreatePartitions::from_bytes(entry.command)?;
+                    let command = CreatePartitions::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams.get_mut(&stream_id).unwrap();
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
@@ -203,7 +203,7 @@ impl SystemState {
                     }
                 }
                 DELETE_PARTITIONS_CODE => {
-                    let command = DeletePartitions::from_bytes(entry.command)?;
+                    let command = DeletePartitions::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams.get_mut(&stream_id).unwrap();
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
@@ -214,7 +214,7 @@ impl SystemState {
                     }
                 }
                 CREATE_CONSUMER_GROUP_CODE => {
-                    let command = CreateConsumerGroup::from_bytes(entry.command)?;
+                    let command = CreateConsumerGroup::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams.get_mut(&stream_id).unwrap();
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
@@ -232,7 +232,7 @@ impl SystemState {
                         .insert(consumer_group.id, consumer_group);
                 }
                 DELETE_CONSUMER_GROUP_CODE => {
-                    let command = DeleteConsumerGroup::from_bytes(entry.command)?;
+                    let command = DeleteConsumerGroup::from_bytes(entry.payload)?;
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams.get_mut(&stream_id).unwrap();
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
@@ -242,7 +242,7 @@ impl SystemState {
                     topic.consumer_groups.remove(&consumer_group_id);
                 }
                 CREATE_USER_CODE => {
-                    let command = CreateUser::from_bytes(entry.command)?;
+                    let command = CreateUser::from_bytes(entry.payload)?;
                     current_user_id += 1;
                     let user = UserState {
                         id: current_user_id,
@@ -255,7 +255,7 @@ impl SystemState {
                     users.insert(user.id, user);
                 }
                 UPDATE_USER_CODE => {
-                    let command = UpdateUser::from_bytes(entry.command)?;
+                    let command = UpdateUser::from_bytes(entry.payload)?;
                     let user_id = find_user_id(&users, &command.user_id);
                     let user = users.get_mut(&user_id).unwrap();
                     if let Some(username) = &command.username {
@@ -266,25 +266,25 @@ impl SystemState {
                     }
                 }
                 DELETE_USER_CODE => {
-                    let command = DeleteUser::from_bytes(entry.command)?;
+                    let command = DeleteUser::from_bytes(entry.payload)?;
                     let user_id = find_user_id(&users, &command.user_id);
                     users.remove(&user_id);
                 }
                 CHANGE_PASSWORD_CODE => {
-                    let command = ChangePassword::from_bytes(entry.command)?;
+                    let command = ChangePassword::from_bytes(entry.payload)?;
                     let user_id = find_user_id(&users, &command.user_id);
                     let user = users.get_mut(&user_id).unwrap();
                     user.password_hash = command.new_password // This is already hashed
                 }
                 UPDATE_PERMISSIONS_CODE => {
-                    let command = UpdatePermissions::from_bytes(entry.command)?;
+                    let command = UpdatePermissions::from_bytes(entry.payload)?;
                     let user_id = find_user_id(&users, &command.user_id);
                     let user = users.get_mut(&user_id).unwrap();
                     user.permissions = command.permissions;
                 }
                 CREATE_PERSONAL_ACCESS_TOKEN_CODE => {
-                    let command = CreatePersonalAccessToken::from_bytes(entry.command)?;
-                    let token_hash = from_utf8(&entry.data)?.to_string();
+                    let command = CreatePersonalAccessToken::from_bytes(entry.payload)?;
+                    let token_hash = from_utf8(&entry.context)?.to_string();
                     let user_id = find_user_id(&users, &entry.user_id.try_into()?);
                     let user = users.get_mut(&user_id).unwrap();
                     let expiry_at =
@@ -306,13 +306,13 @@ impl SystemState {
                     );
                 }
                 DELETE_PERSONAL_ACCESS_TOKEN_CODE => {
-                    let command = DeletePersonalAccessToken::from_bytes(entry.command)?;
+                    let command = DeletePersonalAccessToken::from_bytes(entry.payload)?;
                     let user_id = find_user_id(&users, &entry.user_id.try_into()?);
                     let user = users.get_mut(&user_id).unwrap();
                     user.personal_access_tokens.remove(&command.name);
                 }
                 code => {
-                    warn!("Unsupported metadata entry code: {code}");
+                    warn!("Unsupported state entry code: {code}");
                 }
             }
         }

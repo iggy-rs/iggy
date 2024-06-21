@@ -18,7 +18,7 @@ pub async fn handle(
     let mut system = system.write();
     system.delete_stream(session, &command.stream_id).await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_STREAM_CODE,
             session.get_user_id(),

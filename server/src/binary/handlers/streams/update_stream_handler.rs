@@ -20,7 +20,7 @@ pub async fn handle(
         .update_stream(session, &command.stream_id, &command.name)
         .await?;
     system
-        .metadata
+        .state
         .apply(
             UPDATE_STREAM_CODE,
             session.get_user_id(),

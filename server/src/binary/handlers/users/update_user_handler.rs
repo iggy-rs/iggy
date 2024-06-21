@@ -25,7 +25,7 @@ pub async fn handle(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             UPDATE_USER_CODE,
             session.get_user_id(),

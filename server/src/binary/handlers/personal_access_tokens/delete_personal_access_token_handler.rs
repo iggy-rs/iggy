@@ -20,7 +20,7 @@ pub async fn handle(
         .delete_personal_access_token(session, &command.name)
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_PERSONAL_ACCESS_TOKEN_CODE,
             session.get_user_id(),

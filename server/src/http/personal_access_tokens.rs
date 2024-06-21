@@ -65,7 +65,7 @@ async fn create_personal_access_token(
 
     let token_hash = PersonalAccessToken::hash_token(&token);
     system
-        .metadata
+        .state
         .apply(
             CREATE_PERSONAL_ACCESS_TOKEN_CODE,
             identity.user_id,
@@ -89,7 +89,7 @@ async fn delete_personal_access_token(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_PERSONAL_ACCESS_TOKEN_CODE,
             identity.user_id,

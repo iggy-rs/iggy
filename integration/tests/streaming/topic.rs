@@ -11,7 +11,7 @@ use iggy::messages::send_messages::Partitioning;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
-use server::state::states::{PartitionState, TopicState};
+use server::state::system::{PartitionState, TopicState};
 use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
 use tokio::fs;

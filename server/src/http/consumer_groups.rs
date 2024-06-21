@@ -93,7 +93,7 @@ async fn create_consumer_group(
     {
         let system = state.system.read();
         system
-            .metadata
+            .state
             .apply(
                 CREATE_CONSUMER_GROUP_CODE,
                 identity.user_id,
@@ -123,7 +123,7 @@ async fn delete_consumer_group(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_CONSUMER_GROUP_CODE,
             identity.user_id,

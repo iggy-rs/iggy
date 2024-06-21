@@ -20,7 +20,7 @@ pub async fn handle(
         .purge_topic(session, &command.stream_id, &command.topic_id)
         .await?;
     system
-        .metadata
+        .state
         .apply(
             PURGE_TOPIC_CODE,
             session.get_user_id(),

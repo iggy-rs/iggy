@@ -1,5 +1,5 @@
 use crate::compat::message_conversion::message_converter::MessageFormatConverter;
-use crate::state::states::PartitionState;
+use crate::state::system::PartitionState;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};

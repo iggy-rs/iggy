@@ -72,7 +72,7 @@ async fn create_stream(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             CREATE_STREAM_CODE,
             identity.user_id,
@@ -100,7 +100,7 @@ async fn update_stream(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             UPDATE_STREAM_CODE,
             identity.user_id,
@@ -125,7 +125,7 @@ async fn delete_stream(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_STREAM_CODE,
             identity.user_id,
@@ -150,7 +150,7 @@ async fn purge_stream(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             PURGE_STREAM_CODE,
             identity.user_id,

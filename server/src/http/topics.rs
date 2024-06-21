@@ -90,7 +90,7 @@ async fn create_topic(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             CREATE_TOPIC_CODE,
             identity.user_id,
@@ -124,7 +124,7 @@ async fn update_topic(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             UPDATE_TOPIC_CODE,
             identity.user_id,
@@ -151,7 +151,7 @@ async fn delete_topic(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_TOPIC_CODE,
             identity.user_id,
@@ -182,7 +182,7 @@ async fn purge_topic(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             PURGE_TOPIC_CODE,
             identity.user_id,

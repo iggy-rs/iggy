@@ -20,7 +20,7 @@ pub async fn handle(
         .create_stream(session, command.stream_id, &command.name)
         .await?;
     system
-        .metadata
+        .state
         .apply(
             CREATE_STREAM_CODE,
             session.get_user_id(),

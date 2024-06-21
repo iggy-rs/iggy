@@ -1,4 +1,4 @@
-use crate::state::states::TopicState;
+use crate::state::system::TopicState;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;

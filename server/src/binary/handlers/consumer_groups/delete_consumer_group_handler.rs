@@ -25,7 +25,7 @@ pub async fn handle(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_CONSUMER_GROUP_CODE,
             session.get_user_id(),

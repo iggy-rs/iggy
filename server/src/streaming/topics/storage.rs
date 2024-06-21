@@ -1,4 +1,4 @@
-use crate::state::states::TopicState;
+use crate::state::system::TopicState;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::TopicStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;

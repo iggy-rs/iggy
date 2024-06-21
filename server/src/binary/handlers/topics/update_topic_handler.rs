@@ -29,7 +29,7 @@ pub async fn handle(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             UPDATE_TOPIC_CODE,
             session.get_user_id(),

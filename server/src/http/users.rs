@@ -88,7 +88,7 @@ async fn create_user(
 
     // For the security of the system, we hash the password before storing it in metadata.
     system
-        .metadata
+        .state
         .apply(
             CREATE_USER_CODE,
             identity.user_id,
@@ -124,7 +124,7 @@ async fn update_user(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(UPDATE_USER_CODE, identity.user_id, &bytes, None)
         .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -148,7 +148,7 @@ async fn update_permissions(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(UPDATE_PERMISSIONS_CODE, identity.user_id, &bytes, None)
         .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -173,7 +173,7 @@ async fn change_password(
         .await?;
     // For the security of the system, we hash the password before storing it in metadata.
     system
-        .metadata
+        .state
         .apply(
             CHANGE_PASSWORD_CODE,
             identity.user_id,
@@ -203,7 +203,7 @@ async fn delete_user(
         )
         .await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_USER_CODE,
             identity.user_id,

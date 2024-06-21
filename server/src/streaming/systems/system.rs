@@ -18,8 +18,9 @@ use tokio::time::Instant;
 use tracing::{info, trace};
 
 use crate::compat;
-use crate::state::metadata::{FileMetadata, Metadata};
-use crate::state::states::SystemState;
+use crate::state::file::FileState;
+use crate::state::system::SystemState;
+use crate::state::State;
 use crate::streaming::users::user::User;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
@@ -66,7 +67,7 @@ pub struct System {
     pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
-    pub(crate) metadata: Arc<dyn Metadata>,
+    pub(crate) state: Arc<dyn State>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
 
@@ -80,14 +81,14 @@ impl System {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };
-        let metadata = Arc::new(FileMetadata::new(
+        let state = Arc::new(FileState::new(
             &config.get_state_log_path(),
             persister.clone(),
         ));
         Self::create(
             config.clone(),
             SystemStorage::new(config, persister),
-            metadata,
+            state,
             pat_config,
         )
     }
@@ -95,7 +96,7 @@ impl System {
     pub fn create(
         config: Arc<SystemConfig>,
         storage: SystemStorage,
-        metadata: Arc<dyn Metadata>,
+        state: Arc<dyn State>,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         info!(
@@ -117,7 +118,7 @@ impl System {
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
             users: HashMap::new(),
-            metadata,
+            state,
             personal_access_token: pat_config,
         }
     }
@@ -152,18 +153,22 @@ impl System {
             self.config.get_system_path()
         );
 
-        compat::storage_conversion::init(
-            self.config.clone(),
-            self.metadata.clone(),
-            self.storage.clone(),
-        )
-        .await?;
-        let entries = self.metadata.init().await?;
-        let state = SystemState::init(entries).await?;
+        if self.config.database.is_some() {
+            compat::storage_conversion::init(
+                self.config.clone(),
+                self.state.clone(),
+                self.storage.clone(),
+            )
+            .await?;
+        }
+
+        let state_entries = self.state.init().await?;
+        let system_state = SystemState::init(state_entries).await?;
         let now = Instant::now();
         self.load_version().await?;
-        self.load_users(state.users.into_values().collect()).await?;
-        self.load_streams(state.streams.into_values().collect())
+        self.load_users(system_state.users.into_values().collect())
+            .await?;
+        self.load_streams(system_state.streams.into_values().collect())
             .await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())

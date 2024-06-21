@@ -2,7 +2,7 @@ use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
-use server::state::states::PartitionState;
+use server::state::system::PartitionState;
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};

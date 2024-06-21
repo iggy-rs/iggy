@@ -1,6 +1,6 @@
 use super::batching::message_batch::RetainedMessageBatch;
 use crate::configs::system::SystemConfig;
-use crate::state::states::{PartitionState, StreamState, TopicState};
+use crate::state::system::{PartitionState, StreamState, TopicState};
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::partitions::storage::FilePartitionStorage;
 use crate::streaming::persistence::persister::Persister;

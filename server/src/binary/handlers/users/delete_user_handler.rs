@@ -18,7 +18,7 @@ pub async fn handle(
     let mut system = system.write();
     system.delete_user(session, &command.user_id).await?;
     system
-        .metadata
+        .state
         .apply(
             DELETE_USER_CODE,
             session.get_user_id(),

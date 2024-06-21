@@ -3,8 +3,8 @@ mod persistency;
 
 use crate::compat::storage_conversion::persistency::{personal_access_tokens, streams, users};
 use crate::configs::system::SystemConfig;
-use crate::state::metadata::Metadata;
-use crate::state::states::{PartitionState, StreamState, TopicState};
+use crate::state::system::{PartitionState, StreamState, TopicState};
+use crate::state::State;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
 use crate::streaming::persistence::persister::Persister;
@@ -28,7 +28,7 @@ use tracing::{error, info};
 
 pub async fn init(
     config: Arc<SystemConfig>,
-    metadata: Arc<dyn Metadata>,
+    metadata: Arc<dyn State>,
     storage: Arc<SystemStorage>,
 ) -> Result<(), IggyError> {
     if Path::new(&config.get_state_log_path()).exists() {

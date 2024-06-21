@@ -1,4 +1,4 @@
-use crate::state::metadata::Metadata;
+use crate::state::State;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
@@ -23,19 +23,19 @@ use tokio::fs::create_dir;
 use tracing::{error, info};
 
 pub async fn convert(
-    metadata: Arc<dyn Metadata>,
+    state: Arc<dyn State>,
     storage: Arc<SystemStorage>,
     mut streams: Vec<Stream>,
     mut users: Vec<User>,
     personal_access_tokens: Vec<PersonalAccessToken>,
 ) -> Result<(), IggyError> {
     info!("Converting storage to new format");
-    metadata.init().await?;
+    state.init().await?;
     streams.sort_by(|a, b| a.stream_id.cmp(&b.stream_id));
     users.sort_by(|a, b| a.id.cmp(&b.id));
     info!("Converting {} users", users.len());
     for user in users {
-        metadata
+        state
             .apply(
                 CREATE_USER_CODE,
                 0,
@@ -65,7 +65,7 @@ pub async fn convert(
             expiry = IggyExpiry::ExpireDuration((expiry_at.to_micros() - now.to_micros()).into());
         }
 
-        metadata
+        state
             .apply(
                 CREATE_PERSONAL_ACCESS_TOKEN_CODE,
                 personal_access_token.user_id,
@@ -81,7 +81,7 @@ pub async fn convert(
 
     info!("Converting {} streams", streams.len());
     for stream in streams {
-        metadata
+        state
             .apply(
                 CREATE_STREAM_CODE,
                 0,
@@ -100,7 +100,7 @@ pub async fn convert(
             stream.stream_id
         );
         for topic in stream.topics.into_values() {
-            metadata
+            state
                 .apply(
                     CREATE_TOPIC_CODE,
                     0,
@@ -130,7 +130,7 @@ pub async fn convert(
             );
             for group in topic.consumer_groups.into_values() {
                 let group = group.read().await;
-                metadata
+                state
                     .apply(
                         CREATE_CONSUMER_GROUP_CODE,
                         0,

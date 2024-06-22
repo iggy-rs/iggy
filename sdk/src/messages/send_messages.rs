@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
@@ -23,7 +23,7 @@ const EMPTY_KEY_VALUE: Vec<u8> = vec![];
 /// - `topic_id` - unique topic ID (numeric or name).
 /// - `partitioning` - to which partition the messages should be sent - either provided by the client or calculated by the server.
 /// - `messages` - collection of messages to be sent.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SendMessages {
     /// Unique stream ID (numeric or name).
     #[serde(skip)]
@@ -192,9 +192,9 @@ impl Partitioning {
 }
 
 impl CommandPayload for SendMessages {}
-impl HashableCommand for SendMessages {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for SendMessages {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

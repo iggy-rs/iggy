@@ -9,7 +9,7 @@ pub type StopSender = flume::Sender<()>;
 pub type StopReceiver = flume::Receiver<()>;
 
 #[derive(Clone)]
-pub struct ShardConnector<T: Clone> {
+pub struct ShardConnector<T> {
     pub id: u16,
     pub sender: Sender<T>,
     pub receiver: Receiver<T>,
@@ -17,6 +17,7 @@ pub struct ShardConnector<T: Clone> {
     pub stop_sender: StopSender,
 }
 
+// TODO(numinex) - replace flume with async_channel
 impl<T: Clone> ShardConnector<T> {
     pub fn new(id: u16, max_concurrent_thread_count: usize) -> Self {
         let channel = Arc::new(ShardedChannel::new(max_concurrent_thread_count));
@@ -37,16 +38,16 @@ impl<T: Clone> ShardConnector<T> {
 }
 
 #[derive(Clone)]
-pub struct Receiver<T: Clone> {
+pub struct Receiver<T> {
     channel: Arc<ShardedChannel<T>>,
 }
 
 #[derive(Clone)]
-pub struct Sender<T: Clone> {
+pub struct Sender<T> {
     channel: Arc<ShardedChannel<T>>,
 }
 
-impl<T: Clone> Sender<T> {
+impl<T> Sender<T> {
     pub fn send(&self, data: T) {
         self.channel
             .task_queue
@@ -97,7 +98,7 @@ impl<T: Clone> ShardedChannelsSplit<T> for Arc<ShardedChannel<T>> {
     }
 }
 
-impl<T: Clone> Stream for Receiver<T> {
+impl<T> Stream for Receiver<T> {
     type Item = T;
     fn poll_next(
         self: std::pin::Pin<&mut Self>,

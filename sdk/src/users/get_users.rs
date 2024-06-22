@@ -1,20 +1,20 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 /// `GetUsers` command is used to retrieve the information about all users.
 /// It has no additional payload.
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetUsers {}
 
 impl CommandPayload for GetUsers {}
-impl HashableCommand for GetUsers {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for GetUsers {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

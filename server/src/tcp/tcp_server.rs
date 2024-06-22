@@ -5,7 +5,7 @@ use crate::tpc::shard::shard::IggyShard;
 use iggy::error::IggyError;
 
 /// Starts the TCP server.
-pub async fn start(shard: Rc<IggyShard>) -> Result<(), IggyError> {
+pub async fn spawn_tcp_server(shard: Rc<IggyShard>) -> Result<(), IggyError> {
     let server_name = if shard.config.tcp.tls.enabled {
         "Iggy TCP TLS"
     } else {

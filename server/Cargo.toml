@@ -70,6 +70,7 @@ xxhash-rust = { version = "0.8.10", features = ["xxh32"] }
 native-tls = "0.2.11"
 murmur3 = "0.5.2"
 local-sync = "0.1.1"
+async-channel = "2.3.1"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 tikv-jemallocator = { version = "0.5", optional = true }

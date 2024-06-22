@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -15,7 +15,7 @@ use std::fmt::Display;
 /// - `topic_id` - unique topic ID (numeric or name).
 /// - `partition_id` - partition ID on which the offset is stored. Has to be specified for the regular consumer. For consumer group it is ignored (use `None`).
 /// - `offset` - offset to store.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StoreConsumerOffset {
     /// The consumer that is storing the offset, either the regular consumer or the consumer group.
     #[serde(flatten)]
@@ -45,9 +45,9 @@ impl Default for StoreConsumerOffset {
 }
 
 impl CommandPayload for StoreConsumerOffset {}
-impl HashableCommand for StoreConsumerOffset {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for StoreConsumerOffset {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

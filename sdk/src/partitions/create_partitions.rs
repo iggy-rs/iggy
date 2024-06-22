@@ -1,9 +1,9 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::partitions::MAX_PARTITIONS_COUNT;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -13,7 +13,7 @@ use std::fmt::Display;
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
 /// - `partitions_count` - number of partitions in the topic to create, max value is 1000.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CreatePartitions {
     /// Unique stream ID (numeric or name).
     #[serde(skip)]
@@ -26,9 +26,9 @@ pub struct CreatePartitions {
 }
 
 impl CommandPayload for CreatePartitions {}
-impl HashableCommand for CreatePartitions {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for CreatePartitions {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

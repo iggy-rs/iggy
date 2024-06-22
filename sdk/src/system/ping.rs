@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::Bytes;
@@ -8,13 +8,14 @@ use std::fmt::Display;
 
 /// `Ping` command is used to check if the server is alive.
 /// It has no additional payload.
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct Ping {}
 
 impl CommandPayload for Ping {}
-impl HashableCommand for Ping {
-    fn hash(&self) -> Option<u32> {
-        None
+
+impl CommandExecutionOrigin for Ping {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

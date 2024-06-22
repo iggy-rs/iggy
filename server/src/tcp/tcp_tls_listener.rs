@@ -62,7 +62,7 @@ pub(crate) async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(
                 Err(error) => error!("Unable to accept TCP TLS socket, error: {}", error),
             }
         }
-    });
+    }).await;
     */
     Ok(())
 }

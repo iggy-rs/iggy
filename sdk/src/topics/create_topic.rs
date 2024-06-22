@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -22,7 +22,7 @@ use std::str::from_utf8;
 ///                      Can't be lower than segment size in the config.
 /// - `replication_factor` - replication factor for the topic.
 /// - `name` - unique topic name, max length is 255 characters. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CreateTopic {
     /// Unique stream ID (numeric or name).
     #[serde(skip)]
@@ -44,9 +44,9 @@ pub struct CreateTopic {
 }
 
 impl CommandPayload for CreateTopic {}
-impl HashableCommand for CreateTopic {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for CreateTopic {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

@@ -1,20 +1,20 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 /// `GetPersonalAccessTokens` command is used to get all personal access tokens for the authenticated user.
 /// It has no additional payload.
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetPersonalAccessTokens {}
 
 impl CommandPayload for GetPersonalAccessTokens {}
-impl HashableCommand for GetPersonalAccessTokens {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for GetPersonalAccessTokens {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

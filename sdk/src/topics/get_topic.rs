@@ -1,8 +1,8 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -11,7 +11,7 @@ use std::fmt::Display;
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct GetTopic {
     /// Unique stream ID (numeric or name).
     #[serde(skip)]
@@ -22,9 +22,9 @@ pub struct GetTopic {
 }
 
 impl CommandPayload for GetTopic {}
-impl HashableCommand for GetTopic {
-    fn hash(&self) -> Option<u32> {
-        self.stream_id.hash()
+impl CommandExecutionOrigin for GetTopic {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

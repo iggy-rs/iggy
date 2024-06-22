@@ -96,6 +96,8 @@ pub enum IggyError {
     InvalidRefreshToken = 78,
     #[error("Refresh token expired")]
     RefreshTokenExpired = 79,
+    #[error("Cannot receive message")]
+    CannotReceiveMessage(#[from] async_channel::RecvError) = 80,
     #[error("Client with ID: {0} was not found.")]
     ClientNotFound(u32) = 100,
     #[error("Invalid client ID")]

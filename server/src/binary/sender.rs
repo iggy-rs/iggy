@@ -1,4 +1,4 @@
-use bytes::{Bytes, BytesMut};
+use bytes::BytesMut;
 use iggy::error::IggyError;
 
 pub trait Sender: Sync + Send {

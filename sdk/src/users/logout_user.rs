@@ -1,20 +1,20 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Display, hash::Hash};
+use std::fmt::Display;
 
 /// `LogoutUser` command is used to log out the authenticated user.
 /// It has no additional payload.
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct LogoutUser {}
 
 impl CommandPayload for LogoutUser {}
-impl HashableCommand for LogoutUser {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for LogoutUser {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

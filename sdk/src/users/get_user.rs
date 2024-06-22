@@ -1,8 +1,8 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -10,7 +10,7 @@ use std::fmt::Display;
 /// `GetUser` command is used to retrieve the information about a user by unique ID.
 /// It has additional payload:
 /// - `user_id` - unique user ID (numeric or name).
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct GetUser {
     #[serde(skip)]
     /// Unique user ID (numeric or name).
@@ -18,9 +18,9 @@ pub struct GetUser {
 }
 
 impl CommandPayload for GetUser {}
-impl HashableCommand for GetUser {
-    fn hash(&self) -> Option<u32> {
-        self.user_id.hash()
+impl CommandExecutionOrigin for GetUser {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

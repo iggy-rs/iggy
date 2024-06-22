@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::users::defaults::*;
@@ -14,7 +14,7 @@ use std::str::from_utf8;
 /// - `user_id` - unique user ID (numeric or name).
 /// - `current_password` - current password, must be between 3 and 100 characters long.
 /// - `new_password` - new password, must be between 3 and 100 characters long.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ChangePassword {
     /// Unique user ID (numeric or name).
     #[serde(skip)]
@@ -26,9 +26,9 @@ pub struct ChangePassword {
 }
 
 impl CommandPayload for ChangePassword {}
-impl HashableCommand for ChangePassword {
-    fn hash(&self) -> Option<u32> {
-        self.user_id.hash()
+impl CommandExecutionOrigin for ChangePassword {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

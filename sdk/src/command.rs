@@ -45,7 +45,6 @@ use crate::users::update_user::UpdateUser;
 use bytes::{BufMut, Bytes, BytesMut};
 use enum_dispatch::enum_dispatch;
 use std::{
-    default,
     fmt::{Display, Formatter},
 };
 use strum::EnumString;
@@ -135,13 +134,18 @@ pub const JOIN_CONSUMER_GROUP_CODE: u32 = 604;
 pub const LEAVE_CONSUMER_GROUP: &str = "consumer_group.leave";
 pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 605;
 
+pub enum CommandExecution {
+    Routed(u32),
+    Direct,
+}
+
 #[enum_dispatch(Command)]
-pub trait HashableCommand {
-    fn hash(&self) -> Option<u32>;
+pub trait CommandExecutionOrigin {
+    fn get_command_execution_origin(&self) -> CommandExecution;
 }
 
 #[enum_dispatch]
-#[derive(Debug, PartialEq, EnumString)]
+#[derive(Debug, Clone, PartialEq, EnumString)]
 pub enum Command {
     Ping(Ping),
     GetStats(GetStats),

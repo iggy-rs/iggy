@@ -1,8 +1,8 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -10,7 +10,7 @@ use std::fmt::Display;
 /// `DeleteUser` command is used to delete a user by unique ID.
 /// It has additional payload:
 /// - `user_id` - unique user ID (numeric or name).
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct DeleteUser {
     /// Unique user ID (numeric or name).
     #[serde(skip)]
@@ -18,9 +18,9 @@ pub struct DeleteUser {
 }
 
 impl CommandPayload for DeleteUser {}
-impl HashableCommand for DeleteUser {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for DeleteUser {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

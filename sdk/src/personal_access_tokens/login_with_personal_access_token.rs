@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::validatable::Validatable;
@@ -11,16 +11,16 @@ use std::str::from_utf8;
 /// `LoginWithPersonalAccessToken` command is used to login the user with a personal access token, instead of the username and password.
 /// It has additional payload:
 /// - `token` - personal access token
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoginWithPersonalAccessToken {
     /// Personal access token
     pub token: String,
 }
 
 impl CommandPayload for LoginWithPersonalAccessToken {}
-impl HashableCommand for LoginWithPersonalAccessToken {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for LoginWithPersonalAccessToken {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

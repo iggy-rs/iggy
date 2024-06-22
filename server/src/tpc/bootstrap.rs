@@ -11,6 +11,8 @@ use crate::{
     },
     tcp::tcp_server,
 };
+use crate::tcp::{tcp_listener, tcp_tls_listener};
+use crate::tcp::tcp_server::spawn_tcp_server;
 
 use super::{
     connector::ShardConnector,
@@ -69,7 +71,7 @@ pub async fn shard_executor(shard: Rc<IggyShard>, is_prime_thread: bool) -> Resu
     // have the correct statistics when the server starts.
     shard.get_stats_bypass_auth().await?;
     // TODO - make the init collections a Cell, so they can be mutated while being borrowed.
-    shard.init().await?;
+    //shard.init().await?;
     // Create all tasks (tcp listener, http listener, command processor, in the future also the background handlers).
     let mut tasks = vec![];
     if shard.config.tcp.enabled {
@@ -83,6 +85,3 @@ pub async fn shard_executor(shard: Rc<IggyShard>, is_prime_thread: bool) -> Resu
     Ok(())
 }
 
-async fn spawn_tcp_server(shard: Rc<IggyShard>) -> Result<(), IggyError> {
-    tcp_server::start(shard).await
-}

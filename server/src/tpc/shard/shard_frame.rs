@@ -1,21 +1,31 @@
+use async_channel::Sender;
 use iggy::command::Command;
+use uuid::Bytes;
+use iggy::error::IggyError;
 
-use crate::tpc::connector::Receiver;
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum ShardMessage {
-    Request(Command),
+    Command(Command),
     Event,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub enum ShardResponse {
-    Response,
+    BinaryResponse(Bytes),
+    ErrorResponse(IggyError)
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ShardFrame {
-    pub shard_id: u16,
     pub message: ShardMessage,
-    pub response_receiver: Receiver<ShardResponse>,
+    pub response_sender: Sender<ShardResponse>,
+}
+
+impl ShardFrame {
+    pub fn new(message: ShardMessage, response_sender: Sender<ShardResponse>) -> Self {
+        Self {
+            message,
+            response_sender,
+        }
+    }
 }

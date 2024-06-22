@@ -1,13 +1,4 @@
-use std::{
-    collections::HashMap,
-    fs::{create_dir, remove_dir_all},
-    path::Path,
-    sync::{Arc, OnceLock},
-    time::Instant,
-};
-use sysinfo::{Pid, System as SysinfoSystem};
-use tracing::info;
-
+use super::shard_frame::{ShardFrame, ShardMessage, ShardResponse};
 use crate::{
     configs::{
         server::{PersonalAccessTokenConfig, ServerConfig},
@@ -24,10 +15,9 @@ use crate::{
         utils::hash_string,
     },
 };
-
-use super::shard_frame::ShardFrame;
 use fast_async_mutex::mutex::Mutex;
 use flume::SendError;
+use iggy::command::Command;
 use iggy::{
     error::IggyError,
     locking::{IggySharedMut, IggySharedMutFn},
@@ -35,11 +25,43 @@ use iggy::{
     utils::crypto::{Aes256GcmEncryptor, Encryptor},
 };
 use sled::Db;
+use std::{
+    collections::HashMap,
+    fs::{create_dir, remove_dir_all},
+    path::Path,
+    sync::{Arc, OnceLock},
+    time::Instant,
+};
+use sysinfo::{Pid, System as SysinfoSystem};
+use tracing::info;
+
 pub const SHARD_NAME: &str = "iggy_shard";
 
 /// For each cache eviction, we want to remove more than the size we need.
 /// This is done on purpose to avoid evicting messages on every write.
 const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
+
+pub struct Shard {
+    hash: u32,
+    connection: ShardConnector<ShardFrame>,
+}
+
+impl Shard {
+    pub fn new(name: String, connection: ShardConnector<ShardFrame>) -> Self {
+        let hash = hash_string(&name).unwrap();
+        Self { hash, connection }
+    }
+
+    pub async fn send_request(&self, message: ShardMessage) -> Result<ShardResponse, IggyError> {
+        let (sender, receiver) = async_channel::bounded(1);
+        self.connection
+            .sender
+            .send(ShardFrame::new(message, sender.clone())); // Apparently sender needs to be cloned, otherwise channel will close...
+        let response = receiver.recv().await?;
+        Ok(response)
+    }
+}
+
 
 pub struct IggyShard {
     pub id: u16,
@@ -60,7 +82,6 @@ pub struct IggyShard {
     stop_receiver: StopReceiver,
     stop_sender: StopSender,
 }
-
 impl IggyShard {
     pub fn new(
         id: u16,
@@ -73,9 +94,10 @@ impl IggyShard {
         stop_sender: StopSender,
     ) -> Self {
         let name = &format!("{}_{}", SHARD_NAME, id);
-        let this = Self {
+        let hash = hash_string(&name).unwrap();
+        Self {
             id,
-            hash: hash_string(&name).unwrap(),
+            hash,
             shards,
             permissioner: Permissioner::default(),
             storage,
@@ -94,9 +116,7 @@ impl IggyShard {
             message_receiver: shard_messages_receiver,
             stop_receiver,
             stop_sender,
-        };
-        // For now like this, TODO - make the Vec<Shards> a Cell.
-        this.sort_consistent_hash_ring()
+        }
     }
 
     pub async fn init(&mut self) -> Result<(), IggyError> {
@@ -112,25 +132,26 @@ impl IggyShard {
         Ok(())
     }
 
-    fn sort_consistent_hash_ring(mut self) -> Self {
-        self.shards.sort_unstable_by(|a, b| {
-            let x = a.hash;
-            let y = b.hash;
-            let threshold = self.hash;
-            if x < threshold && y >= threshold {
-                std::cmp::Ordering::Greater
-            } else if x >= threshold && y < threshold {
-                std::cmp::Ordering::Less
-            } else {
-                x.cmp(&y)
-            }
-        });
-        self
-    }
-
     pub async fn stop(self) -> Result<(), SendError<()>> {
         self.stop_sender.send_async(()).await?;
         Ok(())
+    }
+
+    pub async fn send_request_to_shard(
+        &self,
+        cmd_hash: u32,
+        command: Command,
+    ) -> Result<ShardResponse, IggyError> {
+        let message = ShardMessage::Command(command);
+        self.find_shard(cmd_hash).send_request(message).await
+    }
+
+    fn find_shard(&self, cmd_hash: u32) -> &Shard {
+        self
+            .shards
+            .iter()
+            .find(|shard| shard.hash <= cmd_hash)
+            .unwrap_or_else(|| self.shards.last().unwrap())
     }
 
     pub fn ensure_authenticated(&self, session: &Session) -> Result<(), IggyError> {
@@ -164,17 +185,5 @@ impl IggyShard {
                 }
             }
         }
-    }
-}
-
-pub struct Shard {
-    hash: u32,
-    connection: ShardConnector<ShardFrame>,
-}
-
-impl Shard {
-    pub fn new(name: String, connection: ShardConnector<ShardFrame>) -> Self {
-        let hash = hash_string(&name).unwrap();
-        Self { hash, connection }
     }
 }

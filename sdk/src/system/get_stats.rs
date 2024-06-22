@@ -1,22 +1,20 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
+use crate::bytes_serializable::BytesSerializable;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
-use std::hash::Hash;
 
 /// `GetStats` command is used to get the statistics about the system.
 /// It has no additional payload.
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetStats {}
 
-
 impl CommandPayload for GetStats {}
-impl HashableCommand for GetStats {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for GetStats {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

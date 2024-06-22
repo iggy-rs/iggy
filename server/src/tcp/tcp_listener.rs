@@ -17,7 +17,7 @@ pub async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), Iggy
             .local_addr()
             .expect("Failed to get local address for TCP listener");
         info!("{server_name} server has started on: {:?}", local_addr);
-        // This is required for the integration tests client to know where to connect to.
+        // This is required for the integration tests. Client requires information about address to connect.
         // Since we bind to port 0 when creating server in order to get a random non-used port,
         // we have to store the address in the default_config.toml file.
         if let Err(e) = persist_tcp_address(&shard, local_addr.to_string()).await {
@@ -40,6 +40,6 @@ pub async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), Iggy
                 Err(error) => error!("Unable to accept TCP socket, error: {}", error),
             }
         }
-    });
+    }).await;
     Ok(())
 }

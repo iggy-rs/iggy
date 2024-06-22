@@ -1,20 +1,20 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
+use crate::bytes_serializable::BytesSerializable;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 
 /// `GetMe` command is used to get the information connected client.
 /// It has no additional payload.
-#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetMe {}
 
 impl CommandPayload for GetMe {}
-impl HashableCommand for GetMe {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for GetMe {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

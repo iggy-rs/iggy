@@ -2,14 +2,12 @@ use crate::binary::sender::Sender;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
-use crate::streaming::systems::system::{SharedSystem, System};
-use crate::tpc::shard::shard_frame::ShardMessage;
-use crate::{binary::command, tpc::shard::shard::IggyShard};
+use crate::tpc::shard::shard_frame::{ShardResponse};
+use crate::{tpc::shard::shard::IggyShard};
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{Command, ShardCommand};
+use iggy::command::{Command, CommandExecution, CommandExecutionOrigin};
 use iggy::error::IggyError;
-use iggy::system::ping::Ping;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::rc::Rc;
@@ -61,26 +59,29 @@ pub(crate) async fn handle_connection(
                 continue;
             }
         };
+        // We have to validate the session before we dispatch the request.
 
-        let ping = Ping {};
-        let cmd: Command = ping.into();
-
-        /*
-        match shard_command {
-            ShardCommand::Routable(command) => {
-                // Here we can have to hash the request and route it to appropiate shard.
+        match command.get_command_execution_origin() {
+            CommandExecution::Direct => {
 
             },
-            ShardCommand::NonRoutable(command) => {
-                // use current shard to process the request
+            CommandExecution::Routed(cmd_hash) => {
+                match shard.send_request_to_shard(cmd_hash, command).await? {
+                    ShardResponse::BinaryResponse(payload) => {
+                        sender.send_ok_response(&payload).await?;
+                    },
+                    ShardResponse::ErrorResponse(err) => {
+                        sender.send_error_response(err).await?;
+                    }
+                }
             }
         }
-        */
+
         /*
         debug!("Received a TCP command: {command}, payload size: {length}");
-        command::handle(command, sender, &session, system.clone()).await?;
         debug!("Sent a TCP response.");
         */
+        //command::handle(command, sender, &session, system.clone()).await?;
     }
 }
 

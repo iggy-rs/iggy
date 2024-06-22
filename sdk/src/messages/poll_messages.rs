@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -19,7 +19,7 @@ use std::str::FromStr;
 /// - `strategy` - polling strategy which specifies from where to start polling messages.
 /// - `count` - number of messages to poll.
 /// - `auto_commit` - whether to commit offset on the server automatically after polling the messages.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PollMessages {
     /// Consumer which will poll messages. Either regular consumer or consumer group.
     #[serde(flatten)]
@@ -105,9 +105,9 @@ impl Default for PollingStrategy {
 }
 
 impl CommandPayload for PollMessages {}
-impl HashableCommand for PollMessages {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for PollMessages {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
@@ -13,7 +13,7 @@ use std::str::from_utf8;
 /// It has additional payload:
 /// - `username` - username, must be between 3 and 50 characters long.
 /// - `password` - password, must be between 3 and 100 characters long.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LoginUser {
     /// Username, must be between 3 and 50 characters long.
     pub username: String,
@@ -22,9 +22,9 @@ pub struct LoginUser {
 }
 
 impl CommandPayload for LoginUser {}
-impl HashableCommand for LoginUser {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for LoginUser {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

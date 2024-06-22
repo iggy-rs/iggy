@@ -1,8 +1,8 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -12,7 +12,7 @@ use std::fmt::Display;
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `topic_id` - unique topic ID (numeric or name).
 /// - `group_id` - unique consumer group ID (numeric or name).
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct LeaveConsumerGroup {
     /// Unique stream ID (numeric or name).
     #[serde(skip)]
@@ -26,9 +26,9 @@ pub struct LeaveConsumerGroup {
 }
 
 impl CommandPayload for LeaveConsumerGroup {}
-impl HashableCommand for LeaveConsumerGroup {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for LeaveConsumerGroup {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

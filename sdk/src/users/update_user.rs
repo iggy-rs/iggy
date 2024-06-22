@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::user_status::UserStatus;
@@ -16,7 +16,7 @@ use std::str::from_utf8;
 /// - `user_id` - unique user ID (numeric or name).
 /// - `username` - new username (optional), if provided, must be between 3 and 50 characters long.
 /// - `status` - new status (optional)
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UpdateUser {
     #[serde(skip)]
     pub user_id: Identifier,
@@ -25,9 +25,9 @@ pub struct UpdateUser {
 }
 
 impl CommandPayload for UpdateUser {}
-impl HashableCommand for UpdateUser {
-    fn hash(&self) -> Option<u32> {
-        self.user_id.hash()
+impl CommandExecutionOrigin for UpdateUser {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

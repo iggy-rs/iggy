@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::streams::MAX_NAME_LENGTH;
@@ -14,7 +14,7 @@ use std::str::from_utf8;
 /// It has additional payload:
 /// - `stream_id` - unique stream ID (numeric or name).
 /// - `name` - unique stream name (string), max length is 255 characters.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct UpdateStream {
     /// Unique stream ID (numeric or name).
     #[serde(skip)]
@@ -24,9 +24,9 @@ pub struct UpdateStream {
 }
 
 impl CommandPayload for UpdateStream {}
-impl HashableCommand for UpdateStream {
-    fn hash(&self) -> Option<u32> {
-        self.stream_id.hash()
+impl CommandExecutionOrigin for UpdateStream {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

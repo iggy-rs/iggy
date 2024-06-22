@@ -2,7 +2,6 @@ use crate::streaming::storage::Storage;
 use crate::streaming::systems::system::System;
 use iggy::error::IggyError;
 use serde::{Deserialize, Serialize};
-use std::collections::hash_map::DefaultHasher;
 use std::fmt::Display;
 use std::hash::{Hash, Hasher};
 use std::str::FromStr;

@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
@@ -13,7 +13,7 @@ use std::str::from_utf8;
 /// It has additional payload:
 /// - `name` - unique name of the token, must be between 3 and 30 characters long. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
 /// - `expiry` - expiry in seconds (optional), if provided, must be between 1 and 4294967295. Otherwise, the token will never expire.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CreatePersonalAccessToken {
     /// Unique name of the token, must be between 3 and 30 characters long.
     pub name: String,
@@ -22,9 +22,9 @@ pub struct CreatePersonalAccessToken {
 }
 
 impl CommandPayload for CreatePersonalAccessToken {}
-impl HashableCommand for CreatePersonalAccessToken {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for CreatePersonalAccessToken {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

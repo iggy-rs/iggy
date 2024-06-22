@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::consumer_groups::MAX_NAME_LENGTH;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -16,7 +16,7 @@ use std::str::from_utf8;
 /// - `topic_id` - unique topic ID (numeric or name).
 /// - `group_id` - unique consumer group ID.
 /// - `name` - unique consumer group name, max length is 255 characters. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CreateConsumerGroup {
     /// Unique stream ID (numeric or name).
     #[serde(skip)]
@@ -31,9 +31,9 @@ pub struct CreateConsumerGroup {
 }
 
 impl CommandPayload for CreateConsumerGroup {}
-impl HashableCommand for CreateConsumerGroup {
-    fn hash(&self) -> Option<u32> {
-        self.stream_id.hash()
+impl CommandExecutionOrigin for CreateConsumerGroup {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

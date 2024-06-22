@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
@@ -12,16 +12,16 @@ use std::str::from_utf8;
 /// `DeletePersonalAccessToken` command is used to delete a personal access token for the authenticated user.
 /// It has additional payload:
 /// - `name` - unique name of the token, must be between 3 and 30 characters long. The name will be always converted to lowercase and all whitespaces will be replaced with dots.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct DeletePersonalAccessToken {
     /// Unique name of the token, must be between 3 and 30 characters long.
     pub name: String,
 }
 
 impl CommandPayload for DeletePersonalAccessToken {}
-impl HashableCommand for DeletePersonalAccessToken {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for DeletePersonalAccessToken {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

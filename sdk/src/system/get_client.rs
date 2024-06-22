@@ -1,7 +1,7 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -9,16 +9,16 @@ use std::fmt::Display;
 /// `GetClient` command is used to get the information about a specific client by unique ID.
 /// It has additional payload:
 /// - `client_id` - unique ID (numeric) of the client.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GetClient {
     /// Unique ID (numeric) of the client.
     pub client_id: u32,
 }
 
 impl CommandPayload for GetClient {}
-impl HashableCommand for GetClient {
-    fn hash(&self) -> Option<u32> {
-        Some(self.client_id)
+impl CommandExecutionOrigin for GetClient {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

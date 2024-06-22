@@ -43,6 +43,7 @@ fn main() -> Result<(), ServerError> {
     let db = Arc::new(
         sled::open(&db_path).expect(format!("Cannot open database at: {}", db_path).as_ref()),
     );
+    // TODO - move this inside of the ServerConfig struct
     create_directories(&config)?;
     let cpu_set = 0..available_cpus;
     let connections = cpu_set

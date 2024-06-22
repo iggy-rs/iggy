@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandPayload, HashableCommand};
+use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
@@ -17,7 +17,7 @@ use std::str::from_utf8;
 /// - `password` - password of the user, must be between 3 and 100 characters long.
 /// - `status` - status of the user, can be either `active` or `inactive`.
 /// - `permissions` - optional permissions of the user. If not provided, user will have no permissions.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CreateUser {
     /// Unique name of the user, must be between 3 and 50 characters long.
     pub username: String,
@@ -30,9 +30,9 @@ pub struct CreateUser {
 }
 
 impl CommandPayload for CreateUser {}
-impl HashableCommand for CreateUser {
-    fn hash(&self) -> Option<u32> {
-        None
+impl CommandExecutionOrigin for CreateUser {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

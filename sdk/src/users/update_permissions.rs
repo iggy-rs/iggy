@@ -1,9 +1,9 @@
-use crate::{bytes_serializable::BytesSerializable, command::HashableCommand};
-use crate::command::CommandPayload;
+use crate::command::{CommandExecution, CommandPayload};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::permissions::Permissions;
 use crate::validatable::Validatable;
+use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -12,7 +12,7 @@ use std::fmt::Display;
 /// It has additional payload:
 /// - `user_id` - unique user ID (numeric or name).
 /// - `permissions` - new permissions (optional)
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct UpdatePermissions {
     /// Unique user ID (numeric or name).
     #[serde(skip)]
@@ -22,9 +22,9 @@ pub struct UpdatePermissions {
 }
 
 impl CommandPayload for UpdatePermissions {}
-impl HashableCommand for UpdatePermissions {
-    fn hash(&self) -> Option<u32> {
-        self.user_id.hash()
+impl CommandExecutionOrigin for UpdatePermissions {
+    fn get_command_execution_origin(&self) -> CommandExecution {
+        CommandExecution::Direct
     }
 }
 

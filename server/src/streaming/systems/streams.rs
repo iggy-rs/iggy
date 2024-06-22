@@ -389,7 +389,11 @@ mod tests {
 
     #[async_trait]
     impl State for TestState {
-        async fn init(&self) -> Result<Vec<StateEntry>, IggyError> {
+        async fn init(&self) -> Result<(), IggyError> {
+            Ok(())
+        }
+
+        async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError> {
             Ok(Vec::new())
         }
 

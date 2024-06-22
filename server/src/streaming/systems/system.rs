@@ -165,7 +165,8 @@ impl System {
             .await?;
         }
 
-        let state_entries = self.state.init().await?;
+        self.state.init().await?;
+        let state_entries = self.state.load_entries().await?;
         let system_state = SystemState::init(state_entries).await?;
         let now = Instant::now();
         self.load_version().await?;

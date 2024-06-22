@@ -41,11 +41,18 @@ impl FileState {
 
 #[async_trait]
 impl State for FileState {
-    async fn init(&self) -> Result<Vec<StateEntry>, IggyError> {
+    async fn init(&self) -> Result<(), IggyError> {
         if !Path::new(&self.path).exists() {
             info!("State file does not exist, creating a new one");
             self.persister.overwrite(&self.path, &[]).await?;
-            return Ok(Vec::new());
+        }
+
+        return Ok(());
+    }
+
+    async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError> {
+        if !Path::new(&self.path).exists() {
+            return Err(IggyError::StateFileNotFound);
         }
 
         let file = file::open(&self.path).await?;

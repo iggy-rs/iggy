@@ -12,7 +12,8 @@ pub mod system;
 
 #[async_trait]
 pub trait State: Send + Sync + Debug {
-    async fn init(&self) -> Result<Vec<StateEntry>, IggyError>;
+    async fn init(&self) -> Result<(), IggyError>;
+    async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError>;
     async fn apply(
         &self,
         code: u32,

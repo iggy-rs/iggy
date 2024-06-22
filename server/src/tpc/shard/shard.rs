@@ -1,4 +1,5 @@
 use super::shard_frame::{ShardFrame, ShardMessage, ShardResponse};
+use crate::binary::command;
 use crate::{
     configs::{
         server::{PersonalAccessTokenConfig, ServerConfig},
@@ -25,6 +26,7 @@ use iggy::{
     utils::crypto::{Aes256GcmEncryptor, Encryptor},
 };
 use sled::Db;
+use std::cell::{Cell, RefCell};
 use std::{
     collections::HashMap,
     fs::{create_dir, remove_dir_all},
@@ -33,7 +35,7 @@ use std::{
     time::Instant,
 };
 use sysinfo::{Pid, System as SysinfoSystem};
-use tracing::info;
+use tracing::{debug, error, info};
 
 pub const SHARD_NAME: &str = "iggy_shard";
 
@@ -62,13 +64,12 @@ impl Shard {
     }
 }
 
-
 pub struct IggyShard {
     pub id: u16,
     pub hash: u32,
     shards: Vec<Shard>,
 
-    pub(crate) permissioner: Permissioner,
+    pub(crate) permissioner: RefCell<Permissioner>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) streams: HashMap<u32, Stream>,
     pub(crate) streams_ids: HashMap<String, u32>,
@@ -78,7 +79,7 @@ pub struct IggyShard {
     pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) metrics: Metrics,
     db: Arc<Db>,
-    message_receiver: Receiver<ShardFrame>,
+    pub message_receiver: Cell<Option<Receiver<ShardFrame>>>,
     stop_receiver: StopReceiver,
     stop_sender: StopSender,
 }
@@ -99,7 +100,7 @@ impl IggyShard {
             id,
             hash,
             shards,
-            permissioner: Permissioner::default(),
+            permissioner: RefCell::new(Permissioner::default()),
             storage,
             streams: HashMap::new(),
             streams_ids: HashMap::new(),
@@ -113,7 +114,7 @@ impl IggyShard {
             client_manager: IggySharedMut::new(ClientManager::default()),
             metrics: Metrics::init(),
             db,
-            message_receiver: shard_messages_receiver,
+            message_receiver: Cell::new(Some(shard_messages_receiver)),
             stop_receiver,
             stop_sender,
         }
@@ -147,11 +148,19 @@ impl IggyShard {
     }
 
     fn find_shard(&self, cmd_hash: u32) -> &Shard {
-        self
-            .shards
+        self.shards
             .iter()
             .find(|shard| shard.hash <= cmd_hash)
             .unwrap_or_else(|| self.shards.last().unwrap())
+    }
+
+    pub async fn handle_shard_message(&self, message: ShardMessage) {
+        match message {
+            ShardMessage::Command(cmd) => {
+                let response = self.handle_command(cmd).await;
+            }
+            ShardMessage::Event => {}
+        }
     }
 
     pub fn ensure_authenticated(&self, session: &Session) -> Result<(), IggyError> {

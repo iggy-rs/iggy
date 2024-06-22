@@ -78,11 +78,7 @@ impl IggyShard {
         }
     }
 
-    pub async fn get_client(
-        &self,
-        session: &Session,
-        client_id: u32,
-    ) -> Result<IggySharedMut<Client>, IggyError> {
+    pub async fn get_client(&self, session: &Session, client_id: u32) -> Result<Client, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.get_client(session.get_user_id())?;
         let client_manager = self.client_manager.read().await;

@@ -37,7 +37,7 @@ impl IggyShard {
 
     #[allow(clippy::too_many_arguments)]
     pub async fn create_topic(
-        &mut self,
+        &self,
         session: &Session,
         stream_id: &Identifier,
         topic_id: Option<u32>,
@@ -74,7 +74,7 @@ impl IggyShard {
 
     #[allow(clippy::too_many_arguments)]
     pub async fn update_topic(
-        &mut self,
+        &self,
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
@@ -113,7 +113,7 @@ impl IggyShard {
     }
 
     pub async fn delete_topic(
-        &mut self,
+        &self,
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,

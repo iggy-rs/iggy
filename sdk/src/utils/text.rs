@@ -8,7 +8,21 @@ lazy_static! {
     static ref RESOURCE_NAME_REGEX: Regex = Regex::new(r"^[\w\.\-\s]+$").unwrap();
 }
 
-pub fn to_lowercase_non_whitespace(value: &str) -> String {
+pub trait IggyStringUtils {
+    fn to_lowercase_non_whitespace(self) -> Self;
+}
+
+// TODO(numinex) - replace `to_lowercase_non_whitespace` static method with this.
+impl IggyStringUtils for String {
+    fn to_lowercase_non_whitespace(self) -> Self {
+        self.to_lowercase()
+            .split_whitespace()
+            .collect::<Vec<&str>>()
+            .join(".")
+    }
+}
+
+pub fn to_lowercase_non_whitespace(value: String) -> String {
     value
         .to_lowercase()
         .split_whitespace()

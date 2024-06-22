@@ -20,29 +20,13 @@ use crate::binary::handlers::users::{
 use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
+use crate::tpc::shard::shard::IggyShard;
 use iggy::command::Command;
 use iggy::error::IggyError;
+use std::rc::Rc;
 use tracing::{debug, error};
 
-pub async fn handle(
-    command: Command,
-    sender: &mut impl Sender,
-    session: &Session,
-    system: SharedSystem,
-) -> Result<(), IggyError> {
-    match try_handle(command, sender, session, &system).await {
-        Ok(_) => {
-            debug!("Command was handled successfully, session: {session}.");
-            Ok(())
-        }
-        Err(error) => {
-            error!("Command was not handled successfully, session: {session}, error: {error}");
-            sender.send_error_response(error).await
-        }
-    }
-}
-
-async fn try_handle(
+pub async fn try_handle(
     command: Command,
     sender: &mut impl Sender,
     session: &Session,

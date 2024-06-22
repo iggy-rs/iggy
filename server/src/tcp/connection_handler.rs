@@ -2,8 +2,8 @@ use crate::binary::sender::Sender;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
-use crate::tpc::shard::shard_frame::{ShardResponse};
-use crate::{tpc::shard::shard::IggyShard};
+use crate::tpc::shard::shard::IggyShard;
+use crate::tpc::shard::shard_frame::ShardResponse;
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::{Command, CommandExecution, CommandExecutionOrigin};
@@ -62,14 +62,12 @@ pub(crate) async fn handle_connection(
         // We have to validate the session before we dispatch the request.
 
         match command.get_command_execution_origin() {
-            CommandExecution::Direct => {
-
-            },
+            CommandExecution::Direct => {}
             CommandExecution::Routed(cmd_hash) => {
                 match shard.send_request_to_shard(cmd_hash, command).await? {
                     ShardResponse::BinaryResponse(payload) => {
                         sender.send_ok_response(&payload).await?;
-                    },
+                    }
                     ShardResponse::ErrorResponse(err) => {
                         sender.send_error_response(err).await?;
                     }
@@ -81,7 +79,6 @@ pub(crate) async fn handle_connection(
         debug!("Received a TCP command: {command}, payload size: {length}");
         debug!("Sent a TCP response.");
         */
-        //command::handle(command, sender, &session, system.clone()).await?;
     }
 }
 

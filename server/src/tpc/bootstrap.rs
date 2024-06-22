@@ -1,8 +1,12 @@
-use futures::future::try_join_all;
+use futures::future::{join, try_join, try_join_all};
+use futures::Future;
 use iggy::error::IggyError;
 use sled::Db;
+use std::pin::Pin;
 use std::{rc::Rc, sync::Arc};
 
+use crate::tcp::tcp_server::spawn_tcp_server;
+use crate::tcp::{tcp_listener, tcp_tls_listener};
 use crate::{
     configs::server::ServerConfig,
     streaming::{
@@ -11,9 +15,8 @@ use crate::{
     },
     tcp::tcp_server,
 };
-use crate::tcp::{tcp_listener, tcp_tls_listener};
-use crate::tcp::tcp_server::spawn_tcp_server;
 
+use super::shard::tasks::message_task::spawn_shard_message_task;
 use super::{
     connector::ShardConnector,
     shard::{
@@ -21,6 +24,7 @@ use super::{
         shard_frame::ShardFrame,
     },
 };
+type Task = Pin<Box<dyn Future<Output = Result<(), IggyError>>>>;
 
 pub fn create_shard(
     id: u16,
@@ -70,18 +74,15 @@ pub async fn shard_executor(shard: Rc<IggyShard>, is_prime_thread: bool) -> Resu
     // loads streams and starts accepting connections. This is necessary to
     // have the correct statistics when the server starts.
     shard.get_stats_bypass_auth().await?;
-    // TODO - make the init collections a Cell, so they can be mutated while being borrowed.
     //shard.init().await?;
     // Create all tasks (tcp listener, http listener, command processor, in the future also the background handlers).
-    let mut tasks = vec![];
+    let mut tasks: Vec<Task> = vec![Box::pin(spawn_shard_message_task(shard.clone()))];
     if shard.config.tcp.enabled {
-        tasks.push(spawn_tcp_server(shard.clone()));
+        tasks.push(Box::pin(spawn_tcp_server(shard.clone())));
     }
     let result = try_join_all(tasks).await;
     // If its main thread, add to the list of joined tasks the task that will wait for the stop signal.
     // join_all all tasks, if it fails, then we can move to the graceful shutdown stage,
 
-    // Write the toml config to disk only on one thread
     Ok(())
 }
-

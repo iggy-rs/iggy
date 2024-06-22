@@ -9,6 +9,7 @@ use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
 use iggy::users::defaults::*;
 use iggy::utils::text;
+use iggy::utils::text::IggyStringUtils;
 use std::env;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::{error, info, warn};
@@ -106,21 +107,26 @@ impl IggyShard {
 
     pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, IggyError> {
         self.ensure_authenticated(session)?;
-        self.permissioner.get_users(session.get_user_id())?;
+        self.permissioner
+            .borrow()
+            .get_users(session.get_user_id())?;
         self.storage.user.load_all().await
     }
 
     pub async fn create_user(
-        &mut self,
+        &self,
         session: &Session,
-        username: &str,
-        password: &str,
+        username: String,
+        password: String,
         status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        self.permissioner.create_user(session.get_user_id())?;
-        let username = text::to_lowercase_non_whitespace(username);
+        {
+            let permissioner = self.permissioner.borrow();
+            permissioner.create_user(session.get_user_id())?;
+        }
+        let username = username.to_lowercase_non_whitespace();
         if self.storage.user.load_by_username(&username).await.is_ok() {
             error!("User: {username} already exists.");
             return Err(IggyError::UserAlreadyExists);
@@ -133,21 +139,25 @@ impl IggyShard {
 
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
-        let user = User::new(user_id, &username, password, status, permissions);
+        let user = User::new(user_id, username, password, status, permissions);
         self.storage.user.save(&user).await?;
-        self.permissioner.init_permissions_for_user(user);
+        self.permissioner
+            .borrow_mut()
+            .init_permissions_for_user(user);
         info!("Created user: {username} with ID: {user_id}.");
         self.metrics.increment_users(1);
         Ok(())
     }
 
     pub async fn delete_user(
-        &mut self,
+        &self,
         session: &Session,
         user_id: &Identifier,
     ) -> Result<User, IggyError> {
         self.ensure_authenticated(session)?;
-        self.permissioner.delete_user(session.get_user_id())?;
+        self.permissioner
+            .borrow()
+            .delete_user(session.get_user_id())?;
         let user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot delete the root user.");
@@ -196,7 +206,7 @@ impl IggyShard {
     }
 
     pub async fn update_permissions(
-        &mut self,
+        &self,
         session: &Session,
         user_id: &Identifier,
         permissions: Option<Permissions>,
@@ -229,8 +239,8 @@ impl IggyShard {
         &self,
         session: &Session,
         user_id: &Identifier,
-        current_password: &str,
-        new_password: &str,
+        current_password: String,
+        new_password: String,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let mut user = self.get_user(user_id).await?;

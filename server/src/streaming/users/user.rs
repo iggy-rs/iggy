@@ -38,8 +38,8 @@ impl User {
 
     pub fn new(
         id: u32,
-        username: &str,
-        password: &str,
+        username: String,
+        password: String,
         status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Self {
@@ -53,7 +53,7 @@ impl User {
         }
     }
 
-    pub fn root(username: &str, password: &str) -> Self {
+    pub fn root(username: String, password: String) -> Self {
         Self::new(
             DEFAULT_ROOT_USER_ID,
             username,
@@ -78,12 +78,15 @@ mod tests {
 
     #[test]
     fn given_root_user_data_and_credentials_should_be_valid() {
-        let user = User::root(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD);
+        let user = User::root(
+            DEFAULT_ROOT_USERNAME.to_owned(),
+            DEFAULT_ROOT_PASSWORD.to_owned(),
+        );
         assert_eq!(user.id, DEFAULT_ROOT_USER_ID);
         assert_eq!(user.username, DEFAULT_ROOT_USERNAME);
         assert_ne!(user.password, DEFAULT_ROOT_PASSWORD);
         assert!(crypto::verify_password(
-            DEFAULT_ROOT_PASSWORD,
+            DEFAULT_ROOT_PASSWORD.to_owned(),
             &user.password
         ));
         assert_eq!(user.status, UserStatus::Active);
@@ -93,7 +96,7 @@ mod tests {
     #[test]
     fn should_be_created_given_specific_status() {
         let status = UserStatus::Inactive;
-        let user = User::new(1, "test", "test", status, None);
+        let user = User::new(1, "test".to_owned(), "test".to_owned(), status, None);
         assert_eq!(user.status, status);
     }
 }

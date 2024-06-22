@@ -5,6 +5,7 @@ use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::text;
+use iggy::utils::text::IggyStringUtils;
 use std::sync::atomic::Ordering;
 use tracing::info;
 
@@ -66,9 +67,9 @@ impl Topic {
     pub async fn create_consumer_group(
         &mut self,
         group_id: Option<u32>,
-        name: &str,
+        name: String,
     ) -> Result<(), IggyError> {
-        let name = text::to_lowercase_non_whitespace(name);
+        let name = name.to_lowercase_non_whitespace();
         if self.consumer_groups_ids.contains_key(&name) {
             return Err(IggyError::ConsumerGroupNameAlreadyExists(
                 name,

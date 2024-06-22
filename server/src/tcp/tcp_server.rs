@@ -12,8 +12,9 @@ pub async fn spawn_tcp_server(shard: Rc<IggyShard>) -> Result<(), IggyError> {
         "Iggy TCP"
     };
     let server_name = server_name.to_owned();
-    match shard.config.tcp.tls.enabled {
+    let result = match shard.config.tcp.tls.enabled {
         true => tcp_tls_listener::start(server_name, shard).await,
         false => tcp_listener::start(server_name, shard).await,
-    }
+    };
+    result
 }

@@ -46,12 +46,12 @@ impl IggyShard {
     }
 
     pub async fn create_consumer_group(
-        &mut self,
+        &self,
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
         group_id: Option<u32>,
-        name: &str,
+        name: String,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
@@ -70,7 +70,7 @@ impl IggyShard {
     }
 
     pub async fn delete_consumer_group(
-        &mut self,
+        &self,
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,

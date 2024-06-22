@@ -14,6 +14,7 @@ use iggy::models::messages::PolledMessages;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
 
+//TODO(numinex) - make all of those function args moves instead of borrows
 pub fn map_stats(stats: &Stats) -> Bytes {
     let mut bytes = BytesMut::with_capacity(104);
     bytes.put_u32_le(stats.process_id);

@@ -16,7 +16,7 @@ pub struct PersonalAccessToken {
 
 impl PersonalAccessToken {
     // Raw token is generated and returned only once
-    pub fn new(user_id: UserId, name: &str, now: u64, expiry: Option<u32>) -> (Self, String) {
+    pub fn new(user_id: UserId, name: String, now: u64, expiry: Option<u32>) -> (Self, String) {
         let mut buffer: [u8; SIZE] = [0; SIZE];
         let system_random = ring::rand::SystemRandom::new();
         system_random.fill(&mut buffer).unwrap();
@@ -26,7 +26,7 @@ impl PersonalAccessToken {
         (
             Self {
                 user_id,
-                name: name.to_string(),
+                name,
                 token: token_hash,
                 expiry,
             },

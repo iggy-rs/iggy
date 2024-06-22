@@ -1,6 +1,6 @@
 use async_channel::Sender;
+use bytes::Bytes;
 use iggy::command::Command;
-use uuid::Bytes;
 use iggy::error::IggyError;
 
 #[derive(Debug, Clone)]
@@ -12,7 +12,7 @@ pub enum ShardMessage {
 #[derive(Debug)]
 pub enum ShardResponse {
     BinaryResponse(Bytes),
-    ErrorResponse(IggyError)
+    ErrorResponse(IggyError),
 }
 
 #[derive(Debug, Clone)]

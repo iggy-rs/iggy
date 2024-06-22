@@ -6,7 +6,7 @@ use super::shard::IggyShard;
 
 impl IggyShard {
     pub async fn create_partitions(
-        &mut self,
+        &self,
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,
@@ -32,7 +32,7 @@ impl IggyShard {
     }
 
     pub async fn delete_partitions(
-        &mut self,
+        &self,
         session: &Session,
         stream_id: &Identifier,
         topic_id: &Identifier,

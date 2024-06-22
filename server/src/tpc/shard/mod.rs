@@ -1,6 +1,7 @@
 pub mod clients;
 pub mod consumer_groups;
 pub mod consumer_offsets;
+pub mod handler;
 pub mod info;
 pub mod messages;
 pub mod partitions;
@@ -10,5 +11,6 @@ pub mod shard_frame;
 pub mod stats;
 pub mod storage;
 pub mod streams;
+pub mod tasks;
 pub mod topics;
 pub mod users;

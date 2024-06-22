@@ -44,9 +44,7 @@ use crate::users::update_permissions::UpdatePermissions;
 use crate::users::update_user::UpdateUser;
 use bytes::{BufMut, Bytes, BytesMut};
 use enum_dispatch::enum_dispatch;
-use std::{
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 use strum::EnumString;
 
 pub const PING: &str = "ping";

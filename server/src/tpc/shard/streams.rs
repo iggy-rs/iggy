@@ -5,6 +5,7 @@ use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::text;
+use iggy::utils::text::IggyStringUtils;
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::{error, info};
@@ -154,16 +155,16 @@ impl IggyShard {
     }
 
     pub async fn create_stream(
-        &mut self,
+        &self,
         session: &Session,
         stream_id: Option<u32>,
-        name: &str,
+        name: String,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.create_stream(session.get_user_id())?;
-        let name = text::to_lowercase_non_whitespace(name);
+        let name = name.to_lowercase_non_whitespace();
         if self.streams_ids.contains_key(&name) {
-            return Err(IggyError::StreamNameAlreadyExists(name.to_string()));
+            return Err(IggyError::StreamNameAlreadyExists(name));
         }
 
         let mut id;
@@ -197,10 +198,10 @@ impl IggyShard {
     }
 
     pub async fn update_stream(
-        &mut self,
+        &self,
         session: &Session,
         id: &Identifier,
-        name: &str,
+        name: String,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let stream_id;
@@ -210,13 +211,14 @@ impl IggyShard {
         }
 
         self.permissioner
+            .borrow_mut()
             .update_stream(session.get_user_id(), stream_id)?;
-        let updated_name = text::to_lowercase_non_whitespace(name);
+        let updated_name = name.to_lowercase_non_whitespace();
 
         {
             if let Some(stream_id_by_name) = self.streams_ids.get(&updated_name) {
                 if *stream_id_by_name != stream_id {
-                    return Err(IggyError::StreamNameAlreadyExists(updated_name.clone()));
+                    return Err(IggyError::StreamNameAlreadyExists(updated_name));
                 }
             }
         }
@@ -242,7 +244,7 @@ impl IggyShard {
     }
 
     pub async fn delete_stream(
-        &mut self,
+        &self,
         session: &Session,
         id: &Identifier,
     ) -> Result<u32, IggyError> {

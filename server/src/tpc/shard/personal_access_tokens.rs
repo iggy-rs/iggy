@@ -4,6 +4,7 @@ use crate::streaming::storage::{PersonalAccessTokenStorage, Storage, UserStorage
 use crate::streaming::users::user::User;
 use iggy::error::IggyError;
 use iggy::utils::text;
+use iggy::utils::text::IggyStringUtils;
 use iggy::utils::timestamp::IggyTimestamp;
 use tracing::{error, info};
 
@@ -32,13 +33,13 @@ impl IggyShard {
     pub async fn create_personal_access_token(
         &self,
         session: &Session,
-        name: &str,
+        name: String,
         expiry: Option<u32>,
     ) -> Result<String, IggyError> {
         self.ensure_authenticated(session)?;
         let user_id = session.get_user_id();
         let max_token_per_user = self.config.personal_access_token.max_tokens_per_user;
-        let name = text::to_lowercase_non_whitespace(name);
+        let name = name.to_lowercase_non_whitespace();
         let personal_access_tokens = self
             .storage
             .personal_access_token
@@ -64,8 +65,12 @@ impl IggyShard {
         }
 
         info!("Creating personal access token: {name} for user with ID: {user_id}...");
-        let (personal_access_token, token) =
-            PersonalAccessToken::new(user_id, &name, IggyTimestamp::now().to_micros(), expiry);
+        let (personal_access_token, token) = PersonalAccessToken::new(
+            user_id,
+            name.clone(),
+            IggyTimestamp::now().to_micros(),
+            expiry,
+        );
         self.storage
             .personal_access_token
             .save(&personal_access_token)
@@ -77,11 +82,11 @@ impl IggyShard {
     pub async fn delete_personal_access_token(
         &self,
         session: &Session,
-        name: &str,
+        name: String,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         let user_id = session.get_user_id();
-        let name = text::to_lowercase_non_whitespace(name);
+        let name = name.to_lowercase_non_whitespace();
         info!("Deleting personal access token: {name} for user with ID: {user_id}...");
         self.storage
             .personal_access_token

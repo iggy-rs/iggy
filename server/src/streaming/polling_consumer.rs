@@ -10,7 +10,7 @@ pub enum PollingConsumer {
 }
 
 impl PollingConsumer {
-    pub fn from_consumer(consumer: &Consumer, client_id: u32, partition_id: Option<u32>) -> Self {
+    pub fn from_consumer(consumer: Consumer, client_id: u32, partition_id: Option<u32>) -> Self {
         let consumer_id = Self::resolve_consumer_id(&consumer.id);
         match consumer.kind {
             ConsumerKind::Consumer => {

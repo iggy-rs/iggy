@@ -1,7 +1,7 @@
+use crate::bytes_serializable::BytesSerializable;
 use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
-use crate::bytes_serializable::BytesSerializable;
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;

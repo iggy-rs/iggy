@@ -1,4 +1,4 @@
 pub mod command;
 mod handlers;
-mod mapper;
+pub(crate) mod mapper;
 pub mod sender;

@@ -1,6 +1,7 @@
 use crate::state::{State, StateEntry};
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::utils::file;
+use crate::versioning::SemanticVersion;
 use async_trait::async_trait;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
@@ -21,17 +22,19 @@ const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 pub struct FileState {
     current_index: AtomicU64,
     term: AtomicU64,
+    version: u32,
     path: String,
     persister: Arc<dyn Persister>,
 }
 
 impl FileState {
-    pub fn new(path: &str, persister: Arc<dyn Persister>) -> Self {
+    pub fn new(path: &str, version: &SemanticVersion, persister: Arc<dyn Persister>) -> Self {
         Self {
             current_index: AtomicU64::new(0),
-            term: AtomicU64::new(1),
+            term: AtomicU64::new(0),
             path: path.into(),
             persister,
+            version: version.get_numeric_version().expect("Invalid version"),
         }
     }
 }
@@ -62,6 +65,7 @@ impl State for FileState {
         loop {
             let index = reader.read_u64_le().await?;
             let term = reader.read_u64_le().await?;
+            let version = reader.read_u32_le().await?;
             let flags = reader.read_u64_le().await?;
             let timestamp = IggyTimestamp::from(reader.read_u64_le().await?);
             let user_id = reader.read_u32_le().await?;
@@ -77,6 +81,7 @@ impl State for FileState {
             let entry = StateEntry {
                 index,
                 term,
+                version,
                 flags,
                 timestamp,
                 user_id,
@@ -87,7 +92,7 @@ impl State for FileState {
             debug!("Read state entry: {entry}");
             entries.push(entry);
             total_size +=
-                8 + 8 + 8 + 8 + 4 + 4 + 4 + payload_length as u64 + 4 + context_length as u64;
+                8 + 8 + 4 + 8 + 8 + 4 + 4 + 4 + payload_length as u64 + 4 + context_length as u64;
             if total_size == file_size {
                 break;
             }
@@ -110,6 +115,7 @@ impl State for FileState {
         let entry = StateEntry {
             index: self.current_index.load(Ordering::SeqCst),
             term: self.term.load(Ordering::SeqCst),
+            version: self.version,
             flags: 0,
             timestamp: IggyTimestamp::now(),
             user_id,

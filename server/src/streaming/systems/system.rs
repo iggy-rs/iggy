@@ -22,6 +22,7 @@ use crate::state::file::FileState;
 use crate::state::system::SystemState;
 use crate::state::State;
 use crate::streaming::users::user::User;
+use crate::versioning::SemanticVersion;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
@@ -77,12 +78,14 @@ const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 
 impl System {
     pub fn new(config: Arc<SystemConfig>, pat_config: PersonalAccessTokenConfig) -> System {
+        let version = SemanticVersion::current().expect("Invalid version");
         let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };
         let state = Arc::new(FileState::new(
             &config.get_state_log_path(),
+            &version,
             persister.clone(),
         ));
         Self::create(

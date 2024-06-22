@@ -20,3 +20,4 @@ pub mod server_error;
 pub mod state;
 pub mod streaming;
 pub mod tcp;
+pub mod versioning;

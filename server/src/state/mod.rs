@@ -8,6 +8,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::fmt::{Debug, Display, Formatter};
 
 pub mod file;
+pub mod models;
 pub mod system;
 
 #[async_trait]

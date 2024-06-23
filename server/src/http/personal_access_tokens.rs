@@ -3,6 +3,7 @@ use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
+use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
@@ -69,8 +70,15 @@ async fn create_personal_access_token(
         .apply(
             CREATE_PERSONAL_ACCESS_TOKEN_CODE,
             identity.user_id,
-            &command.as_bytes(),
-            Some(token_hash.as_bytes()),
+            &CreatePersonalAccessTokenWithHash {
+                command: CreatePersonalAccessToken {
+                    name: command.name.to_owned(),
+                    expiry: command.expiry,
+                },
+                hash: token_hash,
+            }
+            .as_bytes(),
+            None,
         )
         .await?;
     Ok(Json(RawPersonalAccessToken { token }))

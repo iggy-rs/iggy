@@ -1,3 +1,4 @@
+use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::state::StateEntry;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use iggy::bytes_serializable::BytesSerializable;
@@ -11,7 +12,6 @@ use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
-use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use iggy::streams::create_stream::CreateStream;
 use iggy::streams::delete_stream::DeleteStream;
@@ -29,7 +29,6 @@ use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::str::from_utf8;
 use tracing::{debug, warn};
 
 #[derive(Debug)]
@@ -283,12 +282,14 @@ impl SystemState {
                     user.permissions = command.permissions;
                 }
                 CREATE_PERSONAL_ACCESS_TOKEN_CODE => {
-                    let command = CreatePersonalAccessToken::from_bytes(entry.payload)?;
-                    let token_hash = from_utf8(&entry.context)?.to_string();
+                    let command = CreatePersonalAccessTokenWithHash::from_bytes(entry.payload)?;
+                    let token_hash = command.hash;
                     let user_id = find_user_id(&users, &entry.user_id.try_into()?);
                     let user = users.get_mut(&user_id).unwrap();
-                    let expiry_at =
-                        PersonalAccessToken::calculate_expiry_at(entry.timestamp, command.expiry);
+                    let expiry_at = PersonalAccessToken::calculate_expiry_at(
+                        entry.timestamp,
+                        command.command.expiry,
+                    );
                     if let Some(expiry_at) = expiry_at {
                         if expiry_at.to_micros() <= IggyTimestamp::now().to_micros() {
                             debug!("Personal access token: {token_hash} has already expired.");
@@ -297,9 +298,9 @@ impl SystemState {
                     }
 
                     user.personal_access_tokens.insert(
-                        command.name.clone(),
+                        command.command.name.clone(),
                         PersonalAccessTokenState {
-                            name: command.name,
+                            name: command.command.name,
                             token_hash,
                             expiry_at,
                         },

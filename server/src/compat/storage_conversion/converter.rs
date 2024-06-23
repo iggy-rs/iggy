@@ -1,3 +1,4 @@
+use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::state::State;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::storage::SystemStorage;
@@ -69,12 +70,15 @@ pub async fn convert(
             .apply(
                 CREATE_PERSONAL_ACCESS_TOKEN_CODE,
                 personal_access_token.user_id,
-                &CreatePersonalAccessToken {
-                    name: personal_access_token.name,
-                    expiry,
+                &CreatePersonalAccessTokenWithHash {
+                    command: CreatePersonalAccessToken {
+                        name: personal_access_token.name,
+                        expiry,
+                    },
+                    hash: personal_access_token.token,
                 }
                 .as_bytes(),
-                Some(personal_access_token.token.as_bytes()),
+                None,
             )
             .await?;
     }

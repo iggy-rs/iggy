@@ -7,6 +7,7 @@ use tokio::fs::create_dir;
 use uuid::Uuid;
 
 mod file;
+mod system;
 
 pub struct StateSetup {
     directory_path: String,

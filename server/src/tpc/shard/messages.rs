@@ -1,9 +1,5 @@
-use core::borrow;
-use std::borrow::Borrow;
-
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::polling_consumer::PollingConsumer;
-use crate::streaming::session::Session;
 use bytes::Bytes;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
@@ -41,7 +37,7 @@ impl IggyShard {
         let partition_id = match consumer {
             PollingConsumer::Consumer(_, partition_id) => partition_id,
             PollingConsumer::ConsumerGroup(group_id, member_id) => {
-                let consumer_group = topic.get_consumer_group_by_id(group_id)?.read().await;
+                let consumer_group = topic.get_consumer_group_by_id(group_id)?;
                 consumer_group.calculate_partition_id(member_id).await?
             }
         };

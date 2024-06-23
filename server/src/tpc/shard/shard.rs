@@ -1,12 +1,10 @@
 use super::shard_frame::{ShardFrame, ShardMessage, ShardResponse};
 use crate::{
-    configs::
-        server::ServerConfig,
-    
+    configs::server::ServerConfig,
     streaming::{
         cache::memory_tracker::CacheMemoryTracker, clients::client_manager::ClientManager,
-        diagnostics::metrics::Metrics, session::Session,
-        storage::SystemStorage, streams::stream::Stream, users::permissioner::Permissioner,
+        diagnostics::metrics::Metrics, session::Session, storage::SystemStorage,
+        streams::stream::Stream, users::permissioner::Permissioner,
     },
     tpc::{
         connector::{Receiver, ShardConnector, StopReceiver, StopSender},
@@ -22,11 +20,7 @@ use iggy::{
 };
 use sled::Db;
 use std::cell::{Cell, RefCell};
-use std::{
-    collections::HashMap,
-    sync::Arc,
-    time::Instant,
-};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 use tracing::info;
 
 pub const SHARD_NAME: &str = "iggy_shard";

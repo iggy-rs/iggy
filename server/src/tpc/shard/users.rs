@@ -34,7 +34,7 @@ impl IggyShard {
         let users_count = users.len();
         let current_user_id = users.iter().map(|user| user.id).max().unwrap_or(1);
         USER_ID.store(current_user_id + 1, Ordering::SeqCst);
-        self.permissioner.init(users);
+        self.permissioner.borrow_mut().init(users);
         self.metrics.increment_users(users_count as u32);
         info!("Initialized {} user(s).", users_count);
         Ok(())
@@ -70,7 +70,7 @@ impl IggyShard {
             panic!("Root password is too long.");
         }
 
-        User::root(&username, &password)
+        User::root(username, password)
     }
 
     pub async fn find_user(&self, client_id: u32, user_id: &Identifier) -> Result<User, IggyError> {

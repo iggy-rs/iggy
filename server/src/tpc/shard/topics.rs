@@ -1,12 +1,9 @@
-use std::borrow::Borrow;
-
-use crate::streaming::session::Session;
 use crate::streaming::topics::topic::Topic;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
-use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
+use std::borrow::Borrow;
 
 use super::shard::IggyShard;
 
@@ -16,23 +13,23 @@ impl IggyShard {
         client_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<&Topic, IggyError> {
+    ) -> Result<Topic, IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(stream_id)?.borrow();
+        let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
             .borrow()
             .get_topic(user_id, stream.stream_id, topic.topic_id)?;
-        Ok(topic)
+        Ok(topic.clone())
     }
 
     pub fn find_topics(
         &self,
         client_id: u32,
         stream_id: &Identifier,
-    ) -> Result<Vec<&Topic>, IggyError> {
+    ) -> Result<Vec<Topic>, IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(stream_id)?.borrow();
+        let stream = self.get_stream(stream_id)?;
         self.permissioner
             .borrow()
             .get_topics(user_id, stream.stream_id)?;

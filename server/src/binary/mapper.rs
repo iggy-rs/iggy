@@ -6,16 +6,15 @@ use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use crate::streaming::users::user::User;
 use bytes::{BufMut, Bytes, BytesMut};
-use fast_async_mutex::rwlock::RwLock;
 use iggy::bytes_serializable::BytesSerializable;
-use iggy::locking::{IggySharedMut, IggySharedMutFn};
+use iggy::locking::IggySharedMutFn;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 use iggy::models::messages::PolledMessages;
 use iggy::models::stats::Stats;
 use iggy::models::user_info::UserId;
 
 //TODO(numinex) - make all of those function args moves instead of borrows
-pub fn map_stats(stats: &Stats) -> Bytes {
+pub fn map_stats(stats: Stats) -> Bytes {
     let mut bytes = BytesMut::with_capacity(104);
     bytes.put_u32_le(stats.process_id);
     bytes.put_f32_le(stats.cpu_usage);
@@ -46,7 +45,7 @@ pub fn map_stats(stats: &Stats) -> Bytes {
     bytes.freeze()
 }
 
-pub fn map_consumer_offset(offset: &ConsumerOffsetInfo) -> Bytes {
+pub fn map_consumer_offset(offset: ConsumerOffsetInfo) -> Bytes {
     let mut bytes = BytesMut::with_capacity(20);
     bytes.put_u32_le(offset.partition_id);
     bytes.put_u64_le(offset.current_offset);
@@ -54,9 +53,9 @@ pub fn map_consumer_offset(offset: &ConsumerOffsetInfo) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_client(client: &Client) -> Bytes {
+pub async fn map_client(client: Client) -> Bytes {
     let mut bytes = BytesMut::new();
-    extend_client(client, &mut bytes);
+    extend_client(&client, &mut bytes);
     for consumer_group in &client.consumer_groups {
         bytes.put_u32_le(consumer_group.stream_id);
         bytes.put_u32_le(consumer_group.topic_id);
@@ -65,7 +64,7 @@ pub async fn map_client(client: &Client) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_clients(clients: &[Client]) -> Bytes {
+pub async fn map_clients(clients: Vec<Client>) -> Bytes {
     let mut bytes = BytesMut::new();
     for client in clients {
         extend_client(&client, &mut bytes);
@@ -73,9 +72,9 @@ pub async fn map_clients(clients: &[Client]) -> Bytes {
     bytes.freeze()
 }
 
-pub fn map_user(user: &User) -> Bytes {
+pub fn map_user(user: User) -> Bytes {
     let mut bytes = BytesMut::new();
-    extend_user(user, &mut bytes);
+    extend_user(&user, &mut bytes);
     if let Some(permissions) = &user.permissions {
         bytes.put_u8(1);
         let permissions = permissions.as_bytes();
@@ -88,10 +87,10 @@ pub fn map_user(user: &User) -> Bytes {
     bytes.freeze()
 }
 
-pub fn map_users(users: &[User]) -> Bytes {
+pub fn map_users(users: Vec<User>) -> Bytes {
     let mut bytes = BytesMut::new();
     for user in users {
-        extend_user(user, &mut bytes);
+        extend_user(&user, &mut bytes);
     }
     bytes.freeze()
 }
@@ -102,22 +101,22 @@ pub fn map_identity_info(user_id: UserId) -> Bytes {
     bytes.freeze()
 }
 
-pub fn map_raw_pat(token: &str) -> Bytes {
+pub fn map_raw_pat(token: String) -> Bytes {
     let mut bytes = BytesMut::with_capacity(1 + token.len());
     bytes.put_u8(token.len() as u8);
     bytes.put_slice(token.as_bytes());
     bytes.freeze()
 }
 
-pub fn map_personal_access_tokens(personal_access_tokens: &[PersonalAccessToken]) -> Bytes {
+pub fn map_personal_access_tokens(personal_access_tokens: Vec<PersonalAccessToken>) -> Bytes {
     let mut bytes = BytesMut::new();
     for personal_access_token in personal_access_tokens {
-        extend_pat(personal_access_token, &mut bytes);
+        extend_pat(&personal_access_token, &mut bytes);
     }
     bytes.freeze()
 }
 
-pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
+pub fn map_polled_messages(polled_messages: PolledMessages) -> Bytes {
     let messages_count = polled_messages.messages.len() as u32;
     let messages_size = polled_messages
         .messages
@@ -136,34 +135,34 @@ pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_stream(stream: &Stream) -> Bytes {
+pub async fn map_stream(stream: Stream) -> Bytes {
     let mut bytes = BytesMut::new();
-    extend_stream(stream, &mut bytes).await;
+    extend_stream(&stream, &mut bytes).await;
     for topic in stream.get_topics() {
-        extend_topic(topic, &mut bytes).await;
+        extend_topic(&topic, &mut bytes).await;
     }
     bytes.freeze()
 }
 
-pub async fn map_streams(streams: &[&Stream]) -> Bytes {
+pub async fn map_streams(streams: Vec<Stream>) -> Bytes {
     let mut bytes = BytesMut::new();
     for stream in streams {
-        extend_stream(stream, &mut bytes).await;
+        extend_stream(&stream, &mut bytes).await;
     }
     bytes.freeze()
 }
 
-pub async fn map_topics(topics: &[&Topic]) -> Bytes {
+pub async fn map_topics(topics: Vec<Topic>) -> Bytes {
     let mut bytes = BytesMut::new();
     for topic in topics {
-        extend_topic(topic, &mut bytes).await;
+        extend_topic(&topic, &mut bytes).await;
     }
     bytes.freeze()
 }
 
-pub async fn map_topic(topic: &Topic) -> Bytes {
+pub async fn map_topic(topic: Topic) -> Bytes {
     let mut bytes = BytesMut::new();
-    extend_topic(topic, &mut bytes).await;
+    extend_topic(&topic, &mut bytes).await;
     for partition in topic.get_partitions() {
         let partition = partition.read().await;
         extend_partition(&partition, &mut bytes);
@@ -171,12 +170,11 @@ pub async fn map_topic(topic: &Topic) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> Bytes {
+pub async fn map_consumer_group(consumer_group: ConsumerGroup) -> Bytes {
     let mut bytes = BytesMut::new();
-    extend_consumer_group(consumer_group, &mut bytes);
+    extend_consumer_group(&consumer_group, &mut bytes);
     let members = consumer_group.get_members();
     for member in members {
-        let member = member.read().await;
         bytes.put_u32_le(member.id);
         let partitions = member.get_partitions();
         bytes.put_u32_le(partitions.len() as u32);
@@ -187,10 +185,9 @@ pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_consumer_groups(consumer_groups: Vec<&ConsumerGroup>) -> Bytes {
+pub async fn map_consumer_groups(consumer_groups: Vec<ConsumerGroup>) -> Bytes {
     let mut bytes = BytesMut::new();
     for consumer_group in consumer_groups {
-        let consumer_group = consumer_group.read().await;
         extend_consumer_group(&consumer_group, &mut bytes);
     }
     bytes.freeze()

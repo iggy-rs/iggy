@@ -87,8 +87,7 @@ impl IggyShard {
         self.streams.borrow().values().cloned().collect()
     }
 
-    pub fn find_streams(&self, session: &Session) -> Result<Vec<Stream>, IggyError> 
-    {
+    pub fn find_streams(&self, session: &Session) -> Result<Vec<Stream>, IggyError> {
         let user_id = self.ensure_authenticated(session.client_id)?;
         self.permissioner.borrow().get_streams(user_id)?;
         Ok(self.get_streams())
@@ -98,15 +97,13 @@ impl IggyShard {
         &self,
         client_id: u32,
         identifier: &Identifier,
-    ) -> 
-Result<Ref<'_, Stream>, IggyError> 
-    {
+    ) -> Result<Stream, IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(identifier)?;
         self.permissioner
             .borrow()
             .get_stream(user_id, stream.stream_id)?;
-        Ok(stream)
+        Ok(stream.clone())
     }
 
     pub fn get_stream(&self, identifier: &Identifier) -> Result<Ref<'_, Stream>, IggyError> {

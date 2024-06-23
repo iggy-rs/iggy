@@ -1,3 +1,5 @@
+use std::borrow::BorrowMut;
+
 use crate::streaming::session::Session;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -19,7 +21,8 @@ impl IggyShard {
             .borrow()
             .create_partitions(user_id, stream.stream_id, topic.topic_id)?;
 
-        let topic = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id)?;
+        let mut stream = self.get_stream_mut(stream_id)?;
+        let topic = stream.borrow_mut().get_topic_mut(topic_id)?;
         topic.add_persisted_partitions(partitions_count).await?;
         topic.reassign_consumer_groups().await;
         self.metrics.increment_partitions(partitions_count);
@@ -41,7 +44,8 @@ impl IggyShard {
             .borrow()
             .delete_partitions(user_id, stream.stream_id, topic.topic_id)?;
 
-        let topic = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id)?;
+        let mut stream = self.get_stream_mut(stream_id)?;
+        let topic = stream.borrow_mut().get_topic_mut(topic_id)?;
         let partitions = topic.delete_persisted_partitions(partitions_count).await?;
         topic.reassign_consumer_groups().await;
         if let Some(partitions) = partitions {

@@ -53,34 +53,34 @@ impl IggyShard {
             Command::Ping(_) => Ok(ShardResponse::BinaryResponse(Bytes::new())),
             Command::GetStats(_) => {
                 let stats = self.get_stats(client_id).await?;
-                let bytes = mapper::map_stats(&stats);
+                let bytes = mapper::map_stats(stats);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::GetMe(_) => {
                 let client = self.get_client(client_id).await?;
-                let bytes = mapper::map_client(&client).await;
+                let bytes = mapper::map_client(client).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::GetClient(command) => {
                 let GetClient { client_id } = command;
                 let client = self.get_client(client_id).await?;
-                let bytes = mapper::map_client(&client).await;
+                let bytes = mapper::map_client(client).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::GetClients(_) => {
                 let clients = self.get_clients(client_id).await?;
-                let bytes = mapper::map_clients(&clients).await;
+                let bytes = mapper::map_clients(clients).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::GetUser(command) => {
                 let GetUser { user_id } = command;
                 let user = self.find_user(client_id, &user_id).await?;
-                let bytes = mapper::map_user(&user);
+                let bytes = mapper::map_user(user);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::GetUsers(_) => {
                 let users = self.get_users(client_id).await?;
-                let bytes = mapper::map_users(&users);
+                let bytes = mapper::map_users(users);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::CreateUser(command) => {
@@ -140,7 +140,7 @@ impl IggyShard {
             }
             Command::GetPersonalAccessTokens(_) => {
                 let personal_access_tokens = self.get_personal_access_tokens(client_id).await?;
-                let bytes = mapper::map_personal_access_tokens(&personal_access_tokens);
+                let bytes = mapper::map_personal_access_tokens(personal_access_tokens);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::CreatePersonalAccessToken(command) => {
@@ -148,7 +148,7 @@ impl IggyShard {
                 let token = self
                     .create_personal_access_token(client_id, name, expiry)
                     .await?;
-                let bytes = mapper::map_raw_pat(&token);
+                let bytes = mapper::map_raw_pat(token);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::DeletePersonalAccessToken(command) => {
@@ -195,8 +195,8 @@ impl IggyShard {
                         PollingArgs::new(strategy, count, auto_commit),
                     )
                     .await?;
-                let messages = mapper::map_polled_messages(&messages);
-                Ok(ShardResponse::BinaryResponse(messages))
+                let bytes = mapper::map_polled_messages(messages);
+                Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::GetConsumerOffset(command) => {
                 let GetConsumerOffset {
@@ -206,10 +206,10 @@ impl IggyShard {
                     consumer,
                 } = command;
                 let consumer = PollingConsumer::from_consumer(consumer, client_id, partition_id);
-                let offset = self
+                let consumer_offset = self
                     .get_consumer_offset(client_id, consumer, &stream_id, &topic_id)
                     .await?;
-                let bytes = mapper::map_consumer_offset(&offset);
+                let bytes = mapper::map_consumer_offset(consumer_offset);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::StoreConsumerOffset(command) => {
@@ -234,7 +234,7 @@ impl IggyShard {
             Command::GetStreams(_) => {
                 let _ = self.ensure_authenticated(client_id)?;
                 let streams = self.get_streams();
-                let bytes = mapper::map_streams(&streams).await;
+                let bytes = mapper::map_streams(streams).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::CreateStream(command) => {
@@ -263,13 +263,13 @@ impl IggyShard {
                     topic_id,
                 } = command;
                 let topic = self.find_topic(client_id, &stream_id, &topic_id)?;
-                let bytes = mapper::map_topic(&topic).await;
+                let bytes = mapper::map_topic(topic).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::GetTopics(command) => {
                 let GetTopics { stream_id } = command;
                 let topics = self.find_topics(client_id, &stream_id)?;
-                let bytes = mapper::map_topics(&topics).await;
+                let bytes = mapper::map_topics(topics).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::CreateTopic(command) => {
@@ -364,7 +364,7 @@ impl IggyShard {
                 } = command;
                 let consumer_group =
                     self.get_consumer_group(client_id, &stream_id, &topic_id, &group_id)?;
-                let bytes = mapper::map_consumer_group(&consumer_group).await;
+                let bytes = mapper::map_consumer_group(consumer_group).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::GetConsumerGroups(command) => {

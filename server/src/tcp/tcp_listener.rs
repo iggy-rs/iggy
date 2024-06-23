@@ -20,7 +20,8 @@ pub async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), Iggy
         // This is required for the integration tests. Client requires information about address to connect.
         // Since we bind to port 0 when creating server in order to get a random non-used port,
         // we have to store the address in the default_config.toml file.
-        persist_tcp_address(&shard, local_addr.to_string()).await?;
+        // TODO(numinex) -- uncomment this line when we are ready to test the integration tests.
+        //persist_tcp_address(&shard, local_addr.to_string()).await?;
         loop {
             match listener.accept().await {
                 Ok((stream, address)) => {
@@ -30,6 +31,7 @@ pub async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), Iggy
                     monoio::spawn(async move {
                         if let Err(error) = handle_connection(address, &mut sender, shard).await {
                             handle_error(error);
+                            // Delete client and session
                             //system.read().delete_client(&address).await;
                         }
                     });

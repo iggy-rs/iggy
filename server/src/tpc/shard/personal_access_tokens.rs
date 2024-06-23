@@ -13,10 +13,9 @@ use super::shard::IggyShard;
 impl IggyShard {
     pub async fn get_personal_access_tokens(
         &self,
-        session: &Session,
+        client_id: u32,
     ) -> Result<Vec<PersonalAccessToken>, IggyError> {
-        self.ensure_authenticated(session)?;
-        let user_id = session.get_user_id();
+        let user_id = self.ensure_authenticated(client_id)?;
         info!("Loading personal access tokens for user with ID: {user_id}...",);
         let personal_access_tokens = self
             .storage
@@ -32,12 +31,11 @@ impl IggyShard {
 
     pub async fn create_personal_access_token(
         &self,
-        session: &Session,
+        client_id: u32,
         name: String,
         expiry: Option<u32>,
     ) -> Result<String, IggyError> {
-        self.ensure_authenticated(session)?;
-        let user_id = session.get_user_id();
+        let user_id = self.ensure_authenticated(client_id)?;
         let max_token_per_user = self.config.personal_access_token.max_tokens_per_user;
         let name = name.to_lowercase_non_whitespace();
         let personal_access_tokens = self
@@ -81,11 +79,10 @@ impl IggyShard {
 
     pub async fn delete_personal_access_token(
         &self,
-        session: &Session,
+        client_id: u32,
         name: String,
     ) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
-        let user_id = session.get_user_id();
+        let user_id = self.ensure_authenticated(client_id)?;
         let name = name.to_lowercase_non_whitespace();
         info!("Deleting personal access token: {name} for user with ID: {user_id}...");
         self.storage
@@ -98,8 +95,8 @@ impl IggyShard {
 
     pub async fn login_with_personal_access_token(
         &self,
-        token: &str,
-        session: Option<&Session>,
+        client_id: u32,
+        token: String,
     ) -> Result<User, IggyError> {
         let token_hash = PersonalAccessToken::hash_token(token);
         let personal_access_token = self
@@ -123,7 +120,7 @@ impl IggyShard {
             .user
             .load_by_id(personal_access_token.user_id)
             .await?;
-        self.login_user_with_credentials(&user.username, None, session)
+        self.login_user_with_credentials(user.username, None, client_id)
             .await
     }
 }

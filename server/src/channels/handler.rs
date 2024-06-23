@@ -1,3 +1,4 @@
+/*
 use super::server_command::ServerCommand;
 use crate::configs::server::ServerConfig;
 use crate::streaming::systems::system::SharedSystem;
@@ -26,3 +27,5 @@ impl<'a> ServerCommandHandler<'a> {
         }
     }
 }
+
+*/

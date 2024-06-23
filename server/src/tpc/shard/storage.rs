@@ -1,10 +1,11 @@
 use crate::streaming::storage::{Storage, SystemInfoStorage};
-use crate::streaming::systems::info::SystemInfo;
 use anyhow::Context;
 use iggy::error::IggyError;
 use sled::Db;
 use std::sync::Arc;
 use tracing::info;
+
+use super::info::SystemInfo;
 
 const KEY: &str = "system";
 

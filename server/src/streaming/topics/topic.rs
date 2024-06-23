@@ -3,7 +3,6 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
-use fast_async_mutex::rwlock::RwLock;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -28,7 +27,7 @@ pub struct Topic {
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) partitions: HashMap<u32, IggySharedMut<Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
-    pub(crate) consumer_groups: HashMap<u32, RwLock<ConsumerGroup>>,
+    pub(crate) consumer_groups: HashMap<u32, ConsumerGroup>,
     pub(crate) consumer_groups_ids: HashMap<String, u32>,
     pub(crate) current_consumer_group_id: AtomicU32,
     pub(crate) current_partition_id: AtomicU32,
@@ -37,6 +36,37 @@ pub struct Topic {
     pub max_topic_size: Option<IggyByteSize>,
     pub replication_factor: u8,
     pub created_at: u64,
+}
+
+impl Clone for Topic {
+    fn clone(&self) -> Self {
+        Self {
+            stream_id: self.stream_id.clone(),
+            topic_id: self.topic_id.clone(),
+            name: self.name.clone(),
+            path: self.path.clone(),
+            partitions_path: self.partitions_path.clone(),
+            size_bytes: self.size_bytes.clone(),
+            size_of_parent_stream: self.size_of_parent_stream.clone(),
+            messages_count_of_parent_stream: self.messages_count_of_parent_stream.clone(),
+            messages_count: self.messages_count.clone(),
+            segments_count_of_parent_stream: self.segments_count_of_parent_stream.clone(),
+            config: self.config.clone(),
+            partitions: self.partitions.clone(),
+            storage: self.storage.clone(),
+            consumer_groups: self.consumer_groups.clone(),
+            consumer_groups_ids: self.consumer_groups_ids.clone(),
+            current_consumer_group_id: AtomicU32::new(
+                self.current_consumer_group_id.load(Ordering::SeqCst),
+            ),
+            current_partition_id: AtomicU32::new(self.current_partition_id.load(Ordering::SeqCst)),
+            message_expiry: self.message_expiry.clone(),
+            compression_algorithm: self.compression_algorithm.clone(),
+            max_topic_size: self.max_topic_size.clone(),
+            replication_factor: self.replication_factor.clone(),
+            created_at: self.created_at.clone(),
+        }
+    }
 }
 
 impl Topic {

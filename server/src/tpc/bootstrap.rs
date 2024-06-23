@@ -75,12 +75,13 @@ pub async fn shard_executor(shard: Rc<IggyShard>, is_prime_thread: bool) -> Resu
     // have the correct statistics when the server starts.
     shard.get_stats_bypass_auth().await?;
     //shard.init().await?;
-    // Create all tasks (tcp listener, http listener, command processor, in the future also the background handlers).
+    // Create all tasks (tcp listener, http listener, command processor, in the future also the background jobs).
     let mut tasks: Vec<Task> = vec![Box::pin(spawn_shard_message_task(shard.clone()))];
     if shard.config.tcp.enabled {
         tasks.push(Box::pin(spawn_tcp_server(shard.clone())));
     }
     let result = try_join_all(tasks).await;
+    result?;
     // If its main thread, add to the list of joined tasks the task that will wait for the stop signal.
     // join_all all tasks, if it fails, then we can move to the graceful shutdown stage,
 

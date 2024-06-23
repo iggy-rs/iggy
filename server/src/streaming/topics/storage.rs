@@ -324,7 +324,7 @@ impl Storage<Topic> for FileTopicStorage {
             return Err(IggyError::CannotDeleteResource(err));
         }
         for consumer_group in topic.consumer_groups.values() {
-            let consumer_group = consumer_group.read().await;
+            let consumer_group = consumer_group;
             self.delete_consumer_group(topic, &consumer_group).await?;
         }
         if std::fs::remove_dir_all(&topic.path).is_err() {

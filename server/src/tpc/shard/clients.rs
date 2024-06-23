@@ -1,20 +1,13 @@
 use super::shard::IggyShard;
-use crate::streaming::{
-    clients::client_manager::{Client, Transport},
-    session::Session,
-};
-use iggy::{
-    error::IggyError,
-    identifier::Identifier,
-    locking::{IggySharedMut, IggySharedMutFn},
-};
+use crate::streaming::clients::client_manager::{Client, Transport};
+use iggy::{error::IggyError, identifier::Identifier};
 use std::net::SocketAddr;
 use tracing::{error, info};
 
 impl IggyShard {
     pub async fn add_client(&self, address: &SocketAddr, transport: Transport) -> u32 {
         // We should gossip that to every shard, so the client_manager is up to date everywhere.
-        let mut client_manager = self.client_manager.write().await;
+        let mut client_manager = self.client_manager.borrow_mut();
         let client_id = client_manager.add_client(address, transport);
         info!("Added {transport} client with ID: {client_id} for IP address: {address}");
         self.metrics.increment_clients(1);
@@ -26,14 +19,13 @@ impl IggyShard {
         let client_id;
 
         {
-            let client_manager = self.client_manager.read().await;
+            let client_manager = self.client_manager.borrow();
             let client = client_manager.get_client_by_address(address);
             if client.is_err() {
                 return;
             }
 
             let client = client.unwrap();
-            let client = client.read().await;
             client_id = client.client_id;
 
             consumer_groups = client
@@ -60,38 +52,32 @@ impl IggyShard {
             }
         }
 
-        {
-            let mut client_manager = self.client_manager.write().await;
-            let client = client_manager.delete_client(address);
-            if client.is_none() {
-                return;
-            }
-
-            self.metrics.decrement_clients(1);
-            let client = client.unwrap();
-            let client = client.read().await;
-
-            info!(
-                "Deleted {} client with ID: {} for IP address: {}",
-                client.transport, client.client_id, client.address
-            );
+        let mut client_manager = self.client_manager.borrow_mut();
+        let client = client_manager.delete_client(address);
+        if client.is_none() {
+            return;
         }
+
+        self.metrics.decrement_clients(1);
+        let client = client.unwrap();
+
+        info!(
+            "Deleted {} client with ID: {} for IP address: {}",
+            client.transport, client.client_id, client.address
+        );
     }
 
-    pub async fn get_client(&self, session: &Session, client_id: u32) -> Result<Client, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner.get_client(session.get_user_id())?;
-        let client_manager = self.client_manager.read().await;
+    pub async fn get_client(&self, client_id: u32) -> Result<Client, IggyError> {
+        let user_id = self.ensure_authenticated(client_id)?;
+        self.permissioner.borrow().get_client(user_id)?;
+        let client_manager = self.client_manager.borrow();
         client_manager.get_client_by_id(client_id)
     }
 
-    pub async fn get_clients(
-        &self,
-        session: &Session,
-    ) -> Result<Vec<IggySharedMut<Client>>, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner.get_clients(session.get_user_id())?;
-        let client_manager = self.client_manager.read().await;
+    pub async fn get_clients(&self, client_id: u32) -> Result<Vec<Client>, IggyError> {
+        let user_id = self.ensure_authenticated(client_id)?;
+        self.permissioner.borrow().get_clients(user_id)?;
+        let client_manager = self.client_manager.borrow();
         Ok(client_manager.get_clients())
     }
 }

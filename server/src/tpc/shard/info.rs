@@ -1,15 +1,42 @@
-use std::{
-    hash::{DefaultHasher, Hash, Hasher},
-    str::FromStr,
-};
+use iggy::error::IggyError;
+use serde::{Deserialize, Serialize};
+use std::collections::hash_map::DefaultHasher;
+use std::fmt::Display;
+use std::hash::{Hash, Hasher};
+use std::str::FromStr;
+use tracing::info;
+use crate::streaming::storage::{Storage, SystemInfoStorage};
 
 use super::shard::IggyShard;
-use crate::streaming::storage::Storage;
-use crate::streaming::systems::info::{SemanticVersion, SystemInfo};
-use iggy::error::IggyError;
-use tracing::info;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct SystemInfo {
+    pub version: Version,
+    pub migrations: Vec<Migration>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Version {
+    pub version: String,
+    pub hash: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+pub struct Migration {
+    pub id: u32,
+    pub name: String,
+    pub hash: String,
+    pub applied_at: u64,
+}
+
+#[derive(Debug)]
+pub struct SemanticVersion {
+    pub major: u32,
+    pub minor: u32,
+    pub patch: u32,
+}
 
 impl IggyShard {
     pub(crate) async fn load_version(&mut self) -> Result<(), IggyError> {
@@ -54,5 +81,100 @@ impl SystemInfo {
         let mut hasher = DefaultHasher::new();
         self.version.hash.hash(&mut hasher);
         self.version.hash = hasher.finish().to_string();
+    }
+}
+
+impl Hash for SystemInfo {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.version.version.hash(state);
+        for migration in &self.migrations {
+            migration.hash(state);
+        }
+    }
+}
+
+impl Hash for Migration {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
+
+impl Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "version: {}", self.version)
+    }
+}
+
+impl Display for SystemInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "system info, {}", self.version)
+    }
+}
+
+impl FromStr for SemanticVersion {
+    type Err = IggyError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut version = s.split('.');
+        let major = version.next().unwrap().parse::<u32>()?;
+        let minor = version.next().unwrap().parse::<u32>()?;
+        let patch = version.next().unwrap().parse::<u32>()?;
+        Ok(SemanticVersion {
+            major,
+            minor,
+            patch,
+        })
+    }
+}
+
+impl SemanticVersion {
+    pub fn is_equal_to(&self, other: &SemanticVersion) -> bool {
+        self.major == other.major && self.minor == other.minor && self.patch == other.patch
+    }
+
+    pub fn is_greater_than(&self, other: &SemanticVersion) -> bool {
+        if self.major > other.major {
+            return true;
+        }
+        if self.major < other.major {
+            return false;
+        }
+
+        if self.minor > other.minor {
+            return true;
+        }
+        if self.minor < other.minor {
+            return false;
+        }
+
+        if self.patch > other.patch {
+            return true;
+        }
+        if self.patch < other.patch {
+            return false;
+        }
+
+        false
+    }
+}
+
+impl Display for SemanticVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{major}.{minor}.{patch}",
+            major = self.major,
+            minor = self.minor,
+            patch = self.patch
+        )
+    }
+}
+
+mod tests {
+    #[test]
+    fn should_load_the_expected_version_from_package_definition() {
+        use super::VERSION;
+
+        const CARGO_TOML_VERSION: &str = env!("CARGO_PKG_VERSION");
+        assert_eq!(VERSION, CARGO_TOML_VERSION);
     }
 }

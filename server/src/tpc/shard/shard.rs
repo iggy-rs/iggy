@@ -1,14 +1,11 @@
 use super::shard_frame::{ShardFrame, ShardMessage, ShardResponse};
-use crate::binary::command;
 use crate::{
-    configs::{
-        server::{PersonalAccessTokenConfig, ServerConfig},
-        system::SystemConfig,
-        tcp::TcpConfig,
-    },
+    configs::
+        server::ServerConfig,
+    
     streaming::{
         cache::memory_tracker::CacheMemoryTracker, clients::client_manager::ClientManager,
-        diagnostics::metrics::Metrics, persistence::persister::StoragePersister, session::Session,
+        diagnostics::metrics::Metrics, session::Session,
         storage::SystemStorage, streams::stream::Stream, users::permissioner::Permissioner,
     },
     tpc::{
@@ -16,26 +13,21 @@ use crate::{
         utils::hash_string,
     },
 };
-use fast_async_mutex::mutex::Mutex;
 use flume::SendError;
 use iggy::command::Command;
 use iggy::{
     error::IggyError,
-    locking::{IggySharedMut, IggySharedMutFn},
-    models::stats::Stats,
+    locking::IggySharedMutFn,
     utils::crypto::{Aes256GcmEncryptor, Encryptor},
 };
 use sled::Db;
 use std::cell::{Cell, RefCell};
 use std::{
     collections::HashMap,
-    fs::{create_dir, remove_dir_all},
-    path::Path,
-    sync::{Arc, OnceLock},
+    sync::Arc,
     time::Instant,
 };
-use sysinfo::{Pid, System as SysinfoSystem};
-use tracing::{debug, error, info};
+use tracing::info;
 
 pub const SHARD_NAME: &str = "iggy_shard";
 
@@ -54,11 +46,15 @@ impl Shard {
         Self { hash, connection }
     }
 
-    pub async fn send_request(&self, message: ShardMessage) -> Result<ShardResponse, IggyError> {
+    pub async fn send_request(
+        &self,
+        client_id: u32,
+        message: ShardMessage,
+    ) -> Result<ShardResponse, IggyError> {
         let (sender, receiver) = async_channel::bounded(1);
         self.connection
             .sender
-            .send(ShardFrame::new(message, sender.clone())); // Apparently sender needs to be cloned, otherwise channel will close...
+            .send(ShardFrame::new(client_id, message, sender.clone())); // Apparently sender needs to be cloned, otherwise channel will close...
         let response = receiver.recv().await?;
         Ok(response)
     }
@@ -71,12 +67,13 @@ pub struct IggyShard {
 
     pub(crate) permissioner: RefCell<Permissioner>,
     pub(crate) storage: Arc<SystemStorage>,
-    pub(crate) streams: HashMap<u32, Stream>,
-    pub(crate) streams_ids: HashMap<String, u32>,
+    pub(crate) streams: RefCell<HashMap<u32, Stream>>,
+    pub(crate) streams_ids: RefCell<HashMap<String, u32>>,
     // TODO - get rid of this dynamic dispatch.
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) config: ServerConfig,
-    pub(crate) client_manager: IggySharedMut<ClientManager>,
+    pub(crate) client_manager: RefCell<ClientManager>,
+    pub(crate) active_sessions: RefCell<Vec<Session>>,
     pub(crate) metrics: Metrics,
     db: Arc<Db>,
     pub message_receiver: Cell<Option<Receiver<ShardFrame>>>,
@@ -102,8 +99,8 @@ impl IggyShard {
             shards,
             permissioner: RefCell::new(Permissioner::default()),
             storage,
-            streams: HashMap::new(),
-            streams_ids: HashMap::new(),
+            streams: RefCell::new(HashMap::new()),
+            streams_ids: RefCell::new(HashMap::new()),
             encryptor: match config.system.encryption.enabled {
                 true => Some(Box::new(
                     Aes256GcmEncryptor::from_base64_key(&config.system.encryption.key).unwrap(),
@@ -111,7 +108,8 @@ impl IggyShard {
                 false => None,
             },
             config,
-            client_manager: IggySharedMut::new(ClientManager::default()),
+            client_manager: RefCell::new(ClientManager::default()),
+            active_sessions: RefCell::new(Vec::new()),
             metrics: Metrics::init(),
             db,
             message_receiver: Cell::new(Some(shard_messages_receiver)),
@@ -138,13 +136,32 @@ impl IggyShard {
         Ok(())
     }
 
+    pub fn add_active_session(&self, session: Session) {
+        let mut active_sessions = self.active_sessions.borrow_mut();
+        active_sessions.push(session);
+    }
+
+    pub fn ensure_authenticated(&self, client_id: u32) -> Result<u32, IggyError> {
+        let active_sessions = self.active_sessions.borrow();
+        let session = active_sessions
+            .iter()
+            .find(|s| s.client_id == client_id)
+            .ok_or_else(|| IggyError::Unauthenticated)?;
+        session
+            .is_authenticated()
+            .and_then(|_| Ok(session.get_user_id()))
+    }
+
     pub async fn send_request_to_shard(
         &self,
+        client_id: u32,
         cmd_hash: u32,
         command: Command,
     ) -> Result<ShardResponse, IggyError> {
         let message = ShardMessage::Command(command);
-        self.find_shard(cmd_hash).send_request(message).await
+        self.find_shard(cmd_hash)
+            .send_request(client_id, message)
+            .await
     }
 
     fn find_shard(&self, cmd_hash: u32) -> &Shard {
@@ -154,19 +171,12 @@ impl IggyShard {
             .unwrap_or_else(|| self.shards.last().unwrap())
     }
 
-    pub async fn handle_shard_message(&self, message: ShardMessage) {
+    pub async fn handle_shard_message(&self, client_id: u32, message: ShardMessage) {
         match message {
             ShardMessage::Command(cmd) => {
-                let response = self.handle_command(cmd).await;
+                let response = self.handle_command(client_id, cmd).await;
             }
             ShardMessage::Event => {}
-        }
-    }
-
-    pub fn ensure_authenticated(&self, session: &Session) -> Result<(), IggyError> {
-        match session.is_authenticated() {
-            true => Ok(()),
-            false => Err(IggyError::Unauthenticated),
         }
     }
 
@@ -178,7 +188,7 @@ impl IggyShard {
     }
 
     pub async fn clean_cache(&self, size_to_clean: u64) {
-        for stream in self.streams.values() {
+        for stream in self.streams.borrow().values() {
             for topic in stream.get_topics() {
                 for partition in topic.get_partitions().into_iter() {
                     monoio::spawn(async move {

@@ -1,3 +1,4 @@
+/*
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
 use crate::{channels::server_command::ServerCommand, configs::server::MessageCleanerConfig};
@@ -167,3 +168,5 @@ async fn delete_expired_segments(
         messages_count,
     }))
 }
+
+*/

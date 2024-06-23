@@ -6,7 +6,9 @@ use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::text;
 use iggy::utils::text::IggyStringUtils;
-use std::cell::RefCell;
+use std::borrow::BorrowMut;
+use std::cell::{Ref, RefCell, RefMut};
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use tracing::{error, info};
 
@@ -51,12 +53,12 @@ impl IggyShard {
         try_join_all(load_stream_tasks).await?;
 
         for stream in loaded_streams.take() {
-            if self.streams.contains_key(&stream.stream_id) {
+            if self.streams.borrow().contains_key(&stream.stream_id) {
                 error!("Stream with ID: '{}' already exists.", &stream.stream_id);
                 continue;
             }
 
-            if self.streams_ids.contains_key(&stream.name) {
+            if self.streams_ids.borrow().contains_key(&stream.name) {
                 error!("Stream with name: '{}' already exists.", &stream.name);
                 continue;
             }
@@ -69,101 +71,112 @@ impl IggyShard {
             self.metrics.increment_messages(stream.get_messages_count());
 
             self.streams_ids
+                .borrow_mut()
                 .insert(stream.name.clone(), stream.stream_id);
-            self.streams.insert(stream.stream_id, stream);
+            self.streams.borrow_mut().insert(stream.stream_id, stream);
         }
 
-        info!("Loaded {} stream(s) from disk.", self.streams.len());
+        info!(
+            "Loaded {} stream(s) from disk.",
+            self.streams.borrow().len()
+        );
         Ok(())
     }
 
-    pub fn get_streams(&self) -> Vec<&Stream> {
-        self.streams.values().collect()
+    pub fn get_streams(&self) -> Vec<Stream> {
+        self.streams.borrow().values().cloned().collect()
     }
 
-    pub fn find_streams(&self, session: &Session) -> Result<Vec<&Stream>, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner.get_streams(session.get_user_id())?;
+    pub fn find_streams(&self, session: &Session) -> Result<Vec<Stream>, IggyError> 
+    {
+        let user_id = self.ensure_authenticated(session.client_id)?;
+        self.permissioner.borrow().get_streams(user_id)?;
         Ok(self.get_streams())
     }
 
     pub fn find_stream(
         &self,
-        session: &Session,
+        client_id: u32,
         identifier: &Identifier,
-    ) -> Result<&Stream, IggyError> {
-        self.ensure_authenticated(session)?;
+    ) -> 
+Result<Ref<'_, Stream>, IggyError> 
+    {
+        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(identifier)?;
         self.permissioner
-            .get_stream(session.get_user_id(), stream.stream_id)?;
+            .borrow()
+            .get_stream(user_id, stream.stream_id)?;
         Ok(stream)
     }
 
-    pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, IggyError> {
+    pub fn get_stream(&self, identifier: &Identifier) -> Result<Ref<'_, Stream>, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_stream_by_id(identifier.get_u32_value()?),
             IdKind::String => self.get_stream_by_name(&identifier.get_cow_str_value()?),
         }
     }
 
-    pub fn get_stream_mut(&mut self, identifier: &Identifier) -> Result<&mut Stream, IggyError> {
+    pub fn get_stream_mut(&self, identifier: &Identifier) -> Result<RefMut<'_, Stream>, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_stream_by_id_mut(identifier.get_u32_value()?),
             IdKind::String => self.get_stream_by_name_mut(&identifier.get_cow_str_value()?),
         }
     }
 
-    fn get_stream_by_name(&self, name: &str) -> Result<&Stream, IggyError> {
-        let stream_id = self.streams_ids.get(name);
-        if stream_id.is_none() {
+    fn get_stream_by_name(&self, name: &str) -> Result<Ref<'_, Stream>, IggyError> {
+        let streams = self.streams_ids.borrow();
+        let exists = streams.iter().any(|s| s.0 == name);
+        if !exists {
             return Err(IggyError::StreamNameNotFound(name.to_string()));
         }
-
-        self.get_stream_by_id(*stream_id.unwrap())
+        let stream_id = streams.get(name).unwrap();
+        self.get_stream_by_id(*stream_id)
     }
 
-    fn get_stream_by_id(&self, stream_id: u32) -> Result<&Stream, IggyError> {
-        let stream = self.streams.get(&stream_id);
-        if stream.is_none() {
+    fn get_stream_by_id(&self, stream_id: u32) -> Result<Ref<'_, Stream>, IggyError> {
+        let streams = self.streams.borrow();
+        let exists = streams.iter().any(|s| s.0 == &stream_id);
+        if !exists {
             return Err(IggyError::StreamIdNotFound(stream_id));
         }
-
-        Ok(stream.unwrap())
+        Ok(Ref::map(streams, |streams| {
+            let stream = streams.get(&stream_id);
+            stream.unwrap()
+        }))
     }
 
-    fn get_stream_by_name_mut(&mut self, name: &str) -> Result<&mut Stream, IggyError> {
-        let stream_id;
-        {
-            let id = self.streams_ids.get_mut(name);
-            if id.is_none() {
-                return Err(IggyError::StreamNameNotFound(name.to_string()));
-            }
-
-            stream_id = *id.unwrap();
+    fn get_stream_by_name_mut(&self, name: &str) -> Result<RefMut<'_, Stream>, IggyError> {
+        let streams_ids = self.streams_ids.borrow_mut();
+        let exists = streams_ids.iter().any(|s| s.0 == name);
+        if !exists {
+            return Err(IggyError::StreamNameAlreadyExists(name.to_owned()));
         }
-
-        self.get_stream_by_id_mut(stream_id)
+        let id = streams_ids.get(name);
+        self.get_stream_by_id_mut(*id.unwrap())
     }
 
-    fn get_stream_by_id_mut(&mut self, stream_id: u32) -> Result<&mut Stream, IggyError> {
-        let stream = self.streams.get_mut(&stream_id);
-        if stream.is_none() {
+    fn get_stream_by_id_mut(&self, stream_id: u32) -> Result<RefMut<'_, Stream>, IggyError> {
+        let streams = self.streams.borrow_mut();
+        let exists = streams.iter().any(|s| s.0 == &stream_id);
+        if !exists {
             return Err(IggyError::StreamIdNotFound(stream_id));
         }
-
-        Ok(stream.unwrap())
+        Ok(RefMut::map(streams, |s| {
+            let stream = s.get_mut(&stream_id);
+            stream.unwrap()
+        }))
     }
 
     pub async fn create_stream(
         &self,
-        session: &Session,
+        client_id: u32,
         stream_id: Option<u32>,
         name: String,
     ) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner.create_stream(session.get_user_id())?;
+        let user_id = self.ensure_authenticated(client_id)?;
+        self.permissioner.borrow().create_stream(user_id)?;
         let name = name.to_lowercase_non_whitespace();
-        if self.streams_ids.contains_key(&name) {
+        if self.streams_ids.borrow().contains_key(&name) {
             return Err(IggyError::StreamNameAlreadyExists(name));
         }
 
@@ -171,7 +184,7 @@ impl IggyShard {
         if stream_id.is_none() {
             id = CURRENT_STREAM_ID.fetch_add(1, Ordering::SeqCst);
             loop {
-                if self.streams.contains_key(&id) {
+                if self.streams.borrow().contains_key(&id) {
                     if id == u32::MAX {
                         return Err(IggyError::StreamIdAlreadyExists(id));
                     }
@@ -184,57 +197,48 @@ impl IggyShard {
             id = stream_id.unwrap();
         }
 
-        if self.streams.contains_key(&id) {
+        if self.streams.borrow().contains_key(&id) {
             return Err(IggyError::StreamIdAlreadyExists(id));
         }
 
         let stream = Stream::create(id, &name, self.config.system.clone(), self.storage.clone());
         stream.persist().await?;
         info!("Created stream with ID: {id}, name: '{name}'.");
-        self.streams_ids.insert(name, stream.stream_id);
-        self.streams.insert(stream.stream_id, stream);
+        self.streams_ids.borrow_mut().insert(name, stream.stream_id);
+        self.streams.borrow_mut().insert(stream.stream_id, stream);
         self.metrics.increment_streams(1);
         Ok(())
     }
 
     pub async fn update_stream(
         &self,
-        session: &Session,
+        client_id: u32,
         id: &Identifier,
         name: String,
     ) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
-        let stream_id;
-        {
-            let stream = self.get_stream(id)?;
-            stream_id = stream.stream_id;
-        }
-
+        let user_id = self.ensure_authenticated(client_id)?;
+        let stream = self.get_stream(id)?;
+        let stream_id = stream.stream_id;
         self.permissioner
-            .borrow_mut()
-            .update_stream(session.get_user_id(), stream_id)?;
-        let updated_name = name.to_lowercase_non_whitespace();
+            .borrow()
+            .update_stream(user_id, stream_id)?;
 
-        {
-            if let Some(stream_id_by_name) = self.streams_ids.get(&updated_name) {
-                if *stream_id_by_name != stream_id {
-                    return Err(IggyError::StreamNameAlreadyExists(updated_name));
-                }
+        let updated_name = name.to_lowercase_non_whitespace();
+        if let Some(stream_id_by_name) = self.streams_ids.borrow().get(&updated_name) {
+            if *stream_id_by_name != stream_id {
+                return Err(IggyError::StreamNameAlreadyExists(updated_name));
             }
         }
+        let mut stream = self.get_stream_mut(id)?;
+        let stream = stream.borrow_mut();
+        let old_name = stream.name.clone();
+        stream.name.clone_from(&updated_name);
+        stream.persist().await?;
 
-        let old_name;
-        {
-            let stream = self.get_stream_mut(id)?;
-            old_name = stream.name.clone();
-            stream.name.clone_from(&updated_name);
-            stream.persist().await?;
-        }
-
-        {
-            self.streams_ids.remove(&old_name);
-            self.streams_ids.insert(updated_name.clone(), stream_id);
-        }
+        self.streams_ids.borrow_mut().remove(&old_name);
+        self.streams_ids
+            .borrow_mut()
+            .insert(updated_name.clone(), stream_id);
 
         info!(
             "Stream with ID '{}' updated. Old name: '{}' changed to: '{}'.",
@@ -243,16 +247,13 @@ impl IggyShard {
         Ok(())
     }
 
-    pub async fn delete_stream(
-        &self,
-        session: &Session,
-        id: &Identifier,
-    ) -> Result<u32, IggyError> {
-        self.ensure_authenticated(session)?;
+    pub async fn delete_stream(&self, client_id: u32, id: &Identifier) -> Result<u32, IggyError> {
+        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
         self.permissioner
-            .delete_stream(session.get_user_id(), stream_id)?;
+            .borrow()
+            .delete_stream(user_id, stream_id)?;
         let stream_name = stream.name.clone();
         if stream.delete().await.is_err() {
             return Err(IggyError::CannotDeleteStream(stream_id));
@@ -264,15 +265,15 @@ impl IggyShard {
             .decrement_partitions(stream.get_partitions_count());
         self.metrics.decrement_messages(stream.get_messages_count());
         self.metrics.decrement_segments(stream.get_segments_count());
-        self.streams.remove(&stream_id);
-        self.streams_ids.remove(&stream_name);
+        self.streams.borrow_mut().remove(&stream_id);
+        self.streams_ids.borrow_mut().remove(&stream_name);
         let current_stream_id = CURRENT_STREAM_ID.load(Ordering::SeqCst);
         if current_stream_id > stream_id {
             CURRENT_STREAM_ID.store(stream_id, Ordering::SeqCst);
         }
 
-        let client_manager = self.client_manager.read().await;
-        client_manager
+        self.client_manager
+            .borrow_mut()
             .delete_consumer_groups_for_stream(stream_id)
             .await;
         Ok(stream_id)
@@ -280,12 +281,14 @@ impl IggyShard {
 
     pub async fn purge_stream(
         &self,
-        session: &Session,
+        client_id: u32,
         stream_id: &Identifier,
     ) -> Result<(), IggyError> {
+        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
         self.permissioner
-            .purge_stream(session.get_user_id(), stream.stream_id)?;
+            .borrow()
+            .purge_stream(user_id, stream.stream_id)?;
         stream.purge().await
     }
 }

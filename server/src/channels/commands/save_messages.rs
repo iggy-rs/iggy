@@ -1,3 +1,4 @@
+/*
 use crate::channels::server_command::ServerCommand;
 use crate::configs::server::MessageSaverConfig;
 use crate::configs::server::ServerConfig;
@@ -100,3 +101,5 @@ impl ServerCommand<SaveMessagesCommand> for SaveMessagesExecutor {
         });
     }
 }
+
+*/

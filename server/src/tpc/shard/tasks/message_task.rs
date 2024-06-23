@@ -1,4 +1,4 @@
-use crate::tpc::shard::shard::IggyShard;
+use crate::tpc::shard::{shard::IggyShard, shard_frame::ShardFrame};
 use futures::StreamExt;
 use iggy::error::IggyError;
 use std::rc::Rc;
@@ -11,7 +11,12 @@ async fn run_shard_messages_receiver(shard: Rc<IggyShard>) -> Result<(), IggyErr
     );
     loop {
         if let Some(frame) = message_receiver.next().await {
-            shard.handle_shard_message(frame.message).await
+            let ShardFrame {
+                client_id,
+                message,
+                response_sender,
+            } = frame;
+            shard.handle_shard_message(client_id, message).await
         }
     }
 }

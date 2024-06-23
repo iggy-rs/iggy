@@ -1,3 +1,4 @@
+/*
 use crate::configs::server::ServerConfig;
 use crate::streaming::systems::system::SharedSystem;
 use flume::{Receiver, Sender};
@@ -19,3 +20,5 @@ pub trait ServerCommand<C> {
         receiver: Receiver<C>,
     );
 }
+
+*/

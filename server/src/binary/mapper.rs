@@ -65,10 +65,9 @@ pub async fn map_client(client: &Client) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_clients(clients: &[IggySharedMut<Client>]) -> Bytes {
+pub async fn map_clients(clients: &[Client]) -> Bytes {
     let mut bytes = BytesMut::new();
     for client in clients {
-        let client = client.read().await;
         extend_client(&client, &mut bytes);
     }
     bytes.freeze()
@@ -188,7 +187,7 @@ pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_consumer_groups(consumer_groups: &[&RwLock<ConsumerGroup>]) -> Bytes {
+pub async fn map_consumer_groups(consumer_groups: Vec<&ConsumerGroup>) -> Bytes {
     let mut bytes = BytesMut::new();
     for consumer_group in consumer_groups {
         let consumer_group = consumer_group.read().await;

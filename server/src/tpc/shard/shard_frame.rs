@@ -17,13 +17,19 @@ pub enum ShardResponse {
 
 #[derive(Debug, Clone)]
 pub struct ShardFrame {
+    pub client_id: u32,
     pub message: ShardMessage,
     pub response_sender: Sender<ShardResponse>,
 }
 
 impl ShardFrame {
-    pub fn new(message: ShardMessage, response_sender: Sender<ShardResponse>) -> Self {
+    pub fn new(
+        client_id: u32,
+        message: ShardMessage,
+        response_sender: Sender<ShardResponse>,
+    ) -> Self {
         Self {
+            client_id,
             message,
             response_sender,
         }

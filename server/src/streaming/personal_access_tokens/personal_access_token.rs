@@ -21,7 +21,7 @@ impl PersonalAccessToken {
         let system_random = ring::rand::SystemRandom::new();
         system_random.fill(&mut buffer).unwrap();
         let token = as_base64(&buffer);
-        let token_hash = Self::hash_token(&token);
+        let token_hash = Self::hash_token(token.clone());
         let expiry = expiry.map(|e| now + e as u64 * 1_000_000);
         (
             Self {
@@ -41,7 +41,7 @@ impl PersonalAccessToken {
         }
     }
 
-    pub fn hash_token(token: &str) -> String {
+    pub fn hash_token(token: String) -> String {
         hash::calculate_256(token.as_bytes())
     }
 }
@@ -54,7 +54,7 @@ mod tests {
     fn personal_access_token_should_be_created_with_random_secure_value_and_hashed_successfully() {
         let user_id = 1;
         let now = IggyTimestamp::now().to_micros();
-        let name = "test_token";
+        let name = "test_token".to_owned();
         let (personal_access_token, raw_token) = PersonalAccessToken::new(user_id, name, now, None);
         assert_eq!(personal_access_token.name, name);
         assert!(!personal_access_token.token.is_empty());
@@ -62,7 +62,7 @@ mod tests {
         assert_ne!(personal_access_token.token, raw_token);
         assert_eq!(
             personal_access_token.token,
-            PersonalAccessToken::hash_token(&raw_token)
+            PersonalAccessToken::hash_token(raw_token)
         );
     }
 
@@ -71,7 +71,7 @@ mod tests {
         let user_id = 1;
         let now = IggyTimestamp::now().to_micros();
         let expiry = 1;
-        let name = "test_token";
+        let name = "test_token".to_owned();
         let (personal_access_token, _) = PersonalAccessToken::new(user_id, name, now, Some(expiry));
         assert!(personal_access_token.is_expired(now + expiry as u64 * 1_000_000 + 1));
     }

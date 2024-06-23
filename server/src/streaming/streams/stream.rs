@@ -24,6 +24,26 @@ pub struct Stream {
     pub(crate) storage: Arc<SystemStorage>,
 }
 
+impl Clone for Stream {
+    fn clone(&self) -> Self {
+        Self {
+            stream_id: self.stream_id.clone(),
+            name: self.name.clone(),
+            path: self.path.clone(),
+            topics_path: self.topics_path.clone(),
+            created_at: self.created_at.clone(),
+            current_topic_id: AtomicU32::new(self.current_topic_id.load(Ordering::SeqCst)),
+            size_bytes: self.size_bytes.clone(),
+            messages_count: self.messages_count.clone(),
+            segments_count: self.segments_count.clone(),
+            topics: self.topics.clone(),
+            topics_ids: self.topics_ids.clone(),
+            config: self.config.clone(),
+            storage: self.storage.clone(),
+        }
+    }
+}
+
 impl Stream {
     pub fn empty(id: u32, config: Arc<SystemConfig>, storage: Arc<SystemStorage>) -> Self {
         Stream::create(id, "", config, storage)

@@ -58,7 +58,7 @@ mod tests {
         let partition_id = 3;
         let consumer = Consumer::new(Identifier::numeric(consumer_id).unwrap());
         let polling_consumer =
-            PollingConsumer::from_consumer(&consumer, client_id, Some(partition_id));
+            PollingConsumer::from_consumer(consumer.clone(), client_id, Some(partition_id));
 
         assert_eq!(
             polling_consumer,
@@ -78,7 +78,7 @@ mod tests {
         let partition_id = 3;
         let consumer = Consumer::new(Identifier::named(consumer_name).unwrap());
         let polling_consumer =
-            PollingConsumer::from_consumer(&consumer, client_id, Some(partition_id));
+            PollingConsumer::from_consumer(consumer.clone(), client_id, Some(partition_id));
 
         let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
         assert_eq!(
@@ -92,7 +92,7 @@ mod tests {
         let group_id = 1;
         let client_id = 2;
         let consumer = Consumer::group(Identifier::numeric(group_id).unwrap());
-        let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
+        let polling_consumer = PollingConsumer::from_consumer(consumer.clone(), client_id, None);
 
         assert_eq!(
             polling_consumer,
@@ -106,7 +106,7 @@ mod tests {
         let consumer_group_name = "consumer_group";
         let client_id = 2;
         let consumer = Consumer::group(Identifier::named(consumer_group_name).unwrap());
-        let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
+        let polling_consumer = PollingConsumer::from_consumer(consumer.clone(), client_id, None);
 
         let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
         assert_eq!(

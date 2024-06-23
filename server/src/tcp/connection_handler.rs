@@ -22,6 +22,7 @@ pub(crate) async fn handle_connection(
 ) -> Result<(), ServerError> {
     let client_id = shard.add_client(&address, Transport::Tcp).await;
     let session = Session::from_client_id(client_id, address);
+    shard.add_active_session(session);
     loop {
         let initial_buffer = BytesMut::with_capacity(INITIAL_BYTES_LENGTH);
         let (read_length, initial_buffer) = match sender.read(initial_buffer).await {
@@ -59,12 +60,14 @@ pub(crate) async fn handle_connection(
                 continue;
             }
         };
-        // We have to validate the session before we dispatch the request.
 
         match command.get_command_execution_origin() {
             CommandExecution::Direct => {}
             CommandExecution::Routed(cmd_hash) => {
-                match shard.send_request_to_shard(cmd_hash, command).await? {
+                match shard
+                    .send_request_to_shard(client_id, cmd_hash, command)
+                    .await?
+                {
                     ShardResponse::BinaryResponse(payload) => {
                         sender.send_ok_response(&payload).await?;
                     }

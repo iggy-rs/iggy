@@ -73,16 +73,11 @@ impl IggyShard {
         User::root(&username, &password)
     }
 
-    pub async fn find_user(
-        &self,
-        session: &Session,
-        user_id: &Identifier,
-    ) -> Result<User, IggyError> {
-        self.ensure_authenticated(session)?;
+    pub async fn find_user(&self, client_id: u32, user_id: &Identifier) -> Result<User, IggyError> {
+        let session_user_id = self.ensure_authenticated(client_id)?;
         let user = self.get_user(user_id).await?;
-        let session_user_id = session.get_user_id();
         if user.id != session_user_id {
-            self.permissioner.get_user(session_user_id)?;
+            self.permissioner.borrow().get_user(session_user_id)?;
         }
 
         Ok(user)
@@ -105,27 +100,26 @@ impl IggyShard {
         })
     }
 
-    pub async fn get_users(&self, session: &Session) -> Result<Vec<User>, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner
-            .borrow()
-            .get_users(session.get_user_id())?;
+    pub async fn get_users(&self, client_id: u32) -> Result<Vec<User>, IggyError> {
+        let user_id = self.ensure_authenticated(client_id)?;
+        self.permissioner.borrow().get_users(user_id)?;
         self.storage.user.load_all().await
     }
 
     pub async fn create_user(
         &self,
-        session: &Session,
+        client_id: u32,
         username: String,
         password: String,
         status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
+        let user_id = self.ensure_authenticated(client_id)?;
         {
             let permissioner = self.permissioner.borrow();
-            permissioner.create_user(session.get_user_id())?;
+            permissioner.create_user(user_id)?;
         }
+
         let username = username.to_lowercase_non_whitespace();
         if self.storage.user.load_by_username(&username).await.is_ok() {
             error!("User: {username} already exists.");
@@ -139,7 +133,7 @@ impl IggyShard {
 
         let user_id = USER_ID.fetch_add(1, Ordering::SeqCst);
         info!("Creating user: {username} with ID: {user_id}...");
-        let user = User::new(user_id, username, password, status, permissions);
+        let user = User::new(user_id, username.clone(), password, status, permissions);
         self.storage.user.save(&user).await?;
         self.permissioner
             .borrow_mut()
@@ -151,13 +145,14 @@ impl IggyShard {
 
     pub async fn delete_user(
         &self,
-        session: &Session,
+        client_id: u32,
         user_id: &Identifier,
     ) -> Result<User, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner
-            .borrow()
-            .delete_user(session.get_user_id())?;
+        let session_user_id = self.ensure_authenticated(client_id)?;
+        {
+            let permissioner = self.permissioner.borrow();
+            permissioner.delete_user(session_user_id)?;
+        }
         let user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot delete the root user.");
@@ -166,9 +161,14 @@ impl IggyShard {
 
         info!("Deleting user: {} with ID: {user_id}...", user.username);
         self.storage.user.delete(&user).await?;
-        self.permissioner.delete_permissions_for_user(user.id);
-        let mut client_manager = self.client_manager.write().await;
-        client_manager.delete_clients_for_user(user.id).await?;
+        // TODO - those have to be broadcasted to other shards.
+        self.permissioner
+            .borrow_mut()
+            .delete_permissions_for_user(user.id);
+        self.client_manager
+            .borrow_mut()
+            .delete_clients_for_user(user.id)
+            .await?;
         info!("Deleted user: {} with ID: {user_id}.", user.username);
         self.metrics.decrement_users(1);
         Ok(user)
@@ -176,16 +176,16 @@ impl IggyShard {
 
     pub async fn update_user(
         &self,
-        session: &Session,
+        client_id: u32,
         user_id: &Identifier,
         username: Option<String>,
         status: Option<UserStatus>,
     ) -> Result<User, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner.update_user(session.get_user_id())?;
+        let session_user_id = self.ensure_authenticated(client_id)?;
+        self.permissioner.borrow().update_user(session_user_id)?;
         let mut user = self.get_user(user_id).await?;
         if let Some(username) = username {
-            let username = text::to_lowercase_non_whitespace(&username);
+            let username = username.to_lowercase_non_whitespace();
             let existing_user = self.storage.user.load_by_username(&username).await;
             if existing_user.is_ok() && existing_user.unwrap().id != user.id {
                 error!("User: {username} already exists.");
@@ -207,13 +207,15 @@ impl IggyShard {
 
     pub async fn update_permissions(
         &self,
-        session: &Session,
+        client_id: u32,
         user_id: &Identifier,
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner
-            .update_permissions(session.get_user_id())?;
+        let session_user_id = self.ensure_authenticated(client_id)?;
+        {
+            let permissioner = self.permissioner.borrow();
+            permissioner.update_permissions(session_user_id)?;
+        }
         let mut user = self.get_user(user_id).await?;
         if user.is_root() {
             error!("Cannot change the root user permissions.");
@@ -227,7 +229,9 @@ impl IggyShard {
             username
         );
         self.storage.user.save(&user).await?;
-        self.permissioner.update_permissions_for_user(user);
+        self.permissioner
+            .borrow_mut()
+            .update_permissions_for_user(user);
         info!(
             "Updated permissions for user: {} with ID: {user_id}.",
             username
@@ -237,16 +241,17 @@ impl IggyShard {
 
     pub async fn change_password(
         &self,
-        session: &Session,
+        client_id: u32,
         user_id: &Identifier,
         current_password: String,
         new_password: String,
     ) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
+        let session_user_id = self.ensure_authenticated(client_id)?;
         let mut user = self.get_user(user_id).await?;
-        let session_user_id = session.get_user_id();
         if user.id != session_user_id {
-            self.permissioner.change_password(session_user_id)?;
+            self.permissioner
+                .borrow()
+                .change_password(session_user_id)?;
         }
 
         if !crypto::verify_password(current_password, &user.password) {
@@ -272,21 +277,21 @@ impl IggyShard {
 
     pub async fn login_user(
         &self,
-        username: &str,
-        password: &str,
-        session: Option<&Session>,
+        username: String,
+        password: String,
+        client_id: u32,
     ) -> Result<User, IggyError> {
-        self.login_user_with_credentials(username, Some(password), session)
+        self.login_user_with_credentials(username, Some(password), client_id)
             .await
     }
 
     pub async fn login_user_with_credentials(
         &self,
-        username: &str,
-        password: Option<&str>,
-        session: Option<&Session>,
+        username: String,
+        password: Option<String>,
+        client_id: u32,
     ) -> Result<User, IggyError> {
-        let user = match self.storage.user.load_by_username(username).await {
+        let user = match self.storage.user.load_by_username(&username).await {
             Ok(user) => user,
             Err(_) => {
                 error!("Cannot login user: {username} (not found).");
@@ -311,44 +316,52 @@ impl IggyShard {
         }
 
         info!("Logged in user: {username} with ID: {}.", user.id);
-        if session.is_none() {
+        if self.ensure_authenticated(client_id).is_err() {
             return Ok(user);
         }
 
-        let session = session.unwrap();
-        if session.is_authenticated() {
+        // TODO - maybe this can be solved better ?
+        let active_sessions = self.active_sessions.borrow();
+        let session = active_sessions
+            .iter()
+            .find(|s| s.client_id == client_id)
+            .expect(format!("At this point session for {}, should exist.", client_id).as_str());
+        if session.is_authenticated().is_ok() {
             warn!(
                 "User: {} with ID: {} was already authenticated, removing the previous session...",
                 user.username,
                 session.get_user_id()
             );
-            self.logout_user(session).await?;
+            self.logout_user(session.client_id).await?;
         }
 
         session.set_user_id(user.id);
-        let mut client_manager = self.client_manager.write().await;
+        let mut client_manager = self.client_manager.borrow_mut();
         client_manager
             .set_user_id(session.client_id, user.id)
             .await?;
         Ok(user)
     }
 
-    pub async fn logout_user(&self, session: &Session) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
-        let user = self
-            .get_user(&Identifier::numeric(session.get_user_id())?)
-            .await?;
+    pub async fn logout_user(&self, client_id: u32) -> Result<(), IggyError> {
+        let active_sessions = self.active_sessions.borrow();
+        let session = active_sessions
+            .iter()
+            .find(|s| s.client_id == client_id)
+            .expect("Session for client_id should exist.");
+        let user_id = session.get_user_id();
+
+        let user = self.get_user(&Identifier::numeric(user_id)?).await?;
         info!(
             "Logging out user: {} with ID: {}...",
             user.username, user.id
         );
-        if session.client_id > 0 {
-            let mut client_manager = self.client_manager.write().await;
-            client_manager.clear_user_id(session.client_id).await?;
-            info!(
-                "Cleared user ID: {} for client: {}.",
-                user.id, session.client_id
-            );
+        // TODO - this has to be broadcasted to other shards.
+        if user_id > 0 {
+            let mut client_manager = self.client_manager.borrow_mut();
+            client_manager.clear_user_id(client_id).await?;
+            session.clear_user_id();
+            info!("Cleared user ID: {} for client: {}.", user.id, client_id);
         }
         info!("Logged out user: {} with ID: {}.", user.username, user.id);
         Ok(())

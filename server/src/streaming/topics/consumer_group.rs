@@ -1,18 +1,17 @@
-use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap};
 use tracing::trace;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConsumerGroup {
     pub topic_id: u32,
     pub group_id: u32,
     pub name: String,
     pub partitions_count: u32,
-    members: HashMap<u32, RwLock<ConsumerGroupMember>>,
+    members: RefCell<HashMap<u32, ConsumerGroupMember>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ConsumerGroupMember {
     pub id: u32,
     partitions: HashMap<u32, u32>,
@@ -27,12 +26,12 @@ impl ConsumerGroup {
             group_id,
             name: name.to_string(),
             partitions_count,
-            members: HashMap::new(),
+            members: RefCell::new(HashMap::new()),
         }
     }
 
-    pub fn get_members(&self) -> Vec<&RwLock<ConsumerGroupMember>> {
-        self.members.values().collect()
+    pub fn get_members(&self) -> Vec<ConsumerGroupMember> {
+        self.members.borrow().values().cloned().collect()
     }
 
     pub async fn reassign_partitions(&mut self, partitions_count: u32) {
@@ -41,9 +40,10 @@ impl ConsumerGroup {
     }
 
     pub async fn calculate_partition_id(&self, member_id: u32) -> Result<u32, IggyError> {
-        let member = self.members.get(&member_id);
+        let mut members = self.members.borrow_mut();
+        let member = members.get_mut(&member_id);
         if let Some(member) = member {
-            return Ok(member.write().await.calculate_partition_id());
+            return Ok(member.calculate_partition_id());
         }
         Err(IggyError::ConsumerGroupMemberNotFound(
             member_id,
@@ -53,9 +53,10 @@ impl ConsumerGroup {
     }
 
     pub async fn get_current_partition_id(&self, member_id: u32) -> Result<u32, IggyError> {
-        let member = self.members.get(&member_id);
+        let members = self.members.borrow();
+        let member = members.get(&member_id);
         if let Some(member) = member {
-            return Ok(member.read().await.current_partition_id);
+            return Ok(member.current_partition_id);
         }
         Err(IggyError::ConsumerGroupMemberNotFound(
             member_id,
@@ -64,15 +65,15 @@ impl ConsumerGroup {
         ))
     }
 
-    pub async fn add_member(&mut self, member_id: u32) {
-        self.members.insert(
+    pub async fn add_member(&self, member_id: u32) {
+        self.members.borrow_mut().insert(
             member_id,
-            RwLock::new(ConsumerGroupMember {
+            ConsumerGroupMember {
                 id: member_id,
                 partitions: HashMap::new(),
                 current_partition_index: 0,
                 current_partition_id: 0,
-            }),
+            },
         );
         trace!(
             "Added member with ID: {} to consumer group: {} for topic with ID: {}",
@@ -83,8 +84,8 @@ impl ConsumerGroup {
         self.assign_partitions().await;
     }
 
-    pub async fn delete_member(&mut self, member_id: u32) {
-        if self.members.remove(&member_id).is_some() {
+    pub async fn delete_member(&self, member_id: u32) {
+        if self.members.borrow_mut().remove(&member_id).is_some() {
             trace!(
                 "Deleted member with ID: {} in consumer group: {} for topic with ID: {}",
                 member_id,
@@ -95,15 +96,18 @@ impl ConsumerGroup {
         }
     }
 
-    async fn assign_partitions(&mut self) {
-        let mut members = self.members.values_mut().collect::<Vec<_>>();
-        if members.is_empty() {
+    async fn assign_partitions(&self) {
+        let mut members = self
+            .members
+            .borrow_mut()
+            .values()
+            .cloned()
+            .collect::<Vec<_>>();
+        let members_count = members.len() as u32;
+        if members_count == 0 {
             return;
         }
-
-        let members_count = members.len() as u32;
         for member in members.iter_mut() {
-            let mut member = member.write().await;
             member.current_partition_index = 0;
             member.current_partition_id = 0;
             member.partitions.clear();
@@ -112,9 +116,9 @@ impl ConsumerGroup {
         for partition_index in 0..self.partitions_count {
             let partition_id = partition_index + 1;
             let member_index = partition_index % members_count;
-            let member = members.get(member_index as usize).unwrap();
-            let mut member = member.write().await;
-            let member_partition_index = member.partitions.len() as u32;
+            let member = members.get_mut(member_index as usize).unwrap();
+            //let member_partition_index = member.partitions.len() as u32;
+            let member_partition_index = 0u32;
             member
                 .partitions
                 .insert(member_partition_index, partition_id);
@@ -154,12 +158,12 @@ mod tests {
     #[monoio::test]
     async fn should_calculate_partition_id_using_round_robin() {
         let member_id = 123;
-        let mut consumer_group = ConsumerGroup {
+        let consumer_group = ConsumerGroup {
             topic_id: 1,
             group_id: 1,
             name: "test".to_string(),
             partitions_count: 3,
-            members: HashMap::new(),
+            members: RefCell::new(HashMap::new()),
         };
 
         consumer_group.add_member(member_id).await;
@@ -180,7 +184,7 @@ mod tests {
             group_id: 1,
             name: "test".to_string(),
             partitions_count: 3,
-            members: HashMap::new(),
+            members: RefCell::new(HashMap::new()),
         };
 
         consumer_group.add_member(member_id).await;

@@ -4,7 +4,6 @@ use crate::streaming::topics::topic::Topic;
 use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
-use iggy::utils::text;
 use iggy::utils::text::IggyStringUtils;
 use std::sync::atomic::Ordering;
 use tracing::info;
@@ -21,29 +20,22 @@ impl Topic {
             self.topic_id, self.stream_id, partitions_count
         );
         for (_, consumer_group) in self.consumer_groups.iter_mut() {
-            let mut consumer_group = consumer_group.write().await;
             consumer_group.reassign_partitions(partitions_count).await;
         }
     }
 
-    pub fn get_consumer_groups(&self) -> Vec<&RwLock<ConsumerGroup>> {
+    pub fn get_consumer_groups(&self) -> Vec<&ConsumerGroup> {
         self.consumer_groups.values().collect()
     }
 
-    pub fn get_consumer_group(
-        &self,
-        identifier: &Identifier,
-    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
+    pub fn get_consumer_group(&self, identifier: &Identifier) -> Result<&ConsumerGroup, IggyError> {
         match identifier.kind {
             IdKind::Numeric => self.get_consumer_group_by_id(identifier.get_u32_value().unwrap()),
             IdKind::String => self.get_consumer_group_by_name(&identifier.get_cow_str_value()?),
         }
     }
 
-    pub fn get_consumer_group_by_name(
-        &self,
-        name: &str,
-    ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
+    pub fn get_consumer_group_by_name(&self, name: &str) -> Result<&ConsumerGroup, IggyError> {
         let group_id = self.consumer_groups_ids.get(name);
         if group_id.is_none() {
             return Err(IggyError::ConsumerGroupNameNotFound(
@@ -55,7 +47,7 @@ impl Topic {
         self.get_consumer_group_by_id(*group_id.unwrap())
     }
 
-    pub fn get_consumer_group_by_id(&self, id: u32) -> Result<&RwLock<ConsumerGroup>, IggyError> {
+    pub fn get_consumer_group_by_id(&self, id: u32) -> Result<&ConsumerGroup, IggyError> {
         let consumer_group = self.consumer_groups.get(&id);
         if consumer_group.is_none() {
             return Err(IggyError::ConsumerGroupIdNotFound(id, self.topic_id));
@@ -104,10 +96,9 @@ impl Topic {
 
         let consumer_group =
             ConsumerGroup::new(self.topic_id, id, &name, self.partitions.len() as u32);
-        self.consumer_groups.insert(id, RwLock::new(consumer_group));
+        self.consumer_groups.insert(id, consumer_group);
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;
-        let consumer_group = consumer_group.read().await;
         self.storage
             .topic
             .save_consumer_group(self, &consumer_group)
@@ -122,39 +113,32 @@ impl Topic {
     pub async fn delete_consumer_group(
         &mut self,
         id: &Identifier,
-    ) -> Result<RwLock<ConsumerGroup>, IggyError> {
-        let group_id;
-        {
-            let consumer_group = self.get_consumer_group(id)?;
-            let consumer_group = consumer_group.read().await;
-            group_id = consumer_group.group_id;
-        }
+    ) -> Result<ConsumerGroup, IggyError> {
+        let consumer_group = self.get_consumer_group(id)?;
+        let group_id = consumer_group.group_id;
 
         let consumer_group = self.consumer_groups.remove(&group_id);
         if consumer_group.is_none() {
             return Err(IggyError::ConsumerGroupIdNotFound(group_id, self.topic_id));
         }
         let consumer_group = consumer_group.unwrap();
-        {
-            let consumer_group = consumer_group.read().await;
-            let group_id = consumer_group.group_id;
-            self.consumer_groups_ids.remove(&consumer_group.name);
-            self.storage
-                .topic
-                .delete_consumer_group(self, &consumer_group)
-                .await?;
+        let group_id = consumer_group.group_id;
+        self.consumer_groups_ids.remove(&consumer_group.name);
+        self.storage
+            .topic
+            .delete_consumer_group(self, &consumer_group)
+            .await?;
 
-            let current_group_id = self.current_consumer_group_id.load(Ordering::SeqCst);
-            if current_group_id > group_id {
-                self.current_consumer_group_id
-                    .store(group_id, Ordering::SeqCst);
-            }
-
-            info!(
-                "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
-                id, self.topic_id, self.stream_id
-            );
+        let current_group_id = self.current_consumer_group_id.load(Ordering::SeqCst);
+        if current_group_id > group_id {
+            self.current_consumer_group_id
+                .store(group_id, Ordering::SeqCst);
         }
+
+        info!(
+            "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
+            id, self.topic_id, self.stream_id
+        );
 
         Ok(consumer_group)
     }
@@ -165,7 +149,6 @@ impl Topic {
         member_id: u32,
     ) -> Result<(), IggyError> {
         let consumer_group = self.get_consumer_group(group_id)?;
-        let mut consumer_group = consumer_group.write().await;
         consumer_group.add_member(member_id).await;
         info!(
             "Member with ID: {} has joined consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
@@ -180,7 +163,6 @@ impl Topic {
         member_id: u32,
     ) -> Result<(), IggyError> {
         let consumer_group = self.get_consumer_group(group_id)?;
-        let mut consumer_group = consumer_group.write().await;
         consumer_group.delete_member(member_id).await;
         info!(
             "Member with ID: {} has left consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",

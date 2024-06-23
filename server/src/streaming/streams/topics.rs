@@ -5,7 +5,7 @@ use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
-use iggy::utils::text;
+use iggy::utils::text::{self, IggyStringUtils};
 use std::sync::atomic::Ordering;
 use tracing::{debug, info};
 
@@ -18,14 +18,14 @@ impl Stream {
     pub async fn create_topic(
         &mut self,
         topic_id: Option<u32>,
-        name: &str,
+        name: String,
         partitions_count: u32,
         message_expiry: Option<u32>,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
-        let name = text::to_lowercase_non_whitespace(name);
+        let name = name.to_lowercase_non_whitespace();
         if self.topics_ids.contains_key(&name) {
             return Err(IggyError::TopicNameAlreadyExists(name, self.stream_id));
         }
@@ -78,56 +78,47 @@ impl Stream {
     pub async fn update_topic(
         &mut self,
         id: &Identifier,
-        name: &str,
+        name: String,
         message_expiry: Option<u32>,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
-        let topic_id;
-        {
-            let topic = self.get_topic(id)?;
-            topic_id = topic.topic_id;
-        }
+        let topic = self.get_topic(id)?;
+        let topic_id = topic.topic_id;
 
-        let updated_name = text::to_lowercase_non_whitespace(name);
-
-        {
-            if let Some(topic_id_by_name) = self.topics_ids.get(&updated_name) {
-                if *topic_id_by_name != topic_id {
-                    return Err(IggyError::TopicNameAlreadyExists(
-                        updated_name.to_string(),
-                        self.stream_id,
-                    ));
-                }
+        let updated_name = name.to_lowercase_non_whitespace();
+        if let Some(topic_id_by_name) = self.topics_ids.get(&updated_name) {
+            if *topic_id_by_name != topic_id {
+                return Err(IggyError::TopicNameAlreadyExists(
+                    updated_name.to_string(),
+                    self.stream_id,
+                ));
             }
         }
-
         let old_topic_name = {
             let topic = self.get_topic(id)?;
             topic.name.clone()
         };
 
-        {
-            self.topics_ids.remove(&old_topic_name.clone());
-            self.topics_ids.insert(updated_name.clone(), topic_id);
-            let topic = self.get_topic_mut(id)?;
-            topic.name = updated_name;
-            topic.message_expiry = message_expiry;
-            topic.compression_algorithm = compression_algorithm;
-            for partition in topic.partitions.values_mut() {
-                let mut partition = partition.write().await;
-                partition.message_expiry = message_expiry;
-                for segment in partition.segments.iter_mut() {
-                    segment.message_expiry = message_expiry;
-                }
+        self.topics_ids.remove(&old_topic_name.clone());
+        self.topics_ids.insert(updated_name.clone(), topic_id);
+        let topic = self.get_topic_mut(id)?;
+        topic.name = updated_name;
+        topic.message_expiry = message_expiry;
+        topic.compression_algorithm = compression_algorithm;
+        for partition in topic.partitions.values_mut() {
+            let mut partition = partition.write().await;
+            partition.message_expiry = message_expiry;
+            for segment in partition.segments.iter_mut() {
+                segment.message_expiry = message_expiry;
             }
-            topic.max_topic_size = max_topic_size;
-            topic.replication_factor = replication_factor;
-
-            topic.persist().await?;
-            info!("Updated topic: {topic}");
         }
+        topic.max_topic_size = max_topic_size;
+        topic.replication_factor = replication_factor;
+
+        topic.persist().await?;
+        info!("Updated topic: {topic}");
 
         Ok(())
     }

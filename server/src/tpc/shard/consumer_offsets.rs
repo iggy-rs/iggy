@@ -8,17 +8,17 @@ use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 impl IggyShard {
     pub async fn store_consumer_offset(
         &self,
-        session: &Session,
+        client_id: u32,
         consumer: PollingConsumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
         offset: u64,
     ) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
+        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
-        self.permissioner.store_consumer_offset(
-            session.get_user_id(),
+        self.permissioner.borrow().store_consumer_offset(
+            user_id,
             stream.stream_id,
             topic.topic_id,
         )?;
@@ -28,16 +28,16 @@ impl IggyShard {
 
     pub async fn get_consumer_offset(
         &self,
-        session: &Session,
+        client_id: u32,
         consumer: PollingConsumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
-        self.ensure_authenticated(session)?;
+        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
-        self.permissioner.get_consumer_offset(
-            session.get_user_id(),
+        self.permissioner.borrow().get_consumer_offset(
+            user_id,
             stream.stream_id,
             topic.topic_id,
         )?;

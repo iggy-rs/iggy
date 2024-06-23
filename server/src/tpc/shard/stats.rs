@@ -18,9 +18,9 @@ fn sysinfo() -> &'static Mutex<SysinfoSystem> {
 }
 
 impl IggyShard {
-    pub async fn get_stats(&self, session: &Session) -> Result<Stats, IggyError> {
-        self.ensure_authenticated(session)?;
-        self.permissioner.get_stats(session.get_user_id())?;
+    pub async fn get_stats(&self, client_id: u32) -> Result<Stats, IggyError> {
+        let user_id = self.ensure_authenticated(client_id)?;
+        self.permissioner.borrow().get_stats(user_id)?;
         self.get_stats_bypass_auth().await
     }
 
@@ -34,7 +34,7 @@ impl IggyShard {
         let total_cpu_usage = sys.global_cpu_info().cpu_usage();
         let total_memory = sys.total_memory().into();
         let available_memory = sys.available_memory().into();
-        let clients_count = self.client_manager.read().await.get_clients().len() as u32;
+        let clients_count = self.client_manager.borrow().get_clients().len() as u32;
         let hostname = sysinfo::System::host_name().unwrap_or("unknown_hostname".to_string());
         let os_name = sysinfo::System::name().unwrap_or("unknown_os_name".to_string());
         let os_version =
@@ -73,7 +73,7 @@ impl IggyShard {
 
         drop(sys);
 
-        for stream in self.streams.values() {
+        for stream in self.streams.borrow().values() {
             stats.messages_count += stream.get_messages_count();
             stats.segments_count += stream.get_segments_count();
             stats.messages_size_bytes += stream.get_size();

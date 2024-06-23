@@ -1,7 +1,6 @@
 use crate::streaming::storage::{Storage, TopicStorage};
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
-use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 
@@ -15,12 +14,12 @@ impl Topic {
                 .insert(consumer_group.name.clone(), consumer_group.group_id);
             self.consumer_groups.insert(
                 consumer_group.group_id,
-                RwLock::new(ConsumerGroup::new(
+                ConsumerGroup::new(
                     self.topic_id,
                     consumer_group.group_id,
                     &consumer_group.name,
                     self.get_partitions_count(),
-                )),
+                ),
             );
         }
         Ok(())

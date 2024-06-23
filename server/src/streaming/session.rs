@@ -1,3 +1,4 @@
+use iggy::error::IggyError;
 use iggy::models::user_info::{AtomicUserId, UserId};
 use std::fmt::Display;
 use std::net::SocketAddr;
@@ -40,8 +41,12 @@ impl Session {
         self.set_user_id(0)
     }
 
-    pub fn is_authenticated(&self) -> bool {
-        self.get_user_id() > 0
+    pub fn is_authenticated(&self) -> Result<(), IggyError> {
+        if self.get_user_id() > 0 {
+            Ok(())
+        } else {
+            Err(IggyError::Unauthorized)
+        }
     }
 }
 

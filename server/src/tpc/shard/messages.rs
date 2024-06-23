@@ -1,3 +1,6 @@
+use core::borrow;
+use std::borrow::Borrow;
+
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
@@ -14,13 +17,13 @@ use super::shard::IggyShard;
 impl IggyShard {
     pub async fn poll_messages(
         &self,
-        session: &Session,
+        client_id: u32,
         consumer: PollingConsumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
         args: PollingArgs,
     ) -> Result<PolledMessages, IggyError> {
-        self.ensure_authenticated(session)?;
+        let user_id = self.ensure_authenticated(client_id)?;
         if args.count == 0 {
             return Err(IggyError::InvalidMessagesCount);
         }
@@ -28,7 +31,8 @@ impl IggyShard {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
-            .poll_messages(session.get_user_id(), stream.stream_id, topic.topic_id)?;
+            .borrow()
+            .poll_messages(user_id, stream.stream_id, topic.topic_id)?;
 
         if !topic.has_partitions() {
             return Err(IggyError::NoPartitions(topic.topic_id, topic.stream_id));
@@ -89,20 +93,18 @@ impl IggyShard {
 
     pub async fn append_messages(
         &self,
-        session: &Session,
+        client_id: u32,
         stream_id: Identifier,
         topic_id: Identifier,
         partitioning: Partitioning,
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
-        self.ensure_authenticated(session)?;
+        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(&stream_id)?;
         let topic = stream.get_topic(&topic_id)?;
-        self.permissioner.append_messages(
-            session.get_user_id(),
-            stream.stream_id,
-            topic.topic_id,
-        )?;
+        self.permissioner
+            .borrow()
+            .append_messages(user_id, stream.stream_id, topic.topic_id)?;
 
         let mut batch_size_bytes = 0;
         let mut messages = messages;

@@ -13,7 +13,7 @@ use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
 use tokio::sync::Mutex;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(Debug)]
 pub struct FileStreamStorage;
@@ -53,8 +53,13 @@ impl StreamStorage for FileStreamStorage {
             let topic_id = topic_id.unwrap();
             let topic_state = state.topics.get(&topic_id);
             if topic_state.is_none() {
-                error!("Topic with ID: '{}' for stream with ID: '{}' was not found in state, but exists on disk.",
-                          topic_id, stream.stream_id);
+                let stream_id = stream.stream_id;
+                error!("Topic with ID: '{topic_id}' for stream with ID: '{stream_id}' was not found in state, but exists on disk and will be removed.");
+                if let Err(error) = fs::remove_dir_all(&dir_entry.path()).await {
+                    error!("Cannot remove topic directory: {error}");
+                } else {
+                    warn!("Topic with ID: '{topic_id}' for stream with ID: '{stream_id}' was removed.");
+                }
                 continue;
             }
 

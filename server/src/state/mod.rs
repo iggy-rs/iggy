@@ -25,8 +25,8 @@ pub trait State: Send + Sync + Debug {
 }
 
 /// State entry in the log
-/// - `index` - Commit index of the entry in the log
-/// - `term` - Election term for replication
+/// - `index` - Index (operation number) of the entry in the log
+/// - `term` - Election term (view number) for replication
 /// - `version` - Server version based on semver as number e.g. 1.234.567 -> 1234567
 /// - `flags` - Reserved for future use
 /// - `timestamp` - Timestamp when the command was issued

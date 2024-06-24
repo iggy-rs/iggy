@@ -10,8 +10,9 @@ use iggy::utils::text;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
+use tokio::fs;
 use tokio::fs::read_dir;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 static CURRENT_STREAM_ID: AtomicU32 = AtomicU32::new(1);
 
@@ -33,14 +34,19 @@ impl System {
             let name = dir_entry.file_name().into_string().unwrap();
             let stream_id = name.parse::<u32>();
             if stream_id.is_err() {
-                error!("Invalid stream ID file with name: '{}'.", name);
+                error!("Invalid stream ID file with name: '{name}'.");
                 continue;
             }
 
             let stream_id = stream_id.unwrap();
             let stream_state = streams.iter().find(|s| s.id == stream_id);
             if stream_state.is_none() {
-                error!("Stream with ID: '{stream_id}' was not found in state, but exists on disk.");
+                error!("Stream with ID: '{stream_id}' was not found in state, but exists on disk and will be removed.");
+                if let Err(error) = fs::remove_dir_all(&dir_entry.path()).await {
+                    error!("Cannot remove stream directory: {error}");
+                } else {
+                    warn!("Stream with ID: '{stream_id}' was removed.");
+                }
                 continue;
             }
 

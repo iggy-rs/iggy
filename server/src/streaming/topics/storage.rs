@@ -16,7 +16,7 @@ use std::sync::Arc;
 use tokio::fs;
 use tokio::fs::create_dir;
 use tokio::sync::{Mutex, RwLock};
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(Debug)]
 pub struct FileTopicStorage;
@@ -81,8 +81,14 @@ impl TopicStorage for FileTopicStorage {
             let partition_id = partition_id.unwrap();
             let partition_state = state.partitions.get(&partition_id);
             if partition_state.is_none() {
-                error!("Partition with ID: '{}' for stream with ID: '{}' and topic with ID: '{}' was not found in state, but exists on disk.",
-                           partition_id, topic.topic_id, topic.stream_id);
+                let stream_id = topic.stream_id;
+                let topic_id = topic.topic_id;
+                error!("Partition with ID: '{partition_id}' for stream with ID: '{stream_id}' and topic with ID: '{topic_id}' was not found in state, but exists on disk and will be removed.");
+                if let Err(error) = fs::remove_dir_all(&dir_entry.path()).await {
+                    error!("Cannot remove partition directory: {error}");
+                } else {
+                    warn!("Partition with ID: '{partition_id}' for stream with ID: '{stream_id}' and topic with ID: '{topic_id}' was removed.");
+                }
                 continue;
             }
 

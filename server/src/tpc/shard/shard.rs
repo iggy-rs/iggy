@@ -8,12 +8,11 @@ use crate::{
     },
     tpc::{
         connector::{Receiver, ShardConnector, StopReceiver, StopSender},
-        utils::hash_string,
     },
 };
 use bytes::Bytes;
 use flume::SendError;
-use iggy::command::Command;
+use iggy::{command::Command, utils::hash::hash_string};
 use iggy::{
     error::IggyError,
     locking::IggySharedMutFn,
@@ -138,12 +137,10 @@ impl IggyShard {
 
     pub fn ensure_authenticated(&self, client_id: u32) -> Result<u32, IggyError> {
         let active_sessions = self.active_sessions.borrow();
-        println!("Active sessions: {:?}", active_sessions);
         let session = active_sessions
             .iter()
             .find(|s| s.client_id == client_id)
             .ok_or_else(|| IggyError::Unauthenticated)?;
-        println!("Session: {:?}", session);
         session
             .is_authenticated()
             .and_then(|_| Ok(session.get_user_id()))

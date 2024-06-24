@@ -49,12 +49,14 @@ impl Topic {
         Ok(partition_ids)
     }
 
-    pub async fn add_persisted_partitions(&mut self, count: u32) -> Result<Vec<u32>, IggyError> {
+    pub async fn add_persisted_partitions(&mut self, count: u32, should_persist: bool) -> Result<Vec<u32>, IggyError> {
         let partition_ids = self.add_partitions(count)?;
         for partition_id in &partition_ids {
             let partition = self.partitions.get(partition_id).unwrap();
             let partition = partition.read().await;
-            partition.persist().await?;
+            if should_persist {
+                partition.persist().await?;
+            }
         }
         Ok(partition_ids)
     }

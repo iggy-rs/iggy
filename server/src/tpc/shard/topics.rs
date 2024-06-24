@@ -3,7 +3,7 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::utils::byte_size::IggyByteSize;
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 
 use super::shard::IggyShard;
 
@@ -48,14 +48,18 @@ impl IggyShard {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: Option<u8>,
+        should_persist: bool,
     ) -> Result<(), IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(stream_id)?;
-        self.permissioner
-            .borrow()
-            .create_topic(user_id, stream.stream_id)?;
+        {
+            let stream = self.get_stream(stream_id)?;
+            self.permissioner
+                .borrow()
+                .create_topic(user_id, stream.stream_id)?;
+        }
 
-        self.get_stream_mut(stream_id)?
+        println!("ThreadId: {:?} CHECKPOINT PRINT NUMERO UNO NO DEADLOCK", std::thread::current());
+        self.get_stream_mut(stream_id)?.borrow_mut()
             .create_topic(
                 topic_id,
                 name,
@@ -64,6 +68,7 @@ impl IggyShard {
                 compression_algorithm,
                 max_topic_size,
                 replication_factor.unwrap_or(1),
+                should_persist
             )
             .await?;
         self.metrics.increment_topics(1);

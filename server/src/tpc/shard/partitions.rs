@@ -13,6 +13,7 @@ impl IggyShard {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitions_count: u32,
+        should_persist: bool,
     ) -> Result<(), IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
@@ -23,7 +24,7 @@ impl IggyShard {
 
         let mut stream = self.get_stream_mut(stream_id)?;
         let topic = stream.borrow_mut().get_topic_mut(topic_id)?;
-        topic.add_persisted_partitions(partitions_count).await?;
+        topic.add_persisted_partitions(partitions_count, should_persist).await?;
         topic.reassign_consumer_groups().await;
         self.metrics.increment_partitions(partitions_count);
         self.metrics.increment_segments(partitions_count);

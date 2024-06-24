@@ -244,7 +244,7 @@ impl IggyShard {
             }
             Command::CreateStream(command) => {
                 let CreateStream { stream_id, name } = command;
-                self.create_stream(client_id, stream_id, name.clone())
+                self.create_stream(client_id, stream_id, name.clone(), true)
                     .await?;
                 let event = ShardEvent::CreatedStream(stream_id, name);
                 self.broadcast_event_to_all_shards(client_id, event);
@@ -301,6 +301,7 @@ impl IggyShard {
                     compression_algorithm,
                     max_topic_size,
                     replication_factor,
+                    true
                 )
                 .await?;
                 let event = ShardEvent::CreatedTopic(
@@ -361,7 +362,7 @@ impl IggyShard {
                     topic_id,
                     partitions_count: count,
                 } = command;
-                self.create_partitions(client_id, &stream_id, &topic_id, count)
+                self.create_partitions(client_id, &stream_id, &topic_id, count, true)
                     .await?;
                 let event = ShardEvent::CreatedPartitions(stream_id, topic_id, count);
                 self.broadcast_event_to_all_shards(client_id, event);

@@ -4,7 +4,7 @@ use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
 use crate::tpc::shard::shard::IggyShard;
-use crate::tpc::shard::shard_frame::{ShardMessage, ShardResponse};
+use crate::tpc::shard::shard_frame::{ShardEvent, ShardMessage, ShardResponse};
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::{Command, CommandExecution, CommandExecutionOrigin};
@@ -24,6 +24,9 @@ pub(crate) async fn handle_connection(
     let client_id = shard.add_client(&address, Transport::Tcp).await;
     let session = Session::from_client_id(client_id, address);
     shard.add_active_session(session);
+    // Broadcast session to all shards.
+    let event = ShardEvent::NewSession(client_id, address);
+    shard.broadcast_event_to_all_shards(client_id, event);
     loop {
         let initial_buffer = BytesMut::with_capacity(INITIAL_BYTES_LENGTH);
         let (read_length, initial_buffer) = match sender.read(initial_buffer).await {

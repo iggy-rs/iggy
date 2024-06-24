@@ -336,9 +336,7 @@ impl IggyShard {
             self.logout_user(session.client_id).await?;
         }
 
-        println!("User id during login : {}", user.id);
         session.set_user_id(user.id);
-        println!("Session after setting user id: {:?}", session);
         let mut client_manager = self.client_manager.borrow_mut();
         client_manager
             .set_user_id(session.client_id, user.id)

@@ -35,6 +35,7 @@ flume = "0.11.0"
 humantime = "2.1.0"
 keyring = { version = "2.3.3", optional = true }
 lazy_static = "1.4.0"
+murmur3 = "0.5.2"
 openssl = { version = "0.10.64", features = ["vendored"] }
 passterm = { version = "2.0.1", optional = true }
 regex = "1.10.4"

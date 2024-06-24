@@ -2,7 +2,7 @@ use iggy::error::IggyError;
 use iggy::models::user_info::{AtomicUserId, UserId};
 use std::fmt::Display;
 use std::net::SocketAddr;
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 // This might be extended with more fields in the future e.g. custom name, permissions etc.
 #[derive(Debug)]

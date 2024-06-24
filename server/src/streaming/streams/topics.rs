@@ -24,6 +24,7 @@ impl Stream {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
+        should_persist: bool,
     ) -> Result<(), IggyError> {
         let name = name.to_lowercase_non_whitespace();
         if self.topics_ids.contains_key(&name) {
@@ -67,7 +68,9 @@ impl Stream {
             max_topic_size,
             replication_factor,
         )?;
-        topic.persist().await?;
+        if should_persist {
+            topic.persist().await?;
+        }
         info!("Created topic {}", topic);
         self.topics_ids.insert(name, id);
         self.topics.insert(id, topic);

@@ -1,3 +1,5 @@
+use std::net::SocketAddr;
+
 use async_channel::Sender;
 use bytes::Bytes;
 use iggy::command::Command;
@@ -27,6 +29,7 @@ pub enum ShardEvent {
         Option<u8>,
     ),
     LoginUser(String, String),
+    NewSession(u32, SocketAddr),
 }
 
 #[derive(Debug)]

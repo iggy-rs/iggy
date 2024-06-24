@@ -169,12 +169,9 @@ impl IggyShard {
         client_id: u32,
         stream_id: Option<u32>,
         name: String,
+        should_persist: bool,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id);
-        if user_id.is_err() {
-            info!("User is not authenticated when creating stream.");
-        }
-        let user_id = user_id?;
+        let user_id = self.ensure_authenticated(client_id)?;
         self.permissioner.borrow().create_stream(user_id)?;
         let name = name.to_lowercase_non_whitespace();
         if self.streams_ids.borrow().contains_key(&name) {
@@ -203,11 +200,13 @@ impl IggyShard {
         }
 
         let stream = Stream::create(id, &name, self.config.system.clone(), self.storage.clone());
-        stream.persist().await?;
-        info!("Created stream with ID: {id}, name: '{name}'.");
-        self.streams_ids.borrow_mut().insert(name, stream.stream_id);
+        if should_persist {
+            stream.persist().await?;
+        }
+        self.streams_ids.borrow_mut().insert(name.clone(), stream.stream_id);
         self.streams.borrow_mut().insert(stream.stream_id, stream);
         self.metrics.increment_streams(1);
+        info!("Created stream with ID: {id}, name: '{name}'.");
         Ok(())
     }
 

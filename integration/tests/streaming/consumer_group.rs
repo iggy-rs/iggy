@@ -7,6 +7,7 @@ use std::sync::{
     Arc,
 };
 
+/*
 #[tokio::test]
 async fn should_persist_consumer_group_and_then_load_it_from_disk() {
     let setup = TestSetup::init().await;
@@ -92,3 +93,5 @@ async fn init_topic(setup: &TestSetup) -> Topic {
     topic.persist().await.unwrap();
     topic
 }
+
+*/

@@ -20,7 +20,7 @@ static USER_ID: AtomicU32 = AtomicU32::new(1);
 const MAX_USERS: usize = u32::MAX as usize;
 
 impl IggyShard {
-    pub(crate) async fn load_users(&mut self) -> Result<(), IggyError> {
+    pub(crate) async fn load_users(&self) -> Result<(), IggyError> {
         info!("Loading users...");
         let mut users = self.storage.user.load_all().await?;
         if users.is_empty() {
@@ -316,16 +316,17 @@ impl IggyShard {
         }
 
         info!("Logged in user: {username} with ID: {}.", user.id);
-        if self.ensure_authenticated(client_id).is_err() {
-            return Ok(user);
-        }
-
         // TODO - maybe this can be solved better ?
         let active_sessions = self.active_sessions.borrow();
         let session = active_sessions
             .iter()
             .find(|s| s.client_id == client_id)
             .expect(format!("At this point session for {}, should exist.", client_id).as_str());
+        if self.ensure_authenticated(client_id).is_err() {
+            session.set_user_id(user.id);
+            return Ok(user);
+        }
+
         if session.is_authenticated().is_ok() {
             warn!(
                 "User: {} with ID: {} was already authenticated, removing the previous session...",
@@ -335,7 +336,9 @@ impl IggyShard {
             self.logout_user(session.client_id).await?;
         }
 
+        println!("User id during login : {}", user.id);
         session.set_user_id(user.id);
+        println!("Session after setting user id: {:?}", session);
         let mut client_manager = self.client_manager.borrow_mut();
         client_manager
             .set_user_id(session.client_id, user.id)

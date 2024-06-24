@@ -41,6 +41,7 @@ use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
 
 use super::messages::PollingArgs;
+use super::shard_frame::ShardEvent;
 
 impl IggyShard {
     pub async fn handle_command(
@@ -130,8 +131,12 @@ impl IggyShard {
             }
             Command::LoginUser(command) => {
                 let LoginUser { username, password } = command;
-                let user = self.login_user(username, password, client_id).await?;
+                let user = self
+                    .login_user(username.clone(), password.clone(), client_id)
+                    .await?;
                 let bytes = mapper::map_identity_info(user.id);
+                let event = ShardEvent::LoginUser(username, password);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             Command::LogoutUser(_) => {
@@ -239,7 +244,10 @@ impl IggyShard {
             }
             Command::CreateStream(command) => {
                 let CreateStream { stream_id, name } = command;
-                self.create_stream(client_id, stream_id, name).await?;
+                self.create_stream(client_id, stream_id, name.clone())
+                    .await?;
+                let event = ShardEvent::CreatedStream(stream_id, name);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             Command::DeleteStream(command) => {
@@ -287,7 +295,7 @@ impl IggyShard {
                     client_id,
                     &stream_id,
                     topic_id,
-                    name,
+                    name.clone(),
                     partitions_count,
                     message_expiry,
                     compression_algorithm,
@@ -295,6 +303,17 @@ impl IggyShard {
                     replication_factor,
                 )
                 .await?;
+                let event = ShardEvent::CreatedTopic(
+                    stream_id,
+                    topic_id,
+                    name,
+                    partitions_count,
+                    message_expiry,
+                    compression_algorithm,
+                    max_topic_size,
+                    replication_factor,
+                );
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             Command::DeleteTopic(command) => {
@@ -344,6 +363,8 @@ impl IggyShard {
                 } = command;
                 self.create_partitions(client_id, &stream_id, &topic_id, count)
                     .await?;
+                let event = ShardEvent::CreatedPartitions(stream_id, topic_id, count);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             Command::DeletePartitions(command) => {

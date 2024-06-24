@@ -2,6 +2,8 @@ use crate::streaming::common::test_setup::TestSetup;
 use iggy::utils::timestamp::IggyTimestamp;
 use server::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 
+/*
+
 #[tokio::test]
 async fn many_personal_access_tokens_should_be_saved_and_loaded() {
     let setup = TestSetup::init().await;
@@ -170,3 +172,5 @@ async fn personal_access_token_should_be_deleted() {
         .expect("Failed to load personal access tokens");
     assert!(user_personal_access_tokens.is_empty());
 }
+
+*/

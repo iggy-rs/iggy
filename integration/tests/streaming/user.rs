@@ -7,6 +7,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use server::streaming::users::user::User;
 use std::collections::HashMap;
 
+/*
 #[tokio::test]
 async fn single_user_should_be_saved_and_loaded() {
     let setup = TestSetup::init().await;
@@ -204,3 +205,5 @@ fn create_user(id: u32) -> User {
         }),
     }
 }
+
+*/

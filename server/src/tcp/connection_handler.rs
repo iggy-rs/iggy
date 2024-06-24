@@ -1,9 +1,10 @@
 use crate::binary::sender::Sender;
+use crate::handle_response;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
 use crate::tpc::shard::shard::IggyShard;
-use crate::tpc::shard::shard_frame::ShardResponse;
+use crate::tpc::shard::shard_frame::{ShardMessage, ShardResponse};
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::{Command, CommandExecution, CommandExecutionOrigin};
@@ -62,19 +63,19 @@ pub(crate) async fn handle_connection(
         };
 
         match command.get_command_execution_origin() {
-            CommandExecution::Direct => {}
+            CommandExecution::Direct => {
+                let message = ShardMessage::Command(command);
+                let response = shard
+                    .handle_shard_message(client_id, message)
+                    .await
+                    .expect("Failed to handle a shard command for direct request execution, it should always return a response.");
+                handle_response!(sender, response);
+            }
             CommandExecution::Routed(cmd_hash) => {
-                match shard
+                let response = shard
                     .send_request_to_shard(client_id, cmd_hash, command)
-                    .await?
-                {
-                    ShardResponse::BinaryResponse(payload) => {
-                        sender.send_ok_response(&payload).await?;
-                    }
-                    ShardResponse::ErrorResponse(err) => {
-                        sender.send_error_response(err).await?;
-                    }
-                }
+                    .await?;
+                handle_response!(sender, response);
             }
         }
 

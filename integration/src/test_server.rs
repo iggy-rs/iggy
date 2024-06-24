@@ -288,7 +288,7 @@ impl TestServer {
                     sleep(Duration::from_millis(SLEEP_INTERVAL_MS));
                     continue;
                 }
-                match file_config_provider.load_config().await {
+                match file_config_provider.load_config() {
                     Ok(config) => {
                         loaded_config = Some(config);
                         break;

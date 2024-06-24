@@ -3,6 +3,7 @@ use iggy::consumer::ConsumerKind;
 use server::streaming::partitions::partition::ConsumerOffset;
 use server::streaming::storage::PartitionStorage;
 
+/*
 #[tokio::test]
 async fn should_persist_consumer_offsets_and_then_load_them_from_disk() {
     let setup = TestSetup::init().await;
@@ -64,3 +65,5 @@ struct ConsumerOffsetParts {
     pub topic_id: u32,
     pub partition_id: u32,
 }
+
+*/

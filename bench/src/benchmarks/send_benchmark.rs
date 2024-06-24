@@ -56,7 +56,7 @@ impl Benchmarkable for SendMessagesBenchmark {
                 message_size,
                 warmup_time,
             );
-            let future = Box::pin(producer.run());
+            let future = Box::pin(async move { producer.run().await });
             futures.as_mut().unwrap().push(future);
         }
         info!("Created {} client(s).", clients_count);

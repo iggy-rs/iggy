@@ -74,7 +74,7 @@ pub async fn shard_executor(shard: Rc<IggyShard>, is_prime_thread: bool) -> Resu
     // loads streams and starts accepting connections. This is necessary to
     // have the correct statistics when the server starts.
     shard.get_stats_bypass_auth().await?;
-    //shard.init().await?;
+    shard.init().await?;
     // Create all tasks (tcp listener, http listener, command processor, in the future also the background jobs).
     let mut tasks: Vec<Task> = vec![Box::pin(spawn_shard_message_task(shard.clone()))];
     if shard.config.tcp.enabled {

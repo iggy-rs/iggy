@@ -39,7 +39,7 @@ pub struct SemanticVersion {
 }
 
 impl IggyShard {
-    pub(crate) async fn load_version(&mut self) -> Result<(), IggyError> {
+    pub(crate) async fn load_version(&self) -> Result<(), IggyError> {
         info!("Loading system info...");
         let mut system_info = SystemInfo::default();
         if let Err(err) = self.storage.info.load(&mut system_info).await {

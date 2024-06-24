@@ -16,7 +16,18 @@ async fn run_shard_messages_receiver(shard: Rc<IggyShard>) -> Result<(), IggyErr
                 message,
                 response_sender,
             } = frame;
-            shard.handle_shard_message(client_id, message).await
+            match (
+                shard.handle_shard_message(client_id, message).await,
+                response_sender,
+            ) {
+                (Some(response), Some(response_sender)) => {
+                    response_sender
+                        .send(response)
+                        .await
+                        .expect("Failed to send response back to origin shard.");
+                }
+                _ => {}
+            };
         }
     }
 }

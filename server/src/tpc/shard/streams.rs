@@ -17,7 +17,7 @@ use super::shard::IggyShard;
 static CURRENT_STREAM_ID: AtomicU32 = AtomicU32::new(1);
 
 impl IggyShard {
-    pub(crate) async fn load_streams(&mut self) -> Result<(), IggyError> {
+    pub(crate) async fn load_streams(&self) -> Result<(), IggyError> {
         info!("Loading streams from disk...");
         let mut unloaded_streams = Vec::new();
         let dir_entries = std::fs::read_dir(&self.config.system.get_streams_path());
@@ -170,7 +170,11 @@ impl IggyShard {
         stream_id: Option<u32>,
         name: String,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
+        let user_id = self.ensure_authenticated(client_id);
+        if user_id.is_err() {
+            info!("User is not authenticated when creating stream.");
+        }
+        let user_id = user_id?;
         self.permissioner.borrow().create_stream(user_id)?;
         let name = name.to_lowercase_non_whitespace();
         if self.streams_ids.borrow().contains_key(&name) {

@@ -14,7 +14,7 @@ async fn scenario_parsing_from_file(extension: &str) {
         config_path
     );
     assert!(
-        config_provider.load_config().await.is_ok(),
+        config_provider.load_config().is_ok(),
         "ConfigProvider failed to parse config from {}",
         config_path
     );
@@ -54,7 +54,6 @@ async fn validate_custom_env_provider() {
     let file_config_provider = FileConfigProvider::new(config_path.as_path().display().to_string());
     let config = file_config_provider
         .load_config()
-        .await
         .expect("Failed to load default server.toml config");
 
     assert_eq!(config.system.database.path, expected_database_path);

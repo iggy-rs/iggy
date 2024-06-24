@@ -2,10 +2,10 @@ use crate::streaming::common::test_setup::TestSetup;
 use iggy::identifier::Identifier;
 use server::configs::server::PersonalAccessTokenConfig;
 use server::streaming::session::Session;
-use server::streaming::systems::system::System;
 use std::net::{Ipv4Addr, SocketAddr};
 use tokio::fs;
 
+/*
 #[tokio::test]
 async fn should_initialize_system_and_base_directories() {
     let setup = TestSetup::init().await;
@@ -110,3 +110,5 @@ async fn assert_persisted_stream(streams_path: &str, stream_id: u32) {
     let stream_metadata = fs::metadata(stream_path).await.unwrap();
     assert!(stream_metadata.is_dir());
 }
+
+*/

@@ -1,4 +1,4 @@
-use super::shard_frame::{ShardFrame, ShardMessage, ShardResponse};
+use super::shard_frame::{ShardEvent, ShardFrame, ShardMessage, ShardResponse};
 use crate::{
     configs::server::ServerConfig,
     streaming::{
@@ -11,6 +11,7 @@ use crate::{
         utils::hash_string,
     },
 };
+use bytes::Bytes;
 use flume::SendError;
 use iggy::command::Command;
 use iggy::{
@@ -48,7 +49,7 @@ impl Shard {
         let (sender, receiver) = async_channel::bounded(1);
         self.connection
             .sender
-            .send(ShardFrame::new(client_id, message, sender.clone())); // Apparently sender needs to be cloned, otherwise channel will close...
+            .send(ShardFrame::new(client_id, message, Some(sender.clone()))); // Apparently sender needs to be cloned, otherwise channel will close...
         let response = receiver.recv().await?;
         Ok(response)
     }
@@ -112,7 +113,7 @@ impl IggyShard {
         }
     }
 
-    pub async fn init(&mut self) -> Result<(), IggyError> {
+    pub async fn init(&self) -> Result<(), IggyError> {
         info!(
             "Initializing system, data will be stored at: {}",
             self.config.system.get_system_path()
@@ -137,13 +138,37 @@ impl IggyShard {
 
     pub fn ensure_authenticated(&self, client_id: u32) -> Result<u32, IggyError> {
         let active_sessions = self.active_sessions.borrow();
+        println!("Active sessions: {:?}", active_sessions);
         let session = active_sessions
             .iter()
             .find(|s| s.client_id == client_id)
             .ok_or_else(|| IggyError::Unauthenticated)?;
+        println!("Session: {:?}", session);
         session
             .is_authenticated()
             .and_then(|_| Ok(session.get_user_id()))
+    }
+
+    pub fn broadcast_event_to_all_shards(&self, client_id: u32, event: ShardEvent) {
+        let connections = self
+            .shards
+            .iter()
+            .filter_map(|shard| {
+                if shard.hash != self.hash {
+                    Some(shard.connection.clone())
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+
+        let _ = connections
+            .iter()
+            .map(|connection| {
+                let message = ShardMessage::Event(event.clone());
+                connection.send(ShardFrame::new(client_id, message, None));
+            })
+            .collect::<Vec<_>>();
     }
 
     pub async fn send_request_to_shard(
@@ -165,12 +190,23 @@ impl IggyShard {
             .unwrap_or_else(|| self.shards.last().unwrap())
     }
 
-    pub async fn handle_shard_message(&self, client_id: u32, message: ShardMessage) {
+    pub async fn handle_shard_message(
+        &self,
+        client_id: u32,
+        message: ShardMessage,
+    ) -> Option<ShardResponse> {
         match message {
-            ShardMessage::Command(cmd) => {
-                let response = self.handle_command(client_id, cmd).await;
+            ShardMessage::Command(cmd) => match self.handle_command(client_id, cmd).await {
+                Ok(response) => Some(response),
+                Err(err) => Some(ShardResponse::ErrorResponse(err)),
+            },
+            // TODO - make this panic message richer.
+            ShardMessage::Event(event) => {
+                self.handle_event(client_id, event)
+                    .await
+                    .expect("Failed to handle an event on shard");
+                None
             }
-            ShardMessage::Event => {}
         }
     }
 

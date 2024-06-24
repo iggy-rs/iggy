@@ -1,5 +1,5 @@
 use server::configs::system::SystemConfig;
-use server::streaming::persistence::persister::FilePersister;
+use server::streaming::persistence::persister::{FilePersister, StoragePersister};
 use server::streaming::storage::SystemStorage;
 use sled::Db;
 use std::sync::Arc;
@@ -22,7 +22,7 @@ impl TestSetup {
 
         let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();
-        let persister = FilePersister {};
+        let persister = StoragePersister::File(FilePersister {});
         let db = Arc::new(sled::open(config.get_database_path()).unwrap());
         let storage = Arc::new(SystemStorage::new(db.clone(), Arc::new(persister)));
         TestSetup {

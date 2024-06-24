@@ -1,7 +1,8 @@
 pub mod clients;
+pub mod cmd_handler;
 pub mod consumer_groups;
 pub mod consumer_offsets;
-pub mod handler;
+pub mod event_handler;
 pub mod info;
 pub mod messages;
 pub mod partitions;

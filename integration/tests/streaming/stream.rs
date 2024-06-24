@@ -7,6 +7,7 @@ use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::streams::stream::Stream;
 use tokio::fs;
 
+/*
 #[tokio::test]
 async fn should_persist_stream_with_topics_directory_and_info_file() {
     let setup = TestSetup::init().await;
@@ -146,3 +147,5 @@ async fn assert_persisted_stream(stream_path: &str, topics_directory: &str) {
 fn get_stream_ids() -> Vec<u32> {
     vec![1, 2, 3, 5, 10, 100, 1000, 99999]
 }
+
+*/

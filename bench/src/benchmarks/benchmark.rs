@@ -14,6 +14,7 @@ use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use integration::test_server::{login_root, ClientFactory};
 use std::{pin::Pin, sync::Arc};
 use tracing::info;
@@ -90,7 +91,7 @@ pub trait Benchmarkable {
                         None,
                         None,
                         IggyExpiry::NeverExpire,
-                        None,
+                        MaxTopicSize::ServerDefault,
                     )
                     .await?;
             }

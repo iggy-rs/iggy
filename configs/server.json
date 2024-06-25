@@ -34,7 +34,6 @@
         "iggy.rs"
       ],
       "access_token_expiry": "1 h",
-      "refresh_token_expiry": "1 d",
       "clock_skew": "5 s",
       "not_before": "0 s",
       "encoding_secret": "top_secret$iggy.rs$_jwt_HS256_key#!",
@@ -94,9 +93,6 @@
   },
   "system": {
     "path": "local_data",
-    "database": {
-      "path": "database"
-    },
     "backup": {
       "path": "backup",
       "compatibility": {
@@ -118,7 +114,7 @@
       "size": "4 GB"
     },
     "retention_policy": {
-      "message_expiry": "disabled",
+      "message_expiry": "none",
       "max_topic_size": "10 GB"
     },
     "encryption": {

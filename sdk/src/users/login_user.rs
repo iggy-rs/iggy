@@ -19,6 +19,10 @@ pub struct LoginUser {
     pub username: String,
     /// Password, must be between 3 and 100 characters long.
     pub password: String,
+    // Version metadata added by SDK.
+    pub version: Option<String>,
+    // Context metadata added by SDK.
+    pub context: Option<String>,
 }
 
 impl CommandPayload for LoginUser {}
@@ -28,6 +32,8 @@ impl Default for LoginUser {
         LoginUser {
             username: "user".to_string(),
             password: "secret".to_string(),
+            version: None,
+            context: None,
         }
     }
 }
@@ -65,6 +71,24 @@ impl BytesSerializable for LoginUser {
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.password.len() as u8);
         bytes.put_slice(self.password.as_bytes());
+        match &self.version {
+            Some(version) => {
+                bytes.put_u32_le(version.len() as u32);
+                bytes.put_slice(version.as_bytes());
+            }
+            None => {
+                bytes.put_u32_le(0);
+            }
+        }
+        match &self.context {
+            Some(context) => {
+                bytes.put_u32_le(context.len() as u32);
+                bytes.put_slice(context.as_bytes());
+            }
+            None => {
+                bytes.put_u32_le(0);
+            }
+        }
         bytes.freeze()
     }
 
@@ -89,7 +113,35 @@ impl BytesSerializable for LoginUser {
             return Err(IggyError::InvalidCommand);
         }
 
-        let command = LoginUser { username, password };
+        let position = 2 + username_length as usize + password_length as usize;
+        let version_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let version = match version_length {
+            0 => None,
+            _ => {
+                let version =
+                    from_utf8(&bytes[position + 4..position + 4 + version_length as usize])?
+                        .to_string();
+                Some(version)
+            }
+        };
+        let position = position + 4 + version_length as usize;
+        let context_length = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
+        let context = match context_length {
+            0 => None,
+            _ => {
+                let context =
+                    from_utf8(&bytes[position + 4..position + 4 + context_length as usize])?
+                        .to_string();
+                Some(context)
+            }
+        };
+
+        let command = LoginUser {
+            username,
+            password,
+            version,
+            context,
+        };
         command.validate()?;
         Ok(command)
     }
@@ -110,6 +162,8 @@ mod tests {
         let command = LoginUser {
             username: "user".to_string(),
             password: "secret".to_string(),
+            version: Some("1.0.0".to_string()),
+            context: Some("test".to_string()),
         };
 
         let bytes = command.as_bytes();
@@ -121,16 +175,34 @@ mod tests {
                 ..2 + username_length as usize + password_length as usize],
         )
         .unwrap();
+        let position = 2 + username_length as usize + password_length as usize;
+        let version_length = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
+        let version = Some(
+            from_utf8(&bytes[position + 4..position + 4 + version_length as usize])
+                .unwrap()
+                .to_string(),
+        );
+        let position = position + 4 + version_length as usize;
+        let context_length = u32::from_le_bytes(bytes[position..position + 4].try_into().unwrap());
+        let context = Some(
+            from_utf8(&bytes[position + 4..position + 4 + context_length as usize])
+                .unwrap()
+                .to_string(),
+        );
 
         assert!(!bytes.is_empty());
         assert_eq!(username, command.username);
         assert_eq!(password, command.password);
+        assert_eq!(version, command.version);
+        assert_eq!(context, command.context);
     }
 
     #[test]
     fn should_be_deserialized_from_bytes() {
         let username = "user";
         let password = "secret";
+        let version = "1.0.0".to_string();
+        let context = "test".to_string();
         let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(username.len() as u8);
@@ -138,11 +210,17 @@ mod tests {
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(password.len() as u8);
         bytes.put_slice(password.as_bytes());
+        bytes.put_u32_le(version.len() as u32);
+        bytes.put_slice(version.as_bytes());
+        bytes.put_u32_le(context.len() as u32);
+        bytes.put_slice(context.as_bytes());
         let command = LoginUser::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.username, username);
         assert_eq!(command.password, password);
+        assert_eq!(command.version, Some(version));
+        assert_eq!(command.context, Some(context));
     }
 }

@@ -3,6 +3,7 @@ use crate::command::CommandPayload;
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
+use crate::utils::timestamp::IggyTimestamp;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -142,10 +143,10 @@ impl PollingStrategy {
     }
 
     /// Poll messages from the specified timestamp.
-    pub fn timestamp(value: u64) -> Self {
+    pub fn timestamp(value: IggyTimestamp) -> Self {
         Self {
             kind: PollingKind::Timestamp,
-            value,
+            value: value.into(),
         }
     }
 

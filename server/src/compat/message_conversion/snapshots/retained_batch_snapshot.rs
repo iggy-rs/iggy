@@ -1,14 +1,15 @@
 use super::message_snapshot::MessageSnapshot;
-use crate::compat::message_converter::Extendable;
+use crate::compat::message_conversion::message_converter::Extendable;
 use crate::server_error::ServerError;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::error::IggyError;
+use iggy::utils::timestamp::IggyTimestamp;
 
 pub struct RetainedMessageBatchSnapshot {
     pub base_offset: u64,
     pub last_offset_delta: u32,
-    pub max_timestamp: u64,
+    pub max_timestamp: IggyTimestamp,
     pub length: u32,
     pub bytes: Bytes,
 }
@@ -17,7 +18,7 @@ impl RetainedMessageBatchSnapshot {
     pub fn new(
         base_offset: u64,
         last_offset_delta: u32,
-        max_timestamp: u64,
+        max_timestamp: IggyTimestamp,
         length: u32,
         bytes: Bytes,
     ) -> RetainedMessageBatchSnapshot {
@@ -71,7 +72,7 @@ impl Extendable for RetainedMessageBatchSnapshot {
         bytes.put_u64_le(self.base_offset);
         bytes.put_u32_le(self.length);
         bytes.put_u32_le(self.last_offset_delta);
-        bytes.put_u64_le(self.max_timestamp);
+        bytes.put_u64_le(self.max_timestamp.into());
         bytes.put_slice(&self.bytes);
     }
 }
@@ -132,7 +133,7 @@ impl TryFrom<Bytes> for RetainedMessageBatchSnapshot {
         Ok(RetainedMessageBatchSnapshot {
             base_offset,
             last_offset_delta,
-            max_timestamp,
+            max_timestamp: max_timestamp.into(),
             length,
             bytes,
         })

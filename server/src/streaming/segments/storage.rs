@@ -6,7 +6,7 @@ use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
-use crate::streaming::storage::{SegmentStorage, Storage};
+use crate::streaming::storage::SegmentStorage;
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
@@ -15,6 +15,7 @@ use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::checksum;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::io::SeekFrom;
 use std::path::Path;
 use std::sync::atomic::Ordering;
@@ -42,9 +43,8 @@ impl FileSegmentStorage {
 unsafe impl Send for FileSegmentStorage {}
 unsafe impl Sync for FileSegmentStorage {}
 
-// TODO: Split into smaller components.
 #[async_trait]
-impl Storage<Segment> for FileSegmentStorage {
+impl SegmentStorage for FileSegmentStorage {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError> {
         info!(
             "Loading segment from disk for start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {} ...",
@@ -208,10 +208,7 @@ impl Storage<Segment> for FileSegmentStorage {
         );
         Ok(())
     }
-}
 
-#[async_trait]
-impl SegmentStorage for FileSegmentStorage {
     async fn load_message_batches(
         &self,
         segment: &Segment,
@@ -448,7 +445,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn try_load_time_index_for_timestamp(
         &self,
         segment: &Segment,
-        timestamp: u64,
+        timestamp: IggyTimestamp,
     ) -> Result<Option<TimeIndex>, IggyError> {
         trace!("Loading time indexes from file...");
         let file = file::open(&segment.time_index_path).await?;
@@ -463,13 +460,13 @@ impl SegmentStorage for FileSegmentStorage {
         let mut idx_pred = HeadTailBuffer::new();
         loop {
             let offset = reader.read_u32_le().await?;
-            let time = reader.read_u64_le().await?;
+            let time = reader.read_u64_le().await?.into();
             let idx = TimeIndex {
                 relative_offset: offset,
                 timestamp: time,
             };
             idx_pred.push(idx);
-            if time >= timestamp {
+            if time.to_micros() >= timestamp.to_micros() {
                 return Ok(idx_pred.tail());
             }
             read_bytes += TIME_INDEX_SIZE as usize;
@@ -499,13 +496,17 @@ impl SegmentStorage for FileSegmentStorage {
                 );
                 error
             })?;
-            let timestamp = reader.read_u64().await.map_err(|error| {
-                error!(
-                    "Cannot read timestamp from index file for offset: {}. Error: {}",
-                    offset, &error
-                );
-                error
-            })?;
+            let timestamp = reader
+                .read_u64()
+                .await
+                .map_err(|error| {
+                    error!(
+                        "Cannot read timestamp from index file for offset: {}. Error: {}",
+                        offset, &error
+                    );
+                    error
+                })?
+                .into();
             indexes.push(TimeIndex {
                 relative_offset: offset,
                 timestamp,
@@ -540,7 +541,7 @@ impl SegmentStorage for FileSegmentStorage {
         file.seek(SeekFrom::Start(last_index_position as u64))
             .await?;
         let index_offset = file.read_u32_le().await?;
-        let timestamp = file.read_u64_le().await?;
+        let timestamp = file.read_u64_le().await?.into();
         let index = TimeIndex {
             relative_offset: index_offset,
             timestamp,
@@ -603,7 +604,8 @@ async fn load_batches_by_range(
         let max_timestamp = reader
             .read_u64_le()
             .await
-            .map_err(|_| IggyError::CannotReadMaxTimestamp)?;
+            .map_err(|_| IggyError::CannotReadMaxTimestamp)?
+            .into();
 
         let last_offset = batch_base_offset + (last_offset_delta as u64);
         let index_last_offset = index_range.end.relative_offset as u64 + segment.start_offset;
@@ -662,7 +664,8 @@ async fn load_messages_by_size(
         let max_timestamp = reader
             .read_u64_le()
             .await
-            .map_err(|_| IggyError::CannotReadMaxTimestamp)?;
+            .map_err(|_| IggyError::CannotReadMaxTimestamp)?
+            .into();
 
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);

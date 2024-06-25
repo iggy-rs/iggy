@@ -5,6 +5,7 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::users::defaults::*;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
@@ -53,7 +54,7 @@ async fn init_system(client: &IggyClient) {
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
     {

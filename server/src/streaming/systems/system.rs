@@ -10,7 +10,6 @@ use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::permissioner::Permissioner;
 use iggy::error::IggyError;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
-use sled::Db;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -18,8 +17,15 @@ use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
 use tracing::{info, trace};
 
+use crate::compat;
+use crate::state::file::FileState;
+use crate::state::system::SystemState;
+use crate::state::State;
+use crate::streaming::users::user::User;
+use crate::versioning::SemanticVersion;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
+use iggy::models::user_info::UserId;
 use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
 
 #[derive(Debug)]
@@ -57,11 +63,12 @@ pub struct System {
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) streams: HashMap<u32, Stream>,
     pub(crate) streams_ids: HashMap<String, u32>,
+    pub(crate) users: HashMap<UserId, User>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: IggySharedMut<ClientManager>,
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
-    pub(crate) db: Option<Arc<Db>>,
+    pub(crate) state: Arc<dyn State>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
 
@@ -70,29 +77,21 @@ pub struct System {
 const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 
 impl System {
-    pub fn new(
-        config: Arc<SystemConfig>,
-        db: Option<Arc<Db>>,
-        pat_config: PersonalAccessTokenConfig,
-    ) -> System {
-        let db = match db {
-            Some(db) => db,
-            None => {
-                let db = sled::open(config.get_database_path());
-                if db.is_err() {
-                    panic!("Cannot open database at: {}", config.get_database_path());
-                }
-                Arc::new(db.unwrap())
-            }
-        };
+    pub fn new(config: Arc<SystemConfig>, pat_config: PersonalAccessTokenConfig) -> System {
+        let version = SemanticVersion::current().expect("Invalid version");
         let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
         };
+        let state = Arc::new(FileState::new(
+            &config.get_state_log_path(),
+            &version,
+            persister.clone(),
+        ));
         Self::create(
-            config,
-            SystemStorage::new(db.clone(), persister),
-            Some(db),
+            config.clone(),
+            SystemStorage::new(config, persister),
+            state,
             pat_config,
         )
     }
@@ -100,7 +99,7 @@ impl System {
     pub fn create(
         config: Arc<SystemConfig>,
         storage: SystemStorage,
-        db: Option<Arc<Db>>,
+        state: Arc<dyn State>,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         info!(
@@ -121,16 +120,21 @@ impl System {
             client_manager: IggySharedMut::new(ClientManager::default()),
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),
-            db,
+            users: HashMap::new(),
+            state,
             personal_access_token: pat_config,
         }
     }
 
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let system_path = self.config.get_system_path();
-
         if !Path::new(&system_path).exists() && create_dir(&system_path).await.is_err() {
             return Err(IggyError::CannotCreateBaseDirectory(system_path));
+        }
+
+        let state_path = self.config.get_state_path();
+        if !Path::new(&state_path).exists() && create_dir(&state_path).await.is_err() {
+            return Err(IggyError::CannotCreateStateDirectory(state_path));
         }
 
         let streams_path = self.config.get_streams_path();
@@ -151,10 +155,24 @@ impl System {
             "Initializing system, data will be stored at: {}",
             self.config.get_system_path()
         );
+
+        if self.config.database.is_some() {
+            compat::storage_conversion::init(
+                self.config.clone(),
+                self.state.clone(),
+                self.storage.clone(),
+            )
+            .await?;
+        }
+
+        let state_entries = self.state.init().await?;
+        let system_state = SystemState::init(state_entries).await?;
         let now = Instant::now();
         self.load_version().await?;
-        self.load_users().await?;
-        self.load_streams().await?;
+        self.load_users(system_state.users.into_values().collect())
+            .await?;
+        self.load_streams(system_state.streams.into_values().collect())
+            .await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
     }

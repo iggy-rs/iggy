@@ -36,7 +36,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
                 CREATE_PERSONAL_ACCESS_TOKEN_CODE,
                 CreatePersonalAccessToken {
                     name: name.to_string(),
-                    expiry: expiry.into(),
+                    expiry,
                 }
                 .as_bytes(),
             )

@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
+use crate::utils::timestamp::IggyTimestamp;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -45,7 +46,7 @@ pub struct PolledMessage {
     /// The state of the message.
     pub state: MessageState,
     /// The timestamp of the message.
-    pub timestamp: u64,
+    pub timestamp: IggyTimestamp,
     /// The identifier of the message.
     pub id: u128,
     /// The checksum of the message, can be used to verify the integrity of the message.
@@ -125,7 +126,7 @@ impl PolledMessage {
     /// Creates a new message from the `Message` struct being part of `SendMessages` command.
     /// Creates a new message without a specified offset.
     pub fn empty(
-        timestamp: u64,
+        timestamp: IggyTimestamp,
         state: MessageState,
         id: u128,
         payload: Bytes,
@@ -139,7 +140,7 @@ impl PolledMessage {
     pub fn create(
         offset: u64,
         state: MessageState,
-        timestamp: u64,
+        timestamp: IggyTimestamp,
         id: u128,
         payload: Bytes,
         checksum: u32,
@@ -168,7 +169,7 @@ impl PolledMessage {
     pub fn extend(&self, bytes: &mut BytesMut) {
         bytes.put_u64_le(self.offset);
         bytes.put_u8(self.state.as_code());
-        bytes.put_u64_le(self.timestamp);
+        bytes.put_u64_le(self.timestamp.into());
         bytes.put_u128_le(self.id);
         bytes.put_u32_le(self.checksum);
         if let Some(headers) = &self.headers {

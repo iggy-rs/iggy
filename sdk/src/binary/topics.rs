@@ -16,8 +16,8 @@ use crate::topics::get_topic::GetTopic;
 use crate::topics::get_topics::GetTopics;
 use crate::topics::purge_topic::PurgeTopic;
 use crate::topics::update_topic::UpdateTopic;
-use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
+use crate::utils::topic_size::MaxTopicSize;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> TopicClient for B {
@@ -63,7 +63,7 @@ impl<B: BinaryClient> TopicClient for B {
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
         self.send_with_response(
@@ -75,7 +75,7 @@ impl<B: BinaryClient> TopicClient for B {
                 compression_algorithm,
                 replication_factor,
                 topic_id,
-                message_expiry: message_expiry.into(),
+                message_expiry,
                 max_topic_size,
             }
             .as_bytes(),
@@ -92,7 +92,7 @@ impl<B: BinaryClient> TopicClient for B {
         compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         message_expiry: IggyExpiry,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
         self.send_with_response(
@@ -103,7 +103,7 @@ impl<B: BinaryClient> TopicClient for B {
                 name: name.to_string(),
                 compression_algorithm,
                 replication_factor,
-                message_expiry: message_expiry.into(),
+                message_expiry,
                 max_topic_size,
             }
             .as_bytes(),

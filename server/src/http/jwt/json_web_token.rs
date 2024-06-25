@@ -28,10 +28,8 @@ pub struct RevokedAccessToken {
 }
 
 #[derive(Debug)]
-pub struct GeneratedTokens {
+pub struct GeneratedToken {
     pub user_id: UserId,
     pub access_token: String,
     pub access_token_expiry: u64,
-    pub refresh_token: String,
-    pub refresh_token_expiry: u64,
 }

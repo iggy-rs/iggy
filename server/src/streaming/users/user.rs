@@ -1,18 +1,20 @@
+use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::utils::crypto;
 use iggy::models::user_status::UserStatus;
 use iggy::models::{permissions::Permissions, user_info::UserId};
 use iggy::users::defaults::*;
 use iggy::utils::timestamp::IggyTimestamp;
-use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct User {
     pub id: UserId,
     pub status: UserStatus,
     pub username: String,
     pub password: String,
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     pub permissions: Option<Permissions>,
+    pub personal_access_tokens: HashMap<String, PersonalAccessToken>,
 }
 
 impl Default for User {
@@ -22,8 +24,9 @@ impl Default for User {
             status: UserStatus::Active,
             username: "user".to_string(),
             password: "secret".to_string(),
-            created_at: IggyTimestamp::now().to_micros(),
+            created_at: IggyTimestamp::now(),
             permissions: None,
+            personal_access_tokens: HashMap::new(),
         }
     }
 }
@@ -43,13 +46,30 @@ impl User {
         status: UserStatus,
         permissions: Option<Permissions>,
     ) -> Self {
-        Self {
+        Self::with_password(
             id,
-            username: username.to_string(),
-            password: crypto::hash_password(password),
-            created_at: IggyTimestamp::now().to_micros(),
+            username,
+            crypto::hash_password(password),
             status,
             permissions,
+        )
+    }
+
+    pub fn with_password(
+        id: u32,
+        username: &str,
+        password: String,
+        status: UserStatus,
+        permissions: Option<Permissions>,
+    ) -> Self {
+        Self {
+            id,
+            username: username.into(),
+            password,
+            created_at: IggyTimestamp::now(),
+            status,
+            permissions,
+            personal_access_tokens: HashMap::new(),
         }
     }
 
@@ -87,7 +107,7 @@ mod tests {
             &user.password
         ));
         assert_eq!(user.status, UserStatus::Active);
-        assert!(user.created_at > 0);
+        assert!(user.created_at.to_micros() > 0);
     }
 
     #[test]

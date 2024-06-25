@@ -2,6 +2,8 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::CREATE_PARTITIONS_CODE;
 use iggy::error::IggyError;
 use iggy::partitions::create_partitions::CreatePartitions;
 use tracing::debug;
@@ -20,6 +22,15 @@ pub async fn handle(
             &command.stream_id,
             &command.topic_id,
             command.partitions_count,
+        )
+        .await?;
+    system
+        .state
+        .apply(
+            CREATE_PARTITIONS_CODE,
+            session.get_user_id(),
+            &command.as_bytes(),
+            None,
         )
         .await?;
     sender.send_empty_ok_response().await?;

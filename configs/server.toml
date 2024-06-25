@@ -66,9 +66,6 @@ valid_audiences = ["iggy.rs"]
 # Expiry time for access tokens.
 access_token_expiry = "1 h"
 
-# Expiry time for refresh tokens.
-refresh_token_expiry = "1 d"
-
 # Tolerance for timing discrepancies during token validation.
 clock_skew = "5 s"
 
@@ -233,11 +230,11 @@ path = "backup"
 # Subpath of the backup directory where converted segment data is stored after compatibility conversion.
 path = "compatibility"
 
-# Database configuration.
-[system.database]
-# Path for storing database files.
-# Specifies the directory where database files are stored, relative to `system.path`.
-path = "database"
+# Legacy database configuration - used only for the migration purposes.
+#[system.database]
+## Path for storing database files.
+## Specifies the directory where database files are stored, relative to `system.path`.
+#path = "database"
 
 # Runtime configuration.
 [system.runtime]
@@ -275,10 +272,10 @@ size = "4 GB"
 # Data retention policy configuration.
 [system.retention_policy]
 # Configures the message time-based expiry setting.
-# "disabled" means messages are kept indefinitely.
+# "none" means messages are kept indefinitely.
 # A time value in human-readable format determines the lifespan of messages.
 # Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
-message_expiry = "disabled"
+message_expiry = "none"
 
 # Configures the topic size-based expiry setting.
 # "unlimited" or "0" means topics are kept indefinitely.

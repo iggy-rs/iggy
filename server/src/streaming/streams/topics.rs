@@ -4,8 +4,9 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::text;
+use iggy::utils::topic_size::MaxTopicSize;
 use std::sync::atomic::Ordering;
 use tracing::{debug, info};
 
@@ -20,9 +21,9 @@ impl Stream {
         topic_id: Option<u32>,
         name: &str,
         partitions_count: u32,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
         let name = text::to_lowercase_non_whitespace(name);
@@ -51,7 +52,6 @@ impl Stream {
             return Err(IggyError::TopicIdAlreadyExists(id, self.stream_id));
         }
 
-        // TODO: check if max_topic_size is not lower than system.segment.size
         let topic = Topic::create(
             self.stream_id,
             id,
@@ -79,9 +79,9 @@ impl Stream {
         &mut self,
         id: &Identifier,
         name: &str,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
         let topic_id;
@@ -112,6 +112,15 @@ impl Stream {
             self.topics_ids.remove(&old_topic_name.clone());
             self.topics_ids.insert(updated_name.clone(), topic_id);
             let topic = self.get_topic_mut(id)?;
+
+            let max_topic_size = match max_topic_size {
+                MaxTopicSize::ServerDefault => match topic.config.retention_policy.max_topic_size {
+                    MaxTopicSize::ServerDefault => MaxTopicSize::get_server_default(),
+                    value => value,
+                },
+                value => value,
+            };
+
             topic.name = updated_name;
             topic.message_expiry = message_expiry;
             topic.compression_algorithm = compression_algorithm;
@@ -124,7 +133,6 @@ impl Stream {
             }
             topic.max_topic_size = max_topic_size;
             topic.replication_factor = replication_factor;
-
             topic.persist().await?;
             info!("Updated topic: {topic}");
         }
@@ -227,6 +235,7 @@ mod tests {
     use super::*;
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
+    use iggy::utils::byte_size::IggyByteSize;
     use std::sync::Arc;
 
     #[tokio::test]
@@ -235,9 +244,9 @@ mod tests {
         let stream_name = "test_stream";
         let topic_id = 2;
         let topic_name = "test_topic";
-        let message_expiry = Some(10);
+        let message_expiry = IggyExpiry::NeverExpire;
         let compression_algorithm = CompressionAlgorithm::None;
-        let max_topic_size = Some(IggyByteSize::from(100));
+        let max_topic_size = MaxTopicSize::Custom(IggyByteSize::from(100));
         let config = Arc::new(SystemConfig::default());
         let storage = Arc::new(get_test_system_storage());
         let mut stream = Stream::create(stream_id, stream_name, config, storage);

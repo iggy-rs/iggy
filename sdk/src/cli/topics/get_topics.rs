@@ -2,7 +2,7 @@ use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
 use crate::topics::get_topics::GetTopics;
-use crate::utils::timestamp::IggyTimestamp;
+use crate::utils::expiry::IggyExpiry;
 use anyhow::Context;
 use async_trait::async_trait;
 use comfy_table::Table;
@@ -78,17 +78,14 @@ impl CliCommand for GetTopicsCmd {
                 topics.iter().for_each(|topic| {
                     table.add_row(vec![
                         format!("{}", topic.id),
-                        IggyTimestamp::from(topic.created_at).to_utc_string("%Y-%m-%d %H:%M:%S"),
+                        topic.created_at.to_utc_string("%Y-%m-%d %H:%M:%S"),
                         topic.name.clone(),
                         format!("{}", topic.size),
-                        match topic.max_topic_size {
-                            Some(value) => format!("{}", value),
-                            None => String::from("unlimited"),
-                        },
+                        format!("{}", topic.max_topic_size),
                         topic.compression_algorithm.to_string(),
                         match topic.message_expiry {
-                            Some(value) => format!("{}", value),
-                            None => String::from("unlimited"),
+                            IggyExpiry::NeverExpire => String::from("unlimited"),
+                            IggyExpiry::ExpireDuration(value) => format!("{}", value),
                         },
                         format!("{}", topic.messages_count),
                         format!("{}", topic.partitions_count),
@@ -100,23 +97,20 @@ impl CliCommand for GetTopicsCmd {
             GetTopicsOutput::List => {
                 topics.iter().for_each(|topic| {
                     event!(target: PRINT_TARGET, Level::INFO,
-                        "{}|{}|{}|{}|{}|{}|{}|{}|{}",
-                        topic.id,
-                        IggyTimestamp::from(topic.created_at).to_utc_string("%Y-%m-%d %H:%M:%S"),
-                        topic.name,
-                        topic.size,
-                        match topic.max_topic_size {
-                            Some(value) => format!("{}", value),
-                            None => String::from("unlimited"),
-                        },
-                        topic.compression_algorithm.to_string(),
-                        match topic.message_expiry {
-                            Some(value) => format!("{}", value),
-                            None => String::from("unlimited"),
-                        },
-                        topic.messages_count,
-                        topic.partitions_count
-                    );
+                            "{}|{}|{}|{}|{}|{}|{}|{}|{}",
+                            topic.id,
+                            topic.created_at.to_utc_string("%Y-%m-%d %H:%M:%S"),
+                            topic.name,
+                            topic.size,
+                            topic.max_topic_size,
+                            topic.compression_algorithm.to_string(),
+                            match topic.message_expiry {
+                    IggyExpiry::NeverExpire => String::from("unlimited"),
+                    IggyExpiry::ExpireDuration(value) => format!("{}", value),
+                            },
+                            topic.messages_count,
+                            topic.partitions_count
+                        );
                 });
             }
         }

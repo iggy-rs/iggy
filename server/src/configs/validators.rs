@@ -8,6 +8,7 @@ use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::topic_size::MaxTopicSize;
 use iggy::validatable::Validatable;
 use sysinfo::System;
 use tracing::{error, info, warn};
@@ -19,6 +20,16 @@ impl Validatable<ServerError> for ServerConfig {
         self.system.retention_policy.validate()?;
         self.system.compression.validate()?;
         self.personal_access_token.validate()?;
+
+        let topic_size = match self.system.retention_policy.max_topic_size {
+            MaxTopicSize::Custom(size) => size.as_bytes_u64(),
+            MaxTopicSize::ServerDefault => MaxTopicSize::get_server_default().as_bytes_u64(),
+        };
+
+        if topic_size < self.system.segment.size.as_bytes_u64() {
+            error!("Max topic size cannot be lower than segment size. Max topic size: {}, segment size: {}.",topic_size, self.system.segment.size);
+            return Err(ServerError::InvalidConfiguration);
+        }
 
         Ok(())
     }
@@ -78,11 +89,6 @@ impl Validatable<ServerError> for CacheConfig {
 
 impl Validatable<ServerError> for RetentionPolicyConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        // TODO(hubcio): Change this message once topic size based retention policy is fully developed.
-        if self.max_topic_size.as_bytes_u64() > 0 {
-            warn!("Retention policy max_topic_size is not implemented yet!");
-        }
-
         Ok(())
     }
 }

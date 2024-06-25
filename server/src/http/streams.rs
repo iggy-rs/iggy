@@ -7,9 +7,15 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::{
+    CREATE_STREAM_CODE, DELETE_STREAM_CODE, PURGE_STREAM_CODE, UPDATE_STREAM_CODE,
+};
 use iggy::identifier::Identifier;
 use iggy::models::stream::{Stream, StreamDetails};
 use iggy::streams::create_stream::CreateStream;
+use iggy::streams::delete_stream::DeleteStream;
+use iggy::streams::purge_stream::PurgeStream;
 use iggy::streams::update_stream::UpdateStream;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
@@ -65,6 +71,15 @@ async fn create_stream(
             &command.name,
         )
         .await?;
+    system
+        .state
+        .apply(
+            CREATE_STREAM_CODE,
+            identity.user_id,
+            &command.as_bytes(),
+            None,
+        )
+        .await?;
     Ok(StatusCode::CREATED)
 }
 
@@ -84,6 +99,15 @@ async fn update_stream(
             &command.name,
         )
         .await?;
+    system
+        .state
+        .apply(
+            UPDATE_STREAM_CODE,
+            identity.user_id,
+            &command.as_bytes(),
+            None,
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -100,6 +124,15 @@ async fn delete_stream(
             &stream_id,
         )
         .await?;
+    system
+        .state
+        .apply(
+            DELETE_STREAM_CODE,
+            identity.user_id,
+            &DeleteStream { stream_id }.as_bytes(),
+            None,
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -114,6 +147,15 @@ async fn purge_stream(
         .purge_stream(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
+        )
+        .await?;
+    system
+        .state
+        .apply(
+            PURGE_STREAM_CODE,
+            identity.user_id,
+            &PurgeStream { stream_id }.as_bytes(),
+            None,
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

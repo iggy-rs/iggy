@@ -2,6 +2,8 @@ use crate::binary::sender::Sender;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::CREATE_STREAM_CODE;
 use iggy::error::IggyError;
 use iggy::streams::create_stream::CreateStream;
 use tracing::debug;
@@ -16,6 +18,15 @@ pub async fn handle(
     let mut system = system.write();
     system
         .create_stream(session, command.stream_id, &command.name)
+        .await?;
+    system
+        .state
+        .apply(
+            CREATE_STREAM_CODE,
+            session.get_user_id(),
+            &command.as_bytes(),
+            None,
+        )
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

@@ -1,5 +1,5 @@
-use crate::compat::message_stream::MessageStream;
-use crate::compat::snapshots::message_snapshot::MessageSnapshot;
+use crate::compat::message_conversion::message_stream::MessageStream;
+use crate::compat::message_conversion::snapshots::message_snapshot::MessageSnapshot;
 
 use async_stream::try_stream;
 use bytes::{BufMut, BytesMut};
@@ -74,7 +74,7 @@ impl MessageStream for RetainedMessageStream {
                 self.read_bytes += 4 + payload_len as u64;
 
                 let message =
-                    MessageSnapshot::new(offset, state, timestamp, id, payload.freeze(), checksum, headers);
+                    MessageSnapshot::new(offset, state, timestamp.into(), id, payload.freeze(), checksum, headers);
                 yield message;
             }
         }

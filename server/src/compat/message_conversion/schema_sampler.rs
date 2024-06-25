@@ -1,4 +1,4 @@
-use crate::compat::binary_schema::BinarySchema;
+use crate::compat::message_conversion::binary_schema::BinarySchema;
 use crate::server_error::ServerError;
 use async_trait::async_trait;
 

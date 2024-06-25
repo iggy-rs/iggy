@@ -1,11 +1,12 @@
-use crate::compat::samplers::message_sampler::MessageSampler;
-use crate::compat::samplers::retained_batch_sampler::RetainedMessageBatchSampler;
-use crate::compat::schema_sampler::BinarySchemaSampler;
+use crate::compat::message_conversion::samplers::message_sampler::MessageSampler;
+use crate::compat::message_conversion::samplers::retained_batch_sampler::RetainedMessageBatchSampler;
+use crate::compat::message_conversion::schema_sampler::BinarySchemaSampler;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 
 use crate::streaming::segments::storage::{INDEX_SIZE, TIME_INDEX_SIZE};
+use iggy::utils::timestamp::IggyTimestamp;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 pub trait Extendable {
@@ -22,7 +23,7 @@ pub trait MessageFormatConverterPersister<W: AsyncWrite> {
     ) -> Result<(), IggyError>;
     async fn persist_time_index(
         &self,
-        timestamp: u64,
+        timestamp: IggyTimestamp,
         relative_offset: u32,
         writer: &mut W,
     ) -> Result<(), IggyError>;
@@ -57,13 +58,13 @@ where
 
     async fn persist_time_index(
         &self,
-        timestamp: u64,
+        timestamp: IggyTimestamp,
         relative_offset: u32,
         writer: &mut W,
     ) -> Result<(), IggyError> {
         let mut time_index_bytes = BytesMut::with_capacity(TIME_INDEX_SIZE as usize);
         time_index_bytes.put_u32_le(relative_offset);
-        time_index_bytes.put_u64_le(timestamp);
+        time_index_bytes.put_u64_le(timestamp.into());
 
         writer.write_all(&time_index_bytes).await?;
         Ok(())

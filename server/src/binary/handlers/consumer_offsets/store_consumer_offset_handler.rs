@@ -17,6 +17,7 @@ pub async fn handle(
     let system = system.read();
     let consumer =
         PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
+
     system
         .store_consumer_offset(
             session,

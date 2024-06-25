@@ -1,91 +1,53 @@
-use crate::streaming::storage::{Storage, SystemInfoStorage};
+use crate::streaming::persistence::persister::Persister;
+use crate::streaming::storage::SystemInfoStorage;
 use crate::streaming::systems::info::SystemInfo;
+use crate::streaming::utils::file;
 use anyhow::Context;
 use async_trait::async_trait;
+use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
-use sled::Db;
 use std::sync::Arc;
+use tokio::io::AsyncReadExt;
 use tracing::info;
-
-const KEY: &str = "system";
 
 #[derive(Debug)]
 pub struct FileSystemInfoStorage {
-    db: Arc<Db>,
+    persister: Arc<dyn Persister>,
+    path: String,
 }
 
 impl FileSystemInfoStorage {
-    pub fn new(db: Arc<Db>) -> Self {
-        Self { db }
+    pub fn new(path: String, persister: Arc<dyn Persister>) -> Self {
+        Self { path, persister }
     }
 }
-
 unsafe impl Send for FileSystemInfoStorage {}
 unsafe impl Sync for FileSystemInfoStorage {}
 
-impl SystemInfoStorage for FileSystemInfoStorage {}
-
 #[async_trait]
-impl Storage<SystemInfo> for FileSystemInfoStorage {
-    async fn load(&self, system_info: &mut SystemInfo) -> Result<(), IggyError> {
-        let data = match self
-            .db
-            .get(KEY)
-            .with_context(|| "Failed to load system info")
-        {
-            Ok(data) => {
-                if let Some(data) = data {
-                    let data = rmp_serde::from_slice::<SystemInfo>(&data)
-                        .with_context(|| "Failed to deserialize system info");
-                    if let Err(err) = data {
-                        return Err(IggyError::CannotDeserializeResource(err));
-                    } else {
-                        data.unwrap()
-                    }
-                } else {
-                    return Err(IggyError::ResourceNotFound(KEY.to_string()));
-                }
-            }
-            Err(err) => {
-                return Err(IggyError::CannotLoadResource(err));
-            }
-        };
+impl SystemInfoStorage for FileSystemInfoStorage {
+    async fn load(&self) -> Result<SystemInfo, IggyError> {
+        let file = file::open(&self.path).await;
+        if file.is_err() {
+            return Err(IggyError::ResourceNotFound(self.path.to_owned()));
+        }
 
-        system_info.version = data.version;
-        system_info.migrations = data.migrations;
-        Ok(())
+        let mut file = file.unwrap();
+        let file_size = file.metadata().await?.len() as usize;
+        let mut buffer = BytesMut::with_capacity(file_size);
+        buffer.put_bytes(0, file_size);
+        file.read_exact(&mut buffer).await?;
+        bincode::deserialize(&buffer)
+            .with_context(|| "Failed to deserialize system info")
+            .map_err(IggyError::CannotDeserializeResource)
     }
 
     async fn save(&self, system_info: &SystemInfo) -> Result<(), IggyError> {
-        match rmp_serde::to_vec(&system_info).with_context(|| "Failed to serialize system info") {
-            Ok(data) => {
-                if let Err(err) = self
-                    .db
-                    .insert(KEY, data)
-                    .with_context(|| "Failed to save system info")
-                {
-                    return Err(IggyError::CannotSaveResource(err));
-                }
-            }
-            Err(err) => {
-                return Err(IggyError::CannotSerializeResource(err));
-            }
-        }
-
+        let data = bincode::serialize(&system_info)
+            .with_context(|| "Failed to serialize system info")
+            .map_err(IggyError::CannotSerializeResource)?;
+        self.persister.overwrite(&self.path, &data).await?;
         info!("Saved system info, {}", system_info);
-        Ok(())
-    }
-
-    async fn delete(&self, _: &SystemInfo) -> Result<(), IggyError> {
-        if let Err(err) = self
-            .db
-            .remove(KEY)
-            .with_context(|| "Failed to delete system info")
-        {
-            return Err(IggyError::CannotDeleteResource(err));
-        }
-
-        info!("Deleted system info");
         Ok(())
     }
 }

@@ -8,6 +8,7 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
 use iggy::users::defaults::*;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use tracing::info;
 
 type MessageHandler = dyn Fn(&PolledMessage) -> Result<(), Box<dyn std::error::Error>>;
@@ -74,7 +75,7 @@ pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), Ig
             None,
             Some(args.topic_id),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await?;
     Ok(())

@@ -7,9 +7,13 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
+use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::{CREATE_TOPIC_CODE, DELETE_TOPIC_CODE, PURGE_TOPIC_CODE, UPDATE_TOPIC_CODE};
 use iggy::identifier::Identifier;
 use iggy::models::topic::{Topic, TopicDetails};
 use iggy::topics::create_topic::CreateTopic;
+use iggy::topics::delete_topic::DeleteTopic;
+use iggy::topics::purge_topic::PurgeTopic;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
@@ -85,6 +89,15 @@ async fn create_topic(
             command.replication_factor,
         )
         .await?;
+    system
+        .state
+        .apply(
+            CREATE_TOPIC_CODE,
+            identity.user_id,
+            &command.as_bytes(),
+            None,
+        )
+        .await?;
     Ok(StatusCode::CREATED)
 }
 
@@ -110,6 +123,15 @@ async fn update_topic(
             command.replication_factor,
         )
         .await?;
+    system
+        .state
+        .apply(
+            UPDATE_TOPIC_CODE,
+            identity.user_id,
+            &command.as_bytes(),
+            None,
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -128,6 +150,19 @@ async fn delete_topic(
             &topic_id,
         )
         .await?;
+    system
+        .state
+        .apply(
+            DELETE_TOPIC_CODE,
+            identity.user_id,
+            &DeleteTopic {
+                stream_id,
+                topic_id,
+            }
+            .as_bytes(),
+            None,
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -144,6 +179,19 @@ async fn purge_topic(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
             &topic_id,
+        )
+        .await?;
+    system
+        .state
+        .apply(
+            PURGE_TOPIC_CODE,
+            identity.user_id,
+            &PurgeTopic {
+                stream_id,
+                topic_id,
+            }
+            .as_bytes(),
+            None,
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

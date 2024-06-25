@@ -29,7 +29,6 @@ pub struct HttpClient {
     pub api_url: Url,
     client: ClientWithMiddleware,
     access_token: IggySharedMut<String>,
-    refresh_token: IggySharedMut<String>,
 }
 
 #[async_trait]
@@ -171,33 +170,24 @@ impl HttpTransport for HttpClient {
         !token.is_empty()
     }
 
-    /// Refresh the access token using the provided refresh token.
-    async fn refresh_access_token(&self, refresh_token: &str) -> Result<(), IggyError> {
-        if refresh_token.is_empty() {
-            return Err(IggyError::RefreshTokenMissing);
+    /// Refresh the access token using the current access token.
+    async fn refresh_access_token(&self) -> Result<(), IggyError> {
+        let token = self.access_token.read().await;
+        if token.is_empty() {
+            return Err(IggyError::AccessTokenMissing);
         }
 
         let command = RefreshToken {
-            refresh_token: refresh_token.to_string(),
+            token: token.to_owned(),
         };
         let response = self.post("/users/refresh-token", &command).await?;
         let identity_info: IdentityInfo = response.json().await?;
-        if identity_info.tokens.is_none() {
+        if identity_info.access_token.is_none() {
             return Err(IggyError::JwtMissing);
         }
 
-        self.set_tokens_from_identity(&identity_info).await?;
+        self.set_token_from_identity(&identity_info).await?;
         Ok(())
-    }
-
-    /// Set the refresh token.
-    async fn set_refresh_token(&self, token: Option<String>) {
-        let mut current_token = self.refresh_token.write().await;
-        if let Some(token) = token {
-            *current_token = token;
-        } else {
-            *current_token = "".to_string();
-        }
     }
 
     /// Set the access token.
@@ -210,28 +200,16 @@ impl HttpTransport for HttpClient {
         }
     }
 
-    /// Set the access token and refresh token from the provided identity.
-    async fn set_tokens_from_identity(&self, identity: &IdentityInfo) -> Result<(), IggyError> {
-        if identity.tokens.is_none() {
+    /// Set the access token from the provided identity.
+    async fn set_token_from_identity(&self, identity: &IdentityInfo) -> Result<(), IggyError> {
+        if identity.access_token.is_none() {
             return Err(IggyError::JwtMissing);
         }
 
-        let tokens = identity.tokens.as_ref().unwrap();
-        if tokens.access_token.token.is_empty() {
-            return Err(IggyError::JwtMissing);
-        }
-
-        self.set_access_token(Some(tokens.access_token.token.clone()))
-            .await;
-        self.set_refresh_token(Some(tokens.refresh_token.token.clone()))
+        let access_token = identity.access_token.as_ref().unwrap();
+        self.set_access_token(Some(access_token.token.clone()))
             .await;
         Ok(())
-    }
-
-    /// Refresh the access token using the provided refresh token.
-    async fn refresh_access_token_using_current_refresh_token(&self) -> Result<(), IggyError> {
-        let refresh_token = self.refresh_token.read().await;
-        self.refresh_access_token(&refresh_token).await
     }
 }
 
@@ -260,7 +238,6 @@ impl HttpClient {
             api_url,
             client,
             access_token: IggySharedMut::new("".to_string()),
-            refresh_token: IggySharedMut::new("".to_string()),
         })
     }
 
@@ -295,5 +272,5 @@ impl HttpClient {
 
 #[derive(Debug, Serialize)]
 struct RefreshToken {
-    refresh_token: String,
+    token: String,
 }

@@ -4,4 +4,5 @@ mod config_provider;
 mod data_integrity;
 mod examples;
 mod server;
+mod state;
 mod streaming;

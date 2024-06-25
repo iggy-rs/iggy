@@ -22,7 +22,7 @@ use std::{
 /// assert_eq!(timestamp.to_utc_string("%Y-%m-%d %H:%M:%S"), "2023-09-17 16:34:06");
 /// assert_eq!(timestamp.to_micros(), 1694968446131680);
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct IggyTimestamp(SystemTime);
 
 pub const UTC_TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
@@ -30,6 +30,10 @@ pub const UTC_TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 impl IggyTimestamp {
     pub fn now() -> Self {
         IggyTimestamp::default()
+    }
+
+    pub fn zero() -> Self {
+        IggyTimestamp(UNIX_EPOCH)
     }
 
     pub fn to_secs(&self) -> u64 {

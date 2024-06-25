@@ -73,7 +73,7 @@ impl From<Option<u64>> for IggyDuration {
     fn from(byte_size: Option<u64>) -> Self {
         match byte_size {
             Some(value) => IggyDuration {
-                duration: Duration::from_secs(value),
+                duration: Duration::from_micros(value),
             },
             None => IggyDuration {
                 duration: Duration::new(0, 0),
@@ -85,7 +85,7 @@ impl From<Option<u64>> for IggyDuration {
 impl From<u64> for IggyDuration {
     fn from(value: u64) -> Self {
         IggyDuration {
-            duration: Duration::from_secs(value),
+            duration: Duration::from_micros(value),
         }
     }
 }
@@ -139,7 +139,7 @@ impl Serialize for IggyDuration {
     where
         S: Serializer,
     {
-        serializer.serialize_u32(self.as_secs())
+        serializer.serialize_u64(self.as_micros())
     }
 }
 
@@ -165,7 +165,7 @@ impl<'de> Visitor<'de> for IggyDurationVisitor {
     where
         E: serde::de::Error,
     {
-        Ok(IggyDuration::new(Duration::from_secs(value)))
+        Ok(IggyDuration::new(Duration::from_micros(value)))
     }
 }
 

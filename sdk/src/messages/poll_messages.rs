@@ -108,10 +108,11 @@ impl Default for PollingStrategy {
 impl CommandPayload for PollMessages {}
 impl CommandExecutionOrigin for PollMessages {
     fn get_command_execution_origin(&self) -> CommandExecution {
-        let partition_id = self.partition_id.unwrap();
-        let name = format!("{}-{}-{}", self.stream_id, self.topic_id, partition_id);
-        let hash = hash_string(&name).unwrap();
-        CommandExecution::Routed(hash)
+        // let partition_id = self.partition_id.unwrap();
+        // let name = format!("{}-{}-{}", self.stream_id, self.topic_id, partition_id);
+        // let hash = hash_string(&name).unwrap();
+        // CommandExecution::Routed(hash)
+        CommandExecution::Direct
     }
 }
 

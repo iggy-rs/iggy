@@ -195,10 +195,11 @@ impl Partitioning {
 impl CommandPayload for SendMessages {}
 impl CommandExecutionOrigin for SendMessages {
     fn get_command_execution_origin(&self) -> CommandExecution {
-        let partition_id = u32::from_le_bytes(self.partitioning.value[..self.partitioning.length as usize].try_into().unwrap());
-        let name = format!("{}-{}-{}", self.stream_id, self.topic_id, partition_id);
-        let hash = hash_string(&name).unwrap();
-        CommandExecution::Routed(hash)
+        // let partition_id = u32::from_le_bytes(self.partitioning.value[..self.partitioning.length as usize].try_into().unwrap());
+        // let name = format!("{}-{}-{}", self.stream_id, self.topic_id, partition_id);
+        // let hash = hash_string(&name).unwrap();
+        //CommandExecution::Routed(hash)
+        CommandExecution::Direct
     }
 }
 

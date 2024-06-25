@@ -56,7 +56,12 @@ async fn should_apply_single_entry() {
 async fn should_apply_multiple_entries() {
     let setup = StateSetup::init().await;
     let state = setup.state();
-    state.init().await.unwrap();
+    let entries = state.init().await.unwrap();
+
+    assert!(entries.is_empty());
+    assert_eq!(state.current_index(), 0);
+    assert_eq!(state.entries_count(), 0);
+    assert_eq!(state.term(), 0);
 
     let context = "test".as_bytes();
     let first_user_id = 1;
@@ -78,6 +83,9 @@ async fn should_apply_multiple_entries() {
         .await
         .unwrap();
 
+    assert_eq!(state.current_index(), 0);
+    assert_eq!(state.entries_count(), 1);
+
     let create_user_context = "test".as_bytes();
     let second_user_id = 2;
     let create_stream_code = CREATE_STREAM_CODE;
@@ -95,6 +103,9 @@ async fn should_apply_multiple_entries() {
         )
         .await
         .unwrap();
+
+    assert_eq!(state.current_index(), 1);
+    assert_eq!(state.entries_count(), 2);
 
     let mut entries = state.load_entries().await.unwrap();
     assert_eq!(entries.len(), 2);

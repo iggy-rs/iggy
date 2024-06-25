@@ -96,7 +96,7 @@ pub async fn init(
     converter::convert(metadata, storage, streams, users, personal_access_tokens).await?;
     let old_database_path = format!("{database_path}_old");
     rename(&database_path, &old_database_path).await?;
-    info!("Storage migration completed, old database moved to: {old_database_path} and new state log created.");
+    info!("Storage migration has completed, new state log was cacreated and old database was moved to: {old_database_path} (now it can be safely deleted).");
     Ok(())
 }
 

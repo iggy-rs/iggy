@@ -13,7 +13,7 @@ pub mod system;
 
 #[async_trait]
 pub trait State: Send + Sync + Debug {
-    async fn init(&self) -> Result<(), IggyError>;
+    async fn init(&self) -> Result<Vec<StateEntry>, IggyError>;
     async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError>;
     async fn apply(
         &self,
@@ -27,6 +27,7 @@ pub trait State: Send + Sync + Debug {
 /// State entry in the log
 /// - `index` - Index (operation number) of the entry in the log
 /// - `term` - Election term (view number) for replication
+/// - `leader_id` - Leader ID for replication
 /// - `version` - Server version based on semver as number e.g. 1.234.567 -> 1234567
 /// - `flags` - Reserved for future use
 /// - `timestamp` - Timestamp when the command was issued
@@ -38,6 +39,7 @@ pub trait State: Send + Sync + Debug {
 pub struct StateEntry {
     pub index: u64,
     pub term: u64,
+    pub leader_id: u32,
     pub version: u32,
     pub flags: u64,
     pub timestamp: IggyTimestamp,
@@ -51,9 +53,10 @@ impl Display for StateEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "StateEntry {{ index: {}, term: {}, version: {}, flags: {}, timestamp: {}, user ID: {}, code: {}, name: {}, size: {} }}",
+            "StateEntry {{ index: {}, term: {}, leader ID: {}, version: {}, flags: {}, timestamp: {}, user ID: {}, code: {}, name: {}, size: {} }}",
             self.index,
             self.term,
+            self.leader_id,
             self.version,
             self.flags,
             self.timestamp,
@@ -68,10 +71,11 @@ impl Display for StateEntry {
 impl BytesSerializable for StateEntry {
     fn as_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(
-            8 + 8 + 4 + 8 + 8 + 4 + 4 + 4 + self.payload.len() + 4 + self.context.len(),
+            8 + 8 + 4 + 4 + 8 + 8 + 4 + 4 + 4 + self.payload.len() + 4 + self.context.len(),
         );
         bytes.put_u64_le(self.index);
         bytes.put_u64_le(self.term);
+        bytes.put_u32_le(self.leader_id);
         bytes.put_u32_le(self.version);
         bytes.put_u64_le(self.flags);
         bytes.put_u64_le(self.timestamp.to_micros());
@@ -90,20 +94,22 @@ impl BytesSerializable for StateEntry {
     {
         let index = bytes.slice(0..8).get_u64_le();
         let term = bytes.slice(8..16).get_u64_le();
-        let version = bytes.slice(16..20).get_u32_le();
-        let flags = bytes.slice(20..28).get_u64_le();
-        let timestamp = IggyTimestamp::from(bytes.slice(28..36).get_u64_le());
-        let user_id = bytes.slice(36..40).get_u32_le();
-        let code = bytes.slice(40..44).get_u32_le();
-        let payload_length = bytes.slice(44..48).get_u32_le() as usize;
-        let payload = bytes.slice(48..48 + payload_length);
+        let leader_id = bytes.slice(16..20).get_u32_le();
+        let version = bytes.slice(20..24).get_u32_le();
+        let flags = bytes.slice(24..32).get_u64_le();
+        let timestamp = IggyTimestamp::from(bytes.slice(32..40).get_u64_le());
+        let user_id = bytes.slice(40..44).get_u32_le();
+        let code = bytes.slice(44..48).get_u32_le();
+        let payload_length = bytes.slice(48..52).get_u32_le() as usize;
+        let payload = bytes.slice(52..52 + payload_length);
         let context_length = bytes
-            .slice(48 + payload_length..52 + payload_length)
+            .slice(52 + payload_length..56 + payload_length)
             .get_u32_le() as usize;
-        let context = bytes.slice(52 + payload_length..52 + payload_length + context_length);
+        let context = bytes.slice(56 + payload_length..56 + payload_length + context_length);
         Ok(StateEntry {
             index,
             term,
+            leader_id,
             version,
             flags,
             timestamp,

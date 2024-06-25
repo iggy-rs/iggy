@@ -58,7 +58,6 @@ impl IggyShard {
                 .create_topic(user_id, stream.stream_id)?;
         }
 
-        println!("ThreadId: {:?} CHECKPOINT PRINT NUMERO UNO NO DEADLOCK", std::thread::current());
         self.get_stream_mut(stream_id)?.borrow_mut()
             .create_topic(
                 topic_id,

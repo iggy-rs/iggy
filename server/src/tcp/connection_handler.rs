@@ -75,6 +75,7 @@ pub(crate) async fn handle_connection(
                 handle_response!(sender, response);
             }
             CommandExecution::Routed(cmd_hash) => {
+                error!("Routed cmd hash: {}", cmd_hash);
                 let response = shard
                     .send_request_to_shard(client_id, cmd_hash, command)
                     .await?;

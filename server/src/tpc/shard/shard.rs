@@ -21,7 +21,9 @@ use iggy::{
 use sled::Db;
 use std::cell::{Cell, RefCell};
 use std::{collections::HashMap, sync::Arc, time::Instant};
-use tracing::info;
+use tracing::{error, info};
+
+pub const SHARD_NAME: &str = "iggy_shard";
 
 /// For each cache eviction, we want to remove more than the size we need.
 /// This is done on purpose to avoid evicting messages on every write.
@@ -95,6 +97,8 @@ impl IggyShard {
         stop_receiver: StopReceiver,
         stop_sender: StopSender,
     ) -> Self {
+        let name = &format!("{}_{}", SHARD_NAME, id);
+        let hash = hash_string(&name).unwrap();
         Self {
             id,
             shards,
@@ -182,10 +186,13 @@ impl IggyShard {
         destination_id: u16,
         command: Command,
     ) -> Result<ShardResponse, IggyError> {
+        let shard = self.find_shard(cmd_hash);
+        if shard.hash == self.hash {
+            return self.handle_command(client_id, command).await;
+        }
+
         let message = ShardMessage::Command(command);
-        // Maybe we could spin for a while on the None case.
-        self.find_shard(destination_id)
-            .expect("Failed to find shard")
+        self.find_shard(cmd_hash)
             .send_request(client_id, message)
             .await
     }

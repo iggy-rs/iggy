@@ -146,6 +146,7 @@ impl JwtManager {
         let exp = iat
             + (match self.issuer.access_token_expiry {
                 IggyExpiry::NeverExpire => 1_000_000_000,
+                IggyExpiry::ServerDefault => 0, // This is not a case, as the server default is not allowed here
                 IggyExpiry::ExpireDuration(duration) => duration.as_secs(),
             }) as u64;
         let nbf = iat + self.issuer.not_before.as_secs() as u64;

@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use std::str::FromStr;
 
 use crate::server::scenarios::{
     get_consumer_group, leave_consumer_group, CONSUMER_GROUP_ID, CONSUMER_GROUP_NAME, CONSUMER_ID,
@@ -126,7 +127,10 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
     assert_eq!(topic.message_expiry, IggyExpiry::NeverExpire);
-    assert_eq!(topic.max_topic_size, MaxTopicSize::get_server_default());
+    assert_eq!(
+        topic.max_topic_size,
+        MaxTopicSize::from_str("10 GB").unwrap()
+    );
     assert_eq!(topic.replication_factor, 1);
 
     // 11. Get topic details by ID

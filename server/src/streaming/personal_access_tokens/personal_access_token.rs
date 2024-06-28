@@ -70,6 +70,7 @@ impl PersonalAccessToken {
                 Some(IggyTimestamp::from(now.as_micros() + expiry.as_micros()))
             }
             IggyExpiry::NeverExpire => None,
+            IggyExpiry::ServerDefault => None, // This will
         }
     }
 }

@@ -88,7 +88,10 @@ impl Segment {
             time_index_path: Self::get_time_index_path(&path),
             size_bytes: 0,
             max_size_bytes: config.segment.size.as_bytes_u64() as u32,
-            message_expiry,
+            message_expiry: match message_expiry {
+                IggyExpiry::ServerDefault => config.retention_policy.message_expiry,
+                _ => message_expiry,
+            },
             indexes: match config.segment.cache_indexes {
                 true => Some(Vec::new()),
                 false => None,
@@ -123,6 +126,7 @@ impl Segment {
     pub async fn is_expired(&self, now: IggyTimestamp) -> bool {
         match self.message_expiry {
             IggyExpiry::NeverExpire => false,
+            IggyExpiry::ServerDefault => false,
             IggyExpiry::ExpireDuration(expiry) => {
                 let last_messages = self.get_messages(self.current_offset, 1).await;
                 if last_messages.is_err() {

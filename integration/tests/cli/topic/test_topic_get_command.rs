@@ -110,10 +110,7 @@ impl IggyCmdTestCase for TestTopicGetCmd {
             )))
             .stdout(contains("Topic size          | 0"))
             .stdout(contains("Message expiry      | unlimited"))
-            .stdout(contains(format!(
-                "Max topic size      | {}",
-                MaxTopicSize::get_server_default()
-            )))
+            .stdout(contains("Max topic size      | 10.00 GB"))
             .stdout(contains("Topic message count | 0"))
             .stdout(contains("Partitions count    | 1"));
     }

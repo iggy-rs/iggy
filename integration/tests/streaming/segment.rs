@@ -216,7 +216,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let partition_id = 3;
     let start_offset = 0;
     let message_expiry_ms = 1000;
-    let message_expiry = IggyExpiry::ExpireDuration(message_expiry_ms.into());
+    let message_expiry = 1000u64.into();
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -295,7 +295,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let partition_id = 3;
     let start_offset = 0;
     let message_expiry_ms = 1000;
-    let message_expiry = IggyExpiry::ExpireDuration(message_expiry_ms.into());
+    let message_expiry = message_expiry_ms.into();
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,

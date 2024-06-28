@@ -85,6 +85,7 @@ impl CliCommand for GetTopicsCmd {
                         topic.compression_algorithm.to_string(),
                         match topic.message_expiry {
                             IggyExpiry::NeverExpire => String::from("unlimited"),
+                            IggyExpiry::ServerDefault => String::from("server_default"),
                             IggyExpiry::ExpireDuration(value) => format!("{}", value),
                         },
                         format!("{}", topic.messages_count),
@@ -106,6 +107,7 @@ impl CliCommand for GetTopicsCmd {
                             topic.compression_algorithm.to_string(),
                             match topic.message_expiry {
                     IggyExpiry::NeverExpire => String::from("unlimited"),
+                    IggyExpiry::ServerDefault => String::from("server_default"),
                     IggyExpiry::ExpireDuration(value) => format!("{}", value),
                             },
                             topic.messages_count,

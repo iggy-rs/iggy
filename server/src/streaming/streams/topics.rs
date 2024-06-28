@@ -114,11 +114,8 @@ impl Stream {
             let topic = self.get_topic_mut(id)?;
 
             let max_topic_size = match max_topic_size {
-                MaxTopicSize::ServerDefault => match topic.config.retention_policy.max_topic_size {
-                    MaxTopicSize::ServerDefault => MaxTopicSize::get_server_default(),
-                    value => value,
-                },
-                value => value,
+                MaxTopicSize::ServerDefault => topic.config.retention_policy.max_topic_size,
+                _ => max_topic_size,
             };
 
             topic.name = updated_name;

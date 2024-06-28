@@ -15,10 +15,12 @@ pub const SEC_IN_MICRO: u64 = 1_000_000;
 /// Helper enum for various time-based expiry related functionalities
 #[derive(Debug, Copy, Default, Clone, Eq, PartialEq)]
 pub enum IggyExpiry {
+    #[default]
+    /// Use the default expiry time from the server
+    ServerDefault,
     /// Set expiry time to given value
     ExpireDuration(IggyDuration),
     /// Never expire
-    #[default]
     NeverExpire,
 }
 
@@ -32,15 +34,17 @@ impl From<&IggyExpiry> for Option<u64> {
     fn from(value: &IggyExpiry) -> Self {
         match value {
             IggyExpiry::ExpireDuration(value) => Some(value.as_micros()),
-            IggyExpiry::NeverExpire => None,
+            IggyExpiry::NeverExpire => Some(u64::MAX),
+            IggyExpiry::ServerDefault => None,
         }
     }
 }
 
 impl Display for IggyExpiry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::NeverExpire => write!(f, "none"),
+            Self::ServerDefault => write!(f, "server_default"),
             Self::ExpireDuration(value) => write!(f, "{value}"),
         }
     }
@@ -65,6 +69,9 @@ impl Add for IggyExpiry {
                 IggyExpiry::ExpireDuration(lhs_duration),
                 IggyExpiry::ExpireDuration(rhs_duration),
             ) => IggyExpiry::ExpireDuration(lhs_duration + rhs_duration),
+            (IggyExpiry::ServerDefault, IggyExpiry::ExpireDuration(_)) => IggyExpiry::ServerDefault,
+            (IggyExpiry::ServerDefault, IggyExpiry::ServerDefault) => IggyExpiry::ServerDefault,
+            (IggyExpiry::ExpireDuration(_), IggyExpiry::ServerDefault) => IggyExpiry::ServerDefault,
         }
     }
 }
@@ -75,9 +82,11 @@ impl FromStr for IggyExpiry {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let result = match s {
             "unlimited" | "none" | "None" | "Unlimited" => IggyExpiry::NeverExpire,
+            "default" | "server_default" | "Default" | "Server_default" => {
+                IggyExpiry::ServerDefault
+            }
             value => {
                 let duration = value.parse::<HumanDuration>().map_err(|e| format!("{e}"))?;
-
                 if duration.as_secs() > u32::MAX as u64 {
                     return Err(format!(
                         "Value too big for expiry time, maximum value is {}",
@@ -97,7 +106,8 @@ impl From<IggyExpiry> for Option<u64> {
     fn from(val: IggyExpiry) -> Self {
         match val {
             IggyExpiry::ExpireDuration(value) => Some(value.as_micros()),
-            IggyExpiry::NeverExpire => None,
+            IggyExpiry::ServerDefault => None,
+            IggyExpiry::NeverExpire => Some(u64::MAX),
         }
     }
 }
@@ -106,7 +116,8 @@ impl From<IggyExpiry> for u64 {
     fn from(val: IggyExpiry) -> Self {
         match val {
             IggyExpiry::ExpireDuration(value) => value.as_micros(),
-            IggyExpiry::NeverExpire => 0,
+            IggyExpiry::ServerDefault => 0,
+            IggyExpiry::NeverExpire => u64::MAX,
         }
     }
 }
@@ -124,7 +135,8 @@ impl From<Vec<IggyExpiry>> for IggyExpiry {
 impl From<u64> for IggyExpiry {
     fn from(value: u64) -> Self {
         match value {
-            0 => IggyExpiry::NeverExpire,
+            u64::MAX => IggyExpiry::NeverExpire,
+            0 => IggyExpiry::ServerDefault,
             value => IggyExpiry::ExpireDuration(IggyDuration::from(value)),
         }
     }
@@ -133,7 +145,11 @@ impl From<u64> for IggyExpiry {
 impl From<Option<u64>> for IggyExpiry {
     fn from(value: Option<u64>) -> Self {
         match value {
-            Some(value) => IggyExpiry::ExpireDuration(IggyDuration::from(value)),
+            Some(value) => match value {
+                u64::MAX => IggyExpiry::NeverExpire,
+                0 => IggyExpiry::ServerDefault,
+                value => IggyExpiry::ExpireDuration(IggyDuration::from(value)),
+            },
             None => IggyExpiry::NeverExpire,
         }
     }
@@ -146,7 +162,8 @@ impl Serialize for IggyExpiry {
     {
         let expiry = match self {
             IggyExpiry::ExpireDuration(value) => value.as_micros(),
-            IggyExpiry::NeverExpire => 0,
+            IggyExpiry::ServerDefault => 0,
+            IggyExpiry::NeverExpire => u64::MAX,
         };
         serializer.serialize_u64(expiry)
     }
@@ -273,10 +290,17 @@ mod tests {
     }
 
     #[test]
-    fn should_calculate_none_from_never_expiry() {
-        let expiry = IggyExpiry::NeverExpire;
+    fn should_calculate_none_from_server_default() {
+        let expiry = IggyExpiry::ServerDefault;
         let result: Option<u64> = From::from(&expiry);
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn should_calculate_u64_max_from_never_expiry() {
+        let expiry = IggyExpiry::NeverExpire;
+        let result: Option<u64> = From::from(&expiry);
+        assert_eq!(result, Some(u64::MAX));
     }
 
     #[test]
@@ -300,11 +324,11 @@ mod tests {
             Some(IggyExpiry::ExpireDuration(IggyDuration::from(6)))
         );
         assert_eq!(IggyExpiry::new(None), None);
-        let none_values = vec![IggyExpiry::NeverExpire; 10];
+        let none_values = vec![IggyExpiry::ServerDefault; 10];
 
         assert_eq!(
             IggyExpiry::new(Some(none_values)),
-            Some(IggyExpiry::NeverExpire)
+            Some(IggyExpiry::ServerDefault)
         );
     }
 }

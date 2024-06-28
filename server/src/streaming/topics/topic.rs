@@ -112,11 +112,8 @@ impl Topic {
             },
             compression_algorithm,
             max_topic_size: match max_topic_size {
-                MaxTopicSize::ServerDefault => match config.retention_policy.max_topic_size {
-                    MaxTopicSize::ServerDefault => MaxTopicSize::get_server_default(),
-                    value => value,
-                },
-                value => value,
+                MaxTopicSize::ServerDefault => config.retention_policy.max_topic_size,
+                _ => max_topic_size,
             },
             replication_factor,
             config,

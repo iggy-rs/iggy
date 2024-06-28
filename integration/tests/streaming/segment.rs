@@ -169,7 +169,7 @@ async fn should_persist_and_load_segment_with_messages() {
             timestamp: message.timestamp,
             checksum: message.checksum,
             message_state: message.state,
-            headers: message.headers.map(|headers| headers.as_bytes()),
+            headers: message.headers.map(|headers| headers.to_bytes()),
             payload: message.payload.clone(),
         };
         retained_message.extend(&mut batch_buffer);
@@ -246,13 +246,13 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     .await;
     let messages_count = 10;
     let now = IggyTimestamp::now();
-    let mut expired_timestamp = (now.to_micros() - 2 * message_expiry_ms).into();
+    let mut expired_timestamp = (now.as_micros() - 2 * message_expiry_ms).into();
     let mut base_offset = 0;
     let mut last_timestamp = IggyTimestamp::zero();
     let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
-        expired_timestamp = (expired_timestamp.to_micros() + 1).into();
+        expired_timestamp = (expired_timestamp.as_micros() + 1).into();
         if i == 0 {
             base_offset = message.offset;
         }
@@ -266,7 +266,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
             timestamp: message.timestamp,
             checksum: message.checksum,
             message_state: message.state,
-            headers: message.headers.map(|headers| headers.as_bytes()),
+            headers: message.headers.map(|headers| headers.to_bytes()),
             payload: message.payload.clone(),
         };
         retained_message.extend(&mut batch_buffer);
@@ -324,8 +324,8 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     )
     .await;
     let now = IggyTimestamp::now();
-    let expired_timestamp = (now.to_micros() - 2 * message_expiry_ms).into();
-    let not_expired_timestamp = (now.to_micros() - message_expiry_ms + 1).into();
+    let expired_timestamp = (now.as_micros() - 2 * message_expiry_ms).into();
+    let not_expired_timestamp = (now.as_micros() - message_expiry_ms + 1).into();
     let expired_message = create_message(0, "test", expired_timestamp);
     let not_expired_message = create_message(1, "test", not_expired_timestamp);
 
@@ -336,7 +336,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         timestamp: expired_message.timestamp,
         checksum: expired_message.checksum,
         message_state: expired_message.state,
-        headers: expired_message.headers.map(|headers| headers.as_bytes()),
+        headers: expired_message.headers.map(|headers| headers.to_bytes()),
         payload: expired_message.payload.clone(),
     };
     expired_retained_message.extend(&mut expired_batch_buffer);
@@ -357,7 +357,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         message_state: not_expired_message.state,
         headers: not_expired_message
             .headers
-            .map(|headers| headers.as_bytes()),
+            .map(|headers| headers.to_bytes()),
         payload: not_expired_message.payload.clone(),
     };
     not_expired_retained_message.extend(&mut not_expired_batch_buffer);

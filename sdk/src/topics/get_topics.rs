@@ -26,8 +26,8 @@ impl Validatable<IggyError> for GetTopics {
 }
 
 impl BytesSerializable for GetTopics {
-    fn as_bytes(&self) -> Bytes {
-        self.stream_id.as_bytes()
+    fn to_bytes(&self) -> Bytes {
+        self.stream_id.to_bytes()
     }
 
     fn from_bytes(bytes: Bytes) -> std::result::Result<GetTopics, IggyError> {
@@ -58,7 +58,7 @@ mod tests {
             stream_id: Identifier::numeric(1).unwrap(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
 
         assert!(!bytes.is_empty());
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
-        let bytes = stream_id.as_bytes();
+        let bytes = stream_id.to_bytes();
         let command = GetTopics::from_bytes(bytes);
         assert!(command.is_ok());
 

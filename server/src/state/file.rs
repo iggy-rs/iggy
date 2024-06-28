@@ -125,7 +125,7 @@ impl State for FileState {
             let mut context = BytesMut::with_capacity(context_length);
             context.put_bytes(0, context_length);
             reader.read_exact(&mut context).await?;
-            let entry = StateEntry {
+            let entry = StateEntry::new(
                 index,
                 term,
                 leader_id,
@@ -134,9 +134,9 @@ impl State for FileState {
                 timestamp,
                 user_id,
                 code,
-                payload: payload.freeze(),
-                context: context.freeze(),
-            };
+                payload.freeze(),
+                context.freeze(),
+            );
             debug!("Read state entry: {entry}");
             entries.push(entry);
             total_size += 8
@@ -186,7 +186,7 @@ impl State for FileState {
         };
 
         self.entries_count.fetch_add(1, Ordering::SeqCst);
-        self.persister.append(&self.path, &entry.as_bytes()).await?;
+        self.persister.append(&self.path, &entry.to_bytes()).await?;
         debug!("Applied state entry with code: {code}, user ID: {user_id}, {entry}",);
         Ok(())
     }

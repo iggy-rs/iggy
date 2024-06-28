@@ -56,7 +56,7 @@ impl PersonalAccessToken {
     pub fn is_expired(&self, now: IggyTimestamp) -> bool {
         match self.expiry_at {
             None => false,
-            Some(expiry_at) => expiry_at.to_micros() <= now.to_micros(),
+            Some(expiry_at) => expiry_at.as_micros() <= now.as_micros(),
         }
     }
 
@@ -67,7 +67,7 @@ impl PersonalAccessToken {
     pub fn calculate_expiry_at(now: IggyTimestamp, expiry: IggyExpiry) -> Option<IggyTimestamp> {
         match expiry {
             IggyExpiry::ExpireDuration(expiry) => {
-                Some(IggyTimestamp::from(now.to_micros() + expiry.as_micros()))
+                Some(IggyTimestamp::from(now.as_micros() + expiry.as_micros()))
             }
             IggyExpiry::NeverExpire => None,
         }
@@ -105,7 +105,7 @@ mod tests {
         let expiry = IggyExpiry::ExpireDuration(IggyDuration::from(expiry_ms));
         let name = "test_token";
         let (personal_access_token, _) = PersonalAccessToken::new(user_id, name, now, expiry);
-        let later = IggyTimestamp::from(now.to_micros() + expiry_ms + 1);
+        let later = IggyTimestamp::from(now.as_micros() + expiry_ms + 1);
         assert!(personal_access_token.is_expired(later));
     }
 }

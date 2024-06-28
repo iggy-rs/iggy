@@ -49,8 +49,8 @@ impl Validatable<IggyError> for UpdateUser {
 }
 
 impl BytesSerializable for UpdateUser {
-    fn as_bytes(&self) -> Bytes {
-        let user_id_bytes = self.user_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let user_id_bytes = self.user_id.to_bytes();
         let mut bytes = BytesMut::new();
         bytes.put_slice(&user_id_bytes);
         if let Some(username) = &self.username {
@@ -141,7 +141,7 @@ mod tests {
             status: Some(UserStatus::Active),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
         let mut position = user_id.get_size_bytes() as usize;
         let has_username = bytes[position];
@@ -168,7 +168,7 @@ mod tests {
         let username = "user";
         let status = UserStatus::Active;
         let mut bytes = BytesMut::new();
-        bytes.put_slice(&user_id.as_bytes());
+        bytes.put_slice(&user_id.to_bytes());
         bytes.put_u8(1);
         bytes.put_u8(username.len() as u8);
         bytes.put_slice(username.as_bytes());

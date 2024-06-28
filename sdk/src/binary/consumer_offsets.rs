@@ -30,7 +30,7 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
                 partition_id,
                 offset,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -53,7 +53,7 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
                     topic_id: topic_id.clone(),
                     partition_id,
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_consumer_offset(response)

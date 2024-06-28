@@ -9,6 +9,6 @@ pub struct TimeIndex {
 impl PartialEq<Self> for TimeIndex {
     fn eq(&self, other: &Self) -> bool {
         self.relative_offset == other.relative_offset
-            && self.timestamp.to_micros() == other.timestamp.to_micros()
+            && self.timestamp.as_micros() == other.timestamp.as_micros()
     }
 }

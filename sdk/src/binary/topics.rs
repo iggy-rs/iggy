@@ -34,7 +34,7 @@ impl<B: BinaryClient> TopicClient for B {
                     stream_id: stream_id.clone(),
                     topic_id: topic_id.clone(),
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_topic(response)
@@ -48,7 +48,7 @@ impl<B: BinaryClient> TopicClient for B {
                 GetTopics {
                     stream_id: stream_id.clone(),
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_topics(response)
@@ -78,7 +78,7 @@ impl<B: BinaryClient> TopicClient for B {
                 message_expiry,
                 max_topic_size,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -106,7 +106,7 @@ impl<B: BinaryClient> TopicClient for B {
                 message_expiry,
                 max_topic_size,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -124,7 +124,7 @@ impl<B: BinaryClient> TopicClient for B {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -142,7 +142,7 @@ impl<B: BinaryClient> TopicClient for B {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())

@@ -20,7 +20,7 @@ use std::{
 ///
 /// let timestamp = IggyTimestamp::from(1694968446131680);
 /// assert_eq!(timestamp.to_utc_string("%Y-%m-%d %H:%M:%S"), "2023-09-17 16:34:06");
-/// assert_eq!(timestamp.to_micros(), 1694968446131680);
+/// assert_eq!(timestamp.as_micros(), 1694968446131680);
 /// ```
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct IggyTimestamp(SystemTime);
@@ -40,7 +40,7 @@ impl IggyTimestamp {
         self.0.duration_since(UNIX_EPOCH).unwrap().as_secs()
     }
 
-    pub fn to_micros(&self) -> u64 {
+    pub fn as_micros(&self) -> u64 {
         self.0.duration_since(UNIX_EPOCH).unwrap().as_micros() as u64
     }
 
@@ -61,7 +61,7 @@ impl From<u64> for IggyTimestamp {
 
 impl From<IggyTimestamp> for u64 {
     fn from(timestamp: IggyTimestamp) -> u64 {
-        timestamp.to_micros()
+        timestamp.as_micros()
     }
 }
 
@@ -90,7 +90,7 @@ impl Serialize for IggyTimestamp {
     where
         S: Serializer,
     {
-        let timestamp = self.to_micros();
+        let timestamp = self.as_micros();
         serializer.serialize_u64(timestamp)
     }
 }
@@ -127,13 +127,13 @@ mod tests {
     #[test]
     fn test_timestamp_get() {
         let timestamp = IggyTimestamp::now();
-        assert!(timestamp.to_micros() > 0);
+        assert!(timestamp.as_micros() > 0);
     }
 
     #[test]
     fn test_timestamp_to_micros() {
         let timestamp = IggyTimestamp::from(1663472051111);
-        assert_eq!(timestamp.to_micros(), 1663472051111);
+        assert_eq!(timestamp.as_micros(), 1663472051111);
     }
 
     #[test]
@@ -148,6 +148,6 @@ mod tests {
     #[test]
     fn test_timestamp_from_u64() {
         let timestamp = IggyTimestamp::from(1663472051111);
-        assert_eq!(timestamp.to_micros(), 1663472051111);
+        assert_eq!(timestamp.as_micros(), 1663472051111);
     }
 }

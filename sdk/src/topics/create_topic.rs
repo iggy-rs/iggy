@@ -92,8 +92,8 @@ impl Validatable<IggyError> for CreateTopic {
 }
 
 impl BytesSerializable for CreateTopic {
-    fn as_bytes(&self) -> Bytes {
-        let stream_id_bytes = self.stream_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let stream_id_bytes = self.stream_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(23 + stream_id_bytes.len() + self.name.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.put_u32_le(self.topic_id.unwrap_or(0));
@@ -184,7 +184,7 @@ mod tests {
             replication_factor: Some(1),
             name: "test".to_string(),
         };
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
@@ -226,7 +226,7 @@ mod tests {
         let message_expiry = IggyExpiry::NeverExpire;
         let max_topic_size = MaxTopicSize::ServerDefault;
         let replication_factor = 1;
-        let stream_id_bytes = stream_id.as_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(14 + stream_id_bytes.len() + name.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.put_u32_le(topic_id);

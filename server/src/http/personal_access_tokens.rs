@@ -77,7 +77,7 @@ async fn create_personal_access_token(
                 },
                 hash: token_hash,
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;
@@ -101,7 +101,7 @@ async fn delete_personal_access_token(
         .apply(
             DELETE_PERSONAL_ACCESS_TOKEN_CODE,
             identity.user_id,
-            &DeletePersonalAccessToken { name }.as_bytes(),
+            &DeletePersonalAccessToken { name }.to_bytes(),
             None,
         )
         .await?;

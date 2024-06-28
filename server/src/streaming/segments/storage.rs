@@ -466,7 +466,7 @@ impl SegmentStorage for FileSegmentStorage {
                 timestamp: time,
             };
             idx_pred.push(idx);
-            if time.to_micros() >= timestamp.to_micros() {
+            if time.as_micros() >= timestamp.as_micros() {
                 return Ok(idx_pred.tail());
             }
             read_bytes += TIME_INDEX_SIZE as usize;

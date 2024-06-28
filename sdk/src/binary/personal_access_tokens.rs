@@ -19,7 +19,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
         let response = self
             .send_with_response(
                 GET_PERSONAL_ACCESS_TOKENS_CODE,
-                GetPersonalAccessTokens {}.as_bytes(),
+                GetPersonalAccessTokens {}.to_bytes(),
             )
             .await?;
         mapper::map_personal_access_tokens(response)
@@ -38,7 +38,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
                     name: name.to_string(),
                     expiry,
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_raw_pat(response)
@@ -51,7 +51,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
             DeletePersonalAccessToken {
                 name: name.to_string(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -67,7 +67,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
                 LoginWithPersonalAccessToken {
                     token: token.to_string(),
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         self.set_state(ClientState::Authenticated).await;

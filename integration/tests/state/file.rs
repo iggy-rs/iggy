@@ -29,7 +29,7 @@ async fn should_apply_single_entry() {
         status: Default::default(),
         permissions: None,
     };
-    let payload = command.as_bytes();
+    let payload = command.to_bytes();
     state
         .apply(code, user_id, &payload, Some(context))
         .await
@@ -42,7 +42,7 @@ async fn should_apply_single_entry() {
     assert_eq!(entry.term, 0);
     assert_eq!(entry.version, setup.version());
     assert_eq!(entry.flags, 0);
-    assert!(entry.timestamp.to_micros() > 0);
+    assert!(entry.timestamp.as_micros() > 0);
     assert_eq!(entry.user_id, user_id);
     assert_eq!(entry.code, code);
     assert_eq!(entry.payload, payload);
@@ -72,7 +72,7 @@ async fn should_apply_multiple_entries() {
         status: Default::default(),
         permissions: None,
     };
-    let create_user_payload = create_user.as_bytes();
+    let create_user_payload = create_user.to_bytes();
     state
         .apply(
             create_user_code,
@@ -93,7 +93,7 @@ async fn should_apply_multiple_entries() {
         stream_id: Some(1),
         name: "test".to_string(),
     };
-    let create_stream_payload = create_stream.as_bytes();
+    let create_stream_payload = create_stream.to_bytes();
     state
         .apply(
             create_stream_code,
@@ -115,7 +115,7 @@ async fn should_apply_multiple_entries() {
     assert_eq!(create_user_entry.term, 0);
     assert_eq!(create_user_entry.version, setup.version());
     assert_eq!(create_user_entry.flags, 0);
-    assert!(create_user_entry.timestamp.to_micros() > 0);
+    assert!(create_user_entry.timestamp.as_micros() > 0);
     assert_eq!(create_user_entry.user_id, 1);
     assert_eq!(create_user_entry.code, create_user_code);
     assert_eq!(create_user_entry.payload, create_user_payload);
@@ -129,8 +129,8 @@ async fn should_apply_multiple_entries() {
     assert_eq!(create_stream_entry.term, 0);
     assert_eq!(create_stream_entry.version, setup.version());
     assert_eq!(create_stream_entry.flags, 0);
-    assert!(create_stream_entry.timestamp.to_micros() > 0);
-    assert!(create_stream_entry.timestamp.to_micros() > create_user_entry.timestamp.to_micros());
+    assert!(create_stream_entry.timestamp.as_micros() > 0);
+    assert!(create_stream_entry.timestamp.as_micros() > create_user_entry.timestamp.as_micros());
     assert_eq!(create_stream_entry.user_id, 2);
     assert_eq!(create_stream_entry.code, create_stream_code);
     assert_eq!(create_stream_entry.payload, create_stream_payload);

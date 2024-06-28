@@ -76,7 +76,7 @@ async fn create_stream(
         .apply(
             CREATE_STREAM_CODE,
             identity.user_id,
-            &command.as_bytes(),
+            &command.to_bytes(),
             None,
         )
         .await?;
@@ -104,7 +104,7 @@ async fn update_stream(
         .apply(
             UPDATE_STREAM_CODE,
             identity.user_id,
-            &command.as_bytes(),
+            &command.to_bytes(),
             None,
         )
         .await?;
@@ -129,7 +129,7 @@ async fn delete_stream(
         .apply(
             DELETE_STREAM_CODE,
             identity.user_id,
-            &DeleteStream { stream_id }.as_bytes(),
+            &DeleteStream { stream_id }.to_bytes(),
             None,
         )
         .await?;
@@ -154,7 +154,7 @@ async fn purge_stream(
         .apply(
             PURGE_STREAM_CODE,
             identity.user_id,
-            &PurgeStream { stream_id }.as_bytes(),
+            &PurgeStream { stream_id }.to_bytes(),
             None,
         )
         .await?;

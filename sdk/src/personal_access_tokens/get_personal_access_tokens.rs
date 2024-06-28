@@ -20,7 +20,7 @@ impl Validatable<IggyError> for GetPersonalAccessTokens {
 }
 
 impl BytesSerializable for GetPersonalAccessTokens {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         Bytes::new()
     }
 
@@ -48,7 +48,7 @@ mod tests {
     #[test]
     fn should_be_serialized_as_empty_bytes() {
         let command = GetPersonalAccessTokens {};
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         assert!(bytes.is_empty());
     }
 

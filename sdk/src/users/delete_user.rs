@@ -26,8 +26,8 @@ impl Validatable<IggyError> for DeleteUser {
 }
 
 impl BytesSerializable for DeleteUser {
-    fn as_bytes(&self) -> Bytes {
-        self.user_id.as_bytes()
+    fn to_bytes(&self) -> Bytes {
+        self.user_id.to_bytes()
     }
 
     fn from_bytes(bytes: Bytes) -> Result<DeleteUser, IggyError> {
@@ -58,7 +58,7 @@ mod tests {
             user_id: Identifier::numeric(1).unwrap(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
 
         assert!(!bytes.is_empty());
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let user_id = Identifier::numeric(1).unwrap();
-        let bytes = user_id.as_bytes();
+        let bytes = user_id.to_bytes();
         let command = DeleteUser::from_bytes(bytes);
         assert!(command.is_ok());
 

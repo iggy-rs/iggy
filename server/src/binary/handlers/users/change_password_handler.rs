@@ -37,7 +37,7 @@ pub async fn handle(
                 current_password: "".into(),
                 new_password: crypto::hash_password(&command.new_password),
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;

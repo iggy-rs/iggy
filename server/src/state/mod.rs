@@ -49,6 +49,35 @@ pub struct StateEntry {
     pub context: Bytes,
 }
 
+impl StateEntry {
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        index: u64,
+        term: u64,
+        leader_id: u32,
+        version: u32,
+        flags: u64,
+        timestamp: IggyTimestamp,
+        user_id: u32,
+        code: u32,
+        payload: Bytes,
+        context: Bytes,
+    ) -> Self {
+        Self {
+            index,
+            term,
+            leader_id,
+            version,
+            flags,
+            timestamp,
+            user_id,
+            code,
+            payload,
+            context,
+        }
+    }
+}
+
 impl Display for StateEntry {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -69,7 +98,7 @@ impl Display for StateEntry {
 }
 
 impl BytesSerializable for StateEntry {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(
             8 + 8 + 4 + 4 + 8 + 8 + 4 + 4 + 4 + self.payload.len() + 4 + self.context.len(),
         );
@@ -78,7 +107,7 @@ impl BytesSerializable for StateEntry {
         bytes.put_u32_le(self.leader_id);
         bytes.put_u32_le(self.version);
         bytes.put_u64_le(self.flags);
-        bytes.put_u64_le(self.timestamp.to_micros());
+        bytes.put_u64_le(self.timestamp.as_micros());
         bytes.put_u32_le(self.user_id);
         bytes.put_u32_le(self.code);
         bytes.put_u32_le(self.payload.len() as u32);

@@ -46,7 +46,7 @@ pub async fn convert(
                     status: user.status,
                     permissions: user.permissions.clone(),
                 }
-                .as_bytes(),
+                .to_bytes(),
                 None,
             )
             .await?;
@@ -60,10 +60,10 @@ pub async fn convert(
         let now = IggyTimestamp::now();
         let mut expiry = IggyExpiry::NeverExpire;
         if let Some(expiry_at) = personal_access_token.expiry_at {
-            if expiry_at.to_micros() <= now.to_micros() {
+            if expiry_at.as_micros() <= now.as_micros() {
                 continue;
             }
-            expiry = IggyExpiry::ExpireDuration((expiry_at.to_micros() - now.to_micros()).into());
+            expiry = IggyExpiry::ExpireDuration((expiry_at.as_micros() - now.as_micros()).into());
         }
 
         state
@@ -77,7 +77,7 @@ pub async fn convert(
                     },
                     hash: personal_access_token.token,
                 }
-                .as_bytes(),
+                .to_bytes(),
                 None,
             )
             .await?;
@@ -93,7 +93,7 @@ pub async fn convert(
                     stream_id: Some(stream.stream_id),
                     name: stream.name,
                 }
-                .as_bytes(),
+                .to_bytes(),
                 None,
             )
             .await?;
@@ -122,7 +122,7 @@ pub async fn convert(
                         },
                         name: topic.name,
                     }
-                    .as_bytes(),
+                    .to_bytes(),
                     None,
                 )
                 .await?;
@@ -144,7 +144,7 @@ pub async fn convert(
                             group_id: Some(group.group_id),
                             name: group.name.to_owned(),
                         }
-                        .as_bytes(),
+                        .to_bytes(),
                         None,
                     )
                     .await?;

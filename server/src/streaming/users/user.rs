@@ -107,7 +107,7 @@ mod tests {
             &user.password
         ));
         assert_eq!(user.status, UserStatus::Active);
-        assert!(user.created_at.to_micros() > 0);
+        assert!(user.created_at.as_micros() > 0);
     }
 
     #[test]

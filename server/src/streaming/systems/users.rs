@@ -34,7 +34,7 @@ impl System {
                 permissions: root.permissions.clone(),
             };
             self.state
-                .apply(CREATE_USER_CODE, 0, &command.as_bytes(), None)
+                .apply(CREATE_USER_CODE, 0, &command.to_bytes(), None)
                 .await?;
 
             self.users.insert(root.id, root);

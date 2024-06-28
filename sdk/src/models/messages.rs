@@ -173,7 +173,7 @@ impl PolledMessage {
         bytes.put_u128_le(self.id);
         bytes.put_u32_le(self.checksum);
         if let Some(headers) = &self.headers {
-            let headers_bytes = headers.as_bytes();
+            let headers_bytes = headers.to_bytes();
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(headers_bytes.len() as u32);
             bytes.put_slice(&headers_bytes);

@@ -63,7 +63,7 @@ impl Validatable<IggyError> for LoginUser {
 }
 
 impl BytesSerializable for LoginUser {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(2 + self.username.len() + self.password.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.username.len() as u8);
@@ -166,7 +166,7 @@ mod tests {
             context: Some("test".to_string()),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let username_length = bytes[0];
         let username = from_utf8(&bytes[1..=(username_length as usize)]).unwrap();
         let password_length = bytes[1 + username_length as usize];

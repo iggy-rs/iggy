@@ -34,7 +34,7 @@ impl Validatable<IggyError> for GetClient {
 }
 
 impl BytesSerializable for GetClient {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(4);
         bytes.put_u32_le(self.client_id);
         bytes.freeze()
@@ -66,7 +66,7 @@ mod tests {
     fn should_be_serialized_as_bytes() {
         let command = GetClient { client_id: 1 };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let client_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
 
         assert!(!bytes.is_empty());

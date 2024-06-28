@@ -94,7 +94,7 @@ async fn create_topic(
         .apply(
             CREATE_TOPIC_CODE,
             identity.user_id,
-            &command.as_bytes(),
+            &command.to_bytes(),
             None,
         )
         .await?;
@@ -128,7 +128,7 @@ async fn update_topic(
         .apply(
             UPDATE_TOPIC_CODE,
             identity.user_id,
-            &command.as_bytes(),
+            &command.to_bytes(),
             None,
         )
         .await?;
@@ -159,7 +159,7 @@ async fn delete_topic(
                 stream_id,
                 topic_id,
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;
@@ -190,7 +190,7 @@ async fn purge_topic(
                 stream_id,
                 topic_id,
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;

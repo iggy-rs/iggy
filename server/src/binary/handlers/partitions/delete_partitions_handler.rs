@@ -29,7 +29,7 @@ pub async fn handle(
         .apply(
             DELETE_PARTITIONS_CODE,
             session.get_user_id(),
-            &command.as_bytes(),
+            &command.to_bytes(),
             None,
         )
         .await?;

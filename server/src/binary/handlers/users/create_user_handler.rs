@@ -39,7 +39,7 @@ pub async fn handle(
                 status: command.status,
                 permissions: command.permissions.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;

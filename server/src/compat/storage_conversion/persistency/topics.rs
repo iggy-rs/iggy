@@ -10,7 +10,7 @@ use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
-use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::expiry::{IggyExpiry, SEC_IN_MICRO};
 use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 use sled::Db;
@@ -57,7 +57,9 @@ pub async fn load(config: &SystemConfig, db: &Db, topic: &mut Topic) -> Result<(
     topic.name = topic_data.name;
     topic.created_at = topic_data.created_at;
     topic.message_expiry = match topic_data.message_expiry {
-        Some(expiry) => IggyExpiry::ExpireDuration(IggyDuration::from(expiry as u64 * 1000000)),
+        Some(expiry) => {
+            IggyExpiry::ExpireDuration(IggyDuration::from(expiry as u64 * SEC_IN_MICRO))
+        }
         None => IggyExpiry::NeverExpire,
     };
     topic.compression_algorithm = topic_data.compression_algorithm;

@@ -98,7 +98,7 @@ async fn create_user(
                 status: command.status,
                 permissions: command.permissions.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;
@@ -113,7 +113,7 @@ async fn update_user(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let bytes = command.as_bytes();
+    let bytes = command.to_bytes();
     let mut system = state.system.write();
     system
         .update_user(
@@ -138,7 +138,7 @@ async fn update_permissions(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let bytes = command.as_bytes();
+    let bytes = command.to_bytes();
     let mut system = state.system.write();
     system
         .update_permissions(
@@ -182,7 +182,7 @@ async fn change_password(
                 current_password: "".into(),
                 new_password: crypto::hash_password(&command.new_password),
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;
@@ -207,7 +207,7 @@ async fn delete_user(
         .apply(
             DELETE_USER_CODE,
             identity.user_id,
-            &DeleteUser { user_id }.as_bytes(),
+            &DeleteUser { user_id }.to_bytes(),
             None,
         )
         .await?;

@@ -729,7 +729,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
 
 fn assert_message(message: &PolledMessage, offset: u64) {
     let expected_payload = create_message_payload(offset);
-    assert!(message.timestamp.to_micros() > 0);
+    assert!(message.timestamp.as_micros() > 0);
     assert_eq!(message.offset, offset);
     assert_eq!(message.payload, expected_payload);
 }

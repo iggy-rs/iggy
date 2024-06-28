@@ -10,6 +10,8 @@ use std::ops::Add;
 use std::str::FromStr;
 use std::time::Duration;
 
+pub const SEC_IN_MICRO: u64 = 1_000_000;
+
 /// Helper enum for various time-based expiry related functionalities
 #[derive(Debug, Copy, Default, Clone, Eq, PartialEq)]
 pub enum IggyExpiry {
@@ -188,11 +190,11 @@ mod tests {
         );
         assert_eq!(
             IggyExpiry::from_str("15days").unwrap(),
-            IggyExpiry::ExpireDuration(IggyDuration::from(1000000 * 60 * 60 * 24 * 15))
+            IggyExpiry::ExpireDuration(IggyDuration::from(SEC_IN_MICRO * 60 * 60 * 24 * 15))
         );
         assert_eq!(
             IggyExpiry::from_str("2min").unwrap(),
-            IggyExpiry::ExpireDuration(IggyDuration::from(1000000 * 60 * 2))
+            IggyExpiry::ExpireDuration(IggyDuration::from(SEC_IN_MICRO * 60 * 2))
         );
         assert_eq!(
             IggyExpiry::from_str("1ms").unwrap(),
@@ -200,12 +202,12 @@ mod tests {
         );
         assert_eq!(
             IggyExpiry::from_str("1s").unwrap(),
-            IggyExpiry::ExpireDuration(IggyDuration::from(1000000))
+            IggyExpiry::ExpireDuration(IggyDuration::from(SEC_IN_MICRO))
         );
         assert_eq!(
             IggyExpiry::from_str("15days 2min 2s").unwrap(),
             IggyExpiry::ExpireDuration(IggyDuration::from(
-                1000000 * (60 * 60 * 24 * 15 + 60 * 2 + 2)
+                SEC_IN_MICRO * (60 * 60 * 24 * 15 + 60 * 2 + 2)
             ))
         );
     }

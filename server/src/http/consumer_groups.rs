@@ -97,7 +97,7 @@ async fn create_consumer_group(
             .apply(
                 CREATE_CONSUMER_GROUP_CODE,
                 identity.user_id,
-                &command.as_bytes(),
+                &command.to_bytes(),
                 None,
             )
             .await?;
@@ -132,7 +132,7 @@ async fn delete_consumer_group(
                 topic_id,
                 group_id,
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;

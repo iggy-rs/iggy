@@ -78,7 +78,7 @@ pub fn map_user(user: &User) -> Bytes {
     extend_user(user, &mut bytes);
     if let Some(permissions) = &user.permissions {
         bytes.put_u8(1);
-        let permissions = permissions.as_bytes();
+        let permissions = permissions.to_bytes();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u32_le(permissions.len() as u32);
         bytes.put_slice(&permissions);
@@ -264,7 +264,7 @@ fn extend_pat(personal_access_token: &PersonalAccessToken, bytes: &mut BytesMut)
     bytes.put_slice(personal_access_token.name.as_bytes());
     match &personal_access_token.expiry_at {
         Some(expiry_at) => {
-            bytes.put_u64_le(expiry_at.to_micros());
+            bytes.put_u64_le(expiry_at.as_micros());
         }
         None => {
             bytes.put_u64_le(0);

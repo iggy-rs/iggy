@@ -54,10 +54,10 @@ impl Validatable<IggyError> for GetConsumerOffset {
 }
 
 impl BytesSerializable for GetConsumerOffset {
-    fn as_bytes(&self) -> Bytes {
-        let consumer_bytes = self.consumer.as_bytes();
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let consumer_bytes = self.consumer.to_bytes();
+        let stream_id_bytes = self.stream_id.to_bytes();
+        let topic_id_bytes = self.topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             4 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
         );
@@ -132,7 +132,7 @@ mod tests {
             partition_id: Some(4),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
         let consumer_id = Identifier::from_bytes(bytes.slice(1..)).unwrap();
@@ -161,9 +161,9 @@ mod tests {
         let topic_id = Identifier::numeric(3).unwrap();
         let partition_id = 4u32;
 
-        let consumer_bytes = consumer.as_bytes();
-        let stream_id_bytes = stream_id.as_bytes();
-        let topic_id_bytes = topic_id.as_bytes();
+        let consumer_bytes = consumer.to_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
+        let topic_id_bytes = topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             4 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
         );

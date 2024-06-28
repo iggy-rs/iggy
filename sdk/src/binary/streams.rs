@@ -26,7 +26,7 @@ impl<B: BinaryClient> StreamClient for B {
                 GetStream {
                     stream_id: stream_id.clone(),
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_stream(response)
@@ -35,7 +35,7 @@ impl<B: BinaryClient> StreamClient for B {
     async fn get_streams(&self) -> Result<Vec<Stream>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_STREAMS_CODE, GetStreams {}.as_bytes())
+            .send_with_response(GET_STREAMS_CODE, GetStreams {}.to_bytes())
             .await?;
         mapper::map_streams(response)
     }
@@ -48,7 +48,7 @@ impl<B: BinaryClient> StreamClient for B {
                 name: name.to_string(),
                 stream_id,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -62,7 +62,7 @@ impl<B: BinaryClient> StreamClient for B {
                 stream_id: stream_id.clone(),
                 name: name.to_string(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -75,7 +75,7 @@ impl<B: BinaryClient> StreamClient for B {
             DeleteStream {
                 stream_id: stream_id.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -88,7 +88,7 @@ impl<B: BinaryClient> StreamClient for B {
             PurgeStream {
                 stream_id: stream_id.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())

@@ -25,7 +25,7 @@ impl<B: BinaryClient> PartitionClient for B {
                 topic_id: topic_id.clone(),
                 partitions_count,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -45,7 +45,7 @@ impl<B: BinaryClient> PartitionClient for B {
                 topic_id: topic_id.clone(),
                 partitions_count,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())

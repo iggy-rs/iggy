@@ -64,7 +64,7 @@ impl Partition {
                 let time_index = time_indexes
                     .iter()
                     .rposition(|time_index| {
-                        time_index.timestamp.to_micros() <= timestamp.to_micros()
+                        time_index.timestamp.as_micros() <= timestamp.as_micros()
                     })
                     .map(|idx| time_indexes[idx]);
                 if time_index.is_none() {
@@ -89,7 +89,7 @@ impl Partition {
                 .get_messages_by_offset(start_offset, count)
                 .await?
                 .into_iter()
-                .filter(|msg| msg.timestamp.to_micros() >= timestamp.to_micros())
+                .filter(|msg| msg.timestamp.as_micros() >= timestamp.as_micros())
                 .take(count as usize)
                 .collect());
         }
@@ -103,7 +103,7 @@ impl Partition {
             .get_messages_by_offset(start_offset, adjusted_count)
             .await?
             .into_iter()
-            .filter(|msg| msg.timestamp.to_micros() >= timestamp.to_micros())
+            .filter(|msg| msg.timestamp.as_micros() >= timestamp.as_micros())
             .take(count as usize)
             .collect())
     }
@@ -116,7 +116,7 @@ impl Partition {
         if self.avg_timestamp_delta.as_micros() == 0 {
             return count;
         }
-        let timestamp_diff = timestamp.to_micros() - timestamp_from_index.to_micros();
+        let timestamp_diff = timestamp.as_micros() - timestamp_from_index.as_micros();
         // This approximation is not exact, but it's good enough for the usage of this function
         let overfetch_value =
             ((timestamp_diff as f64 / self.avg_timestamp_delta.as_micros() as f64) * 1.35).ceil()
@@ -444,7 +444,7 @@ impl Partition {
         }
 
         let avg_timestamp_delta = Duration::from_micros(
-            (max_timestamp.to_micros() - min_timestamp.to_micros()) / messages_count as u64,
+            (max_timestamp.as_micros() - min_timestamp.as_micros()) / messages_count as u64,
         )
         .into();
 

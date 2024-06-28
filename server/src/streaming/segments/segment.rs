@@ -136,7 +136,7 @@ impl Segment {
 
                 let last_message = &last_messages[0];
                 let last_message_timestamp: IggyTimestamp = last_message.timestamp;
-                last_message_timestamp.to_micros() + expiry.as_micros() <= now.to_micros()
+                last_message_timestamp.as_micros() + expiry.as_micros() <= now.as_micros()
             }
         }
     }

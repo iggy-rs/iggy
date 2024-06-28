@@ -33,7 +33,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
                     topic_id: topic_id.clone(),
                     group_id: group_id.clone(),
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_consumer_group(response)
@@ -52,7 +52,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
                     stream_id: stream_id.clone(),
                     topic_id: topic_id.clone(),
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_consumer_groups(response)
@@ -75,7 +75,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
                     name: name.to_string(),
                     group_id,
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_consumer_group(response)
@@ -95,7 +95,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
                 topic_id: topic_id.clone(),
                 group_id: group_id.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -115,7 +115,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
                 topic_id: topic_id.clone(),
                 group_id: group_id.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -135,7 +135,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
                 topic_id: topic_id.clone(),
                 group_id: group_id.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())

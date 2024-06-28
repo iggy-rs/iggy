@@ -80,9 +80,9 @@ impl Validatable<IggyError> for UpdateTopic {
 }
 
 impl BytesSerializable for UpdateTopic {
-    fn as_bytes(&self) -> Bytes {
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let stream_id_bytes = self.stream_id.to_bytes();
+        let topic_id_bytes = self.topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             14 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
         );
@@ -173,7 +173,7 @@ mod tests {
             name: "test".to_string(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
@@ -213,8 +213,8 @@ mod tests {
         let max_topic_size = MaxTopicSize::Custom(IggyByteSize::from(100));
         let replication_factor = 1;
 
-        let stream_id_bytes = stream_id.as_bytes();
-        let topic_id_bytes = topic_id.as_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
+        let topic_id_bytes = topic_id.to_bytes();
         let mut bytes =
             BytesMut::with_capacity(5 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
         bytes.put_slice(&stream_id_bytes);

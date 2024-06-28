@@ -61,7 +61,7 @@ impl Extendable for MessageSnapshot {
         if let Some(headers) = headers {
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(headers.len() as u32);
-            bytes.put_slice(&headers.as_bytes());
+            bytes.put_slice(&headers.to_bytes());
         } else {
             bytes.put_u32_le(0u32);
         }

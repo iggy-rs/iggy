@@ -29,7 +29,7 @@ impl<B: BinaryClient> UserClient for B {
                 GetUser {
                     user_id: user_id.clone(),
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         mapper::map_user(response)
@@ -38,7 +38,7 @@ impl<B: BinaryClient> UserClient for B {
     async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GET_USERS_CODE, GetUsers {}.as_bytes())
+            .send_with_response(GET_USERS_CODE, GetUsers {}.to_bytes())
             .await?;
         mapper::map_users(response)
     }
@@ -59,7 +59,7 @@ impl<B: BinaryClient> UserClient for B {
                 status,
                 permissions,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -72,7 +72,7 @@ impl<B: BinaryClient> UserClient for B {
             DeleteUser {
                 user_id: user_id.clone(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -92,7 +92,7 @@ impl<B: BinaryClient> UserClient for B {
                 username: username.map(|s| s.to_string()),
                 status,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -110,7 +110,7 @@ impl<B: BinaryClient> UserClient for B {
                 user_id: user_id.clone(),
                 permissions,
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -130,7 +130,7 @@ impl<B: BinaryClient> UserClient for B {
                 current_password: current_password.to_string(),
                 new_password: new_password.to_string(),
             }
-            .as_bytes(),
+            .to_bytes(),
         )
         .await?;
         Ok(())
@@ -146,7 +146,7 @@ impl<B: BinaryClient> UserClient for B {
                     version: Some("0.5.0".to_string()),
                     context: Some("".to_string()),
                 }
-                .as_bytes(),
+                .to_bytes(),
             )
             .await?;
         self.set_state(ClientState::Authenticated).await;
@@ -155,7 +155,7 @@ impl<B: BinaryClient> UserClient for B {
 
     async fn logout_user(&self) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(LOGOUT_USER_CODE, LogoutUser {}.as_bytes())
+        self.send_with_response(LOGOUT_USER_CODE, LogoutUser {}.to_bytes())
             .await?;
         self.set_state(ClientState::Connected).await;
         Ok(())

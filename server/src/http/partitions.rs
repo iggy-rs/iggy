@@ -46,7 +46,7 @@ async fn create_partitions(
         .apply(
             CREATE_PARTITIONS_CODE,
             identity.user_id,
-            &command.as_bytes(),
+            &command.to_bytes(),
             None,
         )
         .await?;
@@ -81,7 +81,7 @@ async fn delete_partitions(
                 topic_id: query.topic_id.clone(),
                 partitions_count: query.partitions_count,
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;

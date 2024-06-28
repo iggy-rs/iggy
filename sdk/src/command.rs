@@ -181,79 +181,79 @@ pub enum Command {
 pub trait CommandPayload: BytesSerializable + Display {}
 
 impl BytesSerializable for Command {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         match self {
-            Command::Ping(payload) => as_bytes(PING_CODE, payload.as_bytes()),
-            Command::GetStats(payload) => as_bytes(GET_STATS_CODE, payload.as_bytes()),
-            Command::GetMe(payload) => as_bytes(GET_ME_CODE, payload.as_bytes()),
-            Command::GetClient(payload) => as_bytes(GET_CLIENT_CODE, payload.as_bytes()),
-            Command::GetClients(payload) => as_bytes(GET_CLIENTS_CODE, payload.as_bytes()),
-            Command::GetUser(payload) => as_bytes(GET_USER_CODE, payload.as_bytes()),
-            Command::GetUsers(payload) => as_bytes(GET_USERS_CODE, payload.as_bytes()),
-            Command::CreateUser(payload) => as_bytes(CREATE_USER_CODE, payload.as_bytes()),
-            Command::DeleteUser(payload) => as_bytes(DELETE_USER_CODE, payload.as_bytes()),
-            Command::UpdateUser(payload) => as_bytes(UPDATE_USER_CODE, payload.as_bytes()),
+            Command::Ping(payload) => as_bytes(PING_CODE, payload.to_bytes()),
+            Command::GetStats(payload) => as_bytes(GET_STATS_CODE, payload.to_bytes()),
+            Command::GetMe(payload) => as_bytes(GET_ME_CODE, payload.to_bytes()),
+            Command::GetClient(payload) => as_bytes(GET_CLIENT_CODE, payload.to_bytes()),
+            Command::GetClients(payload) => as_bytes(GET_CLIENTS_CODE, payload.to_bytes()),
+            Command::GetUser(payload) => as_bytes(GET_USER_CODE, payload.to_bytes()),
+            Command::GetUsers(payload) => as_bytes(GET_USERS_CODE, payload.to_bytes()),
+            Command::CreateUser(payload) => as_bytes(CREATE_USER_CODE, payload.to_bytes()),
+            Command::DeleteUser(payload) => as_bytes(DELETE_USER_CODE, payload.to_bytes()),
+            Command::UpdateUser(payload) => as_bytes(UPDATE_USER_CODE, payload.to_bytes()),
             Command::UpdatePermissions(payload) => {
-                as_bytes(UPDATE_PERMISSIONS_CODE, payload.as_bytes())
+                as_bytes(UPDATE_PERMISSIONS_CODE, payload.to_bytes())
             }
-            Command::ChangePassword(payload) => as_bytes(CHANGE_PASSWORD_CODE, payload.as_bytes()),
-            Command::LoginUser(payload) => as_bytes(LOGIN_USER_CODE, payload.as_bytes()),
-            Command::LogoutUser(payload) => as_bytes(LOGOUT_USER_CODE, payload.as_bytes()),
+            Command::ChangePassword(payload) => as_bytes(CHANGE_PASSWORD_CODE, payload.to_bytes()),
+            Command::LoginUser(payload) => as_bytes(LOGIN_USER_CODE, payload.to_bytes()),
+            Command::LogoutUser(payload) => as_bytes(LOGOUT_USER_CODE, payload.to_bytes()),
             Command::GetPersonalAccessTokens(payload) => {
-                as_bytes(GET_PERSONAL_ACCESS_TOKENS_CODE, payload.as_bytes())
+                as_bytes(GET_PERSONAL_ACCESS_TOKENS_CODE, payload.to_bytes())
             }
             Command::CreatePersonalAccessToken(payload) => {
-                as_bytes(CREATE_PERSONAL_ACCESS_TOKEN_CODE, payload.as_bytes())
+                as_bytes(CREATE_PERSONAL_ACCESS_TOKEN_CODE, payload.to_bytes())
             }
             Command::DeletePersonalAccessToken(payload) => {
-                as_bytes(DELETE_PERSONAL_ACCESS_TOKEN_CODE, payload.as_bytes())
+                as_bytes(DELETE_PERSONAL_ACCESS_TOKEN_CODE, payload.to_bytes())
             }
             Command::LoginWithPersonalAccessToken(payload) => {
-                as_bytes(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, payload.as_bytes())
+                as_bytes(LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE, payload.to_bytes())
             }
-            Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, payload.as_bytes()),
-            Command::PollMessages(payload) => as_bytes(POLL_MESSAGES_CODE, payload.as_bytes()),
+            Command::SendMessages(payload) => as_bytes(SEND_MESSAGES_CODE, payload.to_bytes()),
+            Command::PollMessages(payload) => as_bytes(POLL_MESSAGES_CODE, payload.to_bytes()),
             Command::StoreConsumerOffset(payload) => {
-                as_bytes(STORE_CONSUMER_OFFSET_CODE, payload.as_bytes())
+                as_bytes(STORE_CONSUMER_OFFSET_CODE, payload.to_bytes())
             }
             Command::GetConsumerOffset(payload) => {
-                as_bytes(GET_CONSUMER_OFFSET_CODE, payload.as_bytes())
+                as_bytes(GET_CONSUMER_OFFSET_CODE, payload.to_bytes())
             }
-            Command::GetStream(payload) => as_bytes(GET_STREAM_CODE, payload.as_bytes()),
-            Command::GetStreams(payload) => as_bytes(GET_STREAMS_CODE, payload.as_bytes()),
-            Command::CreateStream(payload) => as_bytes(CREATE_STREAM_CODE, payload.as_bytes()),
-            Command::DeleteStream(payload) => as_bytes(DELETE_STREAM_CODE, payload.as_bytes()),
-            Command::UpdateStream(payload) => as_bytes(UPDATE_STREAM_CODE, payload.as_bytes()),
-            Command::PurgeStream(payload) => as_bytes(PURGE_STREAM_CODE, payload.as_bytes()),
-            Command::GetTopic(payload) => as_bytes(GET_TOPIC_CODE, payload.as_bytes()),
-            Command::GetTopics(payload) => as_bytes(GET_TOPICS_CODE, payload.as_bytes()),
-            Command::CreateTopic(payload) => as_bytes(CREATE_TOPIC_CODE, payload.as_bytes()),
-            Command::DeleteTopic(payload) => as_bytes(DELETE_TOPIC_CODE, payload.as_bytes()),
-            Command::UpdateTopic(payload) => as_bytes(UPDATE_TOPIC_CODE, payload.as_bytes()),
-            Command::PurgeTopic(payload) => as_bytes(PURGE_TOPIC_CODE, payload.as_bytes()),
+            Command::GetStream(payload) => as_bytes(GET_STREAM_CODE, payload.to_bytes()),
+            Command::GetStreams(payload) => as_bytes(GET_STREAMS_CODE, payload.to_bytes()),
+            Command::CreateStream(payload) => as_bytes(CREATE_STREAM_CODE, payload.to_bytes()),
+            Command::DeleteStream(payload) => as_bytes(DELETE_STREAM_CODE, payload.to_bytes()),
+            Command::UpdateStream(payload) => as_bytes(UPDATE_STREAM_CODE, payload.to_bytes()),
+            Command::PurgeStream(payload) => as_bytes(PURGE_STREAM_CODE, payload.to_bytes()),
+            Command::GetTopic(payload) => as_bytes(GET_TOPIC_CODE, payload.to_bytes()),
+            Command::GetTopics(payload) => as_bytes(GET_TOPICS_CODE, payload.to_bytes()),
+            Command::CreateTopic(payload) => as_bytes(CREATE_TOPIC_CODE, payload.to_bytes()),
+            Command::DeleteTopic(payload) => as_bytes(DELETE_TOPIC_CODE, payload.to_bytes()),
+            Command::UpdateTopic(payload) => as_bytes(UPDATE_TOPIC_CODE, payload.to_bytes()),
+            Command::PurgeTopic(payload) => as_bytes(PURGE_TOPIC_CODE, payload.to_bytes()),
             Command::CreatePartitions(payload) => {
-                as_bytes(CREATE_PARTITIONS_CODE, payload.as_bytes())
+                as_bytes(CREATE_PARTITIONS_CODE, payload.to_bytes())
             }
             Command::DeletePartitions(payload) => {
-                as_bytes(DELETE_PARTITIONS_CODE, payload.as_bytes())
+                as_bytes(DELETE_PARTITIONS_CODE, payload.to_bytes())
             }
             Command::GetConsumerGroup(payload) => {
-                as_bytes(GET_CONSUMER_GROUP_CODE, payload.as_bytes())
+                as_bytes(GET_CONSUMER_GROUP_CODE, payload.to_bytes())
             }
             Command::GetConsumerGroups(payload) => {
-                as_bytes(GET_CONSUMER_GROUPS_CODE, payload.as_bytes())
+                as_bytes(GET_CONSUMER_GROUPS_CODE, payload.to_bytes())
             }
             Command::CreateConsumerGroup(payload) => {
-                as_bytes(CREATE_CONSUMER_GROUP_CODE, payload.as_bytes())
+                as_bytes(CREATE_CONSUMER_GROUP_CODE, payload.to_bytes())
             }
             Command::DeleteConsumerGroup(payload) => {
-                as_bytes(DELETE_CONSUMER_GROUP_CODE, payload.as_bytes())
+                as_bytes(DELETE_CONSUMER_GROUP_CODE, payload.to_bytes())
             }
             Command::JoinConsumerGroup(payload) => {
-                as_bytes(JOIN_CONSUMER_GROUP_CODE, payload.as_bytes())
+                as_bytes(JOIN_CONSUMER_GROUP_CODE, payload.to_bytes())
             }
             Command::LeaveConsumerGroup(payload) => {
-                as_bytes(LEAVE_CONSUMER_GROUP_CODE, payload.as_bytes())
+                as_bytes(LEAVE_CONSUMER_GROUP_CODE, payload.to_bytes())
             }
         }
     }
@@ -709,11 +709,11 @@ mod tests {
         command_id: u32,
         payload: &dyn CommandPayload,
     ) {
-        let payload = payload.as_bytes();
+        let payload = payload.to_bytes();
         let mut bytes = BytesMut::with_capacity(4 + payload.len());
         bytes.put_u32_le(command_id);
         bytes.put_slice(&payload);
-        assert_eq!(command.as_bytes(), bytes);
+        assert_eq!(command.to_bytes(), bytes);
     }
 
     fn assert_deserialized_from_bytes(
@@ -721,7 +721,7 @@ mod tests {
         command_id: u32,
         payload: &dyn CommandPayload,
     ) {
-        let payload = payload.as_bytes();
+        let payload = payload.to_bytes();
         let mut bytes = BytesMut::with_capacity(4 + payload.len());
         bytes.put_u32_le(command_id);
         bytes.put_slice(&payload);

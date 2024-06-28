@@ -348,7 +348,7 @@ impl SystemState {
                         command.command.expiry,
                     );
                     if let Some(expiry_at) = expiry_at {
-                        if expiry_at.to_micros() <= IggyTimestamp::now().to_micros() {
+                        if expiry_at.as_micros() <= IggyTimestamp::now().as_micros() {
                             debug!("Personal access token: {token_hash} has already expired.");
                             continue;
                         }

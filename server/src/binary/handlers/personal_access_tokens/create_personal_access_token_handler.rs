@@ -37,7 +37,7 @@ pub async fn handle(
                 },
                 hash: token_hash,
             }
-            .as_bytes(),
+            .to_bytes(),
             None,
         )
         .await?;

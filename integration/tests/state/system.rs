@@ -80,40 +80,40 @@ async fn should_be_initialized_based_on_state_entries() {
     };
 
     state
-        .apply(CREATE_USER_CODE, user_id, &create_user.as_bytes(), None)
+        .apply(CREATE_USER_CODE, user_id, &create_user.to_bytes(), None)
         .await
         .unwrap();
     state
         .apply(
             CREATE_STREAM_CODE,
             user_id,
-            &create_stream1.as_bytes(),
+            &create_stream1.to_bytes(),
             None,
         )
         .await
         .unwrap();
     state
-        .apply(CREATE_TOPIC_CODE, user_id, &create_topic1.as_bytes(), None)
+        .apply(CREATE_TOPIC_CODE, user_id, &create_topic1.to_bytes(), None)
         .await
         .unwrap();
     state
         .apply(
             CREATE_STREAM_CODE,
             user_id,
-            &create_stream2.as_bytes(),
+            &create_stream2.to_bytes(),
             None,
         )
         .await
         .unwrap();
     state
-        .apply(CREATE_TOPIC_CODE, user_id, &create_topic2.as_bytes(), None)
+        .apply(CREATE_TOPIC_CODE, user_id, &create_topic2.to_bytes(), None)
         .await
         .unwrap();
     state
         .apply(
             CREATE_PARTITIONS_CODE,
             user_id,
-            &create_partitions.as_bytes(),
+            &create_partitions.to_bytes(),
             None,
         )
         .await
@@ -122,7 +122,7 @@ async fn should_be_initialized_based_on_state_entries() {
         .apply(
             DELETE_STREAM_CODE,
             user_id,
-            &delete_stream2.as_bytes(),
+            &delete_stream2.to_bytes(),
             None,
         )
         .await
@@ -131,7 +131,7 @@ async fn should_be_initialized_based_on_state_entries() {
         .apply(
             CREATE_PERSONAL_ACCESS_TOKEN_CODE,
             user_id,
-            &create_personal_access_token.as_bytes(),
+            &create_personal_access_token.to_bytes(),
             None,
         )
         .await

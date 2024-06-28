@@ -12,9 +12,9 @@ pub struct CreatePersonalAccessTokenWithHash {
 }
 
 impl BytesSerializable for CreatePersonalAccessTokenWithHash {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::new();
-        let command_bytes = self.command.as_bytes();
+        let command_bytes = self.command.to_bytes();
         bytes.put_u32_le(command_bytes.len() as u32);
         bytes.put_slice(&command_bytes);
         bytes.put_u32_le(self.hash.len() as u32);

@@ -1,15 +1,14 @@
 use crate::binary::sender::Sender;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::UPDATE_PERMISSIONS_CODE;
 use iggy::error::IggyError;
 use iggy::users::update_permissions::UpdatePermissions;
 use tracing::debug;
 
 pub async fn handle(
-    command: &UpdatePermissions,
+    command: UpdatePermissions,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
@@ -22,10 +21,8 @@ pub async fn handle(
     system
         .state
         .apply(
-            UPDATE_PERMISSIONS_CODE,
             session.get_user_id(),
-            &command.to_bytes(),
-            None,
+            EntryCommand::UpdatePermissions(command),
         )
         .await?;
     sender.send_empty_ok_response().await?;

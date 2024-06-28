@@ -7,7 +7,7 @@ use iggy::users::get_user::GetUser;
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetUser,
+    command: GetUser,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

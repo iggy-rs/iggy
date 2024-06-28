@@ -1,13 +1,12 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Extension, Json, Router};
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{CREATE_PARTITIONS_CODE, DELETE_PARTITIONS_CODE};
 use iggy::identifier::Identifier;
 use iggy::partitions::create_partitions::CreatePartitions;
 use iggy::partitions::delete_partitions::DeletePartitions;
@@ -43,12 +42,7 @@ async fn create_partitions(
         .await?;
     system
         .state
-        .apply(
-            CREATE_PARTITIONS_CODE,
-            identity.user_id,
-            &command.to_bytes(),
-            None,
-        )
+        .apply(identity.user_id, EntryCommand::CreatePartitions(command))
         .await?;
     Ok(StatusCode::CREATED)
 }
@@ -74,15 +68,12 @@ async fn delete_partitions(
     system
         .state
         .apply(
-            DELETE_PARTITIONS_CODE,
             identity.user_id,
-            &DeletePartitions {
+            EntryCommand::DeletePartitions(DeletePartitions {
                 stream_id: query.stream_id.clone(),
                 topic_id: query.topic_id.clone(),
                 partitions_count: query.partitions_count,
-            }
-            .to_bytes(),
-            None,
+            }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

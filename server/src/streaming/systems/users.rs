@@ -1,11 +1,10 @@
+use crate::state::command::EntryCommand;
 use crate::state::system::UserState;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
 use crate::streaming::utils::crypto;
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::CREATE_USER_CODE;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
@@ -34,7 +33,7 @@ impl System {
                 permissions: root.permissions.clone(),
             };
             self.state
-                .apply(CREATE_USER_CODE, 0, &command.to_bytes(), None)
+                .apply(0, EntryCommand::CreateUser(command))
                 .await?;
 
             self.users.insert(root.id, root);

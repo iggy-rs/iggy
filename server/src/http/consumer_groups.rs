@@ -2,13 +2,12 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{CREATE_CONSUMER_GROUP_CODE, DELETE_CONSUMER_GROUP_CODE};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::identifier::Identifier;
@@ -94,12 +93,7 @@ async fn create_consumer_group(
         let system = state.system.read();
         system
             .state
-            .apply(
-                CREATE_CONSUMER_GROUP_CODE,
-                identity.user_id,
-                &command.to_bytes(),
-                None,
-            )
+            .apply(identity.user_id, EntryCommand::CreateConsumerGroup(command))
             .await?;
     }
     Ok((StatusCode::CREATED, Json(consumer_group_details)))
@@ -125,15 +119,12 @@ async fn delete_consumer_group(
     system
         .state
         .apply(
-            DELETE_CONSUMER_GROUP_CODE,
             identity.user_id,
-            &DeleteConsumerGroup {
+            EntryCommand::DeleteConsumerGroup(DeleteConsumerGroup {
                 stream_id,
                 topic_id,
                 group_id,
-            }
-            .to_bytes(),
-            None,
+            }),
         )
         .await?;
 

@@ -7,10 +7,6 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{
-    CREATE_STREAM_CODE, DELETE_STREAM_CODE, PURGE_STREAM_CODE, UPDATE_STREAM_CODE,
-};
 use iggy::identifier::Identifier;
 use iggy::models::stream::{Stream, StreamDetails};
 use iggy::streams::create_stream::CreateStream;
@@ -18,6 +14,8 @@ use iggy::streams::delete_stream::DeleteStream;
 use iggy::streams::purge_stream::PurgeStream;
 use iggy::streams::update_stream::UpdateStream;
 use iggy::validatable::Validatable;
+
+use crate::state::command::EntryCommand;
 use std::sync::Arc;
 
 pub fn router(state: Arc<AppState>) -> Router {
@@ -73,12 +71,7 @@ async fn create_stream(
         .await?;
     system
         .state
-        .apply(
-            CREATE_STREAM_CODE,
-            identity.user_id,
-            &command.to_bytes(),
-            None,
-        )
+        .apply(identity.user_id, EntryCommand::CreateStream(command))
         .await?;
     Ok(StatusCode::CREATED)
 }
@@ -101,12 +94,7 @@ async fn update_stream(
         .await?;
     system
         .state
-        .apply(
-            UPDATE_STREAM_CODE,
-            identity.user_id,
-            &command.to_bytes(),
-            None,
-        )
+        .apply(identity.user_id, EntryCommand::UpdateStream(command))
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -127,10 +115,8 @@ async fn delete_stream(
     system
         .state
         .apply(
-            DELETE_STREAM_CODE,
             identity.user_id,
-            &DeleteStream { stream_id }.to_bytes(),
-            None,
+            EntryCommand::DeleteStream(DeleteStream { stream_id }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -152,10 +138,8 @@ async fn purge_stream(
     system
         .state
         .apply(
-            PURGE_STREAM_CODE,
             identity.user_id,
-            &PurgeStream { stream_id }.to_bytes(),
-            None,
+            EntryCommand::PurgeStream(PurgeStream { stream_id }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

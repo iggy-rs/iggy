@@ -8,7 +8,7 @@ use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPer
 use tracing::debug;
 
 pub async fn handle(
-    command: &LoginWithPersonalAccessToken,
+    command: LoginWithPersonalAccessToken,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

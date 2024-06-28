@@ -3,17 +3,13 @@ use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::utils::crypto;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post, put};
 use axum::{Extension, Json, Router};
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{
-    CHANGE_PASSWORD_CODE, CREATE_USER_CODE, DELETE_USER_CODE, UPDATE_PERMISSIONS_CODE,
-    UPDATE_USER_CODE,
-};
 use iggy::identifier::Identifier;
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
@@ -90,16 +86,13 @@ async fn create_user(
     system
         .state
         .apply(
-            CREATE_USER_CODE,
             identity.user_id,
-            &CreateUser {
-                username: command.username.to_owned(),
+            EntryCommand::CreateUser(CreateUser {
+                username: command.username,
                 password: crypto::hash_password(&command.password),
                 status: command.status,
-                permissions: command.permissions.clone(),
-            }
-            .to_bytes(),
-            None,
+                permissions: command.permissions,
+            }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -113,19 +106,18 @@ async fn update_user(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let bytes = command.to_bytes();
     let mut system = state.system.write();
     system
         .update_user(
             &Session::stateless(identity.user_id, identity.ip_address),
             &command.user_id,
-            command.username,
+            command.username.clone(),
             command.status,
         )
         .await?;
     system
         .state
-        .apply(UPDATE_USER_CODE, identity.user_id, &bytes, None)
+        .apply(identity.user_id, EntryCommand::UpdateUser(command))
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -138,18 +130,17 @@ async fn update_permissions(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let bytes = command.to_bytes();
     let mut system = state.system.write();
     system
         .update_permissions(
             &Session::stateless(identity.user_id, identity.ip_address),
             &command.user_id,
-            command.permissions,
+            command.permissions.clone(),
         )
         .await?;
     system
         .state
-        .apply(UPDATE_PERMISSIONS_CODE, identity.user_id, &bytes, None)
+        .apply(identity.user_id, EntryCommand::UpdatePermissions(command))
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -175,15 +166,12 @@ async fn change_password(
     system
         .state
         .apply(
-            CHANGE_PASSWORD_CODE,
             identity.user_id,
-            &ChangePassword {
-                user_id: command.user_id.to_owned(),
+            EntryCommand::ChangePassword(ChangePassword {
+                user_id: command.user_id,
                 current_password: "".into(),
                 new_password: crypto::hash_password(&command.new_password),
-            }
-            .to_bytes(),
-            None,
+            }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -205,10 +193,8 @@ async fn delete_user(
     system
         .state
         .apply(
-            DELETE_USER_CODE,
             identity.user_id,
-            &DeleteUser { user_id }.to_bytes(),
-            None,
+            EntryCommand::DeleteUser(DeleteUser { user_id }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

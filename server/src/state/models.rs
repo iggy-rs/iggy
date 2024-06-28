@@ -3,6 +3,8 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::fmt::{Display, Formatter};
 use std::str::from_utf8;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -36,5 +38,15 @@ impl BytesSerializable for CreatePersonalAccessTokenWithHash {
         position += 4;
         let hash = from_utf8(&bytes[position..position + hash_length as usize])?.to_string();
         Ok(Self { command, hash })
+    }
+}
+
+impl Display for CreatePersonalAccessTokenWithHash {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "CreatePersonalAccessTokenWithHash {{ command: {}, hash: {} }}",
+            self.command, self.hash
+        )
     }
 }

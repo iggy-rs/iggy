@@ -3,6 +3,7 @@ use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::session::Session;
@@ -10,8 +11,6 @@ use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post};
 use axum::{Extension, Json, Router};
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{CREATE_PERSONAL_ACCESS_TOKEN_CODE, DELETE_PERSONAL_ACCESS_TOKEN_CODE};
 use iggy::models::identity_info::IdentityInfo;
 use iggy::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
@@ -68,17 +67,11 @@ async fn create_personal_access_token(
     system
         .state
         .apply(
-            CREATE_PERSONAL_ACCESS_TOKEN_CODE,
             identity.user_id,
-            &CreatePersonalAccessTokenWithHash {
-                command: CreatePersonalAccessToken {
-                    name: command.name.to_owned(),
-                    expiry: command.expiry,
-                },
+            EntryCommand::CreatePersonalAccessToken(CreatePersonalAccessTokenWithHash {
+                command,
                 hash: token_hash,
-            }
-            .to_bytes(),
-            None,
+            }),
         )
         .await?;
     Ok(Json(RawPersonalAccessToken { token }))
@@ -99,10 +92,8 @@ async fn delete_personal_access_token(
     system
         .state
         .apply(
-            DELETE_PERSONAL_ACCESS_TOKEN_CODE,
             identity.user_id,
-            &DeletePersonalAccessToken { name }.to_bytes(),
-            None,
+            EntryCommand::DeletePersonalAccessToken(DeletePersonalAccessToken { name }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

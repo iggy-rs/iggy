@@ -7,7 +7,7 @@ use iggy::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessT
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetPersonalAccessTokens,
+    command: GetPersonalAccessTokens,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

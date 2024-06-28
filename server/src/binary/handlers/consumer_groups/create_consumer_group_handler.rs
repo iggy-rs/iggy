@@ -1,16 +1,15 @@
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::CREATE_CONSUMER_GROUP_CODE;
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::error::IggyError;
 use tracing::debug;
 
 pub async fn handle(
-    command: &CreateConsumerGroup,
+    command: CreateConsumerGroup,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
@@ -36,10 +35,8 @@ pub async fn handle(
         system
             .state
             .apply(
-                CREATE_CONSUMER_GROUP_CODE,
                 session.get_user_id(),
-                &command.to_bytes(),
-                None,
+                EntryCommand::CreateConsumerGroup(command),
             )
             .await?;
     }

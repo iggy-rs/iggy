@@ -1,29 +1,10 @@
-use crate::state::models::CreatePersonalAccessTokenWithHash;
-use crate::state::StateEntry;
+use crate::state::{EntryCommand, StateEntry};
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::*;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
-use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::models::permissions::Permissions;
 use iggy::models::user_status::UserStatus;
-use iggy::partitions::create_partitions::CreatePartitions;
-use iggy::partitions::delete_partitions::DeletePartitions;
-use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
-use iggy::streams::update_stream::UpdateStream;
-use iggy::topics::create_topic::CreateTopic;
-use iggy::topics::delete_topic::DeleteTopic;
-use iggy::topics::update_topic::UpdateTopic;
-use iggy::users::change_password::ChangePassword;
-use iggy::users::create_user::CreateUser;
-use iggy::users::delete_user::DeleteUser;
-use iggy::users::update_permissions::UpdatePermissions;
-use iggy::users::update_user::UpdateUser;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
@@ -97,14 +78,9 @@ impl SystemState {
         let mut current_stream_id = 0;
         let mut current_user_id = 0;
         for entry in entries {
-            debug!(
-                "Processing state entry with code: {}, name: {}",
-                entry.code,
-                get_name_from_code(entry.code).unwrap_or("invalid_command")
-            );
-            match entry.code {
-                CREATE_STREAM_CODE => {
-                    let command = CreateStream::from_bytes(entry.payload)?;
+            debug!("Processing state entry: {entry}",);
+            match entry.command {
+                EntryCommand::CreateStream(command) => {
                     let stream_id = command.stream_id.unwrap_or_else(|| {
                         current_stream_id += 1;
                         current_stream_id
@@ -118,21 +94,18 @@ impl SystemState {
                     };
                     streams.insert(stream.id, stream);
                 }
-                UPDATE_STREAM_CODE => {
-                    let command = UpdateStream::from_bytes(entry.payload)?;
+                EntryCommand::UpdateStream(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams
                         .get_mut(&stream_id)
                         .unwrap_or_else(|| panic!("{}", format!("Stream: {stream_id} not found")));
                     stream.name = command.name;
                 }
-                DELETE_STREAM_CODE => {
-                    let command = DeleteStream::from_bytes(entry.payload)?;
+                EntryCommand::DeleteStream(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     streams.remove(&stream_id);
                 }
-                CREATE_TOPIC_CODE => {
-                    let command = CreateTopic::from_bytes(entry.payload)?;
+                EntryCommand::CreateTopic(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams
                         .get_mut(&stream_id)
@@ -169,8 +142,7 @@ impl SystemState {
                     };
                     stream.topics.insert(topic.id, topic);
                 }
-                UPDATE_TOPIC_CODE => {
-                    let command = UpdateTopic::from_bytes(entry.payload)?;
+                EntryCommand::UpdateTopic(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams
                         .get_mut(&stream_id)
@@ -186,8 +158,7 @@ impl SystemState {
                     topic.max_topic_size = command.max_topic_size;
                     topic.replication_factor = command.replication_factor;
                 }
-                DELETE_TOPIC_CODE => {
-                    let command = DeleteTopic::from_bytes(entry.payload)?;
+                EntryCommand::DeleteTopic(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams
                         .get_mut(&stream_id)
@@ -195,8 +166,7 @@ impl SystemState {
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
                     stream.topics.remove(&topic_id);
                 }
-                CREATE_PARTITIONS_CODE => {
-                    let command = CreatePartitions::from_bytes(entry.payload)?;
+                EntryCommand::CreatePartitions(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams
                         .get_mut(&stream_id)
@@ -226,8 +196,7 @@ impl SystemState {
                         );
                     }
                 }
-                DELETE_PARTITIONS_CODE => {
-                    let command = DeletePartitions::from_bytes(entry.payload)?;
+                EntryCommand::DeletePartitions(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams
                         .get_mut(&stream_id)
@@ -251,8 +220,7 @@ impl SystemState {
                         topic.partitions.remove(&(last_partition_id - i));
                     }
                 }
-                CREATE_CONSUMER_GROUP_CODE => {
-                    let command = CreateConsumerGroup::from_bytes(entry.payload)?;
+                EntryCommand::CreateConsumerGroup(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams
                         .get_mut(&stream_id)
@@ -274,8 +242,7 @@ impl SystemState {
                         .consumer_groups
                         .insert(consumer_group.id, consumer_group);
                 }
-                DELETE_CONSUMER_GROUP_CODE => {
-                    let command = DeleteConsumerGroup::from_bytes(entry.payload)?;
+                EntryCommand::DeleteConsumerGroup(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     let stream = streams
                         .get_mut(&stream_id)
@@ -289,8 +256,7 @@ impl SystemState {
                         find_consumer_group_id(&topic.consumer_groups, &command.group_id);
                     topic.consumer_groups.remove(&consumer_group_id);
                 }
-                CREATE_USER_CODE => {
-                    let command = CreateUser::from_bytes(entry.payload)?;
+                EntryCommand::CreateUser(command) => {
                     current_user_id += 1;
                     let user = UserState {
                         id: current_user_id,
@@ -302,8 +268,7 @@ impl SystemState {
                     };
                     users.insert(user.id, user);
                 }
-                UPDATE_USER_CODE => {
-                    let command = UpdateUser::from_bytes(entry.payload)?;
+                EntryCommand::UpdateUser(command) => {
                     let user_id = find_user_id(&users, &command.user_id);
                     let user = users
                         .get_mut(&user_id)
@@ -315,29 +280,25 @@ impl SystemState {
                         user.status = *status;
                     }
                 }
-                DELETE_USER_CODE => {
-                    let command = DeleteUser::from_bytes(entry.payload)?;
+                EntryCommand::DeleteUser(command) => {
                     let user_id = find_user_id(&users, &command.user_id);
                     users.remove(&user_id);
                 }
-                CHANGE_PASSWORD_CODE => {
-                    let command = ChangePassword::from_bytes(entry.payload)?;
+                EntryCommand::ChangePassword(command) => {
                     let user_id = find_user_id(&users, &command.user_id);
                     let user = users
                         .get_mut(&user_id)
                         .unwrap_or_else(|| panic!("{}", format!("User: {user_id} not found")));
                     user.password_hash = command.new_password // This is already hashed
                 }
-                UPDATE_PERMISSIONS_CODE => {
-                    let command = UpdatePermissions::from_bytes(entry.payload)?;
+                EntryCommand::UpdatePermissions(command) => {
                     let user_id = find_user_id(&users, &command.user_id);
                     let user = users
                         .get_mut(&user_id)
                         .unwrap_or_else(|| panic!("{}", format!("User: {user_id} not found")));
                     user.permissions = command.permissions;
                 }
-                CREATE_PERSONAL_ACCESS_TOKEN_CODE => {
-                    let command = CreatePersonalAccessTokenWithHash::from_bytes(entry.payload)?;
+                EntryCommand::CreatePersonalAccessToken(command) => {
                     let token_hash = command.hash;
                     let user_id = find_user_id(&users, &entry.user_id.try_into()?);
                     let user = users
@@ -363,8 +324,7 @@ impl SystemState {
                         },
                     );
                 }
-                DELETE_PERSONAL_ACCESS_TOKEN_CODE => {
-                    let command = DeletePersonalAccessToken::from_bytes(entry.payload)?;
+                EntryCommand::DeletePersonalAccessToken(command) => {
                     let user_id = find_user_id(&users, &entry.user_id.try_into()?);
                     let user = users
                         .get_mut(&user_id)

@@ -1,3 +1,4 @@
+use crate::state::command::EntryCommand;
 use crate::state::{State, StateEntry};
 use crate::streaming::persistence::persister::Persister;
 use crate::streaming::utils::file;
@@ -116,15 +117,20 @@ impl State for FileState {
             let flags = reader.read_u64_le().await?;
             let timestamp = IggyTimestamp::from(reader.read_u64_le().await?);
             let user_id = reader.read_u32_le().await?;
-            let code = reader.read_u32_le().await?;
-            let payload_length = reader.read_u32_le().await? as usize;
-            let mut payload = BytesMut::with_capacity(payload_length);
-            payload.put_bytes(0, payload_length);
-            reader.read_exact(&mut payload).await?;
             let context_length = reader.read_u32_le().await? as usize;
             let mut context = BytesMut::with_capacity(context_length);
             context.put_bytes(0, context_length);
             reader.read_exact(&mut context).await?;
+            let code = reader.read_u32_le().await?;
+            let command_length = reader.read_u32_le().await? as usize;
+            let mut command = BytesMut::with_capacity(command_length);
+            command.put_bytes(0, command_length);
+            reader.read_exact(&mut command).await?;
+            let mut entry_command = BytesMut::with_capacity(4 + 4 + command_length);
+            entry_command.put_u32_le(code);
+            entry_command.put_u32_le(command_length as u32);
+            entry_command.extend(command);
+            let command = EntryCommand::from_bytes(entry_command.freeze())?;
             let entry = StateEntry::new(
                 index,
                 term,
@@ -133,9 +139,8 @@ impl State for FileState {
                 flags,
                 timestamp,
                 user_id,
-                code,
-                payload.freeze(),
                 context.freeze(),
+                command,
             );
             debug!("Read state entry: {entry}");
             entries.push(entry);
@@ -147,10 +152,10 @@ impl State for FileState {
                 + 8
                 + 4
                 + 4
+                + context_length as u64
                 + 4
-                + payload_length as u64
                 + 4
-                + context_length as u64;
+                + command_length as u64;
             if total_size == file_size {
                 break;
             }
@@ -160,14 +165,8 @@ impl State for FileState {
         Ok(entries)
     }
 
-    async fn apply(
-        &self,
-        code: u32,
-        user_id: u32,
-        payload: &[u8],
-        context: Option<&[u8]>,
-    ) -> Result<(), IggyError> {
-        debug!("Applying state entry with code: {code}, user ID: {user_id}");
+    async fn apply(&self, user_id: u32, command: EntryCommand) -> Result<(), IggyError> {
+        debug!("Applying state entry with command: {command}, user ID: {user_id}");
         let entry = StateEntry {
             index: if self.entries_count.load(Ordering::SeqCst) == 0 {
                 0
@@ -180,14 +179,13 @@ impl State for FileState {
             flags: 0,
             timestamp: IggyTimestamp::now(),
             user_id,
-            code,
-            payload: Bytes::copy_from_slice(payload),
-            context: context.map_or(Bytes::new(), Bytes::copy_from_slice),
+            command,
+            context: Bytes::new(),
         };
 
         self.entries_count.fetch_add(1, Ordering::SeqCst);
         self.persister.append(&self.path, &entry.to_bytes()).await?;
-        debug!("Applied state entry with code: {code}, user ID: {user_id}, {entry}",);
+        debug!("Applied state entry: {entry}");
         Ok(())
     }
 }

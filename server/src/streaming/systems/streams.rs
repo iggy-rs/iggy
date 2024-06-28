@@ -340,7 +340,9 @@ mod tests {
     use super::*;
     use crate::configs::server::PersonalAccessTokenConfig;
     use crate::configs::system::SystemConfig;
-    use crate::state::{State, StateEntry};
+    use crate::state::command::EntryCommand;
+    use crate::state::entry::StateEntry;
+    use crate::state::State;
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
     use async_trait::async_trait;
@@ -403,7 +405,7 @@ mod tests {
             Ok(Vec::new())
         }
 
-        async fn apply(&self, _: u32, _: u32, _: &[u8], _: Option<&[u8]>) -> Result<(), IggyError> {
+        async fn apply(&self, _: u32, _: EntryCommand) -> Result<(), IggyError> {
             Ok(())
         }
     }

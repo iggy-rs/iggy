@@ -8,7 +8,7 @@ use iggy::topics::get_topics::GetTopics;
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetTopics,
+    command: GetTopics,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

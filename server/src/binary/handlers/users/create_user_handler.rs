@@ -1,16 +1,15 @@
 use crate::binary::sender::Sender;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::utils::crypto;
 use anyhow::Result;
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::CREATE_USER_CODE;
 use iggy::error::IggyError;
 use iggy::users::create_user::CreateUser;
 use tracing::debug;
 
 pub async fn handle(
-    command: &CreateUser,
+    command: CreateUser,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
@@ -31,16 +30,13 @@ pub async fn handle(
     system
         .state
         .apply(
-            CREATE_USER_CODE,
             session.get_user_id(),
-            &CreateUser {
+            EntryCommand::CreateUser(CreateUser {
                 username: command.username.to_owned(),
                 password: crypto::hash_password(&command.password),
                 status: command.status,
                 permissions: command.permissions.clone(),
-            }
-            .to_bytes(),
-            None,
+            }),
         )
         .await?;
     sender.send_empty_ok_response().await?;

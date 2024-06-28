@@ -8,7 +8,7 @@ use iggy::system::get_me::GetMe;
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetMe,
+    command: GetMe,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

@@ -1,14 +1,10 @@
+use crate::state::command::EntryCommand;
 use crate::state::models::CreatePersonalAccessTokenWithHash;
 use crate::state::State;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::users::user::User;
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{
-    CREATE_CONSUMER_GROUP_CODE, CREATE_PERSONAL_ACCESS_TOKEN_CODE, CREATE_STREAM_CODE,
-    CREATE_TOPIC_CODE, CREATE_USER_CODE,
-};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
@@ -38,16 +34,13 @@ pub async fn convert(
     for user in users {
         state
             .apply(
-                CREATE_USER_CODE,
                 0,
-                &CreateUser {
+                EntryCommand::CreateUser(CreateUser {
                     username: user.username,
                     password: user.password,
                     status: user.status,
                     permissions: user.permissions.clone(),
-                }
-                .to_bytes(),
-                None,
+                }),
             )
             .await?;
     }
@@ -68,17 +61,14 @@ pub async fn convert(
 
         state
             .apply(
-                CREATE_PERSONAL_ACCESS_TOKEN_CODE,
                 personal_access_token.user_id,
-                &CreatePersonalAccessTokenWithHash {
+                EntryCommand::CreatePersonalAccessToken(CreatePersonalAccessTokenWithHash {
                     command: CreatePersonalAccessToken {
                         name: personal_access_token.name,
                         expiry,
                     },
                     hash: personal_access_token.token,
-                }
-                .to_bytes(),
-                None,
+                }),
             )
             .await?;
     }
@@ -87,14 +77,11 @@ pub async fn convert(
     for stream in streams {
         state
             .apply(
-                CREATE_STREAM_CODE,
                 0,
-                &CreateStream {
+                EntryCommand::CreateStream(CreateStream {
                     stream_id: Some(stream.stream_id),
                     name: stream.name,
-                }
-                .to_bytes(),
-                None,
+                }),
             )
             .await?;
 
@@ -106,9 +93,8 @@ pub async fn convert(
         for topic in stream.topics.into_values() {
             state
                 .apply(
-                    CREATE_TOPIC_CODE,
                     0,
-                    &CreateTopic {
+                    EntryCommand::CreateTopic(CreateTopic {
                         stream_id: topic.stream_id.try_into()?,
                         topic_id: Some(topic.topic_id),
                         partitions_count: topic.partitions.len() as u32,
@@ -121,9 +107,7 @@ pub async fn convert(
                             None
                         },
                         name: topic.name,
-                    }
-                    .to_bytes(),
-                    None,
+                    }),
                 )
                 .await?;
 
@@ -136,16 +120,13 @@ pub async fn convert(
                 let group = group.read().await;
                 state
                     .apply(
-                        CREATE_CONSUMER_GROUP_CODE,
                         0,
-                        &CreateConsumerGroup {
+                        EntryCommand::CreateConsumerGroup(CreateConsumerGroup {
                             stream_id: stream.stream_id.try_into()?,
                             topic_id: topic.topic_id.try_into()?,
                             group_id: Some(group.group_id),
                             name: group.name.to_owned(),
-                        }
-                        .to_bytes(),
-                        None,
+                        }),
                     )
                     .await?;
             }

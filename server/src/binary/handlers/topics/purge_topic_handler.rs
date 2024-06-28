@@ -1,15 +1,14 @@
 use crate::binary::sender::Sender;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::Result;
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::PURGE_TOPIC_CODE;
 use iggy::error::IggyError;
 use iggy::topics::purge_topic::PurgeTopic;
 use tracing::debug;
 
 pub async fn handle(
-    command: &PurgeTopic,
+    command: PurgeTopic,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
@@ -21,12 +20,7 @@ pub async fn handle(
         .await?;
     system
         .state
-        .apply(
-            PURGE_TOPIC_CODE,
-            session.get_user_id(),
-            &command.to_bytes(),
-            None,
-        )
+        .apply(session.get_user_id(), EntryCommand::PurgeTopic(command))
         .await?;
     sender.send_empty_ok_response().await?;
     Ok(())

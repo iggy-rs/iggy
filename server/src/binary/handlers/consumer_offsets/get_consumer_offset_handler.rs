@@ -9,7 +9,7 @@ use iggy::error::IggyError;
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetConsumerOffset,
+    command: GetConsumerOffset,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

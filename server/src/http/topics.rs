@@ -2,13 +2,12 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get};
 use axum::{Extension, Json, Router};
-use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{CREATE_TOPIC_CODE, DELETE_TOPIC_CODE, PURGE_TOPIC_CODE, UPDATE_TOPIC_CODE};
 use iggy::identifier::Identifier;
 use iggy::models::topic::{Topic, TopicDetails};
 use iggy::topics::create_topic::CreateTopic;
@@ -91,12 +90,7 @@ async fn create_topic(
         .await?;
     system
         .state
-        .apply(
-            CREATE_TOPIC_CODE,
-            identity.user_id,
-            &command.to_bytes(),
-            None,
-        )
+        .apply(identity.user_id, EntryCommand::CreateTopic(command))
         .await?;
     Ok(StatusCode::CREATED)
 }
@@ -125,12 +119,7 @@ async fn update_topic(
         .await?;
     system
         .state
-        .apply(
-            UPDATE_TOPIC_CODE,
-            identity.user_id,
-            &command.to_bytes(),
-            None,
-        )
+        .apply(identity.user_id, EntryCommand::UpdateTopic(command))
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -153,14 +142,11 @@ async fn delete_topic(
     system
         .state
         .apply(
-            DELETE_TOPIC_CODE,
             identity.user_id,
-            &DeleteTopic {
+            EntryCommand::DeleteTopic(DeleteTopic {
                 stream_id,
                 topic_id,
-            }
-            .to_bytes(),
-            None,
+            }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -184,14 +170,11 @@ async fn purge_topic(
     system
         .state
         .apply(
-            PURGE_TOPIC_CODE,
             identity.user_id,
-            &PurgeTopic {
+            EntryCommand::PurgeTopic(PurgeTopic {
                 stream_id,
                 topic_id,
-            }
-            .to_bytes(),
-            None,
+            }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

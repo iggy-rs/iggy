@@ -6,7 +6,7 @@ use iggy::system::ping::Ping;
 use tracing::debug;
 
 pub async fn handle(
-    command: &Ping,
+    command: Ping,
     sender: &mut dyn Sender,
     session: &Session,
 ) -> Result<(), IggyError> {

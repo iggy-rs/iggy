@@ -7,7 +7,7 @@ use iggy::system::get_clients::GetClients;
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetClients,
+    command: GetClients,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

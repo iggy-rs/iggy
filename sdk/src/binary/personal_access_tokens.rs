@@ -1,8 +1,6 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper, ClientState};
-use crate::bytes_serializable::BytesSerializable;
 use crate::client::PersonalAccessTokenClient;
-use crate::command::*;
 use crate::error::IggyError;
 use crate::models::identity_info::IdentityInfo;
 use crate::models::personal_access_token::{PersonalAccessTokenInfo, RawPersonalAccessToken};
@@ -16,12 +14,7 @@ use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 impl<B: BinaryClient> PersonalAccessTokenClient for B {
     async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(
-                GET_PERSONAL_ACCESS_TOKENS_CODE,
-                GetPersonalAccessTokens {}.to_bytes(),
-            )
-            .await?;
+        let response = self.send_with_response(GetPersonalAccessTokens {}).await?;
         mapper::map_personal_access_tokens(response)
     }
 
@@ -32,27 +25,19 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
     ) -> Result<RawPersonalAccessToken, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(
-                CREATE_PERSONAL_ACCESS_TOKEN_CODE,
-                CreatePersonalAccessToken {
-                    name: name.to_string(),
-                    expiry,
-                }
-                .to_bytes(),
-            )
+            .send_with_response(CreatePersonalAccessToken {
+                name: name.to_string(),
+                expiry,
+            })
             .await?;
         mapper::map_raw_pat(response)
     }
 
     async fn delete_personal_access_token(&self, name: &str) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
-            DELETE_PERSONAL_ACCESS_TOKEN_CODE,
-            DeletePersonalAccessToken {
-                name: name.to_string(),
-            }
-            .to_bytes(),
-        )
+        self.send_with_response(DeletePersonalAccessToken {
+            name: name.to_string(),
+        })
         .await?;
         Ok(())
     }
@@ -62,13 +47,9 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
         token: &str,
     ) -> Result<IdentityInfo, IggyError> {
         let response = self
-            .send_with_response(
-                LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE,
-                LoginWithPersonalAccessToken {
-                    token: token.to_string(),
-                }
-                .to_bytes(),
-            )
+            .send_with_response(LoginWithPersonalAccessToken {
+                token: token.to_string(),
+            })
             .await?;
         self.set_state(ClientState::Authenticated).await;
         mapper::map_identity_info(response)

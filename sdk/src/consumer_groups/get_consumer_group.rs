@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_CONSUMER_GROUP_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -25,7 +25,11 @@ pub struct GetConsumerGroup {
     pub group_id: Identifier,
 }
 
-impl CommandPayload for GetConsumerGroup {}
+impl Command for GetConsumerGroup {
+    fn code(&self) -> u32 {
+        GET_CONSUMER_GROUP_CODE
+    }
+}
 
 impl Validatable<IggyError> for GetConsumerGroup {
     fn validate(&self) -> Result<(), IggyError> {

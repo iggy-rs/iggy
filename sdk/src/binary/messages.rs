@@ -24,7 +24,7 @@ impl<B: BinaryClient> MessageClient for B {
     ) -> Result<PolledMessages, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(
+            .send_raw_with_response(
                 POLL_MESSAGES_CODE,
                 poll_messages::as_bytes(
                     stream_id,
@@ -48,7 +48,7 @@ impl<B: BinaryClient> MessageClient for B {
         messages: &mut [Message],
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
+        self.send_raw_with_response(
             SEND_MESSAGES_CODE,
             send_messages::as_bytes(stream_id, topic_id, partitioning, messages),
         )

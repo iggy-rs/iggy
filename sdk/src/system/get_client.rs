@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_CLIENT_CODE};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -15,7 +15,11 @@ pub struct GetClient {
     pub client_id: u32,
 }
 
-impl CommandPayload for GetClient {}
+impl Command for GetClient {
+    fn code(&self) -> u32 {
+        GET_CLIENT_CODE
+    }
+}
 
 impl Default for GetClient {
     fn default() -> Self {

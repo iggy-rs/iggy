@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CREATE_STREAM_CODE};
 use crate::error::IggyError;
 use crate::streams::MAX_NAME_LENGTH;
 use crate::utils::text;
@@ -21,7 +21,11 @@ pub struct CreateStream {
     pub name: String,
 }
 
-impl CommandPayload for CreateStream {}
+impl Command for CreateStream {
+    fn code(&self) -> u32 {
+        CREATE_STREAM_CODE
+    }
+}
 
 impl Default for CreateStream {
     fn default() -> Self {

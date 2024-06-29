@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, LOGOUT_USER_CODE};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::Bytes;
@@ -11,7 +11,11 @@ use std::fmt::Display;
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct LogoutUser {}
 
-impl CommandPayload for LogoutUser {}
+impl Command for LogoutUser {
+    fn code(&self) -> u32 {
+        LOGOUT_USER_CODE
+    }
+}
 
 impl Validatable<IggyError> for LogoutUser {
     fn validate(&self) -> Result<(), IggyError> {

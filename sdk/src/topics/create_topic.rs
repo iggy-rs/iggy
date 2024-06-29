@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CREATE_TOPIC_CODE};
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -44,7 +44,11 @@ pub struct CreateTopic {
     pub name: String,
 }
 
-impl CommandPayload for CreateTopic {}
+impl Command for CreateTopic {
+    fn code(&self) -> u32 {
+        CREATE_TOPIC_CODE
+    }
+}
 
 impl Default for CreateTopic {
     fn default() -> Self {

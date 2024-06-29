@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, PURGE_TOPIC_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -21,7 +21,11 @@ pub struct PurgeTopic {
     pub topic_id: Identifier,
 }
 
-impl CommandPayload for PurgeTopic {}
+impl Command for PurgeTopic {
+    fn code(&self) -> u32 {
+        PURGE_TOPIC_CODE
+    }
+}
 
 impl Validatable<IggyError> for PurgeTopic {
     fn validate(&self) -> Result<(), IggyError> {

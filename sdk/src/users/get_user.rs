@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_USER_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -17,7 +17,11 @@ pub struct GetUser {
     pub user_id: Identifier,
 }
 
-impl CommandPayload for GetUser {}
+impl Command for GetUser {
+    fn code(&self) -> u32 {
+        GET_USER_CODE
+    }
+}
 
 impl Validatable<IggyError> for GetUser {
     fn validate(&self) -> Result<(), IggyError> {

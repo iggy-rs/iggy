@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CREATE_USER_CODE};
 use crate::error::IggyError;
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
@@ -29,7 +29,11 @@ pub struct CreateUser {
     pub permissions: Option<Permissions>,
 }
 
-impl CommandPayload for CreateUser {}
+impl Command for CreateUser {
+    fn code(&self) -> u32 {
+        CREATE_USER_CODE
+    }
+}
 
 impl Default for CreateUser {
     fn default() -> Self {

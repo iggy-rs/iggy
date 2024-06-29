@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, UPDATE_PERMISSIONS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::permissions::Permissions;
@@ -21,7 +21,11 @@ pub struct UpdatePermissions {
     pub permissions: Option<Permissions>,
 }
 
-impl CommandPayload for UpdatePermissions {}
+impl Command for UpdatePermissions {
+    fn code(&self) -> u32 {
+        UPDATE_PERMISSIONS_CODE
+    }
+}
 
 impl Validatable<IggyError> for UpdatePermissions {
     fn validate(&self) -> Result<(), IggyError> {

@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, LOGIN_USER_CODE};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
@@ -25,7 +25,11 @@ pub struct LoginUser {
     pub context: Option<String>,
 }
 
-impl CommandPayload for LoginUser {}
+impl Command for LoginUser {
+    fn code(&self) -> u32 {
+        LOGIN_USER_CODE
+    }
+}
 
 impl Default for LoginUser {
     fn default() -> Self {

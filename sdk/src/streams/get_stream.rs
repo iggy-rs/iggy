@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_STREAM_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -17,7 +17,11 @@ pub struct GetStream {
     pub stream_id: Identifier,
 }
 
-impl CommandPayload for GetStream {}
+impl Command for GetStream {
+    fn code(&self) -> u32 {
+        GET_STREAM_CODE
+    }
+}
 
 impl Validatable<IggyError> for GetStream {
     fn validate(&self) -> Result<(), IggyError> {

@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, DELETE_CONSUMER_GROUP_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -25,7 +25,11 @@ pub struct DeleteConsumerGroup {
     pub group_id: Identifier,
 }
 
-impl CommandPayload for DeleteConsumerGroup {}
+impl Command for DeleteConsumerGroup {
+    fn code(&self) -> u32 {
+        DELETE_CONSUMER_GROUP_CODE
+    }
+}
 
 impl Validatable<IggyError> for DeleteConsumerGroup {
     fn validate(&self) -> Result<(), IggyError> {

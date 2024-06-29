@@ -4089,6 +4089,7 @@ dependencies = [
  "sled",
  "static-toml",
  "strip-ansi-escapes",
+ "strum",
  "sysinfo",
  "thiserror",
  "tikv-jemallocator",

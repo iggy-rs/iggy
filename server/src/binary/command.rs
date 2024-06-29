@@ -18,14 +18,14 @@ use crate::binary::handlers::users::{
     update_user_handler,
 };
 use crate::binary::sender::Sender;
+use crate::command::ServerCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
-use iggy::command::Command;
 use iggy::error::IggyError;
 use tracing::{debug, error};
 
 pub async fn handle(
-    command: Command,
+    command: ServerCommand,
     sender: &mut dyn Sender,
     session: &Session,
     system: SharedSystem,
@@ -43,133 +43,135 @@ pub async fn handle(
 }
 
 async fn try_handle(
-    command: Command,
+    command: ServerCommand,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("Handling command '{command}', session: {session}...");
     match command {
-        Command::Ping(command) => ping_handler::handle(command, sender, session).await,
-        Command::GetStats(command) => {
+        ServerCommand::Ping(command) => ping_handler::handle(command, sender, session).await,
+        ServerCommand::GetStats(command) => {
             get_stats_handler::handle(command, sender, session, system).await
         }
-        Command::GetMe(command) => get_me_handler::handle(command, sender, session, system).await,
-        Command::GetClient(command) => {
+        ServerCommand::GetMe(command) => {
+            get_me_handler::handle(command, sender, session, system).await
+        }
+        ServerCommand::GetClient(command) => {
             get_client_handler::handle(command, sender, session, system).await
         }
-        Command::GetClients(command) => {
+        ServerCommand::GetClients(command) => {
             get_clients_handler::handle(command, sender, session, system).await
         }
-        Command::GetUser(command) => {
+        ServerCommand::GetUser(command) => {
             get_user_handler::handle(command, sender, session, system).await
         }
-        Command::GetUsers(command) => {
+        ServerCommand::GetUsers(command) => {
             get_users_handler::handle(command, sender, session, system).await
         }
-        Command::CreateUser(command) => {
+        ServerCommand::CreateUser(command) => {
             create_user_handler::handle(command, sender, session, system).await
         }
-        Command::DeleteUser(command) => {
+        ServerCommand::DeleteUser(command) => {
             delete_user_handler::handle(command, sender, session, system).await
         }
-        Command::UpdateUser(command) => {
+        ServerCommand::UpdateUser(command) => {
             update_user_handler::handle(command, sender, session, system).await
         }
-        Command::UpdatePermissions(command) => {
+        ServerCommand::UpdatePermissions(command) => {
             update_permissions_handler::handle(command, sender, session, system).await
         }
-        Command::ChangePassword(command) => {
+        ServerCommand::ChangePassword(command) => {
             change_password_handler::handle(command, sender, session, system).await
         }
-        Command::LoginUser(command) => {
+        ServerCommand::LoginUser(command) => {
             login_user_handler::handle(command, sender, session, system).await
         }
-        Command::LogoutUser(command) => {
+        ServerCommand::LogoutUser(command) => {
             logout_user_handler::handle(command, sender, session, system).await
         }
-        Command::GetPersonalAccessTokens(command) => {
+        ServerCommand::GetPersonalAccessTokens(command) => {
             get_personal_access_tokens_handler::handle(command, sender, session, system).await
         }
-        Command::CreatePersonalAccessToken(command) => {
+        ServerCommand::CreatePersonalAccessToken(command) => {
             create_personal_access_token_handler::handle(command, sender, session, system).await
         }
-        Command::DeletePersonalAccessToken(command) => {
+        ServerCommand::DeletePersonalAccessToken(command) => {
             delete_personal_access_token_handler::handle(command, sender, session, system).await
         }
-        Command::LoginWithPersonalAccessToken(command) => {
+        ServerCommand::LoginWithPersonalAccessToken(command) => {
             login_with_personal_access_token_handler::handle(command, sender, session, system).await
         }
-        Command::SendMessages(command) => {
+        ServerCommand::SendMessages(command) => {
             send_messages_handler::handle(command, sender, session, system).await
         }
-        Command::PollMessages(command) => {
+        ServerCommand::PollMessages(command) => {
             poll_messages_handler::handle(command, sender, session, system).await
         }
-        Command::GetConsumerOffset(command) => {
+        ServerCommand::GetConsumerOffset(command) => {
             get_consumer_offset_handler::handle(command, sender, session, system).await
         }
-        Command::StoreConsumerOffset(command) => {
+        ServerCommand::StoreConsumerOffset(command) => {
             store_consumer_offset_handler::handle(command, sender, session, system).await
         }
-        Command::GetStream(command) => {
+        ServerCommand::GetStream(command) => {
             get_stream_handler::handle(command, sender, session, system).await
         }
-        Command::GetStreams(command) => {
+        ServerCommand::GetStreams(command) => {
             get_streams_handler::handle(command, sender, session, system).await
         }
-        Command::CreateStream(command) => {
+        ServerCommand::CreateStream(command) => {
             create_stream_handler::handle(command, sender, session, system).await
         }
-        Command::DeleteStream(command) => {
+        ServerCommand::DeleteStream(command) => {
             delete_stream_handler::handle(command, sender, session, system).await
         }
-        Command::UpdateStream(command) => {
+        ServerCommand::UpdateStream(command) => {
             update_stream_handler::handle(command, sender, session, system).await
         }
-        Command::PurgeStream(command) => {
+        ServerCommand::PurgeStream(command) => {
             purge_stream_handler::handle(command, sender, session, system).await
         }
-        Command::GetTopic(command) => {
+        ServerCommand::GetTopic(command) => {
             get_topic_handler::handle(command, sender, session, system).await
         }
-        Command::GetTopics(command) => {
+        ServerCommand::GetTopics(command) => {
             get_topics_handler::handle(command, sender, session, system).await
         }
-        Command::CreateTopic(command) => {
+        ServerCommand::CreateTopic(command) => {
             create_topic_handler::handle(command, sender, session, system).await
         }
-        Command::DeleteTopic(command) => {
+        ServerCommand::DeleteTopic(command) => {
             delete_topic_handler::handle(command, sender, session, system).await
         }
-        Command::UpdateTopic(command) => {
+        ServerCommand::UpdateTopic(command) => {
             update_topic_handler::handle(command, sender, session, system).await
         }
-        Command::PurgeTopic(command) => {
+        ServerCommand::PurgeTopic(command) => {
             purge_topic_handler::handle(command, sender, session, system).await
         }
-        Command::CreatePartitions(command) => {
+        ServerCommand::CreatePartitions(command) => {
             create_partitions_handler::handle(command, sender, session, system).await
         }
-        Command::DeletePartitions(command) => {
+        ServerCommand::DeletePartitions(command) => {
             delete_partitions_handler::handle(command, sender, session, system).await
         }
-        Command::GetConsumerGroup(command) => {
+        ServerCommand::GetConsumerGroup(command) => {
             get_consumer_group_handler::handle(command, sender, session, system).await
         }
-        Command::GetConsumerGroups(command) => {
+        ServerCommand::GetConsumerGroups(command) => {
             get_consumer_groups_handler::handle(command, sender, session, system).await
         }
-        Command::CreateConsumerGroup(command) => {
+        ServerCommand::CreateConsumerGroup(command) => {
             create_consumer_group_handler::handle(command, sender, session, system).await
         }
-        Command::DeleteConsumerGroup(command) => {
+        ServerCommand::DeleteConsumerGroup(command) => {
             delete_consumer_group_handler::handle(command, sender, session, system).await
         }
-        Command::JoinConsumerGroup(command) => {
+        ServerCommand::JoinConsumerGroup(command) => {
             join_consumer_group_handler::handle(command, sender, session, system).await
         }
-        Command::LeaveConsumerGroup(command) => {
+        ServerCommand::LeaveConsumerGroup(command) => {
             leave_consumer_group_handler::handle(command, sender, session, system).await
         }
     }

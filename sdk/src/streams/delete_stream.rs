@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, DELETE_STREAM_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -17,7 +17,11 @@ pub struct DeleteStream {
     pub stream_id: Identifier,
 }
 
-impl CommandPayload for DeleteStream {}
+impl Command for DeleteStream {
+    fn code(&self) -> u32 {
+        DELETE_STREAM_CODE
+    }
+}
 
 impl Validatable<IggyError> for DeleteStream {
     fn validate(&self) -> Result<(), IggyError> {

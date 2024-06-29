@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, DELETE_TOPIC_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -21,7 +21,11 @@ pub struct DeleteTopic {
     pub topic_id: Identifier,
 }
 
-impl CommandPayload for DeleteTopic {}
+impl Command for DeleteTopic {
+    fn code(&self) -> u32 {
+        DELETE_TOPIC_CODE
+    }
+}
 
 impl Validatable<IggyError> for DeleteTopic {
     fn validate(&self) -> Result<(), IggyError> {

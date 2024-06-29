@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_CONSUMER_OFFSET_CODE};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -41,7 +41,11 @@ impl Default for GetConsumerOffset {
     }
 }
 
-impl CommandPayload for GetConsumerOffset {}
+impl Command for GetConsumerOffset {
+    fn code(&self) -> u32 {
+        GET_CONSUMER_OFFSET_CODE
+    }
+}
 
 fn default_partition_id() -> Option<u32> {
     Some(1)

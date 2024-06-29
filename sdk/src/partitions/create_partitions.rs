@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CREATE_PARTITIONS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::partitions::MAX_PARTITIONS_COUNT;
@@ -25,7 +25,11 @@ pub struct CreatePartitions {
     pub partitions_count: u32,
 }
 
-impl CommandPayload for CreatePartitions {}
+impl Command for CreatePartitions {
+    fn code(&self) -> u32 {
+        CREATE_PARTITIONS_CODE
+    }
+}
 
 impl Default for CreatePartitions {
     fn default() -> Self {

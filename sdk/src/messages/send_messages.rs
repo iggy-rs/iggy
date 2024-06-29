@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, SEND_MESSAGES_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
@@ -191,7 +191,11 @@ impl Partitioning {
     }
 }
 
-impl CommandPayload for SendMessages {}
+impl Command for SendMessages {
+    fn code(&self) -> u32 {
+        SEND_MESSAGES_CODE
+    }
+}
 
 impl Validatable<IggyError> for SendMessages {
     fn validate(&self) -> Result<(), IggyError> {

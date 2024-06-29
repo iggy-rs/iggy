@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, LEAVE_CONSUMER_GROUP_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -25,7 +25,11 @@ pub struct LeaveConsumerGroup {
     pub group_id: Identifier,
 }
 
-impl CommandPayload for LeaveConsumerGroup {}
+impl Command for LeaveConsumerGroup {
+    fn code(&self) -> u32 {
+        LEAVE_CONSUMER_GROUP_CODE
+    }
+}
 
 impl Validatable<IggyError> for LeaveConsumerGroup {
     fn validate(&self) -> Result<(), IggyError> {

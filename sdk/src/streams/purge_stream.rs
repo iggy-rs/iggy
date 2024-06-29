@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, PURGE_STREAM_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -17,7 +17,11 @@ pub struct PurgeStream {
     pub stream_id: Identifier,
 }
 
-impl CommandPayload for PurgeStream {}
+impl Command for PurgeStream {
+    fn code(&self) -> u32 {
+        PURGE_STREAM_CODE
+    }
+}
 
 impl Validatable<IggyError> for PurgeStream {
     fn validate(&self) -> Result<(), IggyError> {

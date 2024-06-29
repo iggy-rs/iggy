@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CREATE_PERSONAL_ACCESS_TOKEN_CODE};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::expiry::IggyExpiry;
@@ -22,7 +22,11 @@ pub struct CreatePersonalAccessToken {
     pub expiry: IggyExpiry,
 }
 
-impl CommandPayload for CreatePersonalAccessToken {}
+impl Command for CreatePersonalAccessToken {
+    fn code(&self) -> u32 {
+        CREATE_PERSONAL_ACCESS_TOKEN_CODE
+    }
+}
 
 impl Default for CreatePersonalAccessToken {
     fn default() -> Self {

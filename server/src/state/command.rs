@@ -2,7 +2,7 @@ use crate::state::models::CreatePersonalAccessTokenWithHash;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::{
-    CHANGE_PASSWORD_CODE, CREATE_CONSUMER_GROUP_CODE, CREATE_PARTITIONS_CODE,
+    Command, CHANGE_PASSWORD_CODE, CREATE_CONSUMER_GROUP_CODE, CREATE_PARTITIONS_CODE,
     CREATE_PERSONAL_ACCESS_TOKEN_CODE, CREATE_STREAM_CODE, CREATE_TOPIC_CODE, CREATE_USER_CODE,
     DELETE_CONSUMER_GROUP_CODE, DELETE_PARTITIONS_CODE, DELETE_PERSONAL_ACCESS_TOKEN_CODE,
     DELETE_STREAM_CODE, DELETE_TOPIC_CODE, DELETE_USER_CODE, PURGE_STREAM_CODE, PURGE_TOPIC_CODE,
@@ -55,34 +55,28 @@ pub enum EntryCommand {
 impl BytesSerializable for EntryCommand {
     fn to_bytes(&self) -> Bytes {
         let (code, command) = match self {
-            EntryCommand::CreateStream(command) => (CREATE_STREAM_CODE, command.to_bytes()),
-            EntryCommand::UpdateStream(command) => (UPDATE_STREAM_CODE, command.to_bytes()),
-            EntryCommand::DeleteStream(command) => (DELETE_STREAM_CODE, command.to_bytes()),
-            EntryCommand::PurgeStream(command) => (PURGE_STREAM_CODE, command.to_bytes()),
-            EntryCommand::CreateTopic(command) => (CREATE_TOPIC_CODE, command.to_bytes()),
-            EntryCommand::UpdateTopic(command) => (UPDATE_TOPIC_CODE, command.to_bytes()),
-            EntryCommand::DeleteTopic(command) => (DELETE_TOPIC_CODE, command.to_bytes()),
-            EntryCommand::PurgeTopic(command) => (PURGE_TOPIC_CODE, command.to_bytes()),
-            EntryCommand::CreatePartitions(command) => (CREATE_PARTITIONS_CODE, command.to_bytes()),
-            EntryCommand::DeletePartitions(command) => (DELETE_PARTITIONS_CODE, command.to_bytes()),
-            EntryCommand::CreateConsumerGroup(command) => {
-                (CREATE_CONSUMER_GROUP_CODE, command.to_bytes())
-            }
-            EntryCommand::DeleteConsumerGroup(command) => {
-                (DELETE_CONSUMER_GROUP_CODE, command.to_bytes())
-            }
-            EntryCommand::CreateUser(command) => (CREATE_USER_CODE, command.to_bytes()),
-            EntryCommand::UpdateUser(command) => (UPDATE_USER_CODE, command.to_bytes()),
-            EntryCommand::DeleteUser(command) => (DELETE_USER_CODE, command.to_bytes()),
-            EntryCommand::ChangePassword(command) => (CHANGE_PASSWORD_CODE, command.to_bytes()),
-            EntryCommand::UpdatePermissions(command) => {
-                (UPDATE_PERMISSIONS_CODE, command.to_bytes())
-            }
+            EntryCommand::CreateStream(command) => (command.code(), command.to_bytes()),
+            EntryCommand::UpdateStream(command) => (command.code(), command.to_bytes()),
+            EntryCommand::DeleteStream(command) => (command.code(), command.to_bytes()),
+            EntryCommand::PurgeStream(command) => (command.code(), command.to_bytes()),
+            EntryCommand::CreateTopic(command) => (command.code(), command.to_bytes()),
+            EntryCommand::UpdateTopic(command) => (command.code(), command.to_bytes()),
+            EntryCommand::DeleteTopic(command) => (command.code(), command.to_bytes()),
+            EntryCommand::PurgeTopic(command) => (command.code(), command.to_bytes()),
+            EntryCommand::CreatePartitions(command) => (command.code(), command.to_bytes()),
+            EntryCommand::DeletePartitions(command) => (command.code(), command.to_bytes()),
+            EntryCommand::CreateConsumerGroup(command) => (command.code(), command.to_bytes()),
+            EntryCommand::DeleteConsumerGroup(command) => (command.code(), command.to_bytes()),
+            EntryCommand::CreateUser(command) => (command.code(), command.to_bytes()),
+            EntryCommand::UpdateUser(command) => (command.code(), command.to_bytes()),
+            EntryCommand::DeleteUser(command) => (command.code(), command.to_bytes()),
+            EntryCommand::ChangePassword(command) => (command.code(), command.to_bytes()),
+            EntryCommand::UpdatePermissions(command) => (command.code(), command.to_bytes()),
             EntryCommand::CreatePersonalAccessToken(command) => {
-                (CREATE_PERSONAL_ACCESS_TOKEN_CODE, command.to_bytes())
+                (command.code(), command.to_bytes())
             }
             EntryCommand::DeletePersonalAccessToken(command) => {
-                (DELETE_PERSONAL_ACCESS_TOKEN_CODE, command.to_bytes())
+                (command.code(), command.to_bytes())
             }
         };
 

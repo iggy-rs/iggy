@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_PERSONAL_ACCESS_TOKENS_CODE};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::Bytes;
@@ -11,7 +11,11 @@ use std::fmt::Display;
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetPersonalAccessTokens {}
 
-impl CommandPayload for GetPersonalAccessTokens {}
+impl Command for GetPersonalAccessTokens {
+    fn code(&self) -> u32 {
+        GET_PERSONAL_ACCESS_TOKENS_CODE
+    }
+}
 
 impl Validatable<IggyError> for GetPersonalAccessTokens {
     fn validate(&self) -> Result<(), IggyError> {

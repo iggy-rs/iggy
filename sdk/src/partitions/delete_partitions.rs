@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, DELETE_PARTITIONS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::partitions::MAX_PARTITIONS_COUNT;
@@ -25,7 +25,11 @@ pub struct DeletePartitions {
     pub partitions_count: u32,
 }
 
-impl CommandPayload for DeletePartitions {}
+impl Command for DeletePartitions {
+    fn code(&self) -> u32 {
+        DELETE_PARTITIONS_CODE
+    }
+}
 
 impl Default for DeletePartitions {
     fn default() -> Self {

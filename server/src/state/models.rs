@@ -1,5 +1,6 @@
 use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
+use iggy::command::Command;
 use iggy::error::IggyError;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
 use serde::{Deserialize, Serialize};
@@ -11,6 +12,12 @@ use std::str::from_utf8;
 pub struct CreatePersonalAccessTokenWithHash {
     pub command: CreatePersonalAccessToken,
     pub hash: String,
+}
+
+impl Command for CreatePersonalAccessTokenWithHash {
+    fn code(&self) -> u32 {
+        self.command.code()
+    }
 }
 
 impl BytesSerializable for CreatePersonalAccessTokenWithHash {

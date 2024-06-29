@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_CLIENTS_CODE};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::Bytes;
@@ -11,7 +11,11 @@ use std::fmt::Display;
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetClients {}
 
-impl CommandPayload for GetClients {}
+impl Command for GetClients {
+    fn code(&self) -> u32 {
+        GET_CLIENTS_CODE
+    }
+}
 
 impl Validatable<IggyError> for GetClients {
     fn validate(&self) -> Result<(), IggyError> {

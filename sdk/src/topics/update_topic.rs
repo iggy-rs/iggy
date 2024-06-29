@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, UPDATE_TOPIC_CODE};
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -43,7 +43,11 @@ pub struct UpdateTopic {
     pub name: String,
 }
 
-impl CommandPayload for UpdateTopic {}
+impl Command for UpdateTopic {
+    fn code(&self) -> u32 {
+        UPDATE_TOPIC_CODE
+    }
+}
 
 impl Default for UpdateTopic {
     fn default() -> Self {

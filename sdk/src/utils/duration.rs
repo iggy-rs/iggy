@@ -9,6 +9,8 @@ use std::{
     time::Duration,
 };
 
+pub const SEC_IN_MICRO: u64 = 1_000_000;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct IggyDuration {
     duration: Duration,

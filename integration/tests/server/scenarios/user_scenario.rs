@@ -4,7 +4,7 @@ use iggy::identifier::Identifier;
 use iggy::models::permissions::{GlobalPermissions, Permissions};
 use iggy::models::user_status::UserStatus;
 use iggy::users::defaults::DEFAULT_ROOT_USERNAME;
-use iggy::utils::expiry::SEC_IN_MICRO;
+use iggy::utils::duration::SEC_IN_MICRO;
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use integration::test_server::{assert_clean_system, login_root, ClientFactory};
 

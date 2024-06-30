@@ -10,8 +10,6 @@ use std::ops::Add;
 use std::str::FromStr;
 use std::time::Duration;
 
-pub const SEC_IN_MICRO: u64 = 1_000_000;
-
 /// Helper enum for various time-based expiry related functionalities
 #[derive(Debug, Copy, Default, Clone, Eq, PartialEq)]
 pub enum IggyExpiry {
@@ -198,6 +196,7 @@ impl<'de> Visitor<'de> for IggyExpiryVisitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::duration::SEC_IN_MICRO;
 
     #[test]
     fn should_parse_expiry() {

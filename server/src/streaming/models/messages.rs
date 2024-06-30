@@ -4,7 +4,6 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
 use iggy::models::messages::PolledMessage;
 use iggy::utils::checksum;
-use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{messages::send_messages::Message, models::messages::MessageState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -48,10 +47,10 @@ impl TryFrom<RetainedMessage> for PolledMessage {
 }
 
 impl RetainedMessage {
-    pub fn new(offset: u64, timestamp: IggyTimestamp, message: Message) -> Self {
+    pub fn new(offset: u64, timestamp: u64, message: Message) -> Self {
         RetainedMessage {
             offset,
-            timestamp: timestamp.as_micros(),
+            timestamp,
             checksum: checksum::calculate(&message.payload),
             message_state: MessageState::Available,
             id: message.id,

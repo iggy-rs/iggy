@@ -5,14 +5,13 @@ use bytes::{BufMut, Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::header::{self, HeaderKey, HeaderValue};
 use iggy::models::messages::MessageState;
-use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct MessageSnapshot {
     pub offset: u64,
     pub state: MessageState,
-    pub timestamp: IggyTimestamp,
+    pub timestamp: u64,
     pub id: u128,
     pub payload: Bytes,
     pub checksum: u32,
@@ -23,7 +22,7 @@ impl MessageSnapshot {
     pub fn new(
         offset: u64,
         state: MessageState,
-        timestamp: IggyTimestamp,
+        timestamp: u64,
         id: u128,
         payload: Bytes,
         checksum: u32,
@@ -55,7 +54,7 @@ impl Extendable for MessageSnapshot {
         bytes.put_u32_le(length);
         bytes.put_u64_le(offset);
         bytes.put_u8(message_state.as_code());
-        bytes.put_u64_le(timestamp.into());
+        bytes.put_u64_le(timestamp);
         bytes.put_u128_le(id);
         bytes.put_u32_le(checksum);
         if let Some(headers) = headers {
@@ -166,7 +165,7 @@ impl TryFrom<Bytes> for MessageSnapshot {
         Ok(MessageSnapshot {
             offset,
             state,
-            timestamp: timestamp.into(),
+            timestamp,
             id,
             payload,
             checksum,

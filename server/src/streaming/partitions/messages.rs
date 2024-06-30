@@ -422,7 +422,8 @@ impl Partition {
                     min_timestamp = max_timestamp;
                 }
                 let message_offset = base_offset + messages_count as u64;
-                let message = RetainedMessage::new(message_offset, max_timestamp, message);
+                let message =
+                    RetainedMessage::new(message_offset, max_timestamp.as_micros(), message);
                 message.extend(&mut buffer);
                 messages_count += 1;
             }
@@ -434,7 +435,8 @@ impl Partition {
                     min_timestamp = max_timestamp;
                 }
                 let message_offset = base_offset + messages_count as u64;
-                let message = RetainedMessage::new(message_offset, max_timestamp, message);
+                let message =
+                    RetainedMessage::new(message_offset, max_timestamp.as_micros(), message);
                 message.extend(&mut buffer);
                 messages_count += 1;
             }

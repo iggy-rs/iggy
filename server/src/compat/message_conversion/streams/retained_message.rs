@@ -74,7 +74,7 @@ impl MessageStream for RetainedMessageStream {
                 self.read_bytes += 4 + payload_len as u64;
 
                 let message =
-                    MessageSnapshot::new(offset, state, timestamp.into(), id, payload.freeze(), checksum, headers);
+                    MessageSnapshot::new(offset, state, timestamp, id, payload.freeze(), checksum, headers);
                 yield message;
             }
         }

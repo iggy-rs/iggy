@@ -6,7 +6,6 @@ use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
 
 use crate::streaming::segments::storage::{INDEX_SIZE, TIME_INDEX_SIZE};
-use iggy::utils::timestamp::IggyTimestamp;
 use tokio::io::{AsyncWrite, AsyncWriteExt};
 
 pub trait Extendable {
@@ -23,7 +22,7 @@ pub trait MessageFormatConverterPersister<W: AsyncWrite> {
     ) -> Result<(), IggyError>;
     async fn persist_time_index(
         &self,
-        timestamp: IggyTimestamp,
+        timestamp: u64,
         relative_offset: u32,
         writer: &mut W,
     ) -> Result<(), IggyError>;
@@ -58,13 +57,13 @@ where
 
     async fn persist_time_index(
         &self,
-        timestamp: IggyTimestamp,
+        timestamp: u64,
         relative_offset: u32,
         writer: &mut W,
     ) -> Result<(), IggyError> {
         let mut time_index_bytes = BytesMut::with_capacity(TIME_INDEX_SIZE as usize);
         time_index_bytes.put_u32_le(relative_offset);
-        time_index_bytes.put_u64_le(timestamp.into());
+        time_index_bytes.put_u64_le(timestamp);
 
         writer.write_all(&time_index_bytes).await?;
         Ok(())

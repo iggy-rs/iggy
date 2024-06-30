@@ -17,7 +17,6 @@ use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::utils::timestamp::IggyTimestamp;
 use std::fmt::{Debug, Formatter};
 use std::sync::Arc;
 
@@ -90,7 +89,7 @@ pub trait SegmentStorage: Send + Sync {
     async fn try_load_time_index_for_timestamp(
         &self,
         segment: &Segment,
-        timestamp: IggyTimestamp,
+        timestamp: u64,
     ) -> Result<Option<TimeIndex>, IggyError>;
     async fn load_all_time_indexes(&self, segment: &Segment) -> Result<Vec<TimeIndex>, IggyError>;
     async fn load_last_time_index(&self, segment: &Segment)
@@ -334,7 +333,7 @@ pub(crate) mod tests {
         async fn try_load_time_index_for_timestamp(
             &self,
             _segment: &Segment,
-            _timestamp: IggyTimestamp,
+            _timestamp: u64,
         ) -> Result<Option<TimeIndex>, IggyError> {
             Ok(None)
         }

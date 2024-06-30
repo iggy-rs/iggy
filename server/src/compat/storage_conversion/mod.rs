@@ -20,7 +20,6 @@ use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use iggy::utils::timestamp::IggyTimestamp;
 use std::path::Path;
 use std::sync::Arc;
 use tokio::fs::{read_dir, rename};
@@ -268,7 +267,7 @@ impl SegmentStorage for NoopSegmentStorage {
     async fn try_load_time_index_for_timestamp(
         &self,
         _segment: &Segment,
-        _timestamp: IggyTimestamp,
+        _timestamp: u64,
     ) -> Result<Option<TimeIndex>, IggyError> {
         Ok(None)
     }

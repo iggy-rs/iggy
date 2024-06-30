@@ -7,7 +7,6 @@ use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
 use bytes::BufMut;
 use iggy::error::IggyError;
-use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{trace, warn};
@@ -249,7 +248,7 @@ impl Segment {
     fn store_offset_and_timestamp_index_for_batch(
         &mut self,
         batch_last_offset: u64,
-        batch_max_timestamp: IggyTimestamp,
+        batch_max_timestamp: u64,
     ) {
         let relative_offset = (batch_last_offset - self.start_offset) as u32;
         match (&mut self.indexes, &mut self.time_indexes) {
@@ -283,8 +282,7 @@ impl Segment {
         self.unsaved_indexes.put_u32_le(relative_offset);
         self.unsaved_indexes.put_u32_le(self.size_bytes);
         self.unsaved_timestamps.put_u32_le(relative_offset);
-        self.unsaved_timestamps
-            .put_u64_le(batch_max_timestamp.into());
+        self.unsaved_timestamps.put_u64_le(batch_max_timestamp);
     }
 
     pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {

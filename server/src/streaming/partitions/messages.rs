@@ -36,6 +36,7 @@ impl Partition {
             return Ok(EMPTY_MESSAGES);
         }
 
+        let timestamp = timestamp.as_micros();
         let mut found_index = None;
         let mut start_offset = self.segments.last().unwrap().start_offset;
         // Since index cache is configurable globally, not per segment we can handle it this way.
@@ -63,9 +64,7 @@ impl Partition {
                 let time_indexes = segment.time_indexes.as_ref().unwrap();
                 let time_index = time_indexes
                     .iter()
-                    .rposition(|time_index| {
-                        time_index.timestamp.as_micros() <= timestamp.as_micros()
-                    })
+                    .rposition(|time_index| time_index.timestamp <= timestamp)
                     .map(|idx| time_indexes[idx]);
                 if time_index.is_none() {
                     continue;
@@ -89,7 +88,7 @@ impl Partition {
                 .get_messages_by_offset(start_offset, count)
                 .await?
                 .into_iter()
-                .filter(|msg| msg.timestamp >= timestamp.as_micros())
+                .filter(|msg| msg.timestamp >= timestamp)
                 .take(count as usize)
                 .collect());
         }
@@ -103,20 +102,21 @@ impl Partition {
             .get_messages_by_offset(start_offset, adjusted_count)
             .await?
             .into_iter()
-            .filter(|msg| msg.timestamp >= timestamp.as_micros())
+            .filter(|msg| msg.timestamp >= timestamp)
             .take(count as usize)
             .collect())
     }
+
     fn calculate_adjusted_timestamp_message_count(
         &self,
         count: u32,
-        timestamp: IggyTimestamp,
-        timestamp_from_index: IggyTimestamp,
+        timestamp: u64,
+        timestamp_from_index: u64,
     ) -> u32 {
         if self.avg_timestamp_delta.as_micros() == 0 {
             return count;
         }
-        let timestamp_diff = timestamp.as_micros() - timestamp_from_index.as_micros();
+        let timestamp_diff = timestamp - timestamp_from_index;
         // This approximation is not exact, but it's good enough for the usage of this function
         let overfetch_value =
             ((timestamp_diff as f64 / self.avg_timestamp_delta.as_micros() as f64) * 1.35).ceil()
@@ -401,8 +401,8 @@ impl Partition {
 
         let mut messages_count = 0u32;
         // assume that messages have monotonic timestamps
-        let mut max_timestamp = IggyTimestamp::zero();
-        let mut min_timestamp = IggyTimestamp::zero();
+        let mut max_timestamp = 0;
+        let mut min_timestamp = 0;
 
         let mut buffer = BytesMut::with_capacity(batch_size as usize);
         let mut batch_builder = RetainedMessageBatch::builder();
@@ -416,27 +416,25 @@ impl Partition {
                     );
                     continue;
                 }
-                max_timestamp = IggyTimestamp::now();
+                max_timestamp = IggyTimestamp::now().as_micros();
 
                 if messages_count == 0 {
                     min_timestamp = max_timestamp;
                 }
                 let message_offset = base_offset + messages_count as u64;
-                let message =
-                    RetainedMessage::new(message_offset, max_timestamp.as_micros(), message);
+                let message = RetainedMessage::new(message_offset, max_timestamp, message);
                 message.extend(&mut buffer);
                 messages_count += 1;
             }
         } else {
             for message in messages {
-                max_timestamp = IggyTimestamp::now();
+                max_timestamp = IggyTimestamp::now().as_micros();
 
                 if messages_count == 0 {
                     min_timestamp = max_timestamp;
                 }
                 let message_offset = base_offset + messages_count as u64;
-                let message =
-                    RetainedMessage::new(message_offset, max_timestamp.as_micros(), message);
+                let message = RetainedMessage::new(message_offset, max_timestamp, message);
                 message.extend(&mut buffer);
                 messages_count += 1;
             }
@@ -445,10 +443,8 @@ impl Partition {
             return Ok(());
         }
 
-        let avg_timestamp_delta = Duration::from_micros(
-            (max_timestamp.as_micros() - min_timestamp.as_micros()) / messages_count as u64,
-        )
-        .into();
+        let avg_timestamp_delta =
+            Duration::from_micros((max_timestamp - min_timestamp) / messages_count as u64).into();
 
         let min_alpha: f64 = 0.3;
         let max_alpha: f64 = 0.7;

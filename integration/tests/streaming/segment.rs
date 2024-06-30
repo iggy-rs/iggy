@@ -152,7 +152,7 @@ async fn should_persist_and_load_segment_with_messages() {
     .await;
     let messages_count = 10;
     let mut base_offset = 0;
-    let mut last_timestamp = IggyTimestamp::zero();
+    let mut last_timestamp = IggyTimestamp::zero().as_micros();
     let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", IggyTimestamp::now());
@@ -160,7 +160,7 @@ async fn should_persist_and_load_segment_with_messages() {
             base_offset = message.offset;
         }
         if i == messages_count - 1 {
-            last_timestamp = message.timestamp.into();
+            last_timestamp = message.timestamp;
         }
 
         let retained_message = RetainedMessage {
@@ -248,7 +248,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let now = IggyTimestamp::now();
     let mut expired_timestamp = (now.as_micros() - 2 * message_expiry_ms).into();
     let mut base_offset = 0;
-    let mut last_timestamp = IggyTimestamp::zero();
+    let mut last_timestamp = 0;
     let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
@@ -257,7 +257,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
             base_offset = message.offset;
         }
         if i == messages_count - 1 {
-            last_timestamp = message.timestamp.into();
+            last_timestamp = message.timestamp;
         }
 
         let retained_message = RetainedMessage {
@@ -324,10 +324,10 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     )
     .await;
     let now = IggyTimestamp::now();
-    let expired_timestamp = (now.as_micros() - 2 * message_expiry_ms).into();
-    let not_expired_timestamp = (now.as_micros() - message_expiry_ms + 1).into();
-    let expired_message = create_message(0, "test", expired_timestamp);
-    let not_expired_message = create_message(1, "test", not_expired_timestamp);
+    let expired_timestamp = now.as_micros() - 2 * message_expiry_ms;
+    let not_expired_timestamp = now.as_micros() - message_expiry_ms + 1;
+    let expired_message = create_message(0, "test", expired_timestamp.into());
+    let not_expired_message = create_message(1, "test", not_expired_timestamp.into());
 
     let mut expired_batch_buffer = BytesMut::new();
     let expired_retained_message = RetainedMessage {

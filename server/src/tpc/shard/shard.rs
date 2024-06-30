@@ -12,7 +12,7 @@ use crate::{
 };
 use bytes::Bytes;
 use flume::SendError;
-use iggy::{command::Command, utils::hash::hash_string};
+use iggy::{command::Command, identifier::Identifier, utils::hash::hash_string};
 use iggy::{
     error::IggyError,
     locking::IggySharedMutFn,
@@ -23,21 +23,18 @@ use std::cell::{Cell, RefCell};
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use tracing::info;
 
-pub const SHARD_NAME: &str = "iggy_shard";
-
 /// For each cache eviction, we want to remove more than the size we need.
 /// This is done on purpose to avoid evicting messages on every write.
 const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 
 pub struct Shard {
-    hash: u32,
+    id: u16,
     connection: ShardConnector<ShardFrame>,
 }
 
 impl Shard {
-    pub fn new(name: String, connection: ShardConnector<ShardFrame>) -> Self {
-        let hash = hash_string(&name).unwrap();
-        Self { hash, connection }
+    pub fn new(id: u16, connection: ShardConnector<ShardFrame>) -> Self {
+        Self { id, connection }
     }
 
     pub async fn send_request(
@@ -54,10 +51,23 @@ impl Shard {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct PartitionNamespace {
+    pub(crate) stream_id: Identifier,
+    pub(crate) topic_id: Identifier,
+    pub(crate) partition_id: u32,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct ShardMetadata {
+    pub(crate) id: u16,
+    // TODO - this could be extended with an revision number, once incoperated with replication.
+}
+
 pub struct IggyShard {
     pub id: u16,
-    pub hash: u32,
     shards: Vec<Shard>,
+    shards_placement: HashMap<ShardMetadata, PartitionNamespace>,
 
     pub(crate) permissioner: RefCell<Permissioner>,
     pub(crate) storage: Arc<SystemStorage>,
@@ -85,12 +95,10 @@ impl IggyShard {
         stop_receiver: StopReceiver,
         stop_sender: StopSender,
     ) -> Self {
-        let name = &format!("{}_{}", SHARD_NAME, id);
-        let hash = hash_string(&name).unwrap();
         Self {
             id,
-            hash,
             shards,
+            shards_placement: HashMap::new(),
             permissioner: RefCell::new(Permissioner::default()),
             storage,
             streams: RefCell::new(HashMap::new()),
@@ -151,7 +159,7 @@ impl IggyShard {
             .shards
             .iter()
             .filter_map(|shard| {
-                if shard.hash != self.hash {
+                if shard.id != self.id {
                     Some(shard.connection.clone())
                 } else {
                     None
@@ -171,20 +179,21 @@ impl IggyShard {
     pub async fn send_request_to_shard(
         &self,
         client_id: u32,
-        cmd_hash: u32,
+        destination_id: u16,
         command: Command,
     ) -> Result<ShardResponse, IggyError> {
         let message = ShardMessage::Command(command);
-        self.find_shard(cmd_hash)
+        // Maybe we could spin for a while on the None case.
+        self.find_shard(destination_id)
+            .expect("Failed to find shard")
             .send_request(client_id, message)
             .await
     }
 
-    fn find_shard(&self, cmd_hash: u32) -> &Shard {
+    fn find_shard(&self, destination_id: u16) -> Option<&Shard> {
         self.shards
             .iter()
-            .find(|shard| shard.hash <= cmd_hash)
-            .unwrap_or_else(|| self.shards.last().unwrap())
+            .find(|shard| shard.id == destination_id)
     }
 
     pub async fn handle_shard_message(

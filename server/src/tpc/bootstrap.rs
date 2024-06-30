@@ -47,8 +47,7 @@ pub fn create_shard(
     let shards = connections
         .into_iter()
         .map(|c| {
-            let name = format!("{}_{}", SHARD_NAME, c.id);
-            Shard::new(name, c)
+            Shard::new(id, c)
         })
         .collect::<Vec<_>>();
 

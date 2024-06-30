@@ -455,6 +455,7 @@ impl SegmentStorage for FileSegmentStorage {
             return Ok(Some(TimeIndex::default()));
         }
 
+        let timestamp = timestamp.as_micros();
         let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
         let mut read_bytes = 0;
         let mut idx_pred = HeadTailBuffer::new();
@@ -466,7 +467,7 @@ impl SegmentStorage for FileSegmentStorage {
                 timestamp: time,
             };
             idx_pred.push(idx);
-            if time.as_micros() >= timestamp.as_micros() {
+            if time.as_micros() >= timestamp {
                 return Ok(idx_pred.tail());
             }
             read_bytes += TIME_INDEX_SIZE as usize;

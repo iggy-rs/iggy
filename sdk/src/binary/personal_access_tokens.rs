@@ -14,7 +14,7 @@ use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 impl<B: BinaryClient> PersonalAccessTokenClient for B {
     async fn get_personal_access_tokens(&self) -> Result<Vec<PersonalAccessTokenInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self.send_with_response(GetPersonalAccessTokens {}).await?;
+        let response = self.send_with_response(&GetPersonalAccessTokens {}).await?;
         mapper::map_personal_access_tokens(response)
     }
 
@@ -25,7 +25,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
     ) -> Result<RawPersonalAccessToken, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(CreatePersonalAccessToken {
+            .send_with_response(&CreatePersonalAccessToken {
                 name: name.to_string(),
                 expiry,
             })
@@ -35,7 +35,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
 
     async fn delete_personal_access_token(&self, name: &str) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(DeletePersonalAccessToken {
+        self.send_with_response(&DeletePersonalAccessToken {
             name: name.to_string(),
         })
         .await?;
@@ -47,7 +47,7 @@ impl<B: BinaryClient> PersonalAccessTokenClient for B {
         token: &str,
     ) -> Result<IdentityInfo, IggyError> {
         let response = self
-            .send_with_response(LoginWithPersonalAccessToken {
+            .send_with_response(&LoginWithPersonalAccessToken {
                 token: token.to_string(),
             })
             .await?;

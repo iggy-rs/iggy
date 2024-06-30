@@ -46,7 +46,7 @@ pub struct PolledMessage {
     /// The state of the message.
     pub state: MessageState,
     /// The timestamp of the message.
-    pub timestamp: IggyTimestamp,
+    pub timestamp: u64,
     /// The identifier of the message.
     pub id: u128,
     /// The checksum of the message, can be used to verify the integrity of the message.
@@ -123,19 +123,6 @@ impl FromStr for MessageState {
 }
 
 impl PolledMessage {
-    /// Creates a new message from the `Message` struct being part of `SendMessages` command.
-    /// Creates a new message without a specified offset.
-    pub fn empty(
-        timestamp: IggyTimestamp,
-        state: MessageState,
-        id: u128,
-        payload: Bytes,
-        checksum: u32,
-        headers: Option<HashMap<HeaderKey, HeaderValue>>,
-    ) -> Self {
-        PolledMessage::create(0, state, timestamp, id, payload, checksum, headers)
-    }
-
     /// Creates a new message with a specified offset.
     pub fn create(
         offset: u64,
@@ -149,7 +136,7 @@ impl PolledMessage {
         PolledMessage {
             offset,
             state,
-            timestamp,
+            timestamp: timestamp.as_micros(),
             id,
             checksum,
             #[allow(clippy::cast_possible_truncation)]
@@ -157,6 +144,11 @@ impl PolledMessage {
             payload,
             headers,
         }
+    }
+
+    /// Returns the timestamp of the message as `IggyTimestamp`.
+    pub fn timestamp(&self) -> IggyTimestamp {
+        self.timestamp.into()
     }
 
     /// Returns the size of the message in bytes.
@@ -169,7 +161,7 @@ impl PolledMessage {
     pub fn extend(&self, bytes: &mut BytesMut) {
         bytes.put_u64_le(self.offset);
         bytes.put_u8(self.state.as_code());
-        bytes.put_u64_le(self.timestamp.into());
+        bytes.put_u64_le(self.timestamp);
         bytes.put_u128_le(self.id);
         bytes.put_u32_le(self.checksum);
         if let Some(headers) = &self.headers {

@@ -21,7 +21,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
     ) -> Result<ConsumerGroupDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GetConsumerGroup {
+            .send_with_response(&GetConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 group_id: group_id.clone(),
@@ -37,7 +37,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
     ) -> Result<Vec<ConsumerGroup>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GetConsumerGroups {
+            .send_with_response(&GetConsumerGroups {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
             })
@@ -54,7 +54,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
     ) -> Result<ConsumerGroupDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(CreateConsumerGroup {
+            .send_with_response(&CreateConsumerGroup {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
                 name: name.to_string(),
@@ -71,7 +71,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         group_id: &Identifier,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(DeleteConsumerGroup {
+        self.send_with_response(&DeleteConsumerGroup {
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
             group_id: group_id.clone(),
@@ -87,7 +87,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         group_id: &Identifier,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(JoinConsumerGroup {
+        self.send_with_response(&JoinConsumerGroup {
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
             group_id: group_id.clone(),
@@ -103,7 +103,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         group_id: &Identifier,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(LeaveConsumerGroup {
+        self.send_with_response(&LeaveConsumerGroup {
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
             group_id: group_id.clone(),

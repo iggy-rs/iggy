@@ -249,7 +249,6 @@ pub fn map_polled_messages(payload: Bytes) -> Result<PolledMessages, IggyError> 
         let offset = u64::from_le_bytes(payload[position..position + 8].try_into()?);
         let state = MessageState::from_code(payload[position + 8])?;
         let timestamp = u64::from_le_bytes(payload[position + 9..position + 17].try_into()?);
-        let timestamp = timestamp.into();
         let id = u128::from_le_bytes(payload[position + 17..position + 33].try_into()?);
         let checksum = u32::from_le_bytes(payload[position + 33..position + 37].try_into()?);
         let headers_length = u32::from_le_bytes(payload[position + 37..position + 41].try_into()?);

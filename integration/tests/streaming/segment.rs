@@ -160,7 +160,7 @@ async fn should_persist_and_load_segment_with_messages() {
             base_offset = message.offset;
         }
         if i == messages_count - 1 {
-            last_timestamp = message.timestamp;
+            last_timestamp = message.timestamp.into();
         }
 
         let retained_message = RetainedMessage {
@@ -257,7 +257,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
             base_offset = message.offset;
         }
         if i == messages_count - 1 {
-            last_timestamp = message.timestamp;
+            last_timestamp = message.timestamp.into();
         }
 
         let retained_message = RetainedMessage {

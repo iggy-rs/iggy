@@ -63,7 +63,7 @@ impl BinaryTransport for QuicClient {
         *self.state.lock().await = state;
     }
 
-    async fn send_with_response<T: Command>(&self, command: T) -> Result<Bytes, IggyError> {
+    async fn send_with_response<T: Command>(&self, command: &T) -> Result<Bytes, IggyError> {
         self.send_raw_with_response(command.code(), command.to_bytes())
             .await
     }

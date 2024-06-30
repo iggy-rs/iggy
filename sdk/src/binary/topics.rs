@@ -23,7 +23,7 @@ impl<B: BinaryClient> TopicClient for B {
     ) -> Result<TopicDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GetTopic {
+            .send_with_response(&GetTopic {
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),
             })
@@ -34,7 +34,7 @@ impl<B: BinaryClient> TopicClient for B {
     async fn get_topics(&self, stream_id: &Identifier) -> Result<Vec<Topic>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GetTopics {
+            .send_with_response(&GetTopics {
                 stream_id: stream_id.clone(),
             })
             .await?;
@@ -53,7 +53,7 @@ impl<B: BinaryClient> TopicClient for B {
         max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(CreateTopic {
+        self.send_with_response(&CreateTopic {
             stream_id: stream_id.clone(),
             name: name.to_string(),
             partitions_count,
@@ -78,7 +78,7 @@ impl<B: BinaryClient> TopicClient for B {
         max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(UpdateTopic {
+        self.send_with_response(&UpdateTopic {
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
             name: name.to_string(),
@@ -97,7 +97,7 @@ impl<B: BinaryClient> TopicClient for B {
         topic_id: &Identifier,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(DeleteTopic {
+        self.send_with_response(&DeleteTopic {
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
         })
@@ -111,7 +111,7 @@ impl<B: BinaryClient> TopicClient for B {
         topic_id: &Identifier,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(PurgeTopic {
+        self.send_with_response(&PurgeTopic {
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
         })

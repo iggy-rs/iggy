@@ -16,7 +16,7 @@ impl<B: BinaryClient> StreamClient for B {
     async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GetStream {
+            .send_with_response(&GetStream {
                 stream_id: stream_id.clone(),
             })
             .await?;
@@ -25,13 +25,13 @@ impl<B: BinaryClient> StreamClient for B {
 
     async fn get_streams(&self) -> Result<Vec<Stream>, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self.send_with_response(GetStreams {}).await?;
+        let response = self.send_with_response(&GetStreams {}).await?;
         mapper::map_streams(response)
     }
 
     async fn create_stream(&self, name: &str, stream_id: Option<u32>) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(CreateStream {
+        self.send_with_response(&CreateStream {
             name: name.to_string(),
             stream_id,
         })
@@ -41,7 +41,7 @@ impl<B: BinaryClient> StreamClient for B {
 
     async fn update_stream(&self, stream_id: &Identifier, name: &str) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(UpdateStream {
+        self.send_with_response(&UpdateStream {
             stream_id: stream_id.clone(),
             name: name.to_string(),
         })
@@ -51,7 +51,7 @@ impl<B: BinaryClient> StreamClient for B {
 
     async fn delete_stream(&self, stream_id: &Identifier) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(DeleteStream {
+        self.send_with_response(&DeleteStream {
             stream_id: stream_id.clone(),
         })
         .await?;
@@ -60,7 +60,7 @@ impl<B: BinaryClient> StreamClient for B {
 
     async fn purge_stream(&self, stream_id: &Identifier) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(PurgeStream {
+        self.send_with_response(&PurgeStream {
             stream_id: stream_id.clone(),
         })
         .await?;

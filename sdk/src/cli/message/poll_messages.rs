@@ -5,6 +5,7 @@ use crate::identifier::Identifier;
 use crate::messages::poll_messages::{PollMessages, PollingStrategy};
 use crate::models::header::{HeaderKey, HeaderKind};
 use crate::models::messages::PolledMessages;
+use crate::utils::timestamp::IggyTimestamp;
 use crate::utils::{byte_size::IggyByteSize, duration::IggyDuration};
 use anyhow::Context;
 use async_trait::async_trait;
@@ -103,7 +104,7 @@ impl PollMessagesCmd {
             .map(|message| {
                 let mut row = vec![
                     format!("{}", message.offset),
-                    message.timestamp.to_local_string("%Y-%m-%d %H:%M:%S%.6f"),
+                    IggyTimestamp::from(message.timestamp).to_local_string("%Y-%m-%d %H:%M:%S%.6f"),
                     format!("{}", message.id),
                     format!("{}", message.payload.len()),
                     String::from_utf8_lossy(&message.payload).to_string(),

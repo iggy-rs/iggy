@@ -2,7 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use std::fmt::Display;
 
-pub trait Command: BytesSerializable + Send + Display {
+pub trait Command: BytesSerializable + Send + Sync + Display {
     fn code(&self) -> u32;
 }
 

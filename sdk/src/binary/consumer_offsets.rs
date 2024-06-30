@@ -19,7 +19,7 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
         offset: u64,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(StoreConsumerOffset {
+        self.send_with_response(&StoreConsumerOffset {
             consumer: consumer.clone(),
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
@@ -39,7 +39,7 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
     ) -> Result<ConsumerOffsetInfo, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(GetConsumerOffset {
+            .send_with_response(&GetConsumerOffset {
                 consumer: consumer.clone(),
                 stream_id: stream_id.clone(),
                 topic_id: topic_id.clone(),

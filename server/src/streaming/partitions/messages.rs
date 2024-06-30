@@ -89,7 +89,7 @@ impl Partition {
                 .get_messages_by_offset(start_offset, count)
                 .await?
                 .into_iter()
-                .filter(|msg| msg.timestamp.as_micros() >= timestamp.as_micros())
+                .filter(|msg| msg.timestamp >= timestamp.as_micros())
                 .take(count as usize)
                 .collect());
         }
@@ -103,7 +103,7 @@ impl Partition {
             .get_messages_by_offset(start_offset, adjusted_count)
             .await?
             .into_iter()
-            .filter(|msg| msg.timestamp.as_micros() >= timestamp.as_micros())
+            .filter(|msg| msg.timestamp >= timestamp.as_micros())
             .take(count as usize)
             .collect())
     }

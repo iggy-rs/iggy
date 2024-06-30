@@ -16,7 +16,7 @@ impl<B: BinaryClient> PartitionClient for B {
         partitions_count: u32,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(CreatePartitions {
+        self.send_with_response(&CreatePartitions {
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
             partitions_count,
@@ -32,7 +32,7 @@ impl<B: BinaryClient> PartitionClient for B {
         partitions_count: u32,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(DeletePartitions {
+        self.send_with_response(&DeletePartitions {
             stream_id: stream_id.clone(),
             topic_id: topic_id.clone(),
             partitions_count,

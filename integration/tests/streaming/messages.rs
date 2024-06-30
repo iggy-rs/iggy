@@ -134,7 +134,7 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         let appended_message = &appended_messages[index];
         assert_eq!(loaded_message.id, appended_message.id);
         assert_eq!(loaded_message.payload, appended_message.payload);
-        assert!(loaded_message.timestamp.as_micros() >= test_timestamp.as_micros());
+        assert!(loaded_message.timestamp >= test_timestamp.as_micros());
         assert_eq!(
             loaded_message
                 .headers

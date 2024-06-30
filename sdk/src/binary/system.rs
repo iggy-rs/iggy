@@ -14,30 +14,30 @@ use crate::system::ping::Ping;
 impl<B: BinaryClient> SystemClient for B {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self.send_with_response(GetStats {}).await?;
+        let response = self.send_with_response(&GetStats {}).await?;
         mapper::map_stats(response)
     }
 
     async fn get_me(&self) -> Result<ClientInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self.send_with_response(GetMe {}).await?;
+        let response = self.send_with_response(&GetMe {}).await?;
         mapper::map_client(response)
     }
 
     async fn get_client(&self, client_id: u32) -> Result<ClientInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self.send_with_response(GetClient { client_id }).await?;
+        let response = self.send_with_response(&GetClient { client_id }).await?;
         mapper::map_client(response)
     }
 
     async fn get_clients(&self) -> Result<Vec<ClientInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self.send_with_response(GetClients {}).await?;
+        let response = self.send_with_response(&GetClients {}).await?;
         mapper::map_clients(response)
     }
 
     async fn ping(&self) -> Result<(), IggyError> {
-        self.send_with_response(Ping {}).await?;
+        self.send_with_response(&Ping {}).await?;
         Ok(())
     }
 }

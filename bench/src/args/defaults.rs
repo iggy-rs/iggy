@@ -28,5 +28,5 @@ pub const DEFAULT_PERFORM_CLEANUP: bool = false;
 pub const DEFAULT_SERVER_SYSTEM_PATH: &str = "local_data";
 pub const DEFAULT_SERVER_STDOUT_VISIBILITY: bool = false;
 
-pub const DEFAULT_WARMUP_TIME_SECONDS: u64 = 1;
+pub const DEFAULT_WARMUP_TIME: &str = "1 s";
 pub const DEFAULT_SKIP_SERVER_START: bool = false;

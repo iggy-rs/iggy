@@ -3,10 +3,11 @@ use super::props::{BenchmarkKindProps, BenchmarkTransportProps};
 use super::{defaults::*, transport::BenchmarkTransportCommand};
 use clap::error::ErrorKind;
 use clap::{CommandFactory, Parser};
-use iggy::utils::duration::{IggyDuration, SEC_IN_MICRO};
+use iggy::utils::duration::IggyDuration;
 use integration::test_server::Transport;
 use std::net::SocketAddr;
 use std::path::Path;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -32,7 +33,7 @@ pub struct IggyBenchArgs {
     pub verbose: bool,
 
     /// Warmup time
-    #[arg(long, short = 'w', default_value_t = IggyDuration::from(SEC_IN_MICRO * DEFAULT_WARMUP_TIME_SECONDS))]
+    #[arg(long, short = 'w', default_value_t = IggyDuration::from_str(DEFAULT_WARMUP_TIME).unwrap())]
     pub warmup_time: IggyDuration,
 
     /// Skip server start

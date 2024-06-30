@@ -108,7 +108,7 @@ impl From<HumanDuration> for IggyDuration {
 
 impl From<IggyDuration> for u64 {
     fn from(iggy_duration: IggyDuration) -> u64 {
-        iggy_duration.duration.as_secs()
+        iggy_duration.duration.as_micros() as u64
     }
 }
 

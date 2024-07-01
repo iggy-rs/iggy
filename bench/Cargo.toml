@@ -7,7 +7,7 @@ edition = "2021"
 async-trait = "0.1.80"
 clap = { version = "4.5.4", features = ["derive"] }
 colored = "2.0.4"
-derive_more = "0.99.17"
+derive_more = "0.99.18"
 figlet-rs = "0.1.5"
 futures = "0.3.30"
 human_format = "1.1.0"

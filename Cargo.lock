@@ -1015,9 +1015,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.5.2"
+version = "4.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd79504325bf38b10165b02e89b4347300f855f273c4cb30c4a3209e6583275e"
+checksum = "b5a2d6eec27fce550d708b2be5d798797e5a55b246b323ef36924a0001996352"
 dependencies = [
  "clap",
 ]
@@ -1353,15 +1353,15 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.17"
+version = "0.99.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fb810d30a7c1953f91334de7244731fc3f3c10d7fe163338a35b9f640960321"
+checksum = "5f33878137e4dafd7fa914ad4e259e18a4e8e532b9617a2d0150262bf53abfce"
 dependencies = [
  "convert_case 0.4.0",
  "proc-macro2",
  "quote",
  "rustc_version",
- "syn 1.0.109",
+ "syn 2.0.48",
 ]
 
 [[package]]
@@ -2145,7 +2145,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.4.3"
+version = "0.4.4"
 dependencies = [
  "aes-gcm",
  "anyhow",

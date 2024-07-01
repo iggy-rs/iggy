@@ -8,7 +8,7 @@ use iggy::error::IggyError;
 use tracing::debug;
 
 pub async fn handle(
-    command: &StoreConsumerOffset,
+    command: StoreConsumerOffset,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
@@ -17,6 +17,7 @@ pub async fn handle(
     let system = system.read();
     let consumer =
         PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
+
     system
         .store_consumer_offset(
             session,

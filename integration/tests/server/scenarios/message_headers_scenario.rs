@@ -12,6 +12,7 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::header::{HeaderKey, HeaderValue};
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use integration::test_server::{assert_clean_system, login_root, ClientFactory};
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -109,7 +110,7 @@ async fn init_system(client: &IggyClient) {
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
         .unwrap();

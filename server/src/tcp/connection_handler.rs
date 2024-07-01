@@ -1,12 +1,12 @@
 use crate::binary::command;
 use crate::binary::sender::Sender;
+use crate::command::ServerCommand;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::Command;
 use iggy::error::IggyError;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
@@ -48,7 +48,7 @@ pub(crate) async fn handle_connection(
         let mut command_buffer = BytesMut::with_capacity(length as usize);
         command_buffer.put_bytes(0, length as usize);
         sender.read(&mut command_buffer).await?;
-        let command = match Command::from_bytes(command_buffer.freeze()) {
+        let command = match ServerCommand::from_bytes(command_buffer.freeze()) {
             Ok(command) => command,
             Err(error) => {
                 sender.send_error_response(error).await?;

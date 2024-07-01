@@ -6,6 +6,7 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
@@ -81,7 +82,7 @@ impl IggyCmdTestCase for TestConsumerGroupListCmd {
                 None,
                 Some(self.topic_id),
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await;
         assert!(topic.is_ok());

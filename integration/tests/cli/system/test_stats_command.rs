@@ -7,6 +7,7 @@ use iggy::cli::system::stats::GetStatsOutput;
 use iggy::client::Client;
 use iggy::identifier::Identifier;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
@@ -57,7 +58,7 @@ impl IggyCmdTestCase for TestStatsCmd {
                 None,
                 Some(1),
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await;
         assert!(topic.is_ok());

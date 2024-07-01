@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CREATE_USER_CODE};
 use crate::error::IggyError;
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
@@ -29,7 +29,11 @@ pub struct CreateUser {
     pub permissions: Option<Permissions>,
 }
 
-impl CommandPayload for CreateUser {}
+impl Command for CreateUser {
+    fn code(&self) -> u32 {
+        CREATE_USER_CODE
+    }
+}
 
 impl Default for CreateUser {
     fn default() -> Self {
@@ -67,7 +71,7 @@ impl Validatable<IggyError> for CreateUser {
 }
 
 impl BytesSerializable for CreateUser {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(2 + self.username.len() + self.password.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.username.len() as u8);
@@ -78,7 +82,7 @@ impl BytesSerializable for CreateUser {
         bytes.put_u8(self.status.as_code());
         if let Some(permissions) = &self.permissions {
             bytes.put_u8(1);
-            let permissions = permissions.as_bytes();
+            let permissions = permissions.to_bytes();
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(permissions.len() as u32);
             bytes.put_slice(&permissions);
@@ -181,7 +185,7 @@ mod tests {
             }),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let username_length = bytes[0];
         let username = from_utf8(&bytes[1..1 + username_length as usize]).unwrap();
         let mut position = 1 + username_length as usize;
@@ -239,7 +243,7 @@ mod tests {
         bytes.put_slice(password.as_bytes());
         bytes.put_u8(status.as_code());
         bytes.put_u8(has_permissions);
-        let permissions_bytes = permissions.as_bytes();
+        let permissions_bytes = permissions.to_bytes();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u32_le(permissions_bytes.len() as u32);
         bytes.put_slice(&permissions_bytes);

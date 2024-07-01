@@ -15,6 +15,8 @@ use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
 use crate::utils::byte_size::IggyByteSize;
+use crate::utils::expiry::IggyExpiry;
+use crate::utils::topic_size::MaxTopicSize;
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::str::from_utf8;
@@ -169,7 +171,7 @@ pub fn map_identity_info(payload: Bytes) -> Result<IdentityInfo, IggyError> {
     let user_id = u32::from_le_bytes(payload[..4].try_into()?);
     Ok(IdentityInfo {
         user_id,
-        tokens: None,
+        access_token: None,
     })
 }
 
@@ -402,27 +404,25 @@ pub fn map_topic(payload: Bytes) -> Result<TopicDetails, IggyError> {
 fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let created_at = created_at.into();
     let partitions_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
-    let message_expiry = match u32::from_le_bytes(payload[position + 16..position + 20].try_into()?)
+    let message_expiry = match u64::from_le_bytes(payload[position + 16..position + 24].try_into()?)
     {
-        0 => None,
-        message_expiry => Some(message_expiry),
+        0 => IggyExpiry::NeverExpire,
+        message_expiry => message_expiry.into(),
     };
-    let compression_algorithm = CompressionAlgorithm::from_code(payload[position + 20])?;
-    let max_topic_size = match u64::from_le_bytes(payload[position + 21..position + 29].try_into()?)
-    {
-        0 => None,
-        max_topic_size => Some(IggyByteSize::from(max_topic_size)),
-    };
-    let replication_factor = payload[position + 29];
+    let compression_algorithm = CompressionAlgorithm::from_code(payload[position + 24])?;
+    let max_topic_size = u64::from_le_bytes(payload[position + 25..position + 33].try_into()?);
+    let max_topic_size: MaxTopicSize = max_topic_size.into();
+    let replication_factor = payload[position + 33];
     let size_bytes = IggyByteSize::from(u64::from_le_bytes(
-        payload[position + 30..position + 38].try_into()?,
+        payload[position + 34..position + 42].try_into()?,
     ));
-    let messages_count = u64::from_le_bytes(payload[position + 38..position + 46].try_into()?);
-    let name_length = payload[position + 46];
+    let messages_count = u64::from_le_bytes(payload[position + 42..position + 50].try_into()?);
+    let name_length = payload[position + 50];
     let name =
-        from_utf8(&payload[position + 47..position + 47 + name_length as usize])?.to_string();
-    let read_bytes = 4 + 8 + 4 + 4 + 8 + 8 + 8 + 1 + 1 + 1 + name_length as usize;
+        from_utf8(&payload[position + 51..position + 51 + name_length as usize])?.to_string();
+    let read_bytes = 4 + 8 + 4 + 8 + 8 + 8 + 8 + 1 + 1 + 1 + name_length as usize;
     Ok((
         Topic {
             id,
@@ -443,6 +443,7 @@ fn map_to_topic(payload: Bytes, position: usize) -> Result<(Topic, usize), IggyE
 fn map_to_partition(payload: Bytes, position: usize) -> Result<(Partition, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let created_at = created_at.into();
     let segments_count = u32::from_le_bytes(payload[position + 12..position + 16].try_into()?);
     let current_offset = u64::from_le_bytes(payload[position + 16..position + 24].try_into()?);
     let size_bytes = u64::from_le_bytes(payload[position + 24..position + 32].try_into()?).into();
@@ -588,6 +589,7 @@ fn map_to_client_info(
 fn map_to_user_info(payload: Bytes, position: usize) -> Result<(UserInfo, usize), IggyError> {
     let id = u32::from_le_bytes(payload[position..position + 4].try_into()?);
     let created_at = u64::from_le_bytes(payload[position + 4..position + 12].try_into()?);
+    let created_at = created_at.into();
     let status = payload[position + 12];
     let status = UserStatus::from_code(status)?;
     let username_length = payload[position + 13];
@@ -613,12 +615,11 @@ fn map_to_pat_info(
     let name_length = payload[position];
     let name = from_utf8(&payload[position + 1..position + 1 + name_length as usize])?.to_string();
     let position = position + 1 + name_length as usize;
-    let expiry = u64::from_le_bytes(payload[position..position + 8].try_into()?);
-    let expiry = match expiry {
+    let expiry_at = u64::from_le_bytes(payload[position..position + 8].try_into()?);
+    let expiry_at = match expiry_at {
         0 => None,
-        _ => Some(expiry),
+        value => Some(value.into()),
     };
     let read_bytes = 1 + name_length as usize + 8;
-
-    Ok((PersonalAccessTokenInfo { name, expiry }, read_bytes))
+    Ok((PersonalAccessTokenInfo { name, expiry_at }, read_bytes))
 }

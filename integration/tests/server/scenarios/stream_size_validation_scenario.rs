@@ -6,6 +6,7 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use integration::test_server::{assert_clean_system, login_root, ClientFactory};
 use std::str::FromStr;
 
@@ -127,7 +128,7 @@ async fn create_topic_assert_empty(client: &IggyClient, stream_name: &str, topic
             None,
             None,
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
         .unwrap();

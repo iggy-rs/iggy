@@ -9,11 +9,7 @@ use tokio::fs;
 #[tokio::test]
 async fn should_initialize_system_and_base_directories() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(
-        setup.config.clone(),
-        Some(setup.db.clone()),
-        PersonalAccessTokenConfig::default(),
-    );
+    let mut system = System::new(setup.config.clone(), PersonalAccessTokenConfig::default());
 
     system.init().await.unwrap();
 
@@ -27,17 +23,12 @@ async fn should_initialize_system_and_base_directories() {
 
     assert_eq!(names.len(), 3);
     assert!(names.contains(&setup.config.stream.path));
-    assert!(names.contains(&setup.config.database.path));
 }
 
 #[tokio::test]
 async fn should_create_and_persist_stream() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(
-        setup.config.clone(),
-        Some(setup.db.clone()),
-        PersonalAccessTokenConfig::default(),
-    );
+    let mut system = System::new(setup.config.clone(), PersonalAccessTokenConfig::default());
     let stream_id = 1;
     let stream_name = "test";
     let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));
@@ -54,11 +45,7 @@ async fn should_create_and_persist_stream() {
 #[tokio::test]
 async fn should_create_and_persist_stream_with_automatically_generated_id() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(
-        setup.config.clone(),
-        Some(setup.db.clone()),
-        PersonalAccessTokenConfig::default(),
-    );
+    let mut system = System::new(setup.config.clone(), PersonalAccessTokenConfig::default());
     let stream_id = 1;
     let stream_name = "test";
     let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));
@@ -75,11 +62,7 @@ async fn should_create_and_persist_stream_with_automatically_generated_id() {
 #[tokio::test]
 async fn should_delete_persisted_stream() {
     let setup = TestSetup::init().await;
-    let mut system = System::new(
-        setup.config.clone(),
-        Some(setup.db.clone()),
-        PersonalAccessTokenConfig::default(),
-    );
+    let mut system = System::new(setup.config.clone(), PersonalAccessTokenConfig::default());
     let stream_id = 1;
     let stream_name = "test";
     let session = Session::new(1, 1, SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234));

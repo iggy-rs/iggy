@@ -11,6 +11,7 @@ use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use integration::test_server::{IpAddrKind, TestServer};
 use regex::Regex;
 use std::sync::Arc;
@@ -126,7 +127,7 @@ impl<'a> IggyExampleTest<'a> {
                     None,
                     None,
                     IggyExpiry::NeverExpire,
-                    None,
+                    MaxTopicSize::ServerDefault,
                 )
                 .await
                 .unwrap();

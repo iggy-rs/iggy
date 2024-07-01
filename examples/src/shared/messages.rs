@@ -1,3 +1,4 @@
+use iggy::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 use std::fmt::{self, Debug};
 
@@ -41,7 +42,7 @@ pub struct OrderCreated {
     pub price: f64,
     pub quantity: f64,
     pub side: String,
-    pub timestamp: u64,
+    pub timestamp: IggyTimestamp,
 }
 
 impl Debug for OrderCreated {
@@ -52,7 +53,7 @@ impl Debug for OrderCreated {
             .field("price", &format!("{:.2}", self.price))
             .field("quantity", &format!("{:.2}", self.quantity))
             .field("side", &self.side)
-            .field("timestamp", &self.timestamp)
+            .field("timestamp", &self.timestamp.as_micros())
             .finish()
     }
 }
@@ -61,7 +62,7 @@ impl Debug for OrderCreated {
 pub struct OrderConfirmed {
     pub order_id: u64,
     pub price: f64,
-    pub timestamp: u64,
+    pub timestamp: IggyTimestamp,
 }
 
 impl Debug for OrderConfirmed {
@@ -69,16 +70,26 @@ impl Debug for OrderConfirmed {
         f.debug_struct("OrderConfirmed")
             .field("order_id", &self.order_id)
             .field("price", &format!("{:.2}", self.price))
-            .field("timestamp", &self.timestamp)
+            .field("timestamp", &self.timestamp.as_micros())
             .finish()
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct OrderRejected {
     pub order_id: u64,
-    pub timestamp: u64,
+    pub timestamp: IggyTimestamp,
     pub reason: String,
+}
+
+impl Debug for OrderRejected {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("OrderRejected")
+            .field("order_id", &self.order_id)
+            .field("timestamp", &self.timestamp.as_micros())
+            .field("reason", &self.reason)
+            .finish()
+    }
 }
 
 impl SerializableMessage for OrderCreated {

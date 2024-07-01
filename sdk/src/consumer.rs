@@ -72,8 +72,8 @@ impl Consumer {
 }
 
 impl BytesSerializable for Consumer {
-    fn as_bytes(&self) -> Bytes {
-        let id_bytes = self.id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let id_bytes = self.id.to_bytes();
         let mut bytes = BytesMut::with_capacity(1 + id_bytes.len());
         bytes.put_u8(self.kind.as_code());
         bytes.put_slice(&id_bytes);

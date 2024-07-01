@@ -7,7 +7,7 @@ use iggy::users::logout_user::LogoutUser;
 use tracing::debug;
 
 pub async fn handle(
-    command: &LogoutUser,
+    command: LogoutUser,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

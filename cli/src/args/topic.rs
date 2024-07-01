@@ -2,8 +2,8 @@ use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
-use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum TopicAction {
@@ -102,7 +102,7 @@ pub(crate) struct TopicCreateArgs {
     /// ("unlimited" or skipping parameter disables max topic size functionality in topic)
     /// Can't be lower than segment size in the config.
     #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
-    pub(crate) max_topic_size: IggyByteSize,
+    pub(crate) max_topic_size: MaxTopicSize,
     /// Replication factor for the topic
     #[arg(short, long, default_value = "1")]
     pub(crate) replication_factor: u8,
@@ -149,7 +149,7 @@ pub(crate) struct TopicUpdateArgs {
     /// ("unlimited" or skipping parameter causes removal of max topic size parameter in topic)
     /// Can't be lower than segment size in the config.
     #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
-    pub(crate) max_topic_size: IggyByteSize,
+    pub(crate) max_topic_size: MaxTopicSize,
     #[arg(short, long, default_value = "1")]
     /// New replication factor for the topic
     pub(crate) replication_factor: u8,

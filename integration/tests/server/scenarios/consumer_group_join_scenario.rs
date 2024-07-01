@@ -10,6 +10,7 @@ use iggy::identifier::Identifier;
 use iggy::models::client_info::ClientInfoDetails;
 use iggy::models::consumer_group::ConsumerGroupDetails;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use integration::test_server::{
     assert_clean_system, create_user, login_root, login_user, ClientFactory,
 };
@@ -39,7 +40,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
         .unwrap();

@@ -3,6 +3,7 @@ use std::sync::atomic::Ordering;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::segments::segment::Segment;
 use iggy::error::IggyError;
+use iggy::utils::timestamp::IggyTimestamp;
 use tracing::info;
 
 pub struct DeletedSegment {
@@ -23,7 +24,7 @@ impl Partition {
         &mut self.segments
     }
 
-    pub async fn get_expired_segments_start_offsets(&self, now: u64) -> Vec<u64> {
+    pub async fn get_expired_segments_start_offsets(&self, now: IggyTimestamp) -> Vec<u64> {
         let mut expired_segments = Vec::new();
         for segment in &self.segments {
             if segment.is_closed && segment.is_expired(now).await {

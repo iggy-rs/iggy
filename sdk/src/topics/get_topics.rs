@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_TOPICS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
@@ -17,7 +17,11 @@ pub struct GetTopics {
     pub stream_id: Identifier,
 }
 
-impl CommandPayload for GetTopics {}
+impl Command for GetTopics {
+    fn code(&self) -> u32 {
+        GET_TOPICS_CODE
+    }
+}
 
 impl Validatable<IggyError> for GetTopics {
     fn validate(&self) -> Result<(), IggyError> {
@@ -26,8 +30,8 @@ impl Validatable<IggyError> for GetTopics {
 }
 
 impl BytesSerializable for GetTopics {
-    fn as_bytes(&self) -> Bytes {
-        self.stream_id.as_bytes()
+    fn to_bytes(&self) -> Bytes {
+        self.stream_id.to_bytes()
     }
 
     fn from_bytes(bytes: Bytes) -> std::result::Result<GetTopics, IggyError> {
@@ -58,7 +62,7 @@ mod tests {
             stream_id: Identifier::numeric(1).unwrap(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
 
         assert!(!bytes.is_empty());
@@ -68,7 +72,7 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
-        let bytes = stream_id.as_bytes();
+        let bytes = stream_id.to_bytes();
         let command = GetTopics::from_bytes(bytes);
         assert!(command.is_ok());
 

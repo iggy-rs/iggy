@@ -7,9 +7,9 @@ use crate::configs::server::{
     PersonalAccessTokenConfig, ServerConfig,
 };
 use crate::configs::system::{
-    BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, DatabaseConfig,
-    EncryptionConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig,
-    RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
+    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RetentionPolicyConfig,
+    RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -157,7 +157,6 @@ impl Default for HttpJwtConfig {
                 .map(|s| s.parse().unwrap())
                 .collect(),
             access_token_expiry: SERVER_CONFIG.http.jwt.access_token_expiry.parse().unwrap(),
-            refresh_token_expiry: SERVER_CONFIG.http.jwt.refresh_token_expiry.parse().unwrap(),
             clock_skew: SERVER_CONFIG.http.jwt.clock_skew.parse().unwrap(),
             not_before: SERVER_CONFIG.http.jwt.not_before.parse().unwrap(),
             encoding_secret: SERVER_CONFIG.http.jwt.encoding_secret.parse().unwrap(),
@@ -233,7 +232,7 @@ impl Default for SystemConfig {
         SystemConfig {
             path: SERVER_CONFIG.system.path.parse().unwrap(),
             backup: BackupConfig::default(),
-            database: DatabaseConfig::default(),
+            database: None,
             runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),
@@ -268,14 +267,6 @@ impl Default for CompatibilityConfig {
                 .path
                 .parse()
                 .unwrap(),
-        }
-    }
-}
-
-impl Default for DatabaseConfig {
-    fn default() -> DatabaseConfig {
-        DatabaseConfig {
-            path: SERVER_CONFIG.system.database.path.parse().unwrap(),
         }
     }
 }

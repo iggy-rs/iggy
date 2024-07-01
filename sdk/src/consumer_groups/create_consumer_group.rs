@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CREATE_CONSUMER_GROUP_CODE};
 use crate::consumer_groups::MAX_NAME_LENGTH;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -30,7 +30,11 @@ pub struct CreateConsumerGroup {
     pub name: String,
 }
 
-impl CommandPayload for CreateConsumerGroup {}
+impl Command for CreateConsumerGroup {
+    fn code(&self) -> u32 {
+        CREATE_CONSUMER_GROUP_CODE
+    }
+}
 
 impl Default for CreateConsumerGroup {
     fn default() -> Self {
@@ -64,9 +68,9 @@ impl Validatable<IggyError> for CreateConsumerGroup {
 }
 
 impl BytesSerializable for CreateConsumerGroup {
-    fn as_bytes(&self) -> Bytes {
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let stream_id_bytes = self.stream_id.to_bytes();
+        let topic_id_bytes = self.topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             4 + stream_id_bytes.len() + topic_id_bytes.len() + self.name.len(),
         );
@@ -131,7 +135,7 @@ mod tests {
             name: "test".to_string(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
@@ -154,8 +158,8 @@ mod tests {
         let topic_id = Identifier::numeric(2).unwrap();
         let group_id = 3u32;
         let name = "test".to_string();
-        let stream_id_bytes = stream_id.as_bytes();
-        let topic_id_bytes = topic_id.as_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
+        let topic_id_bytes = topic_id.to_bytes();
         let mut bytes =
             BytesMut::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len() + name.len());
         bytes.put_slice(&stream_id_bytes);

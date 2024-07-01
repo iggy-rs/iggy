@@ -1,8 +1,9 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, POLL_MESSAGES_CODE};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
+use crate::utils::timestamp::IggyTimestamp;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -104,7 +105,11 @@ impl Default for PollingStrategy {
     }
 }
 
-impl CommandPayload for PollMessages {}
+impl Command for PollMessages {
+    fn code(&self) -> u32 {
+        POLL_MESSAGES_CODE
+    }
+}
 
 fn default_partition_id() -> Option<u32> {
     Some(1)
@@ -142,10 +147,10 @@ impl PollingStrategy {
     }
 
     /// Poll messages from the specified timestamp.
-    pub fn timestamp(value: u64) -> Self {
+    pub fn timestamp(value: IggyTimestamp) -> Self {
         Self {
             kind: PollingKind::Timestamp,
-            value,
+            value: value.into(),
         }
     }
 
@@ -233,7 +238,7 @@ impl Display for PollingKind {
 }
 
 impl BytesSerializable for PollMessages {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         as_bytes(
             &self.stream_id,
             &self.topic_id,
@@ -301,10 +306,10 @@ pub(crate) fn as_bytes(
     count: u32,
     auto_commit: bool,
 ) -> Bytes {
-    let consumer_bytes = consumer.as_bytes();
-    let stream_id_bytes = stream_id.as_bytes();
-    let topic_id_bytes = topic_id.as_bytes();
-    let strategy_bytes = strategy.as_bytes();
+    let consumer_bytes = consumer.to_bytes();
+    let stream_id_bytes = stream_id.to_bytes();
+    let topic_id_bytes = topic_id.to_bytes();
+    let strategy_bytes = strategy.to_bytes();
     let mut bytes = BytesMut::with_capacity(
         9 + consumer_bytes.len()
             + stream_id_bytes.len()
@@ -361,7 +366,7 @@ fn auto_commit_to_string(auto_commit: bool) -> &'static str {
 }
 
 impl BytesSerializable for PollingStrategy {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(9);
         bytes.put_u8(self.kind.as_code());
         bytes.put_u64_le(self.value);
@@ -396,7 +401,7 @@ mod tests {
             auto_commit: true,
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
         let consumer_id = Identifier::from_bytes(bytes.slice(1..)).unwrap();
@@ -441,10 +446,10 @@ mod tests {
         let count = 3u32;
         let auto_commit = 1u8;
 
-        let consumer_bytes = consumer.as_bytes();
-        let stream_id_bytes = stream_id.as_bytes();
-        let topic_id_bytes = topic_id.as_bytes();
-        let strategy_bytes = strategy.as_bytes();
+        let consumer_bytes = consumer.to_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
+        let topic_id_bytes = topic_id.to_bytes();
+        let strategy_bytes = strategy.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             9 + consumer_bytes.len()
                 + stream_id_bytes.len()

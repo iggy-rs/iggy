@@ -8,7 +8,7 @@ use iggy::streams::get_stream::GetStream;
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetStream,
+    command: GetStream,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

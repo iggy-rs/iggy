@@ -1,7 +1,8 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CREATE_PERSONAL_ACCESS_TOKEN_CODE};
 use crate::error::IggyError;
 use crate::users::defaults::*;
+use crate::utils::expiry::IggyExpiry;
 use crate::utils::text;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -18,16 +19,20 @@ pub struct CreatePersonalAccessToken {
     /// Unique name of the token, must be between 3 and 30 characters long.
     pub name: String,
     /// Expiry in seconds (optional), if provided, must be between 1 and 4294967295. Otherwise, the token will never expire.
-    pub expiry: Option<u32>,
+    pub expiry: IggyExpiry,
 }
 
-impl CommandPayload for CreatePersonalAccessToken {}
+impl Command for CreatePersonalAccessToken {
+    fn code(&self) -> u32 {
+        CREATE_PERSONAL_ACCESS_TOKEN_CODE
+    }
+}
 
 impl Default for CreatePersonalAccessToken {
     fn default() -> Self {
         CreatePersonalAccessToken {
             name: "token".to_string(),
-            expiry: None,
+            expiry: IggyExpiry::NeverExpire,
         }
     }
 }
@@ -50,17 +55,17 @@ impl Validatable<IggyError> for CreatePersonalAccessToken {
 }
 
 impl BytesSerializable for CreatePersonalAccessToken {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(5 + self.name.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
         bytes.put_slice(self.name.as_bytes());
-        bytes.put_u32_le(self.expiry.unwrap_or(0));
+        bytes.put_u64_le(self.expiry.into());
         bytes.freeze()
     }
 
     fn from_bytes(bytes: Bytes) -> Result<CreatePersonalAccessToken, IggyError> {
-        if bytes.len() < 8 {
+        if bytes.len() < 12 {
             return Err(IggyError::InvalidCommand);
         }
 
@@ -71,11 +76,8 @@ impl BytesSerializable for CreatePersonalAccessToken {
         }
 
         let position = 1 + name_length as usize;
-        let expiry = u32::from_le_bytes(bytes[position..position + 4].try_into()?);
-        let expiry = match expiry {
-            0 => None,
-            _ => Some(expiry),
-        };
+        let expiry = u64::from_le_bytes(bytes[position..position + 8].try_into()?);
+        let expiry: IggyExpiry = expiry.into();
 
         let command = CreatePersonalAccessToken { name, expiry };
         command.validate()?;
@@ -85,7 +87,7 @@ impl BytesSerializable for CreatePersonalAccessToken {
 
 impl Display for CreatePersonalAccessToken {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}|{}", self.name, self.expiry.unwrap_or(0))
+        write!(f, "{}|{}", self.name, self.expiry)
     }
 }
 
@@ -97,22 +99,18 @@ mod tests {
     fn should_be_serialized_as_bytes() {
         let command = CreatePersonalAccessToken {
             name: "test".to_string(),
-            expiry: Some(100),
+            expiry: IggyExpiry::NeverExpire,
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let name_length = bytes[0];
         let name = from_utf8(&bytes[1..1 + name_length as usize]).unwrap();
-        let expiry = u32::from_le_bytes(
-            bytes[1 + name_length as usize..5 + name_length as usize]
+        let expiry = u64::from_le_bytes(
+            bytes[1 + name_length as usize..9 + name_length as usize]
                 .try_into()
                 .unwrap(),
         );
-        let expiry = match expiry {
-            0 => None,
-            _ => Some(expiry),
-        };
-
+        let expiry: IggyExpiry = expiry.into();
         assert!(!bytes.is_empty());
         assert_eq!(name, command.name);
         assert_eq!(expiry, command.expiry);
@@ -121,18 +119,18 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let name = "test";
-        let expiry = 100;
+        let expiry = IggyExpiry::NeverExpire;
         let mut bytes = BytesMut::new();
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(name.len() as u8);
         bytes.put_slice(name.as_bytes());
-        bytes.put_u32_le(expiry);
+        bytes.put_u64_le(expiry.into());
 
         let command = CreatePersonalAccessToken::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 
         let command = command.unwrap();
         assert_eq!(command.name, name);
-        assert_eq!(command.expiry, Some(expiry));
+        assert_eq!(command.expiry, expiry);
     }
 }

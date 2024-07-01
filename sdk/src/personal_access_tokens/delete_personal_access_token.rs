@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, DELETE_PERSONAL_ACCESS_TOKEN_CODE};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::utils::text;
@@ -18,7 +18,11 @@ pub struct DeletePersonalAccessToken {
     pub name: String,
 }
 
-impl CommandPayload for DeletePersonalAccessToken {}
+impl Command for DeletePersonalAccessToken {
+    fn code(&self) -> u32 {
+        DELETE_PERSONAL_ACCESS_TOKEN_CODE
+    }
+}
 
 impl Default for DeletePersonalAccessToken {
     fn default() -> Self {
@@ -46,7 +50,7 @@ impl Validatable<IggyError> for DeletePersonalAccessToken {
 }
 
 impl BytesSerializable for DeletePersonalAccessToken {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(5 + self.name.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.name.len() as u8);
@@ -87,7 +91,7 @@ mod tests {
             name: "test".to_string(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let name_length = bytes[0];
         let name = from_utf8(&bytes[1..1 + name_length as usize]).unwrap();
         assert!(!bytes.is_empty());

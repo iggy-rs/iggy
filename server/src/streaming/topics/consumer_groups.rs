@@ -2,6 +2,7 @@ use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
+use iggy::locking::IggySharedMutFn;
 use iggy::utils::text;
 use std::sync::atomic::Ordering;
 use tokio::sync::RwLock;
@@ -105,11 +106,6 @@ impl Topic {
         self.consumer_groups.insert(id, RwLock::new(consumer_group));
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;
-        let consumer_group_guard = consumer_group.read().await;
-        self.storage
-            .topic
-            .save_consumer_group(self, &consumer_group_guard)
-            .await?;
         info!(
             "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
             id, self.topic_id, self.stream_id
@@ -137,15 +133,20 @@ impl Topic {
             let consumer_group = consumer_group.read().await;
             let group_id = consumer_group.group_id;
             self.consumer_groups_ids.remove(&consumer_group.name);
-            self.storage
-                .topic
-                .delete_consumer_group(self, &consumer_group)
-                .await?;
-
             let current_group_id = self.current_consumer_group_id.load(Ordering::SeqCst);
             if current_group_id > group_id {
                 self.current_consumer_group_id
                     .store(group_id, Ordering::SeqCst);
+            }
+
+            for (_, partition) in self.partitions.iter() {
+                let partition = partition.read().await;
+                if let Some((_, offset)) = partition.consumer_group_offsets.remove(&group_id) {
+                    self.storage
+                        .partition
+                        .delete_consumer_offset(&offset.path)
+                        .await?;
+                }
             }
 
             info!(
@@ -194,6 +195,8 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
+    use iggy::utils::expiry::IggyExpiry;
+    use iggy::utils::topic_size::MaxTopicSize;
     use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
 
@@ -363,9 +366,9 @@ mod tests {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
+            IggyExpiry::NeverExpire,
             compression_algorithm,
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap()

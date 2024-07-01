@@ -7,6 +7,7 @@ use serde_with::base64::Base64;
 use serde_with::serde_as;
 use std::borrow::Cow;
 use std::fmt::Display;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 
 /// `Identifier` represents the unique identifier of the resources such as stream, topic, partition, user etc.
@@ -15,7 +16,7 @@ use std::str::FromStr;
 /// - `length`: the length of the identifier payload.
 /// - `value`: the binary value of the identifier payload.
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Eq)]
 pub struct Identifier {
     /// The kind of the identifier.
     pub kind: IdKind,
@@ -28,7 +29,7 @@ pub struct Identifier {
 }
 
 /// `IdKind` represents the kind of the identifier.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum IdKind {
     /// The identifier is numeric.
@@ -169,7 +170,7 @@ impl Identifier {
 }
 
 impl BytesSerializable for Identifier {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
         bytes.put_u8(self.length);
@@ -284,6 +285,19 @@ impl Display for IdKind {
         match self {
             IdKind::Numeric => write!(f, "numeric"),
             IdKind::String => write!(f, "string"),
+        }
+    }
+}
+
+impl Hash for Identifier {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self.kind {
+            IdKind::Numeric => {
+                self.get_u32_value().unwrap().hash(state);
+            }
+            IdKind::String => {
+                self.get_cow_str_value().unwrap().hash(state);
+            }
         }
     }
 }

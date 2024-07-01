@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::str::FromStr;
@@ -71,7 +72,7 @@ impl IggyCmdTestCase for TestTopicPurgeCmd {
                 None,
                 Some(self.topic_id),
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await;
         assert!(topic.is_ok());

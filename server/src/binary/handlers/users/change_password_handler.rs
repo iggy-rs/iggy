@@ -1,25 +1,40 @@
 use crate::binary::sender::Sender;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
+use crate::streaming::utils::crypto;
 use anyhow::Result;
 use iggy::error::IggyError;
 use iggy::users::change_password::ChangePassword;
 use tracing::debug;
 
 pub async fn handle(
-    command: &ChangePassword,
+    command: ChangePassword,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let mut system = system.write();
     system
         .change_password(
             session,
             &command.user_id,
             &command.current_password,
             &command.new_password,
+        )
+        .await?;
+
+    // For the security of the system, we hash the password before storing it in metadata.
+    system
+        .state
+        .apply(
+            session.get_user_id(),
+            EntryCommand::ChangePassword(ChangePassword {
+                user_id: command.user_id.to_owned(),
+                current_password: "".into(),
+                new_password: crypto::hash_password(&command.new_password),
+            }),
         )
         .await?;
     sender.send_empty_ok_response().await?;

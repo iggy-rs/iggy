@@ -1,6 +1,6 @@
-use crate::compat::samplers::message_sampler::MessageSampler;
-use crate::compat::samplers::retained_batch_sampler::RetainedMessageBatchSampler;
-use crate::compat::schema_sampler::BinarySchemaSampler;
+use crate::compat::message_conversion::samplers::message_sampler::MessageSampler;
+use crate::compat::message_conversion::samplers::retained_batch_sampler::RetainedMessageBatchSampler;
+use crate::compat::message_conversion::schema_sampler::BinarySchemaSampler;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;

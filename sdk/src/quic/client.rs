@@ -1,6 +1,7 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
 use crate::client::Client;
+use crate::command::Command;
 use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
@@ -62,7 +63,12 @@ impl BinaryTransport for QuicClient {
         *self.state.lock().await = state;
     }
 
-    async fn send_with_response(&self, command: u32, payload: Bytes) -> Result<Bytes, IggyError> {
+    async fn send_with_response<T: Command>(&self, command: &T) -> Result<Bytes, IggyError> {
+        self.send_raw_with_response(command.code(), command.to_bytes())
+            .await
+    }
+
+    async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
         if self.get_state().await == ClientState::Disconnected {
             return Err(IggyError::NotConnected);
         }
@@ -70,12 +76,11 @@ impl BinaryTransport for QuicClient {
         let connection = self.connection.lock().await;
         if let Some(connection) = connection.as_ref() {
             let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
-
             let (mut send, mut recv) = connection.open_bi().await?;
             trace!("Sending a QUIC request...");
             send.write_all(&(payload_length as u32).to_le_bytes())
                 .await?;
-            send.write_all(&command.to_le_bytes()).await?;
+            send.write_all(&code.to_le_bytes()).await?;
             send.write_all(&payload).await?;
             send.finish()?;
             trace!("Sent a QUIC request, waiting for a response...");

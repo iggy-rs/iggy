@@ -7,7 +7,7 @@ use iggy::system::get_stats::GetStats;
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetStats,
+    command: GetStats,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

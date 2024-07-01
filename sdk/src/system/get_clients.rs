@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, GET_CLIENTS_CODE};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
 use bytes::Bytes;
@@ -11,7 +11,11 @@ use std::fmt::Display;
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetClients {}
 
-impl CommandPayload for GetClients {}
+impl Command for GetClients {
+    fn code(&self) -> u32 {
+        GET_CLIENTS_CODE
+    }
+}
 
 impl Validatable<IggyError> for GetClients {
     fn validate(&self) -> Result<(), IggyError> {
@@ -20,7 +24,7 @@ impl Validatable<IggyError> for GetClients {
 }
 
 impl BytesSerializable for GetClients {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         Bytes::new()
     }
 
@@ -48,7 +52,7 @@ mod tests {
     #[test]
     fn should_be_serialized_as_empty_bytes() {
         let command = GetClients {};
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         assert!(bytes.is_empty());
     }
 

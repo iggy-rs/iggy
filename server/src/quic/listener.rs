@@ -2,6 +2,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use crate::binary::command;
+use crate::command::ServerCommand;
 use crate::quic::quic_sender::QuicSender;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
@@ -9,7 +10,6 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::{anyhow, Context};
 use bytes::Bytes;
-use iggy::command::Command;
 use iggy::{bytes_serializable::BytesSerializable, messages::MAX_PAYLOAD_SIZE};
 use quinn::{Connection, Endpoint, RecvStream, SendStream};
 use tracing::{debug, error, info};
@@ -117,8 +117,9 @@ async fn handle_stream(
         .try_into()
         .map(u32::from_le_bytes)
         .unwrap_or_default();
-    let command = Command::from_bytes(Bytes::copy_from_slice(&request[INITIAL_BYTES_LENGTH..]))
-        .with_context(|| "Error when reading the QUIC request command.")?;
+    let command =
+        ServerCommand::from_bytes(Bytes::copy_from_slice(&request[INITIAL_BYTES_LENGTH..]))
+            .with_context(|| "Error when reading the QUIC request command.")?;
 
     debug!("Received a QUIC command: {command}, payload size: {length}");
 

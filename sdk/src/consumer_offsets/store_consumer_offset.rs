@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, STORE_CONSUMER_OFFSET_CODE};
 use crate::consumer::{Consumer, ConsumerKind};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
@@ -44,7 +44,11 @@ impl Default for StoreConsumerOffset {
     }
 }
 
-impl CommandPayload for StoreConsumerOffset {}
+impl Command for StoreConsumerOffset {
+    fn code(&self) -> u32 {
+        STORE_CONSUMER_OFFSET_CODE
+    }
+}
 
 impl Validatable<IggyError> for StoreConsumerOffset {
     fn validate(&self) -> Result<(), IggyError> {
@@ -53,10 +57,10 @@ impl Validatable<IggyError> for StoreConsumerOffset {
 }
 
 impl BytesSerializable for StoreConsumerOffset {
-    fn as_bytes(&self) -> Bytes {
-        let consumer_bytes = self.consumer.as_bytes();
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let consumer_bytes = self.consumer.to_bytes();
+        let stream_id_bytes = self.stream_id.to_bytes();
+        let topic_id_bytes = self.topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             12 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
         );
@@ -136,7 +140,7 @@ mod tests {
             offset: 5,
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let consumer_kind = ConsumerKind::from_code(bytes[0]).unwrap();
         let consumer_id = Identifier::from_bytes(bytes.slice(1..)).unwrap();
@@ -168,9 +172,9 @@ mod tests {
         let partition_id = 4u32;
         let offset = 5u64;
 
-        let consumer_bytes = consumer.as_bytes();
-        let stream_id_bytes = stream_id.as_bytes();
-        let topic_id_bytes = topic_id.as_bytes();
+        let consumer_bytes = consumer.to_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
+        let topic_id_bytes = topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             12 + consumer_bytes.len() + stream_id_bytes.len() + topic_id_bytes.len(),
         );

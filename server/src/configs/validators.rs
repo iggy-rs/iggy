@@ -8,6 +8,8 @@ use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use iggy::validatable::Validatable;
 use sysinfo::System;
 use tracing::{error, info, warn};
@@ -19,6 +21,32 @@ impl Validatable<ServerError> for ServerConfig {
         self.system.retention_policy.validate()?;
         self.system.compression.validate()?;
         self.personal_access_token.validate()?;
+
+        let topic_size = match self.system.retention_policy.max_topic_size {
+            MaxTopicSize::Custom(size) => Ok(size.as_bytes_u64()),
+            MaxTopicSize::Unlimited => Ok(u64::MAX),
+            MaxTopicSize::ServerDefault => {
+                error!("Max topic size cannot be set to server default.");
+                Err(ServerError::InvalidConfiguration)
+            }
+        }?;
+
+        if let IggyExpiry::ServerDefault = self.system.retention_policy.message_expiry {
+            error!("Message expiry cannot be set to server default.");
+            return Err(ServerError::InvalidConfiguration);
+        }
+
+        if self.http.enabled {
+            if let IggyExpiry::ServerDefault = self.http.jwt.access_token_expiry {
+                error!("Access token expiry cannot be set to server default.");
+                return Err(ServerError::InvalidConfiguration);
+            }
+        }
+
+        if topic_size < self.system.segment.size.as_bytes_u64() {
+            error!("Max topic size cannot be lower than segment size. Max topic size: {}, segment size: {}.",topic_size, self.system.segment.size);
+            return Err(ServerError::InvalidConfiguration);
+        }
 
         Ok(())
     }
@@ -78,11 +106,6 @@ impl Validatable<ServerError> for CacheConfig {
 
 impl Validatable<ServerError> for RetentionPolicyConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        // TODO(hubcio): Change this message once topic size based retention policy is fully developed.
-        if self.max_topic_size.as_bytes_u64() > 0 {
-            warn!("Retention policy max_topic_size is not implemented yet!");
-        }
-
         Ok(())
     }
 }

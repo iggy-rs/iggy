@@ -6,6 +6,7 @@ use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 
@@ -69,7 +70,7 @@ impl IggyCmdTestCase for TestTopicGetCmd {
                 None,
                 Some(self.topic_id),
                 IggyExpiry::NeverExpire,
-                None,
+                MaxTopicSize::ServerDefault,
             )
             .await;
         assert!(topic.is_ok());
@@ -109,7 +110,7 @@ impl IggyCmdTestCase for TestTopicGetCmd {
             )))
             .stdout(contains("Topic size          | 0"))
             .stdout(contains("Message expiry      | unlimited"))
-            .stdout(contains("Max topic size      | unlimited"))
+            .stdout(contains("Max topic size      | 10.00 GB"))
             .stdout(contains("Topic message count | 0"))
             .stdout(contains("Partitions count    | 1"));
     }

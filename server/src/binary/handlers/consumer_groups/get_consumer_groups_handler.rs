@@ -8,7 +8,7 @@ use iggy::error::IggyError;
 use tracing::debug;
 
 pub async fn handle(
-    command: &GetConsumerGroups,
+    command: GetConsumerGroups,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

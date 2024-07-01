@@ -1,8 +1,6 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper};
-use crate::bytes_serializable::BytesSerializable;
 use crate::client::SystemClient;
-use crate::command::{GET_CLIENTS_CODE, GET_CLIENT_CODE, GET_ME_CODE, GET_STATS_CODE, PING_CODE};
 use crate::error::IggyError;
 use crate::models::client_info::{ClientInfo, ClientInfoDetails};
 use crate::models::stats::Stats;
@@ -16,39 +14,30 @@ use crate::system::ping::Ping;
 impl<B: BinaryClient> SystemClient for B {
     async fn get_stats(&self) -> Result<Stats, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(GET_STATS_CODE, GetStats {}.as_bytes())
-            .await?;
+        let response = self.send_with_response(&GetStats {}).await?;
         mapper::map_stats(response)
     }
 
     async fn get_me(&self) -> Result<ClientInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(GET_ME_CODE, GetMe {}.as_bytes())
-            .await?;
+        let response = self.send_with_response(&GetMe {}).await?;
         mapper::map_client(response)
     }
 
     async fn get_client(&self, client_id: u32) -> Result<ClientInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(GET_CLIENT_CODE, GetClient { client_id }.as_bytes())
-            .await?;
+        let response = self.send_with_response(&GetClient { client_id }).await?;
         mapper::map_client(response)
     }
 
     async fn get_clients(&self) -> Result<Vec<ClientInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(GET_CLIENTS_CODE, GetClients {}.as_bytes())
-            .await?;
+        let response = self.send_with_response(&GetClients {}).await?;
         mapper::map_clients(response)
     }
 
     async fn ping(&self) -> Result<(), IggyError> {
-        self.send_with_response(PING_CODE, Ping {}.as_bytes())
-            .await?;
+        self.send_with_response(&Ping {}).await?;
         Ok(())
     }
 }

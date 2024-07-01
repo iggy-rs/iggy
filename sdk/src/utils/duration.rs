@@ -9,6 +9,8 @@ use std::{
     time::Duration,
 };
 
+pub const SEC_IN_MICRO: u64 = 1_000_000;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct IggyDuration {
     duration: Duration,
@@ -73,7 +75,7 @@ impl From<Option<u64>> for IggyDuration {
     fn from(byte_size: Option<u64>) -> Self {
         match byte_size {
             Some(value) => IggyDuration {
-                duration: Duration::from_secs(value),
+                duration: Duration::from_micros(value),
             },
             None => IggyDuration {
                 duration: Duration::new(0, 0),
@@ -85,7 +87,7 @@ impl From<Option<u64>> for IggyDuration {
 impl From<u64> for IggyDuration {
     fn from(value: u64) -> Self {
         IggyDuration {
-            duration: Duration::from_secs(value),
+            duration: Duration::from_micros(value),
         }
     }
 }
@@ -106,7 +108,7 @@ impl From<HumanDuration> for IggyDuration {
 
 impl From<IggyDuration> for u64 {
     fn from(iggy_duration: IggyDuration) -> u64 {
-        iggy_duration.duration.as_secs()
+        iggy_duration.duration.as_micros() as u64
     }
 }
 
@@ -139,7 +141,7 @@ impl Serialize for IggyDuration {
     where
         S: Serializer,
     {
-        serializer.serialize_u32(self.as_secs())
+        serializer.serialize_u64(self.as_micros())
     }
 }
 
@@ -165,7 +167,7 @@ impl<'de> Visitor<'de> for IggyDurationVisitor {
     where
         E: serde::de::Error,
     {
-        Ok(IggyDuration::new(Duration::from_secs(value)))
+        Ok(IggyDuration::new(Duration::from_micros(value)))
     }
 }
 

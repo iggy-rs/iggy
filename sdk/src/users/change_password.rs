@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::CommandPayload;
+use crate::command::{Command, CHANGE_PASSWORD_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::users::defaults::*;
@@ -25,7 +25,11 @@ pub struct ChangePassword {
     pub new_password: String,
 }
 
-impl CommandPayload for ChangePassword {}
+impl Command for ChangePassword {
+    fn code(&self) -> u32 {
+        CHANGE_PASSWORD_CODE
+    }
+}
 
 impl Default for ChangePassword {
     fn default() -> Self {
@@ -58,8 +62,8 @@ impl Validatable<IggyError> for ChangePassword {
 }
 
 impl BytesSerializable for ChangePassword {
-    fn as_bytes(&self) -> Bytes {
-        let user_id_bytes = self.user_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let user_id_bytes = self.user_id.to_bytes();
         let mut bytes = BytesMut::new();
         bytes.put_slice(&user_id_bytes);
         #[allow(clippy::cast_possible_truncation)]
@@ -120,7 +124,7 @@ mod tests {
             new_password: "secret".to_string(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
         let mut position = user_id.get_size_bytes() as usize;
         let current_password_length = bytes[position];
@@ -145,7 +149,7 @@ mod tests {
         let current_password = "secret";
         let new_password = "topsecret";
         let mut bytes = BytesMut::new();
-        bytes.put_slice(&user_id.as_bytes());
+        bytes.put_slice(&user_id.to_bytes());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(current_password.len() as u8);
         bytes.put_slice(current_password.as_bytes());

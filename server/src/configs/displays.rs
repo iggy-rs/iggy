@@ -5,9 +5,8 @@ use crate::configs::{
     resource_quota::MemoryResourceQuota,
     server::{MessageCleanerConfig, MessageSaverConfig, ServerConfig},
     system::{
-        CacheConfig, CompressionConfig, DatabaseConfig, EncryptionConfig, LoggingConfig,
-        PartitionConfig, RetentionPolicyConfig, SegmentConfig, StreamConfig, SystemConfig,
-        TopicConfig,
+        CacheConfig, CompressionConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
+        RetentionPolicyConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
     },
     tcp::{TcpConfig, TcpTlsConfig},
 };
@@ -141,12 +140,6 @@ impl Display for MessageSaverConfig {
     }
 }
 
-impl Display for DatabaseConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{ path: {} }}", self.path)
-    }
-}
-
 impl Display for CacheConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{ enabled: {}, size: {} }}", self.enabled, self.size)
@@ -158,8 +151,7 @@ impl Display for RetentionPolicyConfig {
         write!(
             f,
             "{{ message_expiry {}, max_topic_size: {} }}",
-            self.message_expiry.as_secs(),
-            self.max_topic_size.as_human_string_with_zero_as_unlimited()
+            self.message_expiry, self.max_topic_size
         )
     }
 }
@@ -252,9 +244,8 @@ impl Display for SystemConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, database: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
+          "{{ path: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
           self.path,
-          self.database,
           self.logging,
           self.cache,
           self.stream,

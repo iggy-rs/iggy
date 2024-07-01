@@ -1,3 +1,4 @@
+use crate::command::Command;
 use crate::error::IggyError;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -42,7 +43,8 @@ pub trait BinaryTransport {
     /// Sets the state of the client.
     async fn set_state(&self, state: ClientState);
     /// Sends a command and returns the response.
-    async fn send_with_response(&self, command: u32, payload: Bytes) -> Result<Bytes, IggyError>;
+    async fn send_with_response<T: Command>(&self, command: &T) -> Result<Bytes, IggyError>;
+    async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError>;
 }
 
 async fn fail_if_not_authenticated<T: BinaryTransport>(transport: &T) -> Result<(), IggyError> {

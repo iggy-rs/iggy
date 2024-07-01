@@ -10,7 +10,7 @@ use iggy::messages::poll_messages::PollMessages;
 use tracing::debug;
 
 pub async fn handle(
-    command: &PollMessages,
+    command: PollMessages,
     sender: &mut dyn Sender,
     session: &Session,
     system: &SharedSystem,

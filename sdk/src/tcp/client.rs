@@ -6,7 +6,6 @@ use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
@@ -26,7 +25,6 @@ const NAME: &str = "Iggy";
 /// It requires a valid server address.
 #[derive(Debug)]
 pub struct TcpClient {
-    pub(crate) server_address: SocketAddr,
     pub(crate) stream: Mutex<Option<Box<dyn ConnectionStream>>>,
     pub(crate) config: Arc<TcpClientConfig>,
     pub(crate) state: Mutex<ClientState>,
@@ -196,11 +194,8 @@ impl TcpClient {
 
     /// Create a new TCP client based on the provided configuration.
     pub fn create(config: Arc<TcpClientConfig>) -> Result<Self, IggyError> {
-        let server_address = config.server_address.parse::<SocketAddr>()?;
-
         Ok(Self {
             config,
-            server_address,
             stream: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
         })
@@ -276,7 +271,7 @@ impl TcpClient {
                 NAME, self.config.server_address
             );
 
-            let connection = TcpStream::connect(self.server_address).await;
+            let connection = TcpStream::connect(&self.config.server_address).await;
             if connection.is_err() {
                 error!(
                     "Failed to connect to server: {}",

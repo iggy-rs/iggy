@@ -10,7 +10,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use iggy::utils::topic_size::MaxTopicSize;
 use std::collections::HashMap;
 use std::fmt::Display;
-use tracing::{debug, error};
+use tracing::debug;
 
 #[derive(Debug)]
 pub struct SystemState {
@@ -70,7 +70,6 @@ pub struct ConsumerGroupState {
     pub name: String,
 }
 
-// TODO: Consider handling stream and topic purge
 impl SystemState {
     pub async fn init(entries: Vec<StateEntry>) -> Result<Self, IggyError> {
         let mut streams = HashMap::new();
@@ -104,6 +103,13 @@ impl SystemState {
                 EntryCommand::DeleteStream(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
                     streams.remove(&stream_id);
+                }
+                EntryCommand::PurgeStream(command) => {
+                    let stream_id = find_stream_id(&streams, &command.stream_id);
+                    streams
+                        .get(&stream_id)
+                        .unwrap_or_else(|| panic!("{}", format!("Stream: {stream_id} not found")));
+                    // It only affects the segments which are not part of the state
                 }
                 EntryCommand::CreateTopic(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
@@ -165,6 +171,18 @@ impl SystemState {
                         .unwrap_or_else(|| panic!("{}", format!("Stream: {stream_id} not found")));
                     let topic_id = find_topic_id(&stream.topics, &command.topic_id);
                     stream.topics.remove(&topic_id);
+                }
+                EntryCommand::PurgeTopic(command) => {
+                    let stream_id = find_stream_id(&streams, &command.stream_id);
+                    let stream = streams
+                        .get(&stream_id)
+                        .unwrap_or_else(|| panic!("{}", format!("Stream: {stream_id} not found")));
+                    let topic_id = find_topic_id(&stream.topics, &command.topic_id);
+                    stream
+                        .topics
+                        .get(&topic_id)
+                        .unwrap_or_else(|| panic!("{}", format!("Topic: {topic_id} not found")));
+                    // It only affects the segments which are not part of the state
                 }
                 EntryCommand::CreatePartitions(command) => {
                     let stream_id = find_stream_id(&streams, &command.stream_id);
@@ -330,9 +348,6 @@ impl SystemState {
                         .get_mut(&user_id)
                         .unwrap_or_else(|| panic!("{}", format!("User: {user_id} not found")));
                     user.personal_access_tokens.remove(&command.name);
-                }
-                code => {
-                    error!("Unsupported state entry code: {code}");
                 }
             }
         }

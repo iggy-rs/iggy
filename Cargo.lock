@@ -1024,9 +1024,9 @@ dependencies = [
 
 [[package]]
 name = "clap_complete"
-version = "4.5.2"
+version = "4.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd79504325bf38b10165b02e89b4347300f855f273c4cb30c4a3209e6583275e"
+checksum = "b5a2d6eec27fce550d708b2be5d798797e5a55b246b323ef36924a0001996352"
 dependencies = [
  "clap",
 ]
@@ -1362,15 +1362,15 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.17"
+version = "0.99.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fb810d30a7c1953f91334de7244731fc3f3c10d7fe163338a35b9f640960321"
+checksum = "5f33878137e4dafd7fa914ad4e259e18a4e8e532b9617a2d0150262bf53abfce"
 dependencies = [
  "convert_case 0.4.0",
  "proc-macro2",
  "quote",
  "rustc_version",
- "syn 1.0.109",
+ "syn 2.0.48",
 ]
 
 [[package]]
@@ -2181,7 +2181,7 @@ dependencies = [
  "reqwest",
  "reqwest-middleware",
  "reqwest-retry",
- "rustls 0.23.8",
+ "rustls 0.23.10",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2407,9 +2407,9 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 
 [[package]]
 name = "libc"
-version = "0.2.154"
+version = "0.2.155"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae743338b92ff9146ce83992f766a31066a91a8c84a45e0e9f21e7cf6de6d346"
+checksum = "97b3888a4aecf77e811145cadf6eef5901f4782c53886191b2f693f24761847c"
 
 [[package]]
 name = "libloading"
@@ -3271,7 +3271,7 @@ dependencies = [
  "quinn-proto",
  "quinn-udp",
  "rustc-hash",
- "rustls 0.23.8",
+ "rustls 0.23.10",
  "thiserror",
  "tokio",
  "tracing",
@@ -3287,7 +3287,7 @@ dependencies = [
  "rand",
  "ring",
  "rustc-hash",
- "rustls 0.23.8",
+ "rustls 0.23.10",
  "rustls-platform-verifier",
  "slab",
  "thiserror",
@@ -3711,9 +3711,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.8"
+version = "0.23.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "79adb16721f56eb2d843e67676896a61ce7a0fa622dc18d3e372477a029d2740"
+checksum = "05cff451f60db80f490f3c182b77c35260baace73209e9cdbbe526bfe3a4d402"
 dependencies = [
  "aws-lc-rs",
  "log",
@@ -3765,7 +3765,7 @@ dependencies = [
  "jni",
  "log",
  "once_cell",
- "rustls 0.23.8",
+ "rustls 0.23.10",
  "rustls-native-certs",
  "rustls-platform-verifier-android",
  "rustls-webpki 0.102.4",
@@ -4081,7 +4081,7 @@ dependencies = [
  "rcgen",
  "ring",
  "rmp-serde",
- "rustls 0.23.8",
+ "rustls 0.23.10",
  "rustls-pemfile",
  "serde",
  "serde_json",

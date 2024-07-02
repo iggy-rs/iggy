@@ -60,7 +60,7 @@ tracing = { version = "0.1.40" }
 tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.18", features = ["fmt"] }
 ulid = "1.1.2"
-uuid = { version = "1.8.0", features = ["v4", "fast-rng", "zerocopy"] }
+uuid = { version = "1.9.1", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.10", features = ["xxh32"] }
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]

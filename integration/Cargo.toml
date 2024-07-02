@@ -20,7 +20,7 @@ server = { path = "../server" }
 tempfile = "3.10.1"
 tokio = { version = "1.38.0", features = ["full"] }
 tracing-subscriber = "0.3.18"
-uuid = { version = "1.8.0", features = ["v4", "fast-rng", "zerocopy"] }
+uuid = { version = "1.9.1", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.10", features = ["xxh32"] }
 
 # Some tests are failing in CI due to lack of IPv6 interfaces

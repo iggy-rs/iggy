@@ -46,9 +46,7 @@ pub fn create_shard(
         .unwrap();
     let shards = connections
         .into_iter()
-        .map(|c| {
-            Shard::new(id, c)
-        })
+        .map(|c| Shard::new(c.id, c))
         .collect::<Vec<_>>();
 
     let persister = match config.system.partition.enforce_fsync {

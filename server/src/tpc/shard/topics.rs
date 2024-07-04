@@ -1,9 +1,14 @@
 use crate::streaming::topics::topic::Topic;
-use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use crate::tpc::shard::shard::ShardInfo;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::models::resource_namespace::IggyResourceNamespace;
 use iggy::utils::byte_size::IggyByteSize;
-use std::borrow::{Borrow, BorrowMut};
+use iggy::{
+    compression::compression_algorithm::CompressionAlgorithm, utils::hash::hash_resource_namespace,
+};
+use std::borrow::BorrowMut;
+use tracing::error;
 
 use super::shard::IggyShard;
 
@@ -58,7 +63,9 @@ impl IggyShard {
                 .create_topic(user_id, stream.stream_id)?;
         }
 
-        self.get_stream_mut(stream_id)?.borrow_mut()
+        let (topic_id, partition_ids) = self
+            .get_stream_mut(stream_id)?
+            .borrow_mut()
             .create_topic(
                 topic_id,
                 name,
@@ -67,9 +74,23 @@ impl IggyShard {
                 compression_algorithm,
                 max_topic_size,
                 replication_factor.unwrap_or(1),
-                should_persist
+                should_persist,
             )
             .await?;
+
+        let topic_id = Identifier::numeric(topic_id).unwrap();
+        for partition_id in partition_ids {
+            let shards_count = self.get_available_shards_count();
+            let hash = hash_resource_namespace(stream_id, &topic_id, partition_id);
+            let shard_id = hash % shards_count;
+            error!("Shard ID: {}", shard_id);
+            let resource_ns =
+                IggyResourceNamespace::new(stream_id.clone(), topic_id.clone(), partition_id);
+            let shard_info = ShardInfo {
+                id: shard_id as u16,
+            };
+            self.insert_shart_table_record(resource_ns, shard_info);
+        }
         self.metrics.increment_topics(1);
         self.metrics.increment_partitions(partitions_count);
         self.metrics.increment_segments(partitions_count);

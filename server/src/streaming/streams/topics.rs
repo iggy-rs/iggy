@@ -25,7 +25,7 @@ impl Stream {
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
         should_persist: bool,
-    ) -> Result<(), IggyError> {
+    ) -> Result<(u32, Vec<u32>), IggyError> {
         let name = name.to_lowercase_non_whitespace();
         if self.topics_ids.contains_key(&name) {
             return Err(IggyError::TopicNameAlreadyExists(name, self.stream_id));
@@ -53,7 +53,7 @@ impl Stream {
         }
 
         // TODO: check if max_topic_size is not lower than system.segment.size
-        let topic = Topic::create(
+        let (topic, partition_ids) = Topic::create(
             self.stream_id,
             id,
             &name,
@@ -73,9 +73,9 @@ impl Stream {
         }
         info!("Created topic {}", topic);
         self.topics_ids.insert(name, id);
-        self.topics.insert(id, topic);
+        self.topics.insert(id, topic.clone());
 
-        Ok(())
+        Ok((topic.topic_id, partition_ids))
     }
 
     pub async fn update_topic(

@@ -9,6 +9,7 @@ use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::{Command, CommandExecution, CommandExecutionOrigin};
 use iggy::error::IggyError;
+use iggy::models::resource_namespace;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::rc::Rc;
@@ -74,10 +75,9 @@ pub(crate) async fn handle_connection(
                     .expect("Failed to handle a shard command for direct request execution, it should always return a response.");
                 handle_response!(sender, response);
             }
-            CommandExecution::Routed(cmd_hash) => {
-                error!("Routed cmd hash: {}", cmd_hash);
+            CommandExecution::Routed(resource_ns) => {
                 let response = shard
-                    .send_request_to_shard(client_id, cmd_hash, command)
+                    .send_request_to_shard(client_id, resource_ns, command)
                     .await?;
                 handle_response!(sender, response);
             }

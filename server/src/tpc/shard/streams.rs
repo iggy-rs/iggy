@@ -203,7 +203,9 @@ impl IggyShard {
         if should_persist {
             stream.persist().await?;
         }
-        self.streams_ids.borrow_mut().insert(name.clone(), stream.stream_id);
+        self.streams_ids
+            .borrow_mut()
+            .insert(name.clone(), stream.stream_id);
         self.streams.borrow_mut().insert(stream.stream_id, stream);
         self.metrics.increment_streams(1);
         info!("Created stream with ID: {id}, name: '{name}'.");

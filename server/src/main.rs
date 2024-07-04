@@ -47,7 +47,7 @@ fn main() -> Result<(), ServerError> {
     // TODO - move this inside of the ServerConfig struct
     create_directories(&config)?;
     let cpu_set = 0..available_cpus;
-    let connections = cpu_set
+    let connections: Vec<ShardConnector<ShardFrame>> = cpu_set
         .clone()
         .into_iter()
         .map(|cpu| {

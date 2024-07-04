@@ -35,7 +35,7 @@ impl IggyShard {
                     compression_algorithm,
                     max_topic_size,
                     replication_factor,
-                    false
+                    false,
                 )
                 .await
             }

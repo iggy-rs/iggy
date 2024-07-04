@@ -39,6 +39,7 @@ use iggy::users::get_user::GetUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
+use tracing::error;
 
 use super::messages::PollingArgs;
 use super::shard_frame::ShardEvent;
@@ -301,7 +302,7 @@ impl IggyShard {
                     compression_algorithm,
                     max_topic_size,
                     replication_factor,
-                    true
+                    true,
                 )
                 .await?;
                 let event = ShardEvent::CreatedTopic(

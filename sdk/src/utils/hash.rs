@@ -1,9 +1,17 @@
-use murmur3::murmur3_32;
+use std::hash::Hasher as _;
 
-pub fn hash_string(s: &str) -> std::io::Result<u32> {
-    murmur3_32(&mut std::io::Cursor::new(s), 0)
-}
+use hash32::{Hasher, Murmur3Hasher};
 
-pub fn hash_bytes(bytes: &[u8]) -> std::io::Result<u32> {
-    murmur3_32(&mut std::io::Cursor::new(bytes), 0)
+use crate::identifier::Identifier;
+
+pub fn hash_resource_namespace(
+    stream_id: &Identifier,
+    topic_id: &Identifier,
+    partition_id: u32,
+) -> u32 {
+    let mut hasher = Murmur3Hasher::default();
+    hasher.write(&stream_id.value);
+    hasher.write(&topic_id.value);
+    hasher.write_u32(partition_id);
+    hasher.finish32()
 }

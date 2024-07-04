@@ -3,6 +3,7 @@ use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
+use tracing::error;
 
 const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
@@ -41,6 +42,7 @@ impl Topic {
                 self.size_bytes.clone(),
                 self.segments_count_of_parent_stream.clone(),
             );
+
             self.partitions
                 .insert(partition_id, IggySharedMut::new(partition));
             partition_ids.push(partition_id)
@@ -49,7 +51,11 @@ impl Topic {
         Ok(partition_ids)
     }
 
-    pub async fn add_persisted_partitions(&mut self, count: u32, should_persist: bool) -> Result<Vec<u32>, IggyError> {
+    pub async fn add_persisted_partitions(
+        &mut self,
+        count: u32,
+        should_persist: bool,
+    ) -> Result<Vec<u32>, IggyError> {
         let partition_ids = self.add_partitions(count)?;
         for partition_id in &partition_ids {
             let partition = self.partitions.get(partition_id).unwrap();

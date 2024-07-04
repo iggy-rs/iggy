@@ -15,7 +15,7 @@ use std::str::FromStr;
 /// - `length`: the length of the identifier payload.
 /// - `value`: the binary value of the identifier payload.
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Hash, Clone)]
 pub struct Identifier {
     /// The kind of the identifier.
     pub kind: IdKind,
@@ -28,7 +28,7 @@ pub struct Identifier {
 }
 
 /// `IdKind` represents the kind of the identifier.
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Default, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Hash, Default, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum IdKind {
     /// The identifier is numeric.

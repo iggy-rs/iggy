@@ -6,13 +6,10 @@ use crate::{
         diagnostics::metrics::Metrics, session::Session, storage::SystemStorage,
         streams::stream::Stream, users::permissioner::Permissioner,
     },
-    tpc::{
-        connector::{Receiver, ShardConnector, StopReceiver, StopSender},
-    },
+    tpc::connector::{Receiver, ShardConnector, StopReceiver, StopSender},
 };
-use bytes::Bytes;
 use flume::SendError;
-use iggy::{command::Command, identifier::Identifier, utils::hash::hash_string};
+use iggy::{command::Command, models::resource_namespace::IggyResourceNamespace};
 use iggy::{
     error::IggyError,
     locking::IggySharedMutFn,
@@ -21,7 +18,7 @@ use iggy::{
 use sled::Db;
 use std::cell::{Cell, RefCell};
 use std::{collections::HashMap, sync::Arc, time::Instant};
-use tracing::{error, info};
+use tracing::info;
 
 pub const SHARD_NAME: &str = "iggy_shard";
 
@@ -53,23 +50,16 @@ impl Shard {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct PartitionNamespace {
-    pub(crate) stream_id: Identifier,
-    pub(crate) topic_id: Identifier,
-    pub(crate) partition_id: u32,
-}
-
-#[derive(Debug, Clone, Eq, PartialEq, Hash)]
-pub struct ShardMetadata {
+#[derive(Debug)]
+pub struct ShardInfo {
     pub(crate) id: u16,
-    // TODO - this could be extended with an revision number, once incoperated with replication.
+    // TODO - this will be extended with an revision number, once replication is implemented.
 }
 
 pub struct IggyShard {
     pub id: u16,
     shards: Vec<Shard>,
-    shards_placement: HashMap<ShardMetadata, PartitionNamespace>,
+    shards_table: RefCell<HashMap<IggyResourceNamespace, ShardInfo>>,
 
     pub(crate) permissioner: RefCell<Permissioner>,
     pub(crate) storage: Arc<SystemStorage>,
@@ -97,12 +87,10 @@ impl IggyShard {
         stop_receiver: StopReceiver,
         stop_sender: StopSender,
     ) -> Self {
-        let name = &format!("{}_{}", SHARD_NAME, id);
-        let hash = hash_string(&name).unwrap();
         Self {
             id,
             shards,
-            shards_placement: HashMap::new(),
+            shards_table: RefCell::new(HashMap::new()),
             permissioner: RefCell::new(Permissioner::default()),
             storage,
             streams: RefCell::new(HashMap::new()),
@@ -135,6 +123,10 @@ impl IggyShard {
         self.load_streams().await?;
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
+    }
+
+    pub fn get_available_shards_count(&self) -> u32 {
+        self.shards.len() as u32
     }
 
     pub async fn stop(self) -> Result<(), SendError<()>> {
@@ -183,24 +175,38 @@ impl IggyShard {
     pub async fn send_request_to_shard(
         &self,
         client_id: u32,
-        destination_id: u16,
+        resource_ns: IggyResourceNamespace,
         command: Command,
     ) -> Result<ShardResponse, IggyError> {
-        let shard = self.find_shard(cmd_hash);
-        if shard.hash == self.hash {
+        let shard = self.find_shard(resource_ns.clone());
+        let shard = shard.unwrap();
+        //println!("Shard id: {}", shard.id);
+        if shard.id == self.id {
             return self.handle_command(client_id, command).await;
         }
 
         let message = ShardMessage::Command(command);
-        self.find_shard(cmd_hash)
-            .send_request(client_id, message)
-            .await
+        shard.send_request(client_id, message).await
     }
 
-    fn find_shard(&self, destination_id: u16) -> Option<&Shard> {
-        self.shards
-            .iter()
-            .find(|shard| shard.id == destination_id)
+    pub fn insert_shart_table_record(
+        &self,
+        resource_ns: IggyResourceNamespace,
+        shard_info: ShardInfo,
+    ) {
+        self.shards_table
+            .borrow_mut()
+            .insert(resource_ns, shard_info);
+    }
+
+    fn find_shard(&self, resource_ns: IggyResourceNamespace) -> Option<&Shard> {
+        let shards_table = self.shards_table.borrow();
+        shards_table.get(&resource_ns).map(|shard_info| {
+            self.shards
+                .iter()
+                .find(|shard| shard.id == shard_info.id)
+                .expect("Shard not found in the shards array.")
+        })
     }
 
     pub async fn handle_shard_message(

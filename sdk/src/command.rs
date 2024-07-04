@@ -1,4 +1,3 @@
-use crate::bytes_serializable::BytesSerializable;
 use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
 use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
@@ -42,6 +41,9 @@ use crate::users::login_user::LoginUser;
 use crate::users::logout_user::LogoutUser;
 use crate::users::update_permissions::UpdatePermissions;
 use crate::users::update_user::UpdateUser;
+use crate::{
+    bytes_serializable::BytesSerializable, models::resource_namespace::IggyResourceNamespace,
+};
 use bytes::{BufMut, Bytes, BytesMut};
 use enum_dispatch::enum_dispatch;
 use std::fmt::{Display, Formatter};
@@ -133,7 +135,7 @@ pub const LEAVE_CONSUMER_GROUP: &str = "consumer_group.leave";
 pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 605;
 
 pub enum CommandExecution {
-    Routed(u32),
+    Routed(IggyResourceNamespace),
     Direct,
 }
 
@@ -141,7 +143,6 @@ pub enum CommandExecution {
 pub trait CommandExecutionOrigin {
     fn get_command_execution_origin(&self) -> CommandExecution;
 }
-
 
 #[enum_dispatch]
 #[derive(Debug, Clone, PartialEq, EnumString)]

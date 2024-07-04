@@ -3,7 +3,7 @@ pub mod checksum;
 pub mod crypto;
 pub mod duration;
 pub mod expiry;
+pub mod hash;
 pub mod personal_access_token_expiry;
 pub mod text;
 pub mod timestamp;
-pub mod hash;

@@ -383,6 +383,6 @@ mod tests {
             None,
             1,
         )
-        .unwrap()
+        .unwrap().0
     }
 }

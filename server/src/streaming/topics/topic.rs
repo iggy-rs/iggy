@@ -94,7 +94,7 @@ impl Topic {
             None,
             1,
         )
-        .unwrap()
+        .unwrap().0
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -112,7 +112,7 @@ impl Topic {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
-    ) -> Result<Topic, IggyError> {
+    ) -> Result<(Topic, Vec<u32>), IggyError> {
         let path = config.get_topic_path(stream_id, topic_id);
         let partitions_path = config.get_partitions_path(stream_id, topic_id);
         let mut topic = Topic {
@@ -149,8 +149,8 @@ impl Topic {
             created_at: IggyTimestamp::now().to_micros(),
         };
 
-        topic.add_partitions(partitions_count)?;
-        Ok(topic)
+        let partition_ids = topic.add_partitions(partitions_count)?;
+        Ok((topic, partition_ids))
     }
 
     pub fn get_size(&self) -> IggyByteSize {
@@ -230,7 +230,7 @@ mod tests {
             Some(max_topic_size),
             replication_factor,
         )
-        .unwrap();
+        .unwrap().0;
 
         assert_eq!(topic.stream_id, stream_id);
         assert_eq!(topic.topic_id, topic_id);

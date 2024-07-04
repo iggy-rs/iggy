@@ -7,6 +7,7 @@ pub mod messages;
 pub mod partition;
 pub mod permissions;
 pub mod personal_access_token;
+pub mod resource_namespace;
 pub mod stats;
 pub mod stream;
 pub mod topic;

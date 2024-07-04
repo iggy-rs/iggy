@@ -29,6 +29,7 @@ impl Segment {
         count: u32,
     ) -> Result<Vec<RetainedMessage>, IggyError> {
         if count == 0 {
+            println!("HERE IN COUNT EQUALS 0");
             return Ok(EMPTY_MESSAGES);
         }
 
@@ -131,6 +132,7 @@ impl Segment {
                 "Cannot load messages from disk, invalid offset range: {} - {}.",
                 start_offset, end_offset
             );
+            println!("HERE IN LOADING FROM DISK START OFFSET GREATER THAN END");
             return Ok(EMPTY_MESSAGES);
         }
 
@@ -149,6 +151,7 @@ impl Segment {
                         start_offset,
                         end_offset
                     );
+                    println!("HERE IN LOADING FROM DISK INDEX RANGE NOT FOUND");
                     return Ok(EMPTY_MESSAGES);
                 }
             };

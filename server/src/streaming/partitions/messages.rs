@@ -134,12 +134,17 @@ impl Partition {
             self.partition_id
         );
         if self.segments.is_empty() {
+            println!("HERE IN SEGMENT");
             return Ok(EMPTY_MESSAGES);
         }
 
+        /*
         if start_offset > self.current_offset {
+            println!("start_offset: {}, curr_offset: {}", start_offset, self.current_offset);
+            println!("HERE IN START OFFSET BEING GREATHER THAN CURR");
             return Ok(EMPTY_MESSAGES);
         }
+        */
 
         let end_offset = self.get_end_offset(start_offset, count);
 

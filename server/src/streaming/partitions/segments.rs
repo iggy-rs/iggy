@@ -63,6 +63,11 @@ impl Partition {
         Ok(())
     }
 
+    // TODO: Move the segment to the other directory for archiving purposes.
+    pub async fn move_segment(&mut self) -> Result<(), IggyError> {
+        Ok(())
+    }
+
     pub async fn delete_segment(&mut self, start_offset: u64) -> Result<DeletedSegment, IggyError> {
         let deleted_segment;
         {

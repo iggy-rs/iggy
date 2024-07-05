@@ -93,6 +93,19 @@
   },
   "system": {
     "path": "local_data",
+    "archiver": {
+      "enabled": false,
+      "kind": "disk",
+      "disk": {
+        "path": "archive"
+      },
+      "s3": {
+        "key_id": "123",
+        "access_key": "secret",
+        "bucket": "iggy",
+        "region": "eu-west-1"
+      }
+    },
     "backup": {
       "path": "backup",
       "compatibility": {

@@ -45,4 +45,6 @@ pub enum ServerError {
     CannotRemoveOldSegmentFiles,
     #[error("Cannot persist new segment files")]
     CannotPersistNewSegmentFiles,
+    #[error("Cannot archive segment: {0}")]
+    CannotArchiveSegment(String),
 }

@@ -1,3 +1,4 @@
+use crate::archiver::Archiver;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
 use crate::{channels::server_command::ServerCommand, configs::server::MessageCleanerConfig};
@@ -143,6 +144,7 @@ async fn delete_expired_segments(
                 let mut partition = partition.write().await;
                 let mut last_end_offset = 0;
                 for start_offset in start_offsets {
+                    // TODO: Archive the segment before deleting it if archiving is enabled.
                     let deleted_segment = partition.delete_segment(*start_offset).await?;
                     last_end_offset = deleted_segment.end_offset;
                     segments_count += 1;
@@ -164,6 +166,7 @@ async fn delete_expired_segments(
         }
     }
 
+    // TODO: Archive the segments.
     Ok(Some(DeletedSegments {
         segments_count,
         messages_count,

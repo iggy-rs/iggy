@@ -17,6 +17,9 @@ use tokio::fs::{create_dir, remove_dir_all};
 use tokio::time::Instant;
 use tracing::{info, trace};
 
+use crate::archiver::disk::DiskArchiver;
+use crate::archiver::s3::S3Archiver;
+use crate::archiver::{Archiver, ArchiverKind};
 use crate::compat;
 use crate::state::file::FileState;
 use crate::state::system::SystemState;
@@ -69,6 +72,7 @@ pub struct System {
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
     pub(crate) state: Arc<dyn State>,
+    pub(crate) archiver: Option<Box<dyn Archiver>>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
 
@@ -106,6 +110,30 @@ impl System {
             "Server-side encryption is {}.",
             Self::map_toggle_str(config.encryption.enabled)
         );
+
+        let archiver: Option<Box<dyn Archiver>> = if !config.archiver.enabled {
+            info!("Archiving is disabled.");
+            None
+        } else {
+            info!("Archiving is enabled, kind: {}", config.archiver.kind);
+            match config.archiver.kind {
+                ArchiverKind::Disk => Some(Box::new(DiskArchiver::new(
+                    config
+                        .archiver
+                        .disk
+                        .clone()
+                        .expect("Disk archiver config is missing"),
+                ))),
+                ArchiverKind::S3 => Some(Box::new(S3Archiver::new(
+                    config
+                        .archiver
+                        .s3
+                        .clone()
+                        .expect("S3 archiver config is missing"),
+                ))),
+            }
+        };
+
         System {
             encryptor: match config.encryption.enabled {
                 true => Some(Box::new(
@@ -123,6 +151,7 @@ impl System {
             users: HashMap::new(),
             state,
             personal_access_token: pat_config,
+            archiver,
         }
     }
 

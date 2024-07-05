@@ -7,9 +7,9 @@ use crate::configs::server::{
     PersonalAccessTokenConfig, ServerConfig,
 };
 use crate::configs::system::{
-    BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
-    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RetentionPolicyConfig,
-    RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    ArchiverConfig, BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig,
+    EncryptionConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig,
+    RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -32,6 +32,15 @@ impl Default for ServerConfig {
         }
     }
 }
+
+// impl Default for ArchiverConfig {
+//     fn default() -> ArchiverConfig {
+//         ArchiverConfig {
+//             enabled: SERVER_CONFIG.system.archiver.enabled,
+//             kind: SERVER_CONFIG.system.archiver.kind.parse().unwrap(),
+//         }
+//     }
+// }
 
 impl Default for QuicConfig {
     fn default() -> QuicConfig {
@@ -244,6 +253,18 @@ impl Default for SystemConfig {
             segment: SegmentConfig::default(),
             compression: CompressionConfig::default(),
             message_deduplication: MessageDeduplicationConfig::default(),
+            archiver: ArchiverConfig::default(),
+        }
+    }
+}
+
+impl Default for ArchiverConfig {
+    fn default() -> ArchiverConfig {
+        ArchiverConfig {
+            enabled: SERVER_CONFIG.system.archiver.enabled,
+            kind: SERVER_CONFIG.system.archiver.kind.parse().unwrap(),
+            disk: None,
+            s3: None,
         }
     }
 }

@@ -370,3 +370,23 @@ enabled = false
 max_entries = 1000
 # Maximum age of ID entries in the deduplication cache in human-readable format.
 expiry = "1 m"
+
+[system.archiver]
+# Enables or disables the archiver process.
+enabled = false
+# Kind of archiver to use. Available options: "disk", "s3".
+kind = "disk"
+
+[system.archiver.disk]
+# Path for storing archived data.
+path = "archive"
+
+[system.archiver.s3]
+# Access key ID for the S3 bucket.
+key_id = "123"
+# Secret access key for the S3 bucket
+access_key = "secret"
+# Region of the S3 bucket.
+region = "eu-west-1"
+# Endpoint of the S3 bucket.
+bucket = "iggy"

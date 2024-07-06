@@ -31,7 +31,8 @@ impl Topic {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
         }
 
-        let partition = self.partitions.get(&partition_id);
+        let partitions = self.partitions.borrow();
+        let partition = partitions.get(&partition_id);
         if partition.is_none() {
             return Err(IggyError::PartitionNotFound(
                 partition_id,
@@ -41,7 +42,6 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
-        let partition = partition.read().await;
         let value = strategy.value;
         let messages = match strategy.kind {
             PollingKind::Offset => partition.get_messages_by_offset(value, count).await,
@@ -96,7 +96,8 @@ impl Topic {
         appendable_batch_info: AppendableBatchInfo,
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
-        let partition = self.partitions.get(&appendable_batch_info.partition_id);
+        let mut partitions = self.partitions.borrow_mut();
+        let partition = partitions.get_mut(&appendable_batch_info.partition_id);
         partition
             .ok_or_else(|| {
                 IggyError::PartitionNotFound(
@@ -105,8 +106,6 @@ impl Topic {
                     self.stream_id,
                 )
             })?
-            .write()
-            .await
             .append_messages(appendable_batch_info, messages)
             .await?;
 
@@ -115,7 +114,7 @@ impl Topic {
 
     fn get_next_partition_id(&self) -> u32 {
         let mut partition_id = self.current_partition_id.fetch_add(1, Ordering::SeqCst);
-        let partitions_count = self.partitions.len() as u32;
+        let partitions_count = self.partitions.borrow().len() as u32;
         if partition_id > partitions_count {
             partition_id = 1;
             self.current_partition_id
@@ -150,9 +149,7 @@ impl Topic {
         // TODO: load data from database instead of calculating the size on disk
         let total_size_on_disk_bytes = folder_size(&path).await?;
 
-        for partition_lock in self.partitions.values_mut() {
-            let mut partition = partition_lock.write().await;
-
+        for partition in self.partitions.borrow_mut().values_mut() {
             let end_offset = match partition.segments.last() {
                 Some(segment) => segment.current_offset,
                 None => {
@@ -237,8 +234,7 @@ impl Topic {
             return expired_segments;
         }
 
-        for (_, partition) in self.partitions.iter() {
-            let partition = partition.read().await;
+        for (_, partition) in self.partitions.borrow().iter() {
             let segments = partition.get_expired_segments_start_offsets(now).await;
             if !segments.is_empty() {
                 expired_segments.insert(partition.partition_id, segments);
@@ -266,7 +262,7 @@ mod tests {
         let partitioning = Partitioning::partition_id(partition_id);
         let partitions_count = 3;
         let messages_count: u32 = 1000;
-        let topic = init_topic(partitions_count);
+        let mut topic = init_topic(partitions_count);
 
         for entity_id in 1..=messages_count {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
@@ -280,7 +276,6 @@ mod tests {
         let partitions = topic.get_partitions();
         assert_eq!(partitions.len(), partitions_count as usize);
         for partition in partitions {
-            let partition = partition.read().await;
             let messages = partition.cache.as_ref().unwrap().to_vec();
             if partition.partition_id == partition_id {
                 assert_eq!(messages.len() as u32, messages_count);
@@ -294,7 +289,7 @@ mod tests {
     async fn given_messages_key_key_messages_should_be_appended_to_the_calculated_partitions() {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let mut topic = init_topic(partitions_count);
 
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
@@ -310,7 +305,6 @@ mod tests {
         let partitions = topic.get_partitions();
         assert_eq!(partitions.len(), partitions_count as usize);
         for partition in partitions {
-            let partition = partition.read().await;
             let messages = partition.cache.as_ref().unwrap().to_vec();
             read_messages_count += messages.len();
             assert!(messages.len() < messages_count as usize);

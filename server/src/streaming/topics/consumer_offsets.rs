@@ -1,9 +1,9 @@
+use std::cell::Ref;
+
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
-use iggy::locking::IggySharedMut;
-use iggy::locking::IggySharedMutFn;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 
 impl Topic {
@@ -13,7 +13,6 @@ impl Topic {
         offset: u64,
     ) -> Result<(), IggyError> {
         let partition = self.resolve_partition(consumer).await?;
-        let partition = partition.read().await;
         partition.store_consumer_offset(consumer, offset).await
     }
 
@@ -22,7 +21,6 @@ impl Topic {
         consumer: PollingConsumer,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
         let partition = self.resolve_partition(consumer).await?;
-        let partition = partition.read().await;
         let offset = partition.get_consumer_offset(consumer).await?;
         Ok(ConsumerOffsetInfo {
             partition_id: partition.partition_id,
@@ -34,7 +32,7 @@ impl Topic {
     async fn resolve_partition(
         &self,
         consumer: PollingConsumer,
-    ) -> Result<&IggySharedMut<Partition>, IggyError> {
+    ) -> Result<Partition, IggyError> {
         let partition_id = match consumer {
             PollingConsumer::Consumer(_, partition_id) => Ok(partition_id),
             PollingConsumer::ConsumerGroup(group_id, member_id) => {
@@ -43,7 +41,8 @@ impl Topic {
             }
         }?;
 
-        let partition = self.partitions.get(&partition_id);
+        let partitions = self.partitions.borrow();
+        let partition = partitions.get(&partition_id);
         if partition.is_none() {
             return Err(IggyError::PartitionNotFound(
                 partition_id,
@@ -53,6 +52,6 @@ impl Topic {
         }
 
         let partition = partition.unwrap();
-        Ok(partition)
+        Ok(partition.clone())
     }
 }

@@ -110,8 +110,7 @@ impl Stream {
         topic.name = updated_name;
         topic.message_expiry = message_expiry;
         topic.compression_algorithm = compression_algorithm;
-        for partition in topic.partitions.values_mut() {
-            let mut partition = partition.write().await;
+        for partition in topic.partitions.borrow_mut().values_mut() {
             partition.message_expiry = message_expiry;
             for segment in partition.segments.iter_mut() {
                 segment.message_expiry = message_expiry;

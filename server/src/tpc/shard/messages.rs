@@ -1,3 +1,6 @@
+use std::borrow::Borrow;
+use std::borrow::BorrowMut;
+
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::polling_consumer::PollingConsumer;
 use bytes::Bytes;
@@ -97,7 +100,7 @@ impl IggyShard {
     ) -> Result<(), IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(&stream_id)?;
-        let topic = stream.get_topic(&topic_id)?;
+        let topic = stream.borrow().get_topic(&topic_id)?;
         self.permissioner
             .borrow()
             .append_messages(user_id, stream.stream_id, topic.topic_id)?;

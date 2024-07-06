@@ -245,7 +245,8 @@ impl Storage<Topic> for FileTopicStorage {
         for partition in loaded_partitions.lock().await.drain(..) {
             topic
                 .partitions
-                .insert(partition.partition_id, IggySharedMut::new(partition));
+                .borrow_mut()
+                .insert(partition.partition_id, partition);
         }
 
         self.load_consumer_groups(topic).await?;
@@ -301,10 +302,9 @@ impl Storage<Topic> for FileTopicStorage {
 
         info!(
             "Saving {} partition(s) for topic {topic}...",
-            topic.partitions.len()
+            topic.partitions.borrow().len()
         );
-        for (_, partition) in topic.partitions.iter() {
-            let partition = partition.write().await;
+        for (_, partition) in topic.partitions.borrow().iter() {
             partition.persist().await?;
         }
 

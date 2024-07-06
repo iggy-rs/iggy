@@ -82,7 +82,7 @@ impl IggyShard {
             stats.partitions_count += stream
                 .topics
                 .values()
-                .map(|t| t.partitions.len() as u32)
+                .map(|t| t.partitions.borrow().len() as u32)
                 .sum::<u32>();
             stats.consumer_groups_count += stream
                 .topics

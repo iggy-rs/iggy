@@ -3,6 +3,7 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
+use std::cell::RefCell;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
@@ -25,7 +26,7 @@ pub struct Topic {
     pub(crate) messages_count: Arc<AtomicU64>,
     pub(crate) segments_count_of_parent_stream: Arc<AtomicU32>,
     pub(crate) config: Arc<SystemConfig>,
-    pub(crate) partitions: HashMap<u32, IggySharedMut<Partition>>,
+    pub(crate) partitions: RefCell<HashMap<u32, Partition>>,
     pub(crate) storage: Arc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, ConsumerGroup>,
     pub(crate) consumer_groups_ids: HashMap<String, u32>,
@@ -119,7 +120,7 @@ impl Topic {
             stream_id,
             topic_id,
             name: name.to_string(),
-            partitions: HashMap::new(),
+            partitions: RefCell::new(HashMap::new()),
             path,
             partitions_path,
             storage,
@@ -157,12 +158,12 @@ impl Topic {
         IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))
     }
 
-    pub fn get_partitions(&self) -> Vec<IggySharedMut<Partition>> {
-        self.partitions.values().cloned().collect()
+    pub fn get_partitions(&self) -> Vec<Partition> {
+        self.partitions.borrow().values().cloned().collect()
     }
 
-    pub fn get_partition(&self, partition_id: u32) -> Result<IggySharedMut<Partition>, IggyError> {
-        match self.partitions.get(&partition_id) {
+    pub fn get_partition(&self, partition_id: u32) -> Result<Partition, IggyError> {
+        match self.partitions.borrow().get(&partition_id) {
             Some(partition_arc) => Ok(partition_arc.clone()),
             None => Err(IggyError::PartitionNotFound(
                 partition_id,
@@ -183,7 +184,7 @@ impl fmt::Display for Topic {
         write!(f, "stream ID: {}, ", self.stream_id)?;
         write!(f, "name: {}, ", self.name)?;
         write!(f, "path: {}, ", self.path)?;
-        write!(f, "partitions count: {:?}, ", self.partitions.len())?;
+        write!(f, "partitions count: {:?}, ", self.partitions.borrow().len())?;
         write!(f, "message expiry (s): {:?}, ", self.message_expiry)?;
         write!(f, "max topic size (B): {:?}, ", max_topic_size)?;
         write!(f, "replication factor: {}, ", self.replication_factor)
@@ -192,7 +193,6 @@ impl fmt::Display for Topic {
 
 #[cfg(test)]
 mod tests {
-    use iggy::locking::IggySharedMutFn;
     use std::str::FromStr;
 
     use super::*;
@@ -236,14 +236,13 @@ mod tests {
         assert_eq!(topic.topic_id, topic_id);
         assert_eq!(topic.path, path);
         assert_eq!(topic.name, name);
-        assert_eq!(topic.partitions.len(), partitions_count as usize);
+        assert_eq!(topic.partitions.borrow().iter().len(), partitions_count as usize);
         assert_eq!(topic.message_expiry, Some(message_expiry));
 
-        for (id, partition) in topic.partitions {
-            let partition = partition.read().await;
+        for (id, partition) in topic.partitions.borrow().iter() {
             assert_eq!(partition.stream_id, stream_id);
             assert_eq!(partition.topic_id, topic.topic_id);
-            assert_eq!(partition.partition_id, id);
+            assert_eq!(partition.partition_id, *id);
             assert_eq!(partition.segments.len(), 1);
         }
     }

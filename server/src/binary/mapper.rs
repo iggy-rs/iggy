@@ -164,7 +164,6 @@ pub async fn map_topic(topic: Topic) -> Bytes {
     let mut bytes = BytesMut::new();
     extend_topic(&topic, &mut bytes).await;
     for partition in topic.get_partitions() {
-        let partition = partition.read().await;
         extend_partition(&partition, &mut bytes);
     }
     bytes.freeze()

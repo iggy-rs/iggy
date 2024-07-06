@@ -14,7 +14,7 @@ impl Topic {
             return;
         }
 
-        let partitions_count = self.partitions.len() as u32;
+        let partitions_count = self.partitions.borrow().len() as u32;
         info!(
             "Reassigning consumer groups for topic with ID: {} for stream with ID with {}, partitions count: {}",
             self.topic_id, self.stream_id, partitions_count
@@ -95,7 +95,7 @@ impl Topic {
         }
 
         let consumer_group =
-            ConsumerGroup::new(self.topic_id, id, &name, self.partitions.len() as u32);
+            ConsumerGroup::new(self.topic_id, id, &name, self.partitions.borrow().len() as u32);
         self.consumer_groups.insert(id, consumer_group);
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;

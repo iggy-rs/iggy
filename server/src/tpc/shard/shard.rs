@@ -12,7 +12,6 @@ use flume::SendError;
 use iggy::{command::Command, models::resource_namespace::IggyResourceNamespace};
 use iggy::{
     error::IggyError,
-    locking::IggySharedMutFn,
     utils::crypto::{Aes256GcmEncryptor, Encryptor},
 };
 use sled::Db;
@@ -239,11 +238,10 @@ impl IggyShard {
     pub async fn clean_cache(&self, size_to_clean: u64) {
         for stream in self.streams.borrow().values() {
             for topic in stream.get_topics() {
-                for partition in topic.get_partitions().into_iter() {
+                for mut partition in topic.get_partitions().into_iter() {
                     monoio::spawn(async move {
                         let memory_tracker = CacheMemoryTracker::get_instance().unwrap();
-                        let mut partition_guard = partition.write().await;
-                        let cache = &mut partition_guard.cache.as_mut().unwrap();
+                        let cache = partition.cache.as_mut().unwrap();
                         let size_to_remove = (cache.current_size() as f64
                             / memory_tracker.usage_bytes() as f64
                             * size_to_clean as f64)

@@ -1,19 +1,16 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
-use iggy::locking::IggySharedMut;
-use iggy::locking::IggySharedMutFn;
-use tracing::error;
 
 const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
 impl Topic {
     pub fn has_partitions(&self) -> bool {
-        !self.partitions.is_empty()
+        !self.partitions.borrow().is_empty()
     }
 
     pub fn get_partitions_count(&self) -> u32 {
-        self.partitions.len() as u32
+        self.partitions.borrow().len() as u32
     }
 
     pub fn add_partitions(&mut self, count: u32) -> Result<Vec<u32>, IggyError> {
@@ -21,7 +18,7 @@ impl Topic {
             return Ok(vec![]);
         }
 
-        let current_partitions_count = self.partitions.len() as u32;
+        let current_partitions_count = self.partitions.borrow().len() as u32;
         if current_partitions_count + count > MAX_PARTITIONS_COUNT {
             return Err(IggyError::TooManyPartitions);
         }
@@ -44,7 +41,8 @@ impl Topic {
             );
 
             self.partitions
-                .insert(partition_id, IggySharedMut::new(partition));
+                .borrow_mut()
+                .insert(partition_id, partition);
             partition_ids.push(partition_id)
         }
 
@@ -58,8 +56,8 @@ impl Topic {
     ) -> Result<Vec<u32>, IggyError> {
         let partition_ids = self.add_partitions(count)?;
         for partition_id in &partition_ids {
-            let partition = self.partitions.get(partition_id).unwrap();
-            let partition = partition.read().await;
+            let partitions = self.partitions.borrow();
+            let partition = partitions.get(partition_id).unwrap();
             if should_persist {
                 partition.persist().await?;
             }
@@ -75,7 +73,7 @@ impl Topic {
             return Ok(None);
         }
 
-        let current_partitions_count = self.partitions.len() as u32;
+        let current_partitions_count = self.partitions.borrow().len() as u32;
         if count > current_partitions_count {
             count = current_partitions_count;
         }
@@ -83,8 +81,7 @@ impl Topic {
         let mut segments_count = 0;
         let mut messages_count = 0;
         for partition_id in current_partitions_count - count + 1..=current_partitions_count {
-            let partition = self.partitions.remove(&partition_id).unwrap();
-            let partition = partition.read().await;
+            let partition = self.partitions.borrow_mut().remove(&partition_id).unwrap();
             let partition_messages_count = partition.get_messages_count();
             segments_count += partition.get_segments_count();
             messages_count += partition_messages_count;

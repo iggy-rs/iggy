@@ -74,6 +74,9 @@ impl Stream {
             created_at: IggyTimestamp::now(),
         }
     }
+    pub fn get_stream_id(&mut self) -> u32 {
+        self.stream_id
+    }
 
     pub fn get_size(&self) -> IggyByteSize {
         IggyByteSize::from(self.size_bytes.load(Ordering::SeqCst))

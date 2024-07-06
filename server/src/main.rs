@@ -64,7 +64,7 @@ fn main() -> Result<(), ServerError> {
             let db = db.clone();
             let connections = connections.clone();
             let config = config.clone();
-            std::thread::spawn(move || {
+            std::thread::Builder::new().name(format!("thread-{}", cpu)).spawn(move || {
                 let connections = connections.clone();
                 monoio::utils::bind_to_cpu_set(Some(cpu as usize))
                     .expect("Failed set thread affinity");
@@ -80,7 +80,7 @@ fn main() -> Result<(), ServerError> {
                         error!("Failed to start shard executor with error: {}", e);
                     }
                 })
-            })
+            }).expect("Failed to spawn shard thread")
         })
         .collect::<Vec<_>>();
 

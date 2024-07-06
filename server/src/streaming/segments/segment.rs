@@ -27,7 +27,7 @@ pub const INDEX_EXTENSION: &str = "index";
 pub const TIME_INDEX_EXTENSION: &str = "timeindex";
 pub const MAX_SIZE_BYTES: u32 = 1000 * 1000 * 1000;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Segment {
     pub stream_id: u32,
     pub topic_id: u32,

@@ -1,7 +1,7 @@
 use iggy::utils::duration::IggyDuration;
 use moka::future::Cache;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MessageDeduplicator {
     cache: Cache<u128, bool>,
 }

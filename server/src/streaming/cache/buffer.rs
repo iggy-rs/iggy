@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use std::ops::Index;
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SmartCache<T: Sizeable + Debug> {
     current_size: u64,
     buffer: Vc<T>,

@@ -12,7 +12,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Partition {
     pub stream_id: u32,
     pub topic_id: u32,

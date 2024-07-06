@@ -11,6 +11,7 @@ use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
 use iggy::models::messages::PolledMessages;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{info, trace, warn};
@@ -209,7 +210,7 @@ impl Topic {
         Ok(())
     }
 
-    fn cache_integrity_check(cache: &[Arc<RetainedMessageBatch>]) -> bool {
+    fn cache_integrity_check(cache: &[Rc<RetainedMessageBatch>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;
@@ -252,6 +253,7 @@ mod tests {
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
+    use std::rc::Rc;
     use std::sync::atomic::AtomicU32;
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
@@ -352,15 +354,15 @@ mod tests {
     }
 
     fn init_topic(partitions_count: u32) -> Topic {
-        let storage = Arc::new(get_test_system_storage());
+        let storage = Rc::new(get_test_system_storage());
         let stream_id = 1;
         let id = 2;
         let name = "test";
         let compression_algorithm = CompressionAlgorithm::None;
         let config = Arc::new(SystemConfig::default());
-        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let segments_count_of_parent_stream = Arc::new(AtomicU32::new(0));
+        let size_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let segments_count_of_parent_stream = Rc::new(AtomicU32::new(0));
 
         Topic::create(
             stream_id,
@@ -377,6 +379,7 @@ mod tests {
             None,
             1,
         )
-        .unwrap().0
+        .unwrap()
+        .0
     }
 }

@@ -11,6 +11,7 @@ use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
 use iggy::{error::IggyError, utils::duration::IggyDuration};
+use std::rc::Rc;
 use std::sync::{atomic::Ordering, Arc};
 use std::time::Duration;
 use tracing::{trace, warn};
@@ -279,7 +280,7 @@ impl Partition {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
+    ) -> Result<Vec<Rc<RetainedMessageBatch>>, IggyError> {
         trace!(
             "Getting messages for size: {} bytes for partition: {}...",
             size_bytes,
@@ -287,7 +288,7 @@ impl Partition {
         );
 
         if self.segments.is_empty() {
-            return Ok(EMPTY_BATCHES.into_iter().map(Arc::new).collect());
+            return Ok(EMPTY_BATCHES.into_iter().map(Rc::new).collect());
         }
 
         let mut remaining_size = size_bytes;
@@ -303,13 +304,13 @@ impl Partition {
                     .get_newest_batches_by_size(remaining_size)
                     .await?
                     .into_iter()
-                    .map(Arc::new);
+                    .map(Rc::new);
                 batches.splice(..0, partial_batches);
                 break;
             }
 
             // Current segment is smaller than the remaining size, so we need to get all messages from it.
-            let segment_batches = segment.get_all_batches().await?.into_iter().map(Arc::new);
+            let segment_batches = segment.get_all_batches().await?.into_iter().map(Rc::new);
             batches.splice(..0, segment_batches);
             remaining_size = remaining_size.saturating_sub(segment_size_bytes);
             if remaining_size == 0 {
@@ -459,7 +460,7 @@ impl Partition {
             self.current_offset = last_offset;
         }
 
-        let batch = Arc::new(
+        let batch = Rc::new(
             batch_builder
                 .max_timestamp(max_timestamp)
                 .last_offset_delta(last_offset_delta)
@@ -569,7 +570,7 @@ mod tests {
     }
 
     fn create_partition(deduplication_enabled: bool) -> Partition {
-        let storage = Arc::new(get_test_system_storage());
+        let storage = Rc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -589,11 +590,11 @@ mod tests {
             config,
             storage,
             None,
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU32::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU32::new(0)),
         )
     }
 }

@@ -8,6 +8,7 @@ use crate::streaming::sizeable::Sizeable;
 use crate::streaming::storage::SegmentStorage;
 use bytes::BufMut;
 use iggy::error::IggyError;
+use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{trace, warn};
@@ -199,10 +200,7 @@ impl Segment {
         Ok(messages)
     }
 
-    pub async fn append_batch(
-        &mut self,
-        batch: Arc<RetainedMessageBatch>,
-    ) -> Result<(), IggyError> {
+    pub async fn append_batch(&mut self, batch: Rc<RetainedMessageBatch>) -> Result<(), IggyError> {
         if self.is_closed {
             return Err(IggyError::SegmentClosed(
                 self.start_offset,

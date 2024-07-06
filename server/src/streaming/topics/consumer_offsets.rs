@@ -29,10 +29,7 @@ impl Topic {
         })
     }
 
-    async fn resolve_partition(
-        &self,
-        consumer: PollingConsumer,
-    ) -> Result<Partition, IggyError> {
+    async fn resolve_partition(&self, consumer: PollingConsumer) -> Result<Partition, IggyError> {
         let partition_id = match consumer {
             PollingConsumer::Consumer(_, partition_id) => Ok(partition_id),
             PollingConsumer::ConsumerGroup(group_id, member_id) => {

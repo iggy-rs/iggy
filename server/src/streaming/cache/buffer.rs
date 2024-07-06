@@ -3,13 +3,14 @@ use crate::streaming::sizeable::Sizeable;
 use atone::Vc;
 use std::fmt::Debug;
 use std::ops::Index;
+use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct SmartCache<T: Sizeable + Debug> {
     current_size: u64,
     buffer: Vc<T>,
-    memory_tracker: Arc<CacheMemoryTracker>,
+    memory_tracker: Rc<CacheMemoryTracker>,
 }
 
 impl<T> SmartCache<T>

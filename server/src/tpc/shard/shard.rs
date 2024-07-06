@@ -15,7 +15,10 @@ use iggy::{
     utils::crypto::{Aes256GcmEncryptor, Encryptor},
 };
 use sled::Db;
-use std::cell::{Cell, RefCell};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use tracing::info;
 
@@ -61,7 +64,7 @@ pub struct IggyShard {
     shards_table: RefCell<HashMap<IggyResourceNamespace, ShardInfo>>,
 
     pub(crate) permissioner: RefCell<Permissioner>,
-    pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) storage: Rc<SystemStorage>,
     pub(crate) streams: RefCell<HashMap<u32, Stream>>,
     pub(crate) streams_ids: RefCell<HashMap<String, u32>>,
     // TODO - get rid of this dynamic dispatch.
@@ -70,7 +73,6 @@ pub struct IggyShard {
     pub(crate) client_manager: RefCell<ClientManager>,
     pub(crate) active_sessions: RefCell<Vec<Session>>,
     pub(crate) metrics: Metrics,
-    db: Arc<Db>,
     pub message_receiver: Cell<Option<Receiver<ShardFrame>>>,
     stop_receiver: StopReceiver,
     stop_sender: StopSender,
@@ -80,8 +82,7 @@ impl IggyShard {
         id: u16,
         shards: Vec<Shard>,
         config: ServerConfig,
-        db: Arc<Db>,
-        storage: Arc<SystemStorage>,
+        storage: Rc<SystemStorage>,
         shard_messages_receiver: Receiver<ShardFrame>,
         stop_receiver: StopReceiver,
         stop_sender: StopSender,
@@ -104,7 +105,6 @@ impl IggyShard {
             client_manager: RefCell::new(ClientManager::default()),
             active_sessions: RefCell::new(Vec::new()),
             metrics: Metrics::init(),
-            db,
             message_receiver: Cell::new(Some(shard_messages_receiver)),
             stop_receiver,
             stop_sender,

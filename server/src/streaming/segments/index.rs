@@ -74,11 +74,12 @@ mod tests {
     use super::*;
     use crate::configs::system::{SegmentConfig, SystemConfig};
     use crate::streaming::storage::tests::get_test_system_storage;
+    use std::rc::Rc;
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
 
     fn create_segment() -> Segment {
-        let storage = Arc::new(get_test_system_storage());
+        let storage = Rc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -99,12 +100,12 @@ mod tests {
             config,
             storage,
             None,
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
         )
     }
 

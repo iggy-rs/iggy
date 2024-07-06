@@ -18,6 +18,7 @@ use iggy::utils::checksum;
 use monoio::io::AsyncReadRentExt;
 use std::io::SeekFrom;
 use std::path::Path;
+use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use tracing::{error, info, trace, warn};
@@ -30,11 +31,11 @@ const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
 pub struct FileSegmentStorage {
-    persister: Arc<StoragePersister>,
+    persister: Rc<StoragePersister>,
 }
 
 impl FileSegmentStorage {
-    pub fn new(persister: Arc<StoragePersister>) -> Self {
+    pub fn new(persister: Rc<StoragePersister>) -> Self {
         Self { persister }
     }
 }
@@ -250,7 +251,7 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_batches(
         &self,
         segment: &Segment,
-        batches: &[Arc<RetainedMessageBatch>],
+        batches: &[Rc<RetainedMessageBatch>],
     ) -> Result<u32, IggyError> {
         let messages_size = batches.iter().map(|batch| batch.get_size_bytes()).sum();
 

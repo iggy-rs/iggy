@@ -18,8 +18,8 @@ use futures::{pin_mut, TryStreamExt};
 use iggy::error::IggyError;
 use iggy::utils::timestamp::IggyTimestamp;
 use monoio::io::AsyncWriteRent;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::{rc::Rc, sync::atomic::AtomicU64};
 use tracing::{info, trace};
 
 pub const LOG_EXTENSION: &str = "log";
@@ -39,21 +39,21 @@ pub struct Segment {
     pub log_path: String,
     pub time_index_path: String,
     pub size_bytes: u32,
-    pub size_of_parent_stream: Arc<AtomicU64>,
-    pub size_of_parent_topic: Arc<AtomicU64>,
-    pub size_of_parent_partition: Arc<AtomicU64>,
-    pub messages_count_of_parent_stream: Arc<AtomicU64>,
-    pub messages_count_of_parent_topic: Arc<AtomicU64>,
-    pub messages_count_of_parent_partition: Arc<AtomicU64>,
+    pub size_of_parent_stream: Rc<AtomicU64>,
+    pub size_of_parent_topic: Rc<AtomicU64>,
+    pub size_of_parent_partition: Rc<AtomicU64>,
+    pub messages_count_of_parent_stream: Rc<AtomicU64>,
+    pub messages_count_of_parent_topic: Rc<AtomicU64>,
+    pub messages_count_of_parent_partition: Rc<AtomicU64>,
     pub is_closed: bool,
     pub(crate) message_expiry: Option<u32>,
-    pub(crate) unsaved_batches: Option<Vec<Arc<RetainedMessageBatch>>>,
+    pub(crate) unsaved_batches: Option<Vec<Rc<RetainedMessageBatch>>>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) indexes: Option<Vec<Index>>,
     pub(crate) time_indexes: Option<Vec<TimeIndex>>,
     pub(crate) unsaved_indexes: BytesMut,
     pub(crate) unsaved_timestamps: BytesMut,
-    pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) storage: Rc<SystemStorage>,
 }
 
 impl Segment {
@@ -64,14 +64,14 @@ impl Segment {
         partition_id: u32,
         start_offset: u64,
         config: Arc<SystemConfig>,
-        storage: Arc<SystemStorage>,
+        storage: Rc<SystemStorage>,
         message_expiry: Option<u32>,
-        size_of_parent_stream: Arc<AtomicU64>,
-        size_of_parent_topic: Arc<AtomicU64>,
-        size_of_parent_partition: Arc<AtomicU64>,
-        messages_count_of_parent_stream: Arc<AtomicU64>,
-        messages_count_of_parent_topic: Arc<AtomicU64>,
-        messages_count_of_parent_partition: Arc<AtomicU64>,
+        size_of_parent_stream: Rc<AtomicU64>,
+        size_of_parent_topic: Rc<AtomicU64>,
+        size_of_parent_partition: Rc<AtomicU64>,
+        messages_count_of_parent_stream: Rc<AtomicU64>,
+        messages_count_of_parent_topic: Rc<AtomicU64>,
+        messages_count_of_parent_partition: Rc<AtomicU64>,
     ) -> Segment {
         let path = config.get_segment_path(stream_id, topic_id, partition_id, start_offset);
 
@@ -232,7 +232,7 @@ mod tests {
 
     #[monoio::test]
     async fn should_be_created_given_valid_parameters() {
-        let storage = Arc::new(get_test_system_storage());
+        let storage = Rc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -243,12 +243,12 @@ mod tests {
         let index_path = Segment::get_index_path(&path);
         let time_index_path = Segment::get_time_index_path(&path);
         let message_expiry = Some(10);
-        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let size_of_parent_topic = Arc::new(AtomicU64::new(0));
-        let size_of_parent_partition = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_topic = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_partition = Arc::new(AtomicU64::new(0));
+        let size_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let size_of_parent_topic = Rc::new(AtomicU64::new(0));
+        let size_of_parent_partition = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_topic = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_partition = Rc::new(AtomicU64::new(0));
 
         let segment = Segment::create(
             stream_id,
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn should_not_initialize_indexes_cache_when_disabled() {
-        let storage = Arc::new(get_test_system_storage());
+        let storage = Rc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -299,12 +299,12 @@ mod tests {
             ..Default::default()
         });
         let message_expiry = None;
-        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let size_of_parent_topic = Arc::new(AtomicU64::new(0));
-        let size_of_parent_partition = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_topic = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_partition = Arc::new(AtomicU64::new(0));
+        let size_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let size_of_parent_topic = Rc::new(AtomicU64::new(0));
+        let size_of_parent_partition = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_topic = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_partition = Rc::new(AtomicU64::new(0));
 
         let segment = Segment::create(
             stream_id,
@@ -327,7 +327,7 @@ mod tests {
 
     #[test]
     fn should_not_initialize_time_indexes_cache_when_disabled() {
-        let storage = Arc::new(get_test_system_storage());
+        let storage = Rc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let partition_id = 3;
@@ -340,12 +340,12 @@ mod tests {
             ..Default::default()
         });
         let message_expiry = None;
-        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let size_of_parent_topic = Arc::new(AtomicU64::new(0));
-        let size_of_parent_partition = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_topic = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_partition = Arc::new(AtomicU64::new(0));
+        let size_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let size_of_parent_topic = Rc::new(AtomicU64::new(0));
+        let size_of_parent_partition = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_topic = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_partition = Rc::new(AtomicU64::new(0));
 
         let segment = Segment::create(
             stream_id,

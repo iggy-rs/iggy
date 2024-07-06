@@ -3,13 +3,14 @@ use crate::streaming::partitions::partition::Partition;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
-use std::cell::RefCell;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::timestamp::IggyTimestamp;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 
@@ -20,14 +21,14 @@ pub struct Topic {
     pub name: String,
     pub path: String,
     pub partitions_path: String,
-    pub(crate) size_bytes: Arc<AtomicU64>,
-    pub(crate) size_of_parent_stream: Arc<AtomicU64>,
-    pub(crate) messages_count_of_parent_stream: Arc<AtomicU64>,
-    pub(crate) messages_count: Arc<AtomicU64>,
-    pub(crate) segments_count_of_parent_stream: Arc<AtomicU32>,
+    pub(crate) size_bytes: Rc<AtomicU64>,
+    pub(crate) size_of_parent_stream: Rc<AtomicU64>,
+    pub(crate) messages_count_of_parent_stream: Rc<AtomicU64>,
+    pub(crate) messages_count: Rc<AtomicU64>,
+    pub(crate) segments_count_of_parent_stream: Rc<AtomicU32>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) partitions: RefCell<HashMap<u32, Partition>>,
-    pub(crate) storage: Arc<SystemStorage>,
+    pub(crate) storage: Rc<SystemStorage>,
     pub(crate) consumer_groups: HashMap<u32, ConsumerGroup>,
     pub(crate) consumer_groups_ids: HashMap<String, u32>,
     pub(crate) current_consumer_group_id: AtomicU32,
@@ -74,11 +75,11 @@ impl Topic {
     pub fn empty(
         stream_id: u32,
         topic_id: u32,
-        size_of_parent_stream: Arc<AtomicU64>,
-        messages_count_of_parent_stream: Arc<AtomicU64>,
-        segments_count_of_parent_stream: Arc<AtomicU32>,
+        size_of_parent_stream: Rc<AtomicU64>,
+        messages_count_of_parent_stream: Rc<AtomicU64>,
+        segments_count_of_parent_stream: Rc<AtomicU32>,
         config: Arc<SystemConfig>,
-        storage: Arc<SystemStorage>,
+        storage: Rc<SystemStorage>,
     ) -> Topic {
         Topic::create(
             stream_id,
@@ -95,7 +96,8 @@ impl Topic {
             None,
             1,
         )
-        .unwrap().0
+        .unwrap()
+        .0
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -105,10 +107,10 @@ impl Topic {
         name: &str,
         partitions_count: u32,
         config: Arc<SystemConfig>,
-        storage: Arc<SystemStorage>,
-        size_of_parent_stream: Arc<AtomicU64>,
-        messages_count_of_parent_stream: Arc<AtomicU64>,
-        segments_count_of_parent_stream: Arc<AtomicU32>,
+        storage: Rc<SystemStorage>,
+        size_of_parent_stream: Rc<AtomicU64>,
+        messages_count_of_parent_stream: Rc<AtomicU64>,
+        segments_count_of_parent_stream: Rc<AtomicU32>,
         message_expiry: Option<u32>,
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
@@ -124,10 +126,10 @@ impl Topic {
             path,
             partitions_path,
             storage,
-            size_bytes: Arc::new(AtomicU64::new(0)),
+            size_bytes: Rc::new(AtomicU64::new(0)),
             size_of_parent_stream,
             messages_count_of_parent_stream,
-            messages_count: Arc::new(AtomicU64::new(0)),
+            messages_count: Rc::new(AtomicU64::new(0)),
             segments_count_of_parent_stream,
             consumer_groups: HashMap::new(),
             consumer_groups_ids: HashMap::new(),
@@ -184,7 +186,11 @@ impl fmt::Display for Topic {
         write!(f, "stream ID: {}, ", self.stream_id)?;
         write!(f, "name: {}, ", self.name)?;
         write!(f, "path: {}, ", self.path)?;
-        write!(f, "partitions count: {:?}, ", self.partitions.borrow().len())?;
+        write!(
+            f,
+            "partitions count: {:?}, ",
+            self.partitions.borrow().len()
+        )?;
         write!(f, "message expiry (s): {:?}, ", self.message_expiry)?;
         write!(f, "max topic size (B): {:?}, ", max_topic_size)?;
         write!(f, "replication factor: {}, ", self.replication_factor)
@@ -200,7 +206,7 @@ mod tests {
 
     #[monoio::test]
     async fn should_be_created_given_valid_parameters() {
-        let storage = Arc::new(get_test_system_storage());
+        let storage = Rc::new(get_test_system_storage());
         let stream_id = 1;
         let topic_id = 2;
         let name = "test";
@@ -211,9 +217,9 @@ mod tests {
         let replication_factor = 1;
         let config = Arc::new(SystemConfig::default());
         let path = config.get_topic_path(stream_id, topic_id);
-        let size_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let messages_count_of_parent_stream = Arc::new(AtomicU64::new(0));
-        let segments_count_of_parent_stream = Arc::new(AtomicU32::new(0));
+        let size_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let messages_count_of_parent_stream = Rc::new(AtomicU64::new(0));
+        let segments_count_of_parent_stream = Rc::new(AtomicU32::new(0));
 
         let topic = Topic::create(
             stream_id,
@@ -230,13 +236,17 @@ mod tests {
             Some(max_topic_size),
             replication_factor,
         )
-        .unwrap().0;
+        .unwrap()
+        .0;
 
         assert_eq!(topic.stream_id, stream_id);
         assert_eq!(topic.topic_id, topic_id);
         assert_eq!(topic.path, path);
         assert_eq!(topic.name, name);
-        assert_eq!(topic.partitions.borrow().iter().len(), partitions_count as usize);
+        assert_eq!(
+            topic.partitions.borrow().iter().len(),
+            partitions_count as usize
+        );
         assert_eq!(topic.message_expiry, Some(message_expiry));
 
         for (id, partition) in topic.partitions.borrow().iter() {

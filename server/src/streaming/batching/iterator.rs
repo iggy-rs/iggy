@@ -1,6 +1,6 @@
 use super::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
-use std::sync::Arc;
+use std::{rc::Rc, sync::Arc};
 
 pub trait IntoMessagesIterator {
     type Item;
@@ -54,7 +54,7 @@ impl<'a> IntoMessagesIterator for &'a RetainedMessageBatch {
         RetainedMessageBatchIterator::new(self)
     }
 }
-impl<'a> IntoMessagesIterator for &'a Arc<RetainedMessageBatch> {
+impl<'a> IntoMessagesIterator for &'a Rc<RetainedMessageBatch> {
     type Item = RetainedMessage;
     type IntoIter = RetainedMessageBatchIterator<'a>;
 

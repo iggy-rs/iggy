@@ -94,8 +94,12 @@ impl Topic {
             return Err(IggyError::ConsumerGroupIdAlreadyExists(id, self.topic_id));
         }
 
-        let consumer_group =
-            ConsumerGroup::new(self.topic_id, id, &name, self.partitions.borrow().len() as u32);
+        let consumer_group = ConsumerGroup::new(
+            self.topic_id,
+            id,
+            &name,
+            self.partitions.borrow().len() as u32,
+        );
         self.consumer_groups.insert(id, consumer_group);
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;

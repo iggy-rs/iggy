@@ -22,6 +22,7 @@ use iggy::error::IggyError;
 use iggy::models::user_info::UserId;
 use sled::Db;
 use std::fmt::Debug;
+use std::rc::Rc;
 use std::sync::Arc;
 
 pub trait Storage<T> {
@@ -98,7 +99,7 @@ pub trait SegmentStorage: Storage<Segment> {
     async fn save_batches(
         &self,
         segment: &Segment,
-        batches: &[Arc<RetainedMessageBatch>],
+        batches: &[Rc<RetainedMessageBatch>],
     ) -> Result<u32, IggyError>;
     async fn load_message_ids(&self, segment: &Segment) -> Result<Vec<u128>, IggyError>;
     async fn load_checksums(&self, segment: &Segment) -> Result<(), IggyError>;
@@ -123,25 +124,25 @@ pub trait SegmentStorage: Storage<Segment> {
 
 #[derive(Debug)]
 pub struct SystemStorage {
-    pub info: Arc<FileSystemInfoStorage>,
-    pub user: Arc<FileUserStorage>,
-    pub personal_access_token: Arc<FilePersonalAccessTokenStorage>,
-    pub stream: Arc<FileStreamStorage>,
-    pub topic: Arc<FileTopicStorage>,
-    pub partition: Arc<FilePartitionStorage>,
-    pub segment: Arc<FileSegmentStorage>,
+    pub info: Rc<FileSystemInfoStorage>,
+    pub user: Rc<FileUserStorage>,
+    pub personal_access_token: Rc<FilePersonalAccessTokenStorage>,
+    pub stream: Rc<FileStreamStorage>,
+    pub topic: Rc<FileTopicStorage>,
+    pub partition: Rc<FilePartitionStorage>,
+    pub segment: Rc<FileSegmentStorage>,
 }
 
 impl SystemStorage {
-    pub fn new(db: Arc<Db>, persister: Arc<StoragePersister>) -> Self {
+    pub fn new(db: Arc<Db>, persister: Rc<StoragePersister>) -> Self {
         Self {
-            info: Arc::new(FileSystemInfoStorage::new(db.clone())),
-            user: Arc::new(FileUserStorage::new(db.clone())),
-            personal_access_token: Arc::new(FilePersonalAccessTokenStorage::new(db.clone())),
-            stream: Arc::new(FileStreamStorage::new(db.clone())),
-            topic: Arc::new(FileTopicStorage::new(db.clone())),
-            partition: Arc::new(FilePartitionStorage::new(db.clone())),
-            segment: Arc::new(FileSegmentStorage::new(persister)),
+            info: Rc::new(FileSystemInfoStorage::new(db.clone())),
+            user: Rc::new(FileUserStorage::new(db.clone())),
+            personal_access_token: Rc::new(FilePersonalAccessTokenStorage::new(db.clone())),
+            stream: Rc::new(FileStreamStorage::new(db.clone())),
+            topic: Rc::new(FileTopicStorage::new(db.clone())),
+            partition: Rc::new(FilePartitionStorage::new(db.clone())),
+            segment: Rc::new(FileSegmentStorage::new(persister)),
         }
     }
 }
@@ -159,7 +160,7 @@ pub(crate) mod tests {
 
     pub fn get_test_system_storage() -> SystemStorage {
         let db = sled::Config::new().temporary(true).open().unwrap();
-        let persister = Arc::new(StoragePersister::Test);
+        let persister = Rc::new(StoragePersister::Test);
         SystemStorage::new(Arc::new(db), persister)
     }
 
@@ -396,7 +397,7 @@ pub(crate) mod tests {
         async fn save_batches(
             &self,
             _segment: &Segment,
-            _batches: &[Arc<RetainedMessageBatch>],
+            _batches: &[Rc<RetainedMessageBatch>],
         ) -> Result<u32, IggyError> {
             Ok(0)
         }

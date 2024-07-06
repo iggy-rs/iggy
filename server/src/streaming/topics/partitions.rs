@@ -40,9 +40,7 @@ impl Topic {
                 self.segments_count_of_parent_stream.clone(),
             );
 
-            self.partitions
-                .borrow_mut()
-                .insert(partition_id, partition);
+            self.partitions.borrow_mut().insert(partition_id, partition);
             partition_ids.push(partition_id)
         }
 

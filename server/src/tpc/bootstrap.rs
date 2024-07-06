@@ -28,8 +28,8 @@ type Task = Pin<Box<dyn Future<Output = Result<(), IggyError>>>>;
 
 pub fn create_shard(
     id: u16,
-    db: Arc<Db>,
     config: ServerConfig,
+    db: Arc<Db>,
     connections: Vec<ShardConnector<ShardFrame>>,
 ) -> Rc<IggyShard> {
     let (stop_sender, stop_receiver, receiver) = connections
@@ -50,15 +50,14 @@ pub fn create_shard(
         .collect::<Vec<_>>();
 
     let persister = match config.system.partition.enforce_fsync {
-        true => Arc::new(StoragePersister::FileWithSync(FileWithSyncPersister {})),
-        false => Arc::new(StoragePersister::File(FilePersister {})),
+        true => Rc::new(StoragePersister::FileWithSync(FileWithSyncPersister {})),
+        false => Rc::new(StoragePersister::File(FilePersister {})),
     };
-    let storage = Arc::new(SystemStorage::new(db.clone(), persister));
+    let storage = Rc::new(SystemStorage::new(db, persister));
     Rc::new(IggyShard::new(
         id,
         shards,
         config,
-        db,
         storage,
         receiver,
         stop_receiver,

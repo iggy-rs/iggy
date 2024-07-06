@@ -11,6 +11,7 @@ use crate::configs::system::{
     RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
+use std::rc::Rc;
 use std::sync::Arc;
 
 static_toml::static_toml! {

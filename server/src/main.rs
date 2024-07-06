@@ -64,23 +64,26 @@ fn main() -> Result<(), ServerError> {
             let db = db.clone();
             let connections = connections.clone();
             let config = config.clone();
-            std::thread::Builder::new().name(format!("thread-{}", cpu)).spawn(move || {
-                let connections = connections.clone();
-                monoio::utils::bind_to_cpu_set(Some(cpu as usize))
-                    .expect("Failed set thread affinity");
-                let mut rt = monoio::RuntimeBuilder::<monoio::IoUringDriver>::new()
-                    .enable_timer()
-                    .with_blocking_strategy(monoio::blocking::BlockingStrategy::ExecuteLocal)
-                    .build()
-                    .expect("Failed to build monoio runtime");
+            std::thread::Builder::new()
+                .name(format!("thread-{}", cpu))
+                .spawn(move || {
+                    let connections = connections.clone();
+                    monoio::utils::bind_to_cpu_set(Some(cpu as usize))
+                        .expect("Failed set thread affinity");
+                    let mut rt = monoio::RuntimeBuilder::<monoio::IoUringDriver>::new()
+                        .enable_timer()
+                        .with_blocking_strategy(monoio::blocking::BlockingStrategy::ExecuteLocal)
+                        .build()
+                        .expect("Failed to build monoio runtime");
 
-                rt.block_on(async move {
-                    let shard = create_shard(cpu, db, config, connections);
-                    if let Err(e) = shard_executor(shard, cpu == 0).await {
-                        error!("Failed to start shard executor with error: {}", e);
-                    }
+                    rt.block_on(async move {
+                        let shard = create_shard(cpu, config, db, connections);
+                        if let Err(e) = shard_executor(shard, cpu == 0).await {
+                            error!("Failed to start shard executor with error: {}", e);
+                        }
+                    })
                 })
-            }).expect("Failed to spawn shard thread")
+                .expect("Failed to spawn shard thread")
         })
         .collect::<Vec<_>>();
 

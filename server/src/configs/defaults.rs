@@ -8,8 +8,8 @@ use crate::configs::server::{
 };
 use crate::configs::system::{
     ArchiverConfig, BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig,
-    EncryptionConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig,
-    RetentionPolicyConfig, RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    EncryptionConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RuntimeConfig,
+    SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -245,7 +245,6 @@ impl Default for SystemConfig {
             runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),
-            retention_policy: RetentionPolicyConfig::default(),
             stream: StreamConfig::default(),
             encryption: EncryptionConfig::default(),
             topic: TopicConfig::default(),
@@ -340,25 +339,6 @@ impl Default for CacheConfig {
     }
 }
 
-impl Default for RetentionPolicyConfig {
-    fn default() -> RetentionPolicyConfig {
-        RetentionPolicyConfig {
-            message_expiry: SERVER_CONFIG
-                .system
-                .retention_policy
-                .message_expiry
-                .parse()
-                .unwrap(),
-            max_topic_size: SERVER_CONFIG
-                .system
-                .retention_policy
-                .max_topic_size
-                .parse()
-                .unwrap(),
-        }
-    }
-}
-
 impl Default for EncryptionConfig {
     fn default() -> EncryptionConfig {
         EncryptionConfig {
@@ -380,6 +360,8 @@ impl Default for TopicConfig {
     fn default() -> TopicConfig {
         TopicConfig {
             path: SERVER_CONFIG.system.topic.path.parse().unwrap(),
+            max_size: SERVER_CONFIG.system.topic.max_size.parse().unwrap(),
+            close_when_full: SERVER_CONFIG.system.topic.close_when_full,
         }
     }
 }
@@ -402,6 +384,8 @@ impl Default for SegmentConfig {
             size: SERVER_CONFIG.system.segment.size.parse().unwrap(),
             cache_indexes: SERVER_CONFIG.system.segment.cache_indexes,
             cache_time_indexes: SERVER_CONFIG.system.segment.cache_time_indexes,
+            message_expiry: SERVER_CONFIG.system.segment.message_expiry.parse().unwrap(),
+            archive_expired: SERVER_CONFIG.system.segment.archive_expired,
         }
     }
 }

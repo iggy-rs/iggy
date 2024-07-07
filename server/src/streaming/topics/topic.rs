@@ -106,13 +106,13 @@ impl Topic {
             consumer_groups_ids: HashMap::new(),
             current_consumer_group_id: AtomicU32::new(1),
             current_partition_id: AtomicU32::new(1),
-            message_expiry: match config.retention_policy.message_expiry {
+            message_expiry: match config.segment.message_expiry {
                 IggyExpiry::NeverExpire => message_expiry,
                 value => value,
             },
             compression_algorithm,
             max_topic_size: match max_topic_size {
-                MaxTopicSize::ServerDefault => config.retention_policy.max_topic_size,
+                MaxTopicSize::ServerDefault => config.topic.max_size,
                 _ => max_topic_size,
             },
             replication_factor,
@@ -122,6 +122,16 @@ impl Topic {
 
         topic.add_partitions(partitions_count)?;
         Ok(topic)
+    }
+
+    pub fn is_full(&self) -> bool {
+        match self.max_topic_size {
+            MaxTopicSize::Unlimited => false,
+            MaxTopicSize::ServerDefault => false,
+            MaxTopicSize::Custom(size) => {
+                self.size_bytes.load(Ordering::SeqCst) >= size.as_bytes_u64()
+            }
+        }
     }
 
     pub fn get_size(&self) -> IggyByteSize {

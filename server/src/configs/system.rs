@@ -19,7 +19,6 @@ pub struct SystemConfig {
     pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
     pub cache: CacheConfig,
-    pub retention_policy: RetentionPolicyConfig,
     pub stream: StreamConfig,
     pub topic: TopicConfig,
     pub partition: PartitionConfig,
@@ -95,15 +94,6 @@ pub struct CacheConfig {
     pub size: MemoryResourceQuota,
 }
 
-#[serde_as]
-#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
-pub struct RetentionPolicyConfig {
-    #[serde_as(as = "DisplayFromStr")]
-    pub message_expiry: IggyExpiry,
-    #[serde_as(as = "DisplayFromStr")]
-    pub max_topic_size: MaxTopicSize,
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct EncryptionConfig {
     pub enabled: bool,
@@ -115,9 +105,13 @@ pub struct StreamConfig {
     pub path: String,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TopicConfig {
     pub path: String,
+    #[serde_as(as = "DisplayFromStr")]
+    pub max_size: MaxTopicSize,
+    pub close_when_full: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -137,11 +131,15 @@ pub struct MessageDeduplicationConfig {
     pub expiry: IggyDuration,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SegmentConfig {
     pub size: IggyByteSize,
     pub cache_indexes: bool,
     pub cache_time_indexes: bool,
+    #[serde_as(as = "DisplayFromStr")]
+    pub message_expiry: IggyExpiry,
+    pub archive_expired: bool,
 }
 
 impl SystemConfig {

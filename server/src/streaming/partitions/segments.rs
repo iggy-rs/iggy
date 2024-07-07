@@ -20,6 +20,12 @@ impl Partition {
         &self.segments
     }
 
+    pub fn get_segment(&self, start_offset: u64) -> Option<&Segment> {
+        self.segments
+            .iter()
+            .find(|s| s.start_offset == start_offset)
+    }
+
     pub fn get_segments_mut(&mut self) -> &mut Vec<Segment> {
         &mut self.segments
     }
@@ -60,6 +66,8 @@ impl Partition {
         self.segments.push(new_segment);
         self.segments_count_of_parent_stream
             .fetch_add(1, Ordering::SeqCst);
+        self.segments
+            .sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
         Ok(())
     }
 
@@ -71,10 +79,7 @@ impl Partition {
     pub async fn delete_segment(&mut self, start_offset: u64) -> Result<DeletedSegment, IggyError> {
         let deleted_segment;
         {
-            let segment = self
-                .segments
-                .iter()
-                .find(|s| s.start_offset == start_offset);
+            let segment = self.get_segment(start_offset);
             if segment.is_none() {
                 return Err(IggyError::SegmentNotFound);
             }
@@ -91,6 +96,8 @@ impl Partition {
         }
 
         self.segments.retain(|s| s.start_offset != start_offset);
+        self.segments
+            .sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
         Ok(deleted_segment)
     }
 }

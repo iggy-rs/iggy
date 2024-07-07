@@ -6,7 +6,7 @@ use crate::configs::{
     server::{MessageCleanerConfig, MessageSaverConfig, ServerConfig},
     system::{
         CacheConfig, CompressionConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
-        RetentionPolicyConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+        SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
     },
     tcp::{TcpConfig, TcpTlsConfig},
 };
@@ -146,16 +146,6 @@ impl Display for CacheConfig {
     }
 }
 
-impl Display for RetentionPolicyConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{{ message_expiry {}, max_topic_size: {} }}",
-            self.message_expiry, self.max_topic_size
-        )
-    }
-}
-
 impl Display for EncryptionConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{ enabled: {} }}", self.enabled)
@@ -170,7 +160,11 @@ impl Display for StreamConfig {
 
 impl Display for TopicConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{ path: {} }}", self.path)
+        write!(
+            f,
+            "{{ path: {}, max_size: {}, close_when_full: {} }}",
+            self.path, self.max_size, self.close_when_full
+        )
     }
 }
 
@@ -201,8 +195,8 @@ impl Display for SegmentConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ size_bytes: {}, cache_indexes: {}, cache_time_indexes: {} }}",
-            self.size, self.cache_indexes, self.cache_time_indexes
+            "{{ size_bytes: {}, cache_indexes: {}, cache_time_indexes: {}, message_expiry: {}, archive_expired: {} }}",
+            self.size, self.cache_indexes, self.cache_time_indexes, self.message_expiry, self.archive_expired
         )
     }
 }

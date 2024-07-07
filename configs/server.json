@@ -126,10 +126,6 @@
       "enabled": true,
       "size": "4 GB"
     },
-    "retention_policy": {
-      "message_expiry": "none",
-      "max_topic_size": "10 GB"
-    },
     "encryption": {
       "enabled": false,
       "key": ""
@@ -142,7 +138,9 @@
       "path": "streams"
     },
     "topic": {
-      "path": "topics"
+      "path": "topics",
+      "max_size": "10 GB",
+      "close_when_full": false
     },
     "partition": {
       "path": "partitions",
@@ -153,7 +151,9 @@
     "segment": {
       "size": "1 GB",
       "cache_indexes": true,
-      "cache_time_indexes": true
+      "cache_time_indexes": true,
+      "message_expiry": "none",
+      "archive_expired": false
     },
     "message_deduplication": {
       "enabled": false,

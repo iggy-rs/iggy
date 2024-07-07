@@ -72,7 +72,7 @@ pub struct System {
     pub(crate) encryptor: Option<Box<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
     pub(crate) state: Arc<dyn State>,
-    pub(crate) archiver: Option<Box<dyn Archiver>>,
+    pub(crate) archiver: Option<Arc<dyn Archiver>>,
     pub personal_access_token: PersonalAccessTokenConfig,
 }
 
@@ -111,20 +111,20 @@ impl System {
             Self::map_toggle_str(config.encryption.enabled)
         );
 
-        let archiver: Option<Box<dyn Archiver>> = if !config.archiver.enabled {
+        let archiver: Option<Arc<dyn Archiver>> = if !config.archiver.enabled {
             info!("Archiving is disabled.");
             None
         } else {
             info!("Archiving is enabled, kind: {}", config.archiver.kind);
             match config.archiver.kind {
-                ArchiverKind::Disk => Some(Box::new(DiskArchiver::new(
+                ArchiverKind::Disk => Some(Arc::new(DiskArchiver::new(
                     config
                         .archiver
                         .disk
                         .clone()
                         .expect("Disk archiver config is missing"),
                 ))),
-                ArchiverKind::S3 => Some(Box::new(S3Archiver::new(
+                ArchiverKind::S3 => Some(Arc::new(S3Archiver::new(
                     config
                         .archiver
                         .s3

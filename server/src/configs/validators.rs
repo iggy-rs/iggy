@@ -3,7 +3,7 @@ extern crate sysinfo;
 use super::server::{MessageCleanerConfig, MessageSaverConfig};
 use super::system::CompressionConfig;
 use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
-use crate::configs::system::{CacheConfig, RetentionPolicyConfig, SegmentConfig};
+use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::server_error::ServerError;
 use crate::streaming::segments::segment;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
@@ -18,11 +18,10 @@ impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {
         self.system.segment.validate()?;
         self.system.cache.validate()?;
-        self.system.retention_policy.validate()?;
         self.system.compression.validate()?;
         self.personal_access_token.validate()?;
 
-        let topic_size = match self.system.retention_policy.max_topic_size {
+        let topic_size = match self.system.topic.max_size {
             MaxTopicSize::Custom(size) => Ok(size.as_bytes_u64()),
             MaxTopicSize::Unlimited => Ok(u64::MAX),
             MaxTopicSize::ServerDefault => {
@@ -31,7 +30,7 @@ impl Validatable<ServerError> for ServerConfig {
             }
         }?;
 
-        if let IggyExpiry::ServerDefault = self.system.retention_policy.message_expiry {
+        if let IggyExpiry::ServerDefault = self.system.segment.message_expiry {
             error!("Message expiry cannot be set to server default.");
             return Err(ServerError::InvalidConfiguration);
         }
@@ -100,12 +99,6 @@ impl Validatable<ServerError> for CacheConfig {
             pretty_cache_limit, cache_percentage, pretty_total_memory, pretty_free_memory
         );
 
-        Ok(())
-    }
-}
-
-impl Validatable<ServerError> for RetentionPolicyConfig {
-    fn validate(&self) -> Result<(), ServerError> {
         Ok(())
     }
 }

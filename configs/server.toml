@@ -269,24 +269,6 @@ enabled = true
 # Maximum size of the cache, e.g. "4GB".
 size = "4 GB"
 
-# Data retention policy configuration.
-[system.retention_policy]
-# Configures the message time-based expiry setting.
-# "none" means messages are kept indefinitely.
-# A time value in human-readable format determines the lifespan of messages.
-# Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
-message_expiry = "none"
-
-# Configures the topic size-based expiry setting.
-# "unlimited" or "0" means topics are kept indefinitely.
-# A size value in human-readable format determines the maximum size of a topic.
-# When a topic reaches this size, the oldest messages are deleted to make room for new ones.
-# Messages are removed in full segments, so if segment size is 1 GB and the topic size is 10 GB,
-# the oldest segment will be deleted upon reaching 10 GB.
-# Example: `max_topic_size = "10 GB"` means oldest messages in topics will be deleted when they reach 10 GB.
-# Note: this setting can be overwritten with CreateTopic and UpdateTopic requests.
-max_topic_size = "10 GB"
-
 # Encryption configuration
 [system.encryption]
 # Determines whether server-side data encryption is enabled (boolean).
@@ -322,6 +304,19 @@ path = "streams"
 # Specifies the directory where topic data is stored, relative to `stream.path`.
 path = "topics"
 
+# Configures the topic size-based expiry setting.
+# "unlimited" or "0" means topics are kept indefinitely.
+# A size value in human-readable format determines the maximum size of a topic.
+# When a topic reaches this size, the oldest messages are deleted to make room for new ones.
+# Messages are removed in full segments, so if segment size is 1 GB and the topic size is 10 GB,
+# the oldest segment will be deleted upon reaching 10 GB.
+# Example: `max_topic_size = "10 GB"` means oldest messages in topics will be deleted when they reach 10 GB.
+# Note: this setting can be overwritten with CreateTopic and UpdateTopic requests.
+max_size = "10 GB"
+
+# Configures whether full topics are closed when they reach the maximum size (boolean) or just keep on cleaning up the oldest segments indefinitely.
+close_when_full = false
+
 # Partition configuration
 [system.partition]
 # Path for storing partition-related data (string).
@@ -349,6 +344,14 @@ messages_required_to_save = 10_000
 # When a segment reaches this size, a new segment is created for subsequent data.
 # Example: if `size` is set "1GB", the actual segment size may be 1GB + the size of remaining messages in received batch.
 size = "1 GB"
+# Configures the message time-based expiry setting.
+# "none" means messages are kept indefinitely.
+# A time value in human-readable format determines the lifespan of messages.
+# Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
+message_expiry = "none"
+
+# Configures whether expired segments are archived (boolean) or just deleted without archiving.
+archive_expired = false
 
 # Controls whether to cache indexes for segment access (boolean).
 # `true` keeps indexes in memory, speeding up data retrieval.

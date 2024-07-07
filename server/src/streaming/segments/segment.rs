@@ -89,7 +89,7 @@ impl Segment {
             size_bytes: 0,
             max_size_bytes: config.segment.size.as_bytes_u64() as u32,
             message_expiry: match message_expiry {
-                IggyExpiry::ServerDefault => config.retention_policy.message_expiry,
+                IggyExpiry::ServerDefault => config.segment.message_expiry,
                 _ => message_expiry,
             },
             indexes: match config.segment.cache_indexes {

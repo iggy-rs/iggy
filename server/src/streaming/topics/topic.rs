@@ -15,6 +15,8 @@ use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+const ALMOST_FULL_THRESHOLD: f64 = 0.9;
+
 #[derive(Debug)]
 pub struct Topic {
     pub stream_id: u32,
@@ -131,6 +133,24 @@ impl Topic {
             MaxTopicSize::Custom(size) => {
                 self.size_bytes.load(Ordering::SeqCst) >= size.as_bytes_u64()
             }
+        }
+    }
+
+    pub fn is_almost_full(&self) -> bool {
+        match self.max_topic_size {
+            MaxTopicSize::Unlimited => false,
+            MaxTopicSize::ServerDefault => false,
+            MaxTopicSize::Custom(size) => {
+                self.size_bytes.load(Ordering::SeqCst)
+                    >= (size.as_bytes_u64() as f64 * ALMOST_FULL_THRESHOLD) as u64
+            }
+        }
+    }
+
+    pub fn is_unlimited(&self) -> bool {
+        match self.max_topic_size {
+            MaxTopicSize::Unlimited => true,
+            _ => false,
         }
     }
 

@@ -33,6 +33,13 @@ impl FromStr for ArchiverKind {
 
 #[async_trait]
 pub trait Archiver: Sync + Send {
+    async fn is_archived(
+        &self,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+        segment_start_offset: u64,
+    ) -> Result<bool, ServerError>;
     async fn archive(&self, segment: ArchivableSegment) -> Result<(), ServerError>;
 }
 

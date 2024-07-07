@@ -140,7 +140,7 @@
     "topic": {
       "path": "topics",
       "max_size": "10 GB",
-      "close_when_full": false
+      "delete_oldest_segments": false
     },
     "partition": {
       "path": "partitions",

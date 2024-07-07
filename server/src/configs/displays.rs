@@ -162,8 +162,8 @@ impl Display for TopicConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ path: {}, max_size: {}, close_when_full: {} }}",
-            self.path, self.max_size, self.close_when_full
+            "{{ path: {}, max_size: {}, delete_oldest_segments: {} }}",
+            self.path, self.max_size, self.delete_oldest_segments
         )
     }
 }

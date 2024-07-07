@@ -111,7 +111,7 @@ pub struct TopicConfig {
     pub path: String,
     #[serde_as(as = "DisplayFromStr")]
     pub max_size: MaxTopicSize,
-    pub close_when_full: bool,
+    pub delete_oldest_segments: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

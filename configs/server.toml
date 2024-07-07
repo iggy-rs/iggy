@@ -314,8 +314,8 @@ path = "topics"
 # Note: this setting can be overwritten with CreateTopic and UpdateTopic requests.
 max_size = "10 GB"
 
-# Configures whether full topics are closed when they reach the maximum size (boolean) or just keep on cleaning up the oldest segments indefinitely.
-close_when_full = false
+# Configures whether the oldest segments are deleted when a topic reaches its maximum size (boolean).
+delete_oldest_segments = false
 
 # Partition configuration
 [system.partition]

@@ -361,7 +361,7 @@ impl Default for TopicConfig {
         TopicConfig {
             path: SERVER_CONFIG.system.topic.path.parse().unwrap(),
             max_size: SERVER_CONFIG.system.topic.max_size.parse().unwrap(),
-            close_when_full: SERVER_CONFIG.system.topic.close_when_full,
+            delete_oldest_segments: SERVER_CONFIG.system.topic.delete_oldest_segments,
         }
     }
 }

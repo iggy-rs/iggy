@@ -1,4 +1,20 @@
 {
+  "archiver": {
+    "enabled": false,
+    "archive_messages": true,
+    "archive_state": true,
+    "archive_state_interval": "1 m",
+    "kind": "disk",
+    "disk": {
+      "path": "local_data/archive"
+    },
+    "s3": {
+      "key_id": "123",
+      "access_key": "secret",
+      "bucket": "iggy",
+      "region": "eu-west-1"
+    }
+  },
   "http": {
     "enabled": true,
     "address": "0.0.0.0:3000",
@@ -93,19 +109,6 @@
   },
   "system": {
     "path": "local_data",
-    "archiver": {
-      "enabled": false,
-      "kind": "disk",
-      "disk": {
-        "path": "archive"
-      },
-      "s3": {
-        "key_id": "123",
-        "access_key": "secret",
-        "bucket": "iggy",
-        "region": "eu-west-1"
-      }
-    },
     "backup": {
       "path": "backup",
       "compatibility": {

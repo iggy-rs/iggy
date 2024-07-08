@@ -1,5 +1,5 @@
 use crate::archiver::{ArchivableSegment, Archiver};
-use crate::configs::system::S3ArchiverConfig;
+use crate::configs::server::S3ArchiverConfig;
 use crate::server_error::ServerError;
 use async_trait::async_trait;
 use tracing::info;
@@ -17,6 +17,10 @@ impl S3Archiver {
 
 #[async_trait]
 impl Archiver for S3Archiver {
+    async fn init(&self) -> Result<(), ServerError> {
+        Ok(())
+    }
+
     async fn is_archived(
         &self,
         stream_id: u32,

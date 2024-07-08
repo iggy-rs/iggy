@@ -1,4 +1,3 @@
-use crate::archiver::ArchiverKind;
 use crate::configs::resource_quota::MemoryResourceQuota;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
@@ -13,7 +12,6 @@ use serde_with::DisplayFromStr;
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SystemConfig {
     pub path: String,
-    pub archiver: ArchiverConfig,
     pub backup: BackupConfig,
     pub database: Option<DatabaseConfig>,
     pub runtime: RuntimeConfig,
@@ -26,27 +24,6 @@ pub struct SystemConfig {
     pub encryption: EncryptionConfig,
     pub compression: CompressionConfig,
     pub message_deduplication: MessageDeduplicationConfig,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ArchiverConfig {
-    pub enabled: bool,
-    pub kind: ArchiverKind,
-    pub disk: Option<DiskArchiverConfig>,
-    pub s3: Option<S3ArchiverConfig>,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct DiskArchiverConfig {
-    pub path: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct S3ArchiverConfig {
-    pub key_id: String,
-    pub access_key: String,
-    pub region: String,
-    pub bucket: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

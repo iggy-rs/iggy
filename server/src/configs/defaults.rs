@@ -3,13 +3,13 @@ use crate::configs::http::{
 };
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
-    MessageCleanerConfig, MessageSaverConfig, PersonalAccessTokenCleanerConfig,
+    ArchiverConfig, MessageCleanerConfig, MessageSaverConfig, PersonalAccessTokenCleanerConfig,
     PersonalAccessTokenConfig, ServerConfig,
 };
 use crate::configs::system::{
-    ArchiverConfig, BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig,
-    EncryptionConfig, LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RuntimeConfig,
-    SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
+    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RuntimeConfig, SegmentConfig,
+    StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -22,6 +22,7 @@ static_toml::static_toml! {
 impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
+            archiver: ArchiverConfig::default(),
             message_cleaner: MessageCleanerConfig::default(),
             message_saver: MessageSaverConfig::default(),
             personal_access_token: PersonalAccessTokenConfig::default(),
@@ -33,14 +34,23 @@ impl Default for ServerConfig {
     }
 }
 
-// impl Default for ArchiverConfig {
-//     fn default() -> ArchiverConfig {
-//         ArchiverConfig {
-//             enabled: SERVER_CONFIG.system.archiver.enabled,
-//             kind: SERVER_CONFIG.system.archiver.kind.parse().unwrap(),
-//         }
-//     }
-// }
+impl Default for ArchiverConfig {
+    fn default() -> ArchiverConfig {
+        ArchiverConfig {
+            enabled: SERVER_CONFIG.archiver.enabled,
+            archive_messages: SERVER_CONFIG.archiver.archive_messages,
+            archive_state: SERVER_CONFIG.archiver.archive_state,
+            archive_state_interval: SERVER_CONFIG
+                .archiver
+                .archive_state_interval
+                .parse()
+                .unwrap(),
+            kind: SERVER_CONFIG.archiver.kind.parse().unwrap(),
+            disk: None,
+            s3: None,
+        }
+    }
+}
 
 impl Default for QuicConfig {
     fn default() -> QuicConfig {
@@ -252,18 +262,6 @@ impl Default for SystemConfig {
             segment: SegmentConfig::default(),
             compression: CompressionConfig::default(),
             message_deduplication: MessageDeduplicationConfig::default(),
-            archiver: ArchiverConfig::default(),
-        }
-    }
-}
-
-impl Default for ArchiverConfig {
-    fn default() -> ArchiverConfig {
-        ArchiverConfig {
-            enabled: SERVER_CONFIG.system.archiver.enabled,
-            kind: SERVER_CONFIG.system.archiver.kind.parse().unwrap(),
-            disk: None,
-            s3: None,
         }
     }
 }

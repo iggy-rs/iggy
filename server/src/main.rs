@@ -42,7 +42,8 @@ async fn main() -> Result<(), ServerError> {
 
     let system = SharedSystem::new(System::new(
         config.system.clone(),
-        config.personal_access_token,
+        config.archiver.clone(),
+        config.personal_access_token.clone(),
     ));
 
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)

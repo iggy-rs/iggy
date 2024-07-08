@@ -1,7 +1,9 @@
 use crate::archiver::{ArchivableSegment, Archiver};
-use crate::configs::system::DiskArchiverConfig;
+use crate::configs::server::DiskArchiverConfig;
 use crate::server_error::ServerError;
 use async_trait::async_trait;
+use std::path::Path;
+use tokio::fs;
 use tracing::info;
 
 #[derive(Debug)]
@@ -17,6 +19,15 @@ impl DiskArchiver {
 
 #[async_trait]
 impl Archiver for DiskArchiver {
+    async fn init(&self) -> Result<(), ServerError> {
+        if !Path::new(&self.config.path).exists() {
+            info!("Creating disk archiver directory: {}", self.config.path);
+            fs::create_dir_all(&self.config.path).await?;
+        }
+
+        Ok(())
+    }
+
     async fn is_archived(
         &self,
         stream_id: u32,

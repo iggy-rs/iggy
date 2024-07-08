@@ -1,4 +1,4 @@
-use crate::configs::server::PersonalAccessTokenConfig;
+use crate::configs::server::{ArchiverConfig, PersonalAccessTokenConfig};
 use crate::configs::system::SystemConfig;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::clients::client_manager::ClientManager;
@@ -81,7 +81,11 @@ pub struct System {
 const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 
 impl System {
-    pub fn new(config: Arc<SystemConfig>, pat_config: PersonalAccessTokenConfig) -> System {
+    pub fn new(
+        config: Arc<SystemConfig>,
+        archiver_config: ArchiverConfig,
+        pat_config: PersonalAccessTokenConfig,
+    ) -> System {
         let version = SemanticVersion::current().expect("Invalid version");
         let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
             true => Arc::new(FileWithSyncPersister {}),
@@ -96,52 +100,52 @@ impl System {
             config.clone(),
             SystemStorage::new(config, persister),
             state,
+            archiver_config,
             pat_config,
         )
     }
 
     pub fn create(
-        config: Arc<SystemConfig>,
+        system_config: Arc<SystemConfig>,
         storage: SystemStorage,
         state: Arc<dyn State>,
+        archiver_config: ArchiverConfig,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         info!(
             "Server-side encryption is {}.",
-            Self::map_toggle_str(config.encryption.enabled)
+            Self::map_toggle_str(system_config.encryption.enabled)
         );
 
-        let archiver: Option<Arc<dyn Archiver>> = if !config.archiver.enabled {
-            info!("Archiving is disabled.");
-            None
-        } else {
-            info!("Archiving is enabled, kind: {}", config.archiver.kind);
-            match config.archiver.kind {
+        let archiver: Option<Arc<dyn Archiver>> = if archiver_config.enabled {
+            info!("Archiving is enabled, kind: {}", archiver_config.kind);
+            match archiver_config.kind {
                 ArchiverKind::Disk => Some(Arc::new(DiskArchiver::new(
-                    config
-                        .archiver
+                    archiver_config
                         .disk
                         .clone()
                         .expect("Disk archiver config is missing"),
                 ))),
                 ArchiverKind::S3 => Some(Arc::new(S3Archiver::new(
-                    config
-                        .archiver
+                    archiver_config
                         .s3
                         .clone()
                         .expect("S3 archiver config is missing"),
                 ))),
             }
+        } else {
+            info!("Archiving is disabled.");
+            None
         };
 
         System {
-            encryptor: match config.encryption.enabled {
+            encryptor: match system_config.encryption.enabled {
                 true => Some(Box::new(
-                    Aes256GcmEncryptor::from_base64_key(&config.encryption.key).unwrap(),
+                    Aes256GcmEncryptor::from_base64_key(&system_config.encryption.key).unwrap(),
                 )),
                 false => None,
             },
-            config,
+            config: system_config,
             streams: HashMap::new(),
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),
@@ -202,6 +206,12 @@ impl System {
             .await?;
         self.load_streams(system_state.streams.into_values().collect())
             .await?;
+        if let Some(archiver) = self.archiver.as_ref() {
+            archiver
+                .init()
+                .await
+                .expect("Failed to initialize archiver");
+        }
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
     }

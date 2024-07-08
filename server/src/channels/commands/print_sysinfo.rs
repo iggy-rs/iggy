@@ -31,11 +31,7 @@ impl SysInfoPrinter {
             return;
         }
 
-        info!(
-            "SysInfoPrinter is enabled, system information will be printed every {:?} seconds.",
-            interval.as_secs()
-        );
-
+        info!("SysInfoPrinter is enabled, system information will be printed every {interval}.");
         tokio::spawn(async move {
             let mut interval_timer = time::interval(interval.get_duration());
             loop {

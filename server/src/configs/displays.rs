@@ -1,9 +1,13 @@
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
+use crate::configs::server::{
+    ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, MessagesMaintenanceConfig,
+    S3ArchiverConfig, StateMaintenanceConfig,
+};
 use crate::configs::system::MessageDeduplicationConfig;
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
     resource_quota::MemoryResourceQuota,
-    server::{MessageCleanerConfig, MessageSaverConfig, ServerConfig},
+    server::{MessageSaverConfig, ServerConfig},
     system::{
         CacheConfig, CompressionConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
         SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
@@ -110,22 +114,68 @@ impl Display for CompressionConfig {
     }
 }
 
-impl Display for ServerConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for DataMaintenanceConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ message_cleaner: {}, message_saver: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
-            self.message_cleaner, self.message_saver, self.system, self.quic, self.tcp, self.http
+            "{{ archiver: {}, messages: {}, state: {} }}",
+            self.archiver, self.messages, self.state
         )
     }
 }
 
-impl Display for MessageCleanerConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for ArchiverConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ enabled: {}, interval: {} }}",
-            self.enabled, self.interval
+            "{{ enabled: {}, kind: {:?}, disk: {:?}, s3: {:?} }}",
+            self.enabled, self.kind, self.disk, self.s3
+        )
+    }
+}
+
+impl Display for DiskArchiverConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{ path: {} }}", self.path)
+    }
+}
+
+impl Display for S3ArchiverConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ key_id: {}, access_key: ******, region: {}, bucket: {} }}",
+            self.key_id, self.region, self.bucket
+        )
+    }
+}
+
+impl Display for MessagesMaintenanceConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ archiver_enabled: {}, cleaner_enabled: {}, interval: {} }}",
+            self.archiver_enabled, self.cleaner_enabled, self.interval
+        )
+    }
+}
+
+impl Display for StateMaintenanceConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ archiver_enabled: {}, overwrite: {}, interval: {} }}",
+            self.archiver_enabled, self.overwrite, self.interval
+        )
+    }
+}
+
+impl Display for ServerConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ data_maintenance: {}, message_saver: {}, system: {}, quic: {}, tcp: {}, http: {} }}",
+            self.data_maintenance, self.message_saver, self.system, self.quic, self.tcp, self.http
         )
     }
 }

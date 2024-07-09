@@ -13,8 +13,8 @@ pub enum ServerError {
     InvalidConfigurationProvider(String),
     #[error("Cannot load configuration: {0}")]
     CannotLoadConfiguration(String),
-    #[error("Invalid configuration")]
-    InvalidConfiguration,
+    #[error("Invalid configuration: {0}")]
+    InvalidConfiguration(String),
     #[error("SDK error")]
     SdkError(#[from] iggy::error::IggyError),
     #[error("Write error")]

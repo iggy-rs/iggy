@@ -1,24 +1,15 @@
-[archiver]
+[data_maintenance.archiver]
 # Enables or disables the archiver process.
-enabled = false
-
-# Determines whether to archive messages or not (full, closed segments).
-archive_messages = true
-
-# Determines whether to archive the state of the system or not.
-archive_state = true
-
-# Interval for running the state archiver process.
-archive_state_interval = "1 m"
+enabled = true
 
 # Kind of archiver to use. Available options: "disk", "s3".
 kind = "disk"
 
-[archiver.disk]
+[data_maintenance.archiver.disk]
 # Path for storing archived data.
 path = "local_data/archive"
 
-[archiver.s3]
+[data_maintenance.archiver.s3]
 # Access key ID for the S3 bucket.
 key_id = "123"
 # Secret access key for the S3 bucket
@@ -27,6 +18,26 @@ access_key = "secret"
 region = "eu-west-1"
 # Endpoint of the S3 bucket.
 bucket = "iggy"
+
+[data_maintenance.messages]
+# Enables or disables the archiver process.
+archiver_enabled = true
+
+# Enables or disables the expired message cleaner process.
+cleaner_enabled = true
+
+# Interval for running the message archiver and cleaner.
+interval = "1 m"
+
+[data_maintenance.state]
+# Enables or disables the archiver process.
+archiver_enabled = true
+
+# Sets whether the state archiver should overwrite existing log archive or always create a new one.
+overwrite = true
+
+# Interval for running the state archiver
+interval = "1 m"
 
 # HTTP server configuration
 [http]

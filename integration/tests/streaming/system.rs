@@ -1,6 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use iggy::identifier::Identifier;
-use server::configs::server::{ArchiverConfig, PersonalAccessTokenConfig};
+use server::configs::server::{ArchiverConfig, DataMaintenanceConfig, PersonalAccessTokenConfig};
 use server::streaming::session::Session;
 use server::streaming::systems::system::System;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -11,7 +11,7 @@ async fn should_initialize_system_and_base_directories() {
     let setup = TestSetup::init().await;
     let mut system = System::new(
         setup.config.clone(),
-        ArchiverConfig::default(),
+        DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
     );
 
@@ -34,7 +34,7 @@ async fn should_create_and_persist_stream() {
     let setup = TestSetup::init().await;
     let mut system = System::new(
         setup.config.clone(),
-        ArchiverConfig::default(),
+        DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
     );
     let stream_id = 1;
@@ -55,7 +55,7 @@ async fn should_create_and_persist_stream_with_automatically_generated_id() {
     let setup = TestSetup::init().await;
     let mut system = System::new(
         setup.config.clone(),
-        ArchiverConfig::default(),
+        DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
     );
     let stream_id = 1;
@@ -76,7 +76,7 @@ async fn should_delete_persisted_stream() {
     let setup = TestSetup::init().await;
     let mut system = System::new(
         setup.config.clone(),
-        ArchiverConfig::default(),
+        DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
     );
     let stream_id = 1;

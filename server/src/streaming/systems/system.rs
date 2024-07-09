@@ -1,4 +1,4 @@
-use crate::configs::server::{ArchiverConfig, PersonalAccessTokenConfig};
+use crate::configs::server::{DataMaintenanceConfig, PersonalAccessTokenConfig};
 use crate::configs::system::SystemConfig;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::clients::client_manager::ClientManager;
@@ -83,7 +83,7 @@ const CACHE_OVER_EVICTION_FACTOR: u64 = 5;
 impl System {
     pub fn new(
         config: Arc<SystemConfig>,
-        archiver_config: ArchiverConfig,
+        data_maintenance_config: DataMaintenanceConfig,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         let version = SemanticVersion::current().expect("Invalid version");
@@ -100,7 +100,7 @@ impl System {
             config.clone(),
             SystemStorage::new(config, persister),
             state,
-            archiver_config,
+            data_maintenance_config,
             pat_config,
         )
     }
@@ -109,7 +109,7 @@ impl System {
         system_config: Arc<SystemConfig>,
         storage: SystemStorage,
         state: Arc<dyn State>,
-        archiver_config: ArchiverConfig,
+        data_maintenance_config: DataMaintenanceConfig,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         info!(
@@ -117,6 +117,7 @@ impl System {
             Self::map_toggle_str(system_config.encryption.enabled)
         );
 
+        let archiver_config = data_maintenance_config.archiver;
         let archiver: Option<Arc<dyn Archiver>> = if archiver_config.enabled {
             info!("Archiving is enabled, kind: {}", archiver_config.kind);
             match archiver_config.kind {

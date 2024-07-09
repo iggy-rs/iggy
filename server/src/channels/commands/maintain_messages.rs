@@ -1,7 +1,8 @@
 use crate::archiver::Archiver;
+use crate::channels::server_command::ServerCommand;
+use crate::configs::server::MessagesMaintenanceConfig;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
-use crate::{channels::server_command::ServerCommand, configs::server::MessageCleanerConfig};
 use async_trait::async_trait;
 use flume::Sender;
 use iggy::error::IggyError;
@@ -12,53 +13,60 @@ use std::sync::Arc;
 use tokio::time;
 use tracing::{debug, error, info};
 
-pub struct MessagesCleaner {
-    enabled: bool,
-    archive_messages: bool,
+pub struct MessagesMaintainer {
+    cleaner_enabled: bool,
+    archiver_enabled: bool,
     interval: IggyDuration,
-    sender: Sender<CleanMessagesCommand>,
+    sender: Sender<MaintainMessagesCommand>,
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct CleanMessagesCommand {
+pub struct MaintainMessagesCommand {
+    clean_messages: bool,
     archive_messages: bool,
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct CleanMessagesExecutor;
+pub struct MaintainMessagesExecutor;
 
-impl MessagesCleaner {
+impl MessagesMaintainer {
     pub fn new(
-        config: &MessageCleanerConfig,
-        archive_messages: bool,
-        sender: Sender<CleanMessagesCommand>,
+        config: &MessagesMaintenanceConfig,
+        sender: Sender<MaintainMessagesCommand>,
     ) -> Self {
         Self {
-            enabled: config.enabled,
-            archive_messages,
+            cleaner_enabled: config.cleaner_enabled,
+            archiver_enabled: config.archiver_enabled,
             interval: config.interval,
             sender,
         }
     }
 
     pub fn start(&self) {
-        if !self.enabled {
-            info!("Message cleaner is disabled.");
+        if !self.cleaner_enabled && !self.archiver_enabled {
+            info!("Messages maintainer is disabled.");
             return;
         }
 
         let interval = self.interval;
         let sender = self.sender.clone();
-        info!("Message cleaner is enabled, expired messages will be deleted every: {interval}.");
-        let archive_messages = self.archive_messages;
+        info!(
+            "Message maintainer cleaner enabled: {}, archiver enabled: {}, interval: {interval}",
+            self.cleaner_enabled, self.archiver_enabled
+        );
+        let clean_messages = self.cleaner_enabled;
+        let archive_messages = self.archiver_enabled;
         tokio::spawn(async move {
             let mut interval_timer = time::interval(interval.get_duration());
             loop {
                 interval_timer.tick().await;
                 sender
-                    .send(CleanMessagesCommand { archive_messages })
+                    .send(MaintainMessagesCommand {
+                        clean_messages,
+                        archive_messages,
+                    })
                     .unwrap_or_else(|err| {
-                        error!("Failed to send CleanMessagesCommand. Error: {}", err);
+                        error!("Failed to send MaintainMessagesCommand. Error: {}", err);
                     });
             }
         });
@@ -66,8 +74,8 @@ impl MessagesCleaner {
 }
 
 #[async_trait]
-impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
-    async fn execute(&mut self, system: &SharedSystem, command: CleanMessagesCommand) {
+impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
+    async fn execute(&mut self, system: &SharedSystem, command: MaintainMessagesCommand) {
         let system = system.read();
         let streams = system.get_streams();
         for stream in streams {
@@ -78,13 +86,14 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
                 } else {
                     None
                 };
-                let deleted_expired_segments = handle_expired_segments(
+                let expired_segments = handle_expired_segments(
                     topic,
                     archiver.clone(),
                     system.config.segment.archive_expired,
+                    command.clean_messages,
                 )
                 .await;
-                if deleted_expired_segments.is_err() {
+                if expired_segments.is_err() {
                     error!(
                         "Failed to delete expired segments for stream ID: {}, topic ID: {}",
                         topic.stream_id, topic.topic_id
@@ -92,13 +101,13 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
                     continue;
                 }
 
-                let deleted_oldest_segments = handle_oldest_segments(
+                let oldest_segments = handle_oldest_segments(
                     topic,
                     archiver.clone(),
                     system.config.topic.delete_oldest_segments,
                 )
                 .await;
-                if deleted_oldest_segments.is_err() {
+                if oldest_segments.is_err() {
                     error!(
                         "Failed to delete oldest segments for stream ID: {}, topic ID: {}",
                         topic.stream_id, topic.topic_id
@@ -106,8 +115,8 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
                     continue;
                 }
 
-                let deleted_expired_segments = deleted_expired_segments.unwrap();
-                let deleted_oldest_segments = deleted_oldest_segments.unwrap();
+                let deleted_expired_segments = expired_segments.unwrap();
+                let deleted_oldest_segments = oldest_segments.unwrap();
                 let deleted_segments = HandledSegments {
                     segments_count: deleted_expired_segments.segments_count
                         + deleted_oldest_segments.segments_count,
@@ -145,28 +154,25 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
         &mut self,
         _system: SharedSystem,
         config: &crate::configs::server::ServerConfig,
-        sender: Sender<CleanMessagesCommand>,
+        sender: Sender<MaintainMessagesCommand>,
     ) {
-        let messages_cleaner = MessagesCleaner::new(
-            &config.message_cleaner,
-            config.archiver.archive_messages,
-            sender,
-        );
-        messages_cleaner.start();
+        let messages_maintainer =
+            MessagesMaintainer::new(&config.data_maintenance.messages, sender);
+        messages_maintainer.start();
     }
 
     fn start_command_consumer(
         mut self,
         system: SharedSystem,
         _config: &crate::configs::server::ServerConfig,
-        receiver: flume::Receiver<CleanMessagesCommand>,
+        receiver: flume::Receiver<MaintainMessagesCommand>,
     ) {
         tokio::spawn(async move {
             let system = system.clone();
             while let Ok(command) = receiver.recv_async().await {
                 self.execute(&system, command).await;
             }
-            info!("Messages cleaner receiver stopped.");
+            info!("Messages maintainer receiver stopped.");
         });
     }
 }
@@ -174,14 +180,15 @@ impl ServerCommand<CleanMessagesCommand> for CleanMessagesExecutor {
 async fn handle_expired_segments(
     topic: &Topic,
     archiver: Option<Arc<dyn Archiver>>,
-    archive_expired: bool,
+    archive: bool,
+    clean: bool,
 ) -> Result<HandledSegments, IggyError> {
     let expired_segments = get_expired_segments(topic, IggyTimestamp::now()).await;
     if expired_segments.is_empty() {
         return Ok(HandledSegments::none());
     }
 
-    if archive_expired {
+    if archive {
         if let Some(archiver) = archiver {
             archive_segments(topic, &expired_segments, archiver.clone()).await?;
         } else {
@@ -193,7 +200,11 @@ async fn handle_expired_segments(
         }
     }
 
-    delete_segments(topic, &expired_segments).await
+    if clean {
+        delete_segments(topic, &expired_segments).await
+    } else {
+        Ok(HandledSegments::none())
+    }
 }
 
 async fn get_expired_segments(topic: &Topic, now: IggyTimestamp) -> Vec<SegmentsToHandle> {

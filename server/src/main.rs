@@ -2,8 +2,8 @@ use anyhow::Result;
 use clap::Parser;
 use figlet_rs::FIGfont;
 use server::args::Args;
-use server::channels::commands::clean_messages::CleanMessagesExecutor;
 use server::channels::commands::clean_personal_access_tokens::CleanPersonalAccessTokensExecutor;
+use server::channels::commands::maintain_messages::MaintainMessagesExecutor;
 use server::channels::commands::print_sysinfo::SysInfoPrintExecutor;
 use server::channels::commands::save_messages::SaveMessagesExecutor;
 use server::channels::handler::ServerCommandHandler;
@@ -42,13 +42,13 @@ async fn main() -> Result<(), ServerError> {
 
     let system = SharedSystem::new(System::new(
         config.system.clone(),
-        config.archiver.clone(),
+        config.data_maintenance.clone(),
         config.personal_access_token.clone(),
     ));
 
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)
         .install_handler(SaveMessagesExecutor)
-        .install_handler(CleanMessagesExecutor)
+        .install_handler(MaintainMessagesExecutor)
         .install_handler(CleanPersonalAccessTokensExecutor)
         .install_handler(SysInfoPrintExecutor);
 

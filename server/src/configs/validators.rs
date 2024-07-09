@@ -1,7 +1,11 @@
 extern crate sysinfo;
 
-use super::server::{MessageCleanerConfig, MessageSaverConfig};
+use super::server::{
+    ArchiverConfig, DataMaintenanceConfig, MessageSaverConfig, MessagesMaintenanceConfig,
+    StateMaintenanceConfig,
+};
 use super::system::CompressionConfig;
+use crate::archiver::ArchiverKind;
 use crate::configs::server::{PersonalAccessTokenConfig, ServerConfig};
 use crate::configs::system::{CacheConfig, SegmentConfig};
 use crate::server_error::ServerError;
@@ -12,39 +16,44 @@ use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
 use iggy::validatable::Validatable;
 use sysinfo::System;
-use tracing::{error, info, warn};
+use tracing::{info, warn};
 
 impl Validatable<ServerError> for ServerConfig {
     fn validate(&self) -> Result<(), ServerError> {
+        self.data_maintenance.validate()?;
+        self.personal_access_token.validate()?;
         self.system.segment.validate()?;
         self.system.cache.validate()?;
         self.system.compression.validate()?;
-        self.personal_access_token.validate()?;
 
         let topic_size = match self.system.topic.max_size {
             MaxTopicSize::Custom(size) => Ok(size.as_bytes_u64()),
             MaxTopicSize::Unlimited => Ok(u64::MAX),
-            MaxTopicSize::ServerDefault => {
-                error!("Max topic size cannot be set to server default.");
-                Err(ServerError::InvalidConfiguration)
-            }
+            MaxTopicSize::ServerDefault => Err(ServerError::InvalidConfiguration(
+                "Max topic size cannot be set to server default.".into(),
+            )),
         }?;
 
         if let IggyExpiry::ServerDefault = self.system.segment.message_expiry {
-            error!("Message expiry cannot be set to server default.");
-            return Err(ServerError::InvalidConfiguration);
+            return Err(ServerError::InvalidConfiguration(
+                "Message expiry cannot be set to server default.".into(),
+            ));
         }
 
         if self.http.enabled {
             if let IggyExpiry::ServerDefault = self.http.jwt.access_token_expiry {
-                error!("Access token expiry cannot be set to server default.");
-                return Err(ServerError::InvalidConfiguration);
+                return Err(ServerError::InvalidConfiguration(
+                    "Access token expiry cannot be set to server default.".into(),
+                ));
             }
         }
 
         if topic_size < self.system.segment.size.as_bytes_u64() {
-            error!("Max topic size cannot be lower than segment size. Max topic size: {}, segment size: {}.",topic_size, self.system.segment.size);
-            return Err(ServerError::InvalidConfiguration);
+            return Err(ServerError::InvalidConfiguration(format!(
+                "Max topic size cannot be lower than segment size. Max topic size: {}, segment size: {}.",
+                topic_size,
+                self.system.segment.size
+            )));
         }
 
         Ok(())
@@ -106,11 +115,10 @@ impl Validatable<ServerError> for CacheConfig {
 impl Validatable<ServerError> for SegmentConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.size.as_bytes_u64() as u32 > segment::MAX_SIZE_BYTES {
-            error!(
-                "Segment configuration -> size cannot be greater than: {} bytes.",
+            return Err(ServerError::InvalidConfiguration(format!(
+                "Segment size cannot be greater than: {} bytes.",
                 segment::MAX_SIZE_BYTES
-            );
-            return Err(ServerError::InvalidConfiguration);
+            )));
         }
 
         Ok(())
@@ -120,19 +128,102 @@ impl Validatable<ServerError> for SegmentConfig {
 impl Validatable<ServerError> for MessageSaverConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.enabled && self.interval.is_zero() {
-            error!("Message saver interval size cannot be zero, it must be greater than 0.");
-            return Err(ServerError::InvalidConfiguration);
+            return Err(ServerError::InvalidConfiguration(
+                "Message saver interval size cannot be zero, it must be greater than 0.".into(),
+            ));
         }
 
         Ok(())
     }
 }
 
-impl Validatable<ServerError> for MessageCleanerConfig {
+impl Validatable<ServerError> for DataMaintenanceConfig {
     fn validate(&self) -> Result<(), ServerError> {
-        if self.enabled && self.interval.is_zero() {
-            error!("Message cleaner interval size cannot be zero, it must be greater than 0.");
-            return Err(ServerError::InvalidConfiguration);
+        self.archiver.validate()?;
+        self.messages.validate()?;
+        self.state.validate()?;
+        Ok(())
+    }
+}
+
+impl Validatable<ServerError> for ArchiverConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        if !self.enabled {
+            return Ok(());
+        }
+
+        return match self.kind {
+            ArchiverKind::Disk => {
+                if self.disk.is_none() {
+                    return Err(ServerError::InvalidConfiguration(
+                        "Disk archiver configuration is missing.".into(),
+                    ));
+                }
+
+                let disk = self.disk.as_ref().unwrap();
+                if disk.path.is_empty() {
+                    return Err(ServerError::InvalidConfiguration(
+                        "Disk archiver path cannot be empty.".into(),
+                    ));
+                }
+                Ok(())
+            }
+            ArchiverKind::S3 => {
+                if self.s3.is_none() {
+                    return Err(ServerError::InvalidConfiguration(
+                        "S3 archiver configuration is missing.".into(),
+                    ));
+                }
+
+                let s3 = self.s3.as_ref().unwrap();
+                if s3.key_id.is_empty() {
+                    return Err(ServerError::InvalidConfiguration(
+                        "S3 archiver key id cannot be empty.".into(),
+                    ));
+                }
+
+                if s3.access_key.is_empty() {
+                    return Err(ServerError::InvalidConfiguration(
+                        "S3 archiver access key cannot be empty.".into(),
+                    ));
+                }
+
+                if s3.region.is_empty() {
+                    return Err(ServerError::InvalidConfiguration(
+                        "S3 archiver region cannot be empty.".into(),
+                    ));
+                }
+
+                if s3.bucket.is_empty() {
+                    return Err(ServerError::InvalidConfiguration(
+                        "S3 archiver bucket cannot be empty.".into(),
+                    ));
+                }
+                Ok(())
+            }
+        };
+    }
+}
+
+impl Validatable<ServerError> for MessagesMaintenanceConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        if self.archiver_enabled && self.interval.is_zero() {
+            return Err(ServerError::InvalidConfiguration(
+                "Message maintenance interval size cannot be zero, it must be greater than 0."
+                    .into(),
+            ));
+        }
+
+        Ok(())
+    }
+}
+
+impl Validatable<ServerError> for StateMaintenanceConfig {
+    fn validate(&self) -> Result<(), ServerError> {
+        if self.archiver_enabled && self.interval.is_zero() {
+            return Err(ServerError::InvalidConfiguration(
+                "State maintenance interval size cannot be zero, it must be greater than 0.".into(),
+            ));
         }
 
         Ok(())
@@ -142,15 +233,16 @@ impl Validatable<ServerError> for MessageCleanerConfig {
 impl Validatable<ServerError> for PersonalAccessTokenConfig {
     fn validate(&self) -> Result<(), ServerError> {
         if self.max_tokens_per_user == 0 {
-            error!("Max tokens per user cannot be zero, it must be greater than 0.");
-            return Err(ServerError::InvalidConfiguration);
+            return Err(ServerError::InvalidConfiguration(
+                "Max tokens per user cannot be zero, it must be greater than 0.".into(),
+            ));
         }
 
         if self.cleaner.enabled && self.cleaner.interval.is_zero() {
-            error!(
+            return Err(ServerError::InvalidConfiguration(
                 "Personal access token cleaner interval cannot be zero, it must be greater than 0."
-            );
-            return Err(ServerError::InvalidConfiguration);
+                    .into(),
+            ));
         }
 
         Ok(())

@@ -338,7 +338,7 @@ impl System {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::configs::server::{ArchiverConfig, PersonalAccessTokenConfig};
+    use crate::configs::server::{DataMaintenanceConfig, PersonalAccessTokenConfig};
     use crate::configs::system::SystemConfig;
     use crate::state::command::EntryCommand;
     use crate::state::entry::StateEntry;
@@ -362,7 +362,7 @@ mod tests {
             config,
             storage,
             Arc::new(TestState::default()),
-            ArchiverConfig::default(),
+            DataMaintenanceConfig::default(),
             PersonalAccessTokenConfig::default(),
         );
         let root = User::root(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD);

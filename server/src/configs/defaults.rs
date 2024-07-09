@@ -3,8 +3,9 @@ use crate::configs::http::{
 };
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
-    ArchiverConfig, MessageCleanerConfig, MessageSaverConfig, PersonalAccessTokenCleanerConfig,
-    PersonalAccessTokenConfig, ServerConfig,
+    ArchiverConfig, DataMaintenanceConfig, MessageSaverConfig, MessagesMaintenanceConfig,
+    PersonalAccessTokenCleanerConfig, PersonalAccessTokenConfig, ServerConfig,
+    StateMaintenanceConfig,
 };
 use crate::configs::system::{
     BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
@@ -22,8 +23,7 @@ static_toml::static_toml! {
 impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
-            archiver: ArchiverConfig::default(),
-            message_cleaner: MessageCleanerConfig::default(),
+            data_maintenance: DataMaintenanceConfig::default(),
             message_saver: MessageSaverConfig::default(),
             personal_access_token: PersonalAccessTokenConfig::default(),
             system: Arc::new(SystemConfig::default()),
@@ -37,17 +37,55 @@ impl Default for ServerConfig {
 impl Default for ArchiverConfig {
     fn default() -> ArchiverConfig {
         ArchiverConfig {
-            enabled: SERVER_CONFIG.archiver.enabled,
-            archive_messages: SERVER_CONFIG.archiver.archive_messages,
-            archive_state: SERVER_CONFIG.archiver.archive_state,
-            archive_state_interval: SERVER_CONFIG
+            enabled: false,
+            kind: SERVER_CONFIG
+                .data_maintenance
                 .archiver
-                .archive_state_interval
+                .kind
                 .parse()
                 .unwrap(),
-            kind: SERVER_CONFIG.archiver.kind.parse().unwrap(),
             disk: None,
             s3: None,
+        }
+    }
+}
+
+impl Default for DataMaintenanceConfig {
+    fn default() -> DataMaintenanceConfig {
+        DataMaintenanceConfig {
+            archiver: ArchiverConfig::default(),
+            messages: MessagesMaintenanceConfig::default(),
+            state: StateMaintenanceConfig::default(),
+        }
+    }
+}
+
+impl Default for MessagesMaintenanceConfig {
+    fn default() -> MessagesMaintenanceConfig {
+        MessagesMaintenanceConfig {
+            archiver_enabled: SERVER_CONFIG.data_maintenance.messages.archiver_enabled,
+            cleaner_enabled: SERVER_CONFIG.data_maintenance.messages.cleaner_enabled,
+            interval: SERVER_CONFIG
+                .data_maintenance
+                .messages
+                .interval
+                .parse()
+                .unwrap(),
+        }
+    }
+}
+
+impl Default for StateMaintenanceConfig {
+    fn default() -> StateMaintenanceConfig {
+        StateMaintenanceConfig {
+            archiver_enabled: SERVER_CONFIG.data_maintenance.state.archiver_enabled,
+            overwrite: SERVER_CONFIG.data_maintenance.state.overwrite,
+            interval: SERVER_CONFIG
+                .data_maintenance
+                .state
+                .interval
+                .parse()
+                .unwrap(),
         }
     }
 }
@@ -55,7 +93,7 @@ impl Default for ArchiverConfig {
 impl Default for QuicConfig {
     fn default() -> QuicConfig {
         QuicConfig {
-            enabled: true,
+            enabled: SERVER_CONFIG.quic.enabled,
             address: SERVER_CONFIG.quic.address.parse().unwrap(),
             max_concurrent_bidi_streams: SERVER_CONFIG.quic.max_concurrent_bidi_streams as u64,
             datagram_send_buffer_size: SERVER_CONFIG
@@ -106,7 +144,7 @@ impl Default for TcpTlsConfig {
 impl Default for HttpConfig {
     fn default() -> HttpConfig {
         HttpConfig {
-            enabled: true,
+            enabled: SERVER_CONFIG.http.enabled,
             address: SERVER_CONFIG.http.address.parse().unwrap(),
             max_request_size: SERVER_CONFIG.http.max_request_size.parse().unwrap(),
             cors: HttpCorsConfig::default(),
@@ -200,15 +238,6 @@ impl Default for HttpTlsConfig {
             enabled: SERVER_CONFIG.http.tls.enabled,
             cert_file: SERVER_CONFIG.http.tls.cert_file.parse().unwrap(),
             key_file: SERVER_CONFIG.http.tls.key_file.parse().unwrap(),
-        }
-    }
-}
-
-impl Default for MessageCleanerConfig {
-    fn default() -> MessageCleanerConfig {
-        MessageCleanerConfig {
-            enabled: SERVER_CONFIG.message_cleaner.enabled,
-            interval: SERVER_CONFIG.message_cleaner.interval.parse().unwrap(),
         }
     }
 }

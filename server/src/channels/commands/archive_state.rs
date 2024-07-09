@@ -1,4 +1,5 @@
 use crate::channels::server_command::ServerCommand;
+use crate::configs::server::StateMaintenanceConfig;
 use crate::streaming::systems::system::SharedSystem;
 use async_trait::async_trait;
 use flume::Sender;
@@ -19,10 +20,10 @@ pub struct ArchiveStateCommand;
 pub struct ArchiveStateExecutor;
 
 impl StateArchiver {
-    pub fn new(enabled: bool, interval: IggyDuration, sender: Sender<ArchiveStateCommand>) -> Self {
+    pub fn new(config: &StateMaintenanceConfig, sender: Sender<ArchiveStateCommand>) -> Self {
         Self {
-            enabled,
-            interval,
+            enabled: config.archiver_enabled,
+            interval: config.interval,
             sender,
         }
     }
@@ -61,11 +62,7 @@ impl ServerCommand<ArchiveStateCommand> for ArchiveStateExecutor {
         config: &crate::configs::server::ServerConfig,
         sender: Sender<ArchiveStateCommand>,
     ) {
-        let state_archiver = StateArchiver::new(
-            config.archiver.archive_state,
-            config.archiver.archive_state_interval,
-            sender,
-        );
+        let state_archiver = StateArchiver::new(&config.data_maintenance.state, sender);
         state_archiver.start();
     }
 

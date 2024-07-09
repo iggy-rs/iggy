@@ -14,8 +14,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ServerConfig {
-    pub archiver: ArchiverConfig,
-    pub message_cleaner: MessageCleanerConfig,
+    pub data_maintenance: DataMaintenanceConfig,
     pub message_saver: MessageSaverConfig,
     pub personal_access_token: PersonalAccessTokenConfig,
     pub system: Arc<SystemConfig>,
@@ -24,18 +23,38 @@ pub struct ServerConfig {
     pub http: HttpConfig,
 }
 
-// TODO: Refactor config, add message cleaner.
 #[serde_as]
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct DataMaintenanceConfig {
+    pub archiver: ArchiverConfig,
+    pub messages: MessagesMaintenanceConfig,
+    pub state: StateMaintenanceConfig,
+}
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ArchiverConfig {
     pub enabled: bool,
-    pub archive_messages: bool,
-    pub archive_state: bool,
-    #[serde_as(as = "DisplayFromStr")]
-    pub archive_state_interval: IggyDuration,
     pub kind: ArchiverKind,
     pub disk: Option<DiskArchiverConfig>,
     pub s3: Option<S3ArchiverConfig>,
+}
+
+#[serde_as]
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct MessagesMaintenanceConfig {
+    pub archiver_enabled: bool,
+    pub cleaner_enabled: bool,
+    #[serde_as(as = "DisplayFromStr")]
+    pub interval: IggyDuration,
+}
+
+#[serde_as]
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct StateMaintenanceConfig {
+    pub archiver_enabled: bool,
+    pub overwrite: bool,
+    #[serde_as(as = "DisplayFromStr")]
+    pub interval: IggyDuration,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -49,14 +68,6 @@ pub struct S3ArchiverConfig {
     pub access_key: String,
     pub region: String,
     pub bucket: String,
-}
-
-#[serde_as]
-#[derive(Debug, Deserialize, Serialize, Clone)]
-pub struct MessageCleanerConfig {
-    pub enabled: bool,
-    #[serde_as(as = "DisplayFromStr")]
-    pub interval: IggyDuration,
 }
 
 #[serde_as]

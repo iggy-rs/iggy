@@ -8,6 +8,7 @@ use server::configs::system::{PartitionConfig, SystemConfig};
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
@@ -36,11 +37,11 @@ async fn should_persist_messages_and_then_load_them_by_timestamp() {
         config.clone(),
         setup.storage.clone(),
         None,
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU32::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU32::new(0)),
     );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
@@ -165,11 +166,11 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         config.clone(),
         setup.storage.clone(),
         None,
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU32::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU32::new(0)),
     );
 
     let mut messages = Vec::with_capacity(messages_count as usize);
@@ -226,11 +227,11 @@ async fn should_persist_messages_and_then_load_them_from_disk() {
         config.clone(),
         setup.storage.clone(),
         None,
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU32::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU32::new(0)),
     );
     loaded_partition.load().await.unwrap();
     let loaded_messages = loaded_partition

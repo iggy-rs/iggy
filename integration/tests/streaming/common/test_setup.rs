@@ -2,13 +2,14 @@ use server::configs::system::SystemConfig;
 use server::streaming::persistence::persister::{FilePersister, StoragePersister};
 use server::streaming::storage::SystemStorage;
 use sled::Db;
+use std::rc::Rc;
 use std::sync::Arc;
 use tokio::fs;
 use uuid::Uuid;
 
 pub struct TestSetup {
     pub config: Arc<SystemConfig>,
-    pub storage: Arc<SystemStorage>,
+    pub storage: Rc<SystemStorage>,
     pub db: Arc<Db>,
 }
 
@@ -24,7 +25,7 @@ impl TestSetup {
         fs::create_dir(config.get_system_path()).await.unwrap();
         let persister = StoragePersister::File(FilePersister {});
         let db = Arc::new(sled::open(config.get_database_path()).unwrap());
-        let storage = Arc::new(SystemStorage::new(db.clone(), Arc::new(persister)));
+        let storage = Rc::new(SystemStorage::new(db.clone(), Rc::new(persister)));
         TestSetup {
             config,
             storage,

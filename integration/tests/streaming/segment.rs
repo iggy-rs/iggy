@@ -7,6 +7,7 @@ use server::streaming::batching::message_batch::RetainedMessageBatch;
 use server::streaming::models::messages::RetainedMessage;
 use server::streaming::segments::segment;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
+use std::rc::Rc;
 use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use tokio::fs;
@@ -27,12 +28,12 @@ async fn should_persist_segment() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
         );
 
         setup
@@ -65,12 +66,12 @@ async fn should_load_existing_segment_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
         );
         setup
             .create_partition_directory(stream_id, topic_id, partition_id)
@@ -92,12 +93,12 @@ async fn should_load_existing_segment_from_disk() {
             setup.config.clone(),
             setup.storage.clone(),
             None,
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
         );
         loaded_segment.load().await.unwrap();
         let loaded_messages = loaded_segment.get_messages(0, 10).await.unwrap();
@@ -130,12 +131,12 @@ async fn should_persist_and_load_segment_with_messages() {
         setup.config.clone(),
         setup.storage.clone(),
         None,
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
     );
 
     setup
@@ -173,7 +174,7 @@ async fn should_persist_and_load_segment_with_messages() {
         };
         retained_message.extend(&mut batch_buffer);
     }
-    let batch = Arc::new(RetainedMessageBatch::new(
+    let batch = Rc::new(RetainedMessageBatch::new(
         base_offset,
         messages_count as u32 - 1,
         last_timestamp,
@@ -192,12 +193,12 @@ async fn should_persist_and_load_segment_with_messages() {
         setup.config.clone(),
         setup.storage.clone(),
         None,
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
     );
     loaded_segment.load().await.unwrap();
     let messages = loaded_segment
@@ -223,12 +224,12 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         setup.config.clone(),
         setup.storage.clone(),
         Some(message_expiry),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
     );
 
     setup
@@ -270,7 +271,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         };
         retained_message.extend(&mut batch_buffer);
     }
-    let batch = Arc::new(RetainedMessageBatch::new(
+    let batch = Rc::new(RetainedMessageBatch::new(
         base_offset,
         messages_count as u32 - 1,
         last_timestamp,
@@ -302,12 +303,12 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         setup.config.clone(),
         setup.storage.clone(),
         Some(message_expiry),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
     );
 
     setup
@@ -339,7 +340,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         payload: expired_message.payload.clone(),
     };
     expired_retained_message.extend(&mut expired_batch_buffer);
-    let expired_batch = Arc::new(RetainedMessageBatch::new(
+    let expired_batch = Rc::new(RetainedMessageBatch::new(
         0,
         1,
         expired_timestamp,
@@ -360,7 +361,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         payload: not_expired_message.payload.clone(),
     };
     not_expired_retained_message.extend(&mut not_expired_batch_buffer);
-    let not_expired_batch = Arc::new(RetainedMessageBatch::new(
+    let not_expired_batch = Rc::new(RetainedMessageBatch::new(
         1,
         1,
         expired_timestamp,

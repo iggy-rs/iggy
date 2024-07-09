@@ -1,4 +1,5 @@
 use std::default::Default;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
 
@@ -20,22 +21,22 @@ async fn should_persist_topics_with_partitions_directories_and_info_file() {
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
         let name = format!("test-{}", topic_id);
-        let topic = Topic::create(
+        let mut topic = Topic::create(
             stream_id,
             topic_id,
             &name,
-            partitions_count,
             setup.config.clone(),
             setup.storage.clone(),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU32::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU32::new(0)),
             None,
             CompressionAlgorithm::default(),
             None,
             1,
         )
         .unwrap();
+        topic.add_partitions(partitions_count).unwrap();
 
         topic.persist().await.unwrap();
 
@@ -57,22 +58,22 @@ async fn should_load_existing_topic_from_disk() {
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
         let name = format!("test-{}", topic_id);
-        let topic = Topic::create(
+        let mut topic = Topic::create(
             stream_id,
             topic_id,
             &name,
-            partitions_count,
             setup.config.clone(),
             setup.storage.clone(),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU32::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU32::new(0)),
             None,
             CompressionAlgorithm::default(),
             None,
             1,
         )
         .unwrap();
+        topic.add_partitions(partitions_count).unwrap();
         topic.persist().await.unwrap();
         assert_persisted_topic(
             &topic.path,
@@ -84,9 +85,9 @@ async fn should_load_existing_topic_from_disk() {
         let mut loaded_topic = Topic::empty(
             stream_id,
             topic_id,
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU32::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU32::new(0)),
             setup.config.clone(),
             setup.storage.clone(),
         );
@@ -113,22 +114,22 @@ async fn should_delete_existing_topic_from_disk() {
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
         let name = format!("test-{}", topic_id);
-        let topic = Topic::create(
+        let mut topic = Topic::create(
             stream_id,
             topic_id,
             &name,
-            partitions_count,
             setup.config.clone(),
             setup.storage.clone(),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU32::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU32::new(0)),
             None,
             CompressionAlgorithm::default(),
             None,
             1,
         )
         .unwrap();
+        topic.add_partitions(partitions_count).unwrap();
         topic.persist().await.unwrap();
         assert_persisted_topic(
             &topic.path,
@@ -152,22 +153,22 @@ async fn should_purge_existing_topic_on_disk() {
     let topic_ids = get_topic_ids();
     for topic_id in topic_ids {
         let name = format!("test-{}", topic_id);
-        let topic = Topic::create(
+        let mut topic = Topic::create(
             stream_id,
             topic_id,
             &name,
-            partitions_count,
             setup.config.clone(),
             setup.storage.clone(),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU64::new(0)),
-            Arc::new(AtomicU32::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU64::new(0)),
+            Rc::new(AtomicU32::new(0)),
             None,
             CompressionAlgorithm::default(),
             None,
             1,
         )
         .unwrap();
+        topic.add_partitions(partitions_count).unwrap();
         topic.persist().await.unwrap();
         assert_persisted_topic(
             &topic.path,

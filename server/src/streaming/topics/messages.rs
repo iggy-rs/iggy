@@ -264,7 +264,8 @@ mod tests {
         let partitioning = Partitioning::partition_id(partition_id);
         let partitions_count = 3;
         let messages_count: u32 = 1000;
-        let mut topic = init_topic(partitions_count);
+        let mut topic = init_topic();
+        topic.add_partitions(partitions_count).unwrap();
 
         for entity_id in 1..=messages_count {
             let messages = vec![Message::new(Some(entity_id as u128), Bytes::new(), None)];
@@ -291,7 +292,8 @@ mod tests {
     async fn given_messages_key_key_messages_should_be_appended_to_the_calculated_partitions() {
         let partitions_count = 3;
         let messages_count = 1000;
-        let mut topic = init_topic(partitions_count);
+        let mut topic = init_topic();
+        topic.add_partitions(partitions_count).unwrap();
 
         for entity_id in 1..=messages_count {
             let partitioning = Partitioning::messages_key_u32(entity_id);
@@ -320,7 +322,8 @@ mod tests {
     ) {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let mut topic = init_topic();
+        topic.add_partitions(partitions_count).unwrap();
 
         let mut expected_partition_id = 0;
         for _ in 1..=messages_count {
@@ -338,7 +341,8 @@ mod tests {
     fn given_multiple_partitions_calculate_partition_id_by_hash_should_return_next_partition_id() {
         let partitions_count = 3;
         let messages_count = 1000;
-        let topic = init_topic(partitions_count);
+        let mut topic = init_topic();
+        topic.add_partitions(partitions_count).unwrap();
 
         for entity_id in 1..=messages_count {
             let key = Partitioning::messages_key_u32(entity_id);
@@ -353,7 +357,7 @@ mod tests {
         }
     }
 
-    fn init_topic(partitions_count: u32) -> Topic {
+    fn init_topic() -> Topic {
         let storage = Rc::new(get_test_system_storage());
         let stream_id = 1;
         let id = 2;
@@ -368,7 +372,6 @@ mod tests {
             stream_id,
             id,
             name,
-            partitions_count,
             config,
             storage,
             size_of_parent_stream,
@@ -378,8 +381,6 @@ mod tests {
             compression_algorithm,
             None,
             1,
-        )
-        .unwrap()
-        .0
+        ).unwrap()
     }
 }

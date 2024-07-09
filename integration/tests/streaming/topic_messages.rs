@@ -10,6 +10,7 @@ use server::streaming::polling_consumer::PollingConsumer;
 use server::streaming::topics::topic::Topic;
 use server::streaming::utils::hash;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::str::from_utf8;
 use std::sync::atomic::{AtomicU32, AtomicU64};
 use std::sync::Arc;
@@ -95,7 +96,6 @@ async fn assert_polling_messages(cache: CacheConfig, expect_enabled_cache: bool)
 
     assert_eq!(polled_messages.messages.len(), messages_count as usize);
     let partition = topic.get_partition(partition_id).unwrap();
-    let partition = partition.read().await;
     assert_eq!(partition.cache.is_some(), expect_enabled_cache);
     if expect_enabled_cache {
         assert!(partition.cache.as_ref().unwrap().current_size() > 0);
@@ -220,22 +220,22 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
     setup.create_topics_directory(stream_id).await;
     let id = 2;
     let name = "test";
-    let topic = Topic::create(
+    let mut topic = Topic::create(
         stream_id,
         id,
         name,
-        partitions_count,
         setup.config.clone(),
         setup.storage.clone(),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU64::new(0)),
-        Arc::new(AtomicU32::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU64::new(0)),
+        Rc::new(AtomicU32::new(0)),
         None,
         Default::default(),
         None,
         1,
     )
     .unwrap();
+    topic.add_partitions(partitions_count).unwrap();
     topic.persist().await.unwrap();
     topic
 }

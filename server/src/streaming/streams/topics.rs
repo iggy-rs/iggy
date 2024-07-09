@@ -53,11 +53,10 @@ impl Stream {
         }
 
         // TODO: check if max_topic_size is not lower than system.segment.size
-        let (topic, partition_ids) = Topic::create(
+        let mut topic = Topic::create(
             self.stream_id,
             id,
             &name,
-            partitions_count,
             self.config.clone(),
             self.storage.clone(),
             self.size_bytes.clone(),
@@ -68,6 +67,7 @@ impl Stream {
             max_topic_size,
             replication_factor,
         )?;
+        let partition_ids = topic.add_partitions(partitions_count)?;
         if should_persist {
             topic.persist().await?;
         }

@@ -85,7 +85,6 @@ impl Topic {
             stream_id,
             topic_id,
             "",
-            0,
             config,
             storage,
             size_of_parent_stream,
@@ -97,7 +96,6 @@ impl Topic {
             1,
         )
         .unwrap()
-        .0
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -105,7 +103,6 @@ impl Topic {
         stream_id: u32,
         topic_id: u32,
         name: &str,
-        partitions_count: u32,
         config: Arc<SystemConfig>,
         storage: Rc<SystemStorage>,
         size_of_parent_stream: Rc<AtomicU64>,
@@ -115,10 +112,10 @@ impl Topic {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: Option<IggyByteSize>,
         replication_factor: u8,
-    ) -> Result<(Topic, Vec<u32>), IggyError> {
+    ) -> Result<Topic, IggyError> {
         let path = config.get_topic_path(stream_id, topic_id);
         let partitions_path = config.get_partitions_path(stream_id, topic_id);
-        let mut topic = Topic {
+        let topic = Topic {
             stream_id,
             topic_id,
             name: name.to_string(),
@@ -152,8 +149,7 @@ impl Topic {
             created_at: IggyTimestamp::now().to_micros(),
         };
 
-        let partition_ids = topic.add_partitions(partitions_count)?;
-        Ok((topic, partition_ids))
+        Ok(topic)
     }
 
     pub fn get_size(&self) -> IggyByteSize {
@@ -221,11 +217,10 @@ mod tests {
         let messages_count_of_parent_stream = Rc::new(AtomicU64::new(0));
         let segments_count_of_parent_stream = Rc::new(AtomicU32::new(0));
 
-        let topic = Topic::create(
+        let mut topic = Topic::create(
             stream_id,
             topic_id,
             name,
-            partitions_count,
             config,
             storage,
             messages_count_of_parent_stream,
@@ -236,8 +231,8 @@ mod tests {
             Some(max_topic_size),
             replication_factor,
         )
-        .unwrap()
-        .0;
+        .unwrap();
+        topic.add_partitions(partitions_count).unwrap();
 
         assert_eq!(topic.stream_id, stream_id);
         assert_eq!(topic.topic_id, topic_id);

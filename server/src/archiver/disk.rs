@@ -29,13 +29,22 @@ impl Archiver for DiskArchiver {
     }
 
     async fn is_archived(&self, file: &str) -> Result<bool, ServerError> {
-        // TODO: Implement checking if file is archived on disk
-        Ok(false)
+        let path = Path::new(&self.config.path).join(file);
+        Ok(path.exists())
     }
 
     async fn archive(&self, files: &[&str]) -> Result<(), ServerError> {
-        // TODO: Implement archiving file on disk
-        info!("Archiving files on disk");
+        info!("Archiving files on disk: {:?}", files);
+        for file in files {
+            info!("Archiving file: {file}");
+            let source = Path::new(file);
+            let destination = Path::new(&self.config.path).join(source);
+            let destination_path = destination.to_str().unwrap_or_default().to_owned();
+            fs::create_dir_all(destination.parent().unwrap()).await?;
+            fs::copy(source, destination).await?;
+            info!("Archived file: {file} at: {destination_path}");
+        }
+
         Ok(())
     }
 }

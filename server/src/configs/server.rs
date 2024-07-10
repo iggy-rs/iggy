@@ -24,7 +24,7 @@ pub struct ServerConfig {
 }
 
 #[serde_as]
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Default, Deserialize, Serialize, Clone)]
 pub struct DataMaintenanceConfig {
     pub archiver: ArchiverConfig,
     pub messages: MessagesMaintenanceConfig,

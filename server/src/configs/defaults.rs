@@ -50,16 +50,6 @@ impl Default for ArchiverConfig {
     }
 }
 
-impl Default for DataMaintenanceConfig {
-    fn default() -> DataMaintenanceConfig {
-        DataMaintenanceConfig {
-            archiver: ArchiverConfig::default(),
-            messages: MessagesMaintenanceConfig::default(),
-            state: StateMaintenanceConfig::default(),
-        }
-    }
-}
-
 impl Default for MessagesMaintenanceConfig {
     fn default() -> MessagesMaintenanceConfig {
         MessagesMaintenanceConfig {

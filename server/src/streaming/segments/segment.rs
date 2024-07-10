@@ -124,6 +124,10 @@ impl Segment {
     }
 
     pub async fn is_expired(&self, now: IggyTimestamp) -> bool {
+        if !self.is_closed {
+            return false;
+        }
+
         match self.message_expiry {
             IggyExpiry::NeverExpire => false,
             IggyExpiry::ServerDefault => false,

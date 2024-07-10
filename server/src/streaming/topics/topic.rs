@@ -148,10 +148,7 @@ impl Topic {
     }
 
     pub fn is_unlimited(&self) -> bool {
-        match self.max_topic_size {
-            MaxTopicSize::Unlimited => true,
-            _ => false,
-        }
+        matches!(self.max_topic_size, MaxTopicSize::Unlimited)
     }
 
     pub fn get_size(&self) -> IggyByteSize {

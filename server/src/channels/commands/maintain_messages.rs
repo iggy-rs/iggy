@@ -11,7 +11,7 @@ use iggy::utils::duration::IggyDuration;
 use iggy::utils::timestamp::IggyTimestamp;
 use std::sync::Arc;
 use tokio::time;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 pub struct MessagesMaintainer {
     cleaner_enabled: bool,
@@ -95,7 +95,7 @@ impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
                 .await;
                 if expired_segments.is_err() {
                     error!(
-                        "Failed to delete expired segments for stream ID: {}, topic ID: {}",
+                        "Failed to get expired segments for stream ID: {}, topic ID: {}",
                         topic.stream_id, topic.topic_id
                     );
                     continue;
@@ -109,7 +109,7 @@ impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
                 .await;
                 if oldest_segments.is_err() {
                     error!(
-                        "Failed to delete oldest segments for stream ID: {}, topic ID: {}",
+                        "Failed to get oldest segments for stream ID: {}, topic ID: {}",
                         topic.stream_id, topic.topic_id
                     );
                     continue;
@@ -125,7 +125,7 @@ impl ServerCommand<MaintainMessagesCommand> for MaintainMessagesExecutor {
                 };
 
                 if deleted_segments.segments_count == 0 {
-                    debug!(
+                    info!(
                         "No segments were deleted for stream ID: {}, topic ID: {}",
                         topic.stream_id, topic.topic_id
                     );
@@ -185,11 +185,19 @@ async fn handle_expired_segments(
 ) -> Result<HandledSegments, IggyError> {
     let expired_segments = get_expired_segments(topic, IggyTimestamp::now()).await;
     if expired_segments.is_empty() {
+        info!(
+            "No expired segments found for stream ID: {}, topic ID: {}",
+            topic.stream_id, topic.topic_id
+        );
         return Ok(HandledSegments::none());
     }
 
     if archive {
         if let Some(archiver) = archiver {
+            info!(
+                "Archiving expired segments for stream ID: {}, topic ID: {}",
+                topic.stream_id, topic.topic_id
+            );
             archive_segments(topic, &expired_segments, archiver.clone()).await?;
         } else {
             error!(
@@ -201,8 +209,16 @@ async fn handle_expired_segments(
     }
 
     if clean {
+        info!(
+            "Deleting expired segments for stream ID: {}, topic ID: {}",
+            topic.stream_id, topic.topic_id
+        );
         delete_segments(topic, &expired_segments).await
     } else {
+        info!(
+            "Deleting expired segments is disabled for stream ID: {}, topic ID: {}",
+            topic.stream_id, topic.topic_id
+        );
         Ok(HandledSegments::none())
     }
 }
@@ -212,7 +228,7 @@ async fn get_expired_segments(topic: &Topic, now: IggyTimestamp) -> Vec<Segments
         .get_expired_segments_start_offsets_per_partition(now)
         .await;
     if expired_segments.is_empty() {
-        debug!(
+        info!(
             "No expired segments found for stream ID: {}, topic ID: {}",
             topic.stream_id, topic.topic_id
         );
@@ -220,7 +236,7 @@ async fn get_expired_segments(topic: &Topic, now: IggyTimestamp) -> Vec<Segments
     }
 
     info!(
-        "Found {} expired segments to delete for stream ID: {}, topic ID: {}",
+        "Found {} expired segments for stream ID: {}, topic ID: {}",
         expired_segments.len(),
         topic.stream_id,
         topic.topic_id
@@ -246,29 +262,34 @@ async fn handle_oldest_segments(
             let mut start_offsets = Vec::new();
             let partition = partition.read().await;
             for segment in partition.get_segments() {
+                if !segment.is_closed {
+                    continue;
+                }
+
                 let is_archived = archiver.is_archived(&segment.index_path).await;
                 if is_archived.is_err() {
                     error!(
-                        "Failed to check if segment with start offset: {} is archived for stream ID: {}, topic ID: {}. Error: {}",
-                        segment.start_offset, topic.stream_id, topic.topic_id, is_archived.err().unwrap()
+                        "Failed to check if segment with start offset: {} is archived for stream ID: {}, topic ID: {}, partition ID: {}. Error: {}",
+                        segment.start_offset, topic.stream_id, topic.topic_id, partition.partition_id, is_archived.err().unwrap()
                     );
                     continue;
                 }
 
                 if !is_archived.unwrap() {
-                    debug!(
-                        "Segment with start offset: {} is not archived for stream ID: {}, topic ID: {}",
-                        segment.start_offset, topic.stream_id, topic.topic_id
+                    info!(
+                        "Segment with start offset: {} is not archived for stream ID: {}, topic ID: {}, partition ID: {}",
+                        segment.start_offset, topic.stream_id, topic.topic_id, partition.partition_id
                     );
                     start_offsets.push(segment.start_offset);
                 }
             }
             if !start_offsets.is_empty() {
-                debug!(
-                    "Found {} segments to archive for stream ID: {}, topic ID: {}",
+                info!(
+                    "Found {} segments to archive for stream ID: {}, topic ID: {}, partition ID: {}",
                     start_offsets.len(),
                     topic.stream_id,
-                    topic.topic_id
+                    topic.topic_id,
+                    partition.partition_id
                 );
                 segments_to_archive.push(SegmentsToHandle {
                     partition_id: partition.partition_id,
@@ -277,11 +298,17 @@ async fn handle_oldest_segments(
             }
         }
 
+        info!(
+            "Archiving {} oldest segments for stream ID: {}, topic ID: {}...",
+            segments_to_archive.len(),
+            topic.stream_id,
+            topic.topic_id,
+        );
         archive_segments(topic, &segments_to_archive, archiver.clone()).await?;
     }
 
     if topic.is_unlimited() {
-        debug!(
+        info!(
             "Topic is unlimited, oldest segments will not be deleted for stream ID: {}, topic ID: {}",
             topic.stream_id, topic.topic_id
         );
@@ -289,7 +316,7 @@ async fn handle_oldest_segments(
     }
 
     if !delete_oldest_segments {
-        debug!(
+        info!(
             "Delete oldest segments is disabled, oldest segments will not be deleted for stream ID: {}, topic ID: {}",
             topic.stream_id, topic.topic_id
         );
@@ -297,7 +324,7 @@ async fn handle_oldest_segments(
     }
 
     if !topic.is_almost_full() {
-        debug!(
+        info!(
             "Topic is not almost full, oldest segments will not be deleted for stream ID: {}, topic ID: {}",
             topic.stream_id, topic.topic_id
         );
@@ -313,7 +340,7 @@ async fn handle_oldest_segments(
 }
 
 async fn get_oldest_segments(topic: &Topic) -> Vec<SegmentsToHandle> {
-    let mut segments_to_delete = Vec::new();
+    let mut oldest_segments = Vec::new();
     for partition in topic.partitions.values() {
         let partition = partition.read().await;
         if let Some(segment) = partition.get_segments().first() {
@@ -321,28 +348,32 @@ async fn get_oldest_segments(topic: &Topic) -> Vec<SegmentsToHandle> {
                 continue;
             }
 
-            segments_to_delete.push(SegmentsToHandle {
+            oldest_segments.push(SegmentsToHandle {
                 partition_id: partition.partition_id,
                 start_offsets: vec![segment.start_offset],
             });
         }
     }
 
-    if segments_to_delete.is_empty() {
-        return segments_to_delete;
+    if oldest_segments.is_empty() {
+        info!(
+            "No oldest segments found for stream ID: {}, topic ID: {}",
+            topic.stream_id, topic.topic_id
+        );
+        return oldest_segments;
     }
 
     info!(
-        "Found {} start segments to delete for stream ID: {}, topic ID: {}.",
-        segments_to_delete.len(),
+        "Found {} oldest segments for stream ID: {}, topic ID: {}.",
+        oldest_segments.len(),
         topic.stream_id,
         topic.topic_id
     );
 
-    segments_to_delete
+    oldest_segments
 }
 
-#[derive(Debug)]
+#[derive()]
 struct SegmentsToHandle {
     partition_id: u32,
     start_offsets: Vec<u64>,
@@ -388,8 +419,8 @@ async fn archive_segments(
                     let segment = partition.get_segment(*start_offset);
                     if segment.is_none() {
                         error!(
-                            "Segment with start offset: {} not found for stream ID: {}, topic ID: {}",
-                            start_offset, topic.stream_id, topic.topic_id
+                            "Segment with start offset: {} not found for stream ID: {}, topic ID: {}, partition ID: {}",
+                            start_offset, topic.stream_id, topic.topic_id, partition.partition_id
                         );
                         continue;
                     }
@@ -402,8 +433,8 @@ async fn archive_segments(
                     ];
                     if let Err(error) = archiver.archive(&files).await {
                         error!(
-                            "Failed to archive segment with start offset: {} for stream ID: {}, topic ID: {}. Error: {}",
-                            start_offset, topic.stream_id, topic.topic_id, error
+                            "Failed to archive segment with start offset: {} for stream ID: {}, topic ID: {}, partition ID: {}. Error: {}",
+                            start_offset, topic.stream_id, topic.topic_id, partition.partition_id, error
                         );
                         continue;
                     }
@@ -412,7 +443,7 @@ async fn archive_segments(
             }
             Err(error) => {
                 error!(
-                    "Partition with ID: {} not found for stream ID: {}, topic ID: {}. Error: {}",
+                    "Partition with ID: {} was not found for stream ID: {}, topic ID: {}. Error: {}",
                     segment_to_archive.partition_id, topic.stream_id, topic.topic_id, error
                 );
                 continue;
@@ -428,7 +459,7 @@ async fn delete_segments(
     segments_to_delete: &[SegmentsToHandle],
 ) -> Result<HandledSegments, IggyError> {
     info!(
-        "Found {} segments to delete for stream ID: {}, topic ID: {}, deleting...",
+        "Deleting {} segments for stream ID: {}, topic ID: {}...",
         segments_to_delete.len(),
         topic.stream_id,
         topic.topic_id

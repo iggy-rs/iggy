@@ -1,4 +1,4 @@
-use crate::archiver::{ArchivableSegment, Archiver};
+use crate::archiver::Archiver;
 use crate::configs::server::S3ArchiverConfig;
 use crate::server_error::ServerError;
 use async_trait::async_trait;
@@ -21,20 +21,14 @@ impl Archiver for S3Archiver {
         Ok(())
     }
 
-    async fn is_archived(
-        &self,
-        stream_id: u32,
-        topic_id: u32,
-        partition_id: u32,
-        segment_start_offset: u64,
-    ) -> Result<bool, ServerError> {
-        // TODO: Implement checking if segment is archived on S3
+    async fn is_archived(&self, file: &str) -> Result<bool, ServerError> {
+        // TODO: Implement checking if file is archived on S3
         Ok(false)
     }
 
-    async fn archive(&self, segment: ArchivableSegment) -> Result<(), ServerError> {
-        // TODO: Implement archiving segment on S3
-        info!("Archiving segment on S3: {segment}");
+    async fn archive(&self, files: &[&str]) -> Result<(), ServerError> {
+        // TODO: Implement archiving file on S3
+        info!("Archiving files on S3");
         Ok(())
     }
 }

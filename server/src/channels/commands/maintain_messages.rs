@@ -246,14 +246,7 @@ async fn handle_oldest_segments(
             let mut start_offsets = Vec::new();
             let partition = partition.read().await;
             for segment in partition.get_segments() {
-                let is_archived = archiver
-                    .is_archived(
-                        topic.stream_id,
-                        topic.topic_id,
-                        partition.partition_id,
-                        segment.start_offset,
-                    )
-                    .await;
+                let is_archived = archiver.is_archived(&segment.index_path).await;
                 if is_archived.is_err() {
                     error!(
                         "Failed to check if segment with start offset: {} is archived for stream ID: {}, topic ID: {}. Error: {}",
@@ -401,8 +394,13 @@ async fn archive_segments(
                         continue;
                     }
 
-                    let archivable_segment = segment.unwrap().into();
-                    if let Err(error) = archiver.archive(archivable_segment).await {
+                    let segment = segment.unwrap();
+                    let files = [
+                        segment.index_path.as_ref(),
+                        segment.time_index_path.as_ref(),
+                        segment.log_path.as_ref(),
+                    ];
+                    if let Err(error) = archiver.archive(&files).await {
                         error!(
                             "Failed to archive segment with start offset: {} for stream ID: {}, topic ID: {}. Error: {}",
                             start_offset, topic.stream_id, topic.topic_id, error

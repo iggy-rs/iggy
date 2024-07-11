@@ -42,6 +42,7 @@ async fn should_apply_single_entry() {
     assert_eq!(entry.term, 0);
     assert_eq!(entry.version, setup.version());
     assert_eq!(entry.flags, 0);
+    assert!(entry.checksum > 0);
     assert!(entry.timestamp.as_micros() > 0);
     assert_eq!(entry.user_id, user_id);
     assert_eq!(entry.command, command_clone);
@@ -101,6 +102,7 @@ async fn should_apply_multiple_entries() {
     assert_eq!(create_user_entry.term, 0);
     assert_eq!(create_user_entry.version, setup.version());
     assert_eq!(create_user_entry.flags, 0);
+    assert!(create_user_entry.checksum > 0);
     assert!(create_user_entry.timestamp.as_micros() > 0);
     assert_eq!(create_user_entry.user_id, 1);
     assert!(create_user_entry.context.is_empty());
@@ -111,6 +113,7 @@ async fn should_apply_multiple_entries() {
     assert_eq!(create_stream_entry.term, 0);
     assert_eq!(create_stream_entry.version, setup.version());
     assert_eq!(create_stream_entry.flags, 0);
+    assert!(create_stream_entry.checksum > 0);
     assert!(create_stream_entry.timestamp.as_micros() > 0);
     assert!(create_stream_entry.timestamp.as_micros() > create_user_entry.timestamp.as_micros());
     assert_eq!(create_stream_entry.user_id, 2);

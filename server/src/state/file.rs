@@ -117,6 +117,7 @@ impl State for FileState {
             let flags = reader.read_u64_le().await?;
             let timestamp = IggyTimestamp::from(reader.read_u64_le().await?);
             let user_id = reader.read_u32_le().await?;
+            let checksum = reader.read_u32_le().await?;
             let context_length = reader.read_u32_le().await? as usize;
             let mut context = BytesMut::with_capacity(context_length);
             context.put_bytes(0, context_length);
@@ -143,6 +144,14 @@ impl State for FileState {
                 command,
             );
             debug!("Read state entry: {entry}");
+            if entry.checksum != checksum {
+                return Err(IggyError::InvalidStateEntryChecksum(
+                    entry.checksum,
+                    checksum,
+                    entry.index,
+                ));
+            }
+
             entries.push(entry);
             total_size += 8
                 + 8
@@ -150,6 +159,7 @@ impl State for FileState {
                 + 4
                 + 8
                 + 8
+                + 4
                 + 4
                 + 4
                 + context_length as u64
@@ -167,22 +177,21 @@ impl State for FileState {
 
     async fn apply(&self, user_id: u32, command: EntryCommand) -> Result<(), IggyError> {
         debug!("Applying state entry with command: {command}, user ID: {user_id}");
-        let entry = StateEntry {
-            index: if self.entries_count.load(Ordering::SeqCst) == 0 {
+        let entry = StateEntry::new(
+            if self.entries_count.load(Ordering::SeqCst) == 0 {
                 0
             } else {
                 self.current_index.fetch_add(1, Ordering::SeqCst) + 1
             },
-            term: self.term.load(Ordering::SeqCst),
-            leader_id: self.current_leader.load(Ordering::SeqCst),
-            version: self.version,
-            flags: 0,
-            timestamp: IggyTimestamp::now(),
+            self.term.load(Ordering::SeqCst),
+            self.current_leader.load(Ordering::SeqCst),
+            self.version,
+            0,
+            IggyTimestamp::now(),
             user_id,
+            Bytes::new(),
             command,
-            context: Bytes::new(),
-        };
-
+        );
         self.entries_count.fetch_add(1, Ordering::SeqCst);
         self.persister.append(&self.path, &entry.to_bytes()).await?;
         debug!("Applied state entry: {entry}");

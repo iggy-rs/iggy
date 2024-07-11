@@ -1,4 +1,4 @@
-mod archive_state;
+pub mod archive_state;
 pub mod clean_personal_access_tokens;
 pub mod maintain_messages;
 pub mod print_sysinfo;

@@ -13,7 +13,7 @@
 @root_password = iggy
 @user1_username = user1
 @user1_password = secret
-@access_token = secret
+@access_token = eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI2YmIwYmU3YS01Mjc4LTRhNzItYmEyNC1iNjlmYjg0NzBhOWIiLCJpc3MiOiJpZ2d5LnJzIiwiYXVkIjoiaWdneS5ycyIsInN1YiI6MSwiaWF0IjoxNzIwNzI0NjQ1LCJleHAiOjE3MjA3MjgyNDUsIm5iZiI6MTcyMDcyNDY0NX0.37dSKODDzyJn7x-qGbA7PFKTjohNnglUUTex9aA83UM
 @root_id = 1
 @user1_id = 2
 @pat_name = dev_token
@@ -227,6 +227,7 @@ Content-Type: application/json
   "name": "topic1",
   "compression_algorithm": "none",
   "partitions_count": 3,
+  "max_topic_size": 0,
   "message_expiry": 0
 }
 
@@ -238,7 +239,8 @@ Content-Type: application/json
 {
   "name": "topic1",
   "compression_algorithm": "none",
-  "message_expiry": 1000
+  "max_topic_size": 0,
+  "message_expiry": 0
 }
 
 ###

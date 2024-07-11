@@ -1,6 +1,6 @@
 [data_maintenance.archiver]
 # Enables or disables the archiver process.
-enabled = true
+enabled = false
 
 # Kind of archiver to use. Available options: "disk", "s3".
 kind = "disk"
@@ -20,18 +20,18 @@ region = "eu-west-1"
 bucket = "iggy"
 
 [data_maintenance.messages]
-# Enables or disables the archiver process.
-archiver_enabled = true
+# Enables or disables the archiver process for segments containing messages.
+archiver_enabled = false
 
 # Enables or disables the expired message cleaner process.
-cleaner_enabled = true
+cleaner_enabled = false
 
 # Interval for running the message archiver and cleaner.
 interval = "1 m"
 
 [data_maintenance.state]
-# Enables or disables the archiver process.
-archiver_enabled = true
+# Enables or disables the archiver process for state log.
+archiver_enabled = false
 
 # Sets whether the state archiver should overwrite existing log archive or always create a new one.
 overwrite = true

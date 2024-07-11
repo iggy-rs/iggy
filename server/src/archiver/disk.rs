@@ -4,7 +4,7 @@ use crate::server_error::ServerError;
 use async_trait::async_trait;
 use std::path::Path;
 use tokio::fs;
-use tracing::info;
+use tracing::{debug, info};
 
 #[derive(Debug)]
 pub struct DiskArchiver {
@@ -24,25 +24,32 @@ impl Archiver for DiskArchiver {
             info!("Creating disk archiver directory: {}", self.config.path);
             fs::create_dir_all(&self.config.path).await?;
         }
-
         Ok(())
     }
 
     async fn is_archived(&self, file: &str) -> Result<bool, ServerError> {
+        debug!("Checking if file: {file} is archived on disk.");
         let path = Path::new(&self.config.path).join(file);
-        Ok(path.exists())
+        let is_archived = path.exists();
+        debug!("File: {file} is archived: {is_archived}");
+        Ok(is_archived)
     }
 
-    async fn archive(&self, files: &[&str]) -> Result<(), ServerError> {
-        info!("Archiving files on disk: {:?}", files);
+    async fn archive(
+        &self,
+        files: &[&str],
+        base_directory: Option<String>,
+    ) -> Result<(), ServerError> {
+        debug!("Archiving files on disk: {:?}", files);
         for file in files {
-            info!("Archiving file: {file}");
+            debug!("Archiving file: {file}");
             let source = Path::new(file);
-            let destination = Path::new(&self.config.path).join(source);
+            let base_directory = base_directory.as_deref().unwrap_or_default();
+            let destination = Path::new(&self.config.path).join(base_directory).join(file);
             let destination_path = destination.to_str().unwrap_or_default().to_owned();
             fs::create_dir_all(destination.parent().unwrap()).await?;
             fs::copy(source, destination).await?;
-            info!("Archived file: {file} at: {destination_path}");
+            debug!("Archived file: {file} at: {destination_path}");
         }
 
         Ok(())

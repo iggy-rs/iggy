@@ -2,6 +2,7 @@ use anyhow::Result;
 use clap::Parser;
 use figlet_rs::FIGfont;
 use server::args::Args;
+use server::channels::commands::archive_state::ArchiveStateExecutor;
 use server::channels::commands::clean_personal_access_tokens::CleanPersonalAccessTokensExecutor;
 use server::channels::commands::maintain_messages::MaintainMessagesExecutor;
 use server::channels::commands::print_sysinfo::SysInfoPrintExecutor;
@@ -46,17 +47,18 @@ async fn main() -> Result<(), ServerError> {
         config.personal_access_token.clone(),
     ));
 
-    let _command_handler = ServerCommandHandler::new(system.clone(), &config)
-        .install_handler(SaveMessagesExecutor)
-        .install_handler(MaintainMessagesExecutor)
-        .install_handler(CleanPersonalAccessTokensExecutor)
-        .install_handler(SysInfoPrintExecutor);
-
     // Workaround to ensure that the statistics are initialized before the server
     // loads streams and starts accepting connections. This is necessary to
     // have the correct statistics when the server starts.
     system.write().get_stats_bypass_auth().await?;
     system.write().init().await?;
+
+    let _command_handler = ServerCommandHandler::new(system.clone(), &config)
+        .install_handler(SaveMessagesExecutor)
+        .install_handler(MaintainMessagesExecutor)
+        .install_handler(ArchiveStateExecutor)
+        .install_handler(CleanPersonalAccessTokensExecutor)
+        .install_handler(SysInfoPrintExecutor);
 
     #[cfg(unix)]
     let (mut ctrl_c, mut sigterm) = {

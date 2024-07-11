@@ -6,12 +6,12 @@ use tracing::info;
 
 #[derive(Debug)]
 pub struct S3Archiver {
-    config: S3ArchiverConfig,
+    _config: S3ArchiverConfig,
 }
 
 impl S3Archiver {
     pub fn new(config: S3ArchiverConfig) -> Self {
-        S3Archiver { config }
+        S3Archiver { _config: config }
     }
 }
 
@@ -21,14 +21,18 @@ impl Archiver for S3Archiver {
         Ok(())
     }
 
-    async fn is_archived(&self, file: &str) -> Result<bool, ServerError> {
+    async fn is_archived(&self, _file: &str) -> Result<bool, ServerError> {
         // TODO: Implement checking if file is archived on S3
         Ok(false)
     }
 
-    async fn archive(&self, files: &[&str]) -> Result<(), ServerError> {
+    async fn archive(
+        &self,
+        _files: &[&str],
+        _base_directory: Option<String>,
+    ) -> Result<(), ServerError> {
         // TODO: Implement archiving file on S3
-        info!("Archiving files on S3");
+        info!("Archiving files on S3...");
         Ok(())
     }
 }

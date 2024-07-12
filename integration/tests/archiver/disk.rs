@@ -1,4 +1,4 @@
-use crate::archiver::ArchiverSetup;
+use crate::archiver::DiskArchiverSetup;
 use server::archiver::Archiver;
 use server::streaming::utils::file;
 use std::path::Path;
@@ -6,7 +6,7 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 #[tokio::test]
 async fn should_init_base_archiver_directory() {
-    let setup = ArchiverSetup::init().await;
+    let setup = DiskArchiverSetup::init().await;
     let archiver = setup.archiver();
     let result = archiver.init().await;
     assert!(result.is_ok());
@@ -16,7 +16,7 @@ async fn should_init_base_archiver_directory() {
 
 #[tokio::test]
 async fn should_archive_file_on_disk_by_making_a_copy_of_original_file() {
-    let setup = ArchiverSetup::init().await;
+    let setup = DiskArchiverSetup::init().await;
     let archiver = setup.archiver();
     let content = "hello world";
     let file_to_archive_path = format!("{}/file_to_archive", setup.base_path);
@@ -31,7 +31,7 @@ async fn should_archive_file_on_disk_by_making_a_copy_of_original_file() {
 
 #[tokio::test]
 async fn should_archive_file_on_disk_within_additional_base_directory() {
-    let setup = ArchiverSetup::init().await;
+    let setup = DiskArchiverSetup::init().await;
     let archiver = setup.archiver();
     let base_directory = "base";
     let content = "hello world";
@@ -52,7 +52,7 @@ async fn should_archive_file_on_disk_within_additional_base_directory() {
 
 #[tokio::test]
 async fn should_return_true_when_file_is_archived() {
-    let setup = ArchiverSetup::init().await;
+    let setup = DiskArchiverSetup::init().await;
     let archiver = setup.archiver();
     let content = "hello world";
     let file_to_archive_path = format!("{}/file_to_archive", setup.base_path);
@@ -67,7 +67,7 @@ async fn should_return_true_when_file_is_archived() {
 
 #[tokio::test]
 async fn should_return_false_when_file_is_not_archived() {
-    let setup = ArchiverSetup::init().await;
+    let setup = DiskArchiverSetup::init().await;
     let archiver = setup.archiver();
     let content = "hello world";
     let file_to_archive_path = format!("{}/file_to_archive", setup.base_path);

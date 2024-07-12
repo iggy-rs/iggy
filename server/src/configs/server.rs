@@ -65,9 +65,10 @@ pub struct DiskArchiverConfig {
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct S3ArchiverConfig {
     pub key_id: String,
-    pub access_key: String,
-    pub region: String,
+    pub key_secret: String,
     pub bucket: String,
+    pub endpoint: Option<String>,
+    pub region: Option<String>,
 }
 
 #[serde_as]

@@ -127,12 +127,15 @@ impl System {
                         .clone()
                         .expect("Disk archiver config is missing"),
                 ))),
-                ArchiverKind::S3 => Some(Arc::new(S3Archiver::new(
-                    archiver_config
-                        .s3
-                        .clone()
-                        .expect("S3 archiver config is missing"),
-                ))),
+                ArchiverKind::S3 => Some(Arc::new(
+                    S3Archiver::new(
+                        archiver_config
+                            .s3
+                            .clone()
+                            .expect("S3 archiver config is missing"),
+                    )
+                    .expect("Failed to create S3 archiver"),
+                )),
             }
         } else {
             info!("Archiving is disabled.");

@@ -182,15 +182,23 @@ impl Validatable<ServerError> for ArchiverConfig {
                     ));
                 }
 
-                if s3.access_key.is_empty() {
+                if s3.key_secret.is_empty() {
                     return Err(ServerError::InvalidConfiguration(
-                        "S3 archiver access key cannot be empty.".into(),
+                        "S3 archiver key secret cannot be empty.".into(),
                     ));
                 }
 
-                if s3.region.is_empty() {
+                if s3.endpoint.is_none() && s3.region.is_none() {
                     return Err(ServerError::InvalidConfiguration(
-                        "S3 archiver region cannot be empty.".into(),
+                        "S3 archiver endpoint or region must be set.".into(),
+                    ));
+                }
+
+                if s3.endpoint.as_deref().unwrap_or_default().is_empty()
+                    && s3.region.as_deref().unwrap_or_default().is_empty()
+                {
+                    return Err(ServerError::InvalidConfiguration(
+                        "S3 archiver region or endpoint cannot be empty.".into(),
                     ));
                 }
 

@@ -4,15 +4,16 @@ use tokio::fs::create_dir;
 use uuid::Uuid;
 
 mod disk;
+mod s3;
 
-pub struct ArchiverSetup {
+pub struct DiskArchiverSetup {
     base_path: String,
     archive_path: String,
     archiver: DiskArchiver,
 }
 
-impl ArchiverSetup {
-    pub async fn init() -> ArchiverSetup {
+impl DiskArchiverSetup {
+    pub async fn init() -> DiskArchiverSetup {
         let base_path = format!("test_local_data_{}", Uuid::new_v4().to_u128_le());
         let archive_path = format!("{}/archive", base_path);
         let config = DiskArchiverConfig {
@@ -33,7 +34,7 @@ impl ArchiverSetup {
     }
 }
 
-impl Drop for ArchiverSetup {
+impl Drop for DiskArchiverSetup {
     fn drop(&mut self) {
         std::fs::remove_dir_all(&self.base_path).unwrap();
     }

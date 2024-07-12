@@ -23,3 +23,10 @@ pub mod state;
 pub mod streaming;
 pub mod tcp;
 pub mod versioning;
+
+pub(crate) fn map_toggle_str<'a>(enabled: bool) -> &'a str {
+    match enabled {
+        true => "enabled",
+        false => "disabled",
+    }
+}

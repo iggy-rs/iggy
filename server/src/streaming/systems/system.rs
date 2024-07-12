@@ -20,12 +20,12 @@ use tracing::{info, trace};
 use crate::archiver::disk::DiskArchiver;
 use crate::archiver::s3::S3Archiver;
 use crate::archiver::{Archiver, ArchiverKind};
-use crate::compat;
 use crate::state::file::FileState;
 use crate::state::system::SystemState;
 use crate::state::State;
 use crate::streaming::users::user::User;
 use crate::versioning::SemanticVersion;
+use crate::{compat, map_toggle_str};
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
@@ -114,7 +114,7 @@ impl System {
     ) -> System {
         info!(
             "Server-side encryption is {}.",
-            Self::map_toggle_str(system_config.encryption.enabled)
+            map_toggle_str(system_config.encryption.enabled)
         );
 
         let archiver_config = data_maintenance_config.archiver;
@@ -236,13 +236,6 @@ impl System {
         match session.is_authenticated() {
             true => Ok(()),
             false => Err(IggyError::Unauthenticated),
-        }
-    }
-
-    fn map_toggle_str<'a>(enabled: bool) -> &'a str {
-        match enabled {
-            true => "enabled",
-            false => "disabled",
         }
     }
 

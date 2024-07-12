@@ -1,6 +1,7 @@
 use crate::archiver::Archiver;
 use crate::channels::server_command::ServerCommand;
 use crate::configs::server::MessagesMaintenanceConfig;
+use crate::map_toggle_str;
 use crate::streaming::systems::system::SharedSystem;
 use crate::streaming::topics::topic::Topic;
 use async_trait::async_trait;
@@ -51,8 +52,9 @@ impl MessagesMaintainer {
         let interval = self.interval;
         let sender = self.sender.clone();
         info!(
-            "Message maintainer cleaner enabled: {}, archiver enabled: {}, interval: {interval}",
-            self.cleaner_enabled, self.archiver_enabled
+            "Message maintainer, cleaner is {}, archiver is {}, interval: {interval}",
+            map_toggle_str(self.cleaner_enabled),
+            map_toggle_str(self.archiver_enabled)
         );
         let clean_messages = self.cleaner_enabled;
         let archive_messages = self.archiver_enabled;

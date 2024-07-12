@@ -14,13 +14,13 @@
       }
     },
     "messages": {
-      "archiver_enabled": true,
-      "cleaner_enabled": true,
+      "archiver_enabled": false,
+      "cleaner_enabled": false,
       "interval": "1 m"
     },
     "state": {
-      "archiver_enabled": true,
-      "overwrite": false,
+      "archiver_enabled": false,
+      "overwrite": true,
       "interval": "1 m"
     }
   },

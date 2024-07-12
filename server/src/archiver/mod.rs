@@ -23,7 +23,7 @@ impl FromStr for ArchiverKind {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "disk" => Ok(ArchiverKind::Disk),
-            "s3" => Ok(ArchiverKind::S3),
+            "s3" => Err("S3 archiver is not implemented yet.".to_string()),
             _ => Err(format!("Unknown archiver kind: {}", s)),
         }
     }

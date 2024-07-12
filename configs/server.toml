@@ -2,11 +2,11 @@
 # Enables or disables the archiver process.
 enabled = false
 
-# Kind of archiver to use. Available options: "disk", "s3".
+# Kind of archiver to use. Available options: "disk".
 kind = "disk"
 
 [data_maintenance.archiver.disk]
-# Path for storing archived data.
+# Path for storing the archived data on disk.
 path = "local_data/archive"
 
 [data_maintenance.archiver.s3]
@@ -20,7 +20,7 @@ region = "eu-west-1"
 bucket = "iggy"
 
 [data_maintenance.messages]
-# Enables or disables the archiver process for segments containing messages.
+# Enables or disables the archiver process for closed segments containing messages.
 archiver_enabled = false
 
 # Enables or disables the expired message cleaner process.

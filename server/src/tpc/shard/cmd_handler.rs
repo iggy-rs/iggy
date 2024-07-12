@@ -191,7 +191,7 @@ impl IggyShard {
                     count,
                     auto_commit,
                 } = command;
-                let consumer = PollingConsumer::from_consumer(consumer, client_id, partition_id);
+                //let consumer = PollingConsumer::from_consumer(consumer, client_id, partition_id);
                 let messages = self
                     .poll_messages(
                         client_id,

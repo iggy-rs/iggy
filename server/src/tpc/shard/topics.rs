@@ -63,10 +63,9 @@ impl IggyShard {
                 .create_topic(user_id, stream.stream_id)?;
         }
 
-        let stream = self.get_stream_mut(stream_id)?.borrow_mut();
-        let stream_u32_id = stream.stream_id;
-
+        let mut stream = self.get_stream_mut(stream_id)?;
         let (topic_id, partition_ids) = stream
+            .borrow_mut()
             .create_topic(
                 topic_id,
                 name,
@@ -78,6 +77,7 @@ impl IggyShard {
                 should_persist,
             )
             .await?;
+        let stream_u32_id = stream.stream_id;
 
         for partition_id in partition_ids {
             let shards_count = self.get_available_shards_count();

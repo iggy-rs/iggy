@@ -2,6 +2,7 @@ use crate::binary::sender::Sender;
 use crate::handle_response;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
+use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::tpc::shard::cmd_handler;
 use crate::tpc::shard::shard::IggyShard;
@@ -10,9 +11,10 @@ use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::{Command, CommandExecution, CommandExecutionOrigin};
 use iggy::error::IggyError;
+use iggy::identifier::IdKind;
 use iggy::messages::send_messages::PartitioningKind;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
-use iggy::models::resource_namespace;
+use iggy::models::resource_namespace::{self, IggyResourceNamespace};
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::rc::Rc;
@@ -69,7 +71,7 @@ pub(crate) async fn handle_connection(
             }
         };
 
-        match command {
+        let response = match command {
             Command::SendMessages(cmd) => {
                 // This is really ugly, better solution would be to decouple stream and topic ids
                 // from the `Stream` and `Topic` structs
@@ -80,8 +82,11 @@ pub(crate) async fn handle_connection(
                         .expect("Unable to get numeric stream id, despite it being numeric.")
                 } else {
                     // lookup in the streams hashmap
-                    let stringify_stream_id = cmd.stream_id.get_string_value();
-                    *self
+                    let stringify_stream_id = cmd
+                        .stream_id
+                        .get_string_value()
+                        .expect("Failed to get string value out of stream identifier");
+                    *shard
                         .streams_ids
                         .borrow()
                         .get(&stringify_stream_id)
@@ -93,8 +98,11 @@ pub(crate) async fn handle_connection(
                         .expect("Unable to get numeric topic id, despite it being numeric.")
                 } else {
                     // lookup in the streams hashmap
-                    let stringify_topic_id = cmd.topic_id.get_string_value();
-                    *self
+                    let stringify_topic_id = cmd
+                        .topic_id
+                        .get_string_value()
+                        .expect("Failed to get string value out of topic identifier");
+                    *shard
                         .streams
                         .borrow()
                         .get(&stream_id)
@@ -105,9 +113,8 @@ pub(crate) async fn handle_connection(
                 };
                 let partition_id = match cmd.partitioning.kind {
                     PartitioningKind::Balanced => {
-                        let topic = shard
-                            .streams
-                            .borrow()
+                        let streams = shard.streams.borrow();
+                        let topic = streams
                             .get(&stream_id)
                             .expect("Stream not found")
                             .topics
@@ -115,13 +122,12 @@ pub(crate) async fn handle_connection(
                             .expect("Topic not found");
                         topic.get_next_partition_id()
                     }
-                    PartitioningKind::PartitionId => {
-                        u32::from_le_bytes(partitioning.value[..partitioning.length as usize].try_into()?)
-                    }
+                    PartitioningKind::PartitionId => u32::from_le_bytes(
+                        cmd.partitioning.value[..cmd.partitioning.length as usize].try_into()?,
+                    ),
                     PartitioningKind::MessagesKey => {
-                        let topic = shard
-                            .streams
-                            .borrow()
+                        let streams = shard.streams.borrow();
+                        let topic = streams
                             .get(&stream_id)
                             .expect("Stream not found")
                             .topics
@@ -131,15 +137,66 @@ pub(crate) async fn handle_connection(
                     }
                 };
                 let resource_ns = IggyResourceNamespace::new(stream_id, topic_id, partition_id);
-                let response = self.send_request_to_shard(client_id, resource_ns, command);
-
-                continue;
+                let response = shard
+                    .send_request_to_shard(client_id, resource_ns, Command::SendMessages(cmd))
+                    .await?;
+                Some(response)
             }
-            Command::PollMessages(cmd) => {}
+            Command::PollMessages(cmd) => {
+                let stream_id = if let IdKind::Numeric = cmd.stream_id.kind {
+                    cmd.stream_id
+                        .get_u32_value()
+                        .expect("Unable to get numeric stream id, despite it being numeric.")
+                } else {
+                    // lookup in the streams hashmap
+                    let stringify_stream_id = cmd
+                        .stream_id
+                        .get_string_value()
+                        .expect("Failed to get string value out of stream identifier");
+                    *shard
+                        .streams_ids
+                        .borrow()
+                        .get(&stringify_stream_id)
+                        .expect("Stream not found")
+                };
+                let topic_id = if let IdKind::Numeric = cmd.topic_id.kind {
+                    cmd.topic_id
+                        .get_u32_value()
+                        .expect("Unable to get numeric topic id, despite it being numeric.")
+                } else {
+                    let stringify_topic_id = cmd
+                        .topic_id
+                        .get_string_value()
+                        .expect("Failed to get string value out of topic identifier");
+                    *shard
+                        .streams
+                        .borrow()
+                        .get(&stream_id)
+                        .expect("Stream not found")
+                        .topics_ids
+                        .get(&stringify_topic_id)
+                        .expect("Topic not found")
+                };
+                let consumer =
+                    PollingConsumer::from_consumer(&cmd.consumer, client_id, &cmd.partition_id);
+                let partition_id = match consumer {
+                    PollingConsumer::Consumer(_, partition_id) => partition_id,
+                    PollingConsumer::ConsumerGroup(group_id, member_id) => {
+                        let topic = shard.find_topic(client_id, &cmd.stream_id, &cmd.topic_id).expect("Failed to find topic");
+                        let consumer_group = topic.get_consumer_group_by_id(group_id)?;
+                        consumer_group.calculate_partition_id(member_id).await?
+                    }
+                };
+                let resource_ns = IggyResourceNamespace::new(stream_id, topic_id, partition_id);
+                let response = shard
+                    .send_request_to_shard(client_id, resource_ns, Command::PollMessages(cmd))
+                    .await?;
+                Some(response)
+            }
             _ => None,
-        }
+        };
 
-        /* 
+        /*
         match command.get_command_execution_origin() {
             CommandExecution::Direct => {
                 let message = ShardMessage::Command(command);

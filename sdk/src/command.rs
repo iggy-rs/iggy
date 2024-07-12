@@ -135,7 +135,7 @@ pub const LEAVE_CONSUMER_GROUP: &str = "consumer_group.leave";
 pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 605;
 
 pub enum CommandExecution {
-    Routed(IggyResourceNamespace),
+    Routed,
     Direct,
 }
 

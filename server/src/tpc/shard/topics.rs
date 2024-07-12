@@ -63,9 +63,10 @@ impl IggyShard {
                 .create_topic(user_id, stream.stream_id)?;
         }
 
-        let (topic_id, partition_ids) = self
-            .get_stream_mut(stream_id)?
-            .borrow_mut()
+        let stream = self.get_stream_mut(stream_id)?.borrow_mut();
+        let stream_u32_id = stream.stream_id;
+
+        let (topic_id, partition_ids) = stream
             .create_topic(
                 topic_id,
                 name,
@@ -78,14 +79,12 @@ impl IggyShard {
             )
             .await?;
 
-        let topic_id = Identifier::numeric(topic_id).unwrap();
         for partition_id in partition_ids {
             let shards_count = self.get_available_shards_count();
-            let hash = hash_resource_namespace(stream_id, &topic_id, partition_id);
+            let resource_ns = IggyResourceNamespace::new(stream_u32_id, topic_id, partition_id);
+            let hash = resource_ns.generate_hash();
             let shard_id = hash % shards_count;
             error!("Shard ID: {}", shard_id);
-            let resource_ns =
-                IggyResourceNamespace::new(stream_id.clone(), topic_id.clone(), partition_id);
             let shard_info = ShardInfo {
                 id: shard_id as u16,
             };

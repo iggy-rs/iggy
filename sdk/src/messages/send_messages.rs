@@ -195,15 +195,7 @@ impl Partitioning {
 impl CommandPayload for SendMessages {}
 impl CommandExecutionOrigin for SendMessages {
     fn get_command_execution_origin(&self) -> CommandExecution {
-        let partition_id = u32::from_le_bytes(
-            self.partitioning.value[..self.partitioning.length as usize]
-                .try_into()
-                .unwrap(),
-        );
-
-        let resource_ns =
-            IggyResourceNamespace::new(self.stream_id.clone(), self.topic_id.clone(), partition_id);
-        CommandExecution::Routed(resource_ns)
+        CommandExecution::Direct
     }
 }
 

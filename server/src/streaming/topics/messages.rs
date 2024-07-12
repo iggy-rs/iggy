@@ -113,7 +113,7 @@ impl Topic {
         Ok(())
     }
 
-    fn get_next_partition_id(&self) -> u32 {
+    pub fn get_next_partition_id(&self) -> u32 {
         let mut partition_id = self.current_partition_id.fetch_add(1, Ordering::SeqCst);
         let partitions_count = self.partitions.borrow().len() as u32;
         if partition_id > partitions_count {
@@ -125,7 +125,7 @@ impl Topic {
         partition_id
     }
 
-    fn calculate_partition_id_by_messages_key_hash(&self, messages_key: &[u8]) -> u32 {
+    pub fn calculate_partition_id_by_messages_key_hash(&self, messages_key: &[u8]) -> u32 {
         let messages_key_hash = hash::calculate_32(messages_key);
         let partitions_count = self.get_partitions_count();
         let mut partition_id = messages_key_hash % partitions_count;
@@ -381,6 +381,7 @@ mod tests {
             compression_algorithm,
             None,
             1,
-        ).unwrap()
+        )
+        .unwrap()
     }
 }

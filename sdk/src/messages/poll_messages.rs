@@ -108,10 +108,7 @@ impl Default for PollingStrategy {
 impl CommandPayload for PollMessages {}
 impl CommandExecutionOrigin for PollMessages {
     fn get_command_execution_origin(&self) -> CommandExecution {
-        let partition_id = self.partition_id.unwrap();
-        let resource_ns =
-            IggyResourceNamespace::new(self.stream_id.clone(), self.topic_id.clone(), partition_id);
-        CommandExecution::Routed(resource_ns)
+        CommandExecution::Direct
     }
 }
 

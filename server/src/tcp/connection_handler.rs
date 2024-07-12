@@ -3,12 +3,15 @@ use crate::handle_response;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::session::Session;
+use crate::tpc::shard::cmd_handler;
 use crate::tpc::shard::shard::IggyShard;
 use crate::tpc::shard::shard_frame::{ShardEvent, ShardMessage, ShardResponse};
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::{Command, CommandExecution, CommandExecutionOrigin};
 use iggy::error::IggyError;
+use iggy::messages::send_messages::PartitioningKind;
+use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::models::resource_namespace;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
@@ -66,6 +69,77 @@ pub(crate) async fn handle_connection(
             }
         };
 
+        match command {
+            Command::SendMessages(cmd) => {
+                // This is really ugly, better solution would be to decouple stream and topic ids
+                // from the `Stream` and `Topic` structs
+                // into it's own tables (vectors) and store them on top level of the shard.
+                let stream_id = if let IdKind::Numeric = cmd.stream_id.kind {
+                    cmd.stream_id
+                        .get_u32_value()
+                        .expect("Unable to get numeric stream id, despite it being numeric.")
+                } else {
+                    // lookup in the streams hashmap
+                    let stringify_stream_id = cmd.stream_id.get_string_value();
+                    *self
+                        .streams_ids
+                        .borrow()
+                        .get(&stringify_stream_id)
+                        .expect("Stream not found")
+                };
+                let topic_id = if let IdKind::Numeric = cmd.topic_id.kind {
+                    cmd.topic_id
+                        .get_u32_value()
+                        .expect("Unable to get numeric topic id, despite it being numeric.")
+                } else {
+                    // lookup in the streams hashmap
+                    let stringify_topic_id = cmd.topic_id.get_string_value();
+                    *self
+                        .streams
+                        .borrow()
+                        .get(&stream_id)
+                        .expect("Stream not found")
+                        .topics_ids
+                        .get(&stringify_topic_id)
+                        .expect("Topic not found")
+                };
+                let partition_id = match cmd.partitioning.kind {
+                    PartitioningKind::Balanced => {
+                        let topic = shard
+                            .streams
+                            .borrow()
+                            .get(&stream_id)
+                            .expect("Stream not found")
+                            .topics
+                            .get(&topic_id)
+                            .expect("Topic not found");
+                        topic.get_next_partition_id()
+                    }
+                    PartitioningKind::PartitionId => {
+                        u32::from_le_bytes(partitioning.value[..partitioning.length as usize].try_into()?)
+                    }
+                    PartitioningKind::MessagesKey => {
+                        let topic = shard
+                            .streams
+                            .borrow()
+                            .get(&stream_id)
+                            .expect("Stream not found")
+                            .topics
+                            .get(&topic_id)
+                            .expect("Topic not found");
+                        topic.calculate_partition_id_by_messages_key_hash(&cmd.partitioning.value)
+                    }
+                };
+                let resource_ns = IggyResourceNamespace::new(stream_id, topic_id, partition_id);
+                let response = self.send_request_to_shard(client_id, resource_ns, command);
+
+                continue;
+            }
+            Command::PollMessages(cmd) => {}
+            _ => None,
+        }
+
+        /* 
         match command.get_command_execution_origin() {
             CommandExecution::Direct => {
                 let message = ShardMessage::Command(command);
@@ -75,13 +149,14 @@ pub(crate) async fn handle_connection(
                     .expect("Failed to handle a shard command for direct request execution, it should always return a response.");
                 handle_response!(sender, response);
             }
-            CommandExecution::Routed(resource_ns) => {
+            CommandExecution::Routed() => {
                 let response = shard
                     .send_request_to_shard(client_id, resource_ns, command)
                     .await?;
                 handle_response!(sender, response);
             }
         }
+        */
 
         /*
         debug!("Received a TCP command: {command}, payload size: {length}");

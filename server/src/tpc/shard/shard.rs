@@ -9,7 +9,11 @@ use crate::{
     tpc::connector::{Receiver, ShardConnector, StopReceiver, StopSender},
 };
 use flume::SendError;
-use iggy::{command::Command, models::resource_namespace::IggyResourceNamespace};
+use iggy::{
+    command::{self, Command},
+    identifier::{IdKind, Identifier},
+    models::resource_namespace::IggyResourceNamespace,
+};
 use iggy::{
     error::IggyError,
     utils::crypto::{Aes256GcmEncryptor, Encryptor},

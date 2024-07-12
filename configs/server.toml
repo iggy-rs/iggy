@@ -1,3 +1,44 @@
+[data_maintenance.archiver]
+# Enables or disables the archiver process.
+enabled = false
+
+# Kind of archiver to use. Available options: "disk".
+kind = "disk"
+
+[data_maintenance.archiver.disk]
+# Path for storing the archived data on disk.
+path = "local_data/archive"
+
+[data_maintenance.archiver.s3]
+# Access key ID for the S3 bucket.
+key_id = "123"
+# Secret access key for the S3 bucket
+access_key = "secret"
+# Region of the S3 bucket.
+region = "eu-west-1"
+# Endpoint of the S3 bucket.
+bucket = "iggy"
+
+[data_maintenance.messages]
+# Enables or disables the archiver process for closed segments containing messages.
+archiver_enabled = false
+
+# Enables or disables the expired message cleaner process.
+cleaner_enabled = false
+
+# Interval for running the message archiver and cleaner.
+interval = "1 m"
+
+[data_maintenance.state]
+# Enables or disables the archiver process for state log.
+archiver_enabled = false
+
+# Sets whether the state archiver should overwrite existing log archive or always create a new one.
+overwrite = true
+
+# Interval for running the state archiver
+interval = "1 m"
+
 # HTTP server configuration
 [http]
 # Determines if the HTTP server is active.
@@ -269,24 +310,6 @@ enabled = true
 # Maximum size of the cache, e.g. "4GB".
 size = "4 GB"
 
-# Data retention policy configuration.
-[system.retention_policy]
-# Configures the message time-based expiry setting.
-# "none" means messages are kept indefinitely.
-# A time value in human-readable format determines the lifespan of messages.
-# Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
-message_expiry = "none"
-
-# Configures the topic size-based expiry setting.
-# "unlimited" or "0" means topics are kept indefinitely.
-# A size value in human-readable format determines the maximum size of a topic.
-# When a topic reaches this size, the oldest messages are deleted to make room for new ones.
-# Messages are removed in full segments, so if segment size is 1 GB and the topic size is 10 GB,
-# the oldest segment will be deleted upon reaching 10 GB.
-# Example: `max_topic_size = "10 GB"` means oldest messages in topics will be deleted when they reach 10 GB.
-# Note: this setting can be overwritten with CreateTopic and UpdateTopic requests.
-max_topic_size = "10 GB"
-
 # Encryption configuration
 [system.encryption]
 # Determines whether server-side data encryption is enabled (boolean).
@@ -322,6 +345,19 @@ path = "streams"
 # Specifies the directory where topic data is stored, relative to `stream.path`.
 path = "topics"
 
+# Configures the topic size-based expiry setting.
+# "unlimited" or "0" means topics are kept indefinitely.
+# A size value in human-readable format determines the maximum size of a topic.
+# When a topic reaches this size, the oldest messages are deleted to make room for new ones.
+# Messages are removed in full segments, so if segment size is 1 GB and the topic size is 10 GB,
+# the oldest segment will be deleted upon reaching 10 GB.
+# Example: `max_topic_size = "10 GB"` means oldest messages in topics will be deleted when they reach 10 GB.
+# Note: this setting can be overwritten with CreateTopic and UpdateTopic requests.
+max_size = "10 GB"
+
+# Configures whether the oldest segments are deleted when a topic reaches its maximum size (boolean).
+delete_oldest_segments = false
+
 # Partition configuration
 [system.partition]
 # Path for storing partition-related data (string).
@@ -349,6 +385,14 @@ messages_required_to_save = 10_000
 # When a segment reaches this size, a new segment is created for subsequent data.
 # Example: if `size` is set "1GB", the actual segment size may be 1GB + the size of remaining messages in received batch.
 size = "1 GB"
+# Configures the message time-based expiry setting.
+# "none" means messages are kept indefinitely.
+# A time value in human-readable format determines the lifespan of messages.
+# Example: `message_expiry = "2 days 4 hours 15 minutes"` means messages will expire after that duration.
+message_expiry = "none"
+
+# Configures whether expired segments are archived (boolean) or just deleted without archiving.
+archive_expired = false
 
 # Controls whether to cache indexes for segment access (boolean).
 # `true` keeps indexes in memory, speeding up data retrieval.

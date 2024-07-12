@@ -1,3 +1,4 @@
+mod archiver;
 mod bench;
 mod cli;
 mod config_provider;

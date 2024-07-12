@@ -227,6 +227,7 @@ Content-Type: application/json
   "name": "topic1",
   "compression_algorithm": "none",
   "partitions_count": 3,
+  "max_topic_size": 0,
   "message_expiry": 0
 }
 
@@ -238,7 +239,8 @@ Content-Type: application/json
 {
   "name": "topic1",
   "compression_algorithm": "none",
-  "message_expiry": 1000
+  "max_topic_size": 0,
+  "message_expiry": 0
 }
 
 ###

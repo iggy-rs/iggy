@@ -278,7 +278,7 @@ async fn handle_oldest_segments(
                     continue;
                 }
 
-                let is_archived = archiver.is_archived(&segment.index_path).await;
+                let is_archived = archiver.is_archived(&segment.index_path, None).await;
                 if is_archived.is_err() {
                     error!(
                         "Failed to check if segment with start offset: {} is archived for stream ID: {}, topic ID: {}, partition ID: {}. Error: {}",

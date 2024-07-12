@@ -27,9 +27,14 @@ impl Archiver for DiskArchiver {
         Ok(())
     }
 
-    async fn is_archived(&self, file: &str) -> Result<bool, ServerError> {
+    async fn is_archived(
+        &self,
+        file: &str,
+        base_directory: Option<String>,
+    ) -> Result<bool, ServerError> {
         debug!("Checking if file: {file} is archived on disk.");
-        let path = Path::new(&self.config.path).join(file);
+        let base_directory = base_directory.as_deref().unwrap_or_default();
+        let path = Path::new(&self.config.path).join(base_directory).join(file);
         let is_archived = path.exists();
         debug!("File: {file} is archived: {is_archived}");
         Ok(is_archived)

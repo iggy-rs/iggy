@@ -8,7 +8,7 @@ use tikv_jemallocator::Jemalloc;
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 
-mod archiver;
+pub mod archiver;
 pub mod args;
 pub mod binary;
 pub mod channels;

@@ -32,7 +32,11 @@ impl FromStr for ArchiverKind {
 #[async_trait]
 pub trait Archiver: Sync + Send {
     async fn init(&self) -> Result<(), ServerError>;
-    async fn is_archived(&self, file: &str) -> Result<bool, ServerError>;
+    async fn is_archived(
+        &self,
+        file: &str,
+        base_directory: Option<String>,
+    ) -> Result<bool, ServerError>;
     async fn archive(
         &self,
         files: &[&str],

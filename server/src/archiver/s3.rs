@@ -20,7 +20,11 @@ impl Archiver for S3Archiver {
         Ok(())
     }
 
-    async fn is_archived(&self, _file: &str) -> Result<bool, ServerError> {
+    async fn is_archived(
+        &self,
+        _file: &str,
+        _base_directory: Option<String>,
+    ) -> Result<bool, ServerError> {
         todo!("Checking if file is archived on S3")
     }
 

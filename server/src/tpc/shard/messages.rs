@@ -17,6 +17,7 @@ impl IggyShard {
     pub async fn poll_messages(
         &self,
         client_id: u32,
+        partition_id: u32,
         consumer: PollingConsumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
@@ -37,15 +38,8 @@ impl IggyShard {
             return Err(IggyError::NoPartitions(topic.topic_id, topic.stream_id));
         }
 
-        let partition_id = match consumer {
-            PollingConsumer::Consumer(_, partition_id) => partition_id,
-            PollingConsumer::ConsumerGroup(group_id, member_id) => {
-                let consumer_group = topic.get_consumer_group_by_id(group_id)?;
-                consumer_group.calculate_partition_id(member_id).await?
-            }
-        };
 
-        let mut polled_messages = topic
+        let mut polled_messages: PolledMessages = topic
             .get_messages(consumer, partition_id, args.strategy, args.count)
             .await?;
 

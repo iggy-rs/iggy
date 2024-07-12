@@ -8,7 +8,7 @@ use std::fmt::Display;
 
 /// `GetMe` command is used to get the information connected client.
 /// It has no additional payload.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetMe {}
 
 impl CommandPayload for GetMe {}

@@ -9,7 +9,7 @@ use std::fmt::Display;
 /// `GetClient` command is used to get the information about a specific client by unique ID.
 /// It has additional payload:
 /// - `client_id` - unique ID (numeric) of the client.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct GetClient {
     /// Unique ID (numeric) of the client.
     pub client_id: u32,

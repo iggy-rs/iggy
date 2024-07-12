@@ -8,7 +8,7 @@ use std::fmt::Display;
 
 /// `Ping` command is used to check if the server is alive.
 /// It has no additional payload.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct Ping {}
 
 impl CommandPayload for Ping {}

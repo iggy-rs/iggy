@@ -8,7 +8,7 @@ use std::fmt::Display;
 
 /// `GetUsers` command is used to retrieve the information about all users.
 /// It has no additional payload.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetUsers {}
 
 impl CommandPayload for GetUsers {}

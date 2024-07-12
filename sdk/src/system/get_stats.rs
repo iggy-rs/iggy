@@ -8,7 +8,7 @@ use std::fmt::Display;
 
 /// `GetStats` command is used to get the statistics about the system.
 /// It has no additional payload.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetStats {}
 
 impl CommandPayload for GetStats {}

@@ -7,6 +7,7 @@ use std::thread::available_parallelism;
 use clap::Parser;
 use figlet_rs::FIGfont;
 use iggy::error::IggyError;
+use monoio::net::udp::UdpSocket;
 use monoio::time::Instant;
 use monoio::utils::CtrlC;
 use server::args::Args;

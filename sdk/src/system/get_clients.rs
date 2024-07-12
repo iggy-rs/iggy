@@ -8,7 +8,7 @@ use std::fmt::Display;
 
 /// `GetClients` command is used to get the information about all connected clients.
 /// It has no additional payload.
-#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetClients {}
 
 impl CommandPayload for GetClients {}

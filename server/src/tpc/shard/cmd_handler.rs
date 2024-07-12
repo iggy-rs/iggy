@@ -191,10 +191,12 @@ impl IggyShard {
                     count,
                     auto_commit,
                 } = command;
-                //let consumer = PollingConsumer::from_consumer(consumer, client_id, partition_id);
+                let consumer = PollingConsumer::from_consumer(&consumer, client_id, &partition_id);
+                let partition_id = partition_id.unwrap();
                 let messages = self
                     .poll_messages(
                         client_id,
+                        partition_id,
                         consumer,
                         &stream_id,
                         &topic_id,
@@ -211,7 +213,7 @@ impl IggyShard {
                     partition_id,
                     consumer,
                 } = command;
-                let consumer = PollingConsumer::from_consumer(consumer, client_id, partition_id);
+                let consumer = PollingConsumer::from_consumer(&consumer, client_id, &partition_id);
                 let consumer_offset = self
                     .get_consumer_offset(client_id, consumer, &stream_id, &topic_id)
                     .await?;
@@ -226,7 +228,7 @@ impl IggyShard {
                     consumer,
                     offset,
                 } = command;
-                let consumer = PollingConsumer::from_consumer(consumer, client_id, partition_id);
+                let consumer = PollingConsumer::from_consumer(&consumer, client_id, &partition_id);
                 self.store_consumer_offset(client_id, consumer, &stream_id, &topic_id, offset)
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))

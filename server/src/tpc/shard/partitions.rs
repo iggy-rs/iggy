@@ -25,7 +25,9 @@ impl IggyShard {
             .create_partitions(user_id, stream.stream_id, topic.topic_id)?;
 
         let mut stream = self.get_stream_mut(stream_id)?;
+        let stream_id_u32 = stream.stream_id;
         let topic = stream.borrow_mut().get_topic_mut(topic_id)?;
+        let topic_id_u32 = topic.topic_id;
         let partition_ids = topic
             .add_persisted_partitions(partitions_count, should_persist)
             .await?;
@@ -35,7 +37,7 @@ impl IggyShard {
             let shard_id = hash % shards_count;
             error!("Shard ID: {}", shard_id);
             let resource_ns =
-                IggyResourceNamespace::new(stream_id.clone(), topic_id.clone(), partition_id);
+                IggyResourceNamespace::new(stream_id_u32, topic_id_u32, partition_id);
             let shard_info = ShardInfo {
                 id: shard_id as u16,
             };

@@ -71,7 +71,7 @@ pub(crate) async fn handle_connection(
             }
         };
 
-        let response = match command {
+        let response = match command.clone() {
             Command::SendMessages(cmd) => {
                 // This is really ugly, better solution would be to decouple stream and topic ids
                 // from the `Stream` and `Topic` structs
@@ -142,7 +142,7 @@ pub(crate) async fn handle_connection(
                     .await?;
                 Some(response)
             }
-            Command::PollMessages(cmd) => {
+            Command::PollMessages(mut cmd) => {
                 let stream_id = if let IdKind::Numeric = cmd.stream_id.kind {
                     cmd.stream_id
                         .get_u32_value()
@@ -187,6 +187,7 @@ pub(crate) async fn handle_connection(
                         consumer_group.calculate_partition_id(member_id).await?
                     }
                 };
+                cmd.partition_id = Some(partition_id);
                 let resource_ns = IggyResourceNamespace::new(stream_id, topic_id, partition_id);
                 let response = shard
                     .send_request_to_shard(client_id, resource_ns, Command::PollMessages(cmd))
@@ -196,24 +197,17 @@ pub(crate) async fn handle_connection(
             _ => None,
         };
 
-        /*
-        match command.get_command_execution_origin() {
-            CommandExecution::Direct => {
+        let response = match response {
+            Some(response) => response,
+            None => {
                 let message = ShardMessage::Command(command);
-                let response = shard
+                shard
                     .handle_shard_message(client_id, message)
                     .await
-                    .expect("Failed to handle a shard command for direct request execution, it should always return a response.");
-                handle_response!(sender, response);
+                    .expect("Failed to handle a shard command for direct request execution, it should always return a response.")
             }
-            CommandExecution::Routed() => {
-                let response = shard
-                    .send_request_to_shard(client_id, resource_ns, command)
-                    .await?;
-                handle_response!(sender, response);
-            }
-        }
-        */
+        };
+        handle_response!(sender, response);
 
         /*
         debug!("Received a TCP command: {command}, payload size: {length}");

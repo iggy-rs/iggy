@@ -13,8 +13,8 @@ pub enum ServerError {
     InvalidConfigurationProvider(String),
     #[error("Cannot load configuration: {0}")]
     CannotLoadConfiguration(String),
-    #[error("Invalid configuration")]
-    InvalidConfiguration,
+    #[error("Invalid configuration: {0}")]
+    InvalidConfiguration(String),
     #[error("SDK error")]
     SdkError(#[from] iggy::error::IggyError),
     #[error("Write error")]
@@ -45,4 +45,6 @@ pub enum ServerError {
     CannotRemoveOldSegmentFiles,
     #[error("Cannot persist new segment files")]
     CannotPersistNewSegmentFiles,
+    #[error("Cannot archive segment: {0}")]
+    CannotArchiveSegment(String),
 }

@@ -283,6 +283,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
 
     segment.persist_messages().await.unwrap();
 
+    segment.is_closed = true;
     let is_expired = segment.is_expired(now).await;
     assert!(is_expired);
 }

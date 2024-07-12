@@ -254,6 +254,8 @@ pub enum IggyError {
     PartitionNotFound(u32, u32, u32) = 3007,
     #[error("Topic with ID: {0} for stream with ID: {1} has no partitions.")]
     NoPartitions(u32, u32) = 3008,
+    #[error("Cannot read partitions for topic with ID: {0} for stream with ID: {1}")]
+    TopicFull(u32, u32) = 3009,
     #[error("Failed to delete consumer offsets directory for path: {0}")]
     CannotDeleteConsumerOffsetsDirectory(String) = 3010,
     #[error("Failed to delete consumer offset file for path: {0}")]

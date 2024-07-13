@@ -38,7 +38,6 @@ impl IggyShard {
             return Err(IggyError::NoPartitions(topic.topic_id, topic.stream_id));
         }
 
-
         let mut polled_messages: PolledMessages = topic
             .get_messages(consumer, partition_id, args.strategy, args.count)
             .await?;

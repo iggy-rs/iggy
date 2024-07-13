@@ -71,11 +71,18 @@ pub(crate) async fn handle_connection(
             }
         };
 
+        // This is really ugly, better solution would be to decouple stream and topic `Identifier` structs
+        // from the `Stream` and `Topic` structs
+        // into it's own tables and store them on top level shard.
+
+        // Generally it's good idea to use only lightweight versions of `Stream`, `Topic`, `Partition`,
+        // maybe even `Segment` structs, and store all the data in the `IggyShard` struct
+        // as some sort of map, maybe some of those could be even shared, with the usage of
+        // https://github.com/ibraheemdev/papaya
+
+        // Long-term decouple those even further into corresponding `frontends` and `backends`.
         let response = match command {
             Command::SendMessages(ref cmd) => {
-                // This is really ugly, better solution would be to decouple stream and topic ids
-                // from the `Stream` and `Topic` structs
-                // into it's own tables (vectors) and store them on top level of the shard.
                 let stream_id = if let IdKind::Numeric = cmd.stream_id.kind {
                     cmd.stream_id
                         .get_u32_value()
@@ -182,7 +189,9 @@ pub(crate) async fn handle_connection(
                 let partition_id = match consumer {
                     PollingConsumer::Consumer(_, partition_id) => partition_id,
                     PollingConsumer::ConsumerGroup(group_id, member_id) => {
-                        let topic = shard.find_topic(client_id, &cmd.stream_id, &cmd.topic_id).expect("Failed to find topic");
+                        let topic = shard
+                            .find_topic(client_id, &cmd.stream_id, &cmd.topic_id)
+                            .expect("Failed to find topic");
                         let consumer_group = topic.get_consumer_group_by_id(group_id)?;
                         consumer_group.calculate_partition_id(member_id).await?
                     }

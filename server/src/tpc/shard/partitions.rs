@@ -36,8 +36,7 @@ impl IggyShard {
             let hash = hash_resource_namespace(stream_id, topic_id, partition_id);
             let shard_id = hash % shards_count;
             error!("Shard ID: {}", shard_id);
-            let resource_ns =
-                IggyResourceNamespace::new(stream_id_u32, topic_id_u32, partition_id);
+            let resource_ns = IggyResourceNamespace::new(stream_id_u32, topic_id_u32, partition_id);
             let shard_info = ShardInfo {
                 id: shard_id as u16,
             };

@@ -23,7 +23,7 @@ impl StateSetup {
 
         let version = SemanticVersion::from_str("1.2.3").unwrap();
         let persister = FilePersister {};
-        let state = FileState::new(&log_path, &version, Arc::new(persister));
+        let state = FileState::new(&log_path, &version, Arc::new(persister), None);
 
         Self {
             directory_path,

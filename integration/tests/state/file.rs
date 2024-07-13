@@ -1,4 +1,5 @@
 use crate::state::StateSetup;
+use iggy::bytes_serializable::BytesSerializable;
 use iggy::streams::create_stream::CreateStream;
 use iggy::users::create_user::CreateUser;
 use server::state::command::EntryCommand;
@@ -26,12 +27,7 @@ async fn should_apply_single_entry() {
         status: Default::default(),
         permissions: None,
     });
-    let command_clone = EntryCommand::CreateUser(CreateUser {
-        username: "test".to_string(),
-        password: "secret".to_string(),
-        status: Default::default(),
-        permissions: None,
-    });
+    let command_bytes = command.to_bytes();
 
     state.apply(user_id, command).await.unwrap();
 
@@ -45,7 +41,7 @@ async fn should_apply_single_entry() {
     assert!(entry.checksum > 0);
     assert!(entry.timestamp.as_micros() > 0);
     assert_eq!(entry.user_id, user_id);
-    assert_eq!(entry.command, command_clone);
+    assert_eq!(entry.command, command_bytes);
     assert!(entry.context.is_empty());
 }
 
@@ -67,12 +63,7 @@ async fn should_apply_multiple_entries() {
         status: Default::default(),
         permissions: None,
     });
-    let create_user_clone = EntryCommand::CreateUser(CreateUser {
-        username: "test".to_string(),
-        password: "secret".to_string(),
-        status: Default::default(),
-        permissions: None,
-    });
+    let create_user_bytes = create_user.to_bytes();
 
     state.apply(first_user_id, create_user).await.unwrap();
 
@@ -84,10 +75,7 @@ async fn should_apply_multiple_entries() {
         stream_id: Some(1),
         name: "test".to_string(),
     });
-    let create_stream_clone = EntryCommand::CreateStream(CreateStream {
-        stream_id: Some(1),
-        name: "test".to_string(),
-    });
+    let create_stream_bytes = create_stream.to_bytes();
 
     state.apply(second_user_id, create_stream).await.unwrap();
 
@@ -106,7 +94,7 @@ async fn should_apply_multiple_entries() {
     assert!(create_user_entry.timestamp.as_micros() > 0);
     assert_eq!(create_user_entry.user_id, 1);
     assert!(create_user_entry.context.is_empty());
-    assert_eq!(create_user_entry.command, create_user_clone);
+    assert_eq!(create_user_entry.command, create_user_bytes);
 
     let create_stream_entry = entries.remove(0);
     assert_eq!(create_stream_entry.index, 1);
@@ -118,5 +106,5 @@ async fn should_apply_multiple_entries() {
     assert!(create_stream_entry.timestamp.as_micros() > create_user_entry.timestamp.as_micros());
     assert_eq!(create_stream_entry.user_id, 2);
     assert!(create_stream_entry.context.is_empty());
-    assert_eq!(create_stream_clone, create_stream_entry.command);
+    assert_eq!(create_stream_entry.command, create_stream_bytes);
 }

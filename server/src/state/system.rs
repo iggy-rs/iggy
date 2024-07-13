@@ -78,7 +78,7 @@ impl SystemState {
         let mut current_user_id = 0;
         for entry in entries {
             debug!("Processing state entry: {entry}",);
-            match entry.command {
+            match entry.command()? {
                 EntryCommand::CreateStream(command) => {
                     let stream_id = command.stream_id.unwrap_or_else(|| {
                         current_stream_id += 1;

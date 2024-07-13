@@ -68,7 +68,7 @@ impl Benchmarkable for ConsumerGroupBenchmark {
         self.init_streams().await.expect("Failed to init streams!");
         let consumer_group_id = 1;
         let consumer_group_name = "cg-1";
-        self.init_consumer_group(&consumer_group_name, consumer_group_id)
+        self.init_consumer_group(consumer_group_name, consumer_group_id)
             .await
             .expect("Failed to init consumer group");
         let start_stream_id = self.args.start_stream_id();

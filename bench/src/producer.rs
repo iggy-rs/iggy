@@ -24,6 +24,7 @@ pub struct Producer {
 }
 
 impl Producer {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         client_factory: Arc<dyn ClientFactory>,
         producer_id: u32,

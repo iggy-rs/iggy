@@ -261,9 +261,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
             IggyBenchArgs::command()
                 .error(
                     ErrorKind::ValueValidation,
-                    format!(
                         "Number of partitions must be greater than 1 for consumer group benchmark."
-                    ),
                 )
                 .exit();
         }
@@ -272,9 +270,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
             IggyBenchArgs::command()
                 .error(
                     ErrorKind::ValueValidation,
-                    format!(
                         "Number of streams cannot be greater than 1 for consumer group benchmark."
-                    ),
                 )
                 .exit();
         }

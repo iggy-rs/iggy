@@ -63,7 +63,7 @@ pub(crate) async fn handle_connection(
         let _ = res?;
         let command_buffer = command_buffer.freeze();
         // We've got the command now we need to route it to appropiate thread.
-        let command = match Command::from_bytes(command_buffer) {
+        let mut command = match Command::from_bytes(command_buffer) {
             Ok(command) => command,
             Err(error) => {
                 sender.send_error_response(error).await?;
@@ -71,8 +71,8 @@ pub(crate) async fn handle_connection(
             }
         };
 
-        let response = match command.clone() {
-            Command::SendMessages(cmd) => {
+        let response = match command {
+            Command::SendMessages(ref cmd) => {
                 // This is really ugly, better solution would be to decouple stream and topic ids
                 // from the `Stream` and `Topic` structs
                 // into it's own tables (vectors) and store them on top level of the shard.
@@ -138,11 +138,11 @@ pub(crate) async fn handle_connection(
                 };
                 let resource_ns = IggyResourceNamespace::new(stream_id, topic_id, partition_id);
                 let response = shard
-                    .send_request_to_shard(client_id, resource_ns, Command::SendMessages(cmd))
+                    .send_request_to_shard(client_id, resource_ns, command)
                     .await?;
-                Some(response)
+                response
             }
-            Command::PollMessages(mut cmd) => {
+            Command::PollMessages(ref mut cmd) => {
                 let stream_id = if let IdKind::Numeric = cmd.stream_id.kind {
                     cmd.stream_id
                         .get_u32_value()
@@ -190,16 +190,11 @@ pub(crate) async fn handle_connection(
                 cmd.partition_id = Some(partition_id);
                 let resource_ns = IggyResourceNamespace::new(stream_id, topic_id, partition_id);
                 let response = shard
-                    .send_request_to_shard(client_id, resource_ns, Command::PollMessages(cmd))
+                    .send_request_to_shard(client_id, resource_ns, command)
                     .await?;
-                Some(response)
+                response
             }
-            _ => None,
-        };
-
-        let response = match response {
-            Some(response) => response,
-            None => {
+            _ => {
                 let message = ShardMessage::Command(command);
                 shard
                     .handle_shard_message(client_id, message)

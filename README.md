@@ -247,6 +247,15 @@ Then, run the benchmarking app with the desired options:
    cargo r --bin iggy-bench -r -- -c -v send-and-poll tcp
    ```
 
+4. Polling with consumer group
+
+   ```bash
+   cargo r --bin iggy-bench -r -- -c -v send --streams 1 --partitions 10 --disable-parallel-producers tcp
+   ```
+   ```bash
+   cargo r --bin iggy-bench -r -- -c -v consumer-group-poll tcp
+   ```
+
 These benchmarks would start the server with the default configuration, create a stream, topic and partition, and then send or poll the messages. The default configuration is optimized for the best performance, so you might want to tweak it for your needs. If you need more options, please refer to `iggy-bench` subcommands `help` and `examples`.
 For example, to run the benchmark for the already started server, provide the additional argument `--server-address 0.0.0.0:8090`.
 

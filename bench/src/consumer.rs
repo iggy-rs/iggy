@@ -1,6 +1,6 @@
 use crate::args::simple::BenchmarkKind;
 use crate::benchmark_result::BenchmarkResult;
-use iggy::client::MessageClient;
+use iggy::client::{ConsumerGroupClient, MessageClient};
 use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
 use iggy::consumer::Consumer as IggyConsumer;
 use iggy::error::IggyError;
@@ -15,6 +15,7 @@ use tracing::{error, info, warn};
 pub struct Consumer {
     client_factory: Arc<dyn ClientFactory>,
     consumer_id: u32,
+    consumer_group_id: Option<u32>,
     stream_id: u32,
     messages_per_batch: u32,
     message_batches: u32,
@@ -25,6 +26,7 @@ impl Consumer {
     pub fn new(
         client_factory: Arc<dyn ClientFactory>,
         consumer_id: u32,
+        consumer_group_id: Option<u32>,
         stream_id: u32,
         messages_per_batch: u32,
         message_batches: u32,
@@ -33,6 +35,7 @@ impl Consumer {
         Self {
             client_factory,
             consumer_id,
+            consumer_group_id,
             stream_id,
             messages_per_batch,
             message_batches,
@@ -42,7 +45,7 @@ impl Consumer {
 
     pub async fn run(&self) -> Result<BenchmarkResult, IggyError> {
         let topic_id: u32 = 1;
-        let partition_id: u32 = 1;
+        let default_partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;
         let client = self.client_factory.create_client().await;
         let client = IggyClient::create(
@@ -53,10 +56,23 @@ impl Consumer {
             None,
         );
         login_root(&client).await;
-        let consumer = IggyConsumer::new(self.consumer_id.try_into().unwrap());
         let stream_id = self.stream_id.try_into().unwrap();
         let topic_id = topic_id.try_into().unwrap();
-        let partition_id = Some(partition_id);
+        let partition_id = Some(default_partition_id);
+        let consumer = match self.consumer_group_id {
+            Some(consumer_group_id) => {
+                client
+                    .join_consumer_group(
+                        &stream_id,
+                        &topic_id,
+                        &consumer_group_id.try_into().unwrap(),
+                    )
+                    .await
+                    .expect("Failed to join consumer group");
+                IggyConsumer::group(consumer_group_id.try_into().unwrap())
+            }
+            None => IggyConsumer::new(self.consumer_id.try_into().unwrap()),
+        };
 
         let mut latencies: Vec<Duration> = Vec::with_capacity(self.message_batches as usize);
         let mut total_size_bytes = 0;
@@ -131,7 +147,10 @@ impl Consumer {
 
             let polled_messages = polled_messages.unwrap();
             if polled_messages.messages.is_empty() {
-                warn!("Messages are empty for offset: {}, retrying...", offset);
+                warn!(
+                    "Consumer: {} - Messages are empty for offset: {}, retrying...",
+                    self.consumer_id, offset
+                );
                 continue;
             }
 

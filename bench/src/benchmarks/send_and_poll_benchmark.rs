@@ -60,6 +60,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
         let message_size = self.args.message_size();
+        let partitions_count = self.args.number_of_partitions();
         let warmup_time = self.args.warmup_time();
         let mut futures: BenchmarkFutures =
             Ok(Vec::with_capacity((producers + consumers) as usize));
@@ -73,6 +74,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
                 self.client_factory.clone(),
                 producer_id,
                 stream_id,
+                partitions_count,
                 messages_per_batch,
                 message_batches,
                 message_size,
@@ -90,6 +92,7 @@ impl Benchmarkable for SendAndPollMessagesBenchmark {
             let consumer = Consumer::new(
                 self.client_factory.clone(),
                 consumer_id,
+                None,
                 stream_id,
                 messages_per_batch,
                 message_batches,

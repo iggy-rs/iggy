@@ -16,6 +16,7 @@ pub struct Producer {
     client_factory: Arc<dyn ClientFactory>,
     producer_id: u32,
     stream_id: u32,
+    partitions_count: u32,
     messages_per_batch: u32,
     message_batches: u32,
     message_size: u32,
@@ -27,6 +28,7 @@ impl Producer {
         client_factory: Arc<dyn ClientFactory>,
         producer_id: u32,
         stream_id: u32,
+        partitions_count: u32,
         messages_per_batch: u32,
         message_batches: u32,
         message_size: u32,
@@ -36,6 +38,7 @@ impl Producer {
             client_factory,
             producer_id,
             stream_id,
+            partitions_count,
             messages_per_batch,
             message_batches,
             message_size,
@@ -45,7 +48,7 @@ impl Producer {
 
     pub async fn run(&self) -> Result<BenchmarkResult, IggyError> {
         let topic_id: u32 = 1;
-        let partition_id: u32 = 1;
+        let default_partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;
         let client = self.client_factory.create_client().await;
         let client = IggyClient::create(
@@ -69,8 +72,11 @@ impl Producer {
 
         let stream_id = self.stream_id.try_into()?;
         let topic_id = topic_id.try_into()?;
-        let partitioning = Partitioning::partition_id(partition_id);
-
+        let partitioning = match self.partitions_count {
+            0 => panic!("Partition count must be greater than 0"),
+            1 => Partitioning::partition_id(default_partition_id),
+            2.. => Partitioning::balanced(),
+        };
         info!(
             "Producer #{} → warming up for {}...",
             self.producer_id, self.warmup_time

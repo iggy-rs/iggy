@@ -49,6 +49,7 @@ impl Benchmarkable for PollMessagesBenchmark {
             let consumer = Consumer::new(
                 client_factory,
                 client_id,
+                None,
                 stream_id,
                 messages_per_batch,
                 message_batches,

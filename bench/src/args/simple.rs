@@ -8,6 +8,6 @@ pub enum BenchmarkKind {
     Poll,
     #[display(fmt = "send and poll messages")]
     SendAndPoll,
-    #[display(fmt = "consumer group send and poll messages")]
+    #[display(fmt = "consumer group poll")]
     ConsumerGroupPoll,
 }

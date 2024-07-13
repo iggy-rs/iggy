@@ -7,6 +7,7 @@ pub trait BenchmarkKindProps {
     fn message_batches(&self) -> u32;
     fn number_of_streams(&self) -> u32;
     fn number_of_partitions(&self) -> u32;
+    fn number_of_consumer_groups(&self) -> u32;
     fn consumers(&self) -> u32;
     fn producers(&self) -> u32;
     fn disable_parallel_producer_streams(&self) -> bool;

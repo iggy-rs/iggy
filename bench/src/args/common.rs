@@ -126,6 +126,10 @@ impl IggyBenchArgs {
             .disable_parallel_consumer_streams()
     }
 
+    pub fn number_of_consumer_groups(&self) -> u32 {
+        self.benchmark_kind.inner().number_of_consumer_groups()
+    }
+
     pub fn warmup_time(&self) -> IggyDuration {
         self.warmup_time
     }

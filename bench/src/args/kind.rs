@@ -4,6 +4,7 @@ use super::props::BenchmarkKindProps;
 use super::transport::BenchmarkTransportCommand;
 use super::{common::IggyBenchArgs, simple::BenchmarkKind};
 use clap::{error::ErrorKind, CommandFactory, Parser, Subcommand};
+use core::panic;
 use std::num::NonZeroU32;
 
 #[derive(Subcommand, Debug)]
@@ -71,6 +72,10 @@ impl BenchmarkKindProps for BenchmarkKindCommand {
 
     fn transport_command(&self) -> &BenchmarkTransportCommand {
         self.inner().transport_command()
+    }
+
+    fn number_of_consumer_groups(&self) -> u32 {
+        self.inner().number_of_consumer_groups()
     }
 
     fn inner(&self) -> &dyn BenchmarkKindProps {
@@ -167,6 +172,10 @@ impl BenchmarkKindProps for SendArgs {
         &self.transport
     }
 
+    fn number_of_consumer_groups(&self) -> u32 {
+        panic!("No consumer groups in send benchmark");
+    }
+
     fn validate(&self) {
         let streams = self.streams.get();
         let producers = self.producers.get();
@@ -211,6 +220,10 @@ pub struct ConsumerGroupArgs {
     /// Number of consumers
     #[arg(long, default_value_t = DEFAULT_NUMBER_OF_CONSUMERS)]
     pub consumers: NonZeroU32,
+
+    /// Number of consumers
+    #[arg(long, default_value_t = DEFAULT_NUMBER_OF_CONSUMER_GROUPS)]
+    pub consumer_groups: NonZeroU32,
 }
 
 impl BenchmarkKindProps for ConsumerGroupArgs {
@@ -254,6 +267,10 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
         &self.transport
     }
 
+    fn number_of_consumer_groups(&self) -> u32 {
+        self.consumer_groups.get()
+    }
+
     fn validate(&self) {
         let partitions_count = self.inner().number_of_partitions();
         let streams_count = self.inner().number_of_streams();
@@ -261,7 +278,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
             IggyBenchArgs::command()
                 .error(
                     ErrorKind::ValueValidation,
-                        "Number of partitions must be greater than 1 for consumer group benchmark."
+                    "Number of partitions must be greater than 1 for consumer group benchmark.",
                 )
                 .exit();
         }
@@ -270,7 +287,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
             IggyBenchArgs::command()
                 .error(
                     ErrorKind::ValueValidation,
-                        "Number of streams cannot be greater than 1 for consumer group benchmark."
+                    "Number of streams cannot be greater than 1 for consumer group benchmark.",
                 )
                 .exit();
         }
@@ -351,6 +368,10 @@ impl BenchmarkKindProps for PollArgs {
 
     fn transport_command(&self) -> &BenchmarkTransportCommand {
         &self.transport
+    }
+
+    fn number_of_consumer_groups(&self) -> u32 {
+        panic!("No consumer groups in poll benchmark");
     }
 
     fn validate(&self) {
@@ -450,6 +471,10 @@ impl BenchmarkKindProps for SendAndPollArgs {
 
     fn transport_command(&self) -> &BenchmarkTransportCommand {
         &self.transport
+    }
+
+    fn number_of_consumer_groups(&self) -> u32 {
+        panic!("No consumer groups in send and poll benchmark");
     }
 
     fn validate(&self) {

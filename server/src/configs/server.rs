@@ -69,6 +69,7 @@ pub struct S3ArchiverConfig {
     pub bucket: String,
     pub endpoint: Option<String>,
     pub region: Option<String>,
+    pub tmp_upload_dir: String,
 }
 
 #[serde_as]

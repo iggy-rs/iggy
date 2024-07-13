@@ -11,7 +11,8 @@
         "key_secret": "secret",
         "bucket": "iggy",
         "endpoint": "http://localhost:9000",
-        "region": "eu-west-1"
+        "region": "eu-west-1",
+        "tmp_upload_dir": "local_data/s3_tmp"
       }
     },
     "messages": {

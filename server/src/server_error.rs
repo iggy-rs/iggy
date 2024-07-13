@@ -47,10 +47,10 @@ pub enum ServerError {
     CannotPersistNewSegmentFiles,
     #[error("Cannot archive file: {0}")]
     CannotArchiveFile(String),
-    #[error("Cannot check if file: {0} is archived")]
-    CannotCheckArchivedFile(String),
     #[error("Cannot initialize S3 archiver")]
     CannotInitializeS3Archiver,
     #[error("Invalid S3 credentials")]
     InvalidS3Credentials,
+    #[error("File to archive not found: {0}")]
+    FileToArchiveNotFound(String),
 }

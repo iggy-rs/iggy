@@ -10,6 +10,7 @@ async fn should_not_be_initialized_given_invalid_configuration() {
         bucket: "iggy".to_owned(),
         endpoint: Some("https://iggy.s3.com".to_owned()),
         region: None,
+        tmp_upload_dir: "tmp".to_owned(),
     };
     let archiver = S3Archiver::new(config);
     assert!(archiver.is_ok());

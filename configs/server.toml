@@ -19,11 +19,14 @@ key_secret = "secret"
 # Name of the S3 bucket.
 bucket = "iggy"
 
-# Endpoint of the S3 bucket.
+# Endpoint of the S3 region.
 endpoint = "http://localhost:9000"
 
 # Region of the S3 bucket.
 region = "eu-west-1"
+
+# Temporary directory for storing the data before uploading to S3.
+tmp_upload_dir = "local_data/s3_tmp"
 
 [data_maintenance.messages]
 # Enables or disables the archiver process for closed segments containing messages.

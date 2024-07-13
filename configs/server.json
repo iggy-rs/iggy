@@ -8,9 +8,11 @@
       },
       "s3": {
         "key_id": "123",
-        "access_key": "secret",
+        "key_secret": "secret",
         "bucket": "iggy",
-        "region": "eu-west-1"
+        "endpoint": "http://localhost:9000",
+        "region": "eu-west-1",
+        "tmp_upload_dir": "local_data/s3_tmp"
       }
     },
     "messages": {

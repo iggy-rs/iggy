@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.3.2"
+version = "0.3.3"
 edition = "2021"
 build = "src/build.rs"
 
@@ -38,6 +38,7 @@ quinn = { version = "0.11.1" }
 rcgen = "0.13.1"
 ring = "0.17.8"
 rmp-serde = "1.3.0"
+rust-s3 = { version = "0.34.0", features = ["default"] }
 rustls = { version = "0.23.10" }
 rustls-pemfile = "2.1.2"
 serde = { version = "1.0.203", features = ["derive", "rc"] }
@@ -86,3 +87,6 @@ path = "src/main.rs"
 # in case if feature 'tokio-console' is enabled.
 [package.metadata.cargo-udeps.ignore]
 normal = ["tracing-appender", "strip-ansi-escapes"]
+
+[package.metadata.cargo-machete]
+ignored = ["rust-s3"]

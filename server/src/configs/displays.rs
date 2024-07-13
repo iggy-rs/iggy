@@ -144,8 +144,11 @@ impl Display for S3ArchiverConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ key_id: {}, access_key: ******, region: {}, bucket: {} }}",
-            self.key_id, self.region, self.bucket
+            "{{ key_id: {}, key_secret: ******, bucket: {}, endpoint: {}. region: {} }}",
+            self.key_id,
+            self.bucket,
+            self.endpoint.as_deref().unwrap_or_default(),
+            self.region.as_deref().unwrap_or_default()
         )
     }
 }

@@ -45,6 +45,12 @@ pub enum ServerError {
     CannotRemoveOldSegmentFiles,
     #[error("Cannot persist new segment files")]
     CannotPersistNewSegmentFiles,
-    #[error("Cannot archive segment: {0}")]
-    CannotArchiveSegment(String),
+    #[error("Cannot archive file: {0}")]
+    CannotArchiveFile(String),
+    #[error("Cannot initialize S3 archiver")]
+    CannotInitializeS3Archiver,
+    #[error("Invalid S3 credentials")]
+    InvalidS3Credentials,
+    #[error("File to archive not found: {0}")]
+    FileToArchiveNotFound(String),
 }

@@ -75,7 +75,7 @@ impl ServerCommand<ArchiveStateCommand> for ArchiveStateExecutor {
         let state_info_path = system.config.get_state_info_path();
         info!("Archiving state...");
         let archiver = system.archiver.as_ref().unwrap();
-        let files = [state_log_path.as_ref(), state_info_path.as_ref()];
+        let files = [state_info_path.as_ref(), state_log_path.as_ref()];
         if let Err(error) = archiver.archive(&files, base_directory).await {
             error!("Failed to archive state. Error: {}", error);
             return;

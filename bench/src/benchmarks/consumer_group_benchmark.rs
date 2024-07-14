@@ -1,5 +1,6 @@
 use crate::{
     args::{common::IggyBenchArgs, simple::BenchmarkKind},
+    benchmarks::{CONSUMER_GROUP_BASE_ID, CONSUMER_GROUP_NAME_PREFIX},
     consumer::Consumer,
 };
 use async_trait::async_trait;
@@ -11,7 +12,7 @@ use iggy::{
 };
 use integration::test_server::{login_root, ClientFactory};
 use std::sync::Arc;
-use tracing::info;
+use tracing::{error, info};
 
 use super::benchmark::{BenchmarkFutures, Benchmarkable};
 
@@ -28,12 +29,7 @@ impl ConsumerGroupBenchmark {
         }
     }
 
-    pub async fn init_consumer_groups(
-        &self,
-        consumer_group_name_prefix: &str,
-        consumer_group_base_id: u32,
-        consumer_groups_count: u32,
-    ) -> Result<(), IggyError> {
+    pub async fn init_consumer_groups(&self, consumer_groups_count: u32) -> Result<(), IggyError> {
         let start_stream_id = self.args().start_stream_id();
         let topic_id: u32 = 1;
         let client = self.client_factory().create_client().await;
@@ -46,22 +42,32 @@ impl ConsumerGroupBenchmark {
         );
         login_root(&client).await;
         for i in 1..=consumer_groups_count {
-            let consumer_group_id = consumer_group_base_id + i;
+            let consumer_group_id = CONSUMER_GROUP_BASE_ID + i;
             let stream_id = start_stream_id + i;
             let consumer_group_name =
-                format!("{}-{}", consumer_group_name_prefix, consumer_group_id);
+                format!("{}-{}", CONSUMER_GROUP_NAME_PREFIX, consumer_group_id);
             info!(
                 "Creating test consumer group with name: {}, id: {}, stream id: {}, topic id: {}",
                 consumer_group_name, consumer_group_id, stream_id, topic_id
             );
-            client
+
+            let cg = client
                 .create_consumer_group(
                     &stream_id.try_into().unwrap(),
                     &topic_id.try_into().unwrap(),
                     &consumer_group_name,
                     Some(consumer_group_id),
                 )
-                .await?;
+                .await;
+            if cg.is_err() {
+                let error = cg.err().unwrap();
+                match error {
+                    IggyError::ConsumerGroupIdAlreadyExists(_, _) => {
+                        continue;
+                    }
+                    _ => error!("Error when creating consumer group : {error}"),
+                }
+            }
         }
 
         Ok(())
@@ -72,19 +78,13 @@ impl ConsumerGroupBenchmark {
 impl Benchmarkable for ConsumerGroupBenchmark {
     async fn run(&mut self) -> BenchmarkFutures {
         self.check_streams().await?;
-        let consumer_group_base_id = 0;
-        let consumer_group_name_prefix = "cg";
         let consumer_groups_count = self.args.number_of_consumer_groups();
-        self.init_consumer_groups(
-            consumer_group_name_prefix,
-            consumer_group_base_id,
-            consumer_groups_count,
-        )
-        .await
-        .expect("Failed to init consumer group");
+        self.init_consumer_groups(consumer_groups_count)
+            .await
+            .expect("Failed to init consumer group");
 
         let start_stream_id = self.args.start_stream_id();
-        let start_consumer_group_id = consumer_group_base_id;
+        let start_consumer_group_id = CONSUMER_GROUP_BASE_ID;
         let consumers = self.args.consumers();
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();

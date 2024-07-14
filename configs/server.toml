@@ -12,12 +12,21 @@ path = "local_data/archive"
 [data_maintenance.archiver.s3]
 # Access key ID for the S3 bucket.
 key_id = "123"
+
 # Secret access key for the S3 bucket
-access_key = "secret"
+key_secret = "secret"
+
+# Name of the S3 bucket.
+bucket = "iggy"
+
+# Endpoint of the S3 region.
+endpoint = "http://localhost:9000"
+
 # Region of the S3 bucket.
 region = "eu-west-1"
-# Endpoint of the S3 bucket.
-bucket = "iggy"
+
+# Temporary directory for storing the data before uploading to S3.
+tmp_upload_dir = "local_data/s3_tmp"
 
 [data_maintenance.messages]
 # Enables or disables the archiver process for closed segments containing messages.
@@ -312,7 +321,7 @@ size = "4 GB"
 
 # Encryption configuration
 [system.encryption]
-# Determines whether server-side data encryption is enabled (boolean).
+# Determines whether server-side data encryption for the messages payloads and state commands is enabled (boolean).
 # `true` enables encryption for stored data using AES-256-GCM.
 # `false` means data is stored without encryption.
 enabled = false

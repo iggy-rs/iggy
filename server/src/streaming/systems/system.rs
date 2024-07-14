@@ -69,7 +69,7 @@ pub struct System {
     pub(crate) users: HashMap<UserId, User>,
     pub(crate) config: Arc<SystemConfig>,
     pub(crate) client_manager: IggySharedMut<ClientManager>,
-    pub(crate) encryptor: Option<Box<dyn Encryptor>>,
+    pub(crate) encryptor: Option<Arc<dyn Encryptor>>,
     pub(crate) metrics: Metrics,
     pub(crate) state: Arc<dyn State>,
     pub(crate) archiver: Option<Arc<dyn Archiver>>,
@@ -87,6 +87,18 @@ impl System {
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
         let version = SemanticVersion::current().expect("Invalid version");
+        info!(
+            "Server-side encryption is {}.",
+            map_toggle_str(config.encryption.enabled)
+        );
+
+        let encryptor: Option<Arc<dyn Encryptor>> = match config.encryption.enabled {
+            true => Some(Arc::new(
+                Aes256GcmEncryptor::from_base64_key(&config.encryption.key).unwrap(),
+            )),
+            false => None,
+        };
+
         let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
             true => Arc::new(FileWithSyncPersister {}),
             false => Arc::new(FilePersister {}),
@@ -95,11 +107,13 @@ impl System {
             &config.get_state_log_path(),
             &version,
             persister.clone(),
+            encryptor.clone(),
         ));
         Self::create(
             config.clone(),
             SystemStorage::new(config, persister),
             state,
+            encryptor,
             data_maintenance_config,
             pat_config,
         )
@@ -109,14 +123,10 @@ impl System {
         system_config: Arc<SystemConfig>,
         storage: SystemStorage,
         state: Arc<dyn State>,
+        encryptor: Option<Arc<dyn Encryptor>>,
         data_maintenance_config: DataMaintenanceConfig,
         pat_config: PersonalAccessTokenConfig,
     ) -> System {
-        info!(
-            "Server-side encryption is {}.",
-            map_toggle_str(system_config.encryption.enabled)
-        );
-
         let archiver_config = data_maintenance_config.archiver;
         let archiver: Option<Arc<dyn Archiver>> = if archiver_config.enabled {
             info!("Archiving is enabled, kind: {}", archiver_config.kind);
@@ -127,12 +137,15 @@ impl System {
                         .clone()
                         .expect("Disk archiver config is missing"),
                 ))),
-                ArchiverKind::S3 => Some(Arc::new(S3Archiver::new(
-                    archiver_config
-                        .s3
-                        .clone()
-                        .expect("S3 archiver config is missing"),
-                ))),
+                ArchiverKind::S3 => Some(Arc::new(
+                    S3Archiver::new(
+                        archiver_config
+                            .s3
+                            .clone()
+                            .expect("S3 archiver config is missing"),
+                    )
+                    .expect("Failed to create S3 archiver"),
+                )),
             }
         } else {
             info!("Archiving is disabled.");
@@ -140,16 +153,11 @@ impl System {
         };
 
         System {
-            encryptor: match system_config.encryption.enabled {
-                true => Some(Box::new(
-                    Aes256GcmEncryptor::from_base64_key(&system_config.encryption.key).unwrap(),
-                )),
-                false => None,
-            },
             config: system_config,
             streams: HashMap::new(),
             streams_ids: HashMap::new(),
             storage: Arc::new(storage),
+            encryptor,
             client_manager: IggySharedMut::new(ClientManager::default()),
             permissioner: Permissioner::default(),
             metrics: Metrics::init(),

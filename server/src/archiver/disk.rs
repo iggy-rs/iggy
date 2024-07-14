@@ -49,6 +49,10 @@ impl Archiver for DiskArchiver {
         for file in files {
             debug!("Archiving file: {file}");
             let source = Path::new(file);
+            if !source.exists() {
+                return Err(ServerError::FileToArchiveNotFound(file.to_string()));
+            }
+
             let base_directory = base_directory.as_deref().unwrap_or_default();
             let destination = Path::new(&self.config.path).join(base_directory).join(file);
             let destination_path = destination.to_str().unwrap_or_default().to_owned();

@@ -10,23 +10,17 @@ use std::rc::Rc;
 use tracing::{error, info};
 
 pub(crate) async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(), IggyError> {
-    /*
     let address = shard.config.tcp.clone().address;
-    let tls_config = shard.config.tcp.tls;
+    let tls_config = shard.config.tcp.tls.clone();
     monoio::spawn(async move {
-        let certificate = std::fs::read(tls_config.certificate.clone());
-        if certificate.is_err() {
-            panic!("Unable to read certificate file.");
-        }
+        let certificate = std::fs::read(tls_config.certificate.clone())
+            .expect("Unable to read certificate file.");
 
-        let certificate = certificate?;
-        let identity = Identity::from_pkcs12(&certificate, &tls_config.password);
-        if identity.is_err() {
-            panic!("Unable to create identity from certificate.");
-        }
+        let identity = Identity::from_pkcs12(&certificate, &tls_config.password)
+            .expect("Unable to create identity from certificate.");
 
-        let identity = identity?;
-        let raw_acceptor = native_tls::TlsAcceptor::new(identity)?;
+        let raw_acceptor =
+            native_tls::TlsAcceptor::new(identity).expect("Unable to create TLS acceptor.");
         let acceptor = TlsAcceptor::from(raw_acceptor);
         let listener =
             TcpListener::bind(address).expect(format!("Unable to start {server_name}.").as_ref());
@@ -38,9 +32,8 @@ pub(crate) async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(
         // This is required for the integration tests client to know where to connect to.
         // Since we bind to port 0 when creating server in order to get a random non-used port,
         // we have to store the address in the default_config.toml file.
-        if let Err(e) = persist_tcp_address(&shard, local_addr.to_string()).await {
-            return e;
-        }
+        //TODO(numinex) - uncomment this line when we are ready to test the integration tests.
+        //persist_tcp_address(&shard, local_addr.to_string()).await?
 
         loop {
             match listener.accept().await {
@@ -51,10 +44,9 @@ pub(crate) async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(
                     let shard = shard.clone();
                     let mut sender = TcpTlsSender { stream };
                     monoio::spawn(async move {
-                        if let Err(error) =
-                            handle_connection(address, &mut sender, shard).await
-                        {
+                        if let Err(error) = handle_connection(address, &mut sender, shard).await {
                             handle_error(error);
+                            // Delete client and session
                             //system.read().delete_client(&address).await;
                         }
                     });
@@ -62,7 +54,6 @@ pub(crate) async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(
                 Err(error) => error!("Unable to accept TCP TLS socket, error: {}", error),
             }
         }
-    }).await;
-    */
-    Ok(())
+    })
+    .await
 }

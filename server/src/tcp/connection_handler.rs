@@ -4,7 +4,6 @@ use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
-use crate::tpc::shard::cmd_handler;
 use crate::tpc::shard::shard::IggyShard;
 use crate::tpc::shard::shard_frame::{ShardEvent, ShardMessage, ShardResponse};
 use bytes::{BufMut, BytesMut};
@@ -155,7 +154,6 @@ pub(crate) async fn handle_connection(
                         .get_u32_value()
                         .expect("Unable to get numeric stream id, despite it being numeric.")
                 } else {
-                    // lookup in the streams hashmap
                     let stringify_stream_id = cmd
                         .stream_id
                         .get_string_value()

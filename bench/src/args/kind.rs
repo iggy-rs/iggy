@@ -213,10 +213,6 @@ pub struct ConsumerGroupArgs {
     #[arg(long, default_value_t = DEFAULT_NUMBER_OF_STREAMS_CONSUMER_GROUP)]
     pub streams: NonZeroU32,
 
-    /// Number of partitions
-    #[arg(long, default_value_t = DEFAULT_NUMBER_OF_PARTITIONS_CONSUMER_GROUP)]
-    pub partitions: NonZeroU32,
-
     /// Number of consumers
     #[arg(long, default_value_t = DEFAULT_NUMBER_OF_CONSUMERS)]
     pub consumers: NonZeroU32,
@@ -244,7 +240,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
     }
 
     fn number_of_partitions(&self) -> u32 {
-        self.partitions.get()
+        panic!("No partitions in consumer group benchmark");
     }
 
     fn consumers(&self) -> u32 {
@@ -272,24 +268,23 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
     }
 
     fn validate(&self) {
-        let partitions_count = self.inner().number_of_partitions();
-        let streams_count = self.inner().number_of_streams();
-        if partitions_count < 1 {
-            IggyBenchArgs::command()
-                .error(
-                    ErrorKind::ValueValidation,
-                    "Number of partitions must be greater than 1 for consumer group benchmark.",
-                )
-                .exit();
+        let cg_number = self.consumer_groups.get();
+        let consumers_number = self.consumers.get();
+        let mut cmd = IggyBenchArgs::command();
+        if cg_number < 1 {
+            cmd.error(
+                ErrorKind::ArgumentConflict,
+                format!("Consumer groups number must be greater than 0 for a consumer groups benchmark."),
+            )
+            .exit();
         }
 
-        if streams_count > 1 {
-            IggyBenchArgs::command()
-                .error(
-                    ErrorKind::ValueValidation,
-                    "Number of streams cannot be greater than 1 for consumer group benchmark.",
-                )
-                .exit();
+        if consumers_number < 1 {
+            cmd.error(
+                ErrorKind::ArgumentConflict,
+                format!("Consumers number must be greater than 0 for a consumer groups benchmark."),
+            )
+            .exit();
         }
     }
 }

@@ -4,7 +4,10 @@ use crate::{
 };
 use async_trait::async_trait;
 use iggy::{
-    client::ConsumerGroupClient, clients::client::{IggyClient, IggyClientBackgroundConfig}, consumer, error::IggyError, utils::byte_size::IggyByteSize
+    client::ConsumerGroupClient,
+    clients::client::{IggyClient, IggyClientBackgroundConfig},
+    error::IggyError,
+    utils::byte_size::IggyByteSize,
 };
 use integration::test_server::{login_root, ClientFactory};
 use std::sync::Arc;
@@ -48,8 +51,8 @@ impl ConsumerGroupBenchmark {
             let consumer_group_name =
                 format!("{}-{}", consumer_group_name_prefix, consumer_group_id);
             info!(
-                "Creating test consumer group with name: {}, id: {}",
-                consumer_group_name, consumer_group_id
+                "Creating test consumer group with name: {}, id: {}, stream id: {}, topic id: {}",
+                consumer_group_name, consumer_group_id, stream_id, topic_id
             );
             client
                 .create_consumer_group(
@@ -80,8 +83,8 @@ impl Benchmarkable for ConsumerGroupBenchmark {
         .await
         .expect("Failed to init consumer group");
 
-        let start_stream_id = self.args.start_stream_id() + 1;
-        let start_consumer_group_id = consumer_group_base_id + 1;
+        let start_stream_id = self.args.start_stream_id();
+        let start_consumer_group_id = consumer_group_base_id;
         let consumers = self.args.consumers();
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
@@ -89,8 +92,9 @@ impl Benchmarkable for ConsumerGroupBenchmark {
         let mut futures: BenchmarkFutures = Ok(Vec::with_capacity((consumers) as usize));
 
         for consumer_id in 1..=consumers {
-            let consumer_group_id = start_consumer_group_id + (consumer_id % consumer_groups_count);
-            let stream_id = start_stream_id + (consumer_id % consumer_groups_count);
+            let consumer_group_id =
+                start_consumer_group_id + 1 + (consumer_id % consumer_groups_count);
+            let stream_id = start_stream_id + 1 + (consumer_id % consumer_groups_count);
             let consumer = Consumer::new(
                 self.client_factory.clone(),
                 consumer_id,

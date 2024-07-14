@@ -58,7 +58,11 @@ impl Consumer {
         login_root(&client).await;
         let stream_id = self.stream_id.try_into().unwrap();
         let topic_id = topic_id.try_into().unwrap();
-        let partition_id = Some(default_partition_id);
+        let partition_id = if let Some(_) = self.consumer_group_id {
+            None
+        } else {
+            Some(default_partition_id)
+        };
         let consumer = match self.consumer_group_id {
             Some(consumer_group_id) => {
                 client
@@ -82,15 +86,22 @@ impl Consumer {
         let mut strategy = PollingStrategy::offset(0);
 
         if self.warmup_time.get_duration() != Duration::from_millis(0) {
-            info!(
-                "Consumer #{} → warming up for {}...",
-                self.consumer_id, self.warmup_time
-            );
+            if let Some(cg_id) = self.consumer_group_id {
+                info!(
+                    "Consumer #{}, part of consumer group #{}, → warming up for {}...",
+                    self.consumer_id, cg_id, self.warmup_time
+                );
+            } else {
+                info!(
+                    "Consumer #{} → warming up for {}...",
+                    self.consumer_id, self.warmup_time
+                );
+            }
             let warmup_end = Instant::now() + self.warmup_time.get_duration();
             while Instant::now() < warmup_end {
                 let offset = current_iteration * self.messages_per_batch as u64;
                 strategy.set_value(offset);
-                client
+                let polled_messages = client
                     .poll_messages(
                         &stream_id,
                         &topic_id,
@@ -101,14 +112,29 @@ impl Consumer {
                         false,
                     )
                     .await?;
+
+                if polled_messages.messages.is_empty() {
+                    warn!(
+                        "Consumer: {} - Messages are empty for offset: {}, retrying...",
+                        self.consumer_id, offset
+                    );
+                    continue;
+                }
                 current_iteration += 1;
             }
         }
 
-        info!(
-            "Consumer #{} → polling {} messages in {} batches of {} messages...",
-            self.consumer_id, total_messages, self.message_batches, self.messages_per_batch
+        if let Some(cg_id) = self.consumer_group_id {
+            info!(
+            "Consumer #{}, part of consumer group #{} → polling {} messages in {} batches of {} messages...",
+            self.consumer_id, cg_id, total_messages, self.message_batches, self.messages_per_batch
         );
+        } else {
+            info!(
+                "Consumer #{} → polling {} messages in {} batches of {} messages...",
+                self.consumer_id, total_messages, self.message_batches, self.messages_per_batch
+            );
+        }
 
         current_iteration = 0;
         let start_timestamp = Instant::now();

@@ -27,6 +27,7 @@ impl Benchmarkable for SendMessagesBenchmark {
         self.init_streams().await.expect("Failed to init streams!");
         let clients_count = self.args.producers();
         info!("Creating {} client(s)...", clients_count);
+        let streams_number = self.args.number_of_streams();
         let messages_per_batch = self.args.messages_per_batch();
         let message_batches = self.args.message_batches();
         let message_size = self.args.message_size();
@@ -45,7 +46,7 @@ impl Benchmarkable for SendMessagesBenchmark {
             let parallel_producer_streams = !args.disable_parallel_producer_streams();
             let stream_id = match parallel_producer_streams {
                 true => start_stream_id + client_id,
-                false => start_stream_id + 1,
+                false => start_stream_id + 1 + (client_id % streams_number),
             };
 
             let producer = Producer::new(

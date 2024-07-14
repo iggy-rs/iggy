@@ -58,7 +58,7 @@ impl Consumer {
         login_root(&client).await;
         let stream_id = self.stream_id.try_into().unwrap();
         let topic_id = topic_id.try_into().unwrap();
-        let partition_id = if let Some(_) = self.consumer_group_id {
+        let partition_id = if self.consumer_group_id.is_some() {
             None
         } else {
             Some(default_partition_id)

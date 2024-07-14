@@ -274,7 +274,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
         if cg_number < 1 {
             cmd.error(
                 ErrorKind::ArgumentConflict,
-                format!("Consumer groups number must be greater than 0 for a consumer groups benchmark."),
+                "Consumer groups number must be greater than 0 for a consumer groups benchmark.",
             )
             .exit();
         }
@@ -282,7 +282,7 @@ impl BenchmarkKindProps for ConsumerGroupArgs {
         if consumers_number < 1 {
             cmd.error(
                 ErrorKind::ArgumentConflict,
-                format!("Consumers number must be greater than 0 for a consumer groups benchmark."),
+                "Consumers number must be greater than 0 for a consumer groups benchmark.",
             )
             .exit();
         }

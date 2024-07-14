@@ -88,7 +88,6 @@ impl Producer {
                 .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
                 .await?;
         }
-        //println!("stream id: {}, topic id: {}, partitioning: {:?}", stream_id, topic_id, partitioning);
 
         info!(
             "Producer #{} → sending {} messages in {} batches of {} messages...",

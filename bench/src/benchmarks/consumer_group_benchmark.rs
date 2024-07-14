@@ -108,7 +108,7 @@ impl Benchmarkable for ConsumerGroupBenchmark {
             futures.as_mut().unwrap().push(future);
         }
         info!(
-            "Starting consumer group benchmark {} messages",
+            "Starting consumer group benchmark with {} messages",
             self.total_messages()
         );
         futures

@@ -252,6 +252,7 @@ Then, run the benchmarking app with the desired options:
    ```bash
    cargo r --bin iggy-bench -r -- -c -v send --streams 1 --partitions 10 --disable-parallel-producers tcp
    ```
+
    ```bash
    cargo r --bin iggy-bench -r -- -c -v consumer-group-poll tcp
    ```

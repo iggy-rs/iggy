@@ -362,6 +362,7 @@ mod tests {
             config,
             storage,
             Arc::new(TestState::default()),
+            None,
             DataMaintenanceConfig::default(),
             PersonalAccessTokenConfig::default(),
         );

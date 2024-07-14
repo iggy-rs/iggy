@@ -321,7 +321,7 @@ size = "4 GB"
 
 # Encryption configuration
 [system.encryption]
-# Determines whether server-side data encryption is enabled (boolean).
+# Determines whether server-side data encryption for the messages payloads and state commands is enabled (boolean).
 # `true` enables encryption for stored data using AES-256-GCM.
 # `false` means data is stored without encryption.
 enabled = false

@@ -1,6 +1,6 @@
 use super::{
-    poll_benchmark::PollMessagesBenchmark, send_and_poll_benchmark::SendAndPollMessagesBenchmark,
-    send_benchmark::SendMessagesBenchmark,
+    consumer_group_benchmark::ConsumerGroupBenchmark, poll_benchmark::PollMessagesBenchmark,
+    send_and_poll_benchmark::SendAndPollMessagesBenchmark, send_benchmark::SendMessagesBenchmark,
 };
 use crate::{
     args::{common::IggyBenchArgs, simple::BenchmarkKind},
@@ -35,6 +35,9 @@ impl From<IggyBenchArgs> for Box<dyn Benchmarkable> {
             BenchmarkKind::Send => {
                 Box::new(SendMessagesBenchmark::new(Arc::new(args), client_factory))
             }
+            BenchmarkKind::ConsumerGroupPoll => {
+                Box::new(ConsumerGroupBenchmark::new(Arc::new(args), client_factory))
+            }
             BenchmarkKind::SendAndPoll => Box::new(SendAndPollMessagesBenchmark::new(
                 Arc::new(args),
                 client_factory,
@@ -59,7 +62,7 @@ pub trait Benchmarkable {
         let start_stream_id = self.args().start_stream_id();
         let number_of_streams = self.args().number_of_streams();
         let topic_id: u32 = 1;
-        let partitions_count: u32 = 1;
+        let partitions_count: u32 = self.args().number_of_partitions();
         let client = self.client_factory().create_client().await;
         let client = IggyClient::create(
             client,
@@ -91,7 +94,7 @@ pub trait Benchmarkable {
                         None,
                         None,
                         IggyExpiry::NeverExpire,
-                        MaxTopicSize::ServerDefault,
+                        MaxTopicSize::Unlimited,
                     )
                     .await?;
             }

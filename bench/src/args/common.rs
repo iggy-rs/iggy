@@ -102,6 +102,10 @@ impl IggyBenchArgs {
         self.benchmark_kind.inner().number_of_streams()
     }
 
+    pub fn number_of_partitions(&self) -> u32 {
+        self.benchmark_kind.inner().number_of_partitions()
+    }
+
     pub fn consumers(&self) -> u32 {
         self.benchmark_kind.inner().consumers()
     }
@@ -120,6 +124,10 @@ impl IggyBenchArgs {
         self.benchmark_kind
             .inner()
             .disable_parallel_consumer_streams()
+    }
+
+    pub fn number_of_consumer_groups(&self) -> u32 {
+        self.benchmark_kind.inner().number_of_consumer_groups()
     }
 
     pub fn warmup_time(&self) -> IggyDuration {

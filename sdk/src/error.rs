@@ -36,6 +36,8 @@ pub enum IggyError {
     StateFileNotFound = 14,
     #[error("State file corrupted")]
     StateFileCorrupted = 15,
+    #[error("Invalid state entry checksum: {0}, expected: {1}, for index: {2}")]
+    InvalidStateEntryChecksum(u32, u32, u64) = 16,
     #[error("Cannot open database, Path: {0}")]
     CannotOpenDatabase(String) = 19,
     #[error("Resource with key: {0} was not found.")]
@@ -252,6 +254,8 @@ pub enum IggyError {
     PartitionNotFound(u32, u32, u32) = 3007,
     #[error("Topic with ID: {0} for stream with ID: {1} has no partitions.")]
     NoPartitions(u32, u32) = 3008,
+    #[error("Cannot read partitions for topic with ID: {0} for stream with ID: {1}")]
+    TopicFull(u32, u32) = 3009,
     #[error("Failed to delete consumer offsets directory for path: {0}")]
     CannotDeleteConsumerOffsetsDirectory(String) = 3010,
     #[error("Failed to delete consumer offset file for path: {0}")]

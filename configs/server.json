@@ -1,4 +1,31 @@
 {
+  "data_maintenance": {
+    "archiver": {
+      "enabled": false,
+      "kind": "disk",
+      "disk": {
+        "path": "local_data/archive"
+      },
+      "s3": {
+        "key_id": "123",
+        "key_secret": "secret",
+        "bucket": "iggy",
+        "endpoint": "http://localhost:9000",
+        "region": "eu-west-1",
+        "tmp_upload_dir": "local_data/s3_tmp"
+      }
+    },
+    "messages": {
+      "archiver_enabled": false,
+      "cleaner_enabled": false,
+      "interval": "1 m"
+    },
+    "state": {
+      "archiver_enabled": false,
+      "overwrite": true,
+      "interval": "1 m"
+    }
+  },
   "http": {
     "enabled": true,
     "address": "0.0.0.0:3000",
@@ -113,10 +140,6 @@
       "enabled": true,
       "size": "4 GB"
     },
-    "retention_policy": {
-      "message_expiry": "none",
-      "max_topic_size": "10 GB"
-    },
     "encryption": {
       "enabled": false,
       "key": ""
@@ -129,7 +152,9 @@
       "path": "streams"
     },
     "topic": {
-      "path": "topics"
+      "path": "topics",
+      "max_size": "10 GB",
+      "delete_oldest_segments": false
     },
     "partition": {
       "path": "partitions",
@@ -140,7 +165,9 @@
     "segment": {
       "size": "1 GB",
       "cache_indexes": true,
-      "cache_time_indexes": true
+      "cache_time_indexes": true,
+      "message_expiry": "none",
+      "archive_expired": false
     },
     "message_deduplication": {
       "enabled": false,

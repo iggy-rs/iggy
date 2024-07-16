@@ -3,13 +3,14 @@ use crate::configs::http::{
 };
 use crate::configs::quic::{QuicCertificateConfig, QuicConfig};
 use crate::configs::server::{
-    MessageCleanerConfig, MessageSaverConfig, PersonalAccessTokenCleanerConfig,
-    PersonalAccessTokenConfig, ServerConfig,
+    ArchiverConfig, DataMaintenanceConfig, MessageSaverConfig, MessagesMaintenanceConfig,
+    PersonalAccessTokenCleanerConfig, PersonalAccessTokenConfig, ServerConfig,
+    StateMaintenanceConfig,
 };
 use crate::configs::system::{
     BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
-    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RetentionPolicyConfig,
-    RuntimeConfig, SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
+    LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RuntimeConfig, SegmentConfig,
+    StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -22,7 +23,7 @@ static_toml::static_toml! {
 impl Default for ServerConfig {
     fn default() -> ServerConfig {
         ServerConfig {
-            message_cleaner: MessageCleanerConfig::default(),
+            data_maintenance: DataMaintenanceConfig::default(),
             message_saver: MessageSaverConfig::default(),
             personal_access_token: PersonalAccessTokenConfig::default(),
             system: Arc::new(SystemConfig::default()),
@@ -33,10 +34,56 @@ impl Default for ServerConfig {
     }
 }
 
+impl Default for ArchiverConfig {
+    fn default() -> ArchiverConfig {
+        ArchiverConfig {
+            enabled: false,
+            kind: SERVER_CONFIG
+                .data_maintenance
+                .archiver
+                .kind
+                .parse()
+                .unwrap(),
+            disk: None,
+            s3: None,
+        }
+    }
+}
+
+impl Default for MessagesMaintenanceConfig {
+    fn default() -> MessagesMaintenanceConfig {
+        MessagesMaintenanceConfig {
+            archiver_enabled: SERVER_CONFIG.data_maintenance.messages.archiver_enabled,
+            cleaner_enabled: SERVER_CONFIG.data_maintenance.messages.cleaner_enabled,
+            interval: SERVER_CONFIG
+                .data_maintenance
+                .messages
+                .interval
+                .parse()
+                .unwrap(),
+        }
+    }
+}
+
+impl Default for StateMaintenanceConfig {
+    fn default() -> StateMaintenanceConfig {
+        StateMaintenanceConfig {
+            archiver_enabled: SERVER_CONFIG.data_maintenance.state.archiver_enabled,
+            overwrite: SERVER_CONFIG.data_maintenance.state.overwrite,
+            interval: SERVER_CONFIG
+                .data_maintenance
+                .state
+                .interval
+                .parse()
+                .unwrap(),
+        }
+    }
+}
+
 impl Default for QuicConfig {
     fn default() -> QuicConfig {
         QuicConfig {
-            enabled: true,
+            enabled: SERVER_CONFIG.quic.enabled,
             address: SERVER_CONFIG.quic.address.parse().unwrap(),
             max_concurrent_bidi_streams: SERVER_CONFIG.quic.max_concurrent_bidi_streams as u64,
             datagram_send_buffer_size: SERVER_CONFIG
@@ -87,7 +134,7 @@ impl Default for TcpTlsConfig {
 impl Default for HttpConfig {
     fn default() -> HttpConfig {
         HttpConfig {
-            enabled: true,
+            enabled: SERVER_CONFIG.http.enabled,
             address: SERVER_CONFIG.http.address.parse().unwrap(),
             max_request_size: SERVER_CONFIG.http.max_request_size.parse().unwrap(),
             cors: HttpCorsConfig::default(),
@@ -185,15 +232,6 @@ impl Default for HttpTlsConfig {
     }
 }
 
-impl Default for MessageCleanerConfig {
-    fn default() -> MessageCleanerConfig {
-        MessageCleanerConfig {
-            enabled: SERVER_CONFIG.message_cleaner.enabled,
-            interval: SERVER_CONFIG.message_cleaner.interval.parse().unwrap(),
-        }
-    }
-}
-
 impl Default for MessageSaverConfig {
     fn default() -> MessageSaverConfig {
         MessageSaverConfig {
@@ -236,7 +274,6 @@ impl Default for SystemConfig {
             runtime: RuntimeConfig::default(),
             logging: LoggingConfig::default(),
             cache: CacheConfig::default(),
-            retention_policy: RetentionPolicyConfig::default(),
             stream: StreamConfig::default(),
             encryption: EncryptionConfig::default(),
             topic: TopicConfig::default(),
@@ -319,25 +356,6 @@ impl Default for CacheConfig {
     }
 }
 
-impl Default for RetentionPolicyConfig {
-    fn default() -> RetentionPolicyConfig {
-        RetentionPolicyConfig {
-            message_expiry: SERVER_CONFIG
-                .system
-                .retention_policy
-                .message_expiry
-                .parse()
-                .unwrap(),
-            max_topic_size: SERVER_CONFIG
-                .system
-                .retention_policy
-                .max_topic_size
-                .parse()
-                .unwrap(),
-        }
-    }
-}
-
 impl Default for EncryptionConfig {
     fn default() -> EncryptionConfig {
         EncryptionConfig {
@@ -359,6 +377,8 @@ impl Default for TopicConfig {
     fn default() -> TopicConfig {
         TopicConfig {
             path: SERVER_CONFIG.system.topic.path.parse().unwrap(),
+            max_size: SERVER_CONFIG.system.topic.max_size.parse().unwrap(),
+            delete_oldest_segments: SERVER_CONFIG.system.topic.delete_oldest_segments,
         }
     }
 }
@@ -381,6 +401,8 @@ impl Default for SegmentConfig {
             size: SERVER_CONFIG.system.segment.size.parse().unwrap(),
             cache_indexes: SERVER_CONFIG.system.segment.cache_indexes,
             cache_time_indexes: SERVER_CONFIG.system.segment.cache_time_indexes,
+            message_expiry: SERVER_CONFIG.system.segment.message_expiry.parse().unwrap(),
+            archive_expired: SERVER_CONFIG.system.segment.archive_expired,
         }
     }
 }

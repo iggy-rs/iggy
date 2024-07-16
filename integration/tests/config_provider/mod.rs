@@ -56,7 +56,7 @@ async fn validate_custom_env_provider() {
         "IGGY_MESSAGE_SAVER_ENABLED",
         expected_message_saver_enabled.to_string(),
     );
-    env::set_var("IGGY_SYSTEM_RETENTION_POLICY_MESSAGE_EXPIRY", "10s");
+    env::set_var("IGGY_SYSTEM_SEGMENT_MESSAGE_EXPIRY", "10s");
 
     let config_path = get_root_path().join("../configs/server.toml");
     let file_config_provider = FileConfigProvider::new(config_path.as_path().display().to_string());
@@ -77,7 +77,7 @@ async fn validate_custom_env_provider() {
     assert_eq!(config.tcp.enabled.to_string(), expected_tcp_enabled);
     assert_eq!(config.message_saver.enabled, expected_message_saver_enabled);
     assert_eq!(
-        config.system.retention_policy.message_expiry.to_string(),
+        config.system.segment.message_expiry.to_string(),
         expected_message_expiry
     );
 

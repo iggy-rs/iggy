@@ -78,6 +78,10 @@ impl Topic {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
         }
 
+        if self.is_full() {
+            return Err(IggyError::TopicFull(self.topic_id, self.stream_id));
+        }
+
         if messages.is_empty() {
             return Ok(());
         }

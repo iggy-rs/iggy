@@ -13,8 +13,8 @@ pub enum ServerError {
     InvalidConfigurationProvider(String),
     #[error("Cannot load configuration: {0}")]
     CannotLoadConfiguration(String),
-    #[error("Invalid configuration")]
-    InvalidConfiguration,
+    #[error("Invalid configuration: {0}")]
+    InvalidConfiguration(String),
     #[error("SDK error")]
     SdkError(#[from] iggy::error::IggyError),
     #[error("Write error")]
@@ -45,4 +45,12 @@ pub enum ServerError {
     CannotRemoveOldSegmentFiles,
     #[error("Cannot persist new segment files")]
     CannotPersistNewSegmentFiles,
+    #[error("Cannot archive file: {0}")]
+    CannotArchiveFile(String),
+    #[error("Cannot initialize S3 archiver")]
+    CannotInitializeS3Archiver,
+    #[error("Invalid S3 credentials")]
+    InvalidS3Credentials,
+    #[error("File to archive not found: {0}")]
+    FileToArchiveNotFound(String),
 }

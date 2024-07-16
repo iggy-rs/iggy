@@ -20,6 +20,12 @@ impl Partition {
         &self.segments
     }
 
+    pub fn get_segment(&self, start_offset: u64) -> Option<&Segment> {
+        self.segments
+            .iter()
+            .find(|s| s.start_offset == start_offset)
+    }
+
     pub fn get_segments_mut(&mut self) -> &mut Vec<Segment> {
         &mut self.segments
     }
@@ -27,7 +33,7 @@ impl Partition {
     pub async fn get_expired_segments_start_offsets(&self, now: IggyTimestamp) -> Vec<u64> {
         let mut expired_segments = Vec::new();
         for segment in &self.segments {
-            if segment.is_closed && segment.is_expired(now).await {
+            if segment.is_expired(now).await {
                 expired_segments.push(segment.start_offset);
             }
         }
@@ -60,16 +66,15 @@ impl Partition {
         self.segments.push(new_segment);
         self.segments_count_of_parent_stream
             .fetch_add(1, Ordering::SeqCst);
+        self.segments
+            .sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
         Ok(())
     }
 
     pub async fn delete_segment(&mut self, start_offset: u64) -> Result<DeletedSegment, IggyError> {
         let deleted_segment;
         {
-            let segment = self
-                .segments
-                .iter()
-                .find(|s| s.start_offset == start_offset);
+            let segment = self.get_segment(start_offset);
             if segment.is_none() {
                 return Err(IggyError::SegmentNotFound);
             }
@@ -86,6 +91,12 @@ impl Partition {
         }
 
         self.segments.retain(|s| s.start_offset != start_offset);
+        self.segments
+            .sort_by(|a, b| a.start_offset.cmp(&b.start_offset));
+        info!(
+            "Segment with start offset: {} has been deleted from partition with ID: {}, stream with ID: {}, topic with ID: {}",
+            start_offset, self.partition_id, self.stream_id, self.topic_id
+        );
         Ok(deleted_segment)
     }
 }

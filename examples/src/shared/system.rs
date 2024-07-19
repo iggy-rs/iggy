@@ -1,9 +1,12 @@
 use crate::shared::args::Args;
+use futures_util::StreamExt;
 use iggy::client::Client;
+use iggy::clients::consumer::IggyConsumer;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::locking::IggySharedMut;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
 use iggy::users::defaults::*;
@@ -83,7 +86,7 @@ pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), Ig
 
 pub async fn consume_messages(
     args: &Args,
-    client: &dyn Client,
+    client: Box<dyn Client>,
     handle_message: &MessageHandler,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
@@ -95,6 +98,7 @@ pub async fn consume_messages(
         kind: ConsumerKind::from_code(args.consumer_kind)?,
         id: Identifier::numeric(args.consumer_id).unwrap(),
     };
+
     loop {
         if args.message_batches_limit > 0 && consumed_batches == args.message_batches_limit {
             info!("Consumed {consumed_batches} batches of messages, exiting.");
@@ -123,4 +127,34 @@ pub async fn consume_messages(
         }
         interval.tick().await;
     }
+}
+
+pub async fn consume_messages_iter(
+    args: &Args,
+    client: IggySharedMut<Box<dyn Client>>,
+    handle_message: &MessageHandler,
+) -> Result<(), Box<dyn std::error::Error>> {
+    info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
+        args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
+
+    let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
+    let mut consumed_batches = 0;
+    let mut iggy_consumer = IggyConsumer::new(
+        client,
+        args.stream_id.try_into()?,
+        args.topic_id.try_into()?,
+        PollingStrategy::next(),
+        args.messages_per_batch,
+    )?;
+    while let Some(message) = iggy_consumer.next().await {
+        if args.message_batches_limit > 0 && consumed_batches == args.message_batches_limit {
+            info!("Consumed {consumed_batches} batches of messages, exiting.");
+            return Ok(());
+        }
+
+        handle_message(&message?)?;
+        consumed_batches += 1;
+        interval.tick().await;
+    }
+    Ok(())
 }

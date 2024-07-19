@@ -39,6 +39,7 @@ path = "src/message-headers/producer/main.rs"
 anyhow = "1.0.86"
 bytes = "1.6.0"
 clap = { version = "4.5.4", features = ["derive"] }
+futures-util = "0.3.30"
 iggy = { path = "../sdk" }
 rand = "0.8.5"
 serde = { version = "1.0.203", features = ["derive", "rc"] }

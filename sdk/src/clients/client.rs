@@ -155,6 +155,10 @@ impl IggyClient {
         }
     }
 
+    pub fn client(&self) -> IggySharedMut<Box<dyn Client>> {
+        self.client.clone()
+    }
+
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport and the optional configuration for sending and polling the messages in the background.
     /// Additionally, it allows to provide the custom implementations for the message handler, partitioner and encryptor.
     pub fn create(

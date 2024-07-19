@@ -1098,7 +1098,7 @@ dependencies = [
  "clap_complete",
  "figlet-rs",
  "iggy",
- "keyring",
+ "keyring 2.3.3",
  "passterm",
  "thiserror",
  "tokio",
@@ -2249,7 +2249,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -2266,8 +2266,10 @@ dependencies = [
  "dirs",
  "fast-async-mutex",
  "flume",
+ "futures",
+ "futures-util",
  "humantime",
- "keyring",
+ "keyring 3.0.3",
  "lazy_static",
  "openssl",
  "passterm",
@@ -2297,6 +2299,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "clap",
+ "futures-util",
  "iggy",
  "rand",
  "serde",
@@ -2366,7 +2369,7 @@ dependencies = [
  "futures",
  "humantime",
  "iggy",
- "keyring",
+ "keyring 2.3.3",
  "libc",
  "predicates",
  "regex",
@@ -2487,6 +2490,12 @@ dependencies = [
  "security-framework",
  "windows-sys 0.52.0",
 ]
+
+[[package]]
+name = "keyring"
+version = "3.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9961b98f55dc0b2737000132505bdafa249abab147ee9de43c50ae04a054aa6c"
 
 [[package]]
 name = "lazy_static"

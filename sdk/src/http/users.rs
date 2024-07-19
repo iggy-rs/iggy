@@ -115,7 +115,7 @@ impl UserClient for HttpClient {
                 &LoginUser {
                     username: username.to_string(),
                     password: password.to_string(),
-                    version: Some("0.5.0".to_string()),
+                    version: Some(env!("CARGO_PKG_VERSION").to_string()),
                     context: Some("".to_string()),
                 },
             )

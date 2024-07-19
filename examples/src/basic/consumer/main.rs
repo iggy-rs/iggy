@@ -18,9 +18,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_raw_connected_client(client_provider_config).await?;
-    let client = client.as_ref();
-    system::login_root(client).await;
-    system::init_by_consumer(&args, client).await;
+    system::login_root(&client).await;
+    system::init_by_consumer(&args, &client).await;
     system::consume_messages(&args, client, &handle_message).await
 }
 

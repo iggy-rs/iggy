@@ -39,6 +39,12 @@ pub struct Args {
     #[arg(long, default_value = "1")]
     pub messages_per_batch: u32,
 
+    #[arg(long, default_value = "0")]
+    pub offset: u64,
+
+    #[arg(long, default_value = "false")]
+    pub auto_commit: bool,
+
     #[arg(long, default_value = "tcp")]
     pub transport: String,
 

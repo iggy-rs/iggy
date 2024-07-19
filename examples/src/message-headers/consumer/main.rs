@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .build()?;
     system::login_root(&client).await;
     system::init_by_consumer(&args, &client).await;
-    system::consume_messages_iter(&args, client.client(), &handle_message).await
+    system::consume_messages(&args, &client, &handle_message).await
 }
 
 fn handle_message(message: &PolledMessage) -> Result<(), Box<dyn Error>> {

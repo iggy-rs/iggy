@@ -35,6 +35,7 @@ use tokio::time::sleep;
 use tracing::{error, info, warn};
 
 use crate::clients::builder::IggyClientBuilder;
+use crate::clients::consumer::IggyConsumer;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::permissions::Permissions;
@@ -62,6 +63,58 @@ pub struct IggyClient {
     encryptor: Option<Box<dyn Encryptor>>,
     message_handler: Option<Arc<Box<dyn MessageHandler>>>,
     message_channel_sender: Option<Arc<Sender<PolledMessage>>>,
+    consumer: Factory,
+}
+
+#[derive(Debug)]
+pub struct Factory {
+    client: IggySharedMut<Box<dyn Client>>,
+}
+
+impl Factory {
+    #[allow(clippy::too_many_arguments)]
+    pub fn standalone(
+        &self,
+        consumer_id: Identifier,
+        stream_id: Identifier,
+        topic_id: Identifier,
+        partition_id: u32,
+        polling_strategy: PollingStrategy,
+        batch_size: u32,
+        auto_commit: bool,
+    ) -> IggyConsumer {
+        IggyConsumer::new(
+            self.client.clone(),
+            Consumer::new(consumer_id),
+            stream_id,
+            topic_id,
+            Some(partition_id),
+            polling_strategy,
+            batch_size,
+            auto_commit,
+        )
+    }
+
+    pub fn group(
+        &self,
+        consumer_group_id: Identifier,
+        stream_id: Identifier,
+        topic_id: Identifier,
+        polling_strategy: PollingStrategy,
+        batch_size: u32,
+        auto_commit: bool,
+    ) -> IggyConsumer {
+        IggyConsumer::new(
+            self.client.clone(),
+            Consumer::group(consumer_group_id),
+            stream_id,
+            topic_id,
+            None,
+            polling_strategy,
+            batch_size,
+            auto_commit,
+        )
+    }
 }
 
 #[derive(Debug)]
@@ -144,8 +197,12 @@ impl IggyClient {
 
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport.
     pub fn new(client: Box<dyn Client>) -> Self {
+        let client = IggySharedMut::new(client);
         IggyClient {
-            client: IggySharedMut::new(client),
+            consumer: Factory {
+                client: client.clone(),
+            },
+            client,
             config: None,
             send_messages_batch: None,
             partitioner: None,
@@ -155,8 +212,8 @@ impl IggyClient {
         }
     }
 
-    pub fn client(&self) -> IggySharedMut<Box<dyn Client>> {
-        self.client.clone()
+    pub fn consumer(&self) -> &Factory {
+        &self.consumer
     }
 
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport and the optional configuration for sending and polling the messages in the background.
@@ -190,6 +247,9 @@ impl IggyClient {
         }
 
         IggyClient {
+            consumer: Factory {
+                client: client.clone(),
+            },
             client,
             config: Some(config),
             send_messages_batch: Some(send_messages_batch),

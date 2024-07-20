@@ -11,7 +11,7 @@ use iggy::error::IggyError;
 use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{trace, warn};
+use tracing::{info, trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
 
@@ -323,6 +323,10 @@ impl Segment {
             self.end_offset = self.current_offset;
             self.is_closed = true;
             self.unsaved_batches = None;
+            info!(
+                "Closed segment with start offset: {} for partition with ID: {}.",
+                self.start_offset, self.partition_id
+            );
         } else {
             self.unsaved_batches.as_mut().unwrap().clear();
         }

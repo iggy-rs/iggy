@@ -7,12 +7,15 @@ use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::timestamp::IggyTimestamp;
+use iggy::utils::topic_size::MaxTopicSize;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
+const ALMOST_FULL_THRESHOLD: f64 = 0.9;
 
 #[derive(Debug)]
 pub struct Topic {
@@ -33,11 +36,11 @@ pub struct Topic {
     pub(crate) consumer_groups_ids: HashMap<String, u32>,
     pub(crate) current_consumer_group_id: AtomicU32,
     pub(crate) current_partition_id: AtomicU32,
-    pub message_expiry: Option<u32>,
+    pub message_expiry: IggyExpiry,
     pub compression_algorithm: CompressionAlgorithm,
-    pub max_topic_size: Option<IggyByteSize>,
+    pub max_topic_size: MaxTopicSize,
     pub replication_factor: u8,
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
 }
 
 impl Clone for Topic {
@@ -72,9 +75,11 @@ impl Clone for Topic {
 }
 
 impl Topic {
+    #[allow(clippy::too_many_arguments)]
     pub fn empty(
         stream_id: u32,
         topic_id: u32,
+        name: &str,
         size_of_parent_stream: Rc<AtomicU64>,
         messages_count_of_parent_stream: Rc<AtomicU64>,
         segments_count_of_parent_stream: Rc<AtomicU32>,
@@ -84,15 +89,15 @@ impl Topic {
         Topic::create(
             stream_id,
             topic_id,
-            "",
+            name,
             config,
             storage,
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
+            IggyExpiry::NeverExpire,
             Default::default(),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap()
@@ -108,9 +113,9 @@ impl Topic {
         size_of_parent_stream: Rc<AtomicU64>,
         messages_count_of_parent_stream: Rc<AtomicU64>,
         segments_count_of_parent_stream: Rc<AtomicU32>,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<Topic, IggyError> {
         let path = config.get_topic_path(stream_id, topic_id);
@@ -132,24 +137,46 @@ impl Topic {
             consumer_groups_ids: HashMap::new(),
             current_consumer_group_id: AtomicU32::new(1),
             current_partition_id: AtomicU32::new(1),
-            message_expiry: match message_expiry {
-                Some(expiry) => match expiry {
-                    0 => None,
-                    _ => Some(expiry),
-                },
-                None => match config.retention_policy.message_expiry.as_secs() {
-                    0 => None,
-                    expiry => Some(expiry),
-                },
+            message_expiry: match config.segment.message_expiry {
+                IggyExpiry::NeverExpire => message_expiry,
+                value => value,
             },
             compression_algorithm,
-            max_topic_size,
+            max_topic_size: match max_topic_size {
+                MaxTopicSize::ServerDefault => config.topic.max_size,
+                _ => max_topic_size,
+            },
             replication_factor,
             config,
-            created_at: IggyTimestamp::now().to_micros(),
+            created_at: IggyTimestamp::now(),
         };
 
         Ok(topic)
+    }
+
+    pub fn is_full(&self) -> bool {
+        match self.max_topic_size {
+            MaxTopicSize::Unlimited => false,
+            MaxTopicSize::ServerDefault => false,
+            MaxTopicSize::Custom(size) => {
+                self.size_bytes.load(Ordering::SeqCst) >= size.as_bytes_u64()
+            }
+        }
+    }
+
+    pub fn is_almost_full(&self) -> bool {
+        match self.max_topic_size {
+            MaxTopicSize::Unlimited => false,
+            MaxTopicSize::ServerDefault => false,
+            MaxTopicSize::Custom(size) => {
+                self.size_bytes.load(Ordering::SeqCst)
+                    >= (size.as_bytes_u64() as f64 * ALMOST_FULL_THRESHOLD) as u64
+            }
+        }
+    }
+
+    pub fn is_unlimited(&self) -> bool {
+        matches!(self.max_topic_size, MaxTopicSize::Unlimited)
     }
 
     pub fn get_size(&self) -> IggyByteSize {
@@ -174,21 +201,13 @@ impl Topic {
 
 impl fmt::Display for Topic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
-        let max_topic_size = match self.max_topic_size {
-            Some(size) => size.as_human_string_with_zero_as_unlimited(),
-            None => "unlimited".to_owned(),
-        };
         write!(f, "ID: {}, ", self.topic_id)?;
         write!(f, "stream ID: {}, ", self.stream_id)?;
         write!(f, "name: {}, ", self.name)?;
         write!(f, "path: {}, ", self.path)?;
-        write!(
-            f,
-            "partitions count: {:?}, ",
-            self.partitions.borrow().len()
-        )?;
-        write!(f, "message expiry (s): {:?}, ", self.message_expiry)?;
-        write!(f, "max topic size (B): {:?}, ", max_topic_size)?;
+        write!(f, "partitions count: {}, ", self.partitions.borrow().len())?;
+        write!(f, "message expiry: {}, ", self.message_expiry)?;
+        write!(f, "max topic size: {}, ", self.max_topic_size)?;
         write!(f, "replication factor: {}, ", self.replication_factor)
     }
 }
@@ -207,9 +226,9 @@ mod tests {
         let topic_id = 2;
         let name = "test";
         let partitions_count = 3;
-        let message_expiry = 10;
+        let message_expiry = IggyExpiry::NeverExpire;
         let compression_algorithm = CompressionAlgorithm::None;
-        let max_topic_size = IggyByteSize::from_str("2 GB").unwrap();
+        let max_topic_size = MaxTopicSize::Custom(IggyByteSize::from_str("2 GB").unwrap());
         let replication_factor = 1;
         let config = Arc::new(SystemConfig::default());
         let path = config.get_topic_path(stream_id, topic_id);
@@ -226,9 +245,9 @@ mod tests {
             messages_count_of_parent_stream,
             size_of_parent_stream,
             segments_count_of_parent_stream,
-            Some(message_expiry),
+            message_expiry,
             compression_algorithm,
-            Some(max_topic_size),
+            max_topic_size,
             replication_factor,
         )
         .unwrap();
@@ -242,7 +261,7 @@ mod tests {
             topic.partitions.borrow().iter().len(),
             partitions_count as usize
         );
-        assert_eq!(topic.message_expiry, Some(message_expiry));
+        assert_eq!(topic.message_expiry, message_expiry);
 
         for (id, partition) in topic.partitions.borrow().iter() {
             assert_eq!(partition.stream_id, stream_id);

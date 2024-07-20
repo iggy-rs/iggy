@@ -1,5 +1,8 @@
 use crate::streaming::common::test_setup::TestSetup;
 use crate::streaming::create_messages;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::timestamp::IggyTimestamp;
+use server::state::system::PartitionState;
 use server::streaming::batching::appendable_batch_info::AppendableBatchInfo;
 use server::streaming::partitions::partition::Partition;
 use server::streaming::segments::segment::{INDEX_EXTENSION, LOG_EXTENSION, TIME_INDEX_EXTENSION};
@@ -24,17 +27,18 @@ async fn should_persist_partition_with_segment() {
             with_segment,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU32::new(0)),
+            IggyTimestamp::now(),
         );
 
         partition.persist().await.unwrap();
 
-        assert_persisted_partition(&partition.path, with_segment).await;
+        assert_persisted_partition(&partition.partition_path, with_segment).await;
     }
 }
 
@@ -54,16 +58,18 @@ async fn should_load_existing_partition_from_disk() {
             with_segment,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU32::new(0)),
+            IggyTimestamp::now(),
         );
         partition.persist().await.unwrap();
-        assert_persisted_partition(&partition.path, with_segment).await;
+        assert_persisted_partition(&partition.partition_path, with_segment).await;
 
+        let now = IggyTimestamp::now();
         let mut loaded_partition = Partition::create(
             stream_id,
             topic_id,
@@ -71,18 +77,23 @@ async fn should_load_existing_partition_from_disk() {
             false,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU32::new(0)),
+            now,
         );
-        loaded_partition.load().await.unwrap();
+        let partition_state = PartitionState {
+            id: partition.partition_id,
+            created_at: now,
+        };
+        loaded_partition.load(partition_state).await.unwrap();
 
         assert_eq!(loaded_partition.stream_id, partition.stream_id);
         assert_eq!(loaded_partition.partition_id, partition.partition_id);
-        assert_eq!(loaded_partition.path, partition.path);
+        assert_eq!(loaded_partition.partition_path, partition.partition_path);
         assert_eq!(loaded_partition.current_offset, partition.current_offset);
         assert_eq!(
             loaded_partition.unsaved_messages_count,
@@ -120,19 +131,20 @@ async fn should_delete_existing_partition_from_disk() {
             with_segment,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU32::new(0)),
+            IggyTimestamp::now(),
         );
         partition.persist().await.unwrap();
-        assert_persisted_partition(&partition.path, with_segment).await;
+        assert_persisted_partition(&partition.partition_path, with_segment).await;
 
         partition.delete().await.unwrap();
 
-        assert!(fs::metadata(&partition.path).await.is_err());
+        assert!(fs::metadata(&partition.partition_path).await.is_err());
     }
 }
 
@@ -152,15 +164,16 @@ async fn should_purge_existing_partition_on_disk() {
             with_segment,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU32::new(0)),
+            IggyTimestamp::now(),
         );
         partition.persist().await.unwrap();
-        assert_persisted_partition(&partition.path, with_segment).await;
+        assert_persisted_partition(&partition.partition_path, with_segment).await;
         let messages = create_messages();
         let messages_count = messages.len();
         let appendable_batch_info = AppendableBatchInfo::new(

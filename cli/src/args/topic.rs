@@ -2,22 +2,21 @@ use crate::args::common::ListMode;
 use clap::{Args, Subcommand};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::identifier::Identifier;
-use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
-use std::convert::From;
+use iggy::utils::topic_size::MaxTopicSize;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum TopicAction {
-    /// Create topic with given name, number of partitions and expiry time for given stream ID
+    /// Create topic with given name, number of partitions, compression algorithm and expiry time for given stream ID
     ///
     /// Stream ID can be specified as a stream name or ID
     /// If topic ID is not provided then the server will automatically assign it
     ///
     /// Examples
-    ///  iggy topic create 1 sensor1 2 15days
-    ///  iggy topic create prod sensor2 2
-    ///  iggy topic create test debugs 2 1day 1hour 1min 1sec
-    ///  iggy topic create -t 3 1 sensor3 2 unlimited
+    ///  iggy topic create 1 sensor1 2 gzip 15days
+    ///  iggy topic create prod sensor2 2 none
+    ///  iggy topic create test debugs 2 gzip 1day 1hour 1min 1sec
+    ///  iggy topic create -t 3 1 sensor3 2 none unlimited
     #[clap(verbatim_doc_comment, visible_alias = "c")]
     Create(TopicCreateArgs),
     /// Delete topic with given ID in given stream ID
@@ -32,17 +31,17 @@ pub(crate) enum TopicAction {
     ///  iggy topic delete 2 debugs
     #[clap(verbatim_doc_comment, visible_alias = "d")]
     Delete(TopicDeleteArgs),
-    /// Update topic name a message expiry time for given topic ID in given stream ID
+    /// Update topic name, compression algorithm and message expiry time for given topic ID in given stream ID
     ///
     /// Stream ID can be specified as a stream name or ID
     /// Topic ID can be specified as a topic name or ID
     ///
     /// Examples
-    ///  iggy update 1 1 sensor3
-    ///  iggy update prod sensor3 old-sensor
-    ///  iggy update test debugs ready 15days
-    ///  iggy update 1 1 new-name
-    ///  iggy update 1 2 new-name 1day 1hour 1min 1sec
+    ///  iggy update 1 1 sensor3 none
+    ///  iggy update prod sensor3 old-sensor none
+    ///  iggy update test debugs ready gzip 15days
+    ///  iggy update 1 1 new-name gzip
+    ///  iggy update 1 2 new-name none 1day 1hour 1min 1sec
     #[clap(verbatim_doc_comment, visible_alias = "u")]
     Update(TopicUpdateArgs),
     /// Get topic detail for given topic ID and stream ID
@@ -103,7 +102,7 @@ pub(crate) struct TopicCreateArgs {
     /// ("unlimited" or skipping parameter disables max topic size functionality in topic)
     /// Can't be lower than segment size in the config.
     #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
-    pub(crate) max_topic_size: IggyByteSize,
+    pub(crate) max_topic_size: MaxTopicSize,
     /// Replication factor for the topic
     #[arg(short, long, default_value = "1")]
     pub(crate) replication_factor: u8,
@@ -150,7 +149,7 @@ pub(crate) struct TopicUpdateArgs {
     /// ("unlimited" or skipping parameter causes removal of max topic size parameter in topic)
     /// Can't be lower than segment size in the config.
     #[arg(short, long, default_value = "unlimited", verbatim_doc_comment)]
-    pub(crate) max_topic_size: IggyByteSize,
+    pub(crate) max_topic_size: MaxTopicSize,
     #[arg(short, long, default_value = "1")]
     /// New replication factor for the topic
     pub(crate) replication_factor: u8,

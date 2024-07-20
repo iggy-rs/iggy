@@ -1,53 +1,10 @@
-use crate::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use crate::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
-use crate::consumer_groups::get_consumer_group::GetConsumerGroup;
-use crate::consumer_groups::get_consumer_groups::GetConsumerGroups;
-use crate::consumer_groups::join_consumer_group::JoinConsumerGroup;
-use crate::consumer_groups::leave_consumer_group::LeaveConsumerGroup;
-use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
-use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
+use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
-use crate::messages::poll_messages::PollMessages;
-use crate::messages::send_messages::SendMessages;
-use crate::partitions::create_partitions::CreatePartitions;
-use crate::partitions::delete_partitions::DeletePartitions;
-use crate::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
-use crate::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
-use crate::personal_access_tokens::get_personal_access_tokens::GetPersonalAccessTokens;
-use crate::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
-use crate::streams::create_stream::CreateStream;
-use crate::streams::delete_stream::DeleteStream;
-use crate::streams::get_stream::GetStream;
-use crate::streams::get_streams::GetStreams;
-use crate::streams::purge_stream::PurgeStream;
-use crate::streams::update_stream::UpdateStream;
-use crate::system::get_client::GetClient;
-use crate::system::get_clients::GetClients;
-use crate::system::get_me::GetMe;
-use crate::system::get_stats::GetStats;
-use crate::system::ping::Ping;
-use crate::topics::create_topic::CreateTopic;
-use crate::topics::delete_topic::DeleteTopic;
-use crate::topics::get_topic::GetTopic;
-use crate::topics::get_topics::GetTopics;
-use crate::topics::purge_topic::PurgeTopic;
-use crate::topics::update_topic::UpdateTopic;
-use crate::users::change_password::ChangePassword;
-use crate::users::create_user::CreateUser;
-use crate::users::delete_user::DeleteUser;
-use crate::users::get_user::GetUser;
-use crate::users::get_users::GetUsers;
-use crate::users::login_user::LoginUser;
-use crate::users::logout_user::LogoutUser;
-use crate::users::update_permissions::UpdatePermissions;
-use crate::users::update_user::UpdateUser;
-use crate::{
-    bytes_serializable::BytesSerializable, models::resource_namespace::IggyResourceNamespace,
-};
-use bytes::{BufMut, Bytes, BytesMut};
-use enum_dispatch::enum_dispatch;
-use std::fmt::{Display, Formatter};
-use strum::EnumString;
+use std::fmt::Display;
+
+pub trait Command: BytesSerializable + Send + Sync + Display {
+    fn code(&self) -> u32;
+}
 
 pub const PING: &str = "ping";
 pub const PING_CODE: u32 = 1;
@@ -134,17 +91,55 @@ pub const JOIN_CONSUMER_GROUP_CODE: u32 = 604;
 pub const LEAVE_CONSUMER_GROUP: &str = "consumer_group.leave";
 pub const LEAVE_CONSUMER_GROUP_CODE: u32 = 605;
 
-pub enum CommandExecution {
-    Routed,
-    Direct,
+pub fn get_name_from_code(code: u32) -> Result<&'static str, IggyError> {
+    match code {
+        PING_CODE => Ok(PING),
+        GET_STATS_CODE => Ok(GET_STATS),
+        GET_ME_CODE => Ok(GET_ME),
+        GET_CLIENT_CODE => Ok(GET_CLIENT),
+        GET_CLIENTS_CODE => Ok(GET_CLIENTS),
+        GET_USER_CODE => Ok(GET_USER),
+        GET_USERS_CODE => Ok(GET_USERS),
+        CREATE_USER_CODE => Ok(CREATE_USER),
+        DELETE_USER_CODE => Ok(DELETE_USER),
+        UPDATE_USER_CODE => Ok(UPDATE_USER),
+        UPDATE_PERMISSIONS_CODE => Ok(UPDATE_PERMISSIONS),
+        CHANGE_PASSWORD_CODE => Ok(CHANGE_PASSWORD),
+        LOGIN_USER_CODE => Ok(LOGIN_USER),
+        LOGOUT_USER_CODE => Ok(LOGOUT_USER),
+        GET_PERSONAL_ACCESS_TOKENS_CODE => Ok(GET_PERSONAL_ACCESS_TOKENS),
+        CREATE_PERSONAL_ACCESS_TOKEN_CODE => Ok(CREATE_PERSONAL_ACCESS_TOKEN),
+        DELETE_PERSONAL_ACCESS_TOKEN_CODE => Ok(DELETE_PERSONAL_ACCESS_TOKEN),
+        LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE => Ok(LOGIN_WITH_PERSONAL_ACCESS_TOKEN),
+        SEND_MESSAGES_CODE => Ok(SEND_MESSAGES),
+        POLL_MESSAGES_CODE => Ok(POLL_MESSAGES),
+        STORE_CONSUMER_OFFSET_CODE => Ok(STORE_CONSUMER_OFFSET),
+        GET_CONSUMER_OFFSET_CODE => Ok(GET_CONSUMER_OFFSET),
+        GET_STREAM_CODE => Ok(GET_STREAM),
+        GET_STREAMS_CODE => Ok(GET_STREAMS),
+        CREATE_STREAM_CODE => Ok(CREATE_STREAM),
+        DELETE_STREAM_CODE => Ok(DELETE_STREAM),
+        UPDATE_STREAM_CODE => Ok(UPDATE_STREAM),
+        PURGE_STREAM_CODE => Ok(PURGE_STREAM),
+        GET_TOPIC_CODE => Ok(GET_TOPIC),
+        GET_TOPICS_CODE => Ok(GET_TOPICS),
+        CREATE_TOPIC_CODE => Ok(CREATE_TOPIC),
+        DELETE_TOPIC_CODE => Ok(DELETE_TOPIC),
+        UPDATE_TOPIC_CODE => Ok(UPDATE_TOPIC),
+        PURGE_TOPIC_CODE => Ok(PURGE_TOPIC),
+        CREATE_PARTITIONS_CODE => Ok(CREATE_PARTITIONS),
+        DELETE_PARTITIONS_CODE => Ok(DELETE_PARTITIONS),
+        GET_CONSUMER_GROUP_CODE => Ok(GET_CONSUMER_GROUP),
+        GET_CONSUMER_GROUPS_CODE => Ok(GET_CONSUMER_GROUPS),
+        CREATE_CONSUMER_GROUP_CODE => Ok(CREATE_CONSUMER_GROUP),
+        DELETE_CONSUMER_GROUP_CODE => Ok(DELETE_CONSUMER_GROUP),
+        JOIN_CONSUMER_GROUP_CODE => Ok(JOIN_CONSUMER_GROUP),
+        LEAVE_CONSUMER_GROUP_CODE => Ok(LEAVE_CONSUMER_GROUP),
+        _ => Err(IggyError::InvalidCommand),
+    }
 }
 
-#[enum_dispatch(Command)]
-pub trait CommandExecutionOrigin {
-    fn get_command_execution_origin(&self) -> CommandExecution;
-}
-
-#[enum_dispatch]
+/*
 #[derive(Debug, Clone, PartialEq, EnumString)]
 pub enum Command {
     Ping(Ping),
@@ -443,7 +438,9 @@ impl Display for Command {
         }
     }
 }
+*/
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -696,3 +693,5 @@ mod tests {
         assert_eq!(&Command::from_bytes(bytes).unwrap(), command);
     }
 }
+
+*/

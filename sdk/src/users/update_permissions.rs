@@ -1,9 +1,9 @@
-use crate::command::{CommandExecution, CommandPayload};
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{Command, UPDATE_PERMISSIONS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::permissions::Permissions;
 use crate::validatable::Validatable;
-use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -21,10 +21,9 @@ pub struct UpdatePermissions {
     pub permissions: Option<Permissions>,
 }
 
-impl CommandPayload for UpdatePermissions {}
-impl CommandExecutionOrigin for UpdatePermissions {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for UpdatePermissions {
+    fn code(&self) -> u32 {
+        UPDATE_PERMISSIONS_CODE
     }
 }
 
@@ -35,14 +34,14 @@ impl Validatable<IggyError> for UpdatePermissions {
 }
 
 impl BytesSerializable for UpdatePermissions {
-    fn as_bytes(&self) -> Bytes {
-        let user_id_bytes = self.user_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let user_id_bytes = self.user_id.to_bytes();
         let mut bytes = BytesMut::new();
         bytes.put_slice(&user_id_bytes);
         if let Some(permissions) = &self.permissions {
             bytes.put_u8(1);
-            bytes.put_u32_le(permissions.as_bytes().len() as u32);
-            bytes.put_slice(&permissions.as_bytes());
+            bytes.put_u32_le(permissions.to_bytes().len() as u32);
+            bytes.put_slice(&permissions.to_bytes());
         } else {
             bytes.put_u8(0);
         }
@@ -106,7 +105,7 @@ mod tests {
             user_id: Identifier::numeric(1).unwrap(),
             permissions: Some(get_permissions()),
         };
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
         let mut position = user_id.get_size_bytes() as usize;
         let has_permissions = bytes[position];
@@ -128,9 +127,9 @@ mod tests {
     fn should_be_deserialized_from_bytes() {
         let user_id = Identifier::numeric(1).unwrap();
         let permissions = get_permissions();
-        let permissions_bytes = permissions.as_bytes();
+        let permissions_bytes = permissions.to_bytes();
         let mut bytes = BytesMut::new();
-        bytes.put_slice(&user_id.as_bytes());
+        bytes.put_slice(&user_id.to_bytes());
         bytes.put_u8(1);
         bytes.put_u32_le(permissions_bytes.len() as u32);
         bytes.put_slice(&permissions_bytes);

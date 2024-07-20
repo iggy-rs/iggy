@@ -12,6 +12,7 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::models::consumer_group::ConsumerGroupDetails;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use integration::test_server::{
     assert_clean_system, create_user, login_root, login_user, ClientFactory,
 };
@@ -55,7 +56,7 @@ async fn init_system(
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
         .unwrap();

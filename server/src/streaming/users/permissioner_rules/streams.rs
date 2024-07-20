@@ -1,5 +1,6 @@
 use crate::streaming::users::permissioner::Permissioner;
 use iggy::error::IggyError;
+use tracing::error;
 
 impl Permissioner {
     pub fn get_stream(&self, user_id: u32, stream_id: u32) -> Result<(), IggyError> {

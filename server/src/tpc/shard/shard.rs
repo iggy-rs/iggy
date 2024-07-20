@@ -1,30 +1,38 @@
 use super::shard_frame::{ShardEvent, ShardFrame, ShardMessage, ShardResponse};
+use crate::state::State;
+use crate::streaming::persistence::persister::PersistenceStorage;
 use crate::{
+    command::ServerCommand,
     configs::server::ServerConfig,
+    state::{file::FileState, system::SystemState},
     streaming::{
-        cache::memory_tracker::CacheMemoryTracker, clients::client_manager::ClientManager,
-        diagnostics::metrics::Metrics, session::Session, storage::SystemStorage,
-        streams::stream::Stream, users::permissioner::Permissioner,
+        cache::memory_tracker::CacheMemoryTracker,
+        clients::client_manager::ClientManager,
+        diagnostics::metrics::Metrics,
+        session::Session,
+        storage::SystemStorage,
+        streams::stream::Stream,
+        users::{permissioner::Permissioner, user::User},
     },
     tpc::connector::{Receiver, ShardConnector, StopReceiver, StopSender},
+    versioning::SemanticVersion,
 };
 use flume::SendError;
-use iggy::{
-    command::{self, Command},
-    identifier::{IdKind, Identifier},
-    models::resource_namespace::IggyResourceNamespace,
-};
+use iggy::models::{resource_namespace::IggyResourceNamespace, user_info::UserId};
 use iggy::{
     error::IggyError,
     utils::crypto::{Aes256GcmEncryptor, Encryptor},
 };
-use sled::Db;
+use local_sync::semaphore::Semaphore;
+use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
 };
-use std::{collections::HashMap, sync::Arc, time::Instant};
-use tracing::info;
+use std::{collections::HashMap, time::Instant};
+use tracing::{error, info};
 
 pub const SHARD_NAME: &str = "iggy_shard";
 
@@ -66,13 +74,17 @@ pub struct IggyShard {
     pub id: u16,
     shards: Vec<Shard>,
     shards_table: RefCell<HashMap<IggyResourceNamespace, ShardInfo>>,
+    init_gate: Arc<Mutex<()>>,
 
     pub(crate) permissioner: RefCell<Permissioner>,
     pub(crate) storage: Rc<SystemStorage>,
     pub(crate) streams: RefCell<HashMap<u32, Stream>>,
     pub(crate) streams_ids: RefCell<HashMap<String, u32>>,
+    pub(crate) users: RefCell<HashMap<UserId, User>>,
+
     // TODO - get rid of this dynamic dispatch.
-    pub(crate) encryptor: Option<Box<dyn Encryptor>>,
+    pub(crate) state: Rc<FileState>,
+    pub(crate) encryptor: Option<Rc<dyn Encryptor>>,
     pub(crate) config: ServerConfig,
     pub(crate) client_manager: RefCell<ClientManager>,
     pub(crate) active_sessions: RefCell<Vec<Session>>,
@@ -85,26 +97,42 @@ impl IggyShard {
     pub fn new(
         id: u16,
         shards: Vec<Shard>,
+        init_gate: Arc<Mutex<()>>,
         config: ServerConfig,
         storage: Rc<SystemStorage>,
+        persister: Rc<PersistenceStorage>,
         shard_messages_receiver: Receiver<ShardFrame>,
         stop_receiver: StopReceiver,
         stop_sender: StopSender,
     ) -> Self {
+        let version = SemanticVersion::current().expect("Invalid version");
         Self {
             id,
             shards,
             shards_table: RefCell::new(HashMap::new()),
+            init_gate,
             permissioner: RefCell::new(Permissioner::default()),
             storage,
             streams: RefCell::new(HashMap::new()),
+            users: RefCell::new(HashMap::new()),
             streams_ids: RefCell::new(HashMap::new()),
             encryptor: match config.system.encryption.enabled {
-                true => Some(Box::new(
+                true => Some(Rc::new(
                     Aes256GcmEncryptor::from_base64_key(&config.system.encryption.key).unwrap(),
                 )),
                 false => None,
             },
+            state: Rc::new(FileState::new(
+                &config.system.get_state_log_path(),
+                &version,
+                persister,
+                match config.system.encryption.enabled {
+                    true => Some(Rc::new(
+                        Aes256GcmEncryptor::from_base64_key(&config.system.encryption.key).unwrap(),
+                    )),
+                    false => None,
+                },
+            )),
             config,
             client_manager: RefCell::new(ClientManager::default()),
             active_sessions: RefCell::new(Vec::new()),
@@ -115,15 +143,31 @@ impl IggyShard {
         }
     }
 
-    pub async fn init(&self) -> Result<(), IggyError> {
+    pub async fn init(&self, is_prime_thread: bool) -> Result<(), IggyError> {
         info!(
             "Initializing system, data will be stored at: {}",
             self.config.system.get_system_path()
         );
         let now = Instant::now();
+        // Not the cleanest way to do this, it has could be improved later on
+        // (move the creation of state dirs and root user before shards initialization.).
+        let guard = self.init_gate.lock().unwrap();
+        let state_entries = self.state.init().await?;
+        let system_state = SystemState::init(state_entries).await?;
         self.load_version().await?;
-        self.load_users().await?;
-        self.load_streams().await?;
+        self.load_users(system_state.users.into_values().collect())
+            .await?;
+        self.load_streams(system_state.streams.into_values().collect())
+            .await?;
+        drop(guard);
+        /*
+        if let Some(archiver) = self.archiver.as_ref() {
+            archiver
+                .init()
+                .await
+                .expect("Failed to initialize archiver");
+        }
+        */
         info!("Initialized system in {} ms.", now.elapsed().as_millis());
         Ok(())
     }
@@ -179,7 +223,7 @@ impl IggyShard {
         &self,
         client_id: u32,
         resource_ns: IggyResourceNamespace,
-        command: Command,
+        command: ServerCommand,
     ) -> Result<ShardResponse, IggyError> {
         let shard = self.find_shard(resource_ns.clone());
         let shard = shard.unwrap();

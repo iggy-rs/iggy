@@ -2,12 +2,14 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Extension, Json, Router};
 use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
+use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::identifier::Identifier;
 use iggy::models::consumer_group::{ConsumerGroup, ConsumerGroupDetails};
 use iggy::validatable::Validatable;
@@ -68,21 +70,33 @@ async fn create_consumer_group(
     Extension(identity): Extension<Identity>,
     Path((stream_id, topic_id)): Path<(String, String)>,
     Json(mut command): Json<CreateConsumerGroup>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<(StatusCode, Json<ConsumerGroupDetails>), CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    let mut system = state.system.write();
-    system
-        .create_consumer_group(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.stream_id,
-            &command.topic_id,
-            command.group_id,
-            &command.name,
-        )
-        .await?;
-    Ok(StatusCode::CREATED)
+    let consumer_group_details;
+    {
+        let mut system = state.system.write();
+        let consumer_group = system
+            .create_consumer_group(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.stream_id,
+                &command.topic_id,
+                command.group_id,
+                &command.name,
+            )
+            .await?;
+        let consumer_group = consumer_group.read().await;
+        consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
+    }
+    {
+        let system = state.system.read();
+        system
+            .state
+            .apply(identity.user_id, EntryCommand::CreateConsumerGroup(command))
+            .await?;
+    }
+    Ok((StatusCode::CREATED, Json(consumer_group_details)))
 }
 
 async fn delete_consumer_group(
@@ -102,5 +116,17 @@ async fn delete_consumer_group(
             &group_id,
         )
         .await?;
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::DeleteConsumerGroup(DeleteConsumerGroup {
+                stream_id,
+                topic_id,
+                group_id,
+            }),
+        )
+        .await?;
+
     Ok(StatusCode::NO_CONTENT)
 }

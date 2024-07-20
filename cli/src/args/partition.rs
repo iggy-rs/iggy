@@ -1,6 +1,5 @@
 use clap::{Args, Subcommand};
 use iggy::identifier::Identifier;
-use std::convert::From;
 
 #[derive(Debug, Clone, Subcommand)]
 pub(crate) enum PartitionAction {

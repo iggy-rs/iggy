@@ -2,8 +2,11 @@ use crate::streaming::topics::topic::Topic;
 use crate::tpc::shard::shard::ShardInfo;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
+use iggy::locking::IggySharedMutFn;
 use iggy::models::resource_namespace::IggyResourceNamespace;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use iggy::{
     compression::compression_algorithm::CompressionAlgorithm, utils::hash::hash_resource_namespace,
 };
@@ -44,18 +47,17 @@ impl IggyShard {
     #[allow(clippy::too_many_arguments)]
     pub async fn create_topic(
         &self,
-        client_id: u32,
+        user_id: u32,
         stream_id: &Identifier,
         topic_id: Option<u32>,
         name: String,
         partitions_count: u32,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
         replication_factor: Option<u8>,
         should_persist: bool,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         {
             let stream = self.get_stream(stream_id)?;
             self.permissioner
@@ -99,16 +101,15 @@ impl IggyShard {
     #[allow(clippy::too_many_arguments)]
     pub async fn update_topic(
         &self,
-        client_id: u32,
+        user_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
         name: String,
-        message_expiry: Option<u32>,
+        message_expiry: IggyExpiry,
         compression_algorithm: CompressionAlgorithm,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
         replication_factor: Option<u8>,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
@@ -134,11 +135,10 @@ impl IggyShard {
 
     pub async fn delete_topic(
         &self,
-        client_id: u32,
+        user_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         let stream_id_value;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -166,11 +166,10 @@ impl IggyShard {
 
     pub async fn purge_topic(
         &self,
-        client_id: u32,
+        user_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner

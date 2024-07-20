@@ -22,12 +22,24 @@ pub enum IggyError {
     FeatureUnavailable = 5,
     #[error("Invalid identifier")]
     InvalidIdentifier = 6,
+    #[error("Invalid version: {0}")]
+    InvalidVersion(String) = 7,
     #[error("Cannot create base directory, Path: {0}")]
     CannotCreateBaseDirectory(String) = 10,
     #[error("Cannot create runtime directory, Path: {0}")]
     CannotCreateRuntimeDirectory(String) = 11,
     #[error("Cannot remove runtime directory, Path: {0}")]
     CannotRemoveRuntimeDirectory(String) = 12,
+    #[error("Cannot create state directory, Path: {0}")]
+    CannotCreateStateDirectory(String) = 13,
+    #[error("State file not found")]
+    StateFileNotFound = 14,
+    #[error("State file corrupted")]
+    StateFileCorrupted = 15,
+    #[error("Invalid state entry checksum: {0}, expected: {1}, for index: {2}")]
+    InvalidStateEntryChecksum(u32, u32, u64) = 16,
+    #[error("Cannot open database, Path: {0}")]
+    CannotOpenDatabase(String) = 19,
     #[error("Resource with key: {0} was not found.")]
     ResourceNotFound(String) = 20,
     #[error("Cannot load resource. Reason: {0:#}")]
@@ -90,10 +102,10 @@ pub enum IggyError {
     JwtMissing = 75,
     #[error("Cannot generate JWT")]
     CannotGenerateJwt = 76,
-    #[error("Refresh token is missing")]
-    RefreshTokenMissing = 77,
-    #[error("Invalid refresh token")]
-    InvalidRefreshToken = 78,
+    #[error("Access token is missing")]
+    AccessTokenMissing = 77,
+    #[error("Invalid access token")]
+    InvalidAccessToken = 78,
     #[error("Refresh token expired")]
     RefreshTokenExpired = 79,
     #[error("Cannot receive message")]
@@ -134,6 +146,14 @@ pub enum IggyError {
     EmptyResponse = 305,
     #[error("Cannot parse address")]
     CannotParseAddress(#[from] std::net::AddrParseError) = 306,
+    #[error("Read error")]
+    ReadError(#[from] quinn::ReadError) = 307,
+    #[error("Connection error")]
+    ConnectionError(#[from] quinn::ConnectionError) = 308,
+    #[error("Read to end error")]
+    ReadToEndError(#[from] quinn::ReadToEndError) = 309,
+    #[error("Closed error")]
+    ClosedError(#[from] quinn::ClosedStream) = 310,
     #[error("Cannot create streams directory, Path: {0}")]
     CannotCreateStreamsDirectory(String) = 1000,
     #[error("Cannot create stream with ID: {0} directory, Path: {1}")]
@@ -166,6 +186,12 @@ pub enum IggyError {
     InvalidStreamId = 1014,
     #[error("Cannot read streams")]
     CannotReadStreams = 1015,
+    #[error("Missing streams")]
+    MissingStreams = 1016,
+    #[error("Missing topics for stream with ID: {0}")]
+    MissingTopics(u32) = 1017,
+    #[error("Missing partitions for topic with ID: {0} for stream with ID: {1}.")]
+    MissingPartitions(u32, u32) = 1018,
     #[error("Cannot create topics directory for stream with ID: {0}, Path: {1}")]
     CannotCreateTopicsDirectory(u32, String) = 2000,
     #[error(
@@ -230,6 +256,14 @@ pub enum IggyError {
     PartitionNotFound(u32, u32, u32) = 3007,
     #[error("Topic with ID: {0} for stream with ID: {1} has no partitions.")]
     NoPartitions(u32, u32) = 3008,
+    #[error("Cannot read partitions for topic with ID: {0} for stream with ID: {1}")]
+    TopicFull(u32, u32) = 3009,
+    #[error("Failed to delete consumer offsets directory for path: {0}")]
+    CannotDeleteConsumerOffsetsDirectory(String) = 3010,
+    #[error("Failed to delete consumer offset file for path: {0}")]
+    CannotDeleteConsumerOffsetFile(String) = 3011,
+    #[error("Failed to read consumers offsets from path: {0}")]
+    CannotReadConsumerOffsets(String) = 3020,
     #[error("Segment not found")]
     SegmentNotFound = 4000,
     #[error("Segment with start offset: {0} and partition with ID: {1} is closed")]
@@ -292,8 +326,6 @@ pub enum IggyError {
     CommandLengthError(String) = 4029,
     #[error("Invalid offset: {0}")]
     InvalidOffset(u64) = 4100,
-    #[error("Failed to read consumers offsets for partition with ID: {0}")]
-    CannotReadConsumerOffsets(u32) = 4101,
     #[error("Consumer group with ID: {0} for topic with ID: {1} was not found.")]
     ConsumerGroupIdNotFound(u32, u32) = 5000,
     #[error("Consumer group with ID: {0} for topic with ID: {1} already exists.")]

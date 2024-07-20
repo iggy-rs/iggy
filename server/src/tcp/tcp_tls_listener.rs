@@ -1,3 +1,4 @@
+/*
 use crate::tcp::connection_handler::{handle_connection, handle_error};
 use crate::tcp::persist_tcp_address;
 use crate::tcp::tcp_tls_sender::TcpTlsSender;
@@ -57,3 +58,5 @@ pub(crate) async fn start(server_name: String, shard: Rc<IggyShard>) -> Result<(
     })
     .await
 }
+
+*/

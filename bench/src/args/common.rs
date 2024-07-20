@@ -7,6 +7,7 @@ use iggy::utils::duration::IggyDuration;
 use integration::test_server::Transport;
 use std::net::SocketAddr;
 use std::path::Path;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -32,7 +33,7 @@ pub struct IggyBenchArgs {
     pub verbose: bool,
 
     /// Warmup time
-    #[arg(long, short = 'w', default_value_t = IggyDuration::from(DEFAULT_WARMUP_TIME_SECONDS))]
+    #[arg(long, short = 'w', default_value_t = IggyDuration::from_str(DEFAULT_WARMUP_TIME).unwrap())]
     pub warmup_time: IggyDuration,
 
     /// Skip server start
@@ -101,6 +102,10 @@ impl IggyBenchArgs {
         self.benchmark_kind.inner().number_of_streams()
     }
 
+    pub fn number_of_partitions(&self) -> u32 {
+        self.benchmark_kind.inner().number_of_partitions()
+    }
+
     pub fn consumers(&self) -> u32 {
         self.benchmark_kind.inner().consumers()
     }
@@ -119,6 +124,10 @@ impl IggyBenchArgs {
         self.benchmark_kind
             .inner()
             .disable_parallel_consumer_streams()
+    }
+
+    pub fn number_of_consumer_groups(&self) -> u32 {
+        self.benchmark_kind.inner().number_of_consumer_groups()
     }
 
     pub fn warmup_time(&self) -> IggyDuration {

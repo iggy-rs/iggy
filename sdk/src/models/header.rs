@@ -558,7 +558,7 @@ impl HeaderValue {
 }
 
 impl BytesSerializable for HashMap<HeaderKey, HeaderValue> {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         if self.is_empty() {
             return Bytes::new();
         }
@@ -1179,7 +1179,7 @@ mod tests {
             HeaderValue::from_bool(true).unwrap(),
         );
 
-        let bytes = headers.as_bytes();
+        let bytes = headers.to_bytes();
 
         let mut position = 0;
         let mut headers_count = 0;

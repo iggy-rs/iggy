@@ -2,6 +2,7 @@ use crate::streaming::common::test_setup::TestSetup;
 use bytes::{Bytes, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::messages::{MessageState, PolledMessage};
+use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::{checksum, timestamp::IggyTimestamp};
 use server::streaming::batching::message_batch::RetainedMessageBatch;
 use server::streaming::models::messages::RetainedMessage;
@@ -27,7 +28,7 @@ async fn should_persist_segment() {
             start_offset,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
@@ -65,7 +66,7 @@ async fn should_load_existing_segment_from_disk() {
             start_offset,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
@@ -92,7 +93,7 @@ async fn should_load_existing_segment_from_disk() {
             start_offset,
             setup.config.clone(),
             setup.storage.clone(),
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
@@ -130,7 +131,7 @@ async fn should_persist_and_load_segment_with_messages() {
         start_offset,
         setup.config.clone(),
         setup.storage.clone(),
-        None,
+        IggyExpiry::NeverExpire,
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
@@ -152,10 +153,10 @@ async fn should_persist_and_load_segment_with_messages() {
     .await;
     let messages_count = 10;
     let mut base_offset = 0;
-    let mut last_timestamp = 0;
+    let mut last_timestamp = IggyTimestamp::zero().as_micros();
     let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
-        let message = create_message(i, "test", IggyTimestamp::now().to_micros());
+        let message = create_message(i, "test", IggyTimestamp::now());
         if i == 0 {
             base_offset = message.offset;
         }
@@ -169,7 +170,7 @@ async fn should_persist_and_load_segment_with_messages() {
             timestamp: message.timestamp,
             checksum: message.checksum,
             message_state: message.state,
-            headers: message.headers.map(|headers| headers.as_bytes()),
+            headers: message.headers.map(|headers| headers.to_bytes()),
             payload: message.payload.clone(),
         };
         retained_message.extend(&mut batch_buffer);
@@ -192,7 +193,7 @@ async fn should_persist_and_load_segment_with_messages() {
         start_offset,
         setup.config.clone(),
         setup.storage.clone(),
-        None,
+        IggyExpiry::NeverExpire,
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
@@ -215,7 +216,8 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let message_expiry = 10;
+    let message_expiry_ms = 1000;
+    let message_expiry = 1000u64.into();
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -223,7 +225,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
         start_offset,
         setup.config.clone(),
         setup.storage.clone(),
-        Some(message_expiry),
+        message_expiry,
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
@@ -244,15 +246,14 @@ async fn given_all_expired_messages_segment_should_be_expired() {
     )
     .await;
     let messages_count = 10;
-    let now = IggyTimestamp::now().to_micros();
-    let message_expiry = message_expiry as u64;
-    let mut expired_timestamp = now - (1000000 * 2 * message_expiry);
+    let now = IggyTimestamp::now();
+    let mut expired_timestamp = (now.as_micros() - 2 * message_expiry_ms).into();
     let mut base_offset = 0;
     let mut last_timestamp = 0;
     let mut batch_buffer = BytesMut::new();
     for i in 0..messages_count {
         let message = create_message(i, "test", expired_timestamp);
-        expired_timestamp += 1;
+        expired_timestamp = (expired_timestamp.as_micros() + 1).into();
         if i == 0 {
             base_offset = message.offset;
         }
@@ -266,7 +267,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
             timestamp: message.timestamp,
             checksum: message.checksum,
             message_state: message.state,
-            headers: message.headers.map(|headers| headers.as_bytes()),
+            headers: message.headers.map(|headers| headers.to_bytes()),
             payload: message.payload.clone(),
         };
         retained_message.extend(&mut batch_buffer);
@@ -283,6 +284,7 @@ async fn given_all_expired_messages_segment_should_be_expired() {
 
     segment.persist_messages().await.unwrap();
 
+    segment.is_closed = true;
     let is_expired = segment.is_expired(now).await;
     assert!(is_expired);
 }
@@ -294,7 +296,8 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
     let topic_id = 2;
     let partition_id = 3;
     let start_offset = 0;
-    let message_expiry = 10;
+    let message_expiry_ms = 1000;
+    let message_expiry = message_expiry_ms.into();
     let mut segment = segment::Segment::create(
         stream_id,
         topic_id,
@@ -302,7 +305,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         start_offset,
         setup.config.clone(),
         setup.storage.clone(),
-        Some(message_expiry),
+        message_expiry,
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
@@ -322,12 +325,11 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         start_offset,
     )
     .await;
-    let now = IggyTimestamp::now().to_micros();
-    let message_expiry = message_expiry as u64;
-    let expired_timestamp = now - (1000000 * 2 * message_expiry);
-    let not_expired_timestamp = now - (1000000 * message_expiry) + 1;
-    let expired_message = create_message(0, "test", expired_timestamp);
-    let not_expired_message = create_message(1, "test", not_expired_timestamp);
+    let now = IggyTimestamp::now();
+    let expired_timestamp = now.as_micros() - 2 * message_expiry_ms;
+    let not_expired_timestamp = now.as_micros() - message_expiry_ms + 1;
+    let expired_message = create_message(0, "test", expired_timestamp.into());
+    let not_expired_message = create_message(1, "test", not_expired_timestamp.into());
 
     let mut expired_batch_buffer = BytesMut::new();
     let expired_retained_message = RetainedMessage {
@@ -336,7 +338,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         timestamp: expired_message.timestamp,
         checksum: expired_message.checksum,
         message_state: expired_message.state,
-        headers: expired_message.headers.map(|headers| headers.as_bytes()),
+        headers: expired_message.headers.map(|headers| headers.to_bytes()),
         payload: expired_message.payload.clone(),
     };
     expired_retained_message.extend(&mut expired_batch_buffer);
@@ -357,7 +359,7 @@ async fn given_at_least_one_not_expired_message_segment_should_not_be_expired() 
         message_state: not_expired_message.state,
         headers: not_expired_message
             .headers
-            .map(|headers| headers.as_bytes()),
+            .map(|headers| headers.to_bytes()),
         payload: not_expired_message.payload.clone(),
     };
     not_expired_retained_message.extend(&mut not_expired_batch_buffer);
@@ -387,7 +389,7 @@ async fn assert_persisted_segment(partition_path: &str, start_offset: u64) {
     assert!(fs::metadata(&time_index_path).await.is_ok());
 }
 
-fn create_message(offset: u64, payload: &str, timestamp: u64) -> PolledMessage {
+fn create_message(offset: u64, payload: &str, timestamp: IggyTimestamp) -> PolledMessage {
     let payload = Bytes::from(payload.to_string());
     let checksum = checksum::calculate(payload.as_ref());
     PolledMessage::create(

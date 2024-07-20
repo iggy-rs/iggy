@@ -1,195 +1,92 @@
 use crate::http::jwt::json_web_token::RevokedAccessToken;
-use crate::http::jwt::refresh_token::RefreshToken;
+use crate::streaming::persistence::persister::Persister;
+use crate::streaming::utils::file;
 use anyhow::Context;
+use bytes::{BufMut, BytesMut};
 use iggy::error::IggyError;
-use sled::Db;
-use std::str::from_utf8;
+use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{error, info};
-
-const REVOKED_ACCESS_TOKENS_KEY_PREFIX: &str = "revoked_access_token";
-const REFRESH_TOKENS_KEY_PREFIX: &str = "refresh_token";
+use tokio::io::AsyncReadExt;
+use tracing::info;
 
 #[derive(Debug)]
 pub struct TokenStorage {
-    db: Arc<Db>,
+    persister: Arc<dyn Persister>,
+    path: String,
 }
 
 impl TokenStorage {
-    pub fn new(db: Arc<Db>) -> Self {
-        Self { db }
+    pub fn new(persister: Arc<dyn Persister>, path: &str) -> Self {
+        Self {
+            persister,
+            path: path.to_owned(),
+        }
     }
 
-    pub fn load_refresh_token(&self, token_hash: &str) -> Result<RefreshToken, IggyError> {
-        let key = Self::get_refresh_token_key(token_hash);
-        let token_data = self
-            .db
-            .get(&key)
-            .with_context(|| format!("Failed to load refresh token, key: {}", key));
-        if let Err(err) = token_data {
-            return Err(IggyError::CannotLoadResource(err));
+    pub async fn load_all_revoked_access_tokens(
+        &self,
+    ) -> Result<Vec<RevokedAccessToken>, IggyError> {
+        let file = file::open(&self.path).await;
+        if file.is_err() {
+            info!("No revoked access tokens found to load.");
+            return Ok(vec![]);
         }
 
-        let token_data = token_data.unwrap();
-        if token_data.is_none() {
-            return Err(IggyError::ResourceNotFound(key));
-        }
+        info!("Loading revoked access tokens from: {}", self.path);
+        let mut file = file.unwrap();
+        let file_size = file.metadata().await?.len() as usize;
+        let mut buffer = BytesMut::with_capacity(file_size);
+        buffer.put_bytes(0, file_size);
+        file.read_exact(&mut buffer).await?;
 
-        let token_data = token_data.unwrap();
-        let token_data = rmp_serde::from_slice::<RefreshToken>(&token_data)
-            .with_context(|| format!("Failed to deserialize refresh token, key: {}", key));
-        if let Err(err) = token_data {
-            return Err(IggyError::CannotDeserializeResource(err));
-        }
+        let tokens: HashMap<String, u64> = bincode::deserialize(&buffer)
+            .with_context(|| "Failed to deserialize revoked access tokens")
+            .map_err(IggyError::CannotDeserializeResource)?;
 
-        let mut token_data = token_data.unwrap();
-        token_data.token_hash = token_hash.to_string();
-        Ok(token_data)
+        let tokens = tokens
+            .into_iter()
+            .map(|(id, expiry)| RevokedAccessToken { id, expiry })
+            .collect::<Vec<RevokedAccessToken>>();
+
+        info!("Loaded {} revoked access tokens", tokens.len());
+        Ok(tokens)
     }
 
-    pub fn load_all_refresh_tokens(&self) -> Result<Vec<RefreshToken>, IggyError> {
-        let key = format!("{REFRESH_TOKENS_KEY_PREFIX}:");
-        let refresh_tokens: Result<Vec<RefreshToken>, IggyError> = self
-            .db
-            .scan_prefix(&key)
-            .map(|data| {
-                let (hash, value) = data
-                    .with_context(|| {
-                        format!(
-                            "Failed to load refresh token, when searching by key: {}",
-                            key
-                        )
-                    })
-                    .map_err(IggyError::CannotLoadResource)?;
-
-                let mut token = rmp_serde::from_slice::<RefreshToken>(&value)
-                    .with_context(|| {
-                        format!(
-                            "Failed to deserialize refresh token, when searching by key: {}",
-                            key
-                        )
-                    })
-                    .map_err(IggyError::CannotDeserializeResource)?;
-
-                token.token_hash = from_utf8(&hash)
-                    .with_context(|| "Failed to convert hash to UTF-8 string")
-                    .map_err(IggyError::CannotDeserializeResource)?
-                    .to_string();
-                Ok(token)
-            })
-            .collect();
-
-        let refresh_tokens = refresh_tokens?;
-        if !refresh_tokens.is_empty() {
-            info!("Loaded {} refresh tokens", refresh_tokens.len());
-        }
-        Ok(refresh_tokens)
-    }
-
-    pub fn load_all_revoked_access_tokens(&self) -> Result<Vec<RevokedAccessToken>, IggyError> {
-        let key = format!("{REVOKED_ACCESS_TOKENS_KEY_PREFIX}:");
-        let revoked_tokens: Result<Vec<RevokedAccessToken>, IggyError> = self
-            .db
-            .scan_prefix(&key)
-            .map(|data| {
-                let (_, value) = data
-                    .with_context(|| {
-                        format!(
-                            "Failed to load invoked refresh token, when searching by key: {}",
-                            key
-                        )
-                    })
-                    .map_err(IggyError::CannotLoadResource)?;
-
-                let token = rmp_serde::from_slice::<RevokedAccessToken>(&value)
-                    .with_context(|| {
-                        format!(
-                            "Failed to deserialize revoked access token, when searching by key: {}",
-                            key
-                        )
-                    })
-                    .map_err(IggyError::CannotDeserializeResource)?;
-                Ok(token)
-            })
-            .collect();
-
-        let revoked_tokens = revoked_tokens?;
-        info!("Loaded {} revoked access tokens", revoked_tokens.len());
-        Ok(revoked_tokens)
-    }
-
-    pub fn save_revoked_access_token(&self, token: &RevokedAccessToken) -> Result<(), IggyError> {
-        let key = Self::get_revoked_token_key(&token.id);
-        match rmp_serde::to_vec(&token)
-            .with_context(|| format!("Failed to serialize revoked access token, key: {}", key))
-        {
-            Ok(data) => {
-                if let Err(err) = self
-                    .db
-                    .insert(&key, data)
-                    .with_context(|| "Failed to save revoked access token")
-                {
-                    return Err(IggyError::CannotSaveResource(err));
-                }
-            }
-            Err(err) => {
-                return Err(IggyError::CannotSerializeResource(err));
-            }
-        }
+    pub async fn save_revoked_access_token(
+        &self,
+        token: &RevokedAccessToken,
+    ) -> Result<(), IggyError> {
+        let tokens = self.load_all_revoked_access_tokens().await?;
+        let mut map = tokens
+            .into_iter()
+            .map(|token| (token.id, token.expiry))
+            .collect::<HashMap<_, _>>();
+        map.insert(token.id.to_owned(), token.expiry);
+        let bytes = bincode::serialize(&map)
+            .with_context(|| "Failed to serialize revoked access tokens")
+            .map_err(IggyError::CannotSerializeResource)?;
+        self.persister.overwrite(&self.path, &bytes).await?;
         Ok(())
     }
 
-    pub fn save_refresh_token(&self, token: &RefreshToken) -> Result<(), IggyError> {
-        let key = Self::get_refresh_token_key(&token.token_hash);
-        match rmp_serde::to_vec(&token)
-            .with_context(|| format!("Failed to serialize refresh token, key: {}", key))
-        {
-            Ok(data) => {
-                if let Err(err) = self
-                    .db
-                    .insert(&key, data)
-                    .with_context(|| format!("Failed to save refresh token, key: {}", key))
-                {
-                    return Err(IggyError::CannotSaveResource(err));
-                }
-            }
-            Err(err) => {
-                return Err(IggyError::CannotSerializeResource(err));
-            }
+    pub async fn delete_revoked_access_tokens(&self, id: &[String]) -> Result<(), IggyError> {
+        let tokens = self.load_all_revoked_access_tokens().await?;
+        if tokens.is_empty() {
+            return Ok(());
         }
-        Ok(())
-    }
 
-    pub fn delete_revoked_access_token(&self, id: &str) -> Result<(), IggyError> {
-        let key = Self::get_revoked_token_key(id);
-        if let Err(err) = self
-            .db
-            .remove(&key)
-            .with_context(|| format!("Failed to delete revoked access token, key: {}", key))
-        {
-            return Err(IggyError::CannotDeleteResource(err));
+        let mut map = tokens
+            .into_iter()
+            .map(|token| (token.id, token.expiry))
+            .collect::<HashMap<_, _>>();
+        for id in id {
+            map.remove(id);
         }
+
+        let bytes = bincode::serialize(&map)
+            .with_context(|| "Failed to serialize revoked access tokens")
+            .map_err(IggyError::CannotSerializeResource)?;
+        self.persister.overwrite(&self.path, &bytes).await?;
         Ok(())
-    }
-
-    pub fn delete_refresh_token(&self, token_hash: &str) -> Result<(), IggyError> {
-        let key = Self::get_refresh_token_key(token_hash);
-        if let Err(err) = self
-            .db
-            .remove(&key)
-            .with_context(|| format!("Failed to delete refresh token, key: {}", key))
-        {
-            error!("Cannot delete refresh token. Error: {err}");
-            return Err(IggyError::CannotDeleteResource(err));
-        }
-        Ok(())
-    }
-
-    fn get_revoked_token_key(id: &str) -> String {
-        format!("{REVOKED_ACCESS_TOKENS_KEY_PREFIX}:{id}")
-    }
-
-    fn get_refresh_token_key(token_hash: &str) -> String {
-        format!("{REFRESH_TOKENS_KEY_PREFIX}:{token_hash}")
     }
 }

@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use humantime::Duration as HumanDuration;
 use iggy::client::Client;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
-use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use predicates::str::diff;
 use serial_test::parallel;
 use std::time::Duration;
@@ -21,7 +21,7 @@ struct TestTopicCreateCmd {
     partitions_count: u32,
     compression_algorithm: CompressionAlgorithm,
     message_expiry: Option<Vec<String>>,
-    max_topic_size: Option<IggyByteSize>,
+    max_topic_size: MaxTopicSize,
     replication_factor: u8,
     using_identifier: TestStreamId,
 }
@@ -36,7 +36,7 @@ impl TestTopicCreateCmd {
         partitions_count: u32,
         compression_algorithm: CompressionAlgorithm,
         message_expiry: Option<Vec<String>>,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
         replication_factor: u8,
         using_identifier: TestStreamId,
     ) -> Self {
@@ -111,11 +111,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
         })
         .to_string();
 
-        let max_topic_size = (match &self.max_topic_size {
-            Some(value) => value.as_human_string_with_zero_as_unlimited(),
-            None => IggyByteSize::default().as_human_string_with_zero_as_unlimited(),
-        })
-        .to_string();
+        let max_topic_size = self.max_topic_size.to_string();
 
         let replication_factor = self.replication_factor;
 
@@ -155,7 +151,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
                 .unwrap();
             assert_eq!(
                 topic_details.message_expiry,
-                Some(duration.as_secs() as u32)
+                IggyExpiry::ExpireDuration(duration.into())
             );
         }
 
@@ -189,7 +185,7 @@ pub async fn should_be_successful() {
             1,
             Default::default(),
             None,
-            None,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Numeric,
         ))
@@ -203,7 +199,7 @@ pub async fn should_be_successful() {
             5,
             Default::default(),
             None,
-            None,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Named,
         ))
@@ -217,7 +213,7 @@ pub async fn should_be_successful() {
             1,
             Default::default(),
             Some(vec![String::from("3days"), String::from("5s")]),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Named,
         ))
@@ -236,7 +232,7 @@ pub async fn should_be_successful() {
                 String::from("1m"),
                 String::from("1s"),
             ]),
-            None,
+            MaxTopicSize::ServerDefault,
             1,
             TestStreamId::Numeric,
         ))
@@ -252,16 +248,16 @@ pub async fn should_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "create", "--help"],
             format!(
-                r#"Create topic with given name, number of partitions and expiry time for given stream ID
+                r#"Create topic with given name, number of partitions, compression algorithm and expiry time for given stream ID
 
 Stream ID can be specified as a stream name or ID
 If topic ID is not provided then the server will automatically assign it
 
 Examples
- iggy topic create 1 sensor1 2 15days
- iggy topic create prod sensor2 2
- iggy topic create test debugs 2 1day 1hour 1min 1sec
- iggy topic create -t 3 1 sensor3 2 unlimited
+ iggy topic create 1 sensor1 2 gzip 15days
+ iggy topic create prod sensor2 2 none
+ iggy topic create test debugs 2 gzip 1day 1hour 1min 1sec
+ iggy topic create -t 3 1 sensor3 2 none unlimited
 
 {USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 
@@ -318,7 +314,7 @@ pub async fn should_short_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["topic", "create", "-h"],
             format!(
-                r#"Create topic with given name, number of partitions and expiry time for given stream ID
+                r#"Create topic with given name, number of partitions, compression algorithm and expiry time for given stream ID
 
 {USAGE_PREFIX} topic create [OPTIONS] <STREAM_ID> <NAME> <PARTITIONS_COUNT> <COMPRESSION_ALGORITHM> [MESSAGE_EXPIRY]...
 

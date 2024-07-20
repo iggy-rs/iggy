@@ -1,4 +1,5 @@
 use bytes::Bytes;
+use std::str::FromStr;
 
 use crate::server::scenarios::{
     get_consumer_group, leave_consumer_group, CONSUMER_GROUP_ID, CONSUMER_GROUP_NAME, CONSUMER_ID,
@@ -20,6 +21,7 @@ use iggy::models::messages::PolledMessage;
 use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use integration::test_server::{assert_clean_system, ClientFactory};
 
 pub async fn run(client_factory: &dyn ClientFactory) {
@@ -63,7 +65,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.id, STREAM_ID);
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
-    assert_eq!(stream.size_bytes, 0);
+    assert_eq!(stream.size, 0);
     assert_eq!(stream.messages_count, 0);
 
     // 5. Get stream details by ID
@@ -75,7 +77,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
     assert!(stream.topics.is_empty());
-    assert_eq!(stream.size_bytes, 0);
+    assert_eq!(stream.size, 0);
     assert_eq!(stream.messages_count, 0);
 
     // 6. Get stream details by name
@@ -106,7 +108,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
         .unwrap();
@@ -124,8 +126,11 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(topic.compression_algorithm, CompressionAlgorithm::default());
     assert_eq!(topic.size, 0);
     assert_eq!(topic.messages_count, 0);
-    assert_eq!(topic.message_expiry, None);
-    assert_eq!(topic.max_topic_size, None);
+    assert_eq!(topic.message_expiry, IggyExpiry::NeverExpire);
+    assert_eq!(
+        topic.max_topic_size,
+        MaxTopicSize::from_str("10 GB").unwrap()
+    );
     assert_eq!(topic.replication_factor, 1);
 
     // 11. Get topic details by ID
@@ -146,7 +151,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     for topic_partition in topic.partitions {
         assert_eq!(topic_partition.id, id);
         assert_eq!(topic_partition.segments_count, 1);
-        assert_eq!(topic_partition.size_bytes, 0);
+        assert_eq!(topic_partition.size, 0);
         assert_eq!(topic_partition.current_offset, 0);
         assert_eq!(topic_partition.messages_count, 0);
         id += 1;
@@ -190,7 +195,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             None,
             Some(TOPIC_ID),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await;
     assert!(create_topic_result.is_err());
@@ -205,7 +210,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             None,
             Some(TOPIC_ID + 1),
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await;
     assert!(create_topic_result.is_err());
@@ -284,7 +289,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let topic_partition = topic.partitions.get((PARTITION_ID - 1) as usize).unwrap();
     assert_eq!(topic_partition.id, PARTITION_ID);
     assert_eq!(topic_partition.segments_count, 1);
-    assert!(topic_partition.size_bytes > 0);
+    assert!(topic_partition.size > 0);
     assert_eq!(topic_partition.current_offset, (MESSAGES_COUNT - 1) as u64);
     assert_eq!(topic_partition.messages_count, MESSAGES_COUNT as u64);
 
@@ -539,7 +544,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let updated_topic_name = format!("{}-updated", TOPIC_NAME);
     let updated_message_expiry = 1000;
     let message_expiry_duration = updated_message_expiry.into();
-    let updated_max_topic_size = IggyByteSize::from(0x1337);
+    let updated_max_topic_size = MaxTopicSize::Custom(IggyByteSize::from(0x1337));
     let updated_replication_factor = 5;
 
     client
@@ -550,7 +555,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             CompressionAlgorithm::Gzip,
             Some(updated_replication_factor),
             IggyExpiry::ExpireDuration(message_expiry_duration),
-            Some(updated_max_topic_size),
+            updated_max_topic_size,
         )
         .await
         .unwrap();
@@ -566,13 +571,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert_eq!(updated_topic.name, updated_topic_name);
     assert_eq!(
         updated_topic.message_expiry,
-        Some(updated_message_expiry as u32)
+        IggyExpiry::ExpireDuration(message_expiry_duration)
     );
     assert_eq!(
         updated_topic.compression_algorithm,
         CompressionAlgorithm::Gzip
     );
-    assert_eq!(updated_topic.max_topic_size, Some(updated_max_topic_size));
+    assert_eq!(updated_topic.max_topic_size, updated_max_topic_size);
     assert_eq!(updated_topic.replication_factor, updated_replication_factor);
 
     // 37. Purge the existing topic and ensure it has no messages
@@ -688,7 +693,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             None,
             None,
             IggyExpiry::NeverExpire,
-            None,
+            MaxTopicSize::ServerDefault,
         )
         .await
         .unwrap();

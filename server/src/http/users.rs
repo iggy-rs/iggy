@@ -1,9 +1,11 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
-use crate::http::mapper::map_generated_tokens_to_identity_info;
+use crate::http::mapper::map_generated_access_token_to_identity_info;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
+use crate::streaming::utils::crypto;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::routing::{delete, get, post, put};
@@ -13,6 +15,7 @@ use iggy::models::identity_info::IdentityInfo;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
 use iggy::users::change_password::ChangePassword;
 use iggy::users::create_user::CreateUser;
+use iggy::users::delete_user::DeleteUser;
 use iggy::users::login_user::LoginUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
@@ -42,13 +45,11 @@ async fn get_user(
 ) -> Result<Json<UserInfoDetails>, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
     let system = state.system.read();
-    let user = system
-        .find_user(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &user_id,
-        )
-        .await?;
-    let user = mapper::map_user(&user);
+    let user = system.find_user(
+        &Session::stateless(identity.user_id, identity.ip_address),
+        &user_id,
+    )?;
+    let user = mapper::map_user(user);
     Ok(Json(user))
 }
 
@@ -80,6 +81,20 @@ async fn create_user(
             command.permissions.clone(),
         )
         .await?;
+
+    // For the security of the system, we hash the password before storing it in metadata.
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::CreateUser(CreateUser {
+                username: command.username,
+                password: crypto::hash_password(&command.password),
+                status: command.status,
+                permissions: command.permissions,
+            }),
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -91,14 +106,18 @@ async fn update_user(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let system = state.system.read();
+    let mut system = state.system.write();
     system
         .update_user(
             &Session::stateless(identity.user_id, identity.ip_address),
             &command.user_id,
-            command.username,
+            command.username.clone(),
             command.status,
         )
+        .await?;
+    system
+        .state
+        .apply(identity.user_id, EntryCommand::UpdateUser(command))
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -116,8 +135,12 @@ async fn update_permissions(
         .update_permissions(
             &Session::stateless(identity.user_id, identity.ip_address),
             &command.user_id,
-            command.permissions,
+            command.permissions.clone(),
         )
+        .await?;
+    system
+        .state
+        .apply(identity.user_id, EntryCommand::UpdatePermissions(command))
         .await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -130,13 +153,25 @@ async fn change_password(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let system = state.system.read();
+    let mut system = state.system.write();
     system
         .change_password(
             &Session::stateless(identity.user_id, identity.ip_address),
             &command.user_id,
             &command.current_password,
             &command.new_password,
+        )
+        .await?;
+    // For the security of the system, we hash the password before storing it in metadata.
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::ChangePassword(ChangePassword {
+                user_id: command.user_id,
+                current_password: "".into(),
+                new_password: crypto::hash_password(&command.new_password),
+            }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)
@@ -155,6 +190,13 @@ async fn delete_user(
             &user_id,
         )
         .await?;
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::DeleteUser(DeleteUser { user_id }),
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -168,7 +210,7 @@ async fn login_user(
         .login_user(&command.username, &command.password, None)
         .await?;
     let tokens = state.jwt_manager.generate(user.id)?;
-    Ok(Json(map_generated_tokens_to_identity_info(tokens)))
+    Ok(Json(map_generated_access_token_to_identity_info(tokens)))
 }
 
 async fn logout_user(
@@ -190,11 +232,11 @@ async fn refresh_token(
     State(state): State<Arc<AppState>>,
     Json(command): Json<RefreshToken>,
 ) -> Result<Json<IdentityInfo>, CustomError> {
-    let tokens = state.jwt_manager.refresh_token(&command.refresh_token)?;
-    Ok(Json(map_generated_tokens_to_identity_info(tokens)))
+    let token = state.jwt_manager.refresh_token(&command.token).await?;
+    Ok(Json(map_generated_access_token_to_identity_info(token)))
 }
 
 #[derive(Debug, Deserialize)]
 struct RefreshToken {
-    refresh_token: String,
+    token: String,
 }

@@ -1,8 +1,8 @@
-use crate::command::{CommandExecution, CommandPayload};
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{Command, LEAVE_CONSUMER_GROUP_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -25,10 +25,9 @@ pub struct LeaveConsumerGroup {
     pub group_id: Identifier,
 }
 
-impl CommandPayload for LeaveConsumerGroup {}
-impl CommandExecutionOrigin for LeaveConsumerGroup {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for LeaveConsumerGroup {
+    fn code(&self) -> u32 {
+        LEAVE_CONSUMER_GROUP_CODE
     }
 }
 
@@ -39,10 +38,10 @@ impl Validatable<IggyError> for LeaveConsumerGroup {
 }
 
 impl BytesSerializable for LeaveConsumerGroup {
-    fn as_bytes(&self) -> Bytes {
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
-        let group_id_bytes = self.group_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let stream_id_bytes = self.stream_id.to_bytes();
+        let topic_id_bytes = self.topic_id.to_bytes();
+        let group_id_bytes = self.group_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             stream_id_bytes.len() + topic_id_bytes.len() + group_id_bytes.len(),
         );
@@ -91,7 +90,7 @@ mod tests {
             group_id: Identifier::numeric(3).unwrap(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
@@ -110,9 +109,9 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
         let group_id = Identifier::numeric(3).unwrap();
-        let stream_id_bytes = stream_id.as_bytes();
-        let topic_id_bytes = topic_id.as_bytes();
-        let group_id_bytes = group_id.as_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
+        let topic_id_bytes = topic_id.to_bytes();
+        let group_id_bytes = group_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(
             stream_id_bytes.len() + topic_id_bytes.len() + group_id_bytes.len(),
         );

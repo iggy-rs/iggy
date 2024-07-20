@@ -1,5 +1,7 @@
 use crate::configs::resource_quota::MemoryResourceQuota;
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use iggy::{
     compression::compression_algorithm::CompressionAlgorithm, utils::duration::IggyDuration,
 };
@@ -11,11 +13,10 @@ use serde_with::DisplayFromStr;
 pub struct SystemConfig {
     pub path: String,
     pub backup: BackupConfig,
-    pub database: DatabaseConfig,
+    pub database: Option<DatabaseConfig>,
     pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
     pub cache: CacheConfig,
-    pub retention_policy: RetentionPolicyConfig,
     pub stream: StreamConfig,
     pub topic: TopicConfig,
     pub partition: PartitionConfig,
@@ -26,11 +27,6 @@ pub struct SystemConfig {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct DatabaseConfig {
-    pub path: String,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 pub struct BackupConfig {
     pub path: String,
     pub compatibility: CompatibilityConfig,
@@ -38,6 +34,11 @@ pub struct BackupConfig {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CompatibilityConfig {
+    pub path: String,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct DatabaseConfig {
     pub path: String,
 }
 
@@ -70,14 +71,6 @@ pub struct CacheConfig {
     pub size: MemoryResourceQuota,
 }
 
-#[serde_as]
-#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
-pub struct RetentionPolicyConfig {
-    #[serde_as(as = "DisplayFromStr")]
-    pub message_expiry: IggyDuration,
-    pub max_topic_size: IggyByteSize,
-}
-
 #[derive(Debug, Deserialize, Serialize)]
 pub struct EncryptionConfig {
     pub enabled: bool,
@@ -89,9 +82,13 @@ pub struct StreamConfig {
     pub path: String,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct TopicConfig {
     pub path: String,
+    #[serde_as(as = "DisplayFromStr")]
+    pub max_size: MaxTopicSize,
+    pub delete_oldest_segments: bool,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -111,16 +108,41 @@ pub struct MessageDeduplicationConfig {
     pub expiry: IggyDuration,
 }
 
+#[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SegmentConfig {
     pub size: IggyByteSize,
     pub cache_indexes: bool,
     pub cache_time_indexes: bool,
+    #[serde_as(as = "DisplayFromStr")]
+    pub message_expiry: IggyExpiry,
+    pub archive_expired: bool,
 }
 
 impl SystemConfig {
     pub fn get_system_path(&self) -> String {
         self.path.to_string()
+    }
+
+    pub fn get_database_path(&self) -> Option<String> {
+        self.database
+            .as_ref()
+            .map(|database| format!("{}/{}", self.get_system_path(), database.path))
+    }
+
+    pub fn get_state_path(&self) -> String {
+        format!("{}/state", self.get_system_path())
+    }
+
+    pub fn get_state_log_path(&self) -> String {
+        format!("{}/log", self.get_state_path())
+    }
+
+    pub fn get_state_info_path(&self) -> String {
+        format!("{}/info", self.get_state_path())
+    }
+    pub fn get_state_tokens_path(&self) -> String {
+        format!("{}/tokens", self.get_state_path())
     }
 
     pub fn get_backup_path(&self) -> String {
@@ -133,10 +155,6 @@ impl SystemConfig {
             self.get_backup_path(),
             self.backup.compatibility.path
         )
-    }
-
-    pub fn get_database_path(&self) -> String {
-        format!("{}/{}", self.get_system_path(), self.database.path)
     }
 
     pub fn get_runtime_path(&self) -> String {
@@ -172,6 +190,37 @@ impl SystemConfig {
             "{}/{}",
             self.get_partitions_path(stream_id, topic_id),
             partition_id
+        )
+    }
+
+    pub fn get_offsets_path(&self, stream_id: u32, topic_id: u32, partition_id: u32) -> String {
+        format!(
+            "{}/offsets",
+            self.get_partition_path(stream_id, topic_id, partition_id)
+        )
+    }
+
+    pub fn get_consumer_offsets_path(
+        &self,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> String {
+        format!(
+            "{}/consumers",
+            self.get_offsets_path(stream_id, topic_id, partition_id)
+        )
+    }
+
+    pub fn get_consumer_group_offsets_path(
+        &self,
+        stream_id: u32,
+        topic_id: u32,
+        partition_id: u32,
+    ) -> String {
+        format!(
+            "{}/groups",
+            self.get_offsets_path(stream_id, topic_id, partition_id)
         )
     }
 

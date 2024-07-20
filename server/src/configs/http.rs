@@ -1,6 +1,7 @@
 use iggy::error::IggyError;
 use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::duration::IggyDuration;
+use iggy::utils::expiry::IggyExpiry;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use serde::{Deserialize, Serialize};
 use serde_with::serde_as;
@@ -37,9 +38,7 @@ pub struct HttpJwtConfig {
     pub valid_issuers: Vec<String>,
     pub valid_audiences: Vec<String>,
     #[serde_as(as = "DisplayFromStr")]
-    pub access_token_expiry: IggyDuration,
-    #[serde_as(as = "DisplayFromStr")]
-    pub refresh_token_expiry: IggyDuration,
+    pub access_token_expiry: IggyExpiry,
     #[serde_as(as = "DisplayFromStr")]
     pub clock_skew: IggyDuration,
     #[serde_as(as = "DisplayFromStr")]

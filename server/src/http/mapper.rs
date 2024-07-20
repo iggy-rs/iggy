@@ -1,4 +1,4 @@
-use crate::http::jwt::json_web_token::GeneratedTokens;
+use crate::http::jwt::json_web_token::GeneratedToken;
 use crate::streaming::clients::client_manager::Client;
 use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::streams::stream::Stream;
@@ -10,7 +10,7 @@ use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::client_info::ConsumerGroupInfo;
 use iggy::models::consumer_group::{ConsumerGroupDetails, ConsumerGroupMember};
-use iggy::models::identity_info::{IdentityInfo, IdentityTokens, TokenInfo};
+use iggy::models::identity_info::{IdentityInfo, TokenInfo};
 use iggy::models::personal_access_token::PersonalAccessTokenInfo;
 use iggy::models::stream::StreamDetails;
 use iggy::models::topic::TopicDetails;
@@ -23,7 +23,7 @@ pub async fn map_stream(stream: &Stream) -> StreamDetails {
         created_at: stream.created_at,
         name: stream.name.clone(),
         topics_count: topics.len() as u32,
-        size_bytes: stream.get_size(),
+        size: stream.get_size(),
         messages_count: stream.get_messages_count(),
         topics,
     };
@@ -38,7 +38,7 @@ pub async fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Strea
             id: stream.stream_id,
             created_at: stream.created_at,
             name: stream.name.clone(),
-            size_bytes: stream.get_size(),
+            size: stream.get_size(),
             topics_count: stream.get_topics().len() as u32,
             messages_count: stream.get_messages_count(),
         };
@@ -93,7 +93,7 @@ pub async fn map_topic(topic: &Topic) -> TopicDetails {
                 created_at: partition.created_at,
                 segments_count: partition.get_segments().len() as u32,
                 current_offset: partition.current_offset,
-                size_bytes: partition.get_size_bytes().into(),
+                size: partition.get_size_bytes().into(),
                 messages_count: partition.get_messages_count(),
             });
     }
@@ -111,7 +111,7 @@ pub fn map_user(user: &User) -> UserInfoDetails {
     }
 }
 
-pub fn map_users(users: &[User]) -> Vec<UserInfo> {
+pub fn map_users(users: &[&User]) -> Vec<UserInfo> {
     let mut users_data = Vec::with_capacity(users.len());
     for user in users {
         let user = UserInfo {
@@ -127,13 +127,13 @@ pub fn map_users(users: &[User]) -> Vec<UserInfo> {
 }
 
 pub fn map_personal_access_tokens(
-    personal_access_tokens: &[PersonalAccessToken],
+    personal_access_tokens: &[&PersonalAccessToken],
 ) -> Vec<PersonalAccessTokenInfo> {
     let mut personal_access_tokens_data = Vec::with_capacity(personal_access_tokens.len());
     for personal_access_token in personal_access_tokens {
         let personal_access_token = PersonalAccessTokenInfo {
             name: personal_access_token.name.clone(),
-            expiry: personal_access_token.expiry,
+            expiry_at: personal_access_token.expiry_at,
         };
         personal_access_tokens_data.push(personal_access_token);
     }
@@ -220,20 +220,12 @@ pub async fn map_consumer_group(consumer_group: &ConsumerGroup) -> ConsumerGroup
     consumer_group_details
 }
 
-pub fn map_generated_tokens_to_identity_info(tokens: GeneratedTokens) -> IdentityInfo {
+pub fn map_generated_access_token_to_identity_info(token: GeneratedToken) -> IdentityInfo {
     IdentityInfo {
-        user_id: tokens.user_id,
-        tokens: Some({
-            IdentityTokens {
-                access_token: TokenInfo {
-                    token: tokens.access_token,
-                    expiry: tokens.access_token_expiry,
-                },
-                refresh_token: TokenInfo {
-                    token: tokens.refresh_token,
-                    expiry: tokens.refresh_token_expiry,
-                },
-            }
+        user_id: token.user_id,
+        access_token: Some(TokenInfo {
+            token: token.access_token,
+            expiry: token.access_token_expiry,
         }),
     }
 }

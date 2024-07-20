@@ -1,5 +1,6 @@
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
+use crate::utils::timestamp::IggyTimestamp;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicU32;
 
@@ -20,7 +21,7 @@ pub struct UserInfo {
     /// The unique identifier (numeric) of the user.
     pub id: UserId,
     /// The timestamp when the user was created.
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     /// The status of the user.
     pub status: UserStatus,
     /// The username of the user.
@@ -39,7 +40,7 @@ pub struct UserInfoDetails {
     /// The unique identifier (numeric) of the user.
     pub id: UserId,
     /// The timestamp when the user was created.
-    pub created_at: u64,
+    pub created_at: IggyTimestamp,
     /// The status of the user.
     pub status: UserStatus,
     /// The username of the user.

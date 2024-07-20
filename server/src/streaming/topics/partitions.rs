@@ -1,6 +1,9 @@
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
+use iggy::locking::IggySharedMut;
+use iggy::locking::IggySharedMutFn;
+use iggy::utils::timestamp::IggyTimestamp;
 
 const MAX_PARTITIONS_COUNT: u32 = 100_000;
 
@@ -38,6 +41,7 @@ impl Topic {
                 self.size_of_parent_stream.clone(),
                 self.size_bytes.clone(),
                 self.segments_count_of_parent_stream.clone(),
+                IggyTimestamp::now(),
             );
 
             self.partitions.borrow_mut().insert(partition_id, partition);

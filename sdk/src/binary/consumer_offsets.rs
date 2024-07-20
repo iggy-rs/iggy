@@ -1,8 +1,6 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper};
-use crate::bytes_serializable::BytesSerializable;
 use crate::client::ConsumerOffsetClient;
-use crate::command::{GET_CONSUMER_OFFSET_CODE, STORE_CONSUMER_OFFSET_CODE};
 use crate::consumer::Consumer;
 use crate::consumer_offsets::get_consumer_offset::GetConsumerOffset;
 use crate::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
@@ -21,17 +19,13 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
         offset: u64,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
-            STORE_CONSUMER_OFFSET_CODE,
-            StoreConsumerOffset {
-                consumer: consumer.clone(),
-                stream_id: stream_id.clone(),
-                topic_id: topic_id.clone(),
-                partition_id,
-                offset,
-            }
-            .as_bytes(),
-        )
+        self.send_with_response(&StoreConsumerOffset {
+            consumer: consumer.clone(),
+            stream_id: stream_id.clone(),
+            topic_id: topic_id.clone(),
+            partition_id,
+            offset,
+        })
         .await?;
         Ok(())
     }
@@ -45,16 +39,12 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
     ) -> Result<ConsumerOffsetInfo, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(
-                GET_CONSUMER_OFFSET_CODE,
-                GetConsumerOffset {
-                    consumer: consumer.clone(),
-                    stream_id: stream_id.clone(),
-                    topic_id: topic_id.clone(),
-                    partition_id,
-                }
-                .as_bytes(),
-            )
+            .send_with_response(&GetConsumerOffset {
+                consumer: consumer.clone(),
+                stream_id: stream_id.clone(),
+                topic_id: topic_id.clone(),
+                partition_id,
+            })
             .await?;
         mapper::map_consumer_offset(response)
     }

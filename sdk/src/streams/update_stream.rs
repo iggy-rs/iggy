@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
+use crate::command::{Command, UPDATE_STREAM_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::streams::MAX_NAME_LENGTH;
@@ -23,10 +23,9 @@ pub struct UpdateStream {
     pub name: String,
 }
 
-impl CommandPayload for UpdateStream {}
-impl CommandExecutionOrigin for UpdateStream {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for UpdateStream {
+    fn code(&self) -> u32 {
+        UPDATE_STREAM_CODE
     }
 }
 
@@ -54,8 +53,8 @@ impl Validatable<IggyError> for UpdateStream {
 }
 
 impl BytesSerializable for UpdateStream {
-    fn as_bytes(&self) -> Bytes {
-        let stream_id_bytes = self.stream_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let stream_id_bytes = self.stream_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(1 + stream_id_bytes.len() + self.name.len());
         bytes.put_slice(&stream_id_bytes);
         #[allow(clippy::cast_possible_truncation)]
@@ -102,7 +101,7 @@ mod tests {
             name: "test".to_string(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
@@ -121,7 +120,7 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let name = "test".to_string();
 
-        let stream_id_bytes = stream_id.as_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(1 + stream_id_bytes.len() + name.len());
         bytes.put_slice(&stream_id_bytes);
         #[allow(clippy::cast_possible_truncation)]

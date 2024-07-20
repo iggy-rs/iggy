@@ -26,7 +26,7 @@ impl Partition {
 
     pub async fn get_messages_by_timestamp(
         &self,
-        timestamp: u64,
+        timestamp: IggyTimestamp,
         count: u32,
     ) -> Result<Vec<RetainedMessage>, IggyError> {
         trace!(
@@ -38,6 +38,7 @@ impl Partition {
             return Ok(EMPTY_MESSAGES);
         }
 
+        let timestamp = timestamp.as_micros();
         let mut found_index = None;
         let mut start_offset = self.segments.last().unwrap().start_offset;
         // Since index cache is configurable globally, not per segment we can handle it this way.
@@ -107,6 +108,7 @@ impl Partition {
             .take(count as usize)
             .collect())
     }
+
     fn calculate_adjusted_timestamp_message_count(
         &self,
         count: u32,
@@ -416,7 +418,7 @@ impl Partition {
                     );
                     continue;
                 }
-                max_timestamp = IggyTimestamp::now().to_micros();
+                max_timestamp = IggyTimestamp::now().as_micros();
 
                 if messages_count == 0 {
                     min_timestamp = max_timestamp;
@@ -428,7 +430,7 @@ impl Partition {
             }
         } else {
             for message in messages {
-                max_timestamp = IggyTimestamp::now().to_micros();
+                max_timestamp = IggyTimestamp::now().as_micros();
 
                 if messages_count == 0 {
                     min_timestamp = max_timestamp;
@@ -519,6 +521,7 @@ impl Partition {
 
 #[cfg(test)]
 mod tests {
+    use iggy::utils::expiry::IggyExpiry;
     use std::sync::atomic::{AtomicU32, AtomicU64};
 
     use super::*;
@@ -589,12 +592,13 @@ mod tests {
             with_segment,
             config,
             storage,
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU32::new(0)),
+            IggyTimestamp::now(),
         )
     }
 }

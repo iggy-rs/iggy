@@ -15,12 +15,16 @@ pub const DEFAULT_MESSAGE_BATCHES: NonZeroU32 = u32!(1000);
 pub const DEFAULT_MESSAGE_SIZE: NonZeroU32 = u32!(1000);
 
 pub const DEFAULT_NUMBER_OF_STREAMS: NonZeroU32 = u32!(10);
+pub const DEFAULT_NUMBER_OF_STREAMS_CONSUMER_GROUP: NonZeroU32 = u32!(1);
+pub const DEFAULT_NUMBER_OF_PARTITIONS: NonZeroU32 = u32!(1);
+
 pub const DEFAULT_NUMBER_OF_CONSUMERS: NonZeroU32 = u32!(10);
+pub const DEFAULT_NUMBER_OF_CONSUMER_GROUPS: NonZeroU32 = u32!(1);
 pub const DEFAULT_NUMBER_OF_PRODUCERS: NonZeroU32 = u32!(10);
 
 pub const DEFAULT_PERFORM_CLEANUP: bool = false;
 pub const DEFAULT_SERVER_SYSTEM_PATH: &str = "local_data";
 pub const DEFAULT_SERVER_STDOUT_VISIBILITY: bool = false;
 
-pub const DEFAULT_WARMUP_TIME_SECONDS: u64 = 1;
+pub const DEFAULT_WARMUP_TIME: &str = "1 s";
 pub const DEFAULT_SKIP_SERVER_START: bool = false;

@@ -3,7 +3,7 @@ use integration::test_server::{IpAddrKind, TestServer, Transport, SYSTEM_PATH_EN
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::{collections::HashMap, time::Instant};
-use tokio::net::{TcpStream, UdpSocket};
+use tokio::net::TcpStream;
 use tracing::{info, warn};
 
 #[derive(Debug, Deserialize)]

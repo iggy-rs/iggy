@@ -2,6 +2,7 @@ use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::mapper;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
@@ -10,6 +11,8 @@ use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
 use iggy::models::topic::{Topic, TopicDetails};
 use iggy::topics::create_topic::CreateTopic;
+use iggy::topics::delete_topic::DeleteTopic;
+use iggy::topics::purge_topic::PurgeTopic;
 use iggy::topics::update_topic::UpdateTopic;
 use iggy::validatable::Validatable;
 use std::sync::Arc;
@@ -85,6 +88,10 @@ async fn create_topic(
             command.replication_factor,
         )
         .await?;
+    system
+        .state
+        .apply(identity.user_id, EntryCommand::CreateTopic(command))
+        .await?;
     Ok(StatusCode::CREATED)
 }
 
@@ -110,6 +117,10 @@ async fn update_topic(
             command.replication_factor,
         )
         .await?;
+    system
+        .state
+        .apply(identity.user_id, EntryCommand::UpdateTopic(command))
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -128,6 +139,16 @@ async fn delete_topic(
             &topic_id,
         )
         .await?;
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::DeleteTopic(DeleteTopic {
+                stream_id,
+                topic_id,
+            }),
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -144,6 +165,16 @@ async fn purge_topic(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
             &topic_id,
+        )
+        .await?;
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::PurgeTopic(PurgeTopic {
+                stream_id,
+                topic_id,
+            }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

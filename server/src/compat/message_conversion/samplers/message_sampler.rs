@@ -1,6 +1,6 @@
-use crate::compat::binary_schema::BinarySchema;
-use crate::compat::schema_sampler::BinarySchemaSampler;
-use crate::compat::snapshots::message_snapshot::MessageSnapshot;
+use crate::compat::message_conversion::binary_schema::BinarySchema;
+use crate::compat::message_conversion::schema_sampler::BinarySchemaSampler;
+use crate::compat::message_conversion::snapshots::message_snapshot::MessageSnapshot;
 use crate::server_error::ServerError;
 use crate::streaming::utils::file;
 use bytes::{BufMut, BytesMut};

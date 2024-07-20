@@ -74,6 +74,7 @@ mod tests {
     use super::*;
     use crate::configs::system::{SegmentConfig, SystemConfig};
     use crate::streaming::storage::tests::get_test_system_storage;
+    use iggy::utils::expiry::IggyExpiry;
     use std::rc::Rc;
     use std::sync::atomic::AtomicU64;
     use std::sync::Arc;
@@ -99,7 +100,7 @@ mod tests {
             start_offset,
             config,
             storage,
-            None,
+            IggyExpiry::NeverExpire,
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),
             Rc::new(AtomicU64::new(0)),

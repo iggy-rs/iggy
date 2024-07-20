@@ -1,6 +1,6 @@
 use crate::streaming::common::test_setup::TestSetup;
 use iggy::identifier::Identifier;
-use server::configs::server::PersonalAccessTokenConfig;
+use server::configs::server::{DataMaintenanceConfig, PersonalAccessTokenConfig};
 use server::streaming::session::Session;
 use std::net::{Ipv4Addr, SocketAddr};
 use tokio::fs;
@@ -11,7 +11,7 @@ async fn should_initialize_system_and_base_directories() {
     let setup = TestSetup::init().await;
     let mut system = System::new(
         setup.config.clone(),
-        Some(setup.db.clone()),
+        DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
     );
 
@@ -27,7 +27,6 @@ async fn should_initialize_system_and_base_directories() {
 
     assert_eq!(names.len(), 3);
     assert!(names.contains(&setup.config.stream.path));
-    assert!(names.contains(&setup.config.database.path));
 }
 
 #[tokio::test]
@@ -35,7 +34,7 @@ async fn should_create_and_persist_stream() {
     let setup = TestSetup::init().await;
     let mut system = System::new(
         setup.config.clone(),
-        Some(setup.db.clone()),
+        DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
     );
     let stream_id = 1;
@@ -56,7 +55,7 @@ async fn should_create_and_persist_stream_with_automatically_generated_id() {
     let setup = TestSetup::init().await;
     let mut system = System::new(
         setup.config.clone(),
-        Some(setup.db.clone()),
+        DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
     );
     let stream_id = 1;
@@ -77,7 +76,7 @@ async fn should_delete_persisted_stream() {
     let setup = TestSetup::init().await;
     let mut system = System::new(
         setup.config.clone(),
-        Some(setup.db.clone()),
+        DataMaintenanceConfig::default(),
         PersonalAccessTokenConfig::default(),
     );
     let stream_id = 1;

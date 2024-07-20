@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
+use crate::command::{Command, CREATE_STREAM_CODE};
 use crate::error::IggyError;
 use crate::streams::MAX_NAME_LENGTH;
 use crate::utils::text;
@@ -21,10 +21,9 @@ pub struct CreateStream {
     pub name: String,
 }
 
-impl CommandPayload for CreateStream {}
-impl CommandExecutionOrigin for CreateStream {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for CreateStream {
+    fn code(&self) -> u32 {
+        CREATE_STREAM_CODE
     }
 }
 
@@ -58,7 +57,7 @@ impl Validatable<IggyError> for CreateStream {
 }
 
 impl BytesSerializable for CreateStream {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(5 + self.name.len());
         bytes.put_u32_le(self.stream_id.unwrap_or(0));
         #[allow(clippy::cast_possible_truncation)]
@@ -107,7 +106,7 @@ mod tests {
             name: "test".to_string(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let stream_id = u32::from_le_bytes(bytes[..4].try_into().unwrap());
         let name_length = bytes[4];
         let name = from_utf8(&bytes[5..5 + name_length as usize]).unwrap();

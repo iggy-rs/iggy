@@ -1,7 +1,6 @@
-use crate::streaming::storage::TopicStorage;
+use crate::streaming::storage::PartitionStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use crate::streaming::topics::topic::Topic;
-use fast_async_mutex::rwlock::RwLock;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::text::IggyStringUtils;
@@ -60,7 +59,7 @@ impl Topic {
         &mut self,
         group_id: Option<u32>,
         name: String,
-    ) -> Result<(), IggyError> {
+    ) -> Result<ConsumerGroup, IggyError> {
         let name = name.to_lowercase_non_whitespace();
         if self.consumer_groups_ids.contains_key(&name) {
             return Err(IggyError::ConsumerGroupNameAlreadyExists(
@@ -103,15 +102,11 @@ impl Topic {
         self.consumer_groups.insert(id, consumer_group);
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;
-        self.storage
-            .topic
-            .save_consumer_group(self, &consumer_group)
-            .await?;
         info!(
             "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
             id, self.topic_id, self.stream_id
         );
-        Ok(())
+        Ok(consumer_group.clone())
     }
 
     pub async fn delete_consumer_group(
@@ -126,23 +121,29 @@ impl Topic {
             return Err(IggyError::ConsumerGroupIdNotFound(group_id, self.topic_id));
         }
         let consumer_group = consumer_group.unwrap();
-        let group_id = consumer_group.group_id;
-        self.consumer_groups_ids.remove(&consumer_group.name);
-        self.storage
-            .topic
-            .delete_consumer_group(self, &consumer_group)
-            .await?;
+        {
+            let group_id = consumer_group.group_id;
+            self.consumer_groups_ids.remove(&consumer_group.name);
+            let current_group_id = self.current_consumer_group_id.load(Ordering::SeqCst);
+            if current_group_id > group_id {
+                self.current_consumer_group_id
+                    .store(group_id, Ordering::SeqCst);
+            }
 
-        let current_group_id = self.current_consumer_group_id.load(Ordering::SeqCst);
-        if current_group_id > group_id {
-            self.current_consumer_group_id
-                .store(group_id, Ordering::SeqCst);
+            for (_, partition) in self.partitions.borrow().iter() {
+                if let Some((_, offset)) = partition.consumer_group_offsets.remove(&group_id) {
+                    self.storage
+                        .partition
+                        .delete_consumer_offset(&offset.path)
+                        .await?;
+                }
+            }
+
+            info!(
+                "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
+                id, self.topic_id, self.stream_id
+            );
         }
-
-        info!(
-            "Deleted consumer group with ID: {} from topic with ID: {} and stream with ID: {}.",
-            id, self.topic_id, self.stream_id
-        );
 
         Ok(consumer_group)
     }
@@ -183,6 +184,8 @@ mod tests {
     use crate::configs::system::SystemConfig;
     use crate::streaming::storage::tests::get_test_system_storage;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
+    use iggy::utils::expiry::IggyExpiry;
+    use iggy::utils::topic_size::MaxTopicSize;
     use std::sync::atomic::{AtomicU32, AtomicU64};
     use std::sync::Arc;
 
@@ -191,8 +194,16 @@ mod tests {
         let group_id = 1;
         let name = "test";
         let mut topic = get_topic();
+        let topic_id = topic.topic_id;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_ok());
+        {
+            let created_consumer_group = result.unwrap().read().await;
+            assert_eq!(created_consumer_group.group_id, group_id);
+            assert_eq!(created_consumer_group.name, name);
+            assert_eq!(created_consumer_group.topic_id, topic_id);
+        }
+
         assert_eq!(topic.consumer_groups.len(), 1);
         let consumer_group = topic
             .get_consumer_group(&Identifier::numeric(group_id).unwrap())
@@ -200,7 +211,7 @@ mod tests {
         let consumer_group = consumer_group.read().await;
         assert_eq!(consumer_group.group_id, group_id);
         assert_eq!(consumer_group.name, name);
-        assert_eq!(consumer_group.topic_id, topic.topic_id);
+        assert_eq!(consumer_group.topic_id, topic_id);
         assert_eq!(
             consumer_group.partitions_count,
             topic.partitions.len() as u32
@@ -217,9 +228,9 @@ mod tests {
         assert_eq!(topic.consumer_groups.len(), 1);
         let result = topic.create_consumer_group(Some(group_id), "test2").await;
         assert!(result.is_err());
-        assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
         assert!(matches!(err, IggyError::ConsumerGroupIdAlreadyExists(_, _)));
+        assert_eq!(topic.consumer_groups.len(), 1);
     }
 
     #[monoio::test]
@@ -233,12 +244,12 @@ mod tests {
         let group_id = group_id + 1;
         let result = topic.create_consumer_group(Some(group_id), name).await;
         assert!(result.is_err());
-        assert_eq!(topic.consumer_groups.len(), 1);
         let err = result.unwrap_err();
         assert!(matches!(
             err,
             IggyError::ConsumerGroupNameAlreadyExists(_, _)
         ));
+        assert_eq!(topic.consumer_groups.len(), 1);
     }
 
     #[monoio::test]
@@ -344,9 +355,9 @@ mod tests {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
+            IggyExpiry::NeverExpire,
             compression_algorithm,
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap()

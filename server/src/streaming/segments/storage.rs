@@ -2,12 +2,12 @@ use crate::io_utils::reader::{IggyFile, IggyReader};
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::models::messages::RetainedMessage;
-use crate::streaming::persistence::persister::{Persister, StoragePersister};
+use crate::streaming::persistence::persister::{PersistenceStorage, Persister};
 use crate::streaming::segments::index::{Index, IndexRange};
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::segments::time_index::TimeIndex;
 use crate::streaming::sizeable::Sizeable;
-use crate::streaming::storage::{SegmentStorage, Storage};
+use crate::streaming::storage::SegmentStorage;
 use crate::streaming::utils::file;
 use crate::streaming::utils::head_tail_buf::HeadTailBuffer;
 use anyhow::Context;
@@ -20,7 +20,6 @@ use std::io::SeekFrom;
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tracing::{error, info, trace, warn};
 
 const EMPTY_INDEXES: Vec<Index> = vec![];
@@ -31,26 +30,21 @@ const BUF_READER_CAPACITY_BYTES: usize = 512 * 1000;
 
 #[derive(Debug)]
 pub struct FileSegmentStorage {
-    persister: Rc<StoragePersister>,
+    persister: Rc<PersistenceStorage>,
 }
 
 impl FileSegmentStorage {
-    pub fn new(persister: Rc<StoragePersister>) -> Self {
+    pub fn new(persister: Rc<PersistenceStorage>) -> Self {
         Self { persister }
     }
 }
 
-unsafe impl Send for FileSegmentStorage {}
-unsafe impl Sync for FileSegmentStorage {}
-
-// TODO: Split into smaller components.
-impl Storage<Segment> for FileSegmentStorage {
+impl SegmentStorage for FileSegmentStorage {
     async fn load(&self, segment: &mut Segment) -> Result<(), IggyError> {
         info!(
             "Loading segment from disk for start offset: {} and partition with ID: {} for topic with ID: {} and stream with ID: {} ...",
             segment.start_offset, segment.partition_id, segment.topic_id, segment.stream_id
         );
-        let log_file = file::open(&segment.log_path).await?;
         let file_size = file::metadata(&segment.log_path).await.unwrap().len();
         segment.size_bytes = file_size as u32;
 
@@ -208,9 +202,7 @@ impl Storage<Segment> for FileSegmentStorage {
         );
         Ok(())
     }
-}
 
-impl SegmentStorage for FileSegmentStorage {
     async fn load_message_batches(
         &self,
         segment: &Segment,

@@ -39,9 +39,9 @@ use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
-use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
+use crate::utils::topic_size::MaxTopicSize;
 
 // The default interval between sending the messages as batches in the background.
 pub const DEFAULT_SEND_MESSAGES_INTERVAL_MS: u64 = 100;
@@ -684,7 +684,7 @@ impl TopicClient for IggyClient {
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError> {
         self.client
             .read()
@@ -710,7 +710,7 @@ impl TopicClient for IggyClient {
         compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         message_expiry: IggyExpiry,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError> {
         self.client
             .read()
@@ -896,7 +896,7 @@ impl ConsumerGroupClient for IggyClient {
         topic_id: &Identifier,
         name: &str,
         group_id: Option<u32>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<ConsumerGroupDetails, IggyError> {
         self.client
             .read()
             .await

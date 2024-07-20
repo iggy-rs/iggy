@@ -1,6 +1,7 @@
 use crate::http::error::CustomError;
 use crate::http::jwt::json_web_token::Identity;
 use crate::http::shared::AppState;
+use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
@@ -39,6 +40,10 @@ async fn create_partitions(
             command.partitions_count,
         )
         .await?;
+    system
+        .state
+        .apply(identity.user_id, EntryCommand::CreatePartitions(command))
+        .await?;
     Ok(StatusCode::CREATED)
 }
 
@@ -55,9 +60,20 @@ async fn delete_partitions(
     system
         .delete_partitions(
             &Session::stateless(identity.user_id, identity.ip_address),
-            &query.stream_id,
-            &query.topic_id,
+            &query.stream_id.clone(),
+            &query.topic_id.clone(),
             query.partitions_count,
+        )
+        .await?;
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::DeletePartitions(DeletePartitions {
+                stream_id: query.stream_id.clone(),
+                topic_id: query.topic_id.clone(),
+                partitions_count: query.partitions_count,
+            }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

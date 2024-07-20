@@ -102,17 +102,15 @@ pub async fn start(config: HttpConfig, system: SharedSystem) -> SocketAddr {
 }
 
 async fn build_app_state(config: &HttpConfig, system: SharedSystem) -> Arc<AppState> {
-    let db;
+    let tokens_path;
+    let persister;
     {
-        let system_read = system.read();
-        db = system_read
-            .db
-            .as_ref()
-            .expect("Database not initialized")
-            .clone();
+        let system = system.read();
+        tokens_path = system.config.get_state_tokens_path();
+        persister = system.storage.persister.clone();
     }
 
-    let jwt_manager = JwtManager::from_config(&config.jwt, db);
+    let jwt_manager = JwtManager::from_config(persister, &tokens_path, &config.jwt);
     if let Err(error) = jwt_manager {
         panic!("Failed to initialize JWT manager: {}", error);
     }

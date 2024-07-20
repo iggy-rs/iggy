@@ -46,8 +46,13 @@ impl Clone for Stream {
 }
 
 impl Stream {
-    pub fn empty(id: u32, config: Arc<SystemConfig>, storage: Rc<SystemStorage>) -> Self {
-        Stream::create(id, "", config, storage)
+    pub fn empty(
+        id: u32,
+        name: &str,
+        config: Arc<SystemConfig>,
+        storage: Rc<SystemStorage>,
+    ) -> Self {
+        Stream::create(id, name, config, storage)
     }
 
     pub fn create(

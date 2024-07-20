@@ -1,10 +1,9 @@
-use crate::streaming::session::Session;
-use fast_async_mutex::mutex::Mutex;
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
 use std::sync::OnceLock;
 use sysinfo::{Pid, System as SysinfoSystem};
+use tokio::sync::Mutex;
 
 use super::shard::IggyShard;
 

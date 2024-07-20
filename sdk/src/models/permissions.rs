@@ -194,7 +194,7 @@ impl Display for Permissions {
 }
 
 impl BytesSerializable for Permissions {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::new();
         bytes.put_u8(if self.global.manage_servers { 1 } else { 0 });
         bytes.put_u8(if self.global.read_servers { 1 } else { 0 });
@@ -403,7 +403,7 @@ mod tests {
             ])),
         };
 
-        let bytes = permissions.as_bytes();
+        let bytes = permissions.to_bytes();
         let deserialized_permissions = Permissions::from_bytes(bytes).unwrap();
 
         assert_eq!(permissions, deserialized_permissions);

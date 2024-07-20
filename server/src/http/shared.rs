@@ -10,6 +10,7 @@ pub struct AppState {
 
 #[derive(Debug, Copy, Clone)]
 pub struct RequestDetails {
+    #[allow(dead_code)]
     pub request_id: Ulid,
     pub ip_address: SocketAddr,
 }

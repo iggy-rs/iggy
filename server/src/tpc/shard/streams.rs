@@ -1,23 +1,26 @@
+use crate::state::system::StreamState;
 use crate::streaming::session::Session;
 use crate::streaming::streams::stream::Stream;
 use futures::future::try_join_all;
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
-use iggy::utils::text;
 use iggy::utils::text::IggyStringUtils;
 use std::borrow::BorrowMut;
-use std::cell::{Ref, RefCell, RefMut};
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::cell::{Ref, RefMut};
+use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
-use tracing::{error, info};
+use std::sync::Arc;
+use tokio::fs;
+use tracing::{error, info, warn};
 
 use super::shard::IggyShard;
 
 static CURRENT_STREAM_ID: AtomicU32 = AtomicU32::new(1);
 
 impl IggyShard {
-    pub(crate) async fn load_streams(&self) -> Result<(), IggyError> {
+    pub(crate) async fn load_streams(&self, streams: Vec<StreamState>) -> Result<(), IggyError> {
         info!("Loading streams from disk...");
         let mut unloaded_streams = Vec::new();
         let dir_entries = std::fs::read_dir(&self.config.system.get_streams_path());
@@ -32,19 +35,61 @@ impl IggyShard {
             let name = dir_entry.file_name().into_string().unwrap();
             let stream_id = name.parse::<u32>();
             if stream_id.is_err() {
-                error!("Invalid stream ID file with name: '{}'.", name);
+                error!("Invalid stream ID file with name: '{name}'.");
                 continue;
             }
 
             let stream_id = stream_id.unwrap();
-            let stream = Stream::empty(stream_id, self.config.system.clone(), self.storage.clone());
+            let stream_state = streams.iter().find(|s| s.id == stream_id);
+            if stream_state.is_none() {
+                error!("Stream with ID: '{stream_id}' was not found in state, but exists on disk and will be removed.");
+                if let Err(error) = fs::remove_dir_all(&dir_entry.path()).await {
+                    error!("Cannot remove stream directory: {error}");
+                } else {
+                    warn!("Stream with ID: '{stream_id}' was removed.");
+                }
+                continue;
+            }
+
+            let stream_state = stream_state.unwrap();
+            let mut stream = Stream::empty(
+                stream_id,
+                &stream_state.name,
+                self.config.system.clone(),
+                self.storage.clone(),
+            );
+            stream.created_at = stream_state.created_at;
             unloaded_streams.push(stream);
         }
 
+        let state_stream_ids = streams
+            .iter()
+            .map(|stream| stream.id)
+            .collect::<HashSet<u32>>();
+        let unloaded_stream_ids = unloaded_streams
+            .iter()
+            .map(|stream| stream.stream_id)
+            .collect::<HashSet<u32>>();
+        let missing_ids = state_stream_ids
+            .difference(&unloaded_stream_ids)
+            .copied()
+            .collect::<HashSet<u32>>();
+        if missing_ids.is_empty() {
+            info!("All streams found on disk were found in state.");
+        } else {
+            error!("Streams with IDs: '{missing_ids:?}' were not found on disk.");
+            return Err(IggyError::MissingStreams);
+        }
+
+        let mut streams_states = streams
+            .into_iter()
+            .map(|s| (s.id, s))
+            .collect::<HashMap<_, _>>();
         let loaded_streams = RefCell::new(Vec::new());
         let load_stream_tasks = unloaded_streams.into_iter().map(|mut stream| {
+            let state = streams_states.remove(&stream.stream_id).unwrap();
             let load_stream_task = async {
-                stream.load().await?;
+                stream.load(state).await?;
                 loaded_streams.borrow_mut().push(stream);
                 Result::<(), IggyError>::Ok(())
             };
@@ -166,12 +211,11 @@ impl IggyShard {
 
     pub async fn create_stream(
         &self,
-        client_id: u32,
+        user_id: u32,
         stream_id: Option<u32>,
         name: String,
         should_persist: bool,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         self.permissioner.borrow().create_stream(user_id)?;
         let name = name.to_lowercase_non_whitespace();
         if self.streams_ids.borrow().contains_key(&name) {
@@ -214,11 +258,10 @@ impl IggyShard {
 
     pub async fn update_stream(
         &self,
-        client_id: u32,
+        user_id: u32,
         id: &Identifier,
         name: String,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
         self.permissioner
@@ -249,8 +292,7 @@ impl IggyShard {
         Ok(())
     }
 
-    pub async fn delete_stream(&self, client_id: u32, id: &Identifier) -> Result<u32, IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
+    pub async fn delete_stream(&self, user_id: u32, id: &Identifier) -> Result<u32, IggyError> {
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
         self.permissioner
@@ -283,10 +325,9 @@ impl IggyShard {
 
     pub async fn purge_stream(
         &self,
-        client_id: u32,
+        user_id: u32,
         stream_id: &Identifier,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
         self.permissioner
             .borrow()
@@ -298,10 +339,14 @@ impl IggyShard {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::configs::server::PersonalAccessTokenConfig;
+    use crate::configs::server::{DataMaintenanceConfig, PersonalAccessTokenConfig};
     use crate::configs::system::SystemConfig;
+    use crate::state::command::EntryCommand;
+    use crate::state::entry::StateEntry;
+    use crate::state::State;
     use crate::streaming::storage::tests::get_test_system_storage;
     use crate::streaming::users::user::User;
+    use async_trait::async_trait;
     use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
     use std::{
         net::{Ipv4Addr, SocketAddr},
@@ -315,15 +360,24 @@ mod tests {
         let stream_name = "test";
         let config = Arc::new(SystemConfig::default());
         let storage = get_test_system_storage();
-        let mut system =
-            System::create(config, storage, None, PersonalAccessTokenConfig::default());
+        let mut system = System::create(
+            config,
+            storage,
+            Arc::new(TestState::default()),
+            None,
+            DataMaintenanceConfig::default(),
+            PersonalAccessTokenConfig::default(),
+        );
         let root = User::root(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD);
+        let permissions = root.permissions.clone();
         let session = Session::new(
             1,
             root.id,
             SocketAddr::new(Ipv4Addr::LOCALHOST.into(), 1234),
         );
-        system.permissioner.init_permissions_for_user(root);
+        system
+            .permissioner
+            .init_permissions_for_user(root.id, permissions);
         system
             .create_stream(&session, Some(stream_id), stream_name)
             .await
@@ -340,6 +394,24 @@ mod tests {
         let stream = stream.unwrap();
         assert_eq!(stream.stream_id, stream_id);
         assert_eq!(stream.name, stream_name);
+    }
+
+    #[derive(Debug, Default)]
+    struct TestState {}
+
+    #[async_trait]
+    impl State for TestState {
+        async fn init(&self) -> Result<Vec<StateEntry>, IggyError> {
+            Ok(Vec::new())
+        }
+
+        async fn load_entries(&self) -> Result<Vec<StateEntry>, IggyError> {
+            Ok(Vec::new())
+        }
+
+        async fn apply(&self, _: u32, _: EntryCommand) -> Result<(), IggyError> {
+            Ok(())
+        }
     }
      */
 }

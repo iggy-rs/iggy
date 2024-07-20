@@ -1,12 +1,15 @@
+use crate::configs::server::{
+    ArchiverConfig, DataMaintenanceConfig, DiskArchiverConfig, MessagesMaintenanceConfig,
+    S3ArchiverConfig, StateMaintenanceConfig,
+};
 use crate::configs::system::MessageDeduplicationConfig;
 use crate::configs::{
     http::{HttpConfig, HttpCorsConfig, HttpJwtConfig, HttpMetricsConfig, HttpTlsConfig},
     resource_quota::MemoryResourceQuota,
-    server::{MessageCleanerConfig, MessageSaverConfig, ServerConfig},
+    server::{MessageSaverConfig, ServerConfig},
     system::{
-        CacheConfig, CompressionConfig, DatabaseConfig, EncryptionConfig, LoggingConfig,
-        PartitionConfig, RetentionPolicyConfig, SegmentConfig, StreamConfig, SystemConfig,
-        TopicConfig,
+        CacheConfig, CompressionConfig, EncryptionConfig, LoggingConfig, PartitionConfig,
+        SegmentConfig, StreamConfig, SystemConfig, TopicConfig,
     },
     tcp::{TcpConfig, TcpTlsConfig},
 };
@@ -81,22 +84,71 @@ impl Display for CompressionConfig {
     }
 }
 
-impl Display for ServerConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for DataMaintenanceConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ message_cleaner: {}, message_saver: {}, system: {}, tcp: {}, http: {} }}",
-            self.message_cleaner, self.message_saver, self.system, self.tcp, self.http
+            "{{ archiver: {}, messages: {}, state: {} }}",
+            self.archiver, self.messages, self.state
         )
     }
 }
 
-impl Display for MessageCleanerConfig {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl Display for ArchiverConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ enabled: {}, interval: {} }}",
-            self.enabled, self.interval
+            "{{ enabled: {}, kind: {:?}, disk: {:?}, s3: {:?} }}",
+            self.enabled, self.kind, self.disk, self.s3
+        )
+    }
+}
+
+impl Display for DiskArchiverConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{ path: {} }}", self.path)
+    }
+}
+
+impl Display for S3ArchiverConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ key_id: {}, key_secret: ******, bucket: {}, endpoint: {}. region: {} }}",
+            self.key_id,
+            self.bucket,
+            self.endpoint.as_deref().unwrap_or_default(),
+            self.region.as_deref().unwrap_or_default()
+        )
+    }
+}
+
+impl Display for MessagesMaintenanceConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ archiver_enabled: {}, cleaner_enabled: {}, interval: {} }}",
+            self.archiver_enabled, self.cleaner_enabled, self.interval
+        )
+    }
+}
+
+impl Display for StateMaintenanceConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ archiver_enabled: {}, overwrite: {}, interval: {} }}",
+            self.archiver_enabled, self.overwrite, self.interval
+        )
+    }
+}
+
+impl Display for ServerConfig {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{{ data_maintenance: {}, message_saver: {}, system: {}, tcp: {}, http: {} }}",
+            self.data_maintenance, self.message_saver, self.system, self.tcp, self.http
         )
     }
 }
@@ -111,26 +163,9 @@ impl Display for MessageSaverConfig {
     }
 }
 
-impl Display for DatabaseConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{ path: {} }}", self.path)
-    }
-}
-
 impl Display for CacheConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{ enabled: {}, size: {} }}", self.enabled, self.size)
-    }
-}
-
-impl Display for RetentionPolicyConfig {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{{ message_expiry {}, max_topic_size: {} }}",
-            self.message_expiry.as_secs(),
-            self.max_topic_size.as_human_string_with_zero_as_unlimited()
-        )
     }
 }
 
@@ -148,7 +183,11 @@ impl Display for StreamConfig {
 
 impl Display for TopicConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{{ path: {} }}", self.path)
+        write!(
+            f,
+            "{{ path: {}, max_size: {}, delete_oldest_segments: {} }}",
+            self.path, self.max_size, self.delete_oldest_segments
+        )
     }
 }
 
@@ -179,8 +218,8 @@ impl Display for SegmentConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ size_bytes: {}, cache_indexes: {}, cache_time_indexes: {} }}",
-            self.size, self.cache_indexes, self.cache_time_indexes
+            "{{ size_bytes: {}, cache_indexes: {}, cache_time_indexes: {}, message_expiry: {}, archive_expired: {} }}",
+            self.size, self.cache_indexes, self.cache_time_indexes, self.message_expiry, self.archive_expired
         )
     }
 }
@@ -222,9 +261,8 @@ impl Display for SystemConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
           f,
-          "{{ path: {}, database: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
+          "{{ path: {}, logging: {}, cache: {}, stream: {}, topic: {}, partition: {}, segment: {}, encryption: {} }}",
           self.path,
-          self.database,
           self.logging,
           self.cache,
           self.stream,

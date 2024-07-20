@@ -1,5 +1,5 @@
 use crate::streaming::users::user::User;
-use iggy::models::permissions::{GlobalPermissions, StreamPermissions};
+use iggy::models::permissions::{GlobalPermissions, Permissions, StreamPermissions};
 use iggy::models::user_info::UserId;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -15,29 +15,29 @@ pub struct Permissioner {
 }
 
 impl Permissioner {
-    pub fn init(&mut self, users: Vec<User>) {
+    pub fn init(&mut self, users: &[&User]) {
         for user in users {
-            self.init_permissions_for_user(user);
+            self.init_permissions_for_user(user.id, user.permissions.clone());
         }
     }
 
-    pub fn init_permissions_for_user(&mut self, user: User) {
-        if user.permissions.is_none() {
+    pub fn init_permissions_for_user(&mut self, user_id: UserId, permissions: Option<Permissions>) {
+        if permissions.is_none() {
             return;
         }
 
-        let permissions = user.permissions.unwrap();
+        let permissions = permissions.unwrap();
         if permissions.global.poll_messages {
             self.users_that_can_poll_messages_from_all_streams
-                .insert(user.id);
+                .insert(user_id);
         }
 
         if permissions.global.send_messages {
             self.users_that_can_send_messages_to_all_streams
-                .insert(user.id);
+                .insert(user_id);
         }
 
-        self.users_permissions.insert(user.id, permissions.global);
+        self.users_permissions.insert(user_id, permissions.global);
         if permissions.streams.is_none() {
             return;
         }
@@ -46,22 +46,26 @@ impl Permissioner {
         for (stream_id, stream) in streams {
             if stream.poll_messages {
                 self.users_that_can_poll_messages_from_specific_streams
-                    .insert((user.id, stream_id));
+                    .insert((user_id, stream_id));
             }
 
             if stream.send_messages {
                 self.users_that_can_send_messages_to_specific_streams
-                    .insert((user.id, stream_id));
+                    .insert((user_id, stream_id));
             }
 
             self.users_streams_permissions
-                .insert((user.id, stream_id), stream);
+                .insert((user_id, stream_id), stream);
         }
     }
 
-    pub fn update_permissions_for_user(&mut self, user: User) {
-        self.delete_permissions_for_user(user.id);
-        self.init_permissions_for_user(user);
+    pub fn update_permissions_for_user(
+        &mut self,
+        user_id: UserId,
+        permissions: Option<Permissions>,
+    ) {
+        self.delete_permissions_for_user(user_id);
+        self.init_permissions_for_user(user_id, permissions);
     }
 
     pub fn delete_permissions_for_user(&mut self, user_id: UserId) {

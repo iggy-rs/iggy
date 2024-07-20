@@ -7,3 +7,4 @@ pub mod hash;
 pub mod personal_access_token_expiry;
 pub mod text;
 pub mod timestamp;
+pub mod topic_size;

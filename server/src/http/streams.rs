@@ -10,8 +10,12 @@ use axum::{Extension, Json, Router};
 use iggy::identifier::Identifier;
 use iggy::models::stream::{Stream, StreamDetails};
 use iggy::streams::create_stream::CreateStream;
+use iggy::streams::delete_stream::DeleteStream;
+use iggy::streams::purge_stream::PurgeStream;
 use iggy::streams::update_stream::UpdateStream;
 use iggy::validatable::Validatable;
+
+use crate::state::command::EntryCommand;
 use std::sync::Arc;
 
 pub fn router(state: Arc<AppState>) -> Router {
@@ -65,6 +69,10 @@ async fn create_stream(
             &command.name,
         )
         .await?;
+    system
+        .state
+        .apply(identity.user_id, EntryCommand::CreateStream(command))
+        .await?;
     Ok(StatusCode::CREATED)
 }
 
@@ -84,6 +92,10 @@ async fn update_stream(
             &command.name,
         )
         .await?;
+    system
+        .state
+        .apply(identity.user_id, EntryCommand::UpdateStream(command))
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -100,6 +112,13 @@ async fn delete_stream(
             &stream_id,
         )
         .await?;
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::DeleteStream(DeleteStream { stream_id }),
+        )
+        .await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -114,6 +133,13 @@ async fn purge_stream(
         .purge_stream(
             &Session::stateless(identity.user_id, identity.ip_address),
             &stream_id,
+        )
+        .await?;
+    system
+        .state
+        .apply(
+            identity.user_id,
+            EntryCommand::PurgeStream(PurgeStream { stream_id }),
         )
         .await?;
     Ok(StatusCode::NO_CONTENT)

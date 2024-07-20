@@ -1,12 +1,12 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
 use crate::client::Client;
+use crate::command::Command;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
-use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
@@ -26,7 +26,6 @@ const NAME: &str = "Iggy";
 /// It requires a valid server address.
 #[derive(Debug)]
 pub struct TcpClient {
-    pub(crate) server_address: SocketAddr,
     pub(crate) stream: Mutex<Option<Box<dyn ConnectionStream>>>,
     pub(crate) config: Arc<TcpClientConfig>,
     pub(crate) state: Mutex<ClientState>,
@@ -141,7 +140,12 @@ impl BinaryTransport for TcpClient {
         *self.state.lock().await = state;
     }
 
-    async fn send_with_response(&self, command: u32, payload: Bytes) -> Result<Bytes, IggyError> {
+    async fn send_with_response<T: Command>(&self, command: &T) -> Result<Bytes, IggyError> {
+        self.send_raw_with_response(command.code(), command.to_bytes())
+            .await
+    }
+
+    async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
         if self.get_state().await == ClientState::Disconnected {
             return Err(IggyError::NotConnected);
         }
@@ -151,7 +155,7 @@ impl BinaryTransport for TcpClient {
             let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
             trace!("Sending a TCP request...");
             stream.write(&(payload_length as u32).to_le_bytes()).await?;
-            stream.write(&command.to_le_bytes()).await?;
+            stream.write(&code.to_le_bytes()).await?;
             stream.write(&payload).await?;
             stream.flush().await?;
             trace!("Sent a TCP request, waiting for a response...");
@@ -196,11 +200,8 @@ impl TcpClient {
 
     /// Create a new TCP client based on the provided configuration.
     pub fn create(config: Arc<TcpClientConfig>) -> Result<Self, IggyError> {
-        let server_address = config.server_address.parse::<SocketAddr>()?;
-
         Ok(Self {
             config,
-            server_address,
             stream: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
         })
@@ -276,7 +277,7 @@ impl TcpClient {
                 NAME, self.config.server_address
             );
 
-            let connection = TcpStream::connect(self.server_address).await;
+            let connection = TcpStream::connect(&self.config.server_address).await;
             if connection.is_err() {
                 error!(
                     "Failed to connect to server: {}",

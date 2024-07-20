@@ -1,5 +1,5 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
+use crate::command::{Command, LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE};
 use crate::error::IggyError;
 use crate::users::defaults::*;
 use crate::validatable::Validatable;
@@ -17,10 +17,9 @@ pub struct LoginWithPersonalAccessToken {
     pub token: String,
 }
 
-impl CommandPayload for LoginWithPersonalAccessToken {}
-impl CommandExecutionOrigin for LoginWithPersonalAccessToken {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for LoginWithPersonalAccessToken {
+    fn code(&self) -> u32 {
+        LOGIN_WITH_PERSONAL_ACCESS_TOKEN_CODE
     }
 }
 
@@ -43,7 +42,7 @@ impl Validatable<IggyError> for LoginWithPersonalAccessToken {
 }
 
 impl BytesSerializable for LoginWithPersonalAccessToken {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(5 + self.token.len());
         #[allow(clippy::cast_possible_truncation)]
         bytes.put_u8(self.token.len() as u8);
@@ -84,7 +83,7 @@ mod tests {
             token: "test".to_string(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let token_length = bytes[0];
         let token = from_utf8(&bytes[1..1 + token_length as usize]).unwrap();
         assert!(!bytes.is_empty());

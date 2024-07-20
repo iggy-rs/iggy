@@ -1,8 +1,8 @@
-use crate::command::{CommandExecution, CommandPayload};
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{Command, DELETE_USER_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -17,10 +17,9 @@ pub struct DeleteUser {
     pub user_id: Identifier,
 }
 
-impl CommandPayload for DeleteUser {}
-impl CommandExecutionOrigin for DeleteUser {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for DeleteUser {
+    fn code(&self) -> u32 {
+        DELETE_USER_CODE
     }
 }
 
@@ -31,8 +30,8 @@ impl Validatable<IggyError> for DeleteUser {
 }
 
 impl BytesSerializable for DeleteUser {
-    fn as_bytes(&self) -> Bytes {
-        self.user_id.as_bytes()
+    fn to_bytes(&self) -> Bytes {
+        self.user_id.to_bytes()
     }
 
     fn from_bytes(bytes: Bytes) -> Result<DeleteUser, IggyError> {
@@ -63,7 +62,7 @@ mod tests {
             user_id: Identifier::numeric(1).unwrap(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let user_id = Identifier::from_bytes(bytes.clone()).unwrap();
 
         assert!(!bytes.is_empty());
@@ -73,7 +72,7 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let user_id = Identifier::numeric(1).unwrap();
-        let bytes = user_id.as_bytes();
+        let bytes = user_id.to_bytes();
         let command = DeleteUser::from_bytes(bytes);
         assert!(command.is_ok());
 

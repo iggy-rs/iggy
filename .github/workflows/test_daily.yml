@@ -1,0 +1,111 @@
+name: test_daily
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 8 * * *'  # At 8:00 AM UTC, which is 9:00 AM CET
+
+env:
+  CRATE_NAME: iggy
+  GITHUB_TOKEN: ${{ github.token }}
+  RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
+  IGGY_CI_BUILD: true
+  # Option needed for starting docker under cross to be able to lock memory
+  # in order to be able to use keyring inside Docker container
+  CROSS_CONTAINER_OPTS: "--cap-add ipc_lock"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_and_test:
+    name: 'build and test ${{ matrix.toolchain }} ${{ matrix.platform.os_name }}'
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+
+          - os_name: Linux-x86_64-musl
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            name: iggy-Linux-x86_64-musl.tar.gz
+            cargo_command: cargo
+            profile: release
+            docker_arch: linux/amd64
+            cross: false
+
+          - os_name: Linux-aarch64-musl
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            name: iggy-Linux-aarch64-musl.tar.gz
+            docker_arch: linux/arm64/v8
+            profile: release
+            cross: true
+
+        toolchain:
+          - stable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cache cargo & target directories
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: "v2"
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "jdoe@example.com"
+          git config --global user.name "J. Doe"
+
+      - name: Install musl-tools, gnome-keyring and keyutils on Linux
+        run: |
+          sudo apt-get update --yes && sudo apt-get install --yes musl-tools gnome-keyring keyutils
+          rm -f $HOME/.local/share/keyrings/*
+          echo -n "test" | gnome-keyring-daemon --unlock
+        if: contains(matrix.platform.name, 'musl')
+
+      - name: Prepare Cross.toml
+        run: |
+          scripts/prepare-cross-toml.sh
+          cat Cross.toml
+        if: ${{ matrix.platform.cross }}
+
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: "build"
+          target: ${{ matrix.platform.target }}
+          toolchain: ${{ matrix.toolchain }}
+          args: " --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
+
+      - name: Run tests
+        uses: houseabsolute/actions-rust-cross@v0
+        with:
+          command: "test"
+          target: ${{ matrix.platform.target }}
+          toolchain: ${{ matrix.toolchain }}
+          args: " --features ci-qemu --verbose ${{ matrix.platform.profile == 'release' && '--release' || '' }}"
+
+      - name: Check if workspace is clean
+        run: git status | grep "working tree clean" || { git status ; exit 1; }
+
+  finalize_nightly:
+    runs-on: ubuntu-latest
+    needs: build_and_test
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Everything is fine
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: Something went wrong
+        if: ${{ contains(needs.*.result, 'failure') && github.event_name != 'workflow_dispatch' }}
+        uses: JasonEtco/create-an-issue@v2.9.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_BOT_CONTEXT_STRING: "nightly test suite"
+        with:
+          filename: .github/BOT_ISSUE_TEMPLATE.md

@@ -2,6 +2,7 @@ use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
+use crate::utils::timestamp::IggyTimestamp;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use serde_with::base64::Base64;
@@ -122,24 +123,11 @@ impl FromStr for MessageState {
 }
 
 impl PolledMessage {
-    /// Creates a new message from the `Message` struct being part of `SendMessages` command.
-    /// Creates a new message without a specified offset.
-    pub fn empty(
-        timestamp: u64,
-        state: MessageState,
-        id: u128,
-        payload: Bytes,
-        checksum: u32,
-        headers: Option<HashMap<HeaderKey, HeaderValue>>,
-    ) -> Self {
-        PolledMessage::create(0, state, timestamp, id, payload, checksum, headers)
-    }
-
     /// Creates a new message with a specified offset.
     pub fn create(
         offset: u64,
         state: MessageState,
-        timestamp: u64,
+        timestamp: IggyTimestamp,
         id: u128,
         payload: Bytes,
         checksum: u32,
@@ -148,7 +136,7 @@ impl PolledMessage {
         PolledMessage {
             offset,
             state,
-            timestamp,
+            timestamp: timestamp.as_micros(),
             id,
             checksum,
             #[allow(clippy::cast_possible_truncation)]
@@ -156,6 +144,11 @@ impl PolledMessage {
             payload,
             headers,
         }
+    }
+
+    /// Returns the timestamp of the message as `IggyTimestamp`.
+    pub fn timestamp(&self) -> IggyTimestamp {
+        self.timestamp.into()
     }
 
     /// Returns the size of the message in bytes.
@@ -172,7 +165,7 @@ impl PolledMessage {
         bytes.put_u128_le(self.id);
         bytes.put_u32_le(self.checksum);
         if let Some(headers) = &self.headers {
-            let headers_bytes = headers.as_bytes();
+            let headers_bytes = headers.to_bytes();
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(headers_bytes.len() as u32);
             bytes.put_slice(&headers_bytes);

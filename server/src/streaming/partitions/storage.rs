@@ -1,184 +1,48 @@
 //use crate::compat::message_converter::MessageFormatConverter;
+use crate::state::system::PartitionState;
 use crate::streaming::partitions::partition::{ConsumerOffset, Partition};
+use crate::streaming::persistence::persister::{PersistenceStorage, Persister};
 use crate::streaming::segments::segment::{Segment, LOG_EXTENSION};
-use crate::streaming::storage::{PartitionStorage, SegmentStorage, Storage};
+use crate::streaming::storage::PartitionStorage;
+use crate::streaming::storage::SegmentStorage;
+use crate::streaming::utils::file;
 use anyhow::Context;
 use iggy::consumer::ConsumerKind;
 use iggy::error::IggyError;
-use serde::{Deserialize, Serialize};
-use sled::Db;
+use std::fs::create_dir;
 use std::path::Path;
+use std::rc::Rc;
 use std::sync::atomic::Ordering;
-use std::sync::Arc;
 use tracing::{error, info, trace, warn};
 
 #[derive(Debug)]
 pub struct FilePartitionStorage {
-    db: Arc<Db>,
+    persister: Rc<PersistenceStorage>,
 }
 
 impl FilePartitionStorage {
-    pub fn new(db: Arc<Db>) -> Self {
-        Self { db }
+    pub fn new(persister: Rc<PersistenceStorage>) -> Self {
+        Self { persister }
     }
 }
-
-unsafe impl Send for FilePartitionStorage {}
-unsafe impl Sync for FilePartitionStorage {}
 
 impl PartitionStorage for FilePartitionStorage {
-    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError> {
-        // The stored value is just the offset, so we don't need to serialize the whole struct.
-        // It should be as fast and lightweight as possible.
-        // As described in the docs, sled works better with big-endian byte order.
-        if let Err(err) = self
-            .db
-            .insert(&offset.key, &offset.offset.to_be_bytes())
-            .with_context(|| {
-                format!(
-                    "Failed to save consumer offset: {}, key: {}",
-                    offset.offset, offset.key
-                )
-            })
-        {
-            return Err(IggyError::CannotSaveResource(err));
-        }
-
-        trace!(
-            "Stored consumer offset value: {} for {} with ID: {}",
-            offset.offset,
-            offset.kind,
-            offset.consumer_id
-        );
-        Ok(())
-    }
-
-    async fn load_consumer_offsets(
+    async fn load(
         &self,
-        kind: ConsumerKind,
-        stream_id: u32,
-        topic_id: u32,
-        partition_id: u32,
-    ) -> Result<Vec<ConsumerOffset>, IggyError> {
-        let mut consumer_offsets = Vec::new();
-        let key_prefix = format!(
-            "{}:",
-            ConsumerOffset::get_key_prefix(kind, stream_id, topic_id, partition_id)
-        );
-        for data in self.db.scan_prefix(&key_prefix) {
-            let consumer_offset = match data.with_context(|| {
-                format!(
-                    "Failed to load consumer offset, when searching by key: {}",
-                    key_prefix
-                )
-            }) {
-                Ok((key, value)) => {
-                    let key = String::from_utf8(key.to_vec()).unwrap();
-                    let offset = u64::from_be_bytes(value.as_ref().try_into().unwrap());
-                    let consumer_id = key.split(':').last().unwrap().parse::<u32>().unwrap();
-                    ConsumerOffset {
-                        key,
-                        kind,
-                        consumer_id,
-                        offset,
-                    }
-                }
-                Err(err) => {
-                    return Err(IggyError::CannotLoadResource(err));
-                }
-            };
-            consumer_offsets.push(consumer_offset);
-        }
-
-        consumer_offsets.sort_by(|a, b| a.consumer_id.cmp(&b.consumer_id));
-        Ok(consumer_offsets)
-    }
-
-    async fn delete_consumer_offsets(
-        &self,
-        kind: ConsumerKind,
-        stream_id: u32,
-        topic_id: u32,
-        partition_id: u32,
+        partition: &mut Partition,
+        state: PartitionState,
     ) -> Result<(), IggyError> {
-        let consumer_offset_key_prefix = format!(
-            "{}:",
-            ConsumerOffset::get_key_prefix(kind, stream_id, topic_id, partition_id)
-        );
-
-        for data in self.db.scan_prefix(&consumer_offset_key_prefix) {
-            match data.with_context(|| {
-                format!(
-                    "Failed to delete consumer offset, when searching by key: {}",
-                    consumer_offset_key_prefix
-                )
-            }) {
-                Ok((key, _)) => {
-                    if let Err(err) = self.db.remove(&key).with_context(|| {
-                        format!("Failed to delete consumer offset, key: {:?}", key)
-                    }) {
-                        return Err(IggyError::CannotLoadResource(err));
-                    }
-                }
-                Err(err) => {
-                    return Err(IggyError::CannotLoadResource(err));
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct PartitionData {
-    created_at: u64,
-}
-
-impl Storage<Partition> for FilePartitionStorage {
-    async fn load(&self, partition: &mut Partition) -> Result<(), IggyError> {
         info!(
             "Loading partition with ID: {} for stream with ID: {} and topic with ID: {}, for path: {} from disk...",
-            partition.partition_id, partition.stream_id, partition.topic_id, partition.path
+            partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path
         );
-        let dir_entries = std::fs::read_dir(&partition.path);
-        if let Err(err) = std::fs::read_dir(&partition.path)
-            .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}", partition.partition_id, partition.stream_id, partition.topic_id, partition.path))
-        {
-            return Err(IggyError::CannotReadPartitions(err));
-        }
-
-        let key = get_partition_key(
-            partition.stream_id,
-            partition.topic_id,
-            partition.partition_id,
-        );
-        let partition_data = match self
-            .db
-            .get(&key)
-            .with_context(|| format!("Failed to load partition with key: {}", key))
-        {
-            Ok(partition_data) => {
-                if let Some(partition_data) = partition_data {
-                    let partition_data = rmp_serde::from_slice::<PartitionData>(&partition_data)
-                        .with_context(|| {
-                            format!("Failed to deserialize partition with key: {}", key)
-                        });
-                    if let Err(err) = partition_data {
-                        return Err(IggyError::CannotDeserializeResource(err));
-                    } else {
-                        partition_data.unwrap()
-                    }
-                } else {
-                    return Err(IggyError::ResourceNotFound(key));
-                }
+        partition.created_at = state.created_at;
+        let dir_entries = std::fs::read_dir(&partition.partition_path);
+        if let Err(err) = std::fs::read_dir(&partition.partition_path)
+                .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} and topic with ID: {} and path: {}", partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path))
+            {
+                return Err(IggyError::CannotReadPartitions(err));
             }
-            Err(err) => {
-                return Err(IggyError::CannotLoadResource(err));
-            }
-        };
-
-        partition.created_at = partition_data.created_at;
 
         let mut dir_entries = dir_entries.unwrap();
         while let Some(dir_entry) = dir_entries.next() {
@@ -243,11 +107,11 @@ impl Storage<Partition> for FilePartitionStorage {
                     Err(err) if idx + 1 == samplers_count => {
                         // Didn't find any message format, return an error
                         return Err(IggyError::CannotLoadResource(anyhow::anyhow!(err)
-                            .context(format!(
-                            "Failed to find a valid message format, when trying to perform a conversion for partition with ID: {} and segment with start offset: {}.",
-                            partition.partition_id,
-                            start_offset
-                            ))));
+                                .context(format!(
+                                    "Failed to find a valid message format, when trying to perform a conversion for partition with ID: {} and segment with start offset: {}.",
+                                    partition.partition_id,
+                                    start_offset
+                                ))));
                     }
                     _ => {}
                 }
@@ -334,7 +198,9 @@ impl Storage<Partition> for FilePartitionStorage {
             "Saving partition with start ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id
         );
-        if !Path::new(&partition.path).exists() && std::fs::create_dir(&partition.path).is_err() {
+        if !Path::new(&partition.partition_path).exists()
+            && create_dir(&partition.partition_path).is_err()
+        {
             return Err(IggyError::CannotCreatePartitionDirectory(
                 partition.partition_id,
                 partition.stream_id,
@@ -342,49 +208,53 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        let key = get_partition_key(
-            partition.stream_id,
-            partition.topic_id,
-            partition.partition_id,
-        );
-        match rmp_serde::to_vec(&PartitionData {
-            created_at: partition.created_at,
-        })
-        .with_context(|| format!("Failed to serialize partition with key: {}", key))
+        if !Path::new(&partition.offsets_path).exists()
+            && create_dir(&partition.offsets_path).is_err()
         {
-            Ok(data) => {
-                if let Err(err) = self
-                    .db
-                    .insert(&key, data)
-                    .with_context(|| format!("Failed to insert partition with key: {}", key))
-                {
-                    return Err(IggyError::CannotSaveResource(err));
-                }
-            }
-            Err(err) => {
-                return Err(IggyError::CannotSerializeResource(err));
-            }
+            error!(
+                "Failed to create offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                partition.partition_id, partition.stream_id, partition.topic_id
+            );
+            return Err(IggyError::CannotCreatePartition(
+                partition.partition_id,
+                partition.stream_id,
+                partition.topic_id,
+            ));
         }
 
-        if let Err(err) = self
-            .db
-            .insert(
-                &key,
-                rmp_serde::to_vec(&PartitionData {
-                    created_at: partition.created_at,
-                })
-                .unwrap(),
-            )
-            .with_context(|| format!("Failed to insert partition with key: {}", key))
+        if !Path::new(&partition.consumer_offsets_path).exists()
+            && create_dir(&partition.consumer_offsets_path).is_err()
         {
-            return Err(IggyError::CannotSaveResource(err));
+            error!(
+                "Failed to create consumer offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                partition.partition_id, partition.stream_id, partition.topic_id
+            );
+            return Err(IggyError::CannotCreatePartition(
+                partition.partition_id,
+                partition.stream_id,
+                partition.topic_id,
+            ));
+        }
+
+        if !Path::new(&partition.consumer_group_offsets_path).exists()
+            && create_dir(&partition.consumer_group_offsets_path).is_err()
+        {
+            error!(
+                "Failed to create consumer group offsets directory for partition with ID: {} for stream with ID: {} and topic with ID: {}.",
+                partition.partition_id, partition.stream_id, partition.topic_id
+            );
+            return Err(IggyError::CannotCreatePartition(
+                partition.partition_id,
+                partition.stream_id,
+                partition.topic_id,
+            ));
         }
 
         for segment in partition.get_segments() {
             segment.persist().await?;
         }
 
-        info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", partition.partition_id, partition.stream_id, partition.topic_id, partition.path);
+        info!("Saved partition with start ID: {} for stream with ID: {} and topic with ID: {}, path: {}.", partition.partition_id, partition.stream_id, partition.topic_id, partition.partition_path);
 
         Ok(())
     }
@@ -394,29 +264,9 @@ impl Storage<Partition> for FilePartitionStorage {
             "Deleting partition with ID: {} for stream with ID: {} and topic with ID: {}...",
             partition.partition_id, partition.stream_id, partition.topic_id,
         );
-        if self
-            .db
-            .remove(get_partition_key(
-                partition.stream_id,
-                partition.topic_id,
-                partition.partition_id,
-            ))
-            .is_err()
-        {
-            return Err(IggyError::CannotDeletePartition(
-                partition.partition_id,
-                partition.topic_id,
-                partition.stream_id,
-            ));
-        }
 
         if let Err(err) = self
-            .delete_consumer_offsets(
-                ConsumerKind::Consumer,
-                partition.stream_id,
-                partition.topic_id,
-                partition.partition_id,
-            )
+            .delete_consumer_offsets(&partition.consumer_offsets_path)
             .await
         {
             error!("Cannot delete consumer offsets for partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
@@ -428,12 +278,7 @@ impl Storage<Partition> for FilePartitionStorage {
         }
 
         if let Err(err) = self
-            .delete_consumer_offsets(
-                ConsumerKind::ConsumerGroup,
-                partition.stream_id,
-                partition.topic_id,
-                partition.partition_id,
-            )
+            .delete_consumer_offsets(&partition.consumer_group_offsets_path)
             .await
         {
             error!("Cannot delete consumer group offsets for partition with ID: {} for topic with ID: {} for stream with ID: {}. Error: {}", partition.partition_id, partition.topic_id, partition.stream_id, err);
@@ -444,8 +289,8 @@ impl Storage<Partition> for FilePartitionStorage {
             ));
         }
 
-        if std::fs::remove_dir_all(&partition.path).is_err() {
-            error!("Cannot delete partition directory: {} for partition with ID: {} for topic with ID: {} for stream with ID: {}.", partition.path, partition.partition_id, partition.topic_id, partition.stream_id);
+        if std::fs::remove_dir_all(&partition.partition_path).is_err() {
+            error!("Cannot delete partition directory: {} for partition with ID: {} for topic with ID: {} for stream with ID: {}.", partition.partition_path, partition.partition_id, partition.topic_id, partition.stream_id);
             return Err(IggyError::CannotDeletePartitionDirectory(
                 partition.partition_id,
                 partition.stream_id,
@@ -458,11 +303,105 @@ impl Storage<Partition> for FilePartitionStorage {
         );
         Ok(())
     }
-}
 
-fn get_partition_key(stream_id: u32, topic_id: u32, partition_id: u32) -> String {
-    format!(
-        "streams:{}:topics:{}:partitions:{}",
-        stream_id, topic_id, partition_id
-    )
+    async fn save_consumer_offset(&self, offset: &ConsumerOffset) -> Result<(), IggyError> {
+        let bytes = offset.offset.to_le_bytes().to_vec();
+        self.persister.overwrite(&offset.path, bytes).await?;
+        trace!(
+            "Stored consumer offset value: {} for {} with ID: {}, path: {}",
+            offset.offset,
+            offset.kind,
+            offset.consumer_id,
+            offset.path
+        );
+        Ok(())
+    }
+
+    async fn load_consumer_offsets(
+        &self,
+        kind: ConsumerKind,
+        path: &str,
+    ) -> Result<Vec<ConsumerOffset>, IggyError> {
+        trace!("Loading consumer offsets from path: {path}...");
+        let dir_entries = std::fs::read_dir(&path);
+        if dir_entries.is_err() {
+            return Err(IggyError::CannotReadConsumerOffsets(path.to_owned()));
+        }
+
+        let mut consumer_offsets = Vec::new();
+        let mut dir_entries = dir_entries.unwrap();
+        let mut pos = 0;
+        while let Some(dir_entry) = dir_entries.next() {
+            let dir_entry = dir_entry.expect("Failed to read directory entry.");
+            let metadata = dir_entry.metadata();
+            if metadata.is_err() {
+                break;
+            }
+
+            if metadata.unwrap().is_dir() {
+                continue;
+            }
+
+            let name = dir_entry.file_name().into_string().unwrap();
+            let consumer_id = name.parse::<u32>();
+            if consumer_id.is_err() {
+                error!("Invalid consumer ID file with name: '{}'.", name);
+                continue;
+            }
+
+            let path = dir_entry.path();
+            let path = path.to_str();
+            if path.is_none() {
+                error!("Invalid consumer ID path for file with name: '{}'.", name);
+                continue;
+            }
+
+            let path = path.unwrap().to_string();
+            let consumer_id = consumer_id.unwrap();
+            let file = file::open(&path).await?;
+            let offset_val = Box::new([0u8; 8]);
+            let (result, offset_val) = file.read_exact_at(offset_val, 0).await;
+            result?;
+            pos += 8;
+            let offset = u64::from_le_bytes(*offset_val);
+
+            consumer_offsets.push(ConsumerOffset {
+                kind,
+                consumer_id,
+                offset,
+                path,
+            });
+        }
+
+        consumer_offsets.sort_by(|a, b| a.consumer_id.cmp(&b.consumer_id));
+        Ok(consumer_offsets)
+    }
+
+    async fn delete_consumer_offsets(&self, path: &str) -> Result<(), IggyError> {
+        if !Path::new(path).exists() {
+            trace!("Consumer offsets directory does not exist: {path}.");
+            return Ok(());
+        }
+
+        if std::fs::remove_dir_all(path).is_err() {
+            error!("Cannot delete consumer offsets directory: {}.", path);
+            return Err(IggyError::CannotDeleteConsumerOffsetsDirectory(
+                path.to_owned(),
+            ));
+        }
+        Ok(())
+    }
+
+    async fn delete_consumer_offset(&self, path: &str) -> Result<(), IggyError> {
+        if !Path::new(path).exists() {
+            trace!("Consumer offset file does not exist: {path}.");
+            return Ok(());
+        }
+
+        if std::fs::remove_file(path).is_err() {
+            error!("Cannot delete consumer offset file: {path}.");
+            return Err(IggyError::CannotDeleteConsumerOffsetFile(path.to_owned()));
+        }
+        Ok(())
+    }
 }

@@ -1,8 +1,8 @@
-use crate::command::{CommandExecution, CommandPayload};
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{Command, PURGE_TOPIC_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -21,10 +21,9 @@ pub struct PurgeTopic {
     pub topic_id: Identifier,
 }
 
-impl CommandPayload for PurgeTopic {}
-impl CommandExecutionOrigin for PurgeTopic {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for PurgeTopic {
+    fn code(&self) -> u32 {
+        PURGE_TOPIC_CODE
     }
 }
 
@@ -35,9 +34,9 @@ impl Validatable<IggyError> for PurgeTopic {
 }
 
 impl BytesSerializable for PurgeTopic {
-    fn as_bytes(&self) -> Bytes {
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let stream_id_bytes = self.stream_id.to_bytes();
+        let topic_id_bytes = self.topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(stream_id_bytes.len() + topic_id_bytes.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);
@@ -79,7 +78,7 @@ mod tests {
             topic_id: Identifier::numeric(2).unwrap(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
@@ -95,8 +94,8 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
         let mut bytes = BytesMut::new();
-        bytes.put_slice(&stream_id.as_bytes());
-        bytes.put_slice(&topic_id.as_bytes());
+        bytes.put_slice(&stream_id.to_bytes());
+        bytes.put_slice(&topic_id.to_bytes());
         let command = PurgeTopic::from_bytes(bytes.freeze());
         assert!(command.is_ok());
 

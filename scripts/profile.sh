@@ -65,7 +65,7 @@ done
 
 # Validate addr2line version
 addr2line_version=$(addr2line --version)
-if [[ ! "${addr2line_version}" == *"0.21.0"* ]]; then
+if [[ ! "${addr2line_version}" == *"0.2"* ]]; then
     echo "Incompatible addr2line version. Please install the correct version from https://github.com/gimli-rs/addr2line"
     exit 1
 fi

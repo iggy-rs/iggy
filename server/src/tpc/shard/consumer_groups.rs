@@ -44,13 +44,12 @@ impl IggyShard {
 
     pub async fn create_consumer_group(
         &self,
-        client_id: u32,
+        user_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
         group_id: Option<u32>,
         name: String,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner.borrow().create_consumer_group(

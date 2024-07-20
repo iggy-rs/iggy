@@ -81,16 +81,6 @@ jobs:
             docker_arch: linux/amd64
             cross: false
 
-          - os_name: Linux-arm
-            os: ubuntu-latest
-            target: arm-unknown-linux-musleabi
-            bin:
-              - iggy-server
-              - iggy
-            name: iggy-Linux-arm-musl.tar.gz
-            docker_arch: linux/arm/v7
-            cross: true
-
           - os_name: Linux-aarch64-musl
             os: ubuntu-latest
             target: aarch64-unknown-linux-musl
@@ -167,7 +157,7 @@ jobs:
 
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: ./
           file: ./Dockerfile.ci
@@ -199,7 +189,7 @@ jobs:
       - tag
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
         with:
           pattern: 'digests-*'
           merge-multiple: true
@@ -252,7 +242,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e
         with:
           path: all_artifacts
 

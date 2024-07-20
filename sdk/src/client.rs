@@ -16,9 +16,9 @@ use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
-use crate::utils::byte_size::IggyByteSize;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
+use crate::utils::topic_size::MaxTopicSize;
 use async_trait::async_trait;
 use std::fmt::Debug;
 
@@ -206,7 +206,7 @@ pub trait TopicClient {
         replication_factor: Option<u8>,
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError>;
     /// Update a topic by unique ID or name.
     ///
@@ -219,7 +219,7 @@ pub trait TopicClient {
         compression_algorithm: CompressionAlgorithm,
         replication_factor: Option<u8>,
         message_expiry: IggyExpiry,
-        max_topic_size: Option<IggyByteSize>,
+        max_topic_size: MaxTopicSize,
     ) -> Result<(), IggyError>;
     /// Delete a topic by unique ID or name.
     ///
@@ -350,7 +350,7 @@ pub trait ConsumerGroupClient {
         topic_id: &Identifier,
         name: &str,
         group_id: Option<u32>,
-    ) -> Result<(), IggyError>;
+    ) -> Result<ConsumerGroupDetails, IggyError>;
     /// Delete a consumer group by unique ID or name for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to manage the streams or topics.

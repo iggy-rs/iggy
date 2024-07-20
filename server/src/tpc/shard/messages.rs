@@ -102,15 +102,15 @@ impl IggyShard {
         let mut messages = messages;
         if let Some(encryptor) = &self.encryptor {
             for message in messages.iter_mut() {
-                let payload = encryptor.decrypt(&message.payload);
+                let payload = encryptor.encrypt(&message.payload);
                 match payload {
                     Ok(payload) => {
                         message.payload = Bytes::from(payload);
                         batch_size_bytes += message.get_size_bytes() as u64;
                     }
                     Err(error) => {
-                        error!("Cannot decrypt the message. Error: {}", error);
-                        return Err(IggyError::CannotDecryptData);
+                        error!("Cannot encrypt the message. Error: {}", error);
+                        return Err(IggyError::CannotEncryptData);
                     }
                 }
             }

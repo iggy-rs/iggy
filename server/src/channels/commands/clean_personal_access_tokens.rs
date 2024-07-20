@@ -65,56 +65,31 @@ impl PersonalAccessTokenCleaner {
 
 impl ServerCommand<CleanPersonalAccessTokensCommand> for CleanPersonalAccessTokensExecutor {
     async fn execute(&mut self, system: &SharedSystem, _command: CleanPersonalAccessTokensCommand) {
-        let system = system.read();
-        let tokens = system.storage.personal_access_token.load_all().await;
-        if tokens.is_err() {
-            error!("Failed to load personal access tokens: {:?}", tokens);
-            return;
-        }
-
-        let tokens = tokens.unwrap();
-        if tokens.is_empty() {
-            debug!("No personal access tokens to delete.");
-            return;
-        }
-
-        let now = IggyTimestamp::now().to_micros();
-        let expired_tokens = tokens
-            .into_iter()
-            .filter(|token| token.is_expired(now))
-            .collect::<Vec<_>>();
-
-        if expired_tokens.is_empty() {
-            debug!("No expired personal access tokens to delete.");
-            return;
-        }
-
-        let expired_tokens_count = expired_tokens.len();
+        // TODO: System write lock, investigate if it's necessary.
+        let mut system = system.write();
+        let now = IggyTimestamp::now();
         let mut deleted_tokens_count = 0;
-        debug!("Found {expired_tokens_count} expired personal access tokens.");
-        for token in expired_tokens {
-            let result = system
-                .storage
-                .personal_access_token
-                .delete_for_user(token.user_id, &token.name)
-                .await;
-            if result.is_err() {
-                error!(
-                    "Failed to delete personal access token: {} for user with ID: {}. Error: {:?}",
-                    token.name,
-                    token.user_id,
-                    result.err().unwrap()
+        for (_, user) in system.users.iter_mut() {
+            let expired_tokens = user
+                .personal_access_tokens
+                .values()
+                .filter(|token| token.is_expired(now))
+                .map(|token| token.token.clone())
+                .collect::<Vec<_>>();
+
+            for token in expired_tokens {
+                debug!(
+                    "Personal access token: {token} for user with ID: {} is expired.",
+                    user.id
                 );
-                continue;
+                deleted_tokens_count += 1;
+                user.personal_access_tokens.remove(&token);
+                debug!(
+                    "Deleted personal access token: {token} for user with ID: {}.",
+                    user.id
+                );
             }
-
-            deleted_tokens_count += 1;
-            debug!(
-                "Deleted personal access token: {} for user with ID: {}.",
-                token.name, token.user_id
-            );
         }
-
         info!("Deleted {deleted_tokens_count} expired personal access tokens.");
     }
 

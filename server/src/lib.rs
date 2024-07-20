@@ -8,9 +8,11 @@ use tikv_jemallocator::Jemalloc;
 #[global_allocator]
 static GLOBAL: Jemalloc = Jemalloc;
 
+pub mod archiver;
 pub mod args;
 pub mod binary;
 pub mod channels;
+mod command;
 pub(crate) mod compat;
 pub mod configs;
 pub(crate) mod io_utils;
@@ -19,6 +21,15 @@ pub(crate) mod io_utils;
 // pub mod http;
 pub mod log;
 pub mod server_error;
+pub mod state;
 pub mod streaming;
 pub mod tcp;
 pub mod tpc;
+pub mod versioning;
+
+pub(crate) fn map_toggle_str<'a>(enabled: bool) -> &'a str {
+    match enabled {
+        true => "enabled",
+        false => "disabled",
+    }
+}

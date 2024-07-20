@@ -6,26 +6,19 @@ edition = "2021"
 [dependencies]
 assert_cmd = "2.0.14"
 async-trait = "0.1.80"
-byte-unit = { version = "5.1.4", default-features = false, features = [
-    "serde",
-    "byte",
-] }
 bytes = "1.6.0"
-derive_more = "0.99.17"
+derive_more = "0.99.18"
 futures = "0.3.30"
 humantime = "2.1.0"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.3"
-libc = "0.2.154"
+libc = "0.2.155"
 predicates = "3.1.0"
 regex = "1.10.4"
 serial_test = "3.1.1"
 server = { path = "../server" }
-sled = "0.34.7"
 tempfile = "3.10.1"
-tokio = { version = "1.37.0", features = ["full"] }
-toml = "0.8.12"
-tracing = "0.1"
+tokio = { version = "1.38.0", features = ["full"] }
 tracing-subscriber = "0.3.18"
 uuid = { version = "1.8.0", features = ["v4", "fast-rng", "zerocopy"] }
 xxhash-rust = { version = "0.8.10", features = ["xxh32"] }

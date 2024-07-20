@@ -2,17 +2,14 @@ use bytes::Bytes;
 use iggy::messages::send_messages::Message;
 
 mod common;
-mod consumer_group;
 mod consumer_offset;
 mod messages;
 mod partition;
-mod personal_access_token;
 mod segment;
 mod stream;
 mod system;
 mod topic;
 mod topic_messages;
-mod user;
 
 fn create_messages() -> Vec<Message> {
     vec![

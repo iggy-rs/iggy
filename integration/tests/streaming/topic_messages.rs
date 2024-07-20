@@ -4,6 +4,8 @@ use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use server::configs::resource_quota::MemoryResourceQuota;
 use server::configs::system::{CacheConfig, SystemConfig};
 use server::streaming::polling_consumer::PollingConsumer;
@@ -229,9 +231,9 @@ async fn init_topic(setup: &TestSetup, partitions_count: u32) -> Topic {
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU64::new(0)),
         Rc::new(AtomicU32::new(0)),
-        None,
+        IggyExpiry::NeverExpire,
         Default::default(),
-        None,
+        MaxTopicSize::ServerDefault,
         1,
     )
     .unwrap();

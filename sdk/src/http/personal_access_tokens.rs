@@ -29,7 +29,7 @@ impl PersonalAccessTokenClient for HttpClient {
                 PATH,
                 &CreatePersonalAccessToken {
                     name: name.to_string(),
-                    expiry: expiry.into(),
+                    expiry,
                 },
             )
             .await?;
@@ -55,7 +55,7 @@ impl PersonalAccessTokenClient for HttpClient {
             )
             .await?;
         let identity_info: IdentityInfo = response.json().await?;
-        self.set_tokens_from_identity(&identity_info).await?;
+        self.set_token_from_identity(&identity_info).await?;
         Ok(identity_info)
     }
 }

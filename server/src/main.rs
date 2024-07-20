@@ -1,19 +1,23 @@
 use std::fs::{create_dir, remove_dir_all};
 use std::panic;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
+use std::sync::{Arc, Mutex};
 use std::thread::available_parallelism;
 
 use clap::Parser;
 use figlet_rs::FIGfont;
 use iggy::error::IggyError;
+use local_sync::semaphore::Semaphore;
 use monoio::net::udp::UdpSocket;
 use monoio::time::Instant;
 use monoio::utils::CtrlC;
 use server::args::Args;
 /*
 use server::channels::commands::clean_messages::CleanMessagesExecutor;
+use server::channels::commands::archive_state::ArchiveStateExecutor;
 use server::channels::commands::clean_personal_access_tokens::CleanPersonalAccessTokensExecutor;
+use server::channels::commands::maintain_messages::MaintainMessagesExecutor;
 use server::channels::commands::print_sysinfo::SysInfoPrintExecutor;
 use server::channels::commands::save_messages::SaveMessagesExecutor;
 use server::channels::handler::ServerCommandHandler;
@@ -41,10 +45,6 @@ fn main() -> Result<(), ServerError> {
     let config = ServerConfig::load(&config_provider)?;
     logging.late_init(config.system.get_system_path(), &config.system.logging)?;
 
-    let db_path = &config.system.get_database_path();
-    let db = Arc::new(
-        sled::open(&db_path).expect(format!("Cannot open database at: {}", db_path).as_ref()),
-    );
     // TODO - move this inside of the ServerConfig struct
     create_directories(&config)?;
     let cpu_set = 0..available_cpus;
@@ -58,11 +58,13 @@ fn main() -> Result<(), ServerError> {
         })
         .collect::<Vec<_>>();
 
+    //TODO(numinex) - using Mutex for that is overkill, a condvar or a atomicbool would be enough.
+    let init_gate = Arc::new(Mutex::new(()));
     let handles = cpu_set
         .into_iter()
         .map(|cpu| {
             let cpu = cpu as u16;
-            let db = db.clone();
+            let init_gate = init_gate.clone();
             let connections = connections.clone();
             let config = config.clone();
             std::thread::Builder::new()
@@ -78,7 +80,7 @@ fn main() -> Result<(), ServerError> {
                         .expect("Failed to build monoio runtime");
 
                     rt.block_on(async move {
-                        let shard = create_shard(cpu, config, db, connections);
+                        let shard = create_shard(cpu, init_gate.clone(), config, connections);
                         if let Err(e) = shard_executor(shard, cpu == 0).await {
                             error!("Failed to start shard executor with error: {}", e);
                         }
@@ -178,6 +180,11 @@ fn create_directories(config: &ServerConfig) -> Result<(), IggyError> {
 
     if !Path::new(&system_path).exists() && create_dir(&system_path).is_err() {
         return Err(IggyError::CannotCreateBaseDirectory(system_path));
+    }
+
+    let state_path = config.system.get_state_path();
+    if !Path::new(&state_path).exists() && create_dir(&state_path).is_err() {
+        return Err(IggyError::CannotCreateStateDirectory(state_path));
     }
 
     let streams_path = config.system.get_streams_path();

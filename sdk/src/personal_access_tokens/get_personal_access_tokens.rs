@@ -1,7 +1,7 @@
-use crate::command::{CommandExecution, CommandPayload};
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{Command, GET_PERSONAL_ACCESS_TOKENS_CODE};
 use crate::error::IggyError;
 use crate::validatable::Validatable;
-use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -11,10 +11,9 @@ use std::fmt::Display;
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct GetPersonalAccessTokens {}
 
-impl CommandPayload for GetPersonalAccessTokens {}
-impl CommandExecutionOrigin for GetPersonalAccessTokens {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for GetPersonalAccessTokens {
+    fn code(&self) -> u32 {
+        GET_PERSONAL_ACCESS_TOKENS_CODE
     }
 }
 
@@ -25,7 +24,7 @@ impl Validatable<IggyError> for GetPersonalAccessTokens {
 }
 
 impl BytesSerializable for GetPersonalAccessTokens {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         Bytes::new()
     }
 
@@ -53,7 +52,7 @@ mod tests {
     #[test]
     fn should_be_serialized_as_empty_bytes() {
         let command = GetPersonalAccessTokens {};
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         assert!(bytes.is_empty());
     }
 

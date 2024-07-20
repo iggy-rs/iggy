@@ -1,4 +1,5 @@
 use crate::binary::sender::Sender;
+use crate::command::ServerCommand;
 use crate::handle_response;
 use crate::server_error::ServerError;
 use crate::streaming::clients::client_manager::Transport;
@@ -8,12 +9,10 @@ use crate::tpc::shard::shard::IggyShard;
 use crate::tpc::shard::shard_frame::{ShardEvent, ShardMessage, ShardResponse};
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
-use iggy::command::{Command, CommandExecution, CommandExecutionOrigin};
 use iggy::error::IggyError;
 use iggy::identifier::IdKind;
 use iggy::messages::send_messages::PartitioningKind;
-use iggy::models::messages::POLLED_MESSAGE_METADATA;
-use iggy::models::resource_namespace::{self, IggyResourceNamespace};
+use iggy::models::resource_namespace::IggyResourceNamespace;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use std::rc::Rc;
@@ -62,7 +61,7 @@ pub(crate) async fn handle_connection(
         let _ = res?;
         let command_buffer = command_buffer.freeze();
         // We've got the command now we need to route it to appropiate thread.
-        let mut command = match Command::from_bytes(command_buffer) {
+        let mut command = match ServerCommand::from_bytes(command_buffer) {
             Ok(command) => command,
             Err(error) => {
                 sender.send_error_response(error).await?;
@@ -81,7 +80,7 @@ pub(crate) async fn handle_connection(
 
         // Long-term decouple those even further into corresponding `frontends` and `backends`.
         let response = match command {
-            Command::SendMessages(ref cmd) => {
+            ServerCommand::SendMessages(ref cmd) => {
                 let stream_id = if let IdKind::Numeric = cmd.stream_id.kind {
                     cmd.stream_id
                         .get_u32_value()
@@ -148,7 +147,7 @@ pub(crate) async fn handle_connection(
                     .await?;
                 response
             }
-            Command::PollMessages(ref mut cmd) => {
+            ServerCommand::PollMessages(ref mut cmd) => {
                 let stream_id = if let IdKind::Numeric = cmd.stream_id.kind {
                     cmd.stream_id
                         .get_u32_value()

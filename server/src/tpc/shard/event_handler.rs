@@ -9,10 +9,12 @@ impl IggyShard {
     pub async fn handle_event(&self, client_id: u32, event: ShardEvent) -> Result<(), IggyError> {
         match event {
             ShardEvent::CreatedStream(stream_id, name) => {
-                self.create_stream(client_id, stream_id, name, false).await
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.create_stream(user_id, stream_id, name, false).await
             }
             ShardEvent::CreatedPartitions(stream_id, topic_id, partitions_count) => {
-                self.create_partitions(client_id, &stream_id, &topic_id, partitions_count, false)
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.create_partitions(user_id, &stream_id, &topic_id, partitions_count, false)
                     .await
             }
             ShardEvent::CreatedTopic(
@@ -25,8 +27,9 @@ impl IggyShard {
                 max_topic_size,
                 replication_factor,
             ) => {
+                let user_id = self.ensure_authenticated(client_id)?;
                 self.create_topic(
-                    client_id,
+                    user_id,
                     &stream_id,
                     topic_id,
                     name,

@@ -2,7 +2,7 @@ name: test_nightly
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 8 * * *'  # At 8:00 AM UTC, which is 9:00 AM CET
+    - cron: '0 23 * * *'  # At 11:00 PM UTC, which is 10:00 PM CET
 
 env:
   CRATE_NAME: iggy
@@ -37,14 +37,6 @@ jobs:
             docker_arch: linux/amd64
             cross: false
 
-          - os_name: Linux-arm
-            os: ubuntu-latest
-            target: arm-unknown-linux-musleabi
-            name: iggy-Linux-arm-musl.tar.gz
-            docker_arch: linux/arm/v7
-            profile: release
-            cross: true
-
           - os_name: Linux-aarch64-musl
             os: ubuntu-latest
             target: aarch64-unknown-linux-musl
@@ -54,9 +46,8 @@ jobs:
             cross: true
 
         toolchain:
-          - stable
           - nightly
-          # - beta
+          - beta
     steps:
       - uses: actions/checkout@v4
 
@@ -113,9 +104,4 @@ jobs:
         run: exit 0
       - name: Something went wrong
         if: ${{ contains(needs.*.result, 'failure') && github.event_name != 'workflow_dispatch' }}
-        uses: JasonEtco/create-an-issue@v2.9.2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_BOT_CONTEXT_STRING: "nightly test suite"
-        with:
-          filename: .github/BOT_ISSUE_TEMPLATE.md
+        run: exit 1

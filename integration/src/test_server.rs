@@ -445,7 +445,7 @@ pub async fn login_root(client: &IggyClient) -> IdentityInfo {
     client
         .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
         .await
-        .unwrap()
+        .expect("Failed to login root user, for benchmarking")
 }
 
 pub async fn login_user(client: &IggyClient, username: &str) -> IdentityInfo {

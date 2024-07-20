@@ -13,8 +13,18 @@ pub struct BenchmarkResult {
     pub start_timestamp: Instant,
     pub end_timestamp: Instant,
     pub average_latency: Duration,
+    pub latency_percentiles: LatencyPercentiles,
     pub total_size_bytes: u64,
     pub total_messages: u64,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct LatencyPercentiles {
+    pub p50: Duration,
+    pub p90: Duration,
+    pub p95: Duration,
+    pub p99: Duration,
+    pub p999: Duration,
 }
 
 pub struct BenchmarkResults {
@@ -30,6 +40,11 @@ impl From<Vec<BenchmarkResult>> for BenchmarkResults {
 struct BenchmarkStatistics {
     total_throughput: f64,
     messages_per_second: f64,
+    average_p50_latency: f64,
+    average_p90_latency: f64,
+    average_p95_latency: f64,
+    average_p99_latency: f64,
+    average_p999_latency: f64,
     average_latency: f64,
     average_throughput: f64,
     total_duration: f64,
@@ -80,6 +95,51 @@ impl BenchmarkResults {
             .filter(&mut predicate)
             .map(|r| r.total_messages)
             .sum::<u64>();
+        let average_p50_latency = (self
+            .results
+            .iter()
+            .filter(&mut predicate)
+            .map(|r| r.latency_percentiles.p50)
+            .sum::<Duration>()
+            / self.results.len() as u32)
+            .as_secs_f64()
+            * 1000.0;
+        let average_p95_latency = (self
+            .results
+            .iter()
+            .filter(&mut predicate)
+            .map(|r| r.latency_percentiles.p95)
+            .sum::<Duration>()
+            / self.results.len() as u32)
+            .as_secs_f64()
+            * 1000.0;
+        let average_p90_latency = (self
+            .results
+            .iter()
+            .filter(&mut predicate)
+            .map(|r| r.latency_percentiles.p90)
+            .sum::<Duration>()
+            / self.results.len() as u32)
+            .as_secs_f64()
+            * 1000.0;
+        let average_p99_latency = (self
+            .results
+            .iter()
+            .filter(&mut predicate)
+            .map(|r| r.latency_percentiles.p99)
+            .sum::<Duration>()
+            / self.results.len() as u32)
+            .as_secs_f64()
+            * 1000.0;
+        let average_p999_latency = (self
+            .results
+            .iter()
+            .filter(&mut predicate)
+            .map(|r| r.latency_percentiles.p999)
+            .sum::<Duration>()
+            / self.results.len() as u32)
+            .as_secs_f64()
+            * 1000.0;
         let average_latency = (self
             .results
             .iter()
@@ -98,6 +158,11 @@ impl BenchmarkResults {
             total_throughput,
             messages_per_second,
             average_latency,
+            average_p50_latency,
+            average_p90_latency,
+            average_p95_latency,
+            average_p99_latency,
+            average_p999_latency,
             average_throughput,
             total_duration,
         }
@@ -111,11 +176,11 @@ impl Display for BenchmarkResults {
                 let producer_statics = self.calculate_statistics(|x| x.kind == BenchmarkKind::Send);
                 let consumer_statics = self.calculate_statistics(|x| x.kind == BenchmarkKind::Poll);
 
-                let producer_info = format!("Producer results: total throughput: {:.2} MB/s, {:.0} messages/s, average latency: {:.2} ms, average throughput: {:.2} MB/s, total duration: {:.2} s",
-                producer_statics.total_throughput, producer_statics.messages_per_second, producer_statics.average_latency, producer_statics.average_throughput, producer_statics.total_duration).green();
+                let producer_info = format!("Producer results: total throughput: {:.2} MB/s, {:.0} messages/s, average throughput: {:.2} MB/s, average p50 latency: {:.2} ms, average p90 latency: {:.2} ms, average p95 latency: {:.2} ms, average p99 latency: {:.2} ms, average p999 latency: {:.2} ms, average latency: {:.2} ms, total duration: {:.2} s",
+                producer_statics.total_throughput, producer_statics.messages_per_second, producer_statics.average_throughput, producer_statics.average_p50_latency, producer_statics.average_p90_latency, producer_statics.average_p95_latency, producer_statics.average_p99_latency, producer_statics.average_p999_latency, producer_statics.average_latency, producer_statics.total_duration).green();
 
-                let consumer_info = format!("Consumer results: total throughput: {:.2} MB/s, {:.0} messages/s, average latency: {:.2} ms, average  throughput: {:.2} MB/s, total duration: {:.2} s",
-                consumer_statics.total_throughput, consumer_statics.messages_per_second, consumer_statics.average_latency, consumer_statics.average_throughput, consumer_statics.total_duration).green();
+                let consumer_info = format!("Consumer results: total throughput: {:.2} MB/s, {:.0} messages/s, average throughput: {:.2} MB/s, average p50 latency: {:.2} ms, average p90 latency: {:.2} ms, average p95 latency: {:.2} ms, average p99 latency: {:.2} ms, average p999 latency: {:.2} ms, average latency: {:.2} ms, total duration: {:.2} s",
+                consumer_statics.total_throughput, consumer_statics.messages_per_second, consumer_statics.average_throughput, consumer_statics.average_p50_latency, consumer_statics.average_p90_latency, consumer_statics.average_p95_latency, consumer_statics.average_p99_latency, consumer_statics.average_p999_latency, consumer_statics.average_latency, consumer_statics.total_duration).green();
                 writeln!(f, "{}, {}", producer_info, consumer_info)?;
             }
         }
@@ -124,8 +189,8 @@ impl Display for BenchmarkResults {
             x.kind == BenchmarkKind::Send || x.kind == BenchmarkKind::Poll
         });
 
-        let summary_info = format!("Results: total throughput: {:.2} MB/s, {:.0} messages/s, average latency: {:.2} ms, average  throughput: {:.2} MB/s, total duration: {:.2} s",
-        results.total_throughput, results.messages_per_second, results.average_latency, results.average_throughput, results.total_duration).green();
+        let summary_info = format!("Results: total throughput: {:.2} MB/s, {:.0} messages/s, average throughput: {:.2} MB/s, average p50 latency: {:.2} ms, average p90 latency: {:.2} ms, average p95 latency: {:.2} ms, average p99 latency: {:.2} ms, average p999 latency: {:.2} ms, average latency: {:.2} ms, total duration: {:.2} s",
+        results.total_throughput, results.messages_per_second, results.average_throughput, results.average_p50_latency, results.average_p90_latency, results.average_p95_latency, results.average_p99_latency, results.average_p999_latency, results.average_latency, results.total_duration).green();
 
         writeln!(f, "{}", summary_info)
     }

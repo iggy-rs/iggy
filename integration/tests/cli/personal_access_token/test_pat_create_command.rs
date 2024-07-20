@@ -67,7 +67,7 @@ impl IggyCmdTestCase for TestPatCreateCmd {
         assert!(token.is_some());
         let token = token.unwrap();
         if self.expiry.is_none() {
-            assert!(token.expiry.is_none())
+            assert!(token.expiry_at.is_none())
         }
 
         let delete = client.delete_personal_access_token(&self.name).await;

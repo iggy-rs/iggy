@@ -1,27 +1,12 @@
-use crate::streaming::storage::{Storage, TopicStorage};
-use crate::streaming::topics::consumer_group::ConsumerGroup;
+use crate::state::system::TopicState;
+use crate::streaming::storage::TopicStorage;
 use crate::streaming::topics::topic::Topic;
 use iggy::error::IggyError;
-use iggy::locking::IggySharedMutFn;
 
 impl Topic {
-    pub async fn load(&mut self) -> Result<(), IggyError> {
+    pub async fn load(&mut self, state: TopicState) -> Result<(), IggyError> {
         let storage = self.storage.clone();
-        storage.topic.load(self).await?;
-        let consumer_groups = storage.topic.load_consumer_groups(self).await?;
-        for consumer_group in consumer_groups {
-            self.consumer_groups_ids
-                .insert(consumer_group.name.clone(), consumer_group.group_id);
-            self.consumer_groups.insert(
-                consumer_group.group_id,
-                ConsumerGroup::new(
-                    self.topic_id,
-                    consumer_group.group_id,
-                    &consumer_group.name,
-                    self.get_partitions_count(),
-                ),
-            );
-        }
+        storage.topic.load(self, state).await?;
         Ok(())
     }
 

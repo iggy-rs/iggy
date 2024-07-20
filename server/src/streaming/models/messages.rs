@@ -56,7 +56,7 @@ impl RetainedMessage {
             message_state: MessageState::Available,
             id: message.id,
             payload: message.payload.clone(),
-            headers: message.headers.as_ref().map(|headers| headers.as_bytes()),
+            headers: message.headers.as_ref().map(|headers| headers.to_bytes()),
         }
     }
 

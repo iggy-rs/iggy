@@ -1,8 +1,8 @@
-use crate::command::{CommandExecution, CommandPayload};
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{Command, PURGE_STREAM_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::validatable::Validatable;
-use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -17,10 +17,9 @@ pub struct PurgeStream {
     pub stream_id: Identifier,
 }
 
-impl CommandPayload for PurgeStream {}
-impl CommandExecutionOrigin for PurgeStream {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for PurgeStream {
+    fn code(&self) -> u32 {
+        PURGE_STREAM_CODE
     }
 }
 
@@ -31,8 +30,8 @@ impl Validatable<IggyError> for PurgeStream {
 }
 
 impl BytesSerializable for PurgeStream {
-    fn as_bytes(&self) -> Bytes {
-        let stream_id_bytes = self.stream_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let stream_id_bytes = self.stream_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(stream_id_bytes.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.freeze()
@@ -66,7 +65,7 @@ mod tests {
             stream_id: Identifier::numeric(1).unwrap(),
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
 
         assert!(!bytes.is_empty());
@@ -76,7 +75,7 @@ mod tests {
     #[test]
     fn should_be_deserialized_from_bytes() {
         let stream_id = Identifier::numeric(1).unwrap();
-        let bytes = stream_id.as_bytes();
+        let bytes = stream_id.to_bytes();
         let command = PurgeStream::from_bytes(bytes);
         assert!(command.is_ok());
 

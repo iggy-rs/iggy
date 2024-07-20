@@ -1,6 +1,7 @@
 use humantime::format_duration;
 use humantime::Duration as HumanDuration;
-use serde::{Deserialize, Serialize};
+use serde::de::Visitor;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::{
     fmt::{Display, Formatter},
     ops::Add,
@@ -8,7 +9,9 @@ use std::{
     time::Duration,
 };
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, Eq, PartialEq)]
+pub const SEC_IN_MICRO: u64 = 1_000_000;
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub struct IggyDuration {
     duration: Duration,
 }
@@ -72,7 +75,7 @@ impl From<Option<u64>> for IggyDuration {
     fn from(byte_size: Option<u64>) -> Self {
         match byte_size {
             Some(value) => IggyDuration {
-                duration: Duration::from_secs(value),
+                duration: Duration::from_micros(value),
             },
             None => IggyDuration {
                 duration: Duration::new(0, 0),
@@ -84,7 +87,7 @@ impl From<Option<u64>> for IggyDuration {
 impl From<u64> for IggyDuration {
     fn from(value: u64) -> Self {
         IggyDuration {
-            duration: Duration::from_secs(value),
+            duration: Duration::from_micros(value),
         }
     }
 }
@@ -105,7 +108,7 @@ impl From<HumanDuration> for IggyDuration {
 
 impl From<IggyDuration> for u64 {
     fn from(iggy_duration: IggyDuration) -> u64 {
-        iggy_duration.duration.as_secs()
+        iggy_duration.duration.as_micros() as u64
     }
 }
 
@@ -130,6 +133,41 @@ impl Add for IggyDuration {
         IggyDuration {
             duration: self.duration + rhs.duration,
         }
+    }
+}
+
+impl Serialize for IggyDuration {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_u64(self.as_micros())
+    }
+}
+
+struct IggyDurationVisitor;
+
+impl<'de> Deserialize<'de> for IggyDuration {
+    fn deserialize<D>(deserializer: D) -> Result<IggyDuration, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_u64(IggyDurationVisitor)
+    }
+}
+
+impl<'de> Visitor<'de> for IggyDurationVisitor {
+    type Value = IggyDuration;
+
+    fn expecting(&self, formatter: &mut Formatter) -> std::fmt::Result {
+        formatter.write_str("a duration in seconds")
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        Ok(IggyDuration::new(Duration::from_micros(value)))
     }
 }
 

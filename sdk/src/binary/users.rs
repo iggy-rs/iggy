@@ -1,8 +1,6 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper, ClientState};
-use crate::bytes_serializable::BytesSerializable;
 use crate::client::UserClient;
-use crate::command::*;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::identity_info::IdentityInfo;
@@ -24,22 +22,16 @@ impl<B: BinaryClient> UserClient for B {
     async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
-            .send_with_response(
-                GET_USER_CODE,
-                GetUser {
-                    user_id: user_id.clone(),
-                }
-                .as_bytes(),
-            )
+            .send_with_response(&GetUser {
+                user_id: user_id.clone(),
+            })
             .await?;
         mapper::map_user(response)
     }
 
     async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
-        let response = self
-            .send_with_response(GET_USERS_CODE, GetUsers {}.as_bytes())
-            .await?;
+        let response = self.send_with_response(&GetUsers {}).await?;
         mapper::map_users(response)
     }
 
@@ -51,29 +43,21 @@ impl<B: BinaryClient> UserClient for B {
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
-            CREATE_USER_CODE,
-            CreateUser {
-                username: username.to_string(),
-                password: password.to_string(),
-                status,
-                permissions,
-            }
-            .as_bytes(),
-        )
+        self.send_with_response(&CreateUser {
+            username: username.to_string(),
+            password: password.to_string(),
+            status,
+            permissions,
+        })
         .await?;
         Ok(())
     }
 
     async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
-            DELETE_USER_CODE,
-            DeleteUser {
-                user_id: user_id.clone(),
-            }
-            .as_bytes(),
-        )
+        self.send_with_response(&DeleteUser {
+            user_id: user_id.clone(),
+        })
         .await?;
         Ok(())
     }
@@ -85,15 +69,11 @@ impl<B: BinaryClient> UserClient for B {
         status: Option<UserStatus>,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
-            UPDATE_USER_CODE,
-            UpdateUser {
-                user_id: user_id.clone(),
-                username: username.map(|s| s.to_string()),
-                status,
-            }
-            .as_bytes(),
-        )
+        self.send_with_response(&UpdateUser {
+            user_id: user_id.clone(),
+            username: username.map(|s| s.to_string()),
+            status,
+        })
         .await?;
         Ok(())
     }
@@ -104,14 +84,10 @@ impl<B: BinaryClient> UserClient for B {
         permissions: Option<Permissions>,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
-            UPDATE_PERMISSIONS_CODE,
-            UpdatePermissions {
-                user_id: user_id.clone(),
-                permissions,
-            }
-            .as_bytes(),
-        )
+        self.send_with_response(&UpdatePermissions {
+            user_id: user_id.clone(),
+            permissions,
+        })
         .await?;
         Ok(())
     }
@@ -123,29 +99,23 @@ impl<B: BinaryClient> UserClient for B {
         new_password: &str,
     ) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(
-            CHANGE_PASSWORD_CODE,
-            ChangePassword {
-                user_id: user_id.clone(),
-                current_password: current_password.to_string(),
-                new_password: new_password.to_string(),
-            }
-            .as_bytes(),
-        )
+        self.send_with_response(&ChangePassword {
+            user_id: user_id.clone(),
+            current_password: current_password.to_string(),
+            new_password: new_password.to_string(),
+        })
         .await?;
         Ok(())
     }
 
     async fn login_user(&self, username: &str, password: &str) -> Result<IdentityInfo, IggyError> {
         let response = self
-            .send_with_response(
-                LOGIN_USER_CODE,
-                LoginUser {
-                    username: username.to_string(),
-                    password: password.to_string(),
-                }
-                .as_bytes(),
-            )
+            .send_with_response(&LoginUser {
+                username: username.to_string(),
+                password: password.to_string(),
+                version: Some(env!("CARGO_PKG_VERSION").to_string()),
+                context: Some("".to_string()),
+            })
             .await?;
         self.set_state(ClientState::Authenticated).await;
         mapper::map_identity_info(response)
@@ -153,8 +123,7 @@ impl<B: BinaryClient> UserClient for B {
 
     async fn logout_user(&self) -> Result<(), IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(LOGOUT_USER_CODE, LogoutUser {}.as_bytes())
-            .await?;
+        self.send_with_response(&LogoutUser {}).await?;
         self.set_state(ClientState::Connected).await;
         Ok(())
     }

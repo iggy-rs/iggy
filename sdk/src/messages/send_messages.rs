@@ -1,11 +1,10 @@
 use crate::bytes_serializable::BytesSerializable;
-use crate::command::{CommandExecution, CommandExecutionOrigin, CommandPayload};
+use crate::command::{Command, SEND_MESSAGES_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::{MAX_HEADERS_SIZE, MAX_PAYLOAD_SIZE};
 use crate::models::header;
 use crate::models::header::{HeaderKey, HeaderValue};
-use crate::models::resource_namespace::IggyResourceNamespace;
 use crate::validatable::Validatable;
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
@@ -192,10 +191,9 @@ impl Partitioning {
     }
 }
 
-impl CommandPayload for SendMessages {}
-impl CommandExecutionOrigin for SendMessages {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for SendMessages {
+    fn code(&self) -> u32 {
+        SEND_MESSAGES_CODE
     }
 }
 
@@ -312,7 +310,7 @@ impl Display for Message {
 }
 
 impl BytesSerializable for Partitioning {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(2 + self.length as usize);
         bytes.put_u8(self.kind.as_code());
         bytes.put_u8(self.length);
@@ -344,11 +342,11 @@ impl BytesSerializable for Partitioning {
 }
 
 impl BytesSerializable for Message {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         let mut bytes = BytesMut::with_capacity(self.get_size_bytes() as usize);
         bytes.put_u128_le(self.id);
         if let Some(headers) = &self.headers {
-            let headers_bytes = headers.as_bytes();
+            let headers_bytes = headers.to_bytes();
             bytes.put_u32_le(headers_bytes.len() as u32);
             bytes.put_slice(&headers_bytes);
         } else {
@@ -408,9 +406,9 @@ pub(crate) fn as_bytes(
     messages: &[Message],
 ) -> Bytes {
     let messages_size = messages.iter().map(Message::get_size_bytes).sum::<u32>();
-    let key_bytes = partitioning.as_bytes();
-    let stream_id_bytes = stream_id.as_bytes();
-    let topic_id_bytes = topic_id.as_bytes();
+    let key_bytes = partitioning.to_bytes();
+    let stream_id_bytes = stream_id.to_bytes();
+    let topic_id_bytes = topic_id.to_bytes();
     let mut bytes = BytesMut::with_capacity(
         stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len() + messages_size as usize,
     );
@@ -418,7 +416,7 @@ pub(crate) fn as_bytes(
     bytes.put_slice(&topic_id_bytes);
     bytes.put_slice(&key_bytes);
     for message in messages {
-        bytes.put_slice(&message.as_bytes());
+        bytes.put_slice(&message.to_bytes());
     }
 
     bytes.freeze()
@@ -444,7 +442,7 @@ impl FromStr for Message {
 }
 
 impl BytesSerializable for SendMessages {
-    fn as_bytes(&self) -> Bytes {
+    fn to_bytes(&self) -> Bytes {
         as_bytes(
             &self.stream_id,
             &self.topic_id,
@@ -546,7 +544,7 @@ mod tests {
             messages,
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
 
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
@@ -560,7 +558,7 @@ mod tests {
             .messages
             .iter()
             .fold(BytesMut::new(), |mut bytes_mut, message| {
-                bytes_mut.put(message.as_bytes());
+                bytes_mut.put(message.to_bytes());
                 bytes_mut
             })
             .freeze();
@@ -582,15 +580,15 @@ mod tests {
         let message_2 = Message::new(Some(2), "hello 2".into(), None);
         let message_3 = Message::new(Some(3), "hello 3".into(), None);
         let messages = [
-            message_1.as_bytes(),
-            message_2.as_bytes(),
-            message_3.as_bytes(),
+            message_1.to_bytes(),
+            message_2.to_bytes(),
+            message_3.to_bytes(),
         ]
         .concat();
 
-        let key_bytes = key.as_bytes();
-        let stream_id_bytes = stream_id.as_bytes();
-        let topic_id_bytes = topic_id.as_bytes();
+        let key_bytes = key.to_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
+        let topic_id_bytes = topic_id.to_bytes();
         let current_position = stream_id_bytes.len() + topic_id_bytes.len() + key_bytes.len();
         let mut bytes = BytesMut::with_capacity(current_position);
         bytes.put_slice(&stream_id_bytes);

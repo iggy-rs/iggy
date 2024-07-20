@@ -57,9 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@nightly
-      - uses: taiki-e/install-action@cargo-udeps
-      - run: cargo +nightly udeps --all-targets --all-features
+      - uses: bnjbvr/cargo-machete@v0.6.2
 
   check-commit-message:
     name: Validate commit messages

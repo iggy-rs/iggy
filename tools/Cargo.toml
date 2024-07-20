@@ -8,12 +8,10 @@ name = "data-seeder-tool"
 path = "src/data-seeder/main.rs"
 
 [dependencies]
-anyhow = "1.0.82"
-bytes = "1.6.0"
+anyhow = "1.0.86"
 clap = { version = "4.5.4", features = ["derive"] }
 iggy = { path = "../sdk" }
 rand = "0.8.5"
-thiserror = "1.0.59"
-tokio = { version = "1.37.0", features = ["full"] }
+tokio = { version = "1.38.0", features = ["full"] }
 tracing = { version = "0.1.37" }
 tracing-subscriber = { version = "0.3.16" }

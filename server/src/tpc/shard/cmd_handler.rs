@@ -1,11 +1,13 @@
 use crate::binary::mapper;
+use crate::command::ServerCommand;
+use crate::state::command::EntryCommand;
+use crate::state::models::CreatePersonalAccessTokenWithHash;
+use crate::state::State;
+use crate::streaming::personal_access_tokens::personal_access_token::PersonalAccessToken;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::tpc::shard::shard::IggyShard;
 use crate::tpc::shard::shard_frame::ShardResponse;
 use bytes::Bytes;
-use iggy::command::Command;
-use iggy::consumer_groups::create_consumer_group::CreateConsumerGroup;
-use iggy::consumer_groups::delete_consumer_group::DeleteConsumerGroup;
 use iggy::consumer_groups::get_consumer_group::GetConsumerGroup;
 use iggy::consumer_groups::get_consumer_groups::GetConsumerGroups;
 use iggy::consumer_groups::join_consumer_group::JoinConsumerGroup;
@@ -15,31 +17,14 @@ use iggy::consumer_offsets::store_consumer_offset::StoreConsumerOffset;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::PollMessages;
 use iggy::messages::send_messages::SendMessages;
-use iggy::partitions::create_partitions::CreatePartitions;
-use iggy::partitions::delete_partitions::DeletePartitions;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
-use iggy::personal_access_tokens::delete_personal_access_token::DeletePersonalAccessToken;
 use iggy::personal_access_tokens::login_with_personal_access_token::LoginWithPersonalAccessToken;
-use iggy::streams::create_stream::CreateStream;
-use iggy::streams::delete_stream::DeleteStream;
 use iggy::streams::get_stream::GetStream;
-use iggy::streams::purge_stream::PurgeStream;
-use iggy::streams::update_stream::UpdateStream;
 use iggy::system::get_client::GetClient;
-use iggy::topics::create_topic::CreateTopic;
-use iggy::topics::delete_topic::DeleteTopic;
 use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
-use iggy::topics::purge_topic::PurgeTopic;
-use iggy::topics::update_topic::UpdateTopic;
-use iggy::users::change_password::ChangePassword;
-use iggy::users::create_user::CreateUser;
-use iggy::users::delete_user::DeleteUser;
 use iggy::users::get_user::GetUser;
 use iggy::users::login_user::LoginUser;
-use iggy::users::update_permissions::UpdatePermissions;
-use iggy::users::update_user::UpdateUser;
-use tracing::error;
 
 use super::messages::PollingArgs;
 use super::shard_frame::ShardEvent;
@@ -48,90 +33,119 @@ impl IggyShard {
     pub async fn handle_command(
         &self,
         client_id: u32,
-        command: Command,
+        command: ServerCommand,
     ) -> Result<ShardResponse, IggyError> {
         //debug!("Handling command '{command}', session: {session}...");
         match command {
-            Command::Ping(_) => Ok(ShardResponse::BinaryResponse(Bytes::new())),
-            Command::GetStats(_) => {
+            ServerCommand::Ping(_) => Ok(ShardResponse::BinaryResponse(Bytes::new())),
+            ServerCommand::GetStats(_) => {
                 let stats = self.get_stats(client_id).await?;
                 let bytes = mapper::map_stats(stats);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetMe(_) => {
+            ServerCommand::GetMe(_) => {
                 let client = self.get_client(client_id).await?;
                 let bytes = mapper::map_client(client).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetClient(command) => {
+            ServerCommand::GetClient(command) => {
                 let GetClient { client_id } = command;
                 let client = self.get_client(client_id).await?;
                 let bytes = mapper::map_client(client).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetClients(_) => {
+            ServerCommand::GetClients(_) => {
                 let clients = self.get_clients(client_id).await?;
                 let bytes = mapper::map_clients(clients).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetUser(command) => {
+            ServerCommand::GetUser(command) => {
                 let GetUser { user_id } = command;
                 let user = self.find_user(client_id, &user_id).await?;
                 let bytes = mapper::map_user(user);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetUsers(_) => {
+            ServerCommand::GetUsers(_) => {
                 let users = self.get_users(client_id).await?;
                 let bytes = mapper::map_users(users);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::CreateUser(command) => {
-                let CreateUser {
-                    username,
-                    password,
-                    status,
-                    permissions,
-                } = command;
-                self.create_user(client_id, username, password, status, permissions)
-                    .await?;
-                Ok(ShardResponse::BinaryResponse(Bytes::new()))
-            }
-            Command::DeleteUser(command) => {
-                let DeleteUser { user_id } = command;
-                self.delete_user(client_id, &user_id).await?;
-                Ok(ShardResponse::BinaryResponse(Bytes::new()))
-            }
-            Command::UpdateUser(command) => {
-                let UpdateUser {
+            ServerCommand::CreateUser(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.create_user(
                     user_id,
-                    username,
-                    status,
-                } = command;
-                self.update_user(client_id, &user_id, username, status)
+                    command.username.clone(),
+                    command.password.clone(),
+                    command.status.clone(),
+                    command.permissions.clone(),
+                )
+                .await?;
+                self.state
+                    .apply(user_id, EntryCommand::CreateUser(command.clone()))
+                    .await?;
+                //TODO(numinex) - This has to be broadcasted aswell..
+                Ok(ShardResponse::BinaryResponse(Bytes::new()))
+            }
+            ServerCommand::DeleteUser(command) => {
+                let user_id_numeric = self.ensure_authenticated(client_id)?;
+                self.delete_user(user_id_numeric, &command.user_id).await?;
+                self.state
+                    .apply(user_id_numeric, EntryCommand::DeleteUser(command))
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::UpdatePermissions(command) => {
-                let UpdatePermissions {
-                    user_id,
-                    permissions,
-                } = command;
-                self.update_permissions(client_id, &user_id, permissions)
+            ServerCommand::UpdateUser(command) => {
+                let user_id_numeric = self.ensure_authenticated(client_id)?;
+                self.update_user(
+                    user_id_numeric,
+                    &command.user_id.clone(),
+                    command.username.clone(),
+                    command.status.clone(),
+                )
+                .await?;
+                self.state
+                    .apply(user_id_numeric, EntryCommand::UpdateUser(command.clone()))
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::ChangePassword(command) => {
-                let ChangePassword {
-                    user_id,
-                    current_password,
-                    new_password,
-                } = command;
-                self.change_password(client_id, &user_id, current_password, new_password)
+            ServerCommand::UpdatePermissions(command) => {
+                let user_id_numeric = self.ensure_authenticated(client_id)?;
+                self.update_permissions(
+                    user_id_numeric,
+                    &command.user_id.clone(),
+                    command.permissions.clone(),
+                )
+                .await?;
+                self.state
+                    .apply(
+                        user_id_numeric,
+                        EntryCommand::UpdatePermissions(command.clone()),
+                    )
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::LoginUser(command) => {
-                let LoginUser { username, password } = command;
+            ServerCommand::ChangePassword(command) => {
+                let user_id_numeric = self.ensure_authenticated(client_id)?;
+                self.change_password(
+                    client_id,
+                    &command.user_id,
+                    command.current_password.clone(),
+                    command.new_password.clone(),
+                )
+                .await?;
+                self.state
+                    .apply(
+                        user_id_numeric,
+                        EntryCommand::ChangePassword(command.clone()),
+                    )
+                    .await?;
+                //TODO(numinex) - This has to be broadcasted aswell..
+                Ok(ShardResponse::BinaryResponse(Bytes::new()))
+            }
+            ServerCommand::LoginUser(command) => {
+                let LoginUser {
+                    username, password, ..
+                } = command;
                 let user = self
                     .login_user(username.clone(), password.clone(), client_id)
                     .await?;
@@ -140,29 +154,55 @@ impl IggyShard {
                 self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::LogoutUser(_) => {
+            ServerCommand::LogoutUser(_) => {
                 self.logout_user(client_id).await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::GetPersonalAccessTokens(_) => {
+            ServerCommand::GetPersonalAccessTokens(_) => {
                 let personal_access_tokens = self.get_personal_access_tokens(client_id).await?;
                 let bytes = mapper::map_personal_access_tokens(personal_access_tokens);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::CreatePersonalAccessToken(command) => {
-                let CreatePersonalAccessToken { name, expiry } = command;
+            ServerCommand::CreatePersonalAccessToken(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
                 let token = self
-                    .create_personal_access_token(client_id, name, expiry)
+                    .create_personal_access_token(
+                        user_id,
+                        command.name.clone(),
+                        command.expiry.clone(),
+                    )
                     .await?;
+                let token_hash = PersonalAccessToken::hash_token(&token);
                 let bytes = mapper::map_raw_pat(token);
+                self.state
+                    .apply(
+                        user_id,
+                        EntryCommand::CreatePersonalAccessToken(
+                            CreatePersonalAccessTokenWithHash {
+                                command: CreatePersonalAccessToken {
+                                    name: command.name,
+                                    expiry: command.expiry,
+                                },
+                                hash: token_hash,
+                            },
+                        ),
+                    )
+                    .await?;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::DeletePersonalAccessToken(command) => {
-                let DeletePersonalAccessToken { name } = command;
-                self.delete_personal_access_token(client_id, name).await?;
+            ServerCommand::DeletePersonalAccessToken(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.delete_personal_access_token(user_id, command.name.clone())
+                    .await?;
+                self.state
+                    .apply(
+                        user_id,
+                        EntryCommand::DeletePersonalAccessToken(command.clone()),
+                    )
+                    .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::LoginWithPersonalAccessToken(command) => {
+            ServerCommand::LoginWithPersonalAccessToken(command) => {
                 let LoginWithPersonalAccessToken { token } = command;
                 let user = self
                     .login_with_personal_access_token(client_id, token)
@@ -170,7 +210,7 @@ impl IggyShard {
                 let bytes = mapper::map_identity_info(user.id);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::SendMessages(command) => {
+            ServerCommand::SendMessages(command) => {
                 let SendMessages {
                     stream_id,
                     topic_id,
@@ -181,7 +221,7 @@ impl IggyShard {
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::PollMessages(command) => {
+            ServerCommand::PollMessages(command) => {
                 let PollMessages {
                     stream_id,
                     topic_id,
@@ -206,7 +246,7 @@ impl IggyShard {
                 let bytes = mapper::map_polled_messages(messages);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetConsumerOffset(command) => {
+            ServerCommand::GetConsumerOffset(command) => {
                 let GetConsumerOffset {
                     stream_id,
                     topic_id,
@@ -220,7 +260,7 @@ impl IggyShard {
                 let bytes = mapper::map_consumer_offset(consumer_offset);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::StoreConsumerOffset(command) => {
+            ServerCommand::StoreConsumerOffset(command) => {
                 let StoreConsumerOffset {
                     stream_id,
                     topic_id,
@@ -233,42 +273,63 @@ impl IggyShard {
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::GetStream(command) => {
+            ServerCommand::GetStream(command) => {
                 let GetStream { stream_id } = command;
                 let stream = self.find_stream(client_id, &stream_id)?;
                 let bytes = mapper::map_stream(stream).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetStreams(_) => {
+            ServerCommand::GetStreams(_) => {
                 let _ = self.ensure_authenticated(client_id)?;
                 let streams = self.get_streams();
                 let bytes = mapper::map_streams(streams).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::CreateStream(command) => {
-                let CreateStream { stream_id, name } = command;
-                self.create_stream(client_id, stream_id, name.clone(), true)
+            ServerCommand::CreateStream(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.create_stream(
+                    user_id,
+                    command.stream_id.clone(),
+                    command.name.clone(),
+                    true,
+                )
+                .await?;
+                self.state
+                    .apply(user_id, EntryCommand::CreateStream(command.clone()))
                     .await?;
-                let event = ShardEvent::CreatedStream(stream_id, name);
+                let event = ShardEvent::CreatedStream(command.stream_id, command.name);
                 self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::DeleteStream(command) => {
-                let DeleteStream { stream_id } = command;
-                self.delete_stream(client_id, &stream_id).await?;
+            ServerCommand::DeleteStream(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.delete_stream(user_id, &command.stream_id).await?;
+                self.state
+                    .apply(user_id, EntryCommand::DeleteStream(command))
+                    .await?;
+                // TODO(numinex) - This has to be broadcasted aswell..
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::UpdateStream(command) => {
-                let UpdateStream { stream_id, name } = command;
-                self.update_stream(client_id, &stream_id, name).await?;
+            ServerCommand::UpdateStream(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.update_stream(user_id, &command.stream_id, command.name.clone())
+                    .await?;
+                self.state
+                    .apply(user_id, EntryCommand::UpdateStream(command.clone()))
+                    .await?;
+                // TODO(numinex) - This has to be broadcasted aswell..
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::PurgeStream(command) => {
-                let PurgeStream { stream_id } = command;
-                self.purge_stream(client_id, &stream_id).await?;
+            ServerCommand::PurgeStream(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.purge_stream(user_id, &command.stream_id).await?;
+                self.state
+                    .apply(user_id, EntryCommand::PurgeStream(command.clone()))
+                    .await?;
+                // TODO(numinex) - This has to be broadcasted aswell..
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::GetTopic(command) => {
+            ServerCommand::GetTopic(command) => {
                 let GetTopic {
                     stream_id,
                     topic_id,
@@ -277,111 +338,119 @@ impl IggyShard {
                 let bytes = mapper::map_topic(topic).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetTopics(command) => {
+            ServerCommand::GetTopics(command) => {
                 let GetTopics { stream_id } = command;
                 let topics = self.find_topics(client_id, &stream_id)?;
                 let bytes = mapper::map_topics(topics).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::CreateTopic(command) => {
-                let CreateTopic {
-                    stream_id,
-                    topic_id,
-                    name,
-                    partitions_count,
-                    message_expiry,
-                    compression_algorithm,
-                    max_topic_size,
-                    replication_factor,
-                } = command;
+            ServerCommand::CreateTopic(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
                 self.create_topic(
-                    client_id,
-                    &stream_id,
-                    topic_id,
-                    name.clone(),
-                    partitions_count,
-                    message_expiry,
-                    compression_algorithm,
-                    max_topic_size,
-                    replication_factor,
+                    user_id,
+                    &command.stream_id,
+                    command.topic_id,
+                    command.name.clone(),
+                    command.partitions_count,
+                    command.message_expiry,
+                    command.compression_algorithm,
+                    command.max_topic_size,
+                    command.replication_factor,
                     true,
                 )
                 .await?;
+                self.state
+                    .apply(client_id, EntryCommand::CreateTopic(command.clone()))
+                    .await?;
                 let event = ShardEvent::CreatedTopic(
-                    stream_id,
-                    topic_id,
-                    name,
-                    partitions_count,
-                    message_expiry,
-                    compression_algorithm,
-                    max_topic_size,
-                    replication_factor,
+                    command.stream_id,
+                    command.topic_id,
+                    command.name,
+                    command.partitions_count,
+                    command.message_expiry,
+                    command.compression_algorithm,
+                    command.max_topic_size,
+                    command.replication_factor,
                 );
                 self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::DeleteTopic(command) => {
-                let DeleteTopic {
-                    stream_id,
-                    topic_id,
-                } = command;
-                self.delete_topic(client_id, &stream_id, &topic_id).await?;
+            ServerCommand::DeleteTopic(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.delete_topic(user_id, &command.stream_id, &command.topic_id)
+                    .await?;
+                self.state
+                    .apply(user_id, EntryCommand::DeleteTopic(command.clone()))
+                    .await?;
+                //TODO(numinex) - This has to be broadcasted aswell..
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::UpdateTopic(command) => {
-                let UpdateTopic {
-                    stream_id,
-                    topic_id,
-                    name,
-                    message_expiry,
-                    compression_algorithm,
-                    max_topic_size,
-                    replication_factor,
-                } = command;
+            ServerCommand::UpdateTopic(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
                 self.update_topic(
-                    client_id,
-                    &stream_id,
-                    &topic_id,
-                    name,
-                    message_expiry,
-                    compression_algorithm,
-                    max_topic_size,
-                    replication_factor,
+                    user_id,
+                    &command.stream_id,
+                    &command.topic_id,
+                    command.name.clone(),
+                    command.message_expiry,
+                    command.compression_algorithm,
+                    command.max_topic_size,
+                    command.replication_factor,
                 )
                 .await?;
-                Ok(ShardResponse::BinaryResponse(Bytes::new()))
-            }
-            Command::PurgeTopic(command) => {
-                let PurgeTopic {
-                    stream_id,
-                    topic_id,
-                } = command;
-                self.purge_topic(client_id, &stream_id, &topic_id).await?;
-                Ok(ShardResponse::BinaryResponse(Bytes::new()))
-            }
-            Command::CreatePartitions(command) => {
-                let CreatePartitions {
-                    stream_id,
-                    topic_id,
-                    partitions_count: count,
-                } = command;
-                self.create_partitions(client_id, &stream_id, &topic_id, count, true)
+                self.state
+                    .apply(user_id, EntryCommand::UpdateTopic(command.clone()))
                     .await?;
-                let event = ShardEvent::CreatedPartitions(stream_id, topic_id, count);
+                // TODO(numinex) - This has to be broadcasted aswell..
+                Ok(ShardResponse::BinaryResponse(Bytes::new()))
+            }
+            ServerCommand::PurgeTopic(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.purge_topic(user_id, &command.stream_id, &command.topic_id)
+                    .await?;
+                self.state
+                    .apply(user_id, EntryCommand::PurgeTopic(command.clone()))
+                    .await?;
+                // TODO(numinex) - This has to be broadcasted aswell..
+                Ok(ShardResponse::BinaryResponse(Bytes::new()))
+            }
+            ServerCommand::CreatePartitions(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.create_partitions(
+                    user_id,
+                    &command.stream_id.clone(),
+                    &command.topic_id.clone(),
+                    command.partitions_count,
+                    true,
+                )
+                .await?;
+                self.state
+                    .apply(user_id, EntryCommand::CreatePartitions(command.clone()))
+                    .await?;
+                let event = ShardEvent::CreatedPartitions(
+                    command.stream_id,
+                    command.topic_id,
+                    command.partitions_count,
+                );
                 self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::DeletePartitions(command) => {
-                let DeletePartitions {
-                    stream_id,
-                    topic_id,
-                    partitions_count: count,
-                } = command;
-                self.delete_partitions(client_id, &stream_id, &topic_id, count)
+            ServerCommand::DeletePartitions(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.delete_partitions(
+                    user_id,
+                    &command.stream_id,
+                    &command.topic_id,
+                    command.partitions_count,
+                )
+                .await?;
+                self.state
+                    .apply(user_id, EntryCommand::DeletePartitions(command.clone()))
                     .await?;
+                // TODO(numinex): We have to broadcast this event aswell...
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::GetConsumerGroup(command) => {
+            ServerCommand::GetConsumerGroup(command) => {
                 let GetConsumerGroup {
                     stream_id,
                     topic_id,
@@ -392,7 +461,7 @@ impl IggyShard {
                 let bytes = mapper::map_consumer_group(consumer_group).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::GetConsumerGroups(command) => {
+            ServerCommand::GetConsumerGroups(command) => {
                 let GetConsumerGroups {
                     stream_id,
                     topic_id,
@@ -401,28 +470,36 @@ impl IggyShard {
                 let bytes = mapper::map_consumer_groups(consumer_groups).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
-            Command::CreateConsumerGroup(command) => {
-                let CreateConsumerGroup {
-                    stream_id,
-                    topic_id,
-                    group_id,
-                    name,
-                } = command;
-                self.create_consumer_group(client_id, &stream_id, &topic_id, group_id, name)
+            ServerCommand::CreateConsumerGroup(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.create_consumer_group(
+                    user_id,
+                    &command.stream_id,
+                    &command.topic_id,
+                    command.group_id,
+                    command.name.clone(),
+                )
+                .await?;
+                self.state
+                    .apply(user_id, EntryCommand::CreateConsumerGroup(command))
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::DeleteConsumerGroup(command) => {
-                let DeleteConsumerGroup {
-                    stream_id,
-                    topic_id,
-                    group_id,
-                } = command;
-                self.delete_consumer_group(client_id, &stream_id, &topic_id, &group_id)
+            ServerCommand::DeleteConsumerGroup(command) => {
+                let user_id = self.ensure_authenticated(client_id)?;
+                self.delete_consumer_group(
+                    user_id,
+                    &command.stream_id,
+                    &command.topic_id,
+                    &command.group_id,
+                )
+                .await?;
+                self.state
+                    .apply(user_id, EntryCommand::DeleteConsumerGroup(command))
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::JoinConsumerGroup(command) => {
+            ServerCommand::JoinConsumerGroup(command) => {
                 let JoinConsumerGroup {
                     stream_id,
                     topic_id,
@@ -432,7 +509,7 @@ impl IggyShard {
                     .await?;
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
-            Command::LeaveConsumerGroup(command) => {
+            ServerCommand::LeaveConsumerGroup(command) => {
                 let LeaveConsumerGroup {
                     stream_id,
                     topic_id,

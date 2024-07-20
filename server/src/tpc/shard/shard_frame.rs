@@ -2,15 +2,17 @@ use std::net::SocketAddr;
 
 use async_channel::Sender;
 use bytes::Bytes;
-use iggy::command::Command;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
-use iggy::utils::byte_size::IggyByteSize;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
+
+use crate::command::ServerCommand;
 
 #[derive(Debug, Clone)]
 pub enum ShardMessage {
-    Command(Command),
+    Command(ServerCommand),
     Event(ShardEvent),
 }
 
@@ -23,9 +25,9 @@ pub enum ShardEvent {
         Option<u32>,
         String,
         u32,
-        Option<u32>,
+        IggyExpiry,
         CompressionAlgorithm,
-        Option<IggyByteSize>,
+        MaxTopicSize,
         Option<u8>,
     ),
     LoginUser(String, String),

@@ -1,9 +1,9 @@
-use crate::command::{CommandExecution, CommandPayload};
+use crate::bytes_serializable::BytesSerializable;
+use crate::command::{Command, DELETE_PARTITIONS_CODE};
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::partitions::MAX_PARTITIONS_COUNT;
 use crate::validatable::Validatable;
-use crate::{bytes_serializable::BytesSerializable, command::CommandExecutionOrigin};
 use bytes::{BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
@@ -25,10 +25,9 @@ pub struct DeletePartitions {
     pub partitions_count: u32,
 }
 
-impl CommandPayload for DeletePartitions {}
-impl CommandExecutionOrigin for DeletePartitions {
-    fn get_command_execution_origin(&self) -> CommandExecution {
-        CommandExecution::Direct
+impl Command for DeletePartitions {
+    fn code(&self) -> u32 {
+        DELETE_PARTITIONS_CODE
     }
 }
 
@@ -53,9 +52,9 @@ impl Validatable<IggyError> for DeletePartitions {
 }
 
 impl BytesSerializable for DeletePartitions {
-    fn as_bytes(&self) -> Bytes {
-        let stream_id_bytes = self.stream_id.as_bytes();
-        let topic_id_bytes = self.topic_id.as_bytes();
+    fn to_bytes(&self) -> Bytes {
+        let stream_id_bytes = self.stream_id.to_bytes();
+        let topic_id_bytes = self.topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);
@@ -107,7 +106,7 @@ mod tests {
             partitions_count: 3,
         };
 
-        let bytes = command.as_bytes();
+        let bytes = command.to_bytes();
         let mut position = 0;
         let stream_id = Identifier::from_bytes(bytes.clone()).unwrap();
         position += stream_id.get_size_bytes() as usize;
@@ -127,8 +126,8 @@ mod tests {
         let stream_id = Identifier::numeric(1).unwrap();
         let topic_id = Identifier::numeric(2).unwrap();
         let partitions_count = 3u32;
-        let stream_id_bytes = stream_id.as_bytes();
-        let topic_id_bytes = topic_id.as_bytes();
+        let stream_id_bytes = stream_id.to_bytes();
+        let topic_id_bytes = topic_id.to_bytes();
         let mut bytes = BytesMut::with_capacity(4 + stream_id_bytes.len() + topic_id_bytes.len());
         bytes.put_slice(&stream_id_bytes);
         bytes.put_slice(&topic_id_bytes);

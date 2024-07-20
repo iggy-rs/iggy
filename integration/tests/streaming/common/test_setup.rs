@@ -23,14 +23,9 @@ impl TestSetup {
 
         let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();
-        let persister = StoragePersister::File(FilePersister {});
-        let db = Arc::new(sled::open(config.get_database_path()).unwrap());
-        let storage = Rc::new(SystemStorage::new(db.clone(), Rc::new(persister)));
-        TestSetup {
-            config,
-            storage,
-            db,
-        }
+        let persister = FilePersister {};
+        let storage = Arc::new(SystemStorage::new(config.clone(), Arc::new(persister)));
+        TestSetup { config, storage }
     }
 
     pub async fn create_streams_directory(&self) {

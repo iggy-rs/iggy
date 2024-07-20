@@ -1,20 +1,17 @@
 use futures::future::{join, try_join, try_join_all};
 use futures::Future;
 use iggy::error::IggyError;
+use local_sync::semaphore::Semaphore;
 use sled::Db;
 use std::pin::Pin;
+use std::sync::atomic::AtomicBool;
+use std::sync::Mutex;
 use std::{rc::Rc, sync::Arc};
 
+use crate::streaming::persistence::persister::PersistenceStorage;
 use crate::tcp::tcp_server::spawn_tcp_server;
 use crate::tcp::{tcp_listener, tcp_tls_listener};
-use crate::{
-    configs::server::ServerConfig,
-    streaming::{
-        persistence::persister::{FilePersister, FileWithSyncPersister, StoragePersister},
-        storage::SystemStorage,
-    },
-    tcp::tcp_server,
-};
+use crate::{configs::server::ServerConfig, streaming::storage::SystemStorage, tcp::tcp_server};
 
 use super::shard::tasks::message_task::spawn_shard_message_task;
 use super::{
@@ -28,8 +25,8 @@ type Task = Pin<Box<dyn Future<Output = Result<(), IggyError>>>>;
 
 pub fn create_shard(
     id: u16,
+    init_gate: Arc<Mutex<()>>,
     config: ServerConfig,
-    db: Arc<Db>,
     connections: Vec<ShardConnector<ShardFrame>>,
 ) -> Rc<IggyShard> {
     let (stop_sender, stop_receiver, receiver) = connections
@@ -50,15 +47,17 @@ pub fn create_shard(
         .collect::<Vec<_>>();
 
     let persister = match config.system.partition.enforce_fsync {
-        true => Rc::new(StoragePersister::FileWithSync(FileWithSyncPersister {})),
-        false => Rc::new(StoragePersister::File(FilePersister {})),
+        true => Rc::new(PersistenceStorage::FileWithSync),
+        false => Rc::new(PersistenceStorage::File),
     };
-    let storage = Rc::new(SystemStorage::new(db, persister));
+    let storage = Rc::new(SystemStorage::new(config.system.clone(), persister.clone()));
     Rc::new(IggyShard::new(
         id,
         shards,
+        init_gate,
         config,
         storage,
+        persister,
         receiver,
         stop_receiver,
         stop_sender,
@@ -70,7 +69,7 @@ pub async fn shard_executor(shard: Rc<IggyShard>, is_prime_thread: bool) -> Resu
     // loads streams and starts accepting connections. This is necessary to
     // have the correct statistics when the server starts.
     shard.get_stats_bypass_auth().await?;
-    shard.init().await?;
+    shard.init(is_prime_thread).await?;
     // Create all tasks (tcp listener, http listener, command processor, in the future also the background jobs).
     let mut tasks: Vec<Task> = vec![Box::pin(spawn_shard_message_task(shard.clone()))];
     if shard.config.tcp.enabled {

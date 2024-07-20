@@ -1,4 +1,4 @@
-use crate::compat::message_converter::Extendable;
+use crate::compat::message_conversion::message_converter::Extendable;
 use crate::server_error::ServerError;
 use crate::streaming::sizeable::Sizeable;
 use bytes::{BufMut, Bytes, BytesMut};
@@ -6,7 +6,6 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::models::header::{self, HeaderKey, HeaderValue};
 use iggy::models::messages::MessageState;
 use std::collections::HashMap;
-use std::convert::TryFrom;
 
 #[derive(Debug)]
 pub struct MessageSnapshot {
@@ -61,7 +60,7 @@ impl Extendable for MessageSnapshot {
         if let Some(headers) = headers {
             #[allow(clippy::cast_possible_truncation)]
             bytes.put_u32_le(headers.len() as u32);
-            bytes.put_slice(&headers.as_bytes());
+            bytes.put_slice(&headers.to_bytes());
         } else {
             bytes.put_u32_le(0u32);
         }

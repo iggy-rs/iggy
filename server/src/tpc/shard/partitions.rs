@@ -11,13 +11,12 @@ use super::shard::{IggyShard, ShardInfo};
 impl IggyShard {
     pub async fn create_partitions(
         &self,
-        client_id: u32,
+        user_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitions_count: u32,
         should_persist: bool,
     ) -> Result<(), IggyError> {
-        let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner

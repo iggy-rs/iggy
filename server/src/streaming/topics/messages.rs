@@ -10,11 +10,13 @@ use iggy::locking::IggySharedMutFn;
 use iggy::messages::poll_messages::{PollingKind, PollingStrategy};
 use iggy::messages::send_messages::{Message, Partitioning, PartitioningKind};
 use iggy::models::messages::PolledMessages;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{info, trace, warn};
+use tracing::{debug, info, trace, warn};
 
 impl Topic {
     pub fn get_messages_count(&self) -> u64 {
@@ -46,7 +48,11 @@ impl Topic {
         let value = strategy.value;
         let messages = match strategy.kind {
             PollingKind::Offset => partition.get_messages_by_offset(value, count).await,
-            PollingKind::Timestamp => partition.get_messages_by_timestamp(value, count).await,
+            PollingKind::Timestamp => {
+                partition
+                    .get_messages_by_timestamp(value.into(), count)
+                    .await
+            }
             PollingKind::First => partition.get_first_messages(count).await,
             PollingKind::Last => partition.get_last_messages(count).await,
             PollingKind::Next => partition.get_next_messages(consumer, count).await,
@@ -71,6 +77,10 @@ impl Topic {
     ) -> Result<(), IggyError> {
         if !self.has_partitions() {
             return Err(IggyError::NoPartitions(self.topic_id, self.stream_id));
+        }
+
+        if self.is_full() {
+            return Err(IggyError::TopicFull(self.topic_id, self.stream_id));
         }
 
         if messages.is_empty() {
@@ -184,6 +194,14 @@ impl Topic {
                 .get_newest_messages_by_size(size_to_fetch_from_disk)
                 .await?;
 
+            if messages.is_empty() {
+                debug!(
+                    "No messages found on disk for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}",
+                    partition.partition_id, partition.topic_id, partition.stream_id, end_offset
+                );
+                continue;
+            }
+
             let sum: u64 = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
             if !Self::cache_integrity_check(&messages) {
                 warn!(
@@ -228,20 +246,17 @@ impl Topic {
 
     pub async fn get_expired_segments_start_offsets_per_partition(
         &self,
-        now: u64,
+        now: IggyTimestamp,
     ) -> HashMap<u32, Vec<u64>> {
         let mut expired_segments = HashMap::new();
-        if self.message_expiry.is_none() {
-            return expired_segments;
-        }
-
-        for (_, partition) in self.partitions.borrow().iter() {
-            let segments = partition.get_expired_segments_start_offsets(now).await;
-            if !segments.is_empty() {
-                expired_segments.insert(partition.partition_id, segments);
+        if let IggyExpiry::ExpireDuration(_) = self.message_expiry {
+            for (_, partition) in self.partitions.borrow().iter() {
+                let segments = partition.get_expired_segments_start_offsets(now).await;
+                if !segments.is_empty() {
+                    expired_segments.insert(partition.partition_id, segments);
+                }
             }
         }
-
         expired_segments
     }
 }
@@ -253,6 +268,7 @@ mod tests {
     use crate::streaming::storage::tests::get_test_system_storage;
     use bytes::Bytes;
     use iggy::compression::compression_algorithm::CompressionAlgorithm;
+    use iggy::utils::topic_size::MaxTopicSize;
     use std::rc::Rc;
     use std::sync::atomic::AtomicU32;
     use std::sync::atomic::AtomicU64;
@@ -377,9 +393,9 @@ mod tests {
             size_of_parent_stream,
             messages_count_of_parent_stream,
             segments_count_of_parent_stream,
-            None,
+            IggyExpiry::NeverExpire,
             compression_algorithm,
-            None,
+            MaxTopicSize::ServerDefault,
             1,
         )
         .unwrap()

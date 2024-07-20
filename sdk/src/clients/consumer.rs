@@ -24,9 +24,9 @@ pub struct IggyConsumer {
     polling_strategy: PollingStrategy,
     next_offset: u64,
     poll_future: Option<PollMessagesFuture>,
-    buffered_messages: VecDeque<PolledMessage>,
     batch_size: u32,
     auto_commit: bool,
+    buffered_messages: VecDeque<PolledMessage>,
 }
 
 impl IggyConsumer {
@@ -50,9 +50,37 @@ impl IggyConsumer {
             polling_strategy,
             next_offset: 0,
             poll_future: None,
-            buffered_messages: VecDeque::new(),
             batch_size,
             auto_commit,
+            buffered_messages: VecDeque::new(),
+        }
+    }
+
+    fn create_poll_messages_future(
+        &self,
+    ) -> impl Future<Output = Result<PolledMessages, IggyError>> {
+        let stream_id = self.stream_id.clone();
+        let topic_id = self.topic_id.clone();
+        let partition_id = self.partition_id;
+        let consumer = self.consumer.clone();
+        let polling_strategy = self.polling_strategy;
+        let client = self.client.clone();
+        let count = self.batch_size;
+        let auto_commit = self.auto_commit;
+        async move {
+            client
+                .read()
+                .await
+                .poll_messages(
+                    &stream_id,
+                    &topic_id,
+                    partition_id,
+                    &consumer,
+                    &polling_strategy,
+                    count,
+                    auto_commit,
+                )
+                .await
         }
     }
 }
@@ -73,63 +101,31 @@ impl Stream for IggyConsumer {
         }
 
         if self.poll_future.is_none() {
-            let future = {
-                let stream_id = self.stream_id.clone();
-                let topic_id = self.topic_id.clone();
-                let partition_id = self.partition_id;
-                let consumer = self.consumer.clone();
-                let polling_strategy = self.polling_strategy;
-                let client = self.client.clone();
-                let count = self.batch_size;
-                let auto_commit = self.auto_commit;
-                async move {
-                    client
-                        .read()
-                        .await
-                        .poll_messages(
-                            &stream_id,
-                            &topic_id,
-                            partition_id,
-                            &consumer,
-                            &polling_strategy,
-                            count,
-                            auto_commit,
-                        )
-                        .await
-                }
-            };
-
+            let future = self.create_poll_messages_future();
             self.poll_future = Some(Box::pin(future));
         }
 
-        match self
-            .poll_future
-            .as_mut()
-            .expect("Poll future is missing.")
-            .poll_unpin(cx)
-        {
-            Poll::Ready(polled_messages_result) => match polled_messages_result {
-                Ok(mut polled_messages) => {
+        while let Some(future) = self.poll_future.as_mut() {
+            match future.poll_unpin(cx) {
+                Poll::Ready(Ok(mut polled_messages)) => {
                     if polled_messages.messages.is_empty() {
-                        return Poll::Pending;
-                    }
-
-                    let message = polled_messages.messages.remove(0);
-                    self.next_offset = message.offset + 1;
-                    if polled_messages.messages.is_empty() {
+                        self.poll_future = Some(Box::pin(self.create_poll_messages_future()));
+                    } else {
+                        let message = polled_messages.messages.remove(0);
+                        self.next_offset = message.offset + 1;
+                        self.buffered_messages.extend(polled_messages.messages);
                         if self.polling_strategy.kind == PollingKind::Offset {
                             self.polling_strategy = PollingStrategy::offset(self.next_offset);
                         }
-                    } else {
-                        self.buffered_messages.extend(polled_messages.messages);
+                        self.poll_future = None;
+                        return Poll::Ready(Some(Ok(message)));
                     }
-
-                    self.poll_future = None;
-                    Poll::Ready(Some(Ok(message)))
                 }
-                Err(err) => Poll::Ready(Some(Err(err))),
-            },
-            Poll::Pending => Poll::Pending,
+                Poll::Ready(Err(err)) => return Poll::Ready(Some(Err(err))),
+                Poll::Pending => return Poll::Pending,
+            }
         }
+
+        Poll::Pending
     }
 }

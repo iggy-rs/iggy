@@ -26,15 +26,16 @@ pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
     let (stream_id, topic_id, partition_id) = (args.stream_id, args.topic_id, args.partition_id);
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
     loop {
+        interval.tick().await;
         info!("Validating if stream: {} exists..", stream_id);
         let stream = client.get_stream(&args.stream_id.try_into().unwrap()).await;
         if stream.is_ok() {
             info!("Stream: {} was found.", stream_id);
             break;
         }
-        interval.tick().await;
     }
     loop {
+        interval.tick().await;
         info!("Validating if topic: {} exists..", topic_id);
         let topic = client
             .get_topic(
@@ -43,7 +44,6 @@ pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
             )
             .await;
         if topic.is_err() {
-            interval.tick().await;
             continue;
         }
 
@@ -104,6 +104,7 @@ pub async fn consume_messages(
             return Ok(());
         }
 
+        interval.tick().await;
         let polled_messages = client
             .poll_messages(
                 &args.stream_id.try_into()?,
@@ -117,14 +118,12 @@ pub async fn consume_messages(
             .await?;
         if polled_messages.messages.is_empty() {
             info!("No messages found.");
-            interval.tick().await;
             continue;
         }
         consumed_batches += 1;
         for message in polled_messages.messages {
             handle_message(&message)?;
         }
-        interval.tick().await;
     }
 }
 
@@ -165,9 +164,9 @@ pub async fn consume_messages_iter(
             return Ok(());
         }
 
+        interval.tick().await;
         handle_message(&message?)?;
         consumed_batches += 1;
-        interval.tick().await;
     }
     Ok(())
 }

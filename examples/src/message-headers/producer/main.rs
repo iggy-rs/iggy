@@ -47,6 +47,7 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
             return Ok(());
         }
 
+        interval.tick().await;
         let mut messages = Vec::new();
         let mut serializable_messages = Vec::new();
         for _ in 0..args.messages_per_batch {
@@ -77,6 +78,5 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
             .await?;
         sent_batches += 1;
         info!("Sent messages: {:#?}", serializable_messages);
-        interval.tick().await;
     }
 }

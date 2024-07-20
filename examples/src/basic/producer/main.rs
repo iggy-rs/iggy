@@ -41,6 +41,7 @@ async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
             return Ok(());
         }
 
+        interval.tick().await;
         let mut messages = Vec::new();
         let mut sent_messages = Vec::new();
         for _ in 0..args.messages_per_batch {
@@ -60,6 +61,5 @@ async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
             .await?;
         sent_batches += 1;
         info!("Sent messages: {:#?}", sent_messages);
-        interval.tick().await;
     }
 }

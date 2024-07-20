@@ -59,9 +59,9 @@ pub struct IggyClient {
     client: IggySharedMut<Box<dyn Client>>,
     config: Option<IggyClientBackgroundConfig>,
     send_messages_batch: Option<Arc<Mutex<SendMessagesBatch>>>,
-    partitioner: Option<Box<dyn Partitioner>>,
-    encryptor: Option<Box<dyn Encryptor>>,
-    message_handler: Option<Arc<Box<dyn MessageHandler>>>,
+    partitioner: Option<Arc<dyn Partitioner>>,
+    encryptor: Option<Arc<dyn Encryptor>>,
+    message_handler: Option<Arc<dyn MessageHandler>>,
     message_channel_sender: Option<Arc<Sender<PolledMessage>>>,
     consumer: Factory,
 }
@@ -69,6 +69,8 @@ pub struct IggyClient {
 #[derive(Debug)]
 pub struct Factory {
     client: IggySharedMut<Box<dyn Client>>,
+    encryptor: Option<Arc<dyn Encryptor>>,
+    partitioner: Option<Arc<dyn Partitioner>>,
 }
 
 impl Factory {
@@ -92,6 +94,8 @@ impl Factory {
             polling_strategy,
             batch_size,
             auto_commit,
+            self.partitioner.clone(),
+            self.encryptor.clone(),
         )
     }
 
@@ -113,6 +117,8 @@ impl Factory {
             polling_strategy,
             batch_size,
             auto_commit,
+            self.partitioner.clone(),
+            self.encryptor.clone(),
         )
     }
 }
@@ -201,6 +207,8 @@ impl IggyClient {
         IggyClient {
             consumer: Factory {
                 client: client.clone(),
+                encryptor: None,
+                partitioner: None,
             },
             client,
             config: None,
@@ -221,9 +229,9 @@ impl IggyClient {
     pub fn create(
         client: Box<dyn Client>,
         config: IggyClientBackgroundConfig,
-        message_handler: Option<Box<dyn MessageHandler>>,
-        partitioner: Option<Box<dyn Partitioner>>,
-        encryptor: Option<Box<dyn Encryptor>>,
+        message_handler: Option<Arc<dyn MessageHandler>>,
+        partitioner: Option<Arc<dyn Partitioner>>,
+        encryptor: Option<Arc<dyn Encryptor>>,
     ) -> Self {
         if partitioner.is_some() {
             info!("Partitioner is enabled.");
@@ -249,11 +257,13 @@ impl IggyClient {
         IggyClient {
             consumer: Factory {
                 client: client.clone(),
+                encryptor: encryptor.clone(),
+                partitioner: partitioner.clone(),
             },
             client,
             config: Some(config),
             send_messages_batch: Some(send_messages_batch),
-            message_handler: message_handler.map(Arc::new),
+            message_handler,
             message_channel_sender: None,
             partitioner,
             encryptor,

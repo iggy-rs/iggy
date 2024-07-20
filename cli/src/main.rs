@@ -312,9 +312,9 @@ async fn main() -> Result<(), IggyCmdError> {
     // Create credentials based on command line arguments and command
     let mut credentials = IggyCredentials::new(&cli_options, &iggy_args, command.login_required())?;
 
-    let encryptor: Option<Box<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
+    let encryptor: Option<Arc<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
         true => None,
-        false => Some(Box::new(
+        false => Some(Arc::new(
             Aes256GcmEncryptor::from_base64_key(&iggy_args.encryption_key).unwrap(),
         )),
     };

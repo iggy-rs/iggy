@@ -5,6 +5,8 @@ use crate::identifier::Identifier;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::messages::{PolledMessage, PolledMessages};
+use crate::partitioner::Partitioner;
+use crate::utils::crypto::Encryptor;
 use futures::Stream;
 use futures_util::FutureExt;
 use std::collections::VecDeque;
@@ -27,6 +29,8 @@ pub struct IggyConsumer {
     batch_size: u32,
     auto_commit: bool,
     buffered_messages: VecDeque<PolledMessage>,
+    partitioner: Option<Arc<dyn Partitioner>>,
+    encryptor: Option<Arc<dyn Encryptor>>,
 }
 
 impl IggyConsumer {
@@ -40,6 +44,8 @@ impl IggyConsumer {
         polling_strategy: PollingStrategy,
         batch_size: u32,
         auto_commit: bool,
+        partitioner: Option<Arc<dyn Partitioner>>,
+        encryptor: Option<Arc<dyn Encryptor>>,
     ) -> Self {
         Self {
             client,
@@ -53,7 +59,20 @@ impl IggyConsumer {
             batch_size,
             auto_commit,
             buffered_messages: VecDeque::new(),
+            partitioner,
+            encryptor,
         }
+    }
+
+    pub fn with_partitioner(self, partitioner: Option<Arc<dyn Partitioner>>) -> Self {
+        Self {
+            partitioner,
+            ..self
+        }
+    }
+
+    pub fn with_encryptor(self, encryptor: Option<Arc<dyn Encryptor>>) -> Self {
+        Self { encryptor, ..self }
     }
 
     fn create_poll_messages_future(

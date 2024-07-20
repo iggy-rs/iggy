@@ -31,9 +31,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let iggy_args = Args::from(vec![args.iggy.clone()]);
 
     tracing_subscriber::fmt::init();
-    let encryptor: Option<Box<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
+    let encryptor: Option<Arc<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
         true => None,
-        false => Some(Box::new(
+        false => Some(Arc::new(
             Aes256GcmEncryptor::from_base64_key(&iggy_args.encryption_key).unwrap(),
         )),
     };

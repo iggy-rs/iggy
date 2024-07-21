@@ -1,8 +1,6 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
-use crate::client::{
-    AutoReconnect, AutoSignIn, Client, Credentials, PersonalAccessTokenClient, UserClient,
-};
+use crate::client::{AutoSignIn, Client, Credentials, PersonalAccessTokenClient, UserClient};
 use crate::command::Command;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
@@ -10,7 +8,6 @@ use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
@@ -18,13 +15,11 @@ use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tokio_native_tls::native_tls::TlsConnector;
 use tokio_native_tls::TlsStream;
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
 const NAME: &str = "Iggy";
-
-const RECONNECT_INTERVAL: Duration = Duration::from_secs(1);
 
 /// TCP client for interacting with the Iggy API.
 /// It requires a valid server address.
@@ -129,27 +124,6 @@ impl Client for TcpClient {
         TcpClient::connect(self).await
     }
 
-    async fn reconnect(&self, retries: Option<u32>) -> Result<(), IggyError> {
-        let mut retry = 1;
-        let retries = retries.unwrap_or(u32::MAX);
-        while retry <= retries {
-            info!("Reconnecting, attempt: {retry}/{retries}");
-            if let Err(error) = self.connect().await {
-                error!(
-                    "Failed to reconnect: {error}, another attempt in: {} ms.",
-                    RECONNECT_INTERVAL.as_millis()
-                );
-                sleep(RECONNECT_INTERVAL).await;
-                retry += 1;
-                continue;
-            }
-            info!("Reconnected.");
-            return Ok(());
-        }
-        error!("Failed to reconnect after {retries} attempts.");
-        Err(IggyError::NotConnected)
-    }
-
     async fn disconnect(&self) -> Result<(), IggyError> {
         TcpClient::disconnect(self).await
     }
@@ -181,10 +155,10 @@ impl BinaryTransport for TcpClient {
             return Err(error);
         }
 
-        match self.config.auto_reconnect {
-            AutoReconnect::Disabled => return Err(IggyError::Disconnected),
-            AutoReconnect::Limited(retries) => self.reconnect(Some(retries)).await?,
-            AutoReconnect::Unlimited => self.reconnect(None).await?,
+        if self.config.reconnection.enabled {
+            self.disconnect().await?;
+            info!("Reconnecting to the server...");
+            self.connect().await?;
         }
 
         self.send_raw(code, payload).await
@@ -195,19 +169,25 @@ impl BinaryClient for TcpClient {}
 
 impl TcpClient {
     /// Create a new TCP client for the provided server address.
-    pub fn new(server_address: &str) -> Result<Self, IggyError> {
+    pub fn new(server_address: &str, auto_sign_in: AutoSignIn) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
+            auto_sign_in,
             ..Default::default()
         }))
     }
 
     /// Create a new TCP client for the provided server address using TLS.
-    pub fn new_tls(server_address: &str, domain: &str) -> Result<Self, IggyError> {
+    pub fn new_tls(
+        server_address: &str,
+        domain: &str,
+        auto_sign_in: AutoSignIn,
+    ) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
             tls_enabled: true,
             tls_domain: domain.to_string(),
+            auto_sign_in,
             ..Default::default()
         }))
     }
@@ -297,16 +277,28 @@ impl TcpClient {
                     "Failed to connect to server: {}",
                     self.config.server_address
                 );
-                if retry_count < self.config.reconnection_retries {
+                if !self.config.reconnection.enabled {
+                    warn!("Automatic reconnection is disabled.");
+                    return Err(IggyError::NotConnected);
+                }
+
+                let unlimited_retries = self.config.reconnection.max_retries.is_none();
+                let max_retries = self.config.reconnection.max_retries.unwrap_or_default();
+                let max_retries_str =
+                    if let Some(max_retries) = self.config.reconnection.max_retries {
+                        max_retries.to_string()
+                    } else {
+                        "unlimited".to_string()
+                    };
+
+                let interval_str = self.config.reconnection.interval.as_human_time_string();
+                if unlimited_retries || retry_count < max_retries {
                     retry_count += 1;
                     info!(
-                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
-                        retry_count,
-                        self.config.reconnection_retries,
+                        "Retrying to connect to server ({retry_count}/{max_retries_str}): {} in: {interval_str}",
                         self.config.server_address,
-                        self.config.reconnection_interval
                     );
-                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
+                    sleep(self.config.reconnection.interval.get_duration()).await;
                     continue;
                 }
 
@@ -339,10 +331,10 @@ impl TcpClient {
 
         info!("{NAME} client has connected to server: {remote_address}",);
 
-        return match &self.config.auto_sign_in {
+        match &self.config.auto_sign_in {
             AutoSignIn::Disabled => {
                 info!("Automatic sign-in is disabled.");
-                return Ok(());
+                Ok(())
             }
             AutoSignIn::Enabled(credentials) => {
                 info!("{NAME} client is signing in...");
@@ -357,7 +349,7 @@ impl TcpClient {
                     }
                 }
             }
-        };
+        }
     }
 
     async fn disconnect(&self) -> Result<(), IggyError> {
@@ -374,6 +366,7 @@ impl TcpClient {
 
     async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
         if self.get_state().await == ClientState::Disconnected {
+            trace!("Cannot send data. Client is not connected.");
             return Err(IggyError::NotConnected);
         }
 

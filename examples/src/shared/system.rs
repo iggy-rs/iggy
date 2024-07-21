@@ -8,41 +8,34 @@ use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
-use iggy::users::defaults::*;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
 use tracing::info;
 
 type MessageHandler = dyn Fn(&PolledMessage) -> Result<(), Box<dyn std::error::Error>>;
 
-pub async fn login_root(client: &dyn Client) {
-    client
-        .login_user(DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD)
-        .await
-        .unwrap();
-}
-
 pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
-    let (stream_id, topic_id, partition_id) = (args.stream_id, args.topic_id, args.partition_id);
+    let (stream_id, topic_id, partition_id) = (
+        args.stream_id.clone(),
+        args.topic_id.clone(),
+        args.partition_id,
+    );
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(1));
+    let stream_id = stream_id.try_into().unwrap();
+    let topic_id = topic_id.try_into().unwrap();
     loop {
         interval.tick().await;
-        info!("Validating if stream: {} exists..", stream_id);
-        let stream = client.get_stream(&args.stream_id.try_into().unwrap()).await;
+        info!("Validating if stream: {stream_id} exists..");
+        let stream = client.get_stream(&stream_id).await;
         if stream.is_ok() {
-            info!("Stream: {} was found.", stream_id);
+            info!("Stream: {stream_id} was found.");
             break;
         }
     }
     loop {
         interval.tick().await;
         info!("Validating if topic: {} exists..", topic_id);
-        let topic = client
-            .get_topic(
-                &stream_id.try_into().unwrap(),
-                &topic_id.try_into().unwrap(),
-            )
-            .await;
+        let topic = client.get_topic(&stream_id, &topic_id).await;
         if topic.is_err() {
             continue;
         }
@@ -61,21 +54,23 @@ pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
 }
 
 pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), IggyError> {
-    let stream = client.get_stream(&args.stream_id.try_into()?).await;
+    let stream_id = args.stream_id.clone().try_into()?;
+    let topic_name = args.topic_id.clone();
+    let stream = client.get_stream(&stream_id).await;
     if stream.is_ok() {
         return Ok(());
     }
 
     info!("Stream does not exist, creating...");
-    client.create_stream("sample", Some(args.stream_id)).await?;
+    client.create_stream(&args.stream_id, None).await?;
     client
         .create_topic(
-            &args.stream_id.try_into()?,
-            "orders",
+            &stream_id,
+            &topic_name,
             args.partitions_count,
             CompressionAlgorithm::from_code(args.compression_algorithm)?,
             None,
-            Some(args.topic_id),
+            None,
             IggyExpiry::NeverExpire,
             MaxTopicSize::ServerDefault,
         )
@@ -91,6 +86,8 @@ pub async fn consume_messages(
     info!("Messages will be polled by consumer: {} from stream: {}, topic: {}, partition: {} with interval {} ms.",
         args.consumer_id, args.stream_id, args.topic_id, args.partition_id, args.interval);
 
+    let stream_id = args.stream_id.clone().try_into()?;
+    let topic_id = args.topic_id.clone().try_into()?;
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
     let mut consumed_batches = 0;
     let consumer = Consumer {
@@ -107,8 +104,8 @@ pub async fn consume_messages(
         interval.tick().await;
         let polled_messages = client
             .poll_messages(
-                &args.stream_id.try_into()?,
-                &args.topic_id.try_into()?,
+                &stream_id,
+                &topic_id,
                 Some(args.partition_id),
                 &consumer,
                 &PollingStrategy::next(),
@@ -137,26 +134,21 @@ pub async fn consume_messages_iter(
 
     let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
     let mut consumed_batches = 0;
+    let name = "envelope-example";
 
     let mut consumer = match ConsumerKind::from_code(args.consumer_kind)? {
-        ConsumerKind::Consumer => client.consumer().standalone(
-            args.consumer_id.try_into()?,
-            args.stream_id.try_into()?,
-            args.topic_id.try_into()?,
-            args.partition_id,
-            PollingStrategy::next(),
-            args.messages_per_batch,
-            true,
-        ),
-        ConsumerKind::ConsumerGroup => client.consumer().group(
-            args.consumer_id.try_into()?,
-            args.stream_id.try_into()?,
-            args.topic_id.try_into()?,
-            PollingStrategy::next(),
-            args.messages_per_batch,
-            true,
-        ),
-    };
+        ConsumerKind::Consumer => client
+            .consumer(name, &args.stream_id, &args.topic_id, args.partition_id)?
+            .polling_strategy(PollingStrategy::offset(0)),
+        ConsumerKind::ConsumerGroup => client
+            .consumer_group(name, &args.stream_id, &args.topic_id)?
+            .polling_strategy(PollingStrategy::next()),
+    }
+    .auto_commit(args.auto_commit)
+    .batch_size(args.messages_per_batch)
+    .build();
+
+    consumer.init().await?;
 
     while let Some(message) = consumer.next().await {
         if args.message_batches_limit > 0 && consumed_batches == args.message_batches_limit {

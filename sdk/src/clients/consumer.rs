@@ -5,8 +5,8 @@ use crate::identifier::Identifier;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::messages::{PolledMessage, PolledMessages};
-use crate::partitioner::Partitioner;
 use crate::utils::crypto::Encryptor;
+use bytes::Bytes;
 use futures::Stream;
 use futures_util::FutureExt;
 use std::collections::VecDeque;
@@ -24,12 +24,11 @@ pub struct IggyConsumer {
     topic_id: Arc<Identifier>,
     partition_id: Option<u32>,
     polling_strategy: PollingStrategy,
-    next_offset: u64,
-    poll_future: Option<PollMessagesFuture>,
     batch_size: u32,
     auto_commit: bool,
+    next_offset: u64,
+    poll_future: Option<PollMessagesFuture>,
     buffered_messages: VecDeque<PolledMessage>,
-    partitioner: Option<Arc<dyn Partitioner>>,
     encryptor: Option<Arc<dyn Encryptor>>,
 }
 
@@ -44,7 +43,6 @@ impl IggyConsumer {
         polling_strategy: PollingStrategy,
         batch_size: u32,
         auto_commit: bool,
-        partitioner: Option<Arc<dyn Partitioner>>,
         encryptor: Option<Arc<dyn Encryptor>>,
     ) -> Self {
         Self {
@@ -59,20 +57,14 @@ impl IggyConsumer {
             batch_size,
             auto_commit,
             buffered_messages: VecDeque::new(),
-            partitioner,
             encryptor,
         }
     }
 
-    pub fn with_partitioner(self, partitioner: Option<Arc<dyn Partitioner>>) -> Self {
-        Self {
-            partitioner,
-            ..self
-        }
-    }
-
-    pub fn with_encryptor(self, encryptor: Option<Arc<dyn Encryptor>>) -> Self {
-        Self { encryptor, ..self }
+    pub async fn init(&mut self) -> Result<(), IggyError> {
+        // TODO: Join consumer group, create topic etc.
+        let _client = self.client.read().await;
+        Ok(())
     }
 
     fn create_poll_messages_future(
@@ -104,6 +96,7 @@ impl IggyConsumer {
     }
 }
 
+// TODO: Handle reconnection & joining consumer group
 impl Stream for IggyConsumer {
     type Item = Result<PolledMessage, IggyError>;
 
@@ -130,6 +123,13 @@ impl Stream for IggyConsumer {
                     if polled_messages.messages.is_empty() {
                         self.poll_future = Some(Box::pin(self.create_poll_messages_future()));
                     } else {
+                        if let Some(ref encryptor) = self.encryptor {
+                            for message in &mut polled_messages.messages {
+                                let payload = encryptor.decrypt(&message.payload)?;
+                                message.payload = Bytes::from(payload);
+                            }
+                        }
+
                         let message = polled_messages.messages.remove(0);
                         self.next_offset = message.offset + 1;
                         self.buffered_messages.extend(polled_messages.messages);

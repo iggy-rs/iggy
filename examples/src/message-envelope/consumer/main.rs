@@ -33,7 +33,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         })
         .with_client(client)
         .build()?;
-    system::login_root(&client).await;
     system::init_by_consumer(&args, &client).await;
     system::consume_messages(&args, &client, &handle_message).await
 }

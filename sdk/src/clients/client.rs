@@ -24,6 +24,7 @@ use crate::tcp::client::TcpClient;
 use crate::utils::crypto::Encryptor;
 use async_dropper::AsyncDrop;
 use async_trait::async_trait;
+use bytes::Bytes;
 use flume::{Receiver, Sender};
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -63,62 +64,91 @@ pub struct IggyClient {
     encryptor: Option<Arc<dyn Encryptor>>,
     message_handler: Option<Arc<dyn MessageHandler>>,
     message_channel_sender: Option<Arc<Sender<PolledMessage>>>,
-    consumer: Factory,
 }
 
 #[derive(Debug)]
-pub struct Factory {
+pub struct IggyConsumerBuilder {
     client: IggySharedMut<Box<dyn Client>>,
+    consumer: Consumer,
+    stream_id: Identifier,
+    topic_id: Identifier,
+    partition_id: Option<u32>,
+    polling_strategy: PollingStrategy,
+    batch_size: u32,
+    auto_commit: bool,
     encryptor: Option<Arc<dyn Encryptor>>,
-    partitioner: Option<Arc<dyn Partitioner>>,
 }
 
-impl Factory {
-    #[allow(clippy::too_many_arguments)]
-    pub fn standalone(
-        &self,
-        consumer_id: Identifier,
+impl IggyConsumerBuilder {
+    fn new(
+        client: IggySharedMut<Box<dyn Client>>,
+        consumer: Consumer,
         stream_id: Identifier,
         topic_id: Identifier,
-        partition_id: u32,
-        polling_strategy: PollingStrategy,
-        batch_size: u32,
-        auto_commit: bool,
-    ) -> IggyConsumer {
-        IggyConsumer::new(
-            self.client.clone(),
-            Consumer::new(consumer_id),
+        partition_id: Option<u32>,
+        encryptor: Option<Arc<dyn Encryptor>>,
+    ) -> Self {
+        IggyConsumerBuilder {
+            client,
+            consumer,
             stream_id,
             topic_id,
-            Some(partition_id),
-            polling_strategy,
-            batch_size,
-            auto_commit,
-            self.partitioner.clone(),
-            self.encryptor.clone(),
-        )
+            partition_id,
+            polling_strategy: PollingStrategy::next(),
+            batch_size: 1000,
+            auto_commit: true,
+            encryptor,
+        }
     }
 
-    pub fn group(
-        &self,
-        consumer_group_id: Identifier,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        polling_strategy: PollingStrategy,
-        batch_size: u32,
-        auto_commit: bool,
-    ) -> IggyConsumer {
-        IggyConsumer::new(
-            self.client.clone(),
-            Consumer::group(consumer_group_id),
-            stream_id,
-            topic_id,
-            None,
+    pub fn stream(self, stream_id: Identifier) -> Self {
+        Self { stream_id, ..self }
+    }
+
+    pub fn topic(self, topic_id: Identifier) -> Self {
+        Self { topic_id, ..self }
+    }
+
+    pub fn partition(self, partition_id: Option<u32>) -> Self {
+        Self {
+            partition_id,
+            ..self
+        }
+    }
+
+    pub fn polling_strategy(self, polling_strategy: PollingStrategy) -> Self {
+        Self {
             polling_strategy,
-            batch_size,
+            ..self
+        }
+    }
+
+    pub fn batch_size(self, batch_size: u32) -> Self {
+        Self { batch_size, ..self }
+    }
+
+    pub fn auto_commit(self, auto_commit: bool) -> Self {
+        Self {
             auto_commit,
-            self.partitioner.clone(),
-            self.encryptor.clone(),
+            ..self
+        }
+    }
+
+    pub fn encryptor(self, encryptor: Option<Arc<dyn Encryptor>>) -> Self {
+        Self { encryptor, ..self }
+    }
+
+    pub fn build(self) -> IggyConsumer {
+        IggyConsumer::new(
+            self.client,
+            self.consumer,
+            self.stream_id,
+            self.topic_id,
+            self.partition_id,
+            self.polling_strategy,
+            self.batch_size,
+            self.auto_commit,
+            self.encryptor,
         )
     }
 }
@@ -205,11 +235,6 @@ impl IggyClient {
     pub fn new(client: Box<dyn Client>) -> Self {
         let client = IggySharedMut::new(client);
         IggyClient {
-            consumer: Factory {
-                client: client.clone(),
-                encryptor: None,
-                partitioner: None,
-            },
             client,
             config: None,
             send_messages_batch: None,
@@ -220,8 +245,37 @@ impl IggyClient {
         }
     }
 
-    pub fn consumer(&self) -> &Factory {
-        &self.consumer
+    pub fn consumer(
+        &self,
+        name: &str,
+        stream: &str,
+        topic: &str,
+        partition: u32,
+    ) -> Result<IggyConsumerBuilder, IggyError> {
+        Ok(IggyConsumerBuilder::new(
+            self.client.clone(),
+            Consumer::new(name.try_into()?),
+            stream.try_into()?,
+            topic.try_into()?,
+            Some(partition),
+            self.encryptor.clone(),
+        ))
+    }
+
+    pub fn consumer_group(
+        &self,
+        name: &str,
+        stream: &str,
+        topic: &str,
+    ) -> Result<IggyConsumerBuilder, IggyError> {
+        Ok(IggyConsumerBuilder::new(
+            self.client.clone(),
+            Consumer::group(name.try_into()?),
+            stream.try_into()?,
+            topic.try_into()?,
+            None,
+            self.encryptor.clone(),
+        ))
     }
 
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport and the optional configuration for sending and polling the messages in the background.
@@ -255,11 +309,6 @@ impl IggyClient {
         }
 
         IggyClient {
-            consumer: Factory {
-                client: client.clone(),
-                encryptor: encryptor.clone(),
-                partitioner: partitioner.clone(),
-            },
             client,
             config: Some(config),
             send_messages_batch: Some(send_messages_batch),
@@ -549,10 +598,6 @@ impl IggyClient {
 impl Client for IggyClient {
     async fn connect(&self) -> Result<(), IggyError> {
         self.client.read().await.connect().await
-    }
-
-    async fn reconnect(&self, retries: Option<u32>) -> Result<(), IggyError> {
-        self.client.read().await.reconnect(retries).await
     }
 
     async fn disconnect(&self) -> Result<(), IggyError> {
@@ -875,7 +920,8 @@ impl MessageClient for IggyClient {
             return Err(IggyError::InvalidMessagesCount);
         }
 
-        self.client
+        let mut polled_messages = self
+            .client
             .read()
             .await
             .poll_messages(
@@ -887,7 +933,16 @@ impl MessageClient for IggyClient {
                 count,
                 auto_commit,
             )
-            .await
+            .await?;
+
+        if let Some(ref encryptor) = self.encryptor {
+            for message in &mut polled_messages.messages {
+                let payload = encryptor.decrypt(&message.payload)?;
+                message.payload = Bytes::from(payload);
+            }
+        }
+
+        Ok(polled_messages)
     }
 
     async fn send_messages(

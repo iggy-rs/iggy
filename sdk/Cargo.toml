@@ -1,6 +1,6 @@
 [package]
 name = "iggy"
-version = "0.5.1"
+version = "0.6.0"
 description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
 license = "MIT"
@@ -53,6 +53,7 @@ tokio-native-tls = "0.3.1"
 toml = "0.8.14"
 tracing = { version = "0.1.40" }
 uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
+derive_more = "0.99.18"
 
 [build-dependencies]
 convert_case = "0.6.0"

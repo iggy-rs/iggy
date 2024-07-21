@@ -40,17 +40,17 @@ async fn should_successfully_execute() {
         .execute_test(TestMessageEnvelope {
             expected_producer_output: vec![
                 "Message envelope producer has started, selected transport: tcp",
-                "Received an invalid response with status: 1009 (stream_id_not_found).",
+                "Received an invalid response with status: 1010 (stream_name_not_found).",
                 "Stream does not exist, creating...",
-                "Messages will be sent to stream: 9999, topic: 1, partition: 1 with interval 1000 ms.",
+                "Messages will be sent to stream: example-stream, topic: example-topic, partition: 1 with interval 1000 ms.",
             ],
             expected_consumer_output: vec![
                 "Message envelope consumer has started, selected transport: tcp",
-                "Validating if stream: 9999 exists..",
-                "Stream: 9999 was found.",
-                "Validating if topic: 1 exists..",
-                "Topic: 1 was found.",
-                "Messages will be polled by consumer: 1 from stream: 9999, topic: 1, partition: 1 with interval 1000 ms.",
+                "Validating if stream: example-stream exists..",
+                "Stream: example-stream was found.",
+                "Validating if topic: example-topic exists..",
+                "Topic: example-topic was found.",
+                "Messages will be polled by consumer: 1 from stream: example-stream, topic: example-topic, partition: 1 with interval 1000 ms."
             ],
         })
         .await;

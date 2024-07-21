@@ -37,10 +37,6 @@ impl Client for HttpClient {
         HttpClient::connect(self).await
     }
 
-    async fn reconnect(&self, _: Option<u32>) -> Result<(), IggyError> {
-        self.connect().await
-    }
-
     async fn disconnect(&self) -> Result<(), IggyError> {
         HttpClient::disconnect(self).await
     }

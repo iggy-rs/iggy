@@ -34,13 +34,6 @@ pub enum AutoSignIn {
     Enabled(Credentials),
 }
 
-#[derive(Debug, Clone)]
-pub enum AutoReconnect {
-    Disabled,
-    Limited(u32),
-    Unlimited,
-}
-
 /// The client trait which is the main interface to the Iggy server.
 /// It consists of multiple modules, each of which is responsible for a specific set of commands.
 /// Except the ping, login and get me, all the other methods require authentication.
@@ -62,9 +55,6 @@ pub trait Client:
     /// Connect to the server. Depending on the selected transport and provided configuration it might also perform authentication, retry logic etc.
     /// If the client is already connected, it will do nothing.
     async fn connect(&self) -> Result<(), IggyError>;
-
-    /// Reconnect to the server. Depending on the selected transport and provided configuration it might also perform authentication, retry logic etc.
-    async fn reconnect(&self, retries: Option<u32>) -> Result<(), IggyError>;
 
     /// Disconnect from the server. If the client is not connected, it will do nothing.
     async fn disconnect(&self) -> Result<(), IggyError>;

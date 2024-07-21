@@ -43,6 +43,16 @@ Options:
 {CLAP_INDENT}
           [default: ]
 
+      --credentials-username <CREDENTIALS_USERNAME>
+          Optional username for initial login
+{CLAP_INDENT}
+          [default: DEFAULT_ROOT_USERNAME]
+
+      --credentials-password <CREDENTIALS_PASSWORD>
+          Optional password for initial login
+{CLAP_INDENT}
+          [default: DEFAULT_ROOT_PASSWORD]
+
       --http-api-url <HTTP_API_URL>
           The optional API URL for the HTTP transport
 {CLAP_INDENT}
@@ -58,7 +68,7 @@ Options:
 {CLAP_INDENT}
           [default: 127.0.0.1:8090]
 
-      --tcp-reconnection-retries <TCP_RECONNECTION_RETRIES>
+      --tcp-reconnection-max-retries <TCP_RECONNECTION_MAX_RETRIES>
           The optional number of reconnect retries for the TCP transport
 {CLAP_INDENT}
           [default: 3]
@@ -66,7 +76,7 @@ Options:
       --tcp-reconnection-interval <TCP_RECONNECTION_INTERVAL>
           The optional reconnect interval for the TCP transport
 {CLAP_INDENT}
-          [default: 1000]
+          [default: "1s"]
 
       --tcp-tls-enabled
           Flag to enable TLS for the TCP transport

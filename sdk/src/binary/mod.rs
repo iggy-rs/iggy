@@ -2,6 +2,7 @@ use crate::command::Command;
 use crate::error::IggyError;
 use async_trait::async_trait;
 use bytes::Bytes;
+use derive_more::Display;
 
 #[allow(deprecated)]
 pub mod binary_client;
@@ -26,13 +27,16 @@ pub mod topics;
 pub mod users;
 
 /// The state of the client.
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialEq, Display)]
 pub enum ClientState {
     /// The client is disconnected.
+    #[display(fmt = "disconnected")]
     Disconnected,
     /// The client is connected.
+    #[display(fmt = "connected")]
     Connected,
     /// The client is connected and authenticated.
+    #[display(fmt = "authenticated")]
     Authenticated,
 }
 

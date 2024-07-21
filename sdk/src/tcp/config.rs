@@ -1,34 +1,47 @@
-use crate::client::{AutoReconnect, AutoSignIn};
+use crate::client::AutoSignIn;
+use crate::utils::duration::IggyDuration;
+use std::str::FromStr;
 
 /// Configuration for the TCP client.
 #[derive(Debug, Clone)]
 pub struct TcpClientConfig {
     /// The address of the Iggy server.
     pub server_address: String,
-    /// The number of retries when connecting to the server.
-    pub reconnection_retries: u32,
-    /// The interval between retries when connecting to the server.
-    pub reconnection_interval: u64,
     /// Whether to use TLS when connecting to the server.
     pub tls_enabled: bool,
     /// The domain to use for TLS when connecting to the server.
     pub tls_domain: String,
     // Whether to automatically sign in when connecting.
     pub auto_sign_in: AutoSignIn,
-    // Auto-reconnect configuration.
-    pub auto_reconnect: AutoReconnect,
+    // Whether to automatically reconnect when disconnected.
+    pub reconnection: TcpClientReconnectionConfig,
+}
+
+#[derive(Debug, Clone)]
+pub struct TcpClientReconnectionConfig {
+    pub enabled: bool,
+    pub max_retries: Option<u32>,
+    pub interval: IggyDuration,
 }
 
 impl Default for TcpClientConfig {
     fn default() -> TcpClientConfig {
         TcpClientConfig {
             server_address: "127.0.0.1:8090".to_string(),
-            reconnection_retries: 3,
-            reconnection_interval: 1000,
             tls_enabled: false,
             tls_domain: "localhost".to_string(),
             auto_sign_in: AutoSignIn::Disabled,
-            auto_reconnect: AutoReconnect::Disabled,
+            reconnection: TcpClientReconnectionConfig::default(),
+        }
+    }
+}
+
+impl Default for TcpClientReconnectionConfig {
+    fn default() -> TcpClientReconnectionConfig {
+        TcpClientReconnectionConfig {
+            enabled: true,
+            max_retries: None,
+            interval: IggyDuration::from_str("1s").unwrap(),
         }
     }
 }
@@ -56,15 +69,20 @@ impl TcpClientConfigBuilder {
         self
     }
 
+    pub fn with_enabled_reconnection(mut self) -> Self {
+        self.config.reconnection.enabled = true;
+        self
+    }
+
     /// Sets the number of retries when connecting to the server.
-    pub fn with_reconnection_retries(mut self, reconnection_retries: u32) -> Self {
-        self.config.reconnection_retries = reconnection_retries;
+    pub fn with_reconnection_max_retries(mut self, max_retries: Option<u32>) -> Self {
+        self.config.reconnection.max_retries = max_retries;
         self
     }
 
     /// Sets the interval between retries when connecting to the server.
-    pub fn with_reconnection_interval(mut self, reconnection_interval: u64) -> Self {
-        self.config.reconnection_interval = reconnection_interval;
+    pub fn with_reconnection_interval(mut self, interval: IggyDuration) -> Self {
+        self.config.reconnection.interval = interval;
         self
     }
 

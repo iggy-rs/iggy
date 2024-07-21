@@ -1,4 +1,4 @@
-use crate::client::{AutoReconnect, AutoSignIn, Client, Credentials};
+use crate::client::{AutoSignIn, Client, Credentials};
 use crate::client_error::ClientError;
 #[allow(deprecated)]
 use crate::clients::client::IggyClient;
@@ -7,8 +7,9 @@ use crate::http::config::HttpClientConfig;
 use crate::quic::client::QuicClient;
 use crate::quic::config::QuicClientConfig;
 use crate::tcp::client::TcpClient;
-use crate::tcp::config::TcpClientConfig;
-use crate::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
+use crate::tcp::config::{TcpClientConfig, TcpClientReconnectionConfig};
+use crate::utils::duration::IggyDuration;
+use std::str::FromStr;
 use std::sync::Arc;
 
 const QUIC_TRANSPORT: &str = "quic";
@@ -82,18 +83,17 @@ impl ClientProviderConfig {
             TCP_TRANSPORT => {
                 config.tcp = Some(Arc::new(TcpClientConfig {
                     server_address: args.tcp_server_address,
-                    reconnection_retries: args.tcp_reconnection_retries,
-                    reconnection_interval: args.tcp_reconnection_interval,
                     tls_enabled: args.tcp_tls_enabled,
                     tls_domain: args.tcp_tls_domain,
-                    // TODO: Add these back
-                    // auto_sign_in: AutoSignIn::Disabled,
-                    // auto_reconnect: AutoReconnect::Disabled,
+                    reconnection: TcpClientReconnectionConfig {
+                        enabled: args.tcp_reconnection_enabled,
+                        max_retries: args.tcp_reconnection_max_retries,
+                        interval: IggyDuration::from_str(&args.tcp_reconnection_interval).unwrap(),
+                    },
                     auto_sign_in: AutoSignIn::Enabled(Credentials::UsernamePassword(
-                        DEFAULT_ROOT_USERNAME.into(),
-                        DEFAULT_ROOT_PASSWORD.into(),
+                        args.username,
+                        args.password,
                     )),
-                    auto_reconnect: AutoReconnect::Unlimited,
                 }));
             }
             _ => return Err(ClientError::InvalidTransport(config.transport.clone())),

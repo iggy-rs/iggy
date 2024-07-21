@@ -2249,7 +2249,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -2263,6 +2263,7 @@ dependencies = [
  "comfy-table",
  "convert_case 0.6.0",
  "crc32fast",
+ "derive_more",
  "dirs",
  "fast-async-mutex",
  "flume",

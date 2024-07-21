@@ -1,4 +1,5 @@
 use clap::Parser;
+use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -6,20 +7,20 @@ pub struct Args {
     #[arg(long, default_value = "0")]
     pub message_batches_limit: u64,
 
-    #[arg(long, default_value = "iggy")]
+    #[arg(long, default_value = DEFAULT_ROOT_USERNAME)]
     pub username: String,
 
-    #[arg(long, default_value = "iggy")]
+    #[arg(long, default_value = DEFAULT_ROOT_PASSWORD)]
     pub password: String,
 
     #[arg(long, default_value = "1000")]
     pub interval: u64,
 
-    #[arg(long, default_value = "9999")]
-    pub stream_id: u32,
+    #[arg(long, default_value = "example-stream")]
+    pub stream_id: String,
 
-    #[arg(long, default_value = "1")]
-    pub topic_id: u32,
+    #[arg(long, default_value = "example-topic")]
+    pub topic_id: String,
 
     #[arg(long, default_value = "1")]
     pub partition_id: u32,
@@ -57,11 +58,14 @@ pub struct Args {
     #[arg(long, default_value = "3")]
     pub http_retries: u32,
 
-    #[arg(long, default_value = "3")]
-    pub tcp_reconnection_retries: u32,
+    #[arg(long, default_value = "true")]
+    pub tcp_reconnection_enabled: bool,
 
-    #[arg(long, default_value = "1000")]
-    pub tcp_reconnection_interval: u64,
+    #[arg(long)]
+    pub tcp_reconnection_max_retries: Option<u32>,
+
+    #[arg(long, default_value = "1s")]
+    pub tcp_reconnection_interval: String,
 
     #[arg(long, default_value = "127.0.0.1:8090")]
     pub tcp_server_address: String,
@@ -122,9 +126,12 @@ impl Args {
             encryption_key: self.encryption_key.clone(),
             http_api_url: self.http_api_url.clone(),
             http_retries: self.http_retries,
+            username: self.username.clone(),
+            password: self.password.clone(),
             tcp_server_address: self.tcp_server_address.clone(),
-            tcp_reconnection_retries: self.tcp_reconnection_retries,
-            tcp_reconnection_interval: self.tcp_reconnection_interval,
+            tcp_reconnection_enabled: self.tcp_reconnection_enabled,
+            tcp_reconnection_max_retries: self.tcp_reconnection_max_retries,
+            tcp_reconnection_interval: self.tcp_reconnection_interval.clone(),
             tcp_tls_enabled: self.tcp_tls_enabled,
             tcp_tls_domain: self.tcp_tls_domain.clone(),
             quic_client_address: self.quic_client_address.clone(),

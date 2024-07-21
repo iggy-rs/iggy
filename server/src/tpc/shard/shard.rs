@@ -17,6 +17,7 @@ use crate::{
     tpc::connector::{Receiver, ShardConnector, StopReceiver, StopSender},
     versioning::SemanticVersion,
 };
+use clap::error;
 use flume::SendError;
 use iggy::models::{resource_namespace::IggyResourceNamespace, user_info::UserId};
 use iggy::{
@@ -266,13 +267,15 @@ impl IggyShard {
                 Ok(response) => Some(response),
                 Err(err) => Some(ShardResponse::ErrorResponse(err)),
             },
-            // TODO - make this panic message richer.
-            ShardMessage::Event(event) => {
-                self.handle_event(client_id, event)
-                    .await
-                    .expect("Failed to handle an event on shard");
-                None
-            }
+            ShardMessage::Event(event) => self.handle_event(client_id, event).await.map_or_else(
+                |e| {
+                    panic!(
+                        "Failed to handle event on shard with id: {}, error: {}",
+                        self.id, e
+                    );
+                },
+                |_| None,
+            ),
         }
     }
 

@@ -96,7 +96,7 @@ impl IggyConsumer {
     }
 }
 
-// TODO: Handle reconnection & joining consumer group
+// TODO: Handle joining consumer group during reconnect
 impl Stream for IggyConsumer {
     type Item = Result<PolledMessage, IggyError>;
 

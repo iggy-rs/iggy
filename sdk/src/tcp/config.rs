@@ -49,8 +49,8 @@ impl Default for TcpClientReconnectionConfig {
 /// Builder for the TCP client configuration.
 /// Allows configuring the TCP client with custom settings or using defaults:
 /// - `server_address`: Default is "127.0.0.1:8090"
-/// - `reconnection_retries`: Default is 3.
-/// - `reconnection_interval`: Default is 1000 ms.
+/// - `auto_sign_in`: Default is AutoSignIn::Disabled.
+/// - `reconnection`: Default is enabled unlimited retries and 1 second interval.
 /// - `tls_enabled`: Default is false.
 /// - `tls_domain`: Default is "localhost".
 #[derive(Debug, Default)]
@@ -66,6 +66,12 @@ impl TcpClientConfigBuilder {
     /// Sets the server address for the TCP client.
     pub fn with_server_address(mut self, server_address: String) -> Self {
         self.config.server_address = server_address;
+        self
+    }
+
+    /// Sets the auto sign in during connection.
+    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoSignIn) -> Self {
+        self.config.auto_sign_in = auto_sign_in;
         self
     }
 

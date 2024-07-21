@@ -257,10 +257,18 @@ impl TcpClient {
     }
 
     async fn connect(&self) -> Result<(), IggyError> {
-        if self.get_state().await == ClientState::Connected {
+        let state = self.get_state().await;
+        if matches!(state, ClientState::Connected | ClientState::Authenticated) {
+            trace!("Client is already connected.");
             return Ok(());
         }
 
+        if state == ClientState::Connecting {
+            trace!("Client is already connecting.");
+            return Ok(());
+        }
+
+        self.set_state(ClientState::Connecting).await;
         let tls_enabled = self.config.tls_enabled;
         let mut retry_count = 0;
         let connection_stream: Box<dyn ConnectionStream>;
@@ -279,7 +287,7 @@ impl TcpClient {
                 );
                 if !self.config.reconnection.enabled {
                     warn!("Automatic reconnection is disabled.");
-                    return Err(IggyError::NotConnected);
+                    return Err(IggyError::CannotEstablishConnection);
                 }
 
                 let unlimited_retries = self.config.reconnection.max_retries.is_none();
@@ -302,7 +310,8 @@ impl TcpClient {
                     continue;
                 }
 
-                return Err(IggyError::NotConnected);
+                self.set_state(ClientState::Disconnected).await;
+                return Err(IggyError::CannotEstablishConnection);
             }
 
             let stream = connection.unwrap();
@@ -321,7 +330,11 @@ impl TcpClient {
                 stream,
             )
             .await
-            .unwrap();
+            .map_err(|error| {
+                error!("Failed to establish a TLS connection: {error}");
+                IggyError::CannotEstablishConnection
+            })?;
+
             connection_stream = Box::new(TcpTlsConnectionStream { stream });
             break;
         }

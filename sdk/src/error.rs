@@ -26,6 +26,8 @@ pub enum IggyError {
     InvalidVersion(String) = 7,
     #[error("Disconnected")]
     Disconnected = 8,
+    #[error("Cannot establish connection")]
+    CannotEstablishConnection = 9,
     #[error("Cannot create base directory, Path: {0}")]
     CannotCreateBaseDirectory(String) = 10,
     #[error("Cannot create runtime directory, Path: {0}")]

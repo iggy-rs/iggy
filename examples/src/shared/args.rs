@@ -85,11 +85,14 @@ pub struct Args {
     #[arg(long, default_value = "localhost")]
     pub quic_server_name: String,
 
-    #[arg(long, default_value = "3")]
-    pub quic_reconnection_retries: u32,
+    #[arg(long, default_value = "true")]
+    pub quic_reconnection_enabled: bool,
 
-    #[arg(long, default_value = "1000")]
-    pub quic_reconnection_interval: u64,
+    #[arg(long)]
+    pub quic_reconnection_max_retries: Option<u32>,
+
+    #[arg(long, default_value = "1s")]
+    pub quic_reconnection_interval: String,
 
     #[arg(long, default_value = "10000")]
     pub quic_max_concurrent_bidi_streams: u64,
@@ -137,8 +140,9 @@ impl Args {
             quic_client_address: self.quic_client_address.clone(),
             quic_server_address: self.quic_server_address.clone(),
             quic_server_name: self.quic_server_name.clone(),
-            quic_reconnection_retries: self.quic_reconnection_retries,
-            quic_reconnection_interval: self.quic_reconnection_interval,
+            quic_reconnection_enabled: self.quic_reconnection_enabled,
+            quic_reconnection_max_retries: self.quic_reconnection_max_retries,
+            quic_reconnection_interval: self.quic_reconnection_interval.clone(),
             quic_max_concurrent_bidi_streams: self.quic_max_concurrent_bidi_streams,
             quic_datagram_send_buffer_size: self.quic_datagram_send_buffer_size,
             quic_initial_mtu: self.quic_initial_mtu,

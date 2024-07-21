@@ -124,7 +124,7 @@ impl TcpClientBuilder {
         self
     }
 
-    /// Sets the number of retries when connecting to the server.
+    /// Sets the number of max retries when connecting to the server.
     pub fn with_reconnection_max_retries(mut self, reconnection_retries: Option<u32>) -> Self {
         self.config = self
             .config
@@ -174,13 +174,15 @@ impl QuicClientBuilder {
     }
 
     /// Sets the number of retries when connecting to the server.
-    pub fn with_reconnection_retries(mut self, reconnection_retries: u32) -> Self {
-        self.config = self.config.with_reconnection_retries(reconnection_retries);
+    pub fn with_reconnection_max_retries(mut self, reconnection_retries: Option<u32>) -> Self {
+        self.config = self
+            .config
+            .with_reconnection_max_retries(reconnection_retries);
         self
     }
 
     /// Sets the interval between retries when connecting to the server.
-    pub fn with_reconnection_interval(mut self, reconnection_interval: u64) -> Self {
+    pub fn with_reconnection_interval(mut self, reconnection_interval: IggyDuration) -> Self {
         self.config = self
             .config
             .with_reconnection_interval(reconnection_interval);

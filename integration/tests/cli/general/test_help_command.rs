@@ -69,7 +69,7 @@ Options:
           [default: 127.0.0.1:8090]
 
       --tcp-reconnection-max-retries <TCP_RECONNECTION_MAX_RETRIES>
-          The optional number of reconnect retries for the TCP transport
+          The optional number of max reconnect retries for the TCP transport
 {CLAP_INDENT}
           [default: 3]
 
@@ -101,15 +101,15 @@ Options:
 {CLAP_INDENT}
           [default: localhost]
 
-      --quic-reconnection-retries <QUIC_RECONNECTION_RETRIES>
-          The optional number of reconnect retries for the QUIC transport
+      --quic-reconnection-max-retries <QUIC_RECONNECTION_MAX_RETRIES>
+          The optional number of max reconnect retries for the QUIC transport
 {CLAP_INDENT}
           [default: 3]
 
       --quic-reconnection-interval <QUIC_RECONNECTION_INTERVAL>
           The optional reconnect interval for the QUIC transport
 {CLAP_INDENT}
-          [default: 1000]
+          [default: "1s"]
 
       --quic-max-concurrent-bidi-streams <QUIC_MAX_CONCURRENT_BIDI_STREAMS>
           The optional maximum number of concurrent bidirectional streams for QUIC

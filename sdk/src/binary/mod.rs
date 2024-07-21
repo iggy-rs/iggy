@@ -32,6 +32,9 @@ pub enum ClientState {
     /// The client is disconnected.
     #[display(fmt = "disconnected")]
     Disconnected,
+    /// The client is connecting.
+    #[display(fmt = "connecting")]
+    Connecting,
     /// The client is connected.
     #[display(fmt = "connected")]
     Connected,

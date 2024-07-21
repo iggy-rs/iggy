@@ -61,8 +61,15 @@ impl ClientProviderConfig {
                     client_address: args.quic_client_address,
                     server_address: args.quic_server_address,
                     server_name: args.quic_server_name,
-                    reconnection_retries: args.quic_reconnection_retries,
-                    reconnection_interval: args.quic_reconnection_interval,
+                    reconnection: TcpClientReconnectionConfig {
+                        enabled: args.quic_reconnection_enabled,
+                        max_retries: args.quic_reconnection_max_retries,
+                        interval: IggyDuration::from_str(&args.quic_reconnection_interval).unwrap(),
+                    },
+                    auto_sign_in: AutoSignIn::Enabled(Credentials::UsernamePassword(
+                        args.username,
+                        args.password,
+                    )),
                     response_buffer_size: args.quic_response_buffer_size,
                     max_concurrent_bidi_streams: args.quic_max_concurrent_bidi_streams,
                     datagram_send_buffer_size: args.quic_datagram_send_buffer_size,

@@ -4,7 +4,6 @@ use crate::streaming::session::Session;
 
 use super::{shard::IggyShard, shard_frame::ShardEvent};
 
-// TODO - give an non persist flag
 impl IggyShard {
     pub async fn handle_event(&self, client_id: u32, event: ShardEvent) -> Result<(), IggyError> {
         match event {

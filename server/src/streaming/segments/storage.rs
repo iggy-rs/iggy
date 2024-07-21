@@ -428,7 +428,11 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_indexes(&self, segment: &Segment) -> Result<(), IggyError> {
         if let Err(err) = self
             .persister
-            .append(&segment.index_path, segment.size_of_offset_index as u64, segment.unsaved_indexes.clone())
+            .append(
+                &segment.index_path,
+                segment.size_of_offset_index as u64,
+                segment.unsaved_indexes.clone(),
+            )
             .await
             .with_context(|| format!("Failed to save index to segment: {}", segment.index_path))
         {
@@ -545,7 +549,11 @@ impl SegmentStorage for FileSegmentStorage {
     async fn save_time_indexes(&self, segment: &Segment) -> Result<(), IggyError> {
         if let Err(err) = self
             .persister
-            .append(&segment.time_index_path, segment.size_of_timestamp_index as u64, segment.unsaved_timestamps.clone())
+            .append(
+                &segment.time_index_path,
+                segment.size_of_timestamp_index as u64,
+                segment.unsaved_timestamps.clone(),
+            )
             .await
             .with_context(|| {
                 format!(

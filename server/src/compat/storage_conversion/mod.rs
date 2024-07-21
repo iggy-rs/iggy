@@ -111,7 +111,12 @@ struct NoopPartitionStorage {}
 struct NoopSegmentStorage {}
 
 impl Persister for NoopPersister {
-    async fn append<T: IoBuf + Sized>(&self, path: &str, position: u64, bytes: T) -> Result<(), IggyError> {
+    async fn append<T: IoBuf + Sized>(
+        &self,
+        path: &str,
+        position: u64,
+        bytes: T,
+    ) -> Result<(), IggyError> {
         Ok(())
     }
     async fn overwrite<T: IoBuf + Sized>(&self, path: &str, bytes: T) -> Result<(), IggyError> {

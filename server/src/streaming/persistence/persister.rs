@@ -4,7 +4,12 @@ use monoio::buf::IoBuf;
 use std::fmt::Debug;
 
 pub trait Persister {
-    async fn append<T: IoBuf + Sized>(&self, path: &str, position: u64, bytes: T) -> Result<(), IggyError>;
+    async fn append<T: IoBuf + Sized>(
+        &self,
+        path: &str,
+        position: u64,
+        bytes: T,
+    ) -> Result<(), IggyError>;
     async fn overwrite<T: IoBuf + Sized>(&self, path: &str, bytes: T) -> Result<(), IggyError>;
     async fn delete(&self, path: &str) -> Result<(), IggyError>;
 }
@@ -18,7 +23,12 @@ pub enum PersistenceStorage {
 }
 
 impl Persister for PersistenceStorage {
-    async fn append<T: IoBuf + Sized>(&self, path: &str, position: u64, bytes: T) -> Result<(), IggyError> {
+    async fn append<T: IoBuf + Sized>(
+        &self,
+        path: &str,
+        position: u64,
+        bytes: T,
+    ) -> Result<(), IggyError> {
         match self {
             PersistenceStorage::File => {
                 let file = file::append(path).await?;

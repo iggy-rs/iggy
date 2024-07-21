@@ -22,6 +22,8 @@ const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
 const NAME: &str = "Iggy";
 
+const RECONNECT_INTERVAL: Duration = Duration::from_secs(1);
+
 /// TCP client for interacting with the Iggy API.
 /// It requires a valid server address.
 #[derive(Debug)]
@@ -146,34 +148,33 @@ impl BinaryTransport for TcpClient {
     }
 
     async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
-        if self.get_state().await == ClientState::Disconnected {
-            return Err(IggyError::NotConnected);
+        let result = self.send_raw(code, payload.clone()).await;
+        if result.is_ok() {
+            return result;
         }
 
-        let mut stream = self.stream.lock().await;
-        if let Some(stream) = stream.as_mut() {
-            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
-            trace!("Sending a TCP request...");
-            stream.write(&(payload_length as u32).to_le_bytes()).await?;
-            stream.write(&code.to_le_bytes()).await?;
-            stream.write(&payload).await?;
-            stream.flush().await?;
-            trace!("Sent a TCP request, waiting for a response...");
-
-            let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
-            let read_bytes = stream.read(&mut response_buffer).await?;
-            if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
-                error!("Received an invalid or empty response.");
-                return Err(IggyError::EmptyResponse);
+        let error = result.unwrap_err();
+        match error {
+            IggyError::Disconnected | IggyError::EmptyResponse => {
+                info!("Client is disconnected.");
+                self.disconnect().await?;
+                loop {
+                    info!("Reconnecting...");
+                    if let Err(error) = self.connect().await {
+                        error!(
+                            "Failed to reconnect: {error}, another attempt in: {} ms.",
+                            RECONNECT_INTERVAL.as_millis()
+                        );
+                        sleep(RECONNECT_INTERVAL).await;
+                        continue;
+                    }
+                    info!("Reconnected.");
+                    break;
+                }
+                self.send_raw(code, payload).await
             }
-
-            let status = u32::from_le_bytes(response_buffer[..4].try_into().unwrap());
-            let length = u32::from_le_bytes(response_buffer[4..].try_into().unwrap());
-            return self.handle_response(status, length, stream.as_mut()).await;
+            _ => Err(error),
         }
-
-        error!("Cannot send data. Client is not connected.");
-        Err(IggyError::NotConnected)
     }
 }
 
@@ -341,5 +342,42 @@ impl TcpClient {
         self.stream.lock().await.take();
         info!("{} client has disconnected from server.", NAME);
         Ok(())
+    }
+
+    async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
+        if self.get_state().await == ClientState::Disconnected {
+            return Err(IggyError::NotConnected);
+        }
+
+        let mut stream = self.stream.lock().await;
+        if let Some(stream) = stream.as_mut() {
+            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
+            trace!("Sending a TCP request...");
+            stream.write(&(payload_length as u32).to_le_bytes()).await?;
+            stream.write(&code.to_le_bytes()).await?;
+            stream.write(&payload).await?;
+            stream.flush().await?;
+            trace!("Sent a TCP request, waiting for a response...");
+
+            let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
+            let read_bytes = stream.read(&mut response_buffer).await;
+            if let Err(error) = read_bytes {
+                error!("Failed to read response: {}", error);
+                return Err(IggyError::Disconnected);
+            }
+
+            let read_bytes = read_bytes.unwrap();
+            if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
+                error!("Received an invalid or empty response.");
+                return Err(IggyError::EmptyResponse);
+            }
+
+            let status = u32::from_le_bytes(response_buffer[..4].try_into().unwrap());
+            let length = u32::from_le_bytes(response_buffer[4..].try_into().unwrap());
+            return self.handle_response(status, length, stream.as_mut()).await;
+        }
+
+        error!("Cannot send data. Client is not connected.");
+        Err(IggyError::NotConnected)
     }
 }

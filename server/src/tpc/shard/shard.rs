@@ -276,13 +276,6 @@ impl IggyShard {
         }
     }
 
-    fn map_toggle_str<'a>(enabled: bool) -> &'a str {
-        match enabled {
-            true => "enabled",
-            false => "disabled",
-        }
-    }
-
     pub async fn clean_cache(&self, size_to_clean: u64) {
         for stream in self.streams.borrow().values() {
             for topic in stream.get_topics() {

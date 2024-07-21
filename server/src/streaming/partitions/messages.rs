@@ -448,6 +448,7 @@ impl Partition {
         let avg_timestamp_delta =
             Duration::from_micros((max_timestamp - min_timestamp) / messages_count as u64).into();
 
+        //TODO(numinex) - This whole mechanism will be gone, once we unify indexes.
         let min_alpha: f64 = 0.3;
         let max_alpha: f64 = 0.7;
         let dynamic_range = 10.00;

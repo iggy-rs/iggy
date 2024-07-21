@@ -2,10 +2,9 @@ use crate::streaming::utils::file;
 use iggy::error::IggyError;
 use monoio::buf::IoBuf;
 use std::fmt::Debug;
-use tracing::error;
 
 pub trait Persister {
-    async fn append<T: IoBuf + Sized>(&self, path: &str, bytes: T) -> Result<(), IggyError>;
+    async fn append<T: IoBuf + Sized>(&self, path: &str, position: u64, bytes: T) -> Result<(), IggyError>;
     async fn overwrite<T: IoBuf + Sized>(&self, path: &str, bytes: T) -> Result<(), IggyError>;
     async fn delete(&self, path: &str) -> Result<(), IggyError>;
 }
@@ -19,20 +18,16 @@ pub enum PersistenceStorage {
 }
 
 impl Persister for PersistenceStorage {
-    async fn append<T: IoBuf + Sized>(&self, path: &str, bytes: T) -> Result<(), IggyError> {
+    async fn append<T: IoBuf + Sized>(&self, path: &str, position: u64, bytes: T) -> Result<(), IggyError> {
         match self {
             PersistenceStorage::File => {
                 let file = file::append(path).await?;
-                let stat = file::metadata(path).await?;
-
-                file.write_all_at(bytes, stat.len()).await.0?;
+                file.write_all_at(bytes, position).await.0?;
                 Ok(())
             }
             PersistenceStorage::FileWithSync => {
                 let file = file::append(path).await?;
-                let stat = file::metadata(path).await?;
-
-                file.write_all_at(bytes, stat.len()).await.0?;
+                file.write_all_at(bytes, position).await.0?;
                 file.sync_all().await?;
                 Ok(())
             }

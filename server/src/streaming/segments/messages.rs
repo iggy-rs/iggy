@@ -282,6 +282,8 @@ impl Segment {
         self.unsaved_indexes.put_u32_le(self.size_bytes);
         self.unsaved_timestamps.put_u32_le(relative_offset);
         self.unsaved_timestamps.put_u64_le(batch_max_timestamp);
+        self.size_of_offset_index += 8;
+        self.size_of_timestamp_index += 12;
     }
 
     pub async fn persist_messages(&mut self) -> Result<usize, IggyError> {

@@ -60,10 +60,6 @@ impl FileState {
         self.current_index.load(Ordering::SeqCst)
     }
 
-    pub fn get_path(&self) -> &str {
-        &self.path
-    }
-
     pub fn entries_count(&self) -> u64 {
         self.entries_count.load(Ordering::SeqCst)
     }
@@ -262,7 +258,8 @@ impl State for FileState {
         );
         let bytes = entry.to_bytes();
         self.entries_count.fetch_add(1, Ordering::SeqCst);
-        self.persister.append(&self.path, bytes).await?;
+        let stat = file::metadata(&self.path).await?;
+        self.persister.append(&self.path, stat.len(), bytes).await?;
         debug!("Applied state entry: {entry}");
         Ok(())
     }

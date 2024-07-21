@@ -40,6 +40,8 @@ pub struct Segment {
     pub log_path: String,
     pub time_index_path: String,
     pub size_bytes: u32,
+    pub size_of_offset_index: u32,
+    pub size_of_timestamp_index: u32,
     pub max_size_bytes: u32,
     pub size_of_parent_stream: Rc<AtomicU64>,
     pub size_of_parent_topic: Rc<AtomicU64>,
@@ -88,6 +90,8 @@ impl Segment {
             index_path: Self::get_index_path(&path),
             time_index_path: Self::get_time_index_path(&path),
             size_bytes: 0,
+            size_of_offset_index: 0,
+            size_of_timestamp_index: 0,
             max_size_bytes: config.segment.size.as_bytes_u64() as u32,
             message_expiry: match message_expiry {
                 IggyExpiry::ServerDefault => config.segment.message_expiry,

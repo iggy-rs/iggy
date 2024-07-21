@@ -1,6 +1,8 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
-use crate::client::Client;
+use crate::client::{
+    AutoReconnect, AutoSignIn, Client, Credentials, PersonalAccessTokenClient, UserClient,
+};
 use crate::command::Command;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
@@ -127,6 +129,27 @@ impl Client for TcpClient {
         TcpClient::connect(self).await
     }
 
+    async fn reconnect(&self, retries: Option<u32>) -> Result<(), IggyError> {
+        let mut retry = 1;
+        let retries = retries.unwrap_or(u32::MAX);
+        while retry <= retries {
+            info!("Reconnecting, attempt: {retry}/{retries}");
+            if let Err(error) = self.connect().await {
+                error!(
+                    "Failed to reconnect: {error}, another attempt in: {} ms.",
+                    RECONNECT_INTERVAL.as_millis()
+                );
+                sleep(RECONNECT_INTERVAL).await;
+                retry += 1;
+                continue;
+            }
+            info!("Reconnected.");
+            return Ok(());
+        }
+        error!("Failed to reconnect after {retries} attempts.");
+        Err(IggyError::NotConnected)
+    }
+
     async fn disconnect(&self) -> Result<(), IggyError> {
         TcpClient::disconnect(self).await
     }
@@ -154,27 +177,17 @@ impl BinaryTransport for TcpClient {
         }
 
         let error = result.unwrap_err();
-        match error {
-            IggyError::Disconnected | IggyError::EmptyResponse => {
-                info!("Client is disconnected.");
-                self.disconnect().await?;
-                loop {
-                    info!("Reconnecting...");
-                    if let Err(error) = self.connect().await {
-                        error!(
-                            "Failed to reconnect: {error}, another attempt in: {} ms.",
-                            RECONNECT_INTERVAL.as_millis()
-                        );
-                        sleep(RECONNECT_INTERVAL).await;
-                        continue;
-                    }
-                    info!("Reconnected.");
-                    break;
-                }
-                self.send_raw(code, payload).await
-            }
-            _ => Err(error),
+        if !matches!(error, IggyError::Disconnected | IggyError::EmptyResponse) {
+            return Err(error);
         }
+
+        match self.config.auto_reconnect {
+            AutoReconnect::Disabled => return Err(IggyError::Disconnected),
+            AutoReconnect::Limited(retries) => self.reconnect(Some(retries)).await?,
+            AutoReconnect::Unlimited => self.reconnect(None).await?,
+        }
+
+        self.send_raw(code, payload).await
     }
 }
 
@@ -274,8 +287,8 @@ impl TcpClient {
         let remote_address;
         loop {
             info!(
-                "{} client is connecting to server: {}...",
-                NAME, self.config.server_address
+                "{NAME} client is connecting to server: {}...",
+                self.config.server_address
             );
 
             let connection = TcpStream::connect(&self.config.server_address).await;
@@ -324,12 +337,27 @@ impl TcpClient {
         self.stream.lock().await.replace(connection_stream);
         self.set_state(ClientState::Connected).await;
 
-        info!(
-            "{} client has connected to server: {}",
-            NAME, remote_address
-        );
+        info!("{NAME} client has connected to server: {remote_address}",);
 
-        Ok(())
+        return match &self.config.auto_sign_in {
+            AutoSignIn::Disabled => {
+                info!("Automatic sign-in is disabled.");
+                return Ok(());
+            }
+            AutoSignIn::Enabled(credentials) => {
+                info!("{NAME} client is signing in...");
+                match credentials {
+                    Credentials::UsernamePassword(username, password) => {
+                        self.login_user(username, password).await?;
+                        Ok(())
+                    }
+                    Credentials::PersonalAccessToken(token) => {
+                        self.login_with_personal_access_token(token).await?;
+                        Ok(())
+                    }
+                }
+            }
+        };
     }
 
     async fn disconnect(&self) -> Result<(), IggyError> {

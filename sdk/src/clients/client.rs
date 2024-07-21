@@ -551,6 +551,10 @@ impl Client for IggyClient {
         self.client.read().await.connect().await
     }
 
+    async fn reconnect(&self, retries: Option<u32>) -> Result<(), IggyError> {
+        self.client.read().await.reconnect(retries).await
+    }
+
     async fn disconnect(&self) -> Result<(), IggyError> {
         self.client.read().await.disconnect().await
     }

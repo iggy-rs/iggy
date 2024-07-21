@@ -48,6 +48,11 @@ impl Client for QuicClient {
         QuicClient::connect(self).await
     }
 
+    async fn reconnect(&self, _retries: Option<u32>) -> Result<(), IggyError> {
+        // TODO: Implement reconnect for QUIC
+        self.connect().await
+    }
+
     async fn disconnect(&self) -> Result<(), IggyError> {
         QuicClient::disconnect(self).await
     }

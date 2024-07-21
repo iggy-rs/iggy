@@ -1,4 +1,4 @@
-use crate::client::Client;
+use crate::client::{AutoReconnect, AutoSignIn, Client, Credentials};
 use crate::client_error::ClientError;
 #[allow(deprecated)]
 use crate::clients::client::IggyClient;
@@ -8,6 +8,7 @@ use crate::quic::client::QuicClient;
 use crate::quic::config::QuicClientConfig;
 use crate::tcp::client::TcpClient;
 use crate::tcp::config::TcpClientConfig;
+use crate::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use std::sync::Arc;
 
 const QUIC_TRANSPORT: &str = "quic";
@@ -85,6 +86,14 @@ impl ClientProviderConfig {
                     reconnection_interval: args.tcp_reconnection_interval,
                     tls_enabled: args.tcp_tls_enabled,
                     tls_domain: args.tcp_tls_domain,
+                    // TODO: Add these back
+                    // auto_sign_in: AutoSignIn::Disabled,
+                    // auto_reconnect: AutoReconnect::Disabled,
+                    auto_sign_in: AutoSignIn::Enabled(Credentials::UsernamePassword(
+                        DEFAULT_ROOT_USERNAME.into(),
+                        DEFAULT_ROOT_PASSWORD.into(),
+                    )),
+                    auto_reconnect: AutoReconnect::Unlimited,
                 }));
             }
             _ => return Err(ClientError::InvalidTransport(config.transport.clone())),

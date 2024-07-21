@@ -1,3 +1,5 @@
+use crate::client::{AutoReconnect, AutoSignIn};
+
 /// Configuration for the TCP client.
 #[derive(Debug, Clone)]
 pub struct TcpClientConfig {
@@ -11,6 +13,10 @@ pub struct TcpClientConfig {
     pub tls_enabled: bool,
     /// The domain to use for TLS when connecting to the server.
     pub tls_domain: String,
+    // Whether to automatically sign in when connecting.
+    pub auto_sign_in: AutoSignIn,
+    // Auto-reconnect configuration.
+    pub auto_reconnect: AutoReconnect,
 }
 
 impl Default for TcpClientConfig {
@@ -21,6 +27,8 @@ impl Default for TcpClientConfig {
             reconnection_interval: 1000,
             tls_enabled: false,
             tls_domain: "localhost".to_string(),
+            auto_sign_in: AutoSignIn::Disabled,
+            auto_reconnect: AutoReconnect::Disabled,
         }
     }
 }

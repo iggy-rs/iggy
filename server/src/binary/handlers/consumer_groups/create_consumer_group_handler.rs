@@ -17,7 +17,7 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let consumer_group_bytes;
     {
-        let mut system = system.write();
+        let mut system = system.write().await;
         let consumer_group = system
             .create_consumer_group(
                 session,
@@ -30,7 +30,7 @@ pub async fn handle(
         let consumer_group = consumer_group.read().await;
         consumer_group_bytes = mapper::map_consumer_group(&consumer_group).await;
     }
-    let system = system.read();
+    let system = system.read().await;
     system
         .state
         .apply(

@@ -15,13 +15,13 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     {
-        let mut system = system.write();
+        let mut system = system.write().await;
         system
             .create_stream(session, command.stream_id, &command.name)
             .await?;
     }
 
-    let system = system.read();
+    let system = system.read().await;
     system
         .state
         .apply(session.get_user_id(), EntryCommand::CreateStream(command))

@@ -14,7 +14,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let system = system.read().await;
     system.purge_stream(session, &command.stream_id).await?;
     system
         .state

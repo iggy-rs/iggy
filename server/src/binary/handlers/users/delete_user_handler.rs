@@ -15,11 +15,11 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     {
-        let mut system = system.write();
+        let mut system = system.write().await;
         system.delete_user(session, &command.user_id).await?;
     }
 
-    let system = system.read();
+    let system = system.read().await;
     system
         .state
         .apply(session.get_user_id(), EntryCommand::DeleteUser(command))

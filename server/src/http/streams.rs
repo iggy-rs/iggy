@@ -34,7 +34,7 @@ async fn get_stream(
     Extension(identity): Extension<Identity>,
     Path(stream_id): Path<String>,
 ) -> Result<Json<StreamDetails>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let stream = system.find_stream(
         &Session::stateless(identity.user_id, identity.ip_address),
@@ -48,7 +48,7 @@ async fn get_streams(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<Stream>>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let streams =
         system.find_streams(&Session::stateless(identity.user_id, identity.ip_address))?;
     let streams = mapper::map_streams(&streams).await;
@@ -62,7 +62,7 @@ async fn create_stream(
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .create_stream(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -72,7 +72,7 @@ async fn create_stream(
             .await?;
     }
 
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::CreateStream(command))
@@ -89,7 +89,7 @@ async fn update_stream(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .update_stream(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -99,7 +99,7 @@ async fn update_stream(
             .await?;
     }
 
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateStream(command))
@@ -114,7 +114,7 @@ async fn delete_stream(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .delete_stream(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -123,7 +123,7 @@ async fn delete_stream(
             .await?;
     }
 
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(
@@ -140,7 +140,7 @@ async fn purge_stream(
     Path(stream_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .purge_stream(
             &Session::stateless(identity.user_id, identity.ip_address),

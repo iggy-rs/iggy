@@ -50,8 +50,8 @@ async fn main() -> Result<(), ServerError> {
     // Workaround to ensure that the statistics are initialized before the server
     // loads streams and starts accepting connections. This is necessary to
     // have the correct statistics when the server starts.
-    system.write().get_stats_bypass_auth().await?;
-    system.write().init().await?;
+    system.write().await.get_stats_bypass_auth().await?;
+    system.write().await.init().await?;
 
     let _command_handler = ServerCommandHandler::new(system.clone(), &config)
         .install_handler(SaveMessagesExecutor)
@@ -119,7 +119,7 @@ async fn main() -> Result<(), ServerError> {
     }
 
     let shutdown_timestamp = Instant::now();
-    let mut system = system.write();
+    let mut system = system.write().await;
     system.shutdown().await?;
     let elapsed_time = shutdown_timestamp.elapsed();
 

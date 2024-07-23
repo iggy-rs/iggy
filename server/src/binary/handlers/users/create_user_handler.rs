@@ -16,7 +16,7 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     {
-        let mut system = system.write();
+        let mut system = system.write().await;
         system
             .create_user(
                 session,
@@ -29,7 +29,7 @@ pub async fn handle(
     }
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let system = system.read();
+    let system = system.read().await;
     system
         .state
         .apply(

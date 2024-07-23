@@ -105,7 +105,7 @@ async fn build_app_state(config: &HttpConfig, system: SharedSystem) -> Arc<AppSt
     let tokens_path;
     let persister;
     {
-        let system = system.read();
+        let system = system.read().await;
         tokens_path = system.config.get_state_tokens_path();
         persister = system.storage.persister.clone();
     }

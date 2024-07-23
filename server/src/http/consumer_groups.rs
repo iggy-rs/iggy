@@ -36,7 +36,7 @@ async fn get_consumer_group(
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let group_id = Identifier::from_str_value(&group_id)?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     let consumer_group = system.get_consumer_group(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
@@ -55,7 +55,7 @@ async fn get_consumer_groups(
 ) -> Result<Json<Vec<ConsumerGroup>>, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     let consumer_groups = system.get_consumer_groups(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
@@ -76,7 +76,7 @@ async fn create_consumer_group(
     command.validate()?;
     let consumer_group_details;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         let consumer_group = system
             .create_consumer_group(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -90,7 +90,7 @@ async fn create_consumer_group(
         consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
     }
 
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::CreateConsumerGroup(command))
@@ -108,7 +108,7 @@ async fn delete_consumer_group(
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let group_id = Identifier::from_str_value(&group_id)?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .delete_consumer_group(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -119,7 +119,7 @@ async fn delete_consumer_group(
             .await?;
     }
 
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(

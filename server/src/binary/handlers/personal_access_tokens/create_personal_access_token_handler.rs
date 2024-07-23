@@ -20,7 +20,7 @@ pub async fn handle(
     let token_hash;
     debug!("session: {session}, command: {command}");
     {
-        let mut system = system.write();
+        let mut system = system.write().await;
         let token = system
             .create_personal_access_token(session, &command.name, command.expiry)
             .await?;
@@ -28,7 +28,7 @@ pub async fn handle(
         token_hash = PersonalAccessToken::hash_token(&token);
     }
 
-    let system = system.read();
+    let system = system.read().await;
     system
         .state
         .apply(

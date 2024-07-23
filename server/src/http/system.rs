@@ -30,7 +30,7 @@ pub fn router(state: Arc<AppState>, metrics_config: &HttpMetricsConfig) -> Route
 }
 
 async fn get_metrics(State(state): State<Arc<AppState>>) -> Result<String, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     Ok(system.metrics.get_formatted_output())
 }
 
@@ -38,7 +38,7 @@ async fn get_stats(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Stats>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let stats = system
         .get_stats(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
@@ -50,7 +50,7 @@ async fn get_client(
     Extension(identity): Extension<Identity>,
     Path(client_id): Path<u32>,
 ) -> Result<Json<ClientInfoDetails>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let client = system
         .get_client(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -66,7 +66,7 @@ async fn get_clients(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<ClientInfo>>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let clients = system
         .get_clients(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;

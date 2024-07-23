@@ -15,13 +15,13 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     {
-        let mut system = system.write();
+        let mut system = system.write().await;
         system
             .update_permissions(session, &command.user_id, command.permissions.clone())
             .await?;
     }
 
-    let system = system.read();
+    let system = system.read().await;
     system
         .state
         .apply(

@@ -44,7 +44,7 @@ async fn get_user(
     Path(user_id): Path<String>,
 ) -> Result<Json<UserInfoDetails>, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     let user = system.find_user(
         &Session::stateless(identity.user_id, identity.ip_address),
         &user_id,
@@ -57,7 +57,7 @@ async fn get_users(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<UserInfo>>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let users = system
         .get_users(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
@@ -72,7 +72,7 @@ async fn create_user(
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .create_user(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -85,7 +85,7 @@ async fn create_user(
     }
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(
@@ -110,7 +110,7 @@ async fn update_user(
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .update_user(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -121,7 +121,7 @@ async fn update_user(
             .await?;
     }
 
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateUser(command))
@@ -138,7 +138,7 @@ async fn update_permissions(
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .update_permissions(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -148,7 +148,7 @@ async fn update_permissions(
             .await?;
     }
 
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdatePermissions(command))
@@ -165,7 +165,7 @@ async fn change_password(
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .change_password(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -177,7 +177,7 @@ async fn change_password(
     }
 
     // For the security of the system, we hash the password before storing it in metadata.
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(
@@ -199,7 +199,7 @@ async fn delete_user(
 ) -> Result<StatusCode, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
     {
-        let mut system = state.system.write();
+        let mut system = state.system.write().await;
         system
             .delete_user(
                 &Session::stateless(identity.user_id, identity.ip_address),
@@ -208,7 +208,7 @@ async fn delete_user(
             .await?;
     }
 
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .state
         .apply(
@@ -224,7 +224,7 @@ async fn login_user(
     Json(command): Json<LoginUser>,
 ) -> Result<Json<IdentityInfo>, CustomError> {
     command.validate()?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     let user = system
         .login_user(&command.username, &command.password, None)
         .await?;
@@ -236,7 +236,7 @@ async fn logout_user(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<StatusCode, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .logout_user(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;

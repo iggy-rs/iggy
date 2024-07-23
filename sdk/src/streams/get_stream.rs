@@ -41,7 +41,6 @@ impl BytesSerializable for GetStream {
 
         let stream_id = Identifier::from_bytes(bytes)?;
         let command = GetStream { stream_id };
-        command.validate()?;
         Ok(command)
     }
 }

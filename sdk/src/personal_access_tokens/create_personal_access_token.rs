@@ -80,7 +80,6 @@ impl BytesSerializable for CreatePersonalAccessToken {
         let expiry: IggyExpiry = expiry.into();
 
         let command = CreatePersonalAccessToken { name, expiry };
-        command.validate()?;
         Ok(command)
     }
 }

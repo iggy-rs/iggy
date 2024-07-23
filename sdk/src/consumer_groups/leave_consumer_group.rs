@@ -67,7 +67,6 @@ impl BytesSerializable for LeaveConsumerGroup {
             topic_id,
             group_id,
         };
-        command.validate()?;
         Ok(command)
     }
 }

@@ -105,7 +105,6 @@ impl BytesSerializable for GetConsumerOffset {
             topic_id,
             partition_id,
         };
-        command.validate()?;
         Ok(command)
     }
 }

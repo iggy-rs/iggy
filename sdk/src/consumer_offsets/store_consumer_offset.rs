@@ -107,7 +107,6 @@ impl BytesSerializable for StoreConsumerOffset {
             partition_id,
             offset,
         };
-        command.validate()?;
         Ok(command)
     }
 }

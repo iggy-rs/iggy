@@ -137,7 +137,6 @@ impl BytesSerializable for CreateUser {
             status,
             permissions,
         };
-        command.validate()?;
         Ok(command)
     }
 }
@@ -151,8 +150,8 @@ impl Display for CreateUser {
         };
         write!(
             f,
-            "{}|{}|{}|{}",
-            self.username, self.password, self.status, permissions
+            "{}|******|{}|{}",
+            self.username, self.status, permissions
         )
     }
 }

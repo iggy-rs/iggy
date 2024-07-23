@@ -78,7 +78,6 @@ impl BytesSerializable for DeletePartitions {
             topic_id,
             partitions_count,
         };
-        command.validate()?;
         Ok(command)
     }
 }

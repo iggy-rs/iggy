@@ -60,7 +60,7 @@ impl StateArchiver {
 #[async_trait]
 impl ServerCommand<ArchiveStateCommand> for ArchiveStateExecutor {
     async fn execute(&mut self, system: &SharedSystem, command: ArchiveStateCommand) {
-        let system = system.read();
+        let system = system.read().await;
         if system.archiver.is_none() {
             warn!("Archiver is disabled, state will not be archived.");
             return;

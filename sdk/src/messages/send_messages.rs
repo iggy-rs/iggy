@@ -478,7 +478,6 @@ impl BytesSerializable for SendMessages {
             partitioning: key,
             messages,
         };
-        command.validate()?;
         Ok(command)
     }
 }

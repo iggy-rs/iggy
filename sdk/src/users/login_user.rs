@@ -146,14 +146,13 @@ impl BytesSerializable for LoginUser {
             version,
             context,
         };
-        command.validate()?;
         Ok(command)
     }
 }
 
 impl Display for LoginUser {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}|{}", self.username, self.password)
+        write!(f, "{}|******", self.username)
     }
 }
 

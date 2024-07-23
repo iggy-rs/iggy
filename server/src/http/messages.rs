@@ -38,7 +38,7 @@ async fn poll_messages(
     let partition_id = query.partition_id.unwrap_or(0);
     let consumer_id = PollingConsumer::resolve_consumer_id(&query.consumer.id);
     let consumer = PollingConsumer::Consumer(consumer_id, partition_id);
-    let system = state.system.read();
+    let system = state.system.read().await;
     let polled_messages = system
         .poll_messages(
             &Session::stateless(identity.user_id, identity.ip_address),
@@ -71,7 +71,7 @@ async fn send_messages(
     let stream_id = command.stream_id;
     let topic_id = command.topic_id;
     let partitioning = command.partitioning;
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .append_messages(
             &Session::stateless(identity.user_id, identity.ip_address),

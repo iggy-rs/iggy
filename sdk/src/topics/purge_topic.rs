@@ -56,7 +56,6 @@ impl BytesSerializable for PurgeTopic {
             stream_id,
             topic_id,
         };
-        command.validate()?;
         Ok(command)
     }
 }

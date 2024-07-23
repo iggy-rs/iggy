@@ -78,7 +78,6 @@ impl BytesSerializable for UpdatePermissions {
             user_id,
             permissions,
         };
-        command.validate()?;
         Ok(command)
     }
 }

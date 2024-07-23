@@ -34,7 +34,6 @@ impl BytesSerializable for Ping {
         }
 
         let command = Ping {};
-        command.validate()?;
         Ok(command)
     }
 }

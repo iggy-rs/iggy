@@ -14,15 +14,19 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
-    system
-        .update_user(
-            session,
-            &command.user_id,
-            command.username.clone(),
-            command.status,
-        )
-        .await?;
+    {
+        let mut system = system.write().await;
+        system
+            .update_user(
+                session,
+                &command.user_id,
+                command.username.clone(),
+                command.status,
+            )
+            .await?;
+    }
+
+    let system = system.read().await;
     system
         .state
         .apply(session.get_user_id(), EntryCommand::UpdateUser(command))

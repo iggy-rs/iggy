@@ -28,13 +28,11 @@ impl BytesSerializable for GetPersonalAccessTokens {
         Bytes::new()
     }
 
-    fn from_bytes(bytes: Bytes) -> std::result::Result<GetPersonalAccessTokens, IggyError> {
+    fn from_bytes(bytes: Bytes) -> Result<GetPersonalAccessTokens, IggyError> {
         if !bytes.is_empty() {
             return Err(IggyError::InvalidCommand);
         }
 
-        let command = GetPersonalAccessTokens {};
-        command.validate()?;
         Ok(GetPersonalAccessTokens {})
     }
 }

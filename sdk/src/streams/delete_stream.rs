@@ -41,7 +41,6 @@ impl BytesSerializable for DeleteStream {
 
         let stream_id = Identifier::from_bytes(bytes)?;
         let command = DeleteStream { stream_id };
-        command.validate()?;
         Ok(command)
     }
 }

@@ -13,7 +13,7 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let system = system.read();
+    let system = system.read().await;
     let stream_id = command.stream_id;
     let topic_id = command.topic_id;
     let partitioning = command.partitioning;

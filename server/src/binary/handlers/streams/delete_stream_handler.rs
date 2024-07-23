@@ -14,8 +14,12 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
-    system.delete_stream(session, &command.stream_id).await?;
+    {
+        let mut system = system.write().await;
+        system.delete_stream(session, &command.stream_id).await?;
+    }
+
+    let system = system.read().await;
     system
         .state
         .apply(session.get_user_id(), EntryCommand::DeleteStream(command))

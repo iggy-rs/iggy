@@ -67,7 +67,6 @@ impl BytesSerializable for DeleteConsumerGroup {
             topic_id,
             group_id,
         };
-        command.validate()?;
         Ok(command)
     }
 }

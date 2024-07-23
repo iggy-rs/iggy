@@ -33,8 +33,6 @@ impl BytesSerializable for GetStreams {
             return Err(IggyError::InvalidCommand);
         }
 
-        let command = GetStreams {};
-        command.validate()?;
         Ok(GetStreams {})
     }
 }

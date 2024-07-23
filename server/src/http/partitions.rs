@@ -31,15 +31,19 @@ async fn create_partitions(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    let mut system = state.system.write();
-    system
-        .create_partitions(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.stream_id,
-            &command.topic_id,
-            command.partitions_count,
-        )
-        .await?;
+    {
+        let mut system = state.system.write().await;
+        system
+            .create_partitions(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.stream_id,
+                &command.topic_id,
+                command.partitions_count,
+            )
+            .await?;
+    }
+
+    let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::CreatePartitions(command))
@@ -56,15 +60,19 @@ async fn delete_partitions(
     query.stream_id = Identifier::from_str_value(&stream_id)?;
     query.topic_id = Identifier::from_str_value(&topic_id)?;
     query.validate()?;
-    let mut system = state.system.write();
-    system
-        .delete_partitions(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &query.stream_id.clone(),
-            &query.topic_id.clone(),
-            query.partitions_count,
-        )
-        .await?;
+    {
+        let mut system = state.system.write().await;
+        system
+            .delete_partitions(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &query.stream_id.clone(),
+                &query.topic_id.clone(),
+                query.partitions_count,
+            )
+            .await?;
+    }
+
+    let system = state.system.read().await;
     system
         .state
         .apply(

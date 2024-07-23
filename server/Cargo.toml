@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.3.5"
+version = "0.3.6"
 edition = "2021"
 build = "src/build.rs"
 
@@ -30,7 +30,6 @@ flume = "0.11.0"
 futures = "0.3.30"
 iggy = { path = "../sdk" }
 jsonwebtoken = "9.3.0"
-keepcalm = "0.3.5"
 log = "0.4.20"
 moka = { version = "0.12.5", features = ["future"] }
 prometheus-client = "0.22.2"

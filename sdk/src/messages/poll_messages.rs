@@ -291,7 +291,6 @@ impl BytesSerializable for PollMessages {
             count,
             auto_commit,
         };
-        command.validate()?;
         Ok(command)
     }
 }

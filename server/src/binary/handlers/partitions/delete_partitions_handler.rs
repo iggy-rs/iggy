@@ -14,15 +14,19 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
-    system
-        .delete_partitions(
-            session,
-            &command.stream_id,
-            &command.topic_id,
-            command.partitions_count,
-        )
-        .await?;
+    {
+        let mut system = system.write();
+        system
+            .delete_partitions(
+                session,
+                &command.stream_id,
+                &command.topic_id,
+                command.partitions_count,
+            )
+            .await?;
+    }
+
+    let system = system.read();
     system
         .state
         .apply(

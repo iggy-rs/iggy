@@ -2249,7 +2249,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -4257,7 +4257,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.3.5"
+version = "0.3.6"
 dependencies = [
  "anyhow",
  "async-stream",

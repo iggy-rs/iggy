@@ -10,6 +10,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::SharedSystem;
 use anyhow::{anyhow, Context};
 use bytes::Bytes;
+use iggy::validatable::Validatable;
 use iggy::{bytes_serializable::BytesSerializable, messages::MAX_PAYLOAD_SIZE};
 use quinn::{Connection, Endpoint, RecvStream, SendStream};
 use tracing::{debug, error, info};
@@ -120,6 +121,9 @@ async fn handle_stream(
     let command =
         ServerCommand::from_bytes(Bytes::copy_from_slice(&request[INITIAL_BYTES_LENGTH..]))
             .with_context(|| "Error when reading the QUIC request command.")?;
+    command
+        .validate()
+        .with_context(|| "Error when validating the QUIC command.")?;
 
     debug!("Received a QUIC command: {command}, payload size: {length}");
 

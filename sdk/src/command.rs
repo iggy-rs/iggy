@@ -1,8 +1,9 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
+use crate::validatable::Validatable;
 use std::fmt::Display;
 
-pub trait Command: BytesSerializable + Send + Sync + Display {
+pub trait Command: BytesSerializable + Validatable<IggyError> + Send + Sync + Display {
     fn code(&self) -> u32;
 }
 

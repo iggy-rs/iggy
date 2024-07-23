@@ -14,10 +14,14 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
-    system
-        .delete_personal_access_token(session, &command.name)
-        .await?;
+    {
+        let mut system = system.write();
+        system
+            .delete_personal_access_token(session, &command.name)
+            .await?;
+    }
+
+    let system = system.read();
     system
         .state
         .apply(

@@ -89,13 +89,13 @@ async fn create_consumer_group(
         let consumer_group = consumer_group.read().await;
         consumer_group_details = mapper::map_consumer_group(&consumer_group).await;
     }
-    {
-        let system = state.system.read();
-        system
-            .state
-            .apply(identity.user_id, EntryCommand::CreateConsumerGroup(command))
-            .await?;
-    }
+
+    let system = state.system.read();
+    system
+        .state
+        .apply(identity.user_id, EntryCommand::CreateConsumerGroup(command))
+        .await?;
+
     Ok((StatusCode::CREATED, Json(consumer_group_details)))
 }
 
@@ -107,15 +107,19 @@ async fn delete_consumer_group(
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
     let group_id = Identifier::from_str_value(&group_id)?;
-    let mut system = state.system.write();
-    system
-        .delete_consumer_group(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &stream_id,
-            &topic_id,
-            &group_id,
-        )
-        .await?;
+    {
+        let mut system = state.system.write();
+        system
+            .delete_consumer_group(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &stream_id,
+                &topic_id,
+                &group_id,
+            )
+            .await?;
+    }
+
+    let system = state.system.read();
     system
         .state
         .apply(

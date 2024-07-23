@@ -104,7 +104,6 @@ impl BytesSerializable for CreateConsumerGroup {
             group_id,
             name,
         };
-        command.validate()?;
         Ok(command)
     }
 }

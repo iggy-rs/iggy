@@ -150,7 +150,6 @@ impl BytesSerializable for CreateTopic {
             replication_factor,
             name,
         };
-        command.validate()?;
         Ok(command)
     }
 }

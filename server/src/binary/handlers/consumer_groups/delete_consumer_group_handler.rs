@@ -14,15 +14,18 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
-    system
-        .delete_consumer_group(
-            session,
-            &command.stream_id,
-            &command.topic_id,
-            &command.group_id,
-        )
-        .await?;
+    {
+        let mut system = system.write();
+        system
+            .delete_consumer_group(
+                session,
+                &command.stream_id,
+                &command.topic_id,
+                &command.group_id,
+            )
+            .await?;
+    }
+    let system = system.read();
     system
         .state
         .apply(

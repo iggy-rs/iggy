@@ -15,18 +15,21 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
-    system
-        .create_user(
-            session,
-            &command.username,
-            &command.password,
-            command.status,
-            command.permissions.clone(),
-        )
-        .await?;
+    {
+        let mut system = system.write();
+        system
+            .create_user(
+                session,
+                &command.username,
+                &command.password,
+                command.status,
+                command.permissions.clone(),
+            )
+            .await?;
+    }
 
     // For the security of the system, we hash the password before storing it in metadata.
+    let system = system.read();
     system
         .state
         .apply(

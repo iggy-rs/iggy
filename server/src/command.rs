@@ -44,6 +44,7 @@ use iggy::users::login_user::LoginUser;
 use iggy::users::logout_user::LogoutUser;
 use iggy::users::update_permissions::UpdatePermissions;
 use iggy::users::update_user::UpdateUser;
+use iggy::validatable::Validatable;
 use std::fmt::{Display, Formatter};
 use strum::EnumString;
 
@@ -250,6 +251,55 @@ fn as_bytes<T: Command>(command: &T) -> Bytes {
     bytes.put_u32_le(command.code());
     bytes.put_slice(&payload);
     bytes.freeze()
+}
+
+impl Validatable<IggyError> for ServerCommand {
+    fn validate(&self) -> Result<(), IggyError> {
+        match self {
+            ServerCommand::Ping(command) => command.validate(),
+            ServerCommand::GetStats(command) => command.validate(),
+            ServerCommand::GetMe(command) => command.validate(),
+            ServerCommand::GetClient(command) => command.validate(),
+            ServerCommand::GetClients(command) => command.validate(),
+            ServerCommand::GetUser(command) => command.validate(),
+            ServerCommand::GetUsers(command) => command.validate(),
+            ServerCommand::CreateUser(command) => command.validate(),
+            ServerCommand::DeleteUser(command) => command.validate(),
+            ServerCommand::UpdateUser(command) => command.validate(),
+            ServerCommand::UpdatePermissions(command) => command.validate(),
+            ServerCommand::ChangePassword(command) => command.validate(),
+            ServerCommand::LoginUser(command) => command.validate(),
+            ServerCommand::LogoutUser(command) => command.validate(),
+            ServerCommand::GetPersonalAccessTokens(command) => command.validate(),
+            ServerCommand::CreatePersonalAccessToken(command) => command.validate(),
+            ServerCommand::DeletePersonalAccessToken(command) => command.validate(),
+            ServerCommand::LoginWithPersonalAccessToken(command) => command.validate(),
+            ServerCommand::SendMessages(command) => command.validate(),
+            ServerCommand::PollMessages(command) => command.validate(),
+            ServerCommand::StoreConsumerOffset(command) => command.validate(),
+            ServerCommand::GetConsumerOffset(command) => command.validate(),
+            ServerCommand::GetStream(command) => command.validate(),
+            ServerCommand::GetStreams(command) => command.validate(),
+            ServerCommand::CreateStream(command) => command.validate(),
+            ServerCommand::DeleteStream(command) => command.validate(),
+            ServerCommand::UpdateStream(command) => command.validate(),
+            ServerCommand::PurgeStream(command) => command.validate(),
+            ServerCommand::GetTopic(command) => command.validate(),
+            ServerCommand::GetTopics(command) => command.validate(),
+            ServerCommand::CreateTopic(command) => command.validate(),
+            ServerCommand::DeleteTopic(command) => command.validate(),
+            ServerCommand::UpdateTopic(command) => command.validate(),
+            ServerCommand::PurgeTopic(command) => command.validate(),
+            ServerCommand::CreatePartitions(command) => command.validate(),
+            ServerCommand::DeletePartitions(command) => command.validate(),
+            ServerCommand::GetConsumerGroup(command) => command.validate(),
+            ServerCommand::GetConsumerGroups(command) => command.validate(),
+            ServerCommand::CreateConsumerGroup(command) => command.validate(),
+            ServerCommand::DeleteConsumerGroup(command) => command.validate(),
+            ServerCommand::JoinConsumerGroup(command) => command.validate(),
+            ServerCommand::LeaveConsumerGroup(command) => command.validate(),
+        }
+    }
 }
 
 impl Display for ServerCommand {

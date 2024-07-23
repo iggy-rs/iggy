@@ -84,7 +84,6 @@ impl BytesSerializable for CreateStream {
         }
 
         let command = CreateStream { stream_id, name };
-        command.validate()?;
         Ok(command)
     }
 }

@@ -34,7 +34,6 @@ impl BytesSerializable for LogoutUser {
         }
 
         let command = LogoutUser {};
-        command.validate()?;
         Ok(command)
     }
 }

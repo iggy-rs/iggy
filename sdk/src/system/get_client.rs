@@ -51,7 +51,6 @@ impl BytesSerializable for GetClient {
 
         let client_id = u32::from_le_bytes(bytes.as_ref().try_into()?);
         let command = GetClient { client_id };
-        command.validate()?;
         Ok(command)
     }
 }

@@ -3,6 +3,7 @@ use iggy::bytes_serializable::BytesSerializable;
 use iggy::command::Command;
 use iggy::error::IggyError;
 use iggy::personal_access_tokens::create_personal_access_token::CreatePersonalAccessToken;
+use iggy::validatable::Validatable;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::fmt::{Display, Formatter};
@@ -12,6 +13,12 @@ use std::str::from_utf8;
 pub struct CreatePersonalAccessTokenWithHash {
     pub command: CreatePersonalAccessToken,
     pub hash: String,
+}
+
+impl Validatable<IggyError> for CreatePersonalAccessTokenWithHash {
+    fn validate(&self) -> Result<(), IggyError> {
+        self.command.validate()
+    }
 }
 
 impl Command for CreatePersonalAccessTokenWithHash {

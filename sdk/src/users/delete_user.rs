@@ -41,7 +41,6 @@ impl BytesSerializable for DeleteUser {
 
         let user_id = Identifier::from_bytes(bytes)?;
         let command = DeleteUser { user_id };
-        command.validate()?;
         Ok(command)
     }
 }

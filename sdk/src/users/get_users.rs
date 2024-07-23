@@ -33,8 +33,6 @@ impl BytesSerializable for GetUsers {
             return Err(IggyError::InvalidCommand);
         }
 
-        let command = GetUsers {};
-        command.validate()?;
         Ok(GetUsers {})
     }
 }

@@ -56,7 +56,6 @@ impl BytesSerializable for GetTopic {
             stream_id,
             topic_id,
         };
-        command.validate()?;
         Ok(command)
     }
 }

@@ -117,7 +117,6 @@ impl BytesSerializable for UpdateUser {
             username,
             status,
         };
-        command.validate()?;
         Ok(command)
     }
 }

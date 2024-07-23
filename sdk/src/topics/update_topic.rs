@@ -139,7 +139,6 @@ impl BytesSerializable for UpdateTopic {
             replication_factor,
             name,
         };
-        command.validate()?;
         Ok(command)
     }
 }

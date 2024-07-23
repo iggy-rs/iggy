@@ -74,20 +74,24 @@ async fn create_topic(
 ) -> Result<StatusCode, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
-    let mut system = state.system.write();
-    system
-        .create_topic(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.stream_id,
-            command.topic_id,
-            &command.name,
-            command.partitions_count,
-            command.message_expiry,
-            command.compression_algorithm,
-            command.max_topic_size,
-            command.replication_factor,
-        )
-        .await?;
+    {
+        let mut system = state.system.write();
+        system
+            .create_topic(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.stream_id,
+                command.topic_id,
+                &command.name,
+                command.partitions_count,
+                command.message_expiry,
+                command.compression_algorithm,
+                command.max_topic_size,
+                command.replication_factor,
+            )
+            .await?;
+    }
+
+    let system = state.system.read();
     system
         .state
         .apply(identity.user_id, EntryCommand::CreateTopic(command))
@@ -104,19 +108,23 @@ async fn update_topic(
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.topic_id = Identifier::from_str_value(&topic_id)?;
     command.validate()?;
-    let mut system = state.system.write();
-    system
-        .update_topic(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.stream_id,
-            &command.topic_id,
-            &command.name,
-            command.message_expiry,
-            command.compression_algorithm,
-            command.max_topic_size,
-            command.replication_factor,
-        )
-        .await?;
+    {
+        let mut system = state.system.write();
+        system
+            .update_topic(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.stream_id,
+                &command.topic_id,
+                &command.name,
+                command.message_expiry,
+                command.compression_algorithm,
+                command.max_topic_size,
+                command.replication_factor,
+            )
+            .await?;
+    }
+
+    let system = state.system.read();
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateTopic(command))
@@ -131,14 +139,18 @@ async fn delete_topic(
 ) -> Result<StatusCode, CustomError> {
     let stream_id = Identifier::from_str_value(&stream_id)?;
     let topic_id = Identifier::from_str_value(&topic_id)?;
-    let mut system = state.system.write();
-    system
-        .delete_topic(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &stream_id,
-            &topic_id,
-        )
-        .await?;
+    {
+        let mut system = state.system.write();
+        system
+            .delete_topic(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &stream_id,
+                &topic_id,
+            )
+            .await?;
+    }
+
+    let system = state.system.read();
     system
         .state
         .apply(

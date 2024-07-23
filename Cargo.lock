@@ -2249,7 +2249,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.5.0"
+version = "0.5.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -2462,16 +2462,6 @@ dependencies = [
  "serde",
  "serde_json",
  "simple_asn1",
-]
-
-[[package]]
-name = "keepcalm"
-version = "0.3.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "031ddc7e27bbb011c78958881a3723873608397b8b10e146717fc05cf3364d78"
-dependencies = [
- "once_cell",
- "parking_lot 0.12.1",
 ]
 
 [[package]]
@@ -4257,7 +4247,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.3.5"
+version = "0.3.6"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -4279,7 +4269,6 @@ dependencies = [
  "futures",
  "iggy",
  "jsonwebtoken",
- "keepcalm",
  "log",
  "moka",
  "prometheus-client",

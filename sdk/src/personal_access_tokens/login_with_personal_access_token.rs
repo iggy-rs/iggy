@@ -62,7 +62,6 @@ impl BytesSerializable for LoginWithPersonalAccessToken {
         }
 
         let command = LoginWithPersonalAccessToken { token };
-        command.validate()?;
         Ok(command)
     }
 }

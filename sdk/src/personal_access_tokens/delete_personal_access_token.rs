@@ -70,7 +70,6 @@ impl BytesSerializable for DeletePersonalAccessToken {
         }
 
         let command = DeletePersonalAccessToken { name };
-        command.validate()?;
         Ok(command)
     }
 }

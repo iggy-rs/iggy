@@ -79,7 +79,6 @@ impl BytesSerializable for UpdateStream {
         }
 
         let command = UpdateStream { stream_id, name };
-        command.validate()?;
         Ok(command)
     }
 }

@@ -33,8 +33,6 @@ impl BytesSerializable for GetClients {
             return Err(IggyError::InvalidCommand);
         }
 
-        let command = GetClients {};
-        command.validate()?;
         Ok(GetClients {})
     }
 }

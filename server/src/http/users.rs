@@ -44,7 +44,7 @@ async fn get_user(
     Path(user_id): Path<String>,
 ) -> Result<Json<UserInfoDetails>, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     let user = system.find_user(
         &Session::stateless(identity.user_id, identity.ip_address),
         &user_id,
@@ -57,7 +57,7 @@ async fn get_users(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<UserInfo>>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let users = system
         .get_users(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
@@ -71,18 +71,21 @@ async fn create_user(
     Json(command): Json<CreateUser>,
 ) -> Result<StatusCode, CustomError> {
     command.validate()?;
-    let mut system = state.system.write();
-    system
-        .create_user(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.username,
-            &command.password,
-            command.status,
-            command.permissions.clone(),
-        )
-        .await?;
+    {
+        let mut system = state.system.write().await;
+        system
+            .create_user(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.username,
+                &command.password,
+                command.status,
+                command.permissions.clone(),
+            )
+            .await?;
+    }
 
     // For the security of the system, we hash the password before storing it in metadata.
+    let system = state.system.read().await;
     system
         .state
         .apply(
@@ -106,15 +109,19 @@ async fn update_user(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let mut system = state.system.write();
-    system
-        .update_user(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.user_id,
-            command.username.clone(),
-            command.status,
-        )
-        .await?;
+    {
+        let mut system = state.system.write().await;
+        system
+            .update_user(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.user_id,
+                command.username.clone(),
+                command.status,
+            )
+            .await?;
+    }
+
+    let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdateUser(command))
@@ -130,14 +137,18 @@ async fn update_permissions(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let mut system = state.system.write();
-    system
-        .update_permissions(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.user_id,
-            command.permissions.clone(),
-        )
-        .await?;
+    {
+        let mut system = state.system.write().await;
+        system
+            .update_permissions(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.user_id,
+                command.permissions.clone(),
+            )
+            .await?;
+    }
+
+    let system = state.system.read().await;
     system
         .state
         .apply(identity.user_id, EntryCommand::UpdatePermissions(command))
@@ -153,16 +164,20 @@ async fn change_password(
 ) -> Result<StatusCode, CustomError> {
     command.user_id = Identifier::from_str_value(&user_id)?;
     command.validate()?;
-    let mut system = state.system.write();
-    system
-        .change_password(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.user_id,
-            &command.current_password,
-            &command.new_password,
-        )
-        .await?;
+    {
+        let mut system = state.system.write().await;
+        system
+            .change_password(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.user_id,
+                &command.current_password,
+                &command.new_password,
+            )
+            .await?;
+    }
+
     // For the security of the system, we hash the password before storing it in metadata.
+    let system = state.system.read().await;
     system
         .state
         .apply(
@@ -183,13 +198,17 @@ async fn delete_user(
     Path(user_id): Path<String>,
 ) -> Result<StatusCode, CustomError> {
     let user_id = Identifier::from_str_value(&user_id)?;
-    let mut system = state.system.write();
-    system
-        .delete_user(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &user_id,
-        )
-        .await?;
+    {
+        let mut system = state.system.write().await;
+        system
+            .delete_user(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &user_id,
+            )
+            .await?;
+    }
+
+    let system = state.system.read().await;
     system
         .state
         .apply(
@@ -205,7 +224,7 @@ async fn login_user(
     Json(command): Json<LoginUser>,
 ) -> Result<Json<IdentityInfo>, CustomError> {
     command.validate()?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     let user = system
         .login_user(&command.username, &command.password, None)
         .await?;
@@ -217,7 +236,7 @@ async fn logout_user(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<StatusCode, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     system
         .logout_user(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;

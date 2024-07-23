@@ -97,18 +97,13 @@ impl BytesSerializable for ChangePassword {
             current_password,
             new_password,
         };
-        command.validate()?;
         Ok(command)
     }
 }
 
 impl Display for ChangePassword {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}|{}|{}",
-            self.user_id, self.current_password, self.new_password
-        )
+        write!(f, "{}|******|******", self.user_id)
     }
 }
 

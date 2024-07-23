@@ -14,15 +14,19 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
-    system
-        .create_partitions(
-            session,
-            &command.stream_id,
-            &command.topic_id,
-            command.partitions_count,
-        )
-        .await?;
+    {
+        let mut system = system.write().await;
+        system
+            .create_partitions(
+                session,
+                &command.stream_id,
+                &command.topic_id,
+                command.partitions_count,
+            )
+            .await?;
+    }
+
+    let system = system.read().await;
     system
         .state
         .apply(

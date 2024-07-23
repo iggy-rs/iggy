@@ -16,14 +16,19 @@ pub async fn handle(
     session: &Session,
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
+    let bytes;
+    let token_hash;
     debug!("session: {session}, command: {command}");
-    let mut system = system.write();
-    let token = system
-        .create_personal_access_token(session, &command.name, command.expiry)
-        .await?;
-    let bytes = mapper::map_raw_pat(&token);
-    let token_hash = PersonalAccessToken::hash_token(&token);
+    {
+        let mut system = system.write().await;
+        let token = system
+            .create_personal_access_token(session, &command.name, command.expiry)
+            .await?;
+        bytes = mapper::map_raw_pat(&token);
+        token_hash = PersonalAccessToken::hash_token(&token);
+    }
 
+    let system = system.read().await;
     system
         .state
         .apply(

@@ -29,26 +29,26 @@ use crate::{compat, map_toggle_str};
 use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::user_info::UserId;
-use keepcalm::{SharedMut, SharedReadLock, SharedWriteLock};
+use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 #[derive(Debug)]
 pub struct SharedSystem {
-    system: SharedMut<System>,
+    system: Arc<RwLock<System>>,
 }
 
 impl SharedSystem {
     pub fn new(system: System) -> SharedSystem {
         SharedSystem {
-            system: SharedMut::new(system),
+            system: Arc::new(RwLock::new(system)),
         }
     }
 
-    pub fn read(&self) -> SharedReadLock<System> {
-        self.system.read()
+    pub async fn read(&self) -> RwLockReadGuard<System> {
+        self.system.read().await
     }
 
-    pub fn write(&self) -> SharedWriteLock<System> {
-        self.system.write()
+    pub async fn write(&self) -> RwLockWriteGuard<System> {
+        self.system.write().await
     }
 }
 

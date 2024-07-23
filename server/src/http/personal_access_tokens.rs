@@ -40,7 +40,7 @@ async fn get_personal_access_tokens(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
 ) -> Result<Json<Vec<PersonalAccessTokenInfo>>, CustomError> {
-    let system = state.system.read();
+    let system = state.system.read().await;
     let personal_access_tokens = system
         .get_personal_access_tokens(&Session::stateless(identity.user_id, identity.ip_address))
         .await?;
@@ -54,15 +54,19 @@ async fn create_personal_access_token(
     Json(command): Json<CreatePersonalAccessToken>,
 ) -> Result<Json<RawPersonalAccessToken>, CustomError> {
     command.validate()?;
-    let mut system = state.system.write();
-    let token = system
-        .create_personal_access_token(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &command.name,
-            command.expiry,
-        )
-        .await?;
+    let token;
+    {
+        let mut system = state.system.write().await;
+        token = system
+            .create_personal_access_token(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &command.name,
+                command.expiry,
+            )
+            .await?;
+    }
 
+    let system = state.system.read().await;
     let token_hash = PersonalAccessToken::hash_token(&token);
     system
         .state
@@ -82,13 +86,17 @@ async fn delete_personal_access_token(
     Extension(identity): Extension<Identity>,
     Path(name): Path<String>,
 ) -> Result<StatusCode, CustomError> {
-    let mut system = state.system.write();
-    system
-        .delete_personal_access_token(
-            &Session::stateless(identity.user_id, identity.ip_address),
-            &name,
-        )
-        .await?;
+    {
+        let mut system = state.system.write().await;
+        system
+            .delete_personal_access_token(
+                &Session::stateless(identity.user_id, identity.ip_address),
+                &name,
+            )
+            .await?;
+    }
+
+    let system = state.system.read().await;
     system
         .state
         .apply(
@@ -104,7 +112,7 @@ async fn login_with_personal_access_token(
     Json(command): Json<LoginWithPersonalAccessToken>,
 ) -> Result<Json<IdentityInfo>, CustomError> {
     command.validate()?;
-    let system = state.system.read();
+    let system = state.system.read().await;
     let user = system
         .login_with_personal_access_token(&command.token, None)
         .await?;

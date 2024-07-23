@@ -41,7 +41,6 @@ impl BytesSerializable for GetUser {
 
         let user_id = Identifier::from_bytes(bytes)?;
         let command = GetUser { user_id };
-        command.validate()?;
         Ok(command)
     }
 }

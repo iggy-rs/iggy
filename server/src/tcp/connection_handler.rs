@@ -8,6 +8,7 @@ use crate::streaming::systems::system::SharedSystem;
 use bytes::{BufMut, BytesMut};
 use iggy::bytes_serializable::BytesSerializable;
 use iggy::error::IggyError;
+use iggy::validatable::Validatable;
 use std::io::ErrorKind;
 use std::net::SocketAddr;
 use tracing::{debug, error, info};
@@ -19,7 +20,11 @@ pub(crate) async fn handle_connection(
     sender: &mut dyn Sender,
     system: SharedSystem,
 ) -> Result<(), ServerError> {
-    let client_id = system.read().add_client(&address, Transport::Tcp).await;
+    let client_id = system
+        .read()
+        .await
+        .add_client(&address, Transport::Tcp)
+        .await;
 
     let session = Session::from_client_id(client_id, address);
     let mut initial_buffer = [0u8; INITIAL_BYTES_LENGTH];
@@ -48,13 +53,21 @@ pub(crate) async fn handle_connection(
         let mut command_buffer = BytesMut::with_capacity(length as usize);
         command_buffer.put_bytes(0, length as usize);
         sender.read(&mut command_buffer).await?;
-        let command = match ServerCommand::from_bytes(command_buffer.freeze()) {
-            Ok(command) => command,
-            Err(error) => {
-                sender.send_error_response(error).await?;
-                continue;
-            }
-        };
+        let command = ServerCommand::from_bytes(command_buffer.freeze());
+        if command.is_err() {
+            error!("Received an invalid TCP command.");
+            sender
+                .send_error_response(IggyError::InvalidCommand)
+                .await?;
+            continue;
+        }
+        let command = command.unwrap();
+        if let Err(error) = command.validate() {
+            error!("Command validation failed: {error}");
+            sender.send_error_response(error).await?;
+            continue;
+        }
+
         debug!("Received a TCP command: {command}, payload size: {length}");
         command::handle(command, sender, &session, system.clone()).await?;
         debug!("Sent a TCP response.");

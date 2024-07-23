@@ -41,7 +41,6 @@ impl BytesSerializable for GetTopics {
 
         let stream_id = Identifier::from_bytes(bytes)?;
         let command = GetTopics { stream_id };
-        command.validate()?;
         Ok(command)
     }
 }

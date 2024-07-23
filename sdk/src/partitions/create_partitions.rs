@@ -78,7 +78,6 @@ impl BytesSerializable for CreatePartitions {
             topic_id,
             partitions_count,
         };
-        command.validate()?;
         Ok(command)
     }
 }

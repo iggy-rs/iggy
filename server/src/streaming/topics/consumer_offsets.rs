@@ -11,9 +11,12 @@ impl Topic {
         &self,
         consumer: PollingConsumer,
         offset: u64,
+        persist: bool,
     ) -> Result<(), IggyError> {
         let partition = self.resolve_partition(consumer).await?;
-        partition.store_consumer_offset(consumer, offset).await
+        partition
+            .store_consumer_offset(consumer, offset, persist)
+            .await
     }
 
     pub async fn get_consumer_offset(

@@ -15,16 +15,21 @@ impl Partition {
         self.storage.partition.save(self).await
     }
 
-    pub async fn delete(&self) -> Result<(), IggyError> {
+    pub async fn delete(&self, remove_from_disk: bool) -> Result<(), IggyError> {
         for segment in &self.segments {
-            self.storage.segment.delete(segment).await?;
+            if remove_from_disk {
+                self.storage.segment.delete(segment).await?;
+            }
             self.segments_count_of_parent_stream
                 .fetch_sub(1, Ordering::SeqCst);
         }
-        self.storage.partition.delete(self).await
+        if remove_from_disk {
+            return self.storage.partition.delete(self).await;
+        }
+        Ok(())
     }
 
-    pub async fn purge(&mut self) -> Result<(), IggyError> {
+    pub async fn purge(&mut self, purge_storage: bool) -> Result<(), IggyError> {
         self.current_offset = 0;
         self.unsaved_messages_count = 0;
         self.should_increment_offset = false;
@@ -34,21 +39,24 @@ impl Partition {
             cache.purge();
         }
         for segment in &self.segments {
-            self.storage.segment.delete(segment).await?;
+            if purge_storage {
+                self.storage.segment.delete(segment).await?;
+            }
             self.segments_count_of_parent_stream
                 .fetch_sub(1, Ordering::SeqCst);
         }
         self.segments.clear();
-        self.storage
-            .partition
-            .delete_consumer_offsets(&self.consumer_offsets_path)
-            .await?;
-        self.storage
-            .partition
-            .delete_consumer_offsets(&self.consumer_group_offsets_path)
-            .await?;
-        self.add_persisted_segment(0).await?;
-
+        if purge_storage {
+            self.storage
+                .partition
+                .delete_consumer_offsets(&self.consumer_offsets_path)
+                .await?;
+            self.storage
+                .partition
+                .delete_consumer_offsets(&self.consumer_group_offsets_path)
+                .await?;
+            self.add_persisted_segment(0).await?;
+        }
         Ok(())
     }
 }

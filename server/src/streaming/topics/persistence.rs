@@ -14,12 +14,15 @@ impl Topic {
         self.storage.topic.save(self).await
     }
 
-    pub async fn delete(&self) -> Result<(), IggyError> {
+    pub async fn delete(&self, remove_from_disk: bool) -> Result<(), IggyError> {
         for partition in self.get_partitions() {
-            partition.delete().await?;
+            partition.delete(remove_from_disk).await?;
         }
 
-        self.storage.topic.delete(self).await
+        if remove_from_disk {
+            return self.storage.topic.delete(self).await;
+        }
+        Ok(())
     }
 
     pub async fn persist_messages(&self) -> Result<usize, IggyError> {
@@ -33,9 +36,9 @@ impl Topic {
         Ok(saved_messages_number)
     }
 
-    pub async fn purge(&self) -> Result<(), IggyError> {
+    pub async fn purge(&self, purge_storage: bool) -> Result<(), IggyError> {
         for mut partition in self.get_partitions() {
-            partition.purge().await?;
+            partition.purge(purge_storage).await?;
         }
         Ok(())
     }

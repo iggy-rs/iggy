@@ -49,7 +49,7 @@ impl IggyShard {
         let offset = polled_messages.messages.last().unwrap().offset;
         if args.auto_commit {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
-            topic.store_consumer_offset(consumer, offset).await?;
+            topic.store_consumer_offset(consumer, offset, true).await?;
         }
 
         if self.encryptor.is_none() {

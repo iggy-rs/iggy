@@ -261,6 +261,7 @@ impl IggyShard {
         user_id: u32,
         id: &Identifier,
         name: String,
+        update_on_disk: bool,
     ) -> Result<(), IggyError> {
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
@@ -278,7 +279,9 @@ impl IggyShard {
         let stream = stream.borrow_mut();
         let old_name = stream.name.clone();
         stream.name.clone_from(&updated_name);
-        stream.persist().await?;
+        if update_on_disk {
+            stream.persist().await?;
+        }
 
         self.streams_ids.borrow_mut().remove(&old_name);
         self.streams_ids
@@ -292,14 +295,19 @@ impl IggyShard {
         Ok(())
     }
 
-    pub async fn delete_stream(&self, user_id: u32, id: &Identifier) -> Result<u32, IggyError> {
+    pub async fn delete_stream(
+        &self,
+        user_id: u32,
+        id: &Identifier,
+        remove_from_disk: bool,
+    ) -> Result<u32, IggyError> {
         let stream = self.get_stream(id)?;
         let stream_id = stream.stream_id;
         self.permissioner
             .borrow()
             .delete_stream(user_id, stream_id)?;
         let stream_name = stream.name.clone();
-        if stream.delete().await.is_err() {
+        if stream.delete(remove_from_disk).await.is_err() {
             return Err(IggyError::CannotDeleteStream(stream_id));
         }
 
@@ -327,12 +335,13 @@ impl IggyShard {
         &self,
         user_id: u32,
         stream_id: &Identifier,
+        purge_on_disk: bool,
     ) -> Result<(), IggyError> {
         let stream = self.get_stream(stream_id)?;
         self.permissioner
             .borrow()
             .purge_stream(user_id, stream.stream_id)?;
-        stream.purge().await
+        stream.purge(purge_on_disk).await
     }
 }
 

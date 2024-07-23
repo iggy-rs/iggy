@@ -54,6 +54,7 @@ impl IggyShard {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partitions_count: u32,
+        delete_from_disk: bool,
     ) -> Result<(), IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
@@ -64,7 +65,9 @@ impl IggyShard {
 
         let mut stream = self.get_stream_mut(stream_id)?;
         let topic = stream.borrow_mut().get_topic_mut(topic_id)?;
-        let partitions = topic.delete_persisted_partitions(partitions_count).await?;
+        let partitions = topic
+            .delete_persisted_partitions(partitions_count, delete_from_disk)
+            .await?;
         topic.reassign_consumer_groups().await;
         if let Some(partitions) = partitions {
             self.metrics.decrement_partitions(partitions_count);

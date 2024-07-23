@@ -109,6 +109,7 @@ impl IggyShard {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: MaxTopicSize,
         replication_factor: Option<u8>,
+        update_on_disk: bool,
     ) -> Result<(), IggyError> {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
@@ -124,6 +125,7 @@ impl IggyShard {
                 compression_algorithm,
                 max_topic_size,
                 replication_factor.unwrap_or(1),
+                update_on_disk,
             )
             .await?;
 
@@ -138,6 +140,7 @@ impl IggyShard {
         user_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
+        remove_from_disk: bool,
     ) -> Result<(), IggyError> {
         let stream_id_value;
         let stream = self.get_stream(stream_id)?;
@@ -149,7 +152,7 @@ impl IggyShard {
 
         let topic = self
             .get_stream_mut(stream_id)?
-            .delete_topic(topic_id)
+            .delete_topic(topic_id, remove_from_disk)
             .await?;
 
         self.metrics.decrement_topics(1);
@@ -169,12 +172,13 @@ impl IggyShard {
         user_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
+        purge_storage: bool,
     ) -> Result<(), IggyError> {
         let stream = self.get_stream(stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
             .borrow()
             .purge_topic(user_id, stream.stream_id, topic.topic_id)?;
-        topic.purge().await
+        topic.purge(purge_storage).await
     }
 }

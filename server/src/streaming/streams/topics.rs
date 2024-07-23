@@ -86,6 +86,7 @@ impl Stream {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: MaxTopicSize,
         replication_factor: u8,
+        update_on_disk: bool,
     ) -> Result<(), IggyError> {
         let topic = self.get_topic(id)?;
         let topic_id = topic.topic_id;
@@ -125,7 +126,9 @@ impl Stream {
             }
             topic.max_topic_size = max_topic_size;
             topic.replication_factor = replication_factor;
-            topic.persist().await?;
+            if update_on_disk {
+                topic.persist().await?;
+            }
             info!("Updated topic: {topic}");
         }
 
@@ -206,7 +209,11 @@ impl Stream {
             .ok_or_else(|| IggyError::TopicIdNotFound(topic_id, self.stream_id))
     }
 
-    pub async fn delete_topic(&mut self, id: &Identifier) -> Result<Topic, IggyError> {
+    pub async fn delete_topic(
+        &mut self,
+        id: &Identifier,
+        remove_from_disk: bool,
+    ) -> Result<Topic, IggyError> {
         let topic = self.remove_topic(id)?;
         let topic_id = topic.topic_id;
         let current_topic_id = self.current_topic_id.load(Ordering::SeqCst);
@@ -214,7 +221,7 @@ impl Stream {
             self.current_topic_id.store(topic_id, Ordering::SeqCst);
         }
 
-        topic.delete().await.map_err(|err| {
+        topic.delete(remove_from_disk).await.map_err(|err| {
             debug!("Delete topic failed: {}", err);
             IggyError::CannotDeleteTopic(topic.topic_id, self.stream_id)
         })?;

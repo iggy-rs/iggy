@@ -70,6 +70,7 @@ impl Topic {
     pub async fn delete_persisted_partitions(
         &mut self,
         mut count: u32,
+        delete_from_disk: bool,
     ) -> Result<Option<DeletedPartitions>, IggyError> {
         if count == 0 {
             return Ok(None);
@@ -87,7 +88,7 @@ impl Topic {
             let partition_messages_count = partition.get_messages_count();
             segments_count += partition.get_segments_count();
             messages_count += partition_messages_count;
-            partition.delete().await?;
+            partition.delete(delete_from_disk).await?;
         }
         Ok(Some(DeletedPartitions {
             segments_count,

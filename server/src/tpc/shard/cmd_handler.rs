@@ -83,15 +83,23 @@ impl IggyShard {
                 self.state
                     .apply(user_id, EntryCommand::CreateUser(command.clone()))
                     .await?;
-                //TODO(numinex) - This has to be broadcasted aswell..
+                let event = ShardEvent::CreatedUser(
+                    command.username,
+                    command.password,
+                    command.status,
+                    command.permissions,
+                );
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::DeleteUser(command) => {
                 let user_id_numeric = self.ensure_authenticated(client_id)?;
                 self.delete_user(user_id_numeric, &command.user_id).await?;
                 self.state
-                    .apply(user_id_numeric, EntryCommand::DeleteUser(command))
+                    .apply(user_id_numeric, EntryCommand::DeleteUser(command.clone()))
                     .await?;
+                let event = ShardEvent::DeletedUser(command.user_id);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::UpdateUser(command) => {
@@ -106,6 +114,9 @@ impl IggyShard {
                 self.state
                     .apply(user_id_numeric, EntryCommand::UpdateUser(command.clone()))
                     .await?;
+                let event =
+                    ShardEvent::UpdatedUser(command.user_id, command.username, command.status);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::UpdatePermissions(command) => {
@@ -139,7 +150,12 @@ impl IggyShard {
                         EntryCommand::ChangePassword(command.clone()),
                     )
                     .await?;
-                //TODO(numinex) - This has to be broadcasted aswell..
+                let event = ShardEvent::ChangedPassword(
+                    command.user_id,
+                    command.current_password,
+                    command.new_password,
+                );
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::LoginUser(command) => {
@@ -156,6 +172,8 @@ impl IggyShard {
             }
             ServerCommand::LogoutUser(_) => {
                 self.logout_user(client_id).await?;
+                let event = ShardEvent::LogoutUser;
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::GetPersonalAccessTokens(_) => {
@@ -180,14 +198,16 @@ impl IggyShard {
                         EntryCommand::CreatePersonalAccessToken(
                             CreatePersonalAccessTokenWithHash {
                                 command: CreatePersonalAccessToken {
-                                    name: command.name,
-                                    expiry: command.expiry,
+                                    name: command.name.clone(),
+                                    expiry: command.expiry.clone(),
                                 },
                                 hash: token_hash,
                             },
                         ),
                     )
                     .await?;
+                let event = ShardEvent::CreatedPersonalAccessToken(command.name, command.expiry);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::DeletePersonalAccessToken(command) => {
@@ -200,14 +220,18 @@ impl IggyShard {
                         EntryCommand::DeletePersonalAccessToken(command.clone()),
                     )
                     .await?;
+                let event = ShardEvent::DeletedPersonalAccessToken(command.name);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::LoginWithPersonalAccessToken(command) => {
                 let LoginWithPersonalAccessToken { token } = command;
                 let user = self
-                    .login_with_personal_access_token(client_id, token)
+                    .login_with_personal_access_token(client_id, token.clone())
                     .await?;
                 let bytes = mapper::map_identity_info(user.id);
+                let event = ShardEvent::LoginWithPersonalAccessToken(token);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::SendMessages(command) => {
@@ -269,8 +293,12 @@ impl IggyShard {
                     offset,
                 } = command;
                 let consumer = PollingConsumer::from_consumer(&consumer, client_id, &partition_id);
-                self.store_consumer_offset(client_id, consumer, &stream_id, &topic_id, offset)
-                    .await?;
+                self.store_consumer_offset(
+                    client_id, consumer, &stream_id, &topic_id, offset, true,
+                )
+                .await?;
+                let event = ShardEvent::StoredConsumerOffset(stream_id, topic_id, consumer, offset);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::GetStream(command) => {
@@ -303,30 +331,34 @@ impl IggyShard {
             }
             ServerCommand::DeleteStream(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
-                self.delete_stream(user_id, &command.stream_id).await?;
-                self.state
-                    .apply(user_id, EntryCommand::DeleteStream(command))
+                self.delete_stream(user_id, &command.stream_id, true)
                     .await?;
-                // TODO(numinex) - This has to be broadcasted aswell..
+                self.state
+                    .apply(user_id, EntryCommand::DeleteStream(command.clone()))
+                    .await?;
+                let event = ShardEvent::DeletedStream(command.stream_id);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::UpdateStream(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
-                self.update_stream(user_id, &command.stream_id, command.name.clone())
+                self.update_stream(user_id, &command.stream_id, command.name.clone(), true)
                     .await?;
                 self.state
                     .apply(user_id, EntryCommand::UpdateStream(command.clone()))
                     .await?;
-                // TODO(numinex) - This has to be broadcasted aswell..
+                let event = ShardEvent::UpdatedStream(command.stream_id, command.name);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::PurgeStream(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
-                self.purge_stream(user_id, &command.stream_id).await?;
+                self.purge_stream(user_id, &command.stream_id, true).await?;
                 self.state
                     .apply(user_id, EntryCommand::PurgeStream(command.clone()))
                     .await?;
-                // TODO(numinex) - This has to be broadcasted aswell..
+                let event = ShardEvent::PurgedStream(command.stream_id);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::GetTopic(command) => {
@@ -377,12 +409,13 @@ impl IggyShard {
             }
             ServerCommand::DeleteTopic(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
-                self.delete_topic(user_id, &command.stream_id, &command.topic_id)
+                self.delete_topic(user_id, &command.stream_id, &command.topic_id, true)
                     .await?;
                 self.state
                     .apply(user_id, EntryCommand::DeleteTopic(command.clone()))
                     .await?;
-                //TODO(numinex) - This has to be broadcasted aswell..
+                let event = ShardEvent::DeletedTopic(command.stream_id, command.topic_id);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::UpdateTopic(command) => {
@@ -396,22 +429,33 @@ impl IggyShard {
                     command.compression_algorithm,
                     command.max_topic_size,
                     command.replication_factor,
+                    true,
                 )
                 .await?;
                 self.state
                     .apply(user_id, EntryCommand::UpdateTopic(command.clone()))
                     .await?;
-                // TODO(numinex) - This has to be broadcasted aswell..
+                let event = ShardEvent::UpdatedTopic(
+                    command.stream_id,
+                    command.topic_id,
+                    command.name,
+                    command.message_expiry,
+                    command.compression_algorithm,
+                    command.max_topic_size,
+                    command.replication_factor,
+                );
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::PurgeTopic(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
-                self.purge_topic(user_id, &command.stream_id, &command.topic_id)
+                self.purge_topic(user_id, &command.stream_id, &command.topic_id, true)
                     .await?;
                 self.state
                     .apply(user_id, EntryCommand::PurgeTopic(command.clone()))
                     .await?;
-                // TODO(numinex) - This has to be broadcasted aswell..
+                let event = ShardEvent::PurgedTopic(command.stream_id, command.topic_id);
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::CreatePartitions(command) => {
@@ -442,12 +486,18 @@ impl IggyShard {
                     &command.stream_id,
                     &command.topic_id,
                     command.partitions_count,
+                    true,
                 )
                 .await?;
                 self.state
                     .apply(user_id, EntryCommand::DeletePartitions(command.clone()))
                     .await?;
-                // TODO(numinex): We have to broadcast this event aswell...
+                let event = ShardEvent::DeletedPartitions(
+                    command.stream_id,
+                    command.topic_id,
+                    command.partitions_count,
+                );
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::GetConsumerGroup(command) => {
@@ -481,8 +531,15 @@ impl IggyShard {
                 )
                 .await?;
                 self.state
-                    .apply(user_id, EntryCommand::CreateConsumerGroup(command))
+                    .apply(user_id, EntryCommand::CreateConsumerGroup(command.clone()))
                     .await?;
+                let event = ShardEvent::CreatedConsumerGroup(
+                    command.stream_id,
+                    command.topic_id,
+                    command.group_id,
+                    command.name,
+                );
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::DeleteConsumerGroup(command) => {
@@ -495,8 +552,14 @@ impl IggyShard {
                 )
                 .await?;
                 self.state
-                    .apply(user_id, EntryCommand::DeleteConsumerGroup(command))
+                    .apply(user_id, EntryCommand::DeleteConsumerGroup(command.clone()))
                     .await?;
+                let event = ShardEvent::DeletedConsumerGroup(
+                    command.stream_id,
+                    command.topic_id,
+                    command.group_id,
+                );
+                self.broadcast_event_to_all_shards(client_id, event);
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::JoinConsumerGroup(command) => {

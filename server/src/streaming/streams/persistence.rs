@@ -13,12 +13,15 @@ impl Stream {
         self.storage.stream.save(self).await
     }
 
-    pub async fn delete(&self) -> Result<(), IggyError> {
+    pub async fn delete(&self, remove_from_disk: bool) -> Result<(), IggyError> {
         for topic in self.get_topics() {
-            topic.delete().await?;
+            topic.delete(remove_from_disk).await?;
         }
 
-        self.storage.stream.delete(self).await
+        if remove_from_disk {
+            return self.storage.stream.delete(self).await;
+        }
+        Ok(())
     }
 
     pub async fn persist_messages(&self) -> Result<usize, IggyError> {
@@ -30,9 +33,9 @@ impl Stream {
         Ok(saved_messages_number)
     }
 
-    pub async fn purge(&self) -> Result<(), IggyError> {
+    pub async fn purge(&self, purge_on_disk: bool) -> Result<(), IggyError> {
         for topic in self.get_topics() {
-            topic.purge().await?;
+            topic.purge(purge_on_disk).await?;
         }
         Ok(())
     }

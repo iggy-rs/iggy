@@ -1,6 +1,5 @@
 use super::shard::IggyShard;
 use crate::streaming::polling_consumer::PollingConsumer;
-use crate::streaming::session::Session;
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
@@ -13,6 +12,7 @@ impl IggyShard {
         stream_id: &Identifier,
         topic_id: &Identifier,
         offset: u64,
+        persist: bool,
     ) -> Result<(), IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
         let stream = self.get_stream(stream_id)?;
@@ -23,7 +23,7 @@ impl IggyShard {
             topic.topic_id,
         )?;
 
-        topic.store_consumer_offset(consumer, offset).await
+        topic.store_consumer_offset(consumer, offset, persist).await
     }
 
     pub async fn get_consumer_offset(

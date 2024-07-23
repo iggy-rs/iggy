@@ -37,6 +37,7 @@ impl Partition {
         &self,
         consumer: PollingConsumer,
         offset: u64,
+        persist: bool,
     ) -> Result<(), IggyError> {
         trace!(
             "Storing offset: {} for {}, partition: {}, current: {}...",
@@ -51,11 +52,11 @@ impl Partition {
 
         match consumer {
             PollingConsumer::Consumer(consumer_id, _) => {
-                self.store_offset(ConsumerKind::Consumer, consumer_id, offset)
+                self.store_offset(ConsumerKind::Consumer, consumer_id, offset, persist)
                     .await?;
             }
             PollingConsumer::ConsumerGroup(consumer_id, _) => {
-                self.store_offset(ConsumerKind::ConsumerGroup, consumer_id, offset)
+                self.store_offset(ConsumerKind::ConsumerGroup, consumer_id, offset, persist)
                     .await?;
             }
         };
@@ -68,14 +69,17 @@ impl Partition {
         kind: ConsumerKind,
         consumer_id: u32,
         offset: u64,
+        persist: bool,
     ) -> Result<(), IggyError> {
         let consumer_offsets = self.get_consumer_offsets(kind);
         if let Some(mut consumer_offset) = consumer_offsets.get_mut(&consumer_id) {
             consumer_offset.offset = offset;
-            self.storage
-                .partition
-                .save_consumer_offset(&consumer_offset)
-                .await?;
+            if persist {
+                self.storage
+                    .partition
+                    .save_consumer_offset(&consumer_offset)
+                    .await?;
+            }
             return Ok(());
         }
 
@@ -84,10 +88,12 @@ impl Partition {
             ConsumerKind::ConsumerGroup => &self.consumer_group_offsets_path,
         };
         let consumer_offset = ConsumerOffset::new(kind, consumer_id, offset, path);
-        self.storage
-            .partition
-            .save_consumer_offset(&consumer_offset)
-            .await?;
+        if persist {
+            self.storage
+                .partition
+                .save_consumer_offset(&consumer_offset)
+                .await?;
+        }
         consumer_offsets.insert(consumer_id, consumer_offset);
         Ok(())
     }

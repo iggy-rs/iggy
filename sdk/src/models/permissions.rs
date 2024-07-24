@@ -66,10 +66,16 @@ pub struct GlobalPermissions {
     /// - delete_topic
     pub manage_topics: bool,
 
-    /// `read_topics` permission allows to read the topics and includes all the permissions of `read_messages`.
+    /// `read_topics` permission allows to read the topics, manage consumer groups, and includes all the permissions of `read_messages`.
     /// Additionally, the following methods can be invoked:
     /// - get_topic
     /// - get_topics
+    /// - get_consumer_group
+    /// - get_consumer_groups
+    /// - join_consumer_group
+    /// - leave_consumer_group
+    /// - create_consumer_group
+    /// - delete_consumer_group
     pub read_topics: bool,
 
     /// `poll_messages` permission allows to poll messages from all the streams and theirs topics.
@@ -106,7 +112,7 @@ pub struct StreamPermissions {
     /// - delete_topic
     pub manage_topics: bool,
 
-    /// `read_topics` permission allows to read the topics and includes all the permissions of `read_messages`.
+    /// `read_topics` permission allows to read the topics, manage consumer groups, and includes all the permissions of `read_messages`.
     pub read_topics: bool,
 
     /// `poll_messages` permission allows to poll messages from the stream and its topics.
@@ -125,7 +131,7 @@ pub struct TopicPermissions {
     /// `manage_topic` permission allows to manage the topic and includes all the permissions of `read_topic`.
     pub manage_topic: bool,
 
-    /// `read_topic` permission allows to read the topic and includes all the permissions of `read_messages`.
+    /// `read_topic` permission allows to read the topic, manage consumer groups, and includes all the permissions of `read_messages`.
     pub read_topic: bool,
 
     /// `poll_messages` permission allows to poll messages from the topic.

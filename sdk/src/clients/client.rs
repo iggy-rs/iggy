@@ -36,7 +36,8 @@ use tokio::time::sleep;
 use tracing::{error, info, warn};
 
 use crate::clients::builder::IggyClientBuilder;
-use crate::clients::consumer::IggyConsumer;
+use crate::clients::consumer::IggyConsumerBuilder;
+use crate::clients::producer::IggyProducerBuilder;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::permissions::Permissions;
@@ -64,93 +65,6 @@ pub struct IggyClient {
     encryptor: Option<Arc<dyn Encryptor>>,
     message_handler: Option<Arc<dyn MessageHandler>>,
     message_channel_sender: Option<Arc<Sender<PolledMessage>>>,
-}
-
-#[derive(Debug)]
-pub struct IggyConsumerBuilder {
-    client: IggySharedMut<Box<dyn Client>>,
-    consumer: Consumer,
-    stream_id: Identifier,
-    topic_id: Identifier,
-    partition_id: Option<u32>,
-    polling_strategy: PollingStrategy,
-    batch_size: u32,
-    auto_commit: bool,
-    encryptor: Option<Arc<dyn Encryptor>>,
-}
-
-impl IggyConsumerBuilder {
-    fn new(
-        client: IggySharedMut<Box<dyn Client>>,
-        consumer: Consumer,
-        stream_id: Identifier,
-        topic_id: Identifier,
-        partition_id: Option<u32>,
-        encryptor: Option<Arc<dyn Encryptor>>,
-    ) -> Self {
-        IggyConsumerBuilder {
-            client,
-            consumer,
-            stream_id,
-            topic_id,
-            partition_id,
-            polling_strategy: PollingStrategy::next(),
-            batch_size: 1000,
-            auto_commit: true,
-            encryptor,
-        }
-    }
-
-    pub fn stream(self, stream_id: Identifier) -> Self {
-        Self { stream_id, ..self }
-    }
-
-    pub fn topic(self, topic_id: Identifier) -> Self {
-        Self { topic_id, ..self }
-    }
-
-    pub fn partition(self, partition_id: Option<u32>) -> Self {
-        Self {
-            partition_id,
-            ..self
-        }
-    }
-
-    pub fn polling_strategy(self, polling_strategy: PollingStrategy) -> Self {
-        Self {
-            polling_strategy,
-            ..self
-        }
-    }
-
-    pub fn batch_size(self, batch_size: u32) -> Self {
-        Self { batch_size, ..self }
-    }
-
-    pub fn auto_commit(self, auto_commit: bool) -> Self {
-        Self {
-            auto_commit,
-            ..self
-        }
-    }
-
-    pub fn encryptor(self, encryptor: Option<Arc<dyn Encryptor>>) -> Self {
-        Self { encryptor, ..self }
-    }
-
-    pub fn build(self) -> IggyConsumer {
-        IggyConsumer::new(
-            self.client,
-            self.consumer,
-            self.stream_id,
-            self.topic_id,
-            self.partition_id,
-            self.polling_strategy,
-            self.batch_size,
-            self.auto_commit,
-            self.encryptor,
-        )
-    }
 }
 
 #[derive(Debug)]
@@ -254,11 +168,13 @@ impl IggyClient {
     ) -> Result<IggyConsumerBuilder, IggyError> {
         Ok(IggyConsumerBuilder::new(
             self.client.clone(),
+            name.to_owned(),
             Consumer::new(name.try_into()?),
             stream.try_into()?,
             topic.try_into()?,
             Some(partition),
             self.encryptor.clone(),
+            None,
         ))
     }
 
@@ -270,11 +186,25 @@ impl IggyClient {
     ) -> Result<IggyConsumerBuilder, IggyError> {
         Ok(IggyConsumerBuilder::new(
             self.client.clone(),
+            name.to_owned(),
             Consumer::group(name.try_into()?),
             stream.try_into()?,
             topic.try_into()?,
             None,
             self.encryptor.clone(),
+            None,
+        ))
+    }
+
+    pub fn producer(&self, stream: &str, topic: &str) -> Result<IggyProducerBuilder, IggyError> {
+        Ok(IggyProducerBuilder::new(
+            self.client.clone(),
+            stream.try_into()?,
+            stream.to_owned(),
+            topic.try_into()?,
+            topic.to_owned(),
+            self.encryptor.clone(),
+            None,
         ))
     }
 
@@ -463,12 +393,10 @@ impl IggyClient {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        partitioning: &Partitioning,
         messages: &mut [Message],
         partitioner: &dyn Partitioner,
     ) -> Result<(), IggyError> {
-        let partition_id =
-            partitioner.calculate_partition_id(stream_id, topic_id, partitioning, messages)?;
+        let partition_id = partitioner.calculate_partition_id(stream_id, topic_id, messages)?;
         let partitioning = Partitioning::partition_id(partition_id);
         self.send_messages(stream_id, topic_id, &partitioning, messages)
             .await

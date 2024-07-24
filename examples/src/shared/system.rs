@@ -124,6 +124,7 @@ pub async fn consume_messages(
     }
 }
 
+#[allow(dead_code)]
 pub async fn consume_messages_iter(
     args: &Args,
     client: &IggyClient,

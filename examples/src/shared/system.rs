@@ -2,6 +2,7 @@ use crate::shared::args::Args;
 use futures_util::StreamExt;
 use iggy::client::Client;
 use iggy::clients::client::IggyClient;
+use iggy::clients::consumer::{AutoCommit, AutoCommitMode};
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::IggyError;
@@ -145,7 +146,7 @@ pub async fn consume_messages_iter(
             .consumer_group(name, &args.stream_id, &args.topic_id)?
             .polling_strategy(PollingStrategy::next()),
     }
-    .auto_commit(args.auto_commit)
+    .auto_commit(AutoCommit::Mode(AutoCommitMode::AfterPolling))
     .batch_size(args.messages_per_batch)
     .build();
 

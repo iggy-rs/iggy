@@ -242,7 +242,7 @@ impl IggyConsumerBuilder {
             topic: topic_id,
             partition: partition_id,
             polling_strategy: PollingStrategy::next(),
-            batch_size: 100,
+            batch_size: 1000,
             auto_commit: true,
             auto_join_consumer_group: true,
             create_consumer_group_if_not_exists: true,

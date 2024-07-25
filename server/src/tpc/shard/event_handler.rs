@@ -1,6 +1,7 @@
 use iggy::error::IggyError;
+use tracing::error;
 
-use crate::streaming::session::Session;
+use crate::streaming::{clients::client_manager::Transport, session::Session};
 
 use super::{shard::IggyShard, shard_frame::ShardEvent};
 
@@ -45,7 +46,8 @@ impl IggyShard {
                 self.login_user(username, password, client_id).await?;
                 Ok(())
             }
-            ShardEvent::NewSession(client_id, address) => {
+            ShardEvent::NewSession(client_id, address, transport) => {
+                self.add_client(&address, transport).await;
                 let session = Session::from_client_id(client_id, address);
                 self.add_active_session(session);
                 Ok(())
@@ -131,8 +133,8 @@ impl IggyShard {
                 Ok(())
             }
             ShardEvent::LogoutUser => {
-                let user_id = self.ensure_authenticated(client_id)?;
-                self.logout_user(user_id).await?;
+                let _ = self.ensure_authenticated(client_id)?;
+                self.logout_user(client_id).await?;
                 Ok(())
             }
             ShardEvent::UpdatedUser(user_id, username, status) => {
@@ -154,8 +156,8 @@ impl IggyShard {
                 Ok(())
             }
             ShardEvent::DeletedPersonalAccessToken(token) => {
-                let user_id = self.ensure_authenticated(client_id)?;
-                self.delete_personal_access_token(user_id, token).await?;
+                let _ = self.ensure_authenticated(client_id)?;
+                self.delete_personal_access_token(client_id, token).await?;
                 Ok(())
             }
             ShardEvent::LoginWithPersonalAccessToken(token) => {

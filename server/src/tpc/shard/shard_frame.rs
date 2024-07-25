@@ -13,6 +13,7 @@ use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
 
 use crate::command::ServerCommand;
+use crate::streaming::clients::client_manager::Transport;
 use crate::streaming::polling_consumer::PollingConsumer;
 
 #[derive(Debug, Clone)]
@@ -62,7 +63,7 @@ pub enum ShardEvent {
     DeletedPersonalAccessToken(String),
     LoginWithPersonalAccessToken(String),
     StoredConsumerOffset(Identifier, Identifier, PollingConsumer, u64),
-    NewSession(u32, SocketAddr),
+    NewSession(u32, SocketAddr, Transport),
 }
 
 #[derive(Debug)]

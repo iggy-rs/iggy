@@ -440,7 +440,10 @@ impl IggyShard {
         let session = active_sessions
             .iter()
             .find(|s| s.client_id == client_id)
-            .expect("Session for client_id should exist.");
+            .expect(&format!(
+                "Session for client_id: {} should exist.",
+                client_id
+            ));
         let user_id = session.get_user_id();
 
         let user = self.get_user(&Identifier::numeric(user_id)?)?;

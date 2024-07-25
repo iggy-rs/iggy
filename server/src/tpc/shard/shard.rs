@@ -17,6 +17,7 @@ use crate::{
     tpc::connector::{Receiver, ShardConnector, StopReceiver, StopSender},
     versioning::SemanticVersion,
 };
+use bytes::Bytes;
 use clap::error;
 use flume::SendError;
 use iggy::models::{resource_namespace::IggyResourceNamespace, user_info::UserId};
@@ -198,7 +199,11 @@ impl IggyShard {
             .and_then(|_| Ok(session.get_user_id()))
     }
 
-    pub fn broadcast_event_to_all_shards(&self, client_id: u32, event: ShardEvent) {
+    pub fn broadcast_event_to_all_shards(
+        &self,
+        client_id: u32,
+        event: ShardEvent,
+    ) -> Vec<Result<ShardResponse, IggyError>> {
         let connections = self
             .shards
             .iter()
@@ -211,13 +216,15 @@ impl IggyShard {
             })
             .collect::<Vec<_>>();
 
-        let _ = connections
+        let response = connections
             .iter()
             .map(|connection| {
                 let message = ShardMessage::Event(event.clone());
                 connection.send(ShardFrame::new(client_id, message, None));
+                Ok(ShardResponse::BinaryResponse(Bytes::new()))
             })
             .collect::<Vec<_>>();
+        response
     }
 
     pub async fn send_request_to_shard(
@@ -267,15 +274,10 @@ impl IggyShard {
                 Ok(response) => Some(response),
                 Err(err) => Some(ShardResponse::ErrorResponse(err)),
             },
-            ShardMessage::Event(event) => self.handle_event(client_id, event).await.map_or_else(
-                |e| {
-                    panic!(
-                        "Failed to handle event on shard with id: {}, error: {}",
-                        self.id, e
-                    );
-                },
-                |_| None,
-            ),
+            ShardMessage::Event(event) => match self.handle_event(client_id, event).await {
+                Ok(_) => Some(ShardResponse::BinaryResponse(Bytes::new())),
+                Err(err) => Some(ShardResponse::ErrorResponse(err)),
+            },
         }
     }
 

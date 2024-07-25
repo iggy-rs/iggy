@@ -29,8 +29,11 @@ pub(crate) async fn handle_connection(
     let session = Session::from_client_id(client_id, address);
     shard.add_active_session(session);
     // Broadcast session to all shards.
-    let event = ShardEvent::NewSession(client_id, address);
-    shard.broadcast_event_to_all_shards(client_id, event);
+    let event = ShardEvent::NewSession(client_id, address, Transport::Tcp);
+    let response = shard.broadcast_event_to_all_shards(client_id, event);
+    for resp in response {
+        resp?;
+    }
     loop {
         let initial_buffer = BytesMut::with_capacity(INITIAL_BYTES_LENGTH);
         let (read_length, initial_buffer) = match sender.read(initial_buffer).await {
@@ -202,12 +205,14 @@ pub(crate) async fn handle_connection(
             }
             _ => {
                 let message = ShardMessage::Command(command);
+                error!("Received a command: {:?}", message);
                 shard
                     .handle_shard_message(client_id, message)
                     .await
                     .expect("Failed to handle a shard command for direct request execution, it should always return a response.")
             }
         };
+        error!("Response: {:?}", response);
         handle_response!(sender, response);
 
         /*

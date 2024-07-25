@@ -1,4 +1,3 @@
-use std::borrow::BorrowMut;
 
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
@@ -18,16 +17,17 @@ impl IggyShard {
         should_persist: bool,
     ) -> Result<(), IggyError> {
         let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = stream.get_topic(topic_id)?.clone();
+        let topic_id_u32 = topic.topic_id;
         self.permissioner
             .borrow()
             .create_partitions(user_id, stream.stream_id, topic.topic_id)?;
 
-        let mut stream = self.get_stream_mut(stream_id)?;
         let stream_id_u32 = stream.stream_id;
-        let topic = stream.borrow_mut().get_topic_mut(topic_id)?;
-        let topic_id_u32 = topic.topic_id;
-        let partition_ids = topic
+        drop(stream);
+        let partition_ids = self
+            .get_stream_mut(stream_id)?
+            .get_topic_mut(topic_id)?
             .add_persisted_partitions(partitions_count, should_persist)
             .await?;
         for partition_id in partition_ids {
@@ -42,7 +42,10 @@ impl IggyShard {
             self.insert_shart_table_record(resource_ns, shard_info);
         }
 
-        topic.reassign_consumer_groups().await;
+        self.get_stream_mut(stream_id)?
+            .get_topic_mut(topic_id)?
+            .reassign_consumer_groups()
+            .await;
         self.metrics.increment_partitions(partitions_count);
         self.metrics.increment_segments(partitions_count);
         Ok(())
@@ -62,13 +65,12 @@ impl IggyShard {
         self.permissioner
             .borrow()
             .delete_partitions(user_id, stream.stream_id, topic.topic_id)?;
+        drop(stream);
 
-        let mut stream = self.get_stream_mut(stream_id)?;
-        let topic = stream.borrow_mut().get_topic_mut(topic_id)?;
-        let partitions = topic
+        let partitions = self.get_stream_mut(stream_id)?.get_topic_mut(topic_id)?
             .delete_persisted_partitions(partitions_count, delete_from_disk)
             .await?;
-        topic.reassign_consumer_groups().await;
+        self.get_stream_mut(stream_id)?.get_topic_mut(topic_id)?.reassign_consumer_groups().await;
         if let Some(partitions) = partitions {
             self.metrics.decrement_partitions(partitions_count);
             self.metrics.decrement_segments(partitions.segments_count);

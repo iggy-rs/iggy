@@ -10,7 +10,6 @@ use iggy::utils::topic_size::MaxTopicSize;
 use iggy::{
     compression::compression_algorithm::CompressionAlgorithm, utils::hash::hash_resource_namespace,
 };
-use std::borrow::BorrowMut;
 use tracing::error;
 
 use super::shard::IggyShard;
@@ -58,16 +57,12 @@ impl IggyShard {
         replication_factor: Option<u8>,
         should_persist: bool,
     ) -> Result<(), IggyError> {
-        {
-            let stream = self.get_stream(stream_id)?;
-            self.permissioner
-                .borrow()
-                .create_topic(user_id, stream.stream_id)?;
-        }
-
         let mut stream = self.get_stream_mut(stream_id)?;
+        self.permissioner
+            .borrow()
+           .create_topic(user_id, stream.stream_id)?;
+
         let (topic_id, partition_ids) = stream
-            .borrow_mut()
             .create_topic(
                 topic_id,
                 name,
@@ -80,6 +75,7 @@ impl IggyShard {
             )
             .await?;
         let stream_u32_id = stream.stream_id;
+        drop(stream);
 
         for partition_id in partition_ids {
             let shards_count = self.get_available_shards_count();
@@ -116,8 +112,10 @@ impl IggyShard {
         self.permissioner
             .borrow()
             .update_topic(user_id, stream.stream_id, topic.topic_id)?;
+        drop(stream);
 
-        self.get_stream_mut(stream_id)?
+       let mut stream = self.get_stream_mut(stream_id)?;
+       let fut = stream
             .update_topic(
                 topic_id,
                 name,
@@ -126,8 +124,8 @@ impl IggyShard {
                 max_topic_size,
                 replication_factor.unwrap_or(1),
                 update_on_disk,
-            )
-            .await?;
+            );
+        fut.await?;
 
         // TODO: if message_expiry is changed, we need to check if we need to purge messages based on the new expiry
         // TODO: if max_size_bytes is changed, we need to check if we need to purge messages based on the new size
@@ -144,16 +142,17 @@ impl IggyShard {
     ) -> Result<(), IggyError> {
         let stream_id_value;
         let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = stream.get_topic(topic_id)?.clone();
         self.permissioner
             .borrow()
             .delete_topic(user_id, stream.stream_id, topic.topic_id)?;
         stream_id_value = stream.stream_id;
+        drop(stream);
 
-        let topic = self
-            .get_stream_mut(stream_id)?
-            .delete_topic(topic_id, remove_from_disk)
-            .await?;
+       let mut stream = self.get_stream_mut(stream_id)?;
+       let fut = stream
+            .delete_topic(topic_id, remove_from_disk);
+        fut.await?;
 
         self.metrics.decrement_topics(1);
         self.metrics
@@ -175,10 +174,13 @@ impl IggyShard {
         purge_storage: bool,
     ) -> Result<(), IggyError> {
         let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = stream.get_topic(topic_id)?.clone();
+        let stream_id = stream.stream_id;
+        drop(stream);
         self.permissioner
             .borrow()
-            .purge_topic(user_id, stream.stream_id, topic.topic_id)?;
-        topic.purge(purge_storage).await
+            .purge_topic(user_id, stream_id, topic.topic_id)?;
+        let fut = topic.purge(purge_storage);
+        fut.await
     }
 }

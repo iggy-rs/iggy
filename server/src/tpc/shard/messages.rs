@@ -1,6 +1,3 @@
-use std::borrow::Borrow;
-use std::borrow::BorrowMut;
-
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::polling_consumer::PollingConsumer;
 use bytes::Bytes;
@@ -9,6 +6,7 @@ use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
 use iggy::models::messages::{PolledMessage, PolledMessages};
 use iggy::{error::IggyError, identifier::Identifier};
+use std::borrow::Borrow;
 use tracing::{error, trace};
 
 use super::shard::IggyShard;

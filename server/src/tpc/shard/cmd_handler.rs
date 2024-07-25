@@ -25,6 +25,7 @@ use iggy::topics::get_topic::GetTopic;
 use iggy::topics::get_topics::GetTopics;
 use iggy::users::get_user::GetUser;
 use iggy::users::login_user::LoginUser;
+use tracing::error;
 
 use super::messages::PollingArgs;
 use super::shard_frame::ShardEvent;
@@ -89,7 +90,10 @@ impl IggyShard {
                     command.status,
                     command.permissions,
                 );
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::DeleteUser(command) => {
@@ -99,7 +103,10 @@ impl IggyShard {
                     .apply(user_id_numeric, EntryCommand::DeleteUser(command.clone()))
                     .await?;
                 let event = ShardEvent::DeletedUser(command.user_id);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::UpdateUser(command) => {
@@ -116,7 +123,10 @@ impl IggyShard {
                     .await?;
                 let event =
                     ShardEvent::UpdatedUser(command.user_id, command.username, command.status);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::UpdatePermissions(command) => {
@@ -133,12 +143,13 @@ impl IggyShard {
                         EntryCommand::UpdatePermissions(command.clone()),
                     )
                     .await?;
+                //TODO - broadcast this
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::ChangePassword(command) => {
                 let user_id_numeric = self.ensure_authenticated(client_id)?;
                 self.change_password(
-                    client_id,
+                    user_id_numeric,
                     &command.user_id,
                     command.current_password.clone(),
                     command.new_password.clone(),
@@ -155,7 +166,10 @@ impl IggyShard {
                     command.current_password,
                     command.new_password,
                 );
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::LoginUser(command) => {
@@ -167,13 +181,19 @@ impl IggyShard {
                     .await?;
                 let bytes = mapper::map_identity_info(user.id);
                 let event = ShardEvent::LoginUser(username, password);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::LogoutUser(_) => {
                 self.logout_user(client_id).await?;
                 let event = ShardEvent::LogoutUser;
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::GetPersonalAccessTokens(_) => {
@@ -207,12 +227,15 @@ impl IggyShard {
                     )
                     .await?;
                 let event = ShardEvent::CreatedPersonalAccessToken(command.name, command.expiry);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::DeletePersonalAccessToken(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
-                self.delete_personal_access_token(user_id, command.name.clone())
+                self.delete_personal_access_token(client_id, command.name.clone())
                     .await?;
                 self.state
                     .apply(
@@ -221,7 +244,10 @@ impl IggyShard {
                     )
                     .await?;
                 let event = ShardEvent::DeletedPersonalAccessToken(command.name);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::LoginWithPersonalAccessToken(command) => {
@@ -231,7 +257,10 @@ impl IggyShard {
                     .await?;
                 let bytes = mapper::map_identity_info(user.id);
                 let event = ShardEvent::LoginWithPersonalAccessToken(token);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::SendMessages(command) => {
@@ -298,7 +327,10 @@ impl IggyShard {
                 )
                 .await?;
                 let event = ShardEvent::StoredConsumerOffset(stream_id, topic_id, consumer, offset);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::GetStream(command) => {
@@ -326,7 +358,10 @@ impl IggyShard {
                     .apply(user_id, EntryCommand::CreateStream(command.clone()))
                     .await?;
                 let event = ShardEvent::CreatedStream(command.stream_id, command.name);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::DeleteStream(command) => {
@@ -337,7 +372,10 @@ impl IggyShard {
                     .apply(user_id, EntryCommand::DeleteStream(command.clone()))
                     .await?;
                 let event = ShardEvent::DeletedStream(command.stream_id);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::UpdateStream(command) => {
@@ -348,7 +386,10 @@ impl IggyShard {
                     .apply(user_id, EntryCommand::UpdateStream(command.clone()))
                     .await?;
                 let event = ShardEvent::UpdatedStream(command.stream_id, command.name);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::PurgeStream(command) => {
@@ -358,7 +399,10 @@ impl IggyShard {
                     .apply(user_id, EntryCommand::PurgeStream(command.clone()))
                     .await?;
                 let event = ShardEvent::PurgedStream(command.stream_id);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::GetTopic(command) => {
@@ -404,7 +448,10 @@ impl IggyShard {
                     command.max_topic_size,
                     command.replication_factor,
                 );
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::DeleteTopic(command) => {
@@ -415,7 +462,10 @@ impl IggyShard {
                     .apply(user_id, EntryCommand::DeleteTopic(command.clone()))
                     .await?;
                 let event = ShardEvent::DeletedTopic(command.stream_id, command.topic_id);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::UpdateTopic(command) => {
@@ -444,7 +494,10 @@ impl IggyShard {
                     command.max_topic_size,
                     command.replication_factor,
                 );
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::PurgeTopic(command) => {
@@ -455,7 +508,10 @@ impl IggyShard {
                     .apply(user_id, EntryCommand::PurgeTopic(command.clone()))
                     .await?;
                 let event = ShardEvent::PurgedTopic(command.stream_id, command.topic_id);
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::CreatePartitions(command) => {
@@ -476,13 +532,16 @@ impl IggyShard {
                     command.topic_id,
                     command.partitions_count,
                 );
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::DeletePartitions(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
                 self.delete_partitions(
-                    user_id,
+                    client_id,
                     &command.stream_id,
                     &command.topic_id,
                     command.partitions_count,
@@ -497,7 +556,10 @@ impl IggyShard {
                     command.topic_id,
                     command.partitions_count,
                 );
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::GetConsumerGroup(command) => {
@@ -539,7 +601,10 @@ impl IggyShard {
                     command.group_id,
                     command.name,
                 );
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::DeleteConsumerGroup(command) => {
@@ -559,7 +624,10 @@ impl IggyShard {
                     command.topic_id,
                     command.group_id,
                 );
-                self.broadcast_event_to_all_shards(client_id, event);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::JoinConsumerGroup(command) => {

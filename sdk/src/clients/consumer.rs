@@ -39,11 +39,11 @@ pub enum AutoCommit {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum AutoCommitMode {
     /// The offset is stored on the server when the messages are received.
-    AfterPolling,
+    AfterPollingMessages,
     /// The offset is stored on the server when the messages are consumed.
-    AfterConsumingAll,
+    AfterConsumingAllMessages,
     /// The offset is stored on the server after processing each message.
-    AfterConsumingEach,
+    AfterConsumingEachMessage,
 }
 
 pub struct IggyConsumer {
@@ -80,7 +80,7 @@ impl IggyConsumer {
         stream_id: Identifier,
         topic_id: Identifier,
         partition_id: Option<u32>,
-        interval: Option<IggyDuration>,
+        polling_interval: Option<IggyDuration>,
         polling_strategy: PollingStrategy,
         batch_size: u32,
         auto_commit: AutoCommit,
@@ -90,8 +90,8 @@ impl IggyConsumer {
     ) -> Self {
         let (store_offset_sender, store_offset_receiver) = if matches!(
             auto_commit,
-            AutoCommit::Mode(AutoCommitMode::AfterConsumingEach)
-                | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingEach)
+            AutoCommit::Mode(AutoCommitMode::AfterConsumingEachMessage)
+                | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingEachMessage)
         ) {
             let (sender, receiver) = flume::unbounded();
             (Some(sender), Some(receiver))
@@ -107,7 +107,7 @@ impl IggyConsumer {
             topic_id: Arc::new(topic_id),
             partition_id,
             polling_strategy,
-            interval,
+            interval: polling_interval,
             next_offset: Arc::new(AtomicU64::new(0)),
             last_stored_offset: Arc::new(AtomicU64::new(0)),
             poll_future: None,
@@ -115,8 +115,8 @@ impl IggyConsumer {
             auto_commit,
             auto_commit_after_polling: matches!(
                 auto_commit,
-                AutoCommit::Mode(AutoCommitMode::AfterPolling)
-                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterPolling)
+                AutoCommit::Mode(AutoCommitMode::AfterPollingMessages)
+                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterPollingMessages)
             ),
             auto_join_consumer_group,
             create_consumer_group_if_not_exists,
@@ -126,13 +126,13 @@ impl IggyConsumer {
             store_offset_receiver,
             store_offset_after_each_message: matches!(
                 auto_commit,
-                AutoCommit::Mode(AutoCommitMode::AfterConsumingEach)
-                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingEach)
+                AutoCommit::Mode(AutoCommitMode::AfterConsumingEachMessage)
+                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingEachMessage)
             ),
             store_offset_after_all_messages: matches!(
                 auto_commit,
-                AutoCommit::Mode(AutoCommitMode::AfterConsumingAll)
-                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingAll)
+                AutoCommit::Mode(AutoCommitMode::AfterConsumingAllMessages)
+                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingAllMessages)
             ),
         }
     }
@@ -378,7 +378,7 @@ pub struct IggyConsumerBuilder {
     topic: Identifier,
     partition: Option<u32>,
     polling_strategy: PollingStrategy,
-    interval: Option<IggyDuration>,
+    polling_interval: Option<IggyDuration>,
     batch_size: u32,
     auto_commit: AutoCommit,
     auto_join_consumer_group: bool,
@@ -396,7 +396,7 @@ impl IggyConsumerBuilder {
         topic_id: Identifier,
         partition_id: Option<u32>,
         encryptor: Option<Arc<dyn Encryptor>>,
-        interval: Option<IggyDuration>,
+        polling_interval: Option<IggyDuration>,
     ) -> Self {
         Self {
             client,
@@ -409,12 +409,12 @@ impl IggyConsumerBuilder {
             batch_size: 1000,
             auto_commit: AutoCommit::IntervalAndMode(
                 IggyDuration::from(SEC_IN_MICRO),
-                AutoCommitMode::AfterPolling,
+                AutoCommitMode::AfterPollingMessages,
             ),
             auto_join_consumer_group: true,
             create_consumer_group_if_not_exists: true,
             encryptor,
-            interval,
+            polling_interval,
         }
     }
 
@@ -462,8 +462,11 @@ impl IggyConsumerBuilder {
         }
     }
 
-    pub fn interval(self, interval: Option<IggyDuration>) -> Self {
-        Self { interval, ..self }
+    pub fn polling_interval(self, interval: Option<IggyDuration>) -> Self {
+        Self {
+            polling_interval: interval,
+            ..self
+        }
     }
 
     pub fn encryptor(self, encryptor: Option<Arc<dyn Encryptor>>) -> Self {
@@ -478,7 +481,7 @@ impl IggyConsumerBuilder {
             self.stream,
             self.topic,
             self.partition,
-            self.interval,
+            self.polling_interval,
             self.polling_strategy,
             self.batch_size,
             self.auto_commit,

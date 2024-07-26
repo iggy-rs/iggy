@@ -146,7 +146,7 @@ pub async fn consume_messages_iter(
             .consumer_group(name, &args.stream_id, &args.topic_id)?
             .polling_strategy(PollingStrategy::next()),
     }
-    .auto_commit(AutoCommit::Mode(AutoCommitMode::AfterPolling))
+    .auto_commit(AutoCommit::Mode(AutoCommitMode::AfterPollingMessages))
     .batch_size(args.messages_per_batch)
     .build();
 

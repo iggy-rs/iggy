@@ -21,6 +21,9 @@ use tracing::{error, info};
 
 const MAX_BATCH_SIZE: usize = 1000000;
 
+unsafe impl Send for IggyProducer {}
+unsafe impl Sync for IggyProducer {}
+
 pub struct IggyProducer {
     client: Arc<IggySharedMut<Box<dyn Client>>>,
     stream: Arc<Identifier>,
@@ -491,35 +494,76 @@ impl IggyProducerBuilder {
         Self { topic, ..self }
     }
 
-    pub fn batch_size(self, batch_size: Option<u32>) -> Self {
+    pub fn batch_size(self, batch_size: u32) -> Self {
         Self {
-            batch_size: if batch_size.unwrap_or(0) == 0 {
+            batch_size: if batch_size == 0 {
                 None
             } else {
-                batch_size.map(|x| x.min(MAX_BATCH_SIZE as u32) as usize)
+                Some(batch_size.min(MAX_BATCH_SIZE as u32) as usize)
             },
             ..self
         }
     }
 
-    pub fn interval(self, interval: Option<IggyDuration>) -> Self {
-        Self { interval, ..self }
-    }
-
-    pub fn encryptor(self, encryptor: Option<Arc<dyn Encryptor>>) -> Self {
-        Self { encryptor, ..self }
-    }
-
-    pub fn partitioning(self, partitioning: Option<Partitioning>) -> Self {
+    pub fn without_batch_size(self) -> Self {
         Self {
-            partitioning,
+            batch_size: None,
             ..self
         }
     }
 
-    pub fn partitioner(self, partitioner: Option<Arc<dyn Partitioner>>) -> Self {
+    pub fn interval(self, interval: IggyDuration) -> Self {
         Self {
-            partitioner,
+            interval: Some(interval),
+            ..self
+        }
+    }
+
+    pub fn without_interval(self) -> Self {
+        Self {
+            interval: None,
+            ..self
+        }
+    }
+
+    pub fn encryptor(self, encryptor: Arc<dyn Encryptor>) -> Self {
+        Self {
+            encryptor: Some(encryptor),
+            ..self
+        }
+    }
+
+    pub fn without_encryptor(self) -> Self {
+        Self {
+            encryptor: None,
+            ..self
+        }
+    }
+
+    pub fn partitioning(self, partitioning: Partitioning) -> Self {
+        Self {
+            partitioning: Some(partitioning),
+            ..self
+        }
+    }
+
+    pub fn without_partitioning(self) -> Self {
+        Self {
+            partitioning: None,
+            ..self
+        }
+    }
+
+    pub fn partitioner(self, partitioner: Arc<dyn Partitioner>) -> Self {
+        Self {
+            partitioner: Some(partitioner),
+            ..self
+        }
+    }
+
+    pub fn without_partitioner(self) -> Self {
+        Self {
+            partitioner: None,
             ..self
         }
     }
@@ -531,9 +575,23 @@ impl IggyProducerBuilder {
         }
     }
 
+    pub fn do_not_create_stream_if_not_exists(self) -> Self {
+        Self {
+            create_stream_if_not_exists: false,
+            ..self
+        }
+    }
+
     pub fn create_topic_if_not_exists(self) -> Self {
         Self {
             create_topic_if_not_exists: true,
+            ..self
+        }
+    }
+
+    pub fn do_not_create_topic_if_not_exists(self) -> Self {
+        Self {
+            create_topic_if_not_exists: false,
             ..self
         }
     }

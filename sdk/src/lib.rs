@@ -16,6 +16,7 @@ pub mod compression;
 pub mod consumer;
 pub mod consumer_groups;
 pub mod consumer_offsets;
+pub mod diagnostic;
 pub mod error;
 pub mod http;
 pub mod identifier;

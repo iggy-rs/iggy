@@ -1,5 +1,6 @@
 use crate::client::Client;
 use crate::consumer::{Consumer, ConsumerKind};
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::identifier::{IdKind, Identifier};
 use crate::locking::{IggySharedMut, IggySharedMutFn};
@@ -17,7 +18,7 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
 type PollMessagesFuture = Pin<Box<dyn Future<Output = Result<PolledMessages, IggyError>>>>;
@@ -46,7 +47,11 @@ pub enum AutoCommitMode {
     AfterConsumingEachMessage,
 }
 
+unsafe impl Send for IggyConsumer {}
+unsafe impl Sync for IggyConsumer {}
+
 pub struct IggyConsumer {
+    initialized: bool,
     client: IggySharedMut<Box<dyn Client>>,
     consumer_name: String,
     consumer: Arc<Consumer>,
@@ -100,6 +105,7 @@ impl IggyConsumer {
         };
 
         Self {
+            initialized: false,
             client,
             consumer_name,
             consumer: Arc::new(consumer),
@@ -138,43 +144,12 @@ impl IggyConsumer {
     }
 
     pub async fn init(&mut self) -> Result<(), IggyError> {
-        if self.consumer.kind != ConsumerKind::ConsumerGroup {
+        if self.initialized {
             return Ok(());
         }
 
-        if !self.auto_join_consumer_group {
-            info!("Auto join consumer group is disabled");
-            return Ok(());
-        }
-
-        let client = self.client.read().await;
-        if let Err(error) = client
-            .get_consumer_group(&self.stream_id, &self.topic_id, &self.consumer.id)
-            .await
-        {
-            if !self.create_consumer_group_if_not_exists {
-                error!("Consumer group does not exist and auto-creation is disabled.");
-                return Err(error);
-            }
-
-            let (name, id) = match self.consumer.id.kind {
-                IdKind::Numeric => (
-                    self.consumer_name.to_owned(),
-                    Some(self.consumer.id.get_u32_value()?),
-                ),
-                IdKind::String => (self.consumer.id.get_string_value()?, None),
-            };
-
-            info!("Creating consumer group: {name}");
-            client
-                .create_consumer_group(&self.stream_id, &self.topic_id, &name, id)
-                .await?;
-        }
-
-        info!("Joining consumer group: {}", self.consumer.id);
-        client
-            .join_consumer_group(&self.stream_id, &self.topic_id, &self.consumer.id)
-            .await?;
+        self.init_consumer_group().await?;
+        self.subscribe_events().await;
 
         match self.auto_commit {
             AutoCommit::Interval(interval) => self.store_offsets_in_background(interval),
@@ -216,6 +191,7 @@ impl IggyConsumer {
             });
         }
 
+        self.initialized = true;
         Ok(())
     }
 
@@ -263,6 +239,72 @@ impl IggyConsumer {
         });
     }
 
+    async fn init_consumer_group(&self) -> Result<(), IggyError> {
+        if self.consumer.kind != ConsumerKind::ConsumerGroup {
+            return Ok(());
+        }
+
+        if !self.auto_join_consumer_group {
+            info!("Auto join consumer group is disabled");
+            return Ok(());
+        }
+
+        let client = self.client.read().await;
+        if let Err(error) = client
+            .get_consumer_group(&self.stream_id, &self.topic_id, &self.consumer.id)
+            .await
+        {
+            if !self.create_consumer_group_if_not_exists {
+                error!("Consumer group does not exist and auto-creation is disabled.");
+                return Err(error);
+            }
+
+            let (name, id) = match self.consumer.id.kind {
+                IdKind::Numeric => (
+                    self.consumer_name.to_owned(),
+                    Some(self.consumer.id.get_u32_value()?),
+                ),
+                IdKind::String => (self.consumer.id.get_string_value()?, None),
+            };
+
+            info!("Creating consumer group: {name}");
+            client
+                .create_consumer_group(&self.stream_id, &self.topic_id, &name, id)
+                .await?;
+        }
+
+        info!("Joining consumer group: {}", self.consumer.id);
+        client
+            .join_consumer_group(&self.stream_id, &self.topic_id, &self.consumer.id)
+            .await?;
+        info!("Joined consumer group: {}", self.consumer.id);
+        Ok(())
+    }
+
+    // TODO: Handle joining consumer group during reconnect
+    async fn subscribe_events(&self) {
+        info!("Subscribing to diagnostic events");
+        let receiver;
+        {
+            let client = self.client.read().await;
+            receiver = client.events().await;
+        }
+
+        tokio::spawn(async move {
+            while let Ok(event) = receiver.recv_async().await {
+                info!("Received diagnostic event: {event}");
+                match event {
+                    DiagnosticEvent::Connected => {
+                        info!("Connected to the server");
+                    }
+                    DiagnosticEvent::Disconnected => {
+                        warn!("Disconnected from the server");
+                    }
+                }
+            }
+        });
+    }
+
     fn create_poll_messages_future(
         &self,
     ) -> impl Future<Output = Result<PolledMessages, IggyError>> {
@@ -298,7 +340,6 @@ impl IggyConsumer {
     }
 }
 
-// TODO: Handle joining consumer group during reconnect
 impl Stream for IggyConsumer {
     type Item = Result<PolledMessage, IggyError>;
 
@@ -448,29 +489,60 @@ impl IggyConsumerBuilder {
         }
     }
 
-    pub fn auto_join_consumer_group(self, join: bool) -> Self {
+    pub fn auto_join_consumer_group(self) -> Self {
         Self {
-            auto_join_consumer_group: join,
+            auto_join_consumer_group: true,
             ..self
         }
     }
 
-    pub fn create_consumer_group_if_not_exists(self, create: bool) -> Self {
+    pub fn do_not_auto_join_consumer_group(self) -> Self {
         Self {
-            create_consumer_group_if_not_exists: create,
+            auto_join_consumer_group: false,
             ..self
         }
     }
 
-    pub fn polling_interval(self, interval: Option<IggyDuration>) -> Self {
+    pub fn create_consumer_group_if_not_exists(self) -> Self {
         Self {
-            polling_interval: interval,
+            create_consumer_group_if_not_exists: true,
             ..self
         }
     }
 
-    pub fn encryptor(self, encryptor: Option<Arc<dyn Encryptor>>) -> Self {
-        Self { encryptor, ..self }
+    pub fn do_not_create_consumer_group_if_not_exists(self) -> Self {
+        Self {
+            create_consumer_group_if_not_exists: false,
+            ..self
+        }
+    }
+
+    pub fn polling_interval(self, interval: IggyDuration) -> Self {
+        Self {
+            polling_interval: Some(interval),
+            ..self
+        }
+    }
+
+    pub fn without_polling_interval(self) -> Self {
+        Self {
+            polling_interval: None,
+            ..self
+        }
+    }
+
+    pub fn encryptor(self, encryptor: Arc<dyn Encryptor>) -> Self {
+        Self {
+            encryptor: Some(encryptor),
+            ..self
+        }
+    }
+
+    pub fn without_encryptor(self) -> Self {
+        Self {
+            encryptor: None,
+            ..self
+        }
     }
 
     pub fn build(self) -> IggyConsumer {

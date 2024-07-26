@@ -39,6 +39,7 @@ use crate::clients::builder::IggyClientBuilder;
 use crate::clients::consumer::IggyConsumerBuilder;
 use crate::clients::producer::IggyProducerBuilder;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
+use crate::diagnostic::DiagnosticEvent;
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::permissions::Permissions;
 use crate::models::user_status::UserStatus;
@@ -530,6 +531,10 @@ impl Client for IggyClient {
 
     async fn disconnect(&self) -> Result<(), IggyError> {
         self.client.read().await.disconnect().await
+    }
+
+    async fn events(&self) -> Receiver<DiagnosticEvent> {
+        self.client.read().await.events().await
     }
 }
 

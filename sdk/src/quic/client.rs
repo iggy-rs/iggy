@@ -2,10 +2,12 @@ use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
 use crate::client::{AutoSignIn, Client, Credentials, PersonalAccessTokenClient, UserClient};
 use crate::command::Command;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
 use async_trait::async_trait;
 use bytes::Bytes;
+use flume::{Receiver, Sender};
 use quinn::crypto::rustls::QuicClientConfig as QuinnQuicClientConfig;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
@@ -31,6 +33,7 @@ pub struct QuicClient {
     pub(crate) config: Arc<QuicClientConfig>,
     pub(crate) server_address: SocketAddr,
     pub(crate) state: Mutex<ClientState>,
+    events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
 }
 
 unsafe impl Send for QuicClient {}
@@ -50,6 +53,10 @@ impl Client for QuicClient {
 
     async fn disconnect(&self) -> Result<(), IggyError> {
         QuicClient::disconnect(self).await
+    }
+
+    async fn events(&self) -> Receiver<DiagnosticEvent> {
+        self.events.1.clone()
     }
 }
 
@@ -139,6 +146,7 @@ impl QuicClient {
             server_address,
             connection: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
+            events: flume::unbounded(),
         })
     }
 
@@ -239,6 +247,7 @@ impl QuicClient {
                 }
 
                 self.set_state(ClientState::Disconnected).await;
+                self.send_event(DiagnosticEvent::Disconnected).await;
                 return Err(IggyError::CannotEstablishConnection);
             }
 
@@ -249,6 +258,7 @@ impl QuicClient {
 
         self.set_state(ClientState::Connected).await;
         self.connection.lock().await.replace(connection);
+        self.send_event(DiagnosticEvent::Connected).await;
 
         info!("{NAME} client has connected to server: {remote_address}",);
 
@@ -282,6 +292,7 @@ impl QuicClient {
         self.set_state(ClientState::Disconnected).await;
         self.connection.lock().await.take();
         self.endpoint.wait_idle().await;
+        self.send_event(DiagnosticEvent::Disconnected).await;
         info!("{} client has disconnected from server.", NAME);
         Ok(())
     }
@@ -308,6 +319,12 @@ impl QuicClient {
 
         error!("Cannot send data. Client is not connected.");
         Err(IggyError::NotConnected)
+    }
+
+    async fn send_event(&self, event: DiagnosticEvent) {
+        if let Err(error) = self.events.0.send_async(event).await {
+            error!("Failed to send a QUIC diagnostic event: {error}");
+        }
     }
 }
 

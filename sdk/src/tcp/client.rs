@@ -2,10 +2,12 @@ use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
 use crate::client::{AutoSignIn, Client, Credentials, PersonalAccessTokenClient, UserClient};
 use crate::command::Command;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
+use flume::{Receiver, Sender};
 use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
@@ -28,6 +30,7 @@ pub struct TcpClient {
     pub(crate) stream: Mutex<Option<Box<dyn ConnectionStream>>>,
     pub(crate) config: Arc<TcpClientConfig>,
     pub(crate) state: Mutex<ClientState>,
+    events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
 }
 
 unsafe impl Send for TcpClient {}
@@ -127,6 +130,10 @@ impl Client for TcpClient {
     async fn disconnect(&self) -> Result<(), IggyError> {
         TcpClient::disconnect(self).await
     }
+
+    async fn events(&self) -> Receiver<DiagnosticEvent> {
+        self.events.1.clone()
+    }
 }
 
 #[async_trait]
@@ -199,6 +206,7 @@ impl TcpClient {
             config,
             stream: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
+            events: flume::unbounded(),
         })
     }
 
@@ -312,6 +320,7 @@ impl TcpClient {
                 }
 
                 self.set_state(ClientState::Disconnected).await;
+                self.send_event(DiagnosticEvent::Disconnected).await;
                 return Err(IggyError::CannotEstablishConnection);
             }
 
@@ -342,6 +351,7 @@ impl TcpClient {
 
         self.stream.lock().await.replace(connection_stream);
         self.set_state(ClientState::Connected).await;
+        self.send_event(DiagnosticEvent::Connected).await;
 
         info!("{NAME} client has connected to server: {remote_address}",);
 
@@ -374,6 +384,7 @@ impl TcpClient {
         info!("{} client is disconnecting from server...", NAME);
         self.set_state(ClientState::Disconnected).await;
         self.stream.lock().await.take();
+        self.send_event(DiagnosticEvent::Disconnected).await;
         info!("{} client has disconnected from server.", NAME);
         Ok(())
     }
@@ -414,5 +425,11 @@ impl TcpClient {
 
         error!("Cannot send data. Client is not connected.");
         Err(IggyError::NotConnected)
+    }
+
+    async fn send_event(&self, event: DiagnosticEvent) {
+        if let Err(error) = self.events.0.send_async(event).await {
+            error!("Failed to send a TCP diagnostic event: {error}");
+        }
     }
 }

@@ -1,5 +1,6 @@
 use crate::compression::compression_algorithm::CompressionAlgorithm;
 use crate::consumer::Consumer;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::messages::poll_messages::PollingStrategy;
@@ -20,6 +21,7 @@ use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::utils::topic_size::MaxTopicSize;
 use async_trait::async_trait;
+use flume::Receiver;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
@@ -58,6 +60,9 @@ pub trait Client:
 
     /// Disconnect from the server. If the client is not connected, it will do nothing.
     async fn disconnect(&self) -> Result<(), IggyError>;
+
+    /// Subscribe to diagnostic events.
+    async fn events(&self) -> Receiver<DiagnosticEvent>;
 }
 
 /// This trait defines the methods to interact with the system module.

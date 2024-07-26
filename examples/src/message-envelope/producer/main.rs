@@ -79,10 +79,10 @@ async fn produce_messages_new(args: &Args, client: &IggyClient) -> Result<(), Bo
 
     let mut producer = client
         .producer(&args.stream_id, &args.topic_id)?
-        .partitioning(Some(Partitioning::partition_id(args.partition_id)))
-        .batch_size(Some(100))
-        .interval(Some(IggyDuration::from_str("10ms")?))
-        .encryptor(None)
+        .partitioning(Partitioning::partition_id(args.partition_id))
+        .batch_size(100)
+        .interval(IggyDuration::from_str("10ms")?)
+        .without_encryptor()
         .build();
     producer.init().await?;
 

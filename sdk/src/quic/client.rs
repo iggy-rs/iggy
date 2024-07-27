@@ -272,10 +272,12 @@ impl QuicClient {
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
+                        self.send_event(DiagnosticEvent::Authenticated).await;
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
                         self.login_with_personal_access_token(token).await?;
+                        self.send_event(DiagnosticEvent::Authenticated).await;
                         Ok(())
                     }
                 }

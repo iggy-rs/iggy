@@ -14,7 +14,7 @@ use futures_util::FutureExt;
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use tokio::time::sleep;
@@ -52,6 +52,7 @@ unsafe impl Sync for IggyConsumer {}
 
 pub struct IggyConsumer {
     initialized: bool,
+    can_poll: Arc<AtomicBool>,
     client: IggySharedMut<Box<dyn Client>>,
     consumer_name: String,
     consumer: Arc<Consumer>,
@@ -106,6 +107,7 @@ impl IggyConsumer {
 
         Self {
             initialized: false,
+            can_poll: Arc::new(AtomicBool::new(true)),
             client,
             consumer_name,
             consumer: Arc::new(consumer),
@@ -148,8 +150,8 @@ impl IggyConsumer {
             return Ok(());
         }
 
-        self.init_consumer_group().await?;
         self.subscribe_events().await;
+        self.init_consumer_group().await?;
 
         match self.auto_commit {
             AutoCommit::Interval(interval) => self.store_offsets_in_background(interval),
@@ -249,39 +251,17 @@ impl IggyConsumer {
             return Ok(());
         }
 
-        let client = self.client.read().await;
-        if let Err(error) = client
-            .get_consumer_group(&self.stream_id, &self.topic_id, &self.consumer.id)
-            .await
-        {
-            if !self.create_consumer_group_if_not_exists {
-                error!("Consumer group does not exist and auto-creation is disabled.");
-                return Err(error);
-            }
-
-            let (name, id) = match self.consumer.id.kind {
-                IdKind::Numeric => (
-                    self.consumer_name.to_owned(),
-                    Some(self.consumer.id.get_u32_value()?),
-                ),
-                IdKind::String => (self.consumer.id.get_string_value()?, None),
-            };
-
-            info!("Creating consumer group: {name}");
-            client
-                .create_consumer_group(&self.stream_id, &self.topic_id, &name, id)
-                .await?;
-        }
-
-        info!("Joining consumer group: {}", self.consumer.id);
-        client
-            .join_consumer_group(&self.stream_id, &self.topic_id, &self.consumer.id)
-            .await?;
-        info!("Joined consumer group: {}", self.consumer.id);
-        Ok(())
+        Self::handle_consumer_group(
+            self.client.clone(),
+            self.create_consumer_group_if_not_exists,
+            self.stream_id.clone(),
+            self.topic_id.clone(),
+            self.consumer.clone(),
+            &self.consumer_name,
+        )
+        .await
     }
 
-    // TODO: Handle joining consumer group during reconnect
     async fn subscribe_events(&self) {
         info!("Subscribing to diagnostic events");
         let receiver;
@@ -290,15 +270,63 @@ impl IggyConsumer {
             receiver = client.events().await;
         }
 
+        let can_join_consumer_group =
+            self.consumer.kind == ConsumerKind::ConsumerGroup && self.auto_join_consumer_group;
+
+        let client = self.client.clone();
+        let create_consumer_group_if_not_exists = self.create_consumer_group_if_not_exists;
+        let stream_id = self.stream_id.clone();
+        let topic_id = self.topic_id.clone();
+        let consumer = self.consumer.clone();
+        let consumer_name = self.consumer_name.clone();
+        let can_poll = self.can_poll.clone();
+        let was_disconnected = Arc::new(AtomicBool::new(false));
+
         tokio::spawn(async move {
             while let Ok(event) = receiver.recv_async().await {
                 info!("Received diagnostic event: {event}");
                 match event {
                     DiagnosticEvent::Connected => {
                         info!("Connected to the server");
+                        if was_disconnected.load(ORDERING) {
+                            info!("Reconnected to the server");
+                        }
                     }
                     DiagnosticEvent::Disconnected => {
+                        can_poll.store(false, ORDERING);
+                        was_disconnected.store(true, ORDERING);
                         warn!("Disconnected from the server");
+                    }
+                    DiagnosticEvent::Authenticated => {
+                        let reconnected = was_disconnected.load(ORDERING);
+                        was_disconnected.store(false, ORDERING);
+                        if !reconnected {
+                            can_poll.store(true, ORDERING);
+                            continue;
+                        }
+
+                        if !can_join_consumer_group {
+                            can_poll.store(true, ORDERING);
+                            warn!("Auto join consumer group is disabled");
+                            continue;
+                        }
+
+                        info!("Rejoining consumer group");
+                        if let Err(error) = Self::handle_consumer_group(
+                            client.clone(),
+                            create_consumer_group_if_not_exists,
+                            stream_id.clone(),
+                            topic_id.clone(),
+                            consumer.clone(),
+                            &consumer_name,
+                        )
+                        .await
+                        {
+                            error!("Failed to join consumer group: {error}");
+                            continue;
+                        }
+                        info!("Rejoined consumer group");
+                        can_poll.store(true, ORDERING);
                     }
                 }
             }
@@ -314,6 +342,7 @@ impl IggyConsumer {
         let consumer = self.consumer.clone();
         let polling_strategy = self.polling_strategy;
         let client = self.client.clone();
+        let can_poll = self.can_poll.clone();
         let count = self.batch_size;
         let auto_commit = self.auto_commit_after_polling;
         let interval = self.interval;
@@ -321,6 +350,10 @@ impl IggyConsumer {
         async move {
             if let Some(interval) = interval {
                 sleep(interval.get_duration()).await;
+            }
+
+            if !can_poll.load(ORDERING) {
+                return Err(IggyError::Disconnected);
             }
 
             client
@@ -337,6 +370,47 @@ impl IggyConsumer {
                 )
                 .await
         }
+    }
+
+    async fn handle_consumer_group(
+        client: IggySharedMut<Box<dyn Client>>,
+        create_consumer_group_if_not_exists: bool,
+        stream_id: Arc<Identifier>,
+        topic_id: Arc<Identifier>,
+        consumer: Arc<Consumer>,
+        consumer_name: &str,
+    ) -> Result<(), IggyError> {
+        info!("Opening client to join consumer group");
+        let client = client.read().await;
+        info!("Opened client to join consumer group");
+        let (name, id) = match consumer.id.kind {
+            IdKind::Numeric => (consumer_name.to_owned(), Some(consumer.id.get_u32_value()?)),
+            IdKind::String => (consumer.id.get_string_value()?, None),
+        };
+
+        let consumer_group_id = name.to_owned().try_into()?;
+        info!("Checking consumer group: {consumer_group_id}");
+        if let Err(error) = client
+            .get_consumer_group(&stream_id, &topic_id, &consumer_group_id)
+            .await
+        {
+            if !create_consumer_group_if_not_exists {
+                error!("Consumer group does not exist and auto-creation is disabled.");
+                return Err(error);
+            }
+
+            info!("Creating consumer group: {consumer_group_id}");
+            client
+                .create_consumer_group(&stream_id, &topic_id, &name, id)
+                .await?;
+        }
+
+        info!("Joining consumer group: {consumer_group_id}",);
+        client
+            .join_consumer_group(&stream_id, &topic_id, &consumer_group_id)
+            .await?;
+        info!("Joined consumer group: {consumer_group_id}",);
+        Ok(())
     }
 }
 

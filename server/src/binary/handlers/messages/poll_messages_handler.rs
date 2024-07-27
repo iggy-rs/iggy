@@ -1,6 +1,5 @@
 use crate::binary::mapper;
 use crate::binary::sender::Sender;
-use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::messages::PollingArgs;
 use crate::streaming::systems::system::SharedSystem;
@@ -16,15 +15,14 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
-    let consumer =
-        PollingConsumer::from_consumer(&command.consumer, session.client_id, command.partition_id);
     let system = system.read().await;
     let messages = system
         .poll_messages(
             session,
-            consumer,
+            &command.consumer,
             &command.stream_id,
             &command.topic_id,
+            command.partition_id,
             PollingArgs::new(command.strategy, command.count, command.auto_commit),
         )
         .await?;

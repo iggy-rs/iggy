@@ -44,18 +44,6 @@ impl TopicStorage for FileTopicStorage {
         topic.max_topic_size = state.max_topic_size;
         topic.replication_factor = state.replication_factor.unwrap_or(1);
 
-        for consumer_group in state.consumer_groups.into_values() {
-            let consumer_group = ConsumerGroup::new(
-                topic.topic_id,
-                consumer_group.id,
-                &consumer_group.name,
-                topic.get_partitions_count(),
-            );
-            topic
-                .consumer_groups
-                .insert(consumer_group.group_id, RwLock::new(consumer_group));
-        }
-
         let dir_entries = fs::read_dir(&topic.partitions_path).await
             .with_context(|| format!("Failed to read partition with ID: {} for stream with ID: {} for topic with ID: {} and path: {}",
                                      topic.topic_id, topic.stream_id, topic.topic_id, &topic.partitions_path));
@@ -163,6 +151,21 @@ impl TopicStorage for FileTopicStorage {
             topic
                 .partitions
                 .insert(partition.partition_id, IggySharedMut::new(partition));
+        }
+
+        for consumer_group in state.consumer_groups.into_values() {
+            let consumer_group = ConsumerGroup::new(
+                topic.topic_id,
+                consumer_group.id,
+                &consumer_group.name,
+                topic.get_partitions_count(),
+            );
+            topic
+                .consumer_groups_ids
+                .insert(consumer_group.name.to_owned(), consumer_group.group_id);
+            topic
+                .consumer_groups
+                .insert(consumer_group.group_id, RwLock::new(consumer_group));
         }
 
         topic.load_messages_from_disk_to_cache().await?;

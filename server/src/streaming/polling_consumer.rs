@@ -10,7 +10,15 @@ pub enum PollingConsumer {
 }
 
 impl PollingConsumer {
-    pub fn from_consumer(consumer: &Consumer, client_id: u32, partition_id: Option<u32>) -> Self {
+    pub fn consumer(consumer_id: &Identifier, partition_id: u32) -> Self {
+        PollingConsumer::Consumer(Self::resolve_consumer_id(consumer_id), partition_id)
+    }
+
+    pub fn consumer_group(consumer_group_id: &Identifier, member_id: u32) -> Self {
+        PollingConsumer::ConsumerGroup(Self::resolve_consumer_id(consumer_group_id), member_id)
+    }
+
+    pub fn from_consumer(consumer: Consumer, client_id: u32, partition_id: Option<u32>) -> Self {
         let consumer_id = Self::resolve_consumer_id(&consumer.id);
         match consumer.kind {
             ConsumerKind::Consumer => {
@@ -57,18 +65,16 @@ mod tests {
         let client_id = 2;
         let partition_id = 3;
         let consumer = Consumer::new(Identifier::numeric(consumer_id).unwrap());
+        let resolved_consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
         let polling_consumer =
-            PollingConsumer::from_consumer(&consumer, client_id, Some(partition_id));
+            PollingConsumer::from_consumer(consumer, client_id, Some(partition_id));
 
         assert_eq!(
             polling_consumer,
             PollingConsumer::Consumer(consumer_id, partition_id)
         );
 
-        assert_eq!(
-            consumer_id,
-            PollingConsumer::resolve_consumer_id(&consumer.id)
-        );
+        assert_eq!(consumer_id, resolved_consumer_id);
     }
 
     #[test]
@@ -76,11 +82,12 @@ mod tests {
         let consumer_name = "consumer";
         let client_id = 2;
         let partition_id = 3;
-        let consumer = Consumer::new(Identifier::named(consumer_name).unwrap());
-        let polling_consumer =
-            PollingConsumer::from_consumer(&consumer, client_id, Some(partition_id));
 
+        let consumer = Consumer::new(Identifier::named(consumer_name).unwrap());
         let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
+        let polling_consumer =
+            PollingConsumer::from_consumer(consumer, client_id, Some(partition_id));
+
         assert_eq!(
             polling_consumer,
             PollingConsumer::Consumer(consumer_id, partition_id)
@@ -92,13 +99,14 @@ mod tests {
         let group_id = 1;
         let client_id = 2;
         let consumer = Consumer::group(Identifier::numeric(group_id).unwrap());
-        let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
+        let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
+        let polling_consumer = PollingConsumer::from_consumer(consumer, client_id, None);
 
         assert_eq!(
             polling_consumer,
             PollingConsumer::ConsumerGroup(group_id, client_id)
         );
-        assert_eq!(group_id, PollingConsumer::resolve_consumer_id(&consumer.id));
+        assert_eq!(group_id, consumer_id);
     }
 
     #[test]
@@ -106,9 +114,9 @@ mod tests {
         let consumer_group_name = "consumer_group";
         let client_id = 2;
         let consumer = Consumer::group(Identifier::named(consumer_group_name).unwrap());
-        let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
-
         let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
+        let polling_consumer = PollingConsumer::from_consumer(consumer, client_id, None);
+
         assert_eq!(
             polling_consumer,
             PollingConsumer::ConsumerGroup(consumer_id, client_id)

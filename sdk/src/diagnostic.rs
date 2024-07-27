@@ -8,4 +8,6 @@ pub enum DiagnosticEvent {
     Disconnected,
     #[display(fmt = "connected")]
     Connected,
+    #[display(fmt = "authenticated")]
+    Authenticated,
 }

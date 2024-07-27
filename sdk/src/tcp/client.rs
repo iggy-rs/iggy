@@ -365,10 +365,12 @@ impl TcpClient {
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
+                        self.send_event(DiagnosticEvent::Authenticated).await;
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
                         self.login_with_personal_access_token(token).await?;
+                        self.send_event(DiagnosticEvent::Authenticated).await;
                         Ok(())
                     }
                 }
@@ -395,6 +397,7 @@ impl TcpClient {
             return Err(IggyError::NotConnected);
         }
 
+        info!("Sending a TCP request with code: {code}");
         let mut stream = self.stream.lock().await;
         if let Some(stream) = stream.as_mut() {
             let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;

@@ -11,7 +11,7 @@ use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
-use tracing::info;
+use tracing::{error, info};
 
 type MessageHandler = dyn Fn(&PolledMessage) -> Result<(), Box<dyn std::error::Error>>;
 
@@ -140,8 +140,8 @@ pub async fn consume_messages_iter(
 
     let mut consumer = match ConsumerKind::from_code(args.consumer_kind)? {
         ConsumerKind::Consumer => client
-            .consumer(name, &args.stream_id, &args.topic_id, args.partition_id)?
-            .polling_strategy(PollingStrategy::offset(0)),
+            .consumer_group(name, &args.stream_id, &args.topic_id)?
+            .polling_strategy(PollingStrategy::next()),
         ConsumerKind::ConsumerGroup => client
             .consumer_group(name, &args.stream_id, &args.topic_id)?
             .polling_strategy(PollingStrategy::next()),
@@ -159,8 +159,13 @@ pub async fn consume_messages_iter(
         }
 
         interval.tick().await;
-        handle_message(&message?)?;
-        consumed_batches += 1;
+        if let Ok(message) = message {
+            handle_message(&message)?;
+            consumed_batches += 1;
+        } else if let Err(error) = message {
+            error!("Error while handling message: {error}");
+            continue;
+        }
     }
     Ok(())
 }

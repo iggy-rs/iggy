@@ -14,7 +14,7 @@ impl Topic {
         client_id: u32,
     ) -> Result<(), IggyError> {
         let (polling_consumer, partition_id) = self
-            .resolve_consumer_with_partition(&consumer, client_id, partition_id, false)
+            .resolve_consumer_with_partition_id(&consumer, client_id, partition_id, false)
             .await?;
         let partition = self.get_partition(partition_id)?;
         let partition = partition.read().await;
@@ -41,7 +41,7 @@ impl Topic {
         client_id: u32,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
         let (polling_consumer, partition_id) = self
-            .resolve_consumer_with_partition(consumer, client_id, partition_id, false)
+            .resolve_consumer_with_partition_id(consumer, client_id, partition_id, false)
             .await?;
         let partition = self.get_partition(partition_id)?;
         let partition = partition.read().await;

@@ -270,8 +270,8 @@ impl IggyConsumer {
             receiver = client.events().await;
         }
 
-        let can_join_consumer_group =
-            self.consumer.kind == ConsumerKind::ConsumerGroup && self.auto_join_consumer_group;
+        let is_consumer_group = self.consumer.kind == ConsumerKind::ConsumerGroup;
+        let can_join_consumer_group = is_consumer_group && self.auto_join_consumer_group;
 
         let client = self.client.clone();
         let create_consumer_group_if_not_exists = self.create_consumer_group_if_not_exists;
@@ -294,19 +294,28 @@ impl IggyConsumer {
                     }
                     DiagnosticEvent::Disconnected => {
                         can_poll.store(false, ORDERING);
+                        info!("Set can poll to false");
                         was_disconnected.store(true, ORDERING);
                         warn!("Disconnected from the server");
                     }
                     DiagnosticEvent::Authenticated => {
                         let reconnected = was_disconnected.load(ORDERING);
                         was_disconnected.store(false, ORDERING);
+                        if !is_consumer_group {
+                            can_poll.store(true, ORDERING);
+                            info!("Set can poll to true");
+                            continue;
+                        }
+
                         if !reconnected {
                             can_poll.store(true, ORDERING);
+                            info!("Set can poll to true");
                             continue;
                         }
 
                         if !can_join_consumer_group {
                             can_poll.store(true, ORDERING);
+                            info!("Set can poll to true");
                             warn!("Auto join consumer group is disabled");
                             continue;
                         }
@@ -327,6 +336,7 @@ impl IggyConsumer {
                         }
                         info!("Rejoined consumer group");
                         can_poll.store(true, ORDERING);
+                        info!("Set can poll to true");
                     }
                 }
             }
@@ -353,9 +363,17 @@ impl IggyConsumer {
             }
 
             if !can_poll.load(ORDERING) {
-                return Err(IggyError::Disconnected);
+                loop {
+                    sleep(IggyDuration::from(1000).get_duration()).await;
+                    let can_poll_result = can_poll.load(ORDERING);
+                    info!("Waiting till can poll: {can_poll_result}");
+                    if can_poll_result {
+                        break;
+                    }
+                }
             }
 
+            info!("Sending poll messages request");
             client
                 .read()
                 .await

@@ -172,7 +172,7 @@ impl Topic {
         }
     }
 
-    pub async fn resolve_consumer_with_partition(
+    pub async fn resolve_consumer_with_partition_id(
         &self,
         consumer: &Consumer,
         client_id: u32,
@@ -195,7 +195,7 @@ impl Topic {
                     consumer_group.get_current_partition_id(client_id).await?
                 };
                 Ok((
-                    PollingConsumer::consumer_group(&consumer.id, client_id),
+                    PollingConsumer::consumer_group(consumer_group.group_id, client_id),
                     partition_id,
                 ))
             }

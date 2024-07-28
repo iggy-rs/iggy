@@ -35,7 +35,7 @@ impl System {
         }
 
         let (polling_consumer, partition_id) = topic
-            .resolve_consumer_with_partition(consumer, session.client_id, partition_id, true)
+            .resolve_consumer_with_partition_id(consumer, session.client_id, partition_id, true)
             .await?;
 
         let mut polled_messages = topic

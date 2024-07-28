@@ -56,6 +56,8 @@ pub struct IggyConsumer {
     client: IggySharedMut<Box<dyn Client>>,
     consumer_name: String,
     consumer: Arc<Consumer>,
+    is_consumer_group: bool,
+    consumer_group_joined: Arc<AtomicBool>,
     stream_id: Arc<Identifier>,
     topic_id: Arc<Identifier>,
     partition_id: Option<u32>,
@@ -75,8 +77,6 @@ pub struct IggyConsumer {
     store_offset_receiver: Option<flume::Receiver<u64>>,
     store_offset_after_each_message: bool,
     store_offset_after_all_messages: bool,
-    is_consumer_group: bool,
-    consumer_group_joined: Arc<AtomicBool>,
 }
 
 impl IggyConsumer {
@@ -250,17 +250,12 @@ impl IggyConsumer {
             return Ok(());
         }
 
-        if self.consumer_group_joined.load(ORDERING) {
-            info!("Consumer group is already joined");
-            return Ok(());
-        }
-
         if !self.auto_join_consumer_group {
             info!("Auto join consumer group is disabled");
             return Ok(());
         }
 
-        Self::handle_consumer_group(
+        Self::initialize_consumer_group(
             self.client.clone(),
             self.create_consumer_group_if_not_exists,
             self.stream_id.clone(),
@@ -290,7 +285,6 @@ impl IggyConsumer {
         let consumer_name = self.consumer_name.clone();
         let can_poll = self.can_poll.clone();
         let consumer_group_joined = self.consumer_group_joined.clone();
-        let should_rejoin_consumer_group = Arc::new(AtomicBool::new(false));
 
         tokio::spawn(async move {
             while let Ok(event) = receiver.recv_async().await {
@@ -303,20 +297,11 @@ impl IggyConsumer {
                         can_poll.store(false, ORDERING);
                         if is_consumer_group {
                             consumer_group_joined.store(false, ORDERING);
-                            should_rejoin_consumer_group.store(true, ORDERING);
                         }
                         warn!("Disconnected from the server");
                     }
                     DiagnosticEvent::SignedIn => {
                         if !is_consumer_group {
-                            can_poll.store(true, ORDERING);
-                            info!("Set can poll to true");
-                            continue;
-                        }
-
-                        let join_consumer_group = should_rejoin_consumer_group.load(ORDERING);
-                        should_rejoin_consumer_group.store(false, ORDERING);
-                        if !join_consumer_group {
                             can_poll.store(true, ORDERING);
                             info!("Set can poll to true");
                             continue;
@@ -330,7 +315,7 @@ impl IggyConsumer {
                         }
 
                         info!("Rejoining consumer group");
-                        if let Err(error) = Self::handle_consumer_group(
+                        if let Err(error) = Self::initialize_consumer_group(
                             client.clone(),
                             create_consumer_group_if_not_exists,
                             stream_id.clone(),
@@ -352,7 +337,6 @@ impl IggyConsumer {
                         can_poll.store(false, ORDERING);
                         if is_consumer_group {
                             consumer_group_joined.store(false, ORDERING);
-                            should_rejoin_consumer_group.store(true, ORDERING);
                         }
                     }
                 }
@@ -395,14 +379,14 @@ impl IggyConsumer {
         }
     }
 
-    async fn handle_consumer_group(
+    async fn initialize_consumer_group(
         client: IggySharedMut<Box<dyn Client>>,
         create_consumer_group_if_not_exists: bool,
         stream_id: Arc<Identifier>,
         topic_id: Arc<Identifier>,
         consumer: Arc<Consumer>,
         consumer_name: &str,
-        joined: Arc<AtomicBool>,
+        consumer_group_joined: Arc<AtomicBool>,
     ) -> Result<(), IggyError> {
         let client = client.read().await;
         let (name, id) = match consumer.id.kind {
@@ -428,10 +412,16 @@ impl IggyConsumer {
         }
 
         info!("Joining consumer group: {consumer_group_id}",);
-        client
+        if let Err(error) = client
             .join_consumer_group(&stream_id, &topic_id, &consumer_group_id)
-            .await?;
-        joined.store(true, ORDERING);
+            .await
+        {
+            error!("Failed to join consumer group: {error}");
+            consumer_group_joined.store(false, ORDERING);
+            return Err(error);
+        }
+
+        consumer_group_joined.store(true, ORDERING);
         info!("Joined consumer group: {consumer_group_id}",);
         Ok(())
     }

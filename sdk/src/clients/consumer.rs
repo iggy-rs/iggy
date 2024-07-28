@@ -41,9 +41,9 @@ pub enum AutoCommit {
 pub enum AutoCommitMode {
     /// The offset is stored on the server when the messages are received.
     AfterPollingMessages,
-    /// The offset is stored on the server when the messages are consumed.
+    /// The offset is stored on the server after all the messages are consumed.
     AfterConsumingAllMessages,
-    /// The offset is stored on the server after processing each message.
+    /// The offset is stored on the server after consuming each message.
     AfterConsumingEachMessage,
 }
 
@@ -75,6 +75,8 @@ pub struct IggyConsumer {
     store_offset_receiver: Option<flume::Receiver<u64>>,
     store_offset_after_each_message: bool,
     store_offset_after_all_messages: bool,
+    is_consumer_group: bool,
+    consumer_group_joined: Arc<AtomicBool>,
 }
 
 impl IggyConsumer {
@@ -107,6 +109,7 @@ impl IggyConsumer {
 
         Self {
             initialized: false,
+            is_consumer_group: consumer.kind == ConsumerKind::ConsumerGroup,
             can_poll: Arc::new(AtomicBool::new(true)),
             client,
             consumer_name,
@@ -142,6 +145,7 @@ impl IggyConsumer {
                 AutoCommit::Mode(AutoCommitMode::AfterConsumingAllMessages)
                     | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingAllMessages)
             ),
+            consumer_group_joined: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -242,7 +246,12 @@ impl IggyConsumer {
     }
 
     async fn init_consumer_group(&self) -> Result<(), IggyError> {
-        if self.consumer.kind != ConsumerKind::ConsumerGroup {
+        if !self.is_consumer_group {
+            return Ok(());
+        }
+
+        if self.consumer_group_joined.load(ORDERING) {
+            info!("Consumer group is already joined");
             return Ok(());
         }
 
@@ -258,6 +267,7 @@ impl IggyConsumer {
             self.topic_id.clone(),
             self.consumer.clone(),
             &self.consumer_name,
+            self.consumer_group_joined.clone(),
         )
         .await
     }
@@ -267,12 +277,11 @@ impl IggyConsumer {
         let receiver;
         {
             let client = self.client.read().await;
-            receiver = client.events().await;
+            receiver = client.subscribe_events().await;
         }
 
-        let is_consumer_group = self.consumer.kind == ConsumerKind::ConsumerGroup;
+        let is_consumer_group = self.is_consumer_group;
         let can_join_consumer_group = is_consumer_group && self.auto_join_consumer_group;
-
         let client = self.client.clone();
         let create_consumer_group_if_not_exists = self.create_consumer_group_if_not_exists;
         let stream_id = self.stream_id.clone();
@@ -280,7 +289,8 @@ impl IggyConsumer {
         let consumer = self.consumer.clone();
         let consumer_name = self.consumer_name.clone();
         let can_poll = self.can_poll.clone();
-        let was_disconnected = Arc::new(AtomicBool::new(false));
+        let consumer_group_joined = self.consumer_group_joined.clone();
+        let should_rejoin_consumer_group = Arc::new(AtomicBool::new(false));
 
         tokio::spawn(async move {
             while let Ok(event) = receiver.recv_async().await {
@@ -288,26 +298,25 @@ impl IggyConsumer {
                 match event {
                     DiagnosticEvent::Connected => {
                         info!("Connected to the server");
-                        if was_disconnected.load(ORDERING) {
-                            info!("Reconnected to the server");
-                        }
                     }
                     DiagnosticEvent::Disconnected => {
                         can_poll.store(false, ORDERING);
-                        info!("Set can poll to false");
-                        was_disconnected.store(true, ORDERING);
+                        if is_consumer_group {
+                            consumer_group_joined.store(false, ORDERING);
+                            should_rejoin_consumer_group.store(true, ORDERING);
+                        }
                         warn!("Disconnected from the server");
                     }
-                    DiagnosticEvent::Authenticated => {
-                        let reconnected = was_disconnected.load(ORDERING);
-                        was_disconnected.store(false, ORDERING);
+                    DiagnosticEvent::SignedIn => {
                         if !is_consumer_group {
                             can_poll.store(true, ORDERING);
                             info!("Set can poll to true");
                             continue;
                         }
 
-                        if !reconnected {
+                        let join_consumer_group = should_rejoin_consumer_group.load(ORDERING);
+                        should_rejoin_consumer_group.store(false, ORDERING);
+                        if !join_consumer_group {
                             can_poll.store(true, ORDERING);
                             info!("Set can poll to true");
                             continue;
@@ -328,6 +337,7 @@ impl IggyConsumer {
                             topic_id.clone(),
                             consumer.clone(),
                             &consumer_name,
+                            consumer_group_joined.clone(),
                         )
                         .await
                         {
@@ -337,6 +347,13 @@ impl IggyConsumer {
                         info!("Rejoined consumer group");
                         can_poll.store(true, ORDERING);
                         info!("Set can poll to true");
+                    }
+                    DiagnosticEvent::SignedOut => {
+                        can_poll.store(false, ORDERING);
+                        if is_consumer_group {
+                            consumer_group_joined.store(false, ORDERING);
+                            should_rejoin_consumer_group.store(true, ORDERING);
+                        }
                     }
                 }
             }
@@ -352,7 +369,6 @@ impl IggyConsumer {
         let consumer = self.consumer.clone();
         let polling_strategy = self.polling_strategy;
         let client = self.client.clone();
-        let can_poll = self.can_poll.clone();
         let count = self.batch_size;
         let auto_commit = self.auto_commit_after_polling;
         let interval = self.interval;
@@ -360,17 +376,6 @@ impl IggyConsumer {
         async move {
             if let Some(interval) = interval {
                 sleep(interval.get_duration()).await;
-            }
-
-            if !can_poll.load(ORDERING) {
-                loop {
-                    sleep(IggyDuration::from(1000).get_duration()).await;
-                    let can_poll_result = can_poll.load(ORDERING);
-                    info!("Waiting till can poll: {can_poll_result}");
-                    if can_poll_result {
-                        break;
-                    }
-                }
             }
 
             info!("Sending poll messages request");
@@ -397,17 +402,16 @@ impl IggyConsumer {
         topic_id: Arc<Identifier>,
         consumer: Arc<Consumer>,
         consumer_name: &str,
+        joined: Arc<AtomicBool>,
     ) -> Result<(), IggyError> {
-        info!("Opening client to join consumer group");
         let client = client.read().await;
-        info!("Opened client to join consumer group");
         let (name, id) = match consumer.id.kind {
             IdKind::Numeric => (consumer_name.to_owned(), Some(consumer.id.get_u32_value()?)),
             IdKind::String => (consumer.id.get_string_value()?, None),
         };
 
         let consumer_group_id = name.to_owned().try_into()?;
-        info!("Checking consumer group: {consumer_group_id}");
+        info!("Validating consumer group: {consumer_group_id}");
         if let Err(error) = client
             .get_consumer_group(&stream_id, &topic_id, &consumer_group_id)
             .await
@@ -427,6 +431,7 @@ impl IggyConsumer {
         client
             .join_consumer_group(&stream_id, &topic_id, &consumer_group_id)
             .await?;
+        joined.store(true, ORDERING);
         info!("Joined consumer group: {consumer_group_id}",);
         Ok(())
     }
@@ -493,7 +498,10 @@ impl Stream for IggyConsumer {
                         return Poll::Ready(Some(Ok(message)));
                     }
                 }
-                Poll::Ready(Err(err)) => return Poll::Ready(Some(Err(err))),
+                Poll::Ready(Err(err)) => {
+                    self.poll_future = None;
+                    return Poll::Ready(Some(Err(err)));
+                }
                 Poll::Pending => return Poll::Pending,
             }
         }

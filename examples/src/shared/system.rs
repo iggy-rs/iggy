@@ -126,7 +126,7 @@ pub async fn consume_messages(
 }
 
 #[allow(dead_code)]
-pub async fn consume_messages_iter(
+pub async fn consume_messages_new(
     args: &Args,
     client: &IggyClient,
     handle_message: &MessageHandler,
@@ -138,17 +138,25 @@ pub async fn consume_messages_iter(
     let mut consumed_batches = 0;
     let name = "envelope-example";
 
-    let mut consumer = match ConsumerKind::from_code(args.consumer_kind)? {
-        ConsumerKind::Consumer => client
-            .consumer_group(name, &args.stream_id, &args.topic_id)?
-            .polling_strategy(PollingStrategy::next()),
-        ConsumerKind::ConsumerGroup => client
-            .consumer_group(name, &args.stream_id, &args.topic_id)?
-            .polling_strategy(PollingStrategy::next()),
-    }
-    .auto_commit(AutoCommit::Mode(AutoCommitMode::AfterPollingMessages))
-    .batch_size(args.messages_per_batch)
-    .build();
+    // let mut consumer = match ConsumerKind::from_code(args.consumer_kind)? {
+    //     ConsumerKind::Consumer => client
+    //         .consumer(name, &args.stream_id, &args.topic_id, args.partition_id)?
+    //         .polling_strategy(PollingStrategy::next()),
+    //     ConsumerKind::ConsumerGroup => client
+    //         .consumer_group(name, &args.stream_id, &args.topic_id)?
+    //         .polling_strategy(PollingStrategy::next()),
+    // }
+    // .auto_commit(AutoCommit::Mode(AutoCommitMode::AfterPollingMessages))
+    // .batch_size(args.messages_per_batch)
+    // .build();
+
+    let mut consumer = client
+        .consumer_group(name, &args.stream_id, &args.topic_id)?
+        .polling_strategy(PollingStrategy::next())
+        .auto_commit(AutoCommit::Mode(AutoCommitMode::AfterPollingMessages))
+        .batch_size(args.messages_per_batch)
+        .auto_join_consumer_group()
+        .build();
 
     consumer.init().await?;
 

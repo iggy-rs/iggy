@@ -44,7 +44,7 @@ impl Client for HttpClient {
         HttpClient::disconnect(self).await
     }
 
-    async fn events(&self) -> Receiver<DiagnosticEvent> {
+    async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
         self.events.1.clone()
     }
 }

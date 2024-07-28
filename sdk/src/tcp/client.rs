@@ -131,7 +131,7 @@ impl Client for TcpClient {
         TcpClient::disconnect(self).await
     }
 
-    async fn events(&self) -> Receiver<DiagnosticEvent> {
+    async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
         self.events.1.clone()
     }
 }
@@ -170,6 +170,12 @@ impl BinaryTransport for TcpClient {
         }
 
         self.send_raw(code, payload).await
+    }
+
+    async fn publish_event(&self, event: DiagnosticEvent) {
+        if let Err(error) = self.events.0.send_async(event).await {
+            error!("Failed to send a TCP diagnostic event: {error}");
+        }
     }
 }
 
@@ -320,7 +326,7 @@ impl TcpClient {
                 }
 
                 self.set_state(ClientState::Disconnected).await;
-                self.send_event(DiagnosticEvent::Disconnected).await;
+                self.publish_event(DiagnosticEvent::Disconnected).await;
                 return Err(IggyError::CannotEstablishConnection);
             }
 
@@ -349,12 +355,10 @@ impl TcpClient {
             break;
         }
 
+        info!("{NAME} client has connected to server: {remote_address}",);
         self.stream.lock().await.replace(connection_stream);
         self.set_state(ClientState::Connected).await;
-        self.send_event(DiagnosticEvent::Connected).await;
-
-        info!("{NAME} client has connected to server: {remote_address}",);
-
+        self.publish_event(DiagnosticEvent::Connected).await;
         match &self.config.auto_sign_in {
             AutoSignIn::Disabled => {
                 info!("Automatic sign-in is disabled.");
@@ -365,12 +369,14 @@ impl TcpClient {
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
-                        self.send_event(DiagnosticEvent::Authenticated).await;
+                        self.publish_event(DiagnosticEvent::SignedIn).await;
+                        info!("{NAME} client has signed in with the user credentials.",);
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
                         self.login_with_personal_access_token(token).await?;
-                        self.send_event(DiagnosticEvent::Authenticated).await;
+                        self.publish_event(DiagnosticEvent::SignedIn).await;
+                        info!("{NAME} client has signed in with a personal access token.",);
                         Ok(())
                     }
                 }
@@ -386,7 +392,7 @@ impl TcpClient {
         info!("{} client is disconnecting from server...", NAME);
         self.set_state(ClientState::Disconnected).await;
         self.stream.lock().await.take();
-        self.send_event(DiagnosticEvent::Disconnected).await;
+        self.publish_event(DiagnosticEvent::Disconnected).await;
         info!("{} client has disconnected from server.", NAME);
         Ok(())
     }
@@ -428,11 +434,5 @@ impl TcpClient {
 
         error!("Cannot send data. Client is not connected.");
         Err(IggyError::NotConnected)
-    }
-
-    async fn send_event(&self, event: DiagnosticEvent) {
-        if let Err(error) = self.events.0.send_async(event).await {
-            error!("Failed to send a TCP diagnostic event: {error}");
-        }
     }
 }

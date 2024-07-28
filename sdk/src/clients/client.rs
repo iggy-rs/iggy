@@ -533,8 +533,8 @@ impl Client for IggyClient {
         self.client.read().await.disconnect().await
     }
 
-    async fn events(&self) -> Receiver<DiagnosticEvent> {
-        self.client.read().await.events().await
+    async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
+        self.client.read().await.subscribe_events().await
     }
 }
 

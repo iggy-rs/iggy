@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client = client_provider::get_raw_connected_client(client_provider_config).await?;
     let client = IggyClient::builder().with_client(client).build()?;
     system::init_by_producer(&args, &client).await?;
-    produce_messages(&args, &client).await
+    produce_messages_new(&args, &client).await
 }
 
 async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {

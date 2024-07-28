@@ -62,7 +62,7 @@ pub trait Client:
     async fn disconnect(&self) -> Result<(), IggyError>;
 
     /// Subscribe to diagnostic events.
-    async fn events(&self) -> Receiver<DiagnosticEvent>;
+    async fn subscribe_events(&self) -> Receiver<DiagnosticEvent>;
 }
 
 /// This trait defines the methods to interact with the system module.

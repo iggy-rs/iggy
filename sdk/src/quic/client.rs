@@ -55,7 +55,7 @@ impl Client for QuicClient {
         QuicClient::disconnect(self).await
     }
 
-    async fn events(&self) -> Receiver<DiagnosticEvent> {
+    async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
         self.events.1.clone()
     }
 }
@@ -94,6 +94,12 @@ impl BinaryTransport for QuicClient {
         }
 
         self.send_raw(code, payload).await
+    }
+
+    async fn publish_event(&self, event: DiagnosticEvent) {
+        if let Err(error) = self.events.0.send_async(event).await {
+            error!("Failed to send a QUIC diagnostic event: {error}");
+        }
     }
 }
 
@@ -247,7 +253,7 @@ impl QuicClient {
                 }
 
                 self.set_state(ClientState::Disconnected).await;
-                self.send_event(DiagnosticEvent::Disconnected).await;
+                self.publish_event(DiagnosticEvent::Disconnected).await;
                 return Err(IggyError::CannotEstablishConnection);
             }
 
@@ -258,7 +264,7 @@ impl QuicClient {
 
         self.set_state(ClientState::Connected).await;
         self.connection.lock().await.replace(connection);
-        self.send_event(DiagnosticEvent::Connected).await;
+        self.publish_event(DiagnosticEvent::Connected).await;
 
         info!("{NAME} client has connected to server: {remote_address}",);
 
@@ -272,12 +278,10 @@ impl QuicClient {
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
-                        self.send_event(DiagnosticEvent::Authenticated).await;
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
                         self.login_with_personal_access_token(token).await?;
-                        self.send_event(DiagnosticEvent::Authenticated).await;
                         Ok(())
                     }
                 }
@@ -294,7 +298,7 @@ impl QuicClient {
         self.set_state(ClientState::Disconnected).await;
         self.connection.lock().await.take();
         self.endpoint.wait_idle().await;
-        self.send_event(DiagnosticEvent::Disconnected).await;
+        self.publish_event(DiagnosticEvent::Disconnected).await;
         info!("{} client has disconnected from server.", NAME);
         Ok(())
     }
@@ -321,12 +325,6 @@ impl QuicClient {
 
         error!("Cannot send data. Client is not connected.");
         Err(IggyError::NotConnected)
-    }
-
-    async fn send_event(&self, event: DiagnosticEvent) {
-        if let Err(error) = self.events.0.send_async(event).await {
-            error!("Failed to send a QUIC diagnostic event: {error}");
-        }
     }
 }
 

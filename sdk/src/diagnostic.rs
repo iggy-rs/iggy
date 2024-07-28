@@ -8,6 +8,8 @@ pub enum DiagnosticEvent {
     Disconnected,
     #[display(fmt = "connected")]
     Connected,
-    #[display(fmt = "authenticated")]
-    Authenticated,
+    #[display(fmt = "signed_in")]
+    SignedIn,
+    #[display(fmt = "signed_out")]
+    SignedOut,
 }

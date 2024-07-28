@@ -1,4 +1,5 @@
 use crate::command::Command;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -49,6 +50,7 @@ pub trait BinaryTransport {
     async fn get_state(&self) -> ClientState;
     /// Sets the state of the client.
     async fn set_state(&self, state: ClientState);
+    async fn publish_event(&self, event: DiagnosticEvent);
     /// Sends a command and returns the response.
     async fn send_with_response<T: Command>(&self, command: &T) -> Result<Bytes, IggyError>;
     async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError>;

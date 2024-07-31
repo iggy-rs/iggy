@@ -15,14 +15,15 @@ use tracing::error;
 use super::shard::IggyShard;
 
 impl IggyShard {
-    pub fn find_topic(
+    pub async fn find_topic(
         &self,
         client_id: u32,
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<Topic, IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
             .borrow()
@@ -30,13 +31,14 @@ impl IggyShard {
         Ok(topic.clone())
     }
 
-    pub fn find_topics(
+    pub async fn find_topics(
         &self,
         client_id: u32,
         stream_id: &Identifier,
     ) -> Result<Vec<Topic>, IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         self.permissioner
             .borrow()
             .get_topics(user_id, stream.stream_id)?;
@@ -57,10 +59,11 @@ impl IggyShard {
         replication_factor: Option<u8>,
         should_persist: bool,
     ) -> Result<(), IggyError> {
-        let mut stream = self.get_stream_mut(stream_id)?;
+        let mut stream_lock = self.streams.write().await;
+        let stream = self.get_stream_mut(&mut stream_lock, stream_id)?;
         self.permissioner
             .borrow()
-           .create_topic(user_id, stream.stream_id)?;
+            .create_topic(user_id, stream.stream_id)?;
 
         let (topic_id, partition_ids) = stream
             .create_topic(
@@ -75,7 +78,7 @@ impl IggyShard {
             )
             .await?;
         let stream_u32_id = stream.stream_id;
-        drop(stream);
+        drop(stream_lock);
 
         for partition_id in partition_ids {
             let shards_count = self.get_available_shards_count();
@@ -107,24 +110,25 @@ impl IggyShard {
         replication_factor: Option<u8>,
         update_on_disk: bool,
     ) -> Result<(), IggyError> {
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
             .borrow()
             .update_topic(user_id, stream.stream_id, topic.topic_id)?;
-        drop(stream);
+        drop(stream_lock);
 
-       let mut stream = self.get_stream_mut(stream_id)?;
-       let fut = stream
-            .update_topic(
-                topic_id,
-                name,
-                message_expiry,
-                compression_algorithm,
-                max_topic_size,
-                replication_factor.unwrap_or(1),
-                update_on_disk,
-            );
+        let mut stream_lock = self.streams.write().await;
+        let stream = self.get_stream_mut(&mut stream_lock, stream_id)?;
+        let fut = stream.update_topic(
+            topic_id,
+            name,
+            message_expiry,
+            compression_algorithm,
+            max_topic_size,
+            replication_factor.unwrap_or(1),
+            update_on_disk,
+        );
         fut.await?;
 
         // TODO: if message_expiry is changed, we need to check if we need to purge messages based on the new expiry
@@ -141,17 +145,17 @@ impl IggyShard {
         remove_from_disk: bool,
     ) -> Result<(), IggyError> {
         let stream_id_value;
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         let topic = stream.get_topic(topic_id)?.clone();
         self.permissioner
             .borrow()
             .delete_topic(user_id, stream.stream_id, topic.topic_id)?;
         stream_id_value = stream.stream_id;
-        drop(stream);
-
-       let mut stream = self.get_stream_mut(stream_id)?;
-       let fut = stream
-            .delete_topic(topic_id, remove_from_disk);
+        drop(stream_lock);
+        let mut stream_lock = self.streams.write().await;
+        let stream = self.get_stream_mut(&mut stream_lock, stream_id)?;
+        let fut = stream.delete_topic(topic_id, remove_from_disk);
         fut.await?;
 
         self.metrics.decrement_topics(1);
@@ -173,10 +177,11 @@ impl IggyShard {
         topic_id: &Identifier,
         purge_storage: bool,
     ) -> Result<(), IggyError> {
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         let topic = stream.get_topic(topic_id)?.clone();
         let stream_id = stream.stream_id;
-        drop(stream);
+        drop(stream_lock);
         self.permissioner
             .borrow()
             .purge_topic(user_id, stream_id, topic.topic_id)?;

@@ -26,7 +26,8 @@ impl IggyShard {
             return Err(IggyError::InvalidMessagesCount);
         }
 
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner
             .borrow()
@@ -49,6 +50,7 @@ impl IggyShard {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
             topic.store_consumer_offset(consumer, offset, true).await?;
         }
+        drop(stream_lock);
 
         if self.encryptor.is_none() {
             return Ok(polled_messages);
@@ -90,7 +92,8 @@ impl IggyShard {
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(&stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, &stream_id)?;
         let topic = stream.borrow().get_topic(&topic_id)?;
         self.permissioner
             .borrow()
@@ -125,6 +128,7 @@ impl IggyShard {
         topic
             .append_messages(batch_size_bytes, partitioning, messages)
             .await?;
+        drop(stream_lock);
         self.metrics.increment_messages(messages_count);
         Ok(())
     }

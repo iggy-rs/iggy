@@ -335,13 +335,13 @@ impl IggyShard {
             }
             ServerCommand::GetStream(command) => {
                 let GetStream { stream_id } = command;
-                let stream = self.find_stream(client_id, &stream_id)?;
+                let stream = self.find_stream(client_id, &stream_id).await?;
                 let bytes = mapper::map_stream(stream).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::GetStreams(_) => {
                 let _ = self.ensure_authenticated(client_id)?;
-                let streams = self.get_streams();
+                let streams = self.get_streams().await;
                 let bytes = mapper::map_streams(streams).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
@@ -410,13 +410,13 @@ impl IggyShard {
                     stream_id,
                     topic_id,
                 } = command;
-                let topic = self.find_topic(client_id, &stream_id, &topic_id)?;
+                let topic = self.find_topic(client_id, &stream_id, &topic_id).await?;
                 let bytes = mapper::map_topic(topic).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::GetTopics(command) => {
                 let GetTopics { stream_id } = command;
-                let topics = self.find_topics(client_id, &stream_id)?;
+                let topics = self.find_topics(client_id, &stream_id).await?;
                 let bytes = mapper::map_topics(topics).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
@@ -568,8 +568,9 @@ impl IggyShard {
                     topic_id,
                     group_id,
                 } = command;
-                let consumer_group =
-                    self.get_consumer_group(client_id, &stream_id, &topic_id, &group_id)?;
+                let consumer_group = self
+                    .get_consumer_group(client_id, &stream_id, &topic_id, &group_id)
+                    .await?;
                 let bytes = mapper::map_consumer_group(consumer_group).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
@@ -578,20 +579,23 @@ impl IggyShard {
                     stream_id,
                     topic_id,
                 } = command;
-                let consumer_groups = self.get_consumer_groups(client_id, &stream_id, &topic_id)?;
+                let consumer_groups = self
+                    .get_consumer_groups(client_id, &stream_id, &topic_id)
+                    .await?;
                 let bytes = mapper::map_consumer_groups(consumer_groups).await;
                 Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::CreateConsumerGroup(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
-                self.create_consumer_group(
-                    user_id,
-                    &command.stream_id,
-                    &command.topic_id,
-                    command.group_id,
-                    command.name.clone(),
-                )
-                .await?;
+                let cg = self
+                    .create_consumer_group(
+                        user_id,
+                        &command.stream_id,
+                        &command.topic_id,
+                        command.group_id,
+                        command.name.clone(),
+                    )
+                    .await?;
                 self.state
                     .apply(user_id, EntryCommand::CreateConsumerGroup(command.clone()))
                     .await?;
@@ -605,7 +609,8 @@ impl IggyShard {
                 for resp in response {
                     resp?;
                 }
-                Ok(ShardResponse::BinaryResponse(Bytes::new()))
+                let bytes = mapper::map_consumer_group(cg).await;
+                Ok(ShardResponse::BinaryResponse(bytes))
             }
             ServerCommand::DeleteConsumerGroup(command) => {
                 let user_id = self.ensure_authenticated(client_id)?;
@@ -638,6 +643,11 @@ impl IggyShard {
                 } = command;
                 self.join_consumer_group(client_id, &stream_id, &topic_id, &group_id)
                     .await?;
+                let event = ShardEvent::JoinedConsumerGroup(stream_id, topic_id, group_id);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
             ServerCommand::LeaveConsumerGroup(command) => {
@@ -648,6 +658,11 @@ impl IggyShard {
                 } = command;
                 self.leave_consumer_group(client_id, &stream_id, &topic_id, &group_id)
                     .await?;
+                let event = ShardEvent::LeftConsumerGroup(stream_id, topic_id, group_id);
+                let response = self.broadcast_event_to_all_shards(client_id, event);
+                for resp in response {
+                    resp?;
+                }
                 Ok(ShardResponse::BinaryResponse(Bytes::new()))
             }
         }

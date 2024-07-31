@@ -72,7 +72,7 @@ impl IggyShard {
 
         drop(sys);
 
-        for stream in self.streams.borrow().values() {
+        for stream in self.streams.read().await.values() {
             stats.messages_count += stream.get_messages_count();
             stats.segments_count += stream.get_segments_count();
             stats.messages_size_bytes += stream.get_size();

@@ -173,6 +173,16 @@ impl IggyShard {
                 .await?;
                 Ok(())
             }
+            ShardEvent::JoinedConsumerGroup(stream_id, topic_id, group_id) => {
+                self.join_consumer_group(client_id, &stream_id, &topic_id, &group_id)
+                    .await?;
+                Ok(())
+            }
+            ShardEvent::LeftConsumerGroup(stream_id, topic_id, group_id) => {
+                self.leave_consumer_group(client_id, &stream_id, &topic_id, &group_id)
+                    .await?;
+                Ok(())
+            }
         }
     }
 }

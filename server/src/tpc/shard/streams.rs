@@ -13,6 +13,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 use tokio::fs;
+use tokio::sync::{RwLockReadGuard, RwLockWriteGuard};
 use tracing::{error, info, warn};
 
 use super::shard::IggyShard;
@@ -98,7 +99,7 @@ impl IggyShard {
         try_join_all(load_stream_tasks).await?;
 
         for stream in loaded_streams.take() {
-            if self.streams.borrow().contains_key(&stream.stream_id) {
+            if self.streams.read().await.contains_key(&stream.stream_id) {
                 error!("Stream with ID: '{}' already exists.", &stream.stream_id);
                 continue;
             }
@@ -118,73 +119,94 @@ impl IggyShard {
             self.streams_ids
                 .borrow_mut()
                 .insert(stream.name.clone(), stream.stream_id);
-            self.streams.borrow_mut().insert(stream.stream_id, stream);
+            self.streams.write().await.insert(stream.stream_id, stream);
         }
 
         info!(
             "Loaded {} stream(s) from disk.",
-            self.streams.borrow().len()
+            self.streams.read().await.len()
         );
         Ok(())
     }
 
-    pub fn get_streams(&self) -> Vec<Stream> {
-        self.streams.borrow().values().cloned().collect()
+    pub async fn get_streams(&self) -> Vec<Stream> {
+        self.streams.read().await.values().cloned().collect()
     }
 
-    pub fn find_streams(&self, session: &Session) -> Result<Vec<Stream>, IggyError> {
+    pub async fn find_streams(&self, session: &Session) -> Result<Vec<Stream>, IggyError> {
         let user_id = self.ensure_authenticated(session.client_id)?;
         self.permissioner.borrow().get_streams(user_id)?;
-        Ok(self.get_streams())
+        Ok(self.get_streams().await)
     }
 
-    pub fn find_stream(
+    pub async fn find_stream(
         &self,
         client_id: u32,
         identifier: &Identifier,
     ) -> Result<Stream, IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(identifier)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, identifier)?;
         self.permissioner
             .borrow()
             .get_stream(user_id, stream.stream_id)?;
         Ok(stream.clone())
     }
 
-    pub fn get_stream(&self, identifier: &Identifier) -> Result<Ref<'_, Stream>, IggyError> {
+    pub fn get_stream<'stream>(
+        &self,
+        stream_lock: &'stream RwLockReadGuard<HashMap<u32, Stream>>,
+        identifier: &Identifier,
+    ) -> Result<&'stream Stream, IggyError> {
         match identifier.kind {
-            IdKind::Numeric => self.get_stream_by_id(identifier.get_u32_value()?),
-            IdKind::String => self.get_stream_by_name(&identifier.get_cow_str_value()?),
+            IdKind::Numeric => Self::get_stream_by_id(stream_lock, identifier.get_u32_value()?),
+            IdKind::String => {
+                self.get_stream_by_name(stream_lock, &identifier.get_cow_str_value()?)
+            }
         }
     }
 
-    pub fn get_stream_mut(&self, identifier: &Identifier) -> Result<RefMut<'_, Stream>, IggyError> {
+    fn get_stream_by_name<'stream>(
+        &self,
+        stream_lock: &'stream RwLockReadGuard<HashMap<u32, Stream>>,
+        name: &str,
+    ) -> Result<&'stream Stream, IggyError> {
+        let streams_ids = self.streams_ids.borrow();
+        let id = match streams_ids.get(name) {
+            Some(id) => id,
+            None => return Err(IggyError::StreamNameAlreadyExists(name.to_owned())),
+        };
+        Self::get_stream_by_id(stream_lock, *id)
+    }
+
+    fn get_stream_by_id<'stream>(
+        stream_lock: &'stream RwLockReadGuard<HashMap<u32, Stream>>,
+        stream_id: u32,
+    ) -> Result<&'stream Stream, IggyError> {
+        match stream_lock.get(&stream_id) {
+            Some(stream) => Ok(stream),
+            None => Err(IggyError::StreamIdNotFound(stream_id)),
+        }
+    }
+
+    pub fn get_stream_mut<'stream>(
+        &self,
+        stream_lock: &'stream mut RwLockWriteGuard<HashMap<u32, Stream>>,
+        identifier: &Identifier,
+    ) -> Result<&'stream mut Stream, IggyError> {
         match identifier.kind {
-            IdKind::Numeric => self.get_stream_by_id_mut(identifier.get_u32_value()?),
-            IdKind::String => self.get_stream_by_name_mut(&identifier.get_cow_str_value()?),
+            IdKind::Numeric => Self::get_stream_by_id_mut(stream_lock, identifier.get_u32_value()?),
+            IdKind::String => {
+                self.get_stream_by_name_mut(stream_lock, &identifier.get_cow_str_value()?)
+            }
         }
     }
 
-    fn get_stream_by_name(&self, name: &str) -> Result<Ref<'_, Stream>, IggyError> {
-        let exists = self.streams_ids.borrow().iter().any(|s| s.0 == name);
-        if !exists {
-            return Err(IggyError::StreamNameNotFound(name.to_string()));
-        }
-        let stream_id = self.streams_ids.borrow().get(name).cloned().unwrap();
-        self.get_stream_by_id(stream_id)
-    }
-
-    fn get_stream_by_id(&self, stream_id: u32) -> Result<Ref<'_, Stream>, IggyError> {
-        let exists = self.streams.borrow().iter().any(|s| s.0 == &stream_id);
-        if !exists {
-            return Err(IggyError::StreamIdNotFound(stream_id));
-        }
-        Ok(Ref::map(self.streams.borrow(), |streams| {
-            streams.get(&stream_id).unwrap()
-        }))
-    }
-
-    fn get_stream_by_name_mut(&self, name: &str) -> Result<RefMut<'_, Stream>, IggyError> {
+    fn get_stream_by_name_mut<'stream>(
+        &self,
+        stream_lock: &'stream mut RwLockWriteGuard<HashMap<u32, Stream>>,
+        name: &str,
+    ) -> Result<&'stream mut Stream, IggyError> {
         let exists = self.streams_ids.borrow().iter().any(|s| s.0 == name);
         if !exists {
             return Err(IggyError::StreamNameAlreadyExists(name.to_owned()));
@@ -192,17 +214,18 @@ impl IggyShard {
         let streams_ids = self.streams_ids.borrow();
         let id = streams_ids.get(name).cloned();
         drop(streams_ids);
-        self.get_stream_by_id_mut(id.unwrap())
+        Self::get_stream_by_id_mut(stream_lock, id.unwrap())
     }
 
-    fn get_stream_by_id_mut(&self, stream_id: u32) -> Result<RefMut<'_, Stream>, IggyError> {
-        let exists = self.streams.borrow().iter().any(|s| s.0 == &stream_id);
+    fn get_stream_by_id_mut<'stream>(
+        stream_lock: &'stream mut RwLockWriteGuard<HashMap<u32, Stream>>,
+        stream_id: u32,
+    ) -> Result<&'stream mut Stream, IggyError> {
+        let exists = stream_lock.iter().any(|s| s.0 == &stream_id);
         if !exists {
             return Err(IggyError::StreamIdNotFound(stream_id));
         }
-        Ok(RefMut::map(self.streams.borrow_mut(), |s| {
-            s.get_mut(&stream_id).unwrap()
-        }))
+        Ok(stream_lock.get_mut(&stream_id).unwrap())
     }
 
     pub async fn create_stream(
@@ -214,7 +237,7 @@ impl IggyShard {
     ) -> Result<(), IggyError> {
         self.permissioner.borrow().create_stream(user_id)?;
         let name = name.to_lowercase_non_whitespace();
-        let mut streams = self.streams.borrow_mut();
+        let mut streams = self.streams.write().await;
         if self.streams_ids.borrow().contains_key(&name) {
             return Err(IggyError::StreamNameAlreadyExists(name));
         }
@@ -260,7 +283,8 @@ impl IggyShard {
         name: String,
         update_on_disk: bool,
     ) -> Result<(), IggyError> {
-        let mut stream = self.get_stream_mut(id)?;
+        let mut stream_lock = self.streams.write().await;
+        let stream = self.get_stream_mut(&mut stream_lock, id)?;
         let stream_id = stream.stream_id;
         self.permissioner
             .borrow()
@@ -274,9 +298,10 @@ impl IggyShard {
         }
         let old_name = stream.name.clone();
         stream.name.clone_from(&updated_name);
-        drop(stream);
+        drop(stream_lock);
+        let mut stream_lock = self.streams.write().await;
         if update_on_disk {
-            self.get_stream_mut(id)?.persist().await?;
+            self.get_stream_mut(&mut stream_lock, id)?.persist().await?;
         }
 
         self.streams_ids.borrow_mut().remove(&old_name);
@@ -297,26 +322,33 @@ impl IggyShard {
         id: &Identifier,
         remove_from_disk: bool,
     ) -> Result<u32, IggyError> {
-        let stream = self.get_stream(id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, id)?;
         let stream_id = stream.stream_id;
         self.permissioner
             .borrow()
             .delete_stream(user_id, stream_id)?;
         let stream_name = stream.name.clone();
-        drop(stream);
-        if self.get_stream(id)?.delete(remove_from_disk).await.is_err() {
+        drop(stream_lock);
+        let stream_lock = self.streams.read().await;
+        if self
+            .get_stream(&stream_lock, id)?
+            .delete(remove_from_disk)
+            .await
+            .is_err()
+        {
             return Err(IggyError::CannotDeleteStream(stream_id));
         }
 
-        let stream = self.get_stream(id)?;
+        let stream = self.get_stream(&stream_lock, id)?;
         self.metrics.decrement_streams(1);
         self.metrics.decrement_topics(stream.get_topics_count());
         self.metrics
             .decrement_partitions(stream.get_partitions_count());
         self.metrics.decrement_messages(stream.get_messages_count());
         self.metrics.decrement_segments(stream.get_segments_count());
-        drop(stream);
-        self.streams.borrow_mut().remove(&stream_id);
+        drop(stream_lock);
+        self.streams.write().await.remove(&stream_id);
         self.streams_ids.borrow_mut().remove(&stream_name);
         let current_stream_id = CURRENT_STREAM_ID.load(Ordering::SeqCst);
         if current_stream_id > stream_id {
@@ -336,13 +368,15 @@ impl IggyShard {
         stream_id: &Identifier,
         purge_on_disk: bool,
     ) -> Result<(), IggyError> {
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         let numeric_stream_id = stream.stream_id;
         self.permissioner
             .borrow()
             .purge_stream(user_id, numeric_stream_id)?;
-        drop(stream);
-        self.get_stream(stream_id)?.purge(purge_on_disk).await
+        self.get_stream(&stream_lock, stream_id)?
+            .purge(purge_on_disk)
+            .await
     }
 }
 

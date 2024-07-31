@@ -34,6 +34,7 @@ use std::{
     rc::Rc,
 };
 use std::{collections::HashMap, time::Instant};
+use tokio::sync::RwLock;
 use tracing::{error, info};
 
 pub const SHARD_NAME: &str = "iggy_shard";
@@ -80,7 +81,7 @@ pub struct IggyShard {
 
     pub(crate) permissioner: RefCell<Permissioner>,
     pub(crate) storage: Rc<SystemStorage>,
-    pub(crate) streams: RefCell<HashMap<u32, Stream>>,
+    pub(crate) streams: RwLock<HashMap<u32, Stream>>,
     pub(crate) streams_ids: RefCell<HashMap<String, u32>>,
     pub(crate) users: RefCell<HashMap<UserId, User>>,
 
@@ -115,7 +116,7 @@ impl IggyShard {
             init_gate,
             permissioner: RefCell::new(Permissioner::default()),
             storage,
-            streams: RefCell::new(HashMap::new()),
+            streams: RwLock::new(HashMap::new()),
             users: RefCell::new(HashMap::new()),
             streams_ids: RefCell::new(HashMap::new()),
             encryptor: match config.system.encryption.enabled {
@@ -282,7 +283,7 @@ impl IggyShard {
     }
 
     pub async fn clean_cache(&self, size_to_clean: u64) {
-        for stream in self.streams.borrow().values() {
+        for stream in self.streams.write().await.values() {
             for topic in stream.get_topics() {
                 for mut partition in topic.get_partitions().into_iter() {
                     monoio::spawn(async move {

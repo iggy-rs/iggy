@@ -112,7 +112,8 @@ pub(crate) async fn handle_connection(
                         .expect("Failed to get string value out of topic identifier");
                     *shard
                         .streams
-                        .borrow()
+                        .read()
+                        .await
                         .get(&stream_id)
                         .expect("Stream not found")
                         .topics_ids
@@ -121,7 +122,7 @@ pub(crate) async fn handle_connection(
                 };
                 let partition_id = match cmd.partitioning.kind {
                     PartitioningKind::Balanced => {
-                        let streams = shard.streams.borrow();
+                        let streams = shard.streams.read().await;
                         let topic = streams
                             .get(&stream_id)
                             .expect("Stream not found")
@@ -134,7 +135,7 @@ pub(crate) async fn handle_connection(
                         cmd.partitioning.value[..cmd.partitioning.length as usize].try_into()?,
                     ),
                     PartitioningKind::MessagesKey => {
-                        let streams = shard.streams.borrow();
+                        let streams = shard.streams.read().await;
                         let topic = streams
                             .get(&stream_id)
                             .expect("Stream not found")
@@ -177,7 +178,8 @@ pub(crate) async fn handle_connection(
                         .expect("Failed to get string value out of topic identifier");
                     *shard
                         .streams
-                        .borrow()
+                        .read()
+                        .await
                         .get(&stream_id)
                         .expect("Stream not found")
                         .topics_ids
@@ -191,6 +193,7 @@ pub(crate) async fn handle_connection(
                     PollingConsumer::ConsumerGroup(group_id, member_id) => {
                         let topic = shard
                             .find_topic(client_id, &cmd.stream_id, &cmd.topic_id)
+                            .await
                             .expect("Failed to find topic");
                         let consumer_group = topic.get_consumer_group_by_id(group_id)?;
                         consumer_group.calculate_partition_id(member_id).await?

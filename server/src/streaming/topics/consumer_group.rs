@@ -1,6 +1,7 @@
+use clap::error;
 use iggy::error::IggyError;
 use std::{cell::RefCell, collections::HashMap};
-use tracing::trace;
+use tracing::{error, trace};
 
 #[derive(Debug, Clone)]
 pub struct ConsumerGroup {
@@ -54,6 +55,7 @@ impl ConsumerGroup {
 
     pub async fn get_current_partition_id(&self, member_id: u32) -> Result<u32, IggyError> {
         let members = self.members.borrow();
+        error!("members: {:?}", members);
         let member = members.get(&member_id);
         if let Some(member) = member {
             return Ok(member.current_partition_id);
@@ -97,17 +99,13 @@ impl ConsumerGroup {
     }
 
     async fn assign_partitions(&self) {
-        let mut members = self
-            .members
-            .borrow_mut()
-            .values()
-            .cloned()
-            .collect::<Vec<_>>();
+        let mut members = self.members.borrow_mut();
         let members_count = members.len() as u32;
         if members_count == 0 {
             return;
         }
-        for member in members.iter_mut() {
+
+        for member in members.values_mut() {
             member.current_partition_index = 0;
             member.current_partition_id = 0;
             member.partitions.clear();
@@ -116,14 +114,14 @@ impl ConsumerGroup {
         for partition_index in 0..self.partitions_count {
             let partition_id = partition_index + 1;
             let member_index = partition_index % members_count;
-            let member = members.get_mut(member_index as usize).unwrap();
-            //let member_partition_index = member.partitions.len() as u32;
-            let member_partition_index = 0u32;
+            let member = members.values_mut().nth(member_index as usize).unwrap();
+            let member_partition_index = member.partitions.len() as u32;
+            error!("MEMBER PARTITION INDEX INSIDE OF ASSING: {}", member_partition_index);
             member
                 .partitions
                 .insert(member_partition_index, partition_id);
             trace!("Assigned partition ID: {} to member with ID: {} for topic with ID: {} in consumer group: {}",
-                partition_id, member.id, self.topic_id, self.group_id)
+            partition_id, member.id, self.topic_id, self.group_id)
         }
     }
 }
@@ -135,6 +133,7 @@ impl ConsumerGroupMember {
 
     pub fn calculate_partition_id(&mut self) -> u32 {
         let partition_index = self.current_partition_index;
+        error!("partition_index: {}", partition_index);
         let partition_id = *self.partitions.get(&partition_index).unwrap();
         self.current_partition_id = partition_id;
         if self.partitions.len() == (partition_index + 1) as usize {

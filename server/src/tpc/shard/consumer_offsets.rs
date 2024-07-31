@@ -15,7 +15,8 @@ impl IggyShard {
         persist: bool,
     ) -> Result<(), IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner.borrow().store_consumer_offset(
             user_id,
@@ -34,7 +35,8 @@ impl IggyShard {
         topic_id: &Identifier,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
         let user_id = self.ensure_authenticated(client_id)?;
-        let stream = self.get_stream(stream_id)?;
+        let stream_lock = self.streams.read().await;
+        let stream = self.get_stream(&stream_lock, stream_id)?;
         let topic = stream.get_topic(topic_id)?;
         self.permissioner.borrow().get_consumer_offset(
             user_id,

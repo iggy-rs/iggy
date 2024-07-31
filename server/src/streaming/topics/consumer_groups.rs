@@ -5,7 +5,7 @@ use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::utils::text::IggyStringUtils;
 use std::sync::atomic::Ordering;
-use tracing::info;
+use tracing::{error, info};
 
 impl Topic {
     pub async fn reassign_consumer_groups(&mut self) {
@@ -93,12 +93,12 @@ impl Topic {
             return Err(IggyError::ConsumerGroupIdAlreadyExists(id, self.topic_id));
         }
 
-        let consumer_group = ConsumerGroup::new(
-            self.topic_id,
-            id,
-            &name,
-            self.partitions.borrow().len() as u32,
+        let partitions = self.partitions.borrow();
+        error!(
+            "!---------PARTITIONS-COUNT----------------!: {:?}",
+            partitions.len()
         );
+        let consumer_group = ConsumerGroup::new(self.topic_id, id, &name, partitions.len() as u32);
         self.consumer_groups.insert(id, consumer_group);
         self.consumer_groups_ids.insert(name, id);
         let consumer_group = self.get_consumer_group_by_id(id)?;

@@ -42,6 +42,8 @@ pub enum ShardEvent {
     ),
     CreatedConsumerGroup(Identifier, Identifier, Option<u32>, String),
     DeletedConsumerGroup(Identifier, Identifier, Identifier),
+    JoinedConsumerGroup(Identifier, Identifier, Identifier),
+    LeftConsumerGroup(Identifier, Identifier, Identifier),
     UpdatedTopic(
         Identifier,
         Identifier,

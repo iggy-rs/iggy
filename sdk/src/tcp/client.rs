@@ -370,7 +370,7 @@ impl TcpClient {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
                         self.publish_event(DiagnosticEvent::SignedIn).await;
-                        info!("{NAME} client has signed in with the user credentials.",);
+                        info!("{NAME} client has signed in with the user credentials, username: {username}",);
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
@@ -403,21 +403,23 @@ impl TcpClient {
             return Err(IggyError::NotConnected);
         }
 
-        info!("Sending a TCP request with code: {code}");
         let mut stream = self.stream.lock().await;
         if let Some(stream) = stream.as_mut() {
             let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
-            trace!("Sending a TCP request...");
+            trace!("Sending a TCP request with code: {code}");
             stream.write(&(payload_length as u32).to_le_bytes()).await?;
             stream.write(&code.to_le_bytes()).await?;
             stream.write(&payload).await?;
             stream.flush().await?;
-            trace!("Sent a TCP request, waiting for a response...");
+            trace!("Sent a TCP request with code: {code}, waiting for a response...");
 
             let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
             let read_bytes = stream.read(&mut response_buffer).await;
             if let Err(error) = read_bytes {
-                error!("Failed to read response: {}", error);
+                error!(
+                    "Failed to read response for TCP request with code: {code}: {}",
+                    error
+                );
                 return Err(IggyError::Disconnected);
             }
 

@@ -1,9 +1,8 @@
 use crate::client::Client;
-use crate::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use crate::clients::client::IggyClient;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::config::HttpClientConfigBuilder;
-use crate::message_handler::MessageHandler;
 use crate::partitioner::Partitioner;
 use crate::quic::client::QuicClient;
 use crate::quic::config::QuicClientConfigBuilder;
@@ -18,10 +17,8 @@ use tracing::error;
 #[derive(Debug, Default)]
 pub struct IggyClientBuilder {
     client: Option<Box<dyn Client>>,
-    background_config: Option<IggyClientBackgroundConfig>,
     partitioner: Option<Arc<dyn Partitioner>>,
     encryptor: Option<Arc<dyn Encryptor>>,
-    message_handler: Option<Arc<dyn MessageHandler>>,
 }
 
 impl IggyClientBuilder {
@@ -43,21 +40,9 @@ impl IggyClientBuilder {
         self
     }
 
-    /// Apply the provided background configuration.
-    pub fn with_background_config(mut self, background_config: IggyClientBackgroundConfig) -> Self {
-        self.background_config = Some(background_config);
-        self
-    }
-
     /// Use the custom encryptor implementation.
     pub fn with_encryptor(mut self, encryptor: Arc<dyn Encryptor>) -> Self {
         self.encryptor = Some(encryptor);
-        self
-    }
-
-    /// Use the custom message handler implementation. This handler will be used only for `start_polling_messages` method, if neither `subscribe_to_polled_messages` (which returns the receiver for the messages channel) is called nor `on_message` closure is provided.
-    pub fn with_message_handler(mut self, message_handler: Arc<dyn MessageHandler>) -> Self {
-        self.message_handler = Some(message_handler);
         self
     }
 
@@ -101,13 +86,7 @@ impl IggyClientBuilder {
             return Err(IggyError::InvalidConfiguration);
         };
 
-        Ok(IggyClient::create(
-            client,
-            self.background_config.unwrap_or_default(),
-            self.message_handler,
-            self.partitioner,
-            self.encryptor,
-        ))
+        Ok(IggyClient::create(client, self.partitioner, self.encryptor))
     }
 }
 

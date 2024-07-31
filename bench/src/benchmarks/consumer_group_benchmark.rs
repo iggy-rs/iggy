@@ -5,9 +5,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use iggy::{
-    client::ConsumerGroupClient,
-    clients::client::{IggyClient, IggyClientBackgroundConfig},
-    error::IggyError,
+    client::ConsumerGroupClient, clients::client::IggyClient, error::IggyError,
     utils::byte_size::IggyByteSize,
 };
 use integration::test_server::{login_root, ClientFactory};
@@ -33,13 +31,7 @@ impl ConsumerGroupBenchmark {
         let start_stream_id = self.args().start_stream_id();
         let topic_id: u32 = 1;
         let client = self.client_factory().create_client().await;
-        let client = IggyClient::create(
-            client,
-            IggyClientBackgroundConfig::default(),
-            None,
-            None,
-            None,
-        );
+        let client = IggyClient::create(client, None, None);
         login_root(&client).await;
         for i in 1..=consumer_groups_count {
             let consumer_group_id = CONSUMER_GROUP_BASE_ID + i;

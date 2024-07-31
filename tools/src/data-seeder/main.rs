@@ -6,7 +6,7 @@ use iggy::args::{Args, ArgsOptional};
 use iggy::client::UserClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use std::error::Error;
 use std::sync::Arc;
@@ -42,13 +42,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let password = args.password.clone();
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(iggy_args)?);
     let client = client_provider::get_raw_connected_client(client_provider_config).await?;
-    let client = IggyClient::create(
-        client,
-        IggyClientBackgroundConfig::default(),
-        None,
-        None,
-        encryptor,
-    );
+    let client = IggyClient::create(client, None, encryptor);
     client.login_user(&username, &password).await.unwrap();
     info!("Data seeder has started...");
     seeder::seed(&client).await.unwrap();

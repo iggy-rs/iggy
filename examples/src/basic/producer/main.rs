@@ -26,13 +26,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dyn Error>> {
+    let interval = args.get_interval();
+
     info!(
-        "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
-        args.stream_id, args.topic_id, args.partition_id, args.interval
+        "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {}.",
+        args.stream_id,
+        args.topic_id,
+        args.partition_id,
+        interval.map_or("none".to_string(), |i| i.as_human_time_string())
     );
     let stream_id = args.stream_id.clone().try_into()?;
     let topic_id = args.topic_id.clone().try_into()?;
-    let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
+    let mut interval = interval.map(|interval| tokio::time::interval(interval.get_duration()));
     let mut current_id = 0u64;
     let mut sent_batches = 0;
     let partitioning = Partitioning::partition_id(args.partition_id);
@@ -42,7 +47,10 @@ async fn produce_messages(args: &Args, client: &dyn Client) -> Result<(), Box<dy
             return Ok(());
         }
 
-        interval.tick().await;
+        if let Some(interval) = &mut interval {
+            interval.tick().await;
+        }
+
         let mut messages = Vec::new();
         let mut sent_messages = Vec::new();
         for _ in 0..args.messages_per_batch {

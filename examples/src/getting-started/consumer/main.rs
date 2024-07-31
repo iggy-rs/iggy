@@ -4,9 +4,10 @@ use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
 use iggy::users::defaults::*;
+use iggy::utils::duration::IggyDuration;
 use std::env;
 use std::error::Error;
-use std::time::Duration;
+use std::str::FromStr;
 use tokio::time::sleep;
 use tracing::info;
 
@@ -36,13 +37,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
-    let interval = Duration::from_millis(500);
+    let interval = IggyDuration::from_str("500ms")?;
     info!(
-        "Messages will be consumed from stream: {}, topic: {}, partition: {} with interval {} ms.",
+        "Messages will be consumed from stream: {}, topic: {}, partition: {} with interval {}.",
         STREAM_ID,
         TOPIC_ID,
         PARTITION_ID,
-        interval.as_millis()
+        interval.as_human_time_string()
     );
 
     let mut offset = 0;
@@ -69,7 +70,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
 
         if polled_messages.messages.is_empty() {
             info!("No messages found.");
-            sleep(interval).await;
+            sleep(interval.get_duration()).await;
             continue;
         }
 
@@ -78,7 +79,7 @@ async fn consume_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
             handle_message(&message)?;
         }
         consumed_batches += 1;
-        sleep(interval).await;
+        sleep(interval.get_duration()).await;
     }
 }
 

@@ -18,7 +18,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use tokio::time::sleep;
-use tracing::{error, info, warn};
+use tracing::{error, info, trace, warn};
 
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
 type PollMessagesFuture = Pin<Box<dyn Future<Output = Result<PolledMessages, IggyError>>>>;
@@ -149,6 +149,7 @@ impl IggyConsumer {
         }
     }
 
+    /// Initializes the consumer by subscribing to diagnostic events, initializing the consumer group if needed, storing the offsets in the background etc.
     pub async fn init(&mut self) -> Result<(), IggyError> {
         if self.initialized {
             return Ok(());
@@ -191,7 +192,7 @@ impl IggyConsumer {
                         error!("Failed to store offset: {offset}, error: {error}");
                         continue;
                     }
-                    info!("Stored offset: {offset}");
+                    trace!("Stored offset: {offset}");
                     last_stored_offset.store(offset, ORDERING);
                 }
             });
@@ -239,7 +240,7 @@ impl IggyConsumer {
                     error!("Failed to store offset: {offset} in the background, error: {error}");
                     continue;
                 }
-                info!("Stored offset: {offset} in the background");
+                trace!("Stored offset: {offset} in the background");
                 last_stored_offset.store(offset, ORDERING);
             }
         });
@@ -268,7 +269,7 @@ impl IggyConsumer {
     }
 
     async fn subscribe_events(&self) {
-        info!("Subscribing to diagnostic events");
+        trace!("Subscribing to diagnostic events");
         let receiver;
         {
             let client = self.client.read().await;
@@ -285,15 +286,23 @@ impl IggyConsumer {
         let consumer_name = self.consumer_name.clone();
         let can_poll = self.can_poll.clone();
         let consumer_group_joined = self.consumer_group_joined.clone();
+        let mut reconnected = false;
+        let mut disconnected = false;
 
         tokio::spawn(async move {
             while let Ok(event) = receiver.recv_async().await {
-                info!("Received diagnostic event: {event}");
+                trace!("Received diagnostic event: {event}");
                 match event {
                     DiagnosticEvent::Connected => {
-                        info!("Connected to the server");
+                        trace!("Connected to the server");
+                        if disconnected {
+                            reconnected = true;
+                            disconnected = false;
+                        }
                     }
                     DiagnosticEvent::Disconnected => {
+                        disconnected = true;
+                        reconnected = false;
                         can_poll.store(false, ORDERING);
                         if is_consumer_group {
                             consumer_group_joined.store(false, ORDERING);
@@ -303,14 +312,17 @@ impl IggyConsumer {
                     DiagnosticEvent::SignedIn => {
                         if !is_consumer_group {
                             can_poll.store(true, ORDERING);
-                            info!("Set can poll to true");
                             continue;
                         }
 
                         if !can_join_consumer_group {
                             can_poll.store(true, ORDERING);
-                            info!("Set can poll to true");
-                            warn!("Auto join consumer group is disabled");
+                            trace!("Auto join consumer group is disabled");
+                            continue;
+                        }
+
+                        if !reconnected {
+                            can_poll.store(true, ORDERING);
                             continue;
                         }
 
@@ -331,7 +343,6 @@ impl IggyConsumer {
                         }
                         info!("Rejoined consumer group");
                         can_poll.store(true, ORDERING);
-                        info!("Set can poll to true");
                     }
                     DiagnosticEvent::SignedOut => {
                         can_poll.store(false, ORDERING);
@@ -362,7 +373,7 @@ impl IggyConsumer {
                 sleep(interval.get_duration()).await;
             }
 
-            info!("Sending poll messages request");
+            trace!("Sending poll messages request");
             client
                 .read()
                 .await
@@ -395,7 +406,7 @@ impl IggyConsumer {
         };
 
         let consumer_group_id = name.to_owned().try_into()?;
-        info!("Validating consumer group: {consumer_group_id}");
+        trace!("Validating consumer group: {consumer_group_id}");
         if let Err(error) = client
             .get_consumer_group(&stream_id, &topic_id, &consumer_group_id)
             .await
@@ -549,18 +560,22 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Sets the stream identifier.
     pub fn stream(self, stream: Identifier) -> Self {
         Self { stream, ..self }
     }
 
+    /// Sets the topic identifier.
     pub fn topic(self, topic: Identifier) -> Self {
         Self { topic, ..self }
     }
 
+    /// Sets the partition identifier.
     pub fn partition(self, partition: Option<u32>) -> Self {
         Self { partition, ..self }
     }
 
+    /// Sets the polling strategy.
     pub fn polling_strategy(self, polling_strategy: PollingStrategy) -> Self {
         Self {
             polling_strategy,
@@ -568,10 +583,12 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Sets the batch size for polling messages.
     pub fn batch_size(self, batch_size: u32) -> Self {
         Self { batch_size, ..self }
     }
 
+    /// Sets the auto-commit configuration for storing the offset on the server.
     pub fn auto_commit(self, auto_commit: AutoCommit) -> Self {
         Self {
             auto_commit,
@@ -579,6 +596,7 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Automatically joins the consumer group if the consumer is a part of a consumer group.
     pub fn auto_join_consumer_group(self) -> Self {
         Self {
             auto_join_consumer_group: true,
@@ -586,6 +604,7 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Does not automatically join the consumer group if the consumer is a part of a consumer group.
     pub fn do_not_auto_join_consumer_group(self) -> Self {
         Self {
             auto_join_consumer_group: false,
@@ -593,6 +612,7 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Automatically creates the consumer group if it does not exist.
     pub fn create_consumer_group_if_not_exists(self) -> Self {
         Self {
             create_consumer_group_if_not_exists: true,
@@ -600,6 +620,7 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Does not automatically create the consumer group if it does not exist.
     pub fn do_not_create_consumer_group_if_not_exists(self) -> Self {
         Self {
             create_consumer_group_if_not_exists: false,
@@ -607,6 +628,7 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Sets the polling interval for messages.
     pub fn polling_interval(self, interval: IggyDuration) -> Self {
         Self {
             polling_interval: Some(interval),
@@ -614,6 +636,7 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Clears the polling interval for messages.
     pub fn without_polling_interval(self) -> Self {
         Self {
             polling_interval: None,
@@ -621,6 +644,7 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Sets the encryptor for decrypting the messages' payloads.
     pub fn encryptor(self, encryptor: Arc<dyn Encryptor>) -> Self {
         Self {
             encryptor: Some(encryptor),
@@ -628,6 +652,7 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Clears the encryptor for decrypting the messages' payloads.
     pub fn without_encryptor(self) -> Self {
         Self {
             encryptor: None,

@@ -278,10 +278,14 @@ impl QuicClient {
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
+                        self.publish_event(DiagnosticEvent::SignedIn).await;
+                        info!("{NAME} client has signed in with the user credentials, username: {username}",);
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
                         self.login_with_personal_access_token(token).await?;
+                        self.publish_event(DiagnosticEvent::SignedIn).await;
+                        info!("{NAME} client has signed in with a personal access token.",);
                         Ok(())
                     }
                 }
@@ -313,13 +317,13 @@ impl QuicClient {
         if let Some(connection) = connection.as_ref() {
             let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
             let (mut send, mut recv) = connection.open_bi().await?;
-            trace!("Sending a QUIC request...");
+            trace!("Sending a QUIC request with code: {code}");
             send.write_all(&(payload_length as u32).to_le_bytes())
                 .await?;
             send.write_all(&code.to_le_bytes()).await?;
             send.write_all(&payload).await?;
             send.finish()?;
-            trace!("Sent a QUIC request, waiting for a response...");
+            trace!("Sent a QUIC request with code: {code}, waiting for a response...");
             return self.handle_response(&mut recv).await;
         }
 

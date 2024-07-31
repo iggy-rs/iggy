@@ -5,7 +5,7 @@ mod test_message_headers;
 
 use assert_cmd::Command;
 use iggy::client::{Client, StreamClient, SystemClient, TopicClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
@@ -90,13 +90,7 @@ impl<'a> IggyExampleTest<'a> {
             ..TcpClientConfig::default()
         };
         let client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
-        let client = IggyClient::create(
-            client,
-            IggyClientBackgroundConfig::default(),
-            None,
-            None,
-            None,
-        );
+        let client = IggyClient::create(client, None, None);
 
         Self {
             server,

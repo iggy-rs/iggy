@@ -21,7 +21,6 @@ pub mod error;
 pub mod http;
 pub mod identifier;
 pub mod locking;
-pub mod message_handler;
 pub mod messages;
 pub mod models;
 pub mod partitioner;

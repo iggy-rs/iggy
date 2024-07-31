@@ -1,34 +1,44 @@
-use anyhow::Result;
 use clap::Parser;
-use iggy::client::MessageClient;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::IggyClient;
+use iggy::clients::producer::IggyProducer;
 use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::utils::duration::IggyDuration;
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::messages_generator::MessagesGenerator;
-use iggy_examples::shared::system;
 use std::error::Error;
 use std::str::FromStr;
 use std::sync::Arc;
 use tracing::info;
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
+async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
     info!(
-        "Message envelope producer has started, selected transport: {}",
+        "New SDK producer has started, selected transport: {}",
         args.transport
     );
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_raw_connected_client(client_provider_config).await?;
     let client = IggyClient::builder().with_client(client).build()?;
-    system::init_by_producer(&args, &client).await?;
-    produce_messages(&args, &client).await
+    let mut producer = client
+        .producer(&args.stream_id, &args.topic_id)?
+        .batch_size(args.messages_per_batch)
+        .send_interval(IggyDuration::from_str(&args.interval)?)
+        .partitioning(Partitioning::balanced())
+        .create_topic_if_not_exists(3, None)
+        .build();
+    producer.init().await?;
+    produce_messages(&args, &producer).await?;
+    Ok(())
 }
 
-async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
+async fn produce_messages(
+    args: &Args,
+    producer: &IggyProducer,
+) -> anyhow::Result<(), Box<dyn Error>> {
     let interval = args.get_interval();
     info!(
         "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {}.",
@@ -37,38 +47,27 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
         args.partition_id,
         interval.map_or("none".to_string(), |i| i.as_human_time_string())
     );
-    let stream_id = args.stream_id.clone().try_into()?;
-    let topic_id = args.topic_id.clone().try_into()?;
-    let mut interval = interval.map(|interval| tokio::time::interval(interval.get_duration()));
     let mut message_generator = MessagesGenerator::new();
     let mut sent_batches = 0;
-    let partitioning = Partitioning::partition_id(args.partition_id);
+
     loop {
         if args.message_batches_limit > 0 && sent_batches == args.message_batches_limit {
             info!("Sent {sent_batches} batches of messages, exiting.");
             return Ok(());
         }
 
-        if let Some(interval) = &mut interval {
-            interval.tick().await;
-        }
-
         let mut messages = Vec::new();
-        let mut serializable_messages = Vec::new();
         for _ in 0..args.messages_per_batch {
             let serializable_message = message_generator.generate();
-            // You can send the different message types to the same partition, or stick to the single type.
             let json_envelope = serializable_message.to_json_envelope();
             let message = Message::from_str(&json_envelope)?;
             messages.push(message);
-            // This is used for the logging purposes only.
-            serializable_messages.push(serializable_message);
         }
-        info!("Sending messages count: {}", messages.len());
-        client
-            .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
-            .await?;
+        producer.send(messages).await?;
         sent_batches += 1;
-        info!("Sent messages: {:#?}", serializable_messages);
+        info!(
+            "Sent batch {sent_batches} of {} messages.",
+            args.messages_per_batch
+        );
     }
 }

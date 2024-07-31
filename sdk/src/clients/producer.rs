@@ -8,17 +8,21 @@ use crate::partitioner::Partitioner;
 use crate::utils::crypto::Encryptor;
 use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
+use crate::utils::timestamp::IggyTimestamp;
 use crate::utils::topic_size::MaxTopicSize;
 use async_dropper::AsyncDrop;
 use async_trait::async_trait;
 use bytes::Bytes;
 use std::collections::{HashMap, VecDeque};
 use std::hash::{Hash, Hasher};
+use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{error, info, trace};
 
+const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
 const MAX_BATCH_SIZE: usize = 1000000;
 
 unsafe impl Send for IggyProducer {}
@@ -34,7 +38,7 @@ pub struct IggyProducer {
     partitioning: Option<Arc<Partitioning>>,
     encryptor: Option<Arc<dyn Encryptor>>,
     partitioner: Option<Arc<dyn Partitioner>>,
-    interval: Option<IggyDuration>,
+    interval_micros: u64,
     create_stream_if_not_exists: bool,
     create_topic_if_not_exists: bool,
     topic_partitions_count: u32,
@@ -44,6 +48,7 @@ pub struct IggyProducer {
     background_sender_initialized: bool,
     default_partitioning: Arc<Partitioning>,
     can_send_immediately: bool,
+    last_sent_at: Arc<AtomicU64>,
 }
 
 #[derive(Eq, PartialEq)]
@@ -94,7 +99,7 @@ impl IggyProducer {
             partitioning: partitioning.map(Arc::new),
             encryptor,
             partitioner,
-            interval,
+            interval_micros: interval.map_or(0, |i| i.as_micros()),
             create_stream_if_not_exists,
             create_topic_if_not_exists,
             topic_partitions_count,
@@ -104,9 +109,11 @@ impl IggyProducer {
             background_sender_initialized: false,
             default_partitioning: Arc::new(Partitioning::balanced()),
             can_send_immediately: interval.is_none(),
+            last_sent_at: Arc::new(AtomicU64::new(0)),
         }
     }
 
+    /// Initializes the producer by creating the stream and topic if they do not exist etc.
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let client = self.client.clone();
         let client = client.read().await;
@@ -154,7 +161,8 @@ impl IggyProducer {
                 )
                 .await?;
         }
-        let Some(interval) = self.interval else {
+
+        if self.interval_micros == 0 {
             return Ok(());
         };
 
@@ -163,12 +171,17 @@ impl IggyProducer {
         }
 
         self.background_sender_initialized = true;
+        let interval_micros = self.interval_micros;
         let client = self.client.clone();
         let send_order = self.send_order.clone();
         let buffered_messages = self.buffered_messages.clone();
+        let last_sent_at = self.last_sent_at.clone();
         tokio::spawn(async move {
             loop {
-                sleep(interval.get_duration()).await;
+                if interval_micros > 0 {
+                    Self::wait_before_sending(interval_micros, last_sent_at.load(ORDERING)).await;
+                }
+
                 let client = client.read().await;
                 let mut buffered_messages = buffered_messages.lock().await;
                 let mut send_order = send_order.lock().await;
@@ -178,7 +191,8 @@ impl IggyProducer {
                     };
 
                     let messages_count = batch.messages.len();
-                    info!("Sending {messages_count} buffered messages in the background...");
+                    trace!("Sending {messages_count} buffered messages in the background...");
+                    last_sent_at.store(IggyTimestamp::now().into(), ORDERING);
                     if let Err(error) = client
                         .send_messages(
                             &batch.destination.stream,
@@ -196,7 +210,7 @@ impl IggyProducer {
                         continue;
                     }
 
-                    info!("Sent {messages_count} buffered messages in the background.");
+                    trace!("Sent {messages_count} buffered messages in the background.");
                 }
             }
         });
@@ -205,7 +219,7 @@ impl IggyProducer {
 
     pub async fn send(&self, messages: Vec<Message>) -> Result<(), IggyError> {
         if messages.is_empty() {
-            info!("No messages to send.");
+            trace!("No messages to send.");
             return Ok(());
         }
 
@@ -225,7 +239,7 @@ impl IggyProducer {
         partitioning: Option<Arc<Partitioning>>,
     ) -> Result<(), IggyError> {
         if messages.is_empty() {
-            info!("No messages to send.");
+            trace!("No messages to send.");
             return Ok(());
         }
 
@@ -252,7 +266,7 @@ impl IggyProducer {
         partitioning: Option<Arc<Partitioning>>,
     ) -> Result<(), IggyError> {
         if messages.is_empty() {
-            info!("No messages to send.");
+            trace!("No messages to send.");
             return Ok(());
         }
 
@@ -285,7 +299,7 @@ impl IggyProducer {
         let messages_batch = buffered_messages.get_mut(&destination);
         if let Some(messages_batch) = messages_batch {
             let messages_count = messages.len();
-            info!("Extending buffer with {messages_count} messages...");
+            trace!("Extending buffer with {messages_count} messages...");
             messages_batch.messages.extend(messages);
             if messages_batch.messages.len() >= batch_size {
                 let mut messages = messages_batch
@@ -293,7 +307,18 @@ impl IggyProducer {
                     .drain(..batch_size)
                     .collect::<Vec<_>>();
                 let messages_count = messages.len();
-                info!("Sending {messages_count} buffered messages...");
+
+                if self.interval_micros > 0 {
+                    Self::wait_before_sending(
+                        self.interval_micros,
+                        self.last_sent_at.load(ORDERING),
+                    )
+                    .await;
+                }
+
+                trace!("Sending {messages_count} buffered messages...");
+                self.last_sent_at
+                    .store(IggyTimestamp::now().into(), ORDERING);
                 let client = self.client.read().await;
                 client
                     .send_messages(
@@ -303,11 +328,11 @@ impl IggyProducer {
                         &mut messages,
                     )
                     .await?;
-                info!("Sent {messages_count} buffered messages.");
+                trace!("Sent {messages_count} buffered messages.");
             }
 
             if messages_batch.messages.is_empty() {
-                info!("Removing empty messages batch.");
+                trace!("Removing empty messages batch.");
                 buffered_messages.remove(&destination);
                 self.send_order.lock().await.retain(|p| p != &destination);
             }
@@ -315,8 +340,18 @@ impl IggyProducer {
         }
 
         if messages.len() >= batch_size {
-            info!("Sending messages exceeding the batch size of {batch_size}...");
+            trace!(
+                "Sending messages {} exceeding the batch size of {batch_size}...",
+                messages.len()
+            );
             let mut messages_batch = messages.drain(..batch_size).collect::<Vec<_>>();
+            if self.interval_micros > 0 {
+                Self::wait_before_sending(self.interval_micros, self.last_sent_at.load(ORDERING))
+                    .await;
+            }
+
+            self.last_sent_at
+                .store(IggyTimestamp::now().into(), ORDERING);
             let client = self.client.read().await;
             client
                 .send_messages(
@@ -326,16 +361,16 @@ impl IggyProducer {
                     &mut messages_batch,
                 )
                 .await?;
-            info!("Sent messages exceeding the batch size of {batch_size}.");
+            trace!("Sent messages exceeding the batch size of {batch_size}.");
         }
 
         if messages.is_empty() {
-            info!("No messages to buffer.");
+            trace!("No messages to buffer.");
             return Ok(());
         }
 
         let messages_count = messages.len();
-        info!("Buffering {messages_count} messages...");
+        trace!("Buffering {messages_count} messages...");
         self.send_order.lock().await.push_back(destination.clone());
         buffered_messages.insert(
             destination.clone(),
@@ -344,7 +379,7 @@ impl IggyProducer {
                 messages,
             },
         );
-        info!("Buffered {messages_count} messages.");
+        trace!("Buffered {messages_count} messages.");
         Ok(())
     }
 
@@ -355,23 +390,45 @@ impl IggyProducer {
         mut messages: Vec<Message>,
         partitioning: Option<Arc<Partitioning>>,
     ) -> Result<(), IggyError> {
-        info!("No batch size specified, sending messages immediately.");
+        trace!("No batch size specified, sending messages immediately.");
         self.encrypt_messages(&mut messages)?;
         let partitioning = self.get_partitioning(stream, topic, &messages, partitioning)?;
         let batch_size = self.batch_size.unwrap_or(MAX_BATCH_SIZE);
         let client = self.client.read().await;
         if messages.len() <= batch_size {
-            return client
+            self.last_sent_at
+                .store(IggyTimestamp::now().into(), ORDERING);
+            client
                 .send_messages(stream, topic, &partitioning, &mut messages)
-                .await;
+                .await?;
+            return Ok(());
         }
 
         for batch in messages.chunks_mut(batch_size) {
+            self.last_sent_at
+                .store(IggyTimestamp::now().into(), ORDERING);
             client
                 .send_messages(stream, topic, &partitioning, batch)
                 .await?;
         }
         Ok(())
+    }
+
+    async fn wait_before_sending(interval: u64, last_sent_at: u64) {
+        if interval == 0 {
+            return;
+        }
+
+        let now: u64 = IggyTimestamp::now().into();
+        let elapsed = now - last_sent_at;
+        if elapsed >= interval {
+            trace!("No need to wait before sending messages. {now} - {last_sent_at} = {elapsed}");
+            return;
+        }
+
+        let remaining = interval - elapsed;
+        trace!("Waiting for {remaining} microseconds before sending messages... {interval} - {elapsed} = {remaining}");
+        sleep(Duration::from_micros(remaining)).await;
     }
 
     fn encrypt_messages(&self, messages: &mut [Message]) -> Result<(), IggyError> {
@@ -391,11 +448,11 @@ impl IggyProducer {
         partitioning: Option<Arc<Partitioning>>,
     ) -> Result<Arc<Partitioning>, IggyError> {
         if let Some(partitioner) = &self.partitioner {
-            info!("Calculating partition id using custom partitioner.");
+            trace!("Calculating partition id using custom partitioner.");
             let partition_id = partitioner.calculate_partition_id(stream, topic, messages)?;
             Ok(Arc::new(Partitioning::partition_id(partition_id)))
         } else {
-            info!("Using the provided partitioning.");
+            trace!("Using the provided partitioning.");
             Ok(partitioning.unwrap_or_else(|| {
                 self.partitioning
                     .clone()
@@ -421,7 +478,9 @@ impl AsyncDrop for IggyProducer {
             };
 
             let messages_count = batch.messages.len();
-            info!("Sending {messages_count} remaining messages...");
+            self.last_sent_at
+                .store(IggyTimestamp::now().into(), ORDERING);
+            trace!("Sending {messages_count} remaining messages...");
             if let Err(error) = client
                 .send_messages(
                     &batch.destination.stream,
@@ -434,7 +493,7 @@ impl AsyncDrop for IggyProducer {
                 error!("Failed to send {messages_count} remaining messages: {error}");
             }
 
-            info!("Sent {messages_count} remaining messages.");
+            trace!("Sent {messages_count} remaining messages.");
         }
     }
 }
@@ -486,14 +545,17 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Sets the stream identifier.
     pub fn stream(self, stream: Identifier) -> Self {
         Self { stream, ..self }
     }
 
+    /// Sets the stream name.
     pub fn topic(self, topic: Identifier) -> Self {
         Self { topic, ..self }
     }
 
+    /// Sets the number of messages to batch before sending them, can be combined with `interval`.
     pub fn batch_size(self, batch_size: u32) -> Self {
         Self {
             batch_size: if batch_size == 0 {
@@ -505,6 +567,7 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Clears the batch size.
     pub fn without_batch_size(self) -> Self {
         Self {
             batch_size: None,
@@ -512,20 +575,23 @@ impl IggyProducerBuilder {
         }
     }
 
-    pub fn interval(self, interval: IggyDuration) -> Self {
+    /// Sets the interval between sending the messages, can be combined with `batch_size`.
+    pub fn send_interval(self, interval: IggyDuration) -> Self {
         Self {
             interval: Some(interval),
             ..self
         }
     }
 
-    pub fn without_interval(self) -> Self {
+    /// Clears the interval.
+    pub fn without_send_interval(self) -> Self {
         Self {
             interval: None,
             ..self
         }
     }
 
+    /// Sets the encryptor for encrypting the messages' payloads.
     pub fn encryptor(self, encryptor: Arc<dyn Encryptor>) -> Self {
         Self {
             encryptor: Some(encryptor),
@@ -533,6 +599,7 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Clears the encryptor for encrypting the messages' payloads.
     pub fn without_encryptor(self) -> Self {
         Self {
             encryptor: None,
@@ -540,6 +607,7 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Sets the partitioning strategy for messages.
     pub fn partitioning(self, partitioning: Partitioning) -> Self {
         Self {
             partitioning: Some(partitioning),
@@ -547,6 +615,7 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Clears the partitioning strategy.
     pub fn without_partitioning(self) -> Self {
         Self {
             partitioning: None,
@@ -554,6 +623,7 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Sets the partitioner for messages.
     pub fn partitioner(self, partitioner: Arc<dyn Partitioner>) -> Self {
         Self {
             partitioner: Some(partitioner),
@@ -561,6 +631,7 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Clears the partitioner.
     pub fn without_partitioner(self) -> Self {
         Self {
             partitioner: None,
@@ -568,6 +639,7 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Creates the stream if it does not exist - requires user to have the necessary permissions.
     pub fn create_stream_if_not_exists(self) -> Self {
         Self {
             create_stream_if_not_exists: true,
@@ -575,6 +647,7 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Does not create the stream if it does not exist.
     pub fn do_not_create_stream_if_not_exists(self) -> Self {
         Self {
             create_stream_if_not_exists: false,
@@ -582,30 +655,24 @@ impl IggyProducerBuilder {
         }
     }
 
-    pub fn create_topic_if_not_exists(self) -> Self {
+    /// Creates the topic if it does not exist - requires user to have the necessary permissions.
+    pub fn create_topic_if_not_exists(
+        self,
+        partitions_count: u32,
+        replication_factor: Option<u8>,
+    ) -> Self {
         Self {
             create_topic_if_not_exists: true,
+            topic_partitions_count: partitions_count,
+            topic_replication_factor: replication_factor,
             ..self
         }
     }
 
+    /// Does not create the topic if it does not exist.
     pub fn do_not_create_topic_if_not_exists(self) -> Self {
         Self {
             create_topic_if_not_exists: false,
-            ..self
-        }
-    }
-
-    pub fn topic_partitions_count(self, topic_partitions_count: u32) -> Self {
-        Self {
-            topic_partitions_count,
-            ..self
-        }
-    }
-
-    pub fn topic_replication_factor(self, topic_replication_factor: Option<u8>) -> Self {
-        Self {
-            topic_replication_factor,
             ..self
         }
     }

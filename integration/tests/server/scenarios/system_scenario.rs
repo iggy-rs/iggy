@@ -10,7 +10,7 @@ use iggy::client::{
     ConsumerGroupClient, ConsumerOffsetClient, MessageClient, PartitionClient, StreamClient,
     SystemClient, TopicClient, UserClient,
 };
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::consumer::Consumer;
 use iggy::error::IggyError;
@@ -26,13 +26,7 @@ use integration::test_server::{assert_clean_system, ClientFactory};
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;
-    let client = IggyClient::create(
-        client,
-        IggyClientBackgroundConfig::default(),
-        None,
-        None,
-        None,
-    );
+    let client = IggyClient::create(client, None, None);
 
     let consumer = Consumer {
         kind: CONSUMER_KIND,

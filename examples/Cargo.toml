@@ -35,6 +35,14 @@ path = "src/message-headers/consumer/main.rs"
 name = "message-headers-producer"
 path = "src/message-headers/producer/main.rs"
 
+[[example]]
+name = "new-sdk-producer"
+path = "src/new-sdk/producer/main.rs"
+
+[[example]]
+name = "new-sdk-consumer"
+path = "src/new-sdk/consumer/main.rs"
+
 [dependencies]
 anyhow = "1.0.86"
 bytes = "1.6.0"

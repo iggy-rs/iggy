@@ -25,15 +25,15 @@ use flume::Receiver;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]
-pub enum Credentials {
-    UsernamePassword(String, String),
-    PersonalAccessToken(String),
-}
-
-#[derive(Debug, Clone)]
 pub enum AutoSignIn {
     Disabled,
     Enabled(Credentials),
+}
+
+#[derive(Debug, Clone)]
+pub enum Credentials {
+    UsernamePassword(String, String),
+    PersonalAccessToken(String),
 }
 
 /// The client trait which is the main interface to the Iggy server.

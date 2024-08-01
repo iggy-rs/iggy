@@ -6,7 +6,7 @@ use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::partitioner::Partitioner;
 use crate::utils::crypto::Encryptor;
-use crate::utils::duration::IggyDuration;
+use crate::utils::duration::{IggyDuration, SEC_IN_MICRO};
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::timestamp::IggyTimestamp;
 use crate::utils::topic_size::MaxTopicSize;
@@ -24,7 +24,6 @@ use tracing::{error, info, trace};
 
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
 const MAX_BATCH_SIZE: usize = 1000000;
-const RETRY_INTERVAL: Duration = Duration::from_secs(1);
 
 unsafe impl Send for IggyProducer {}
 unsafe impl Sync for IggyProducer {}
@@ -50,6 +49,7 @@ pub struct IggyProducer {
     default_partitioning: Arc<Partitioning>,
     can_send_immediately: bool,
     last_sent_at: Arc<AtomicU64>,
+    retry_interval: IggyDuration,
 }
 
 #[derive(Eq, PartialEq)]
@@ -89,6 +89,7 @@ impl IggyProducer {
         create_topic_if_not_exists: bool,
         topic_partitions_count: u32,
         topic_replication_factor: Option<u8>,
+        retry_interval: IggyDuration,
     ) -> Self {
         Self {
             client: Arc::new(client),
@@ -111,6 +112,7 @@ impl IggyProducer {
             default_partitioning: Arc::new(Partitioning::balanced()),
             can_send_immediately: interval.is_none(),
             last_sent_at: Arc::new(AtomicU64::new(0)),
+            retry_interval,
         }
     }
 
@@ -185,6 +187,8 @@ impl IggyProducer {
         let send_order = self.send_order.clone();
         let buffered_messages = self.buffered_messages.clone();
         let last_sent_at = self.last_sent_at.clone();
+        let retry_interval = self.retry_interval;
+
         tokio::spawn(async move {
             loop {
                 if interval_micros > 0 {
@@ -220,8 +224,9 @@ impl IggyProducer {
                         );
                         send_order.push_front(partitioning.clone());
                         buffered_messages.insert(partitioning, batch);
-                        if matches!(error, IggyError::Unauthenticated) {
-                            sleep(RETRY_INTERVAL).await;
+                        if matches!(error, IggyError::Disconnected | IggyError::Unauthenticated) {
+                            trace!("Retrying to send {messages_count} buffered messages in the background in {retry_interval}...");
+                            sleep(retry_interval.get_duration()).await;
                         }
                         continue;
                     }
@@ -535,6 +540,7 @@ pub struct IggyProducerBuilder {
     create_topic_if_not_exists: bool,
     topic_partitions_count: u32,
     topic_replication_factor: Option<u8>,
+    retry_interval: IggyDuration,
 }
 
 impl IggyProducerBuilder {
@@ -563,6 +569,7 @@ impl IggyProducerBuilder {
             create_topic_if_not_exists: true,
             topic_partitions_count: 1,
             topic_replication_factor: None,
+            retry_interval: IggyDuration::from(SEC_IN_MICRO),
         }
     }
 
@@ -698,6 +705,14 @@ impl IggyProducerBuilder {
         }
     }
 
+    /// Sets the retry interval in case of server disconnection.
+    pub fn retry_interval(self, interval: IggyDuration) -> Self {
+        Self {
+            retry_interval: interval,
+            ..self
+        }
+    }
+
     pub fn build(self) -> IggyProducer {
         IggyProducer::new(
             self.client,
@@ -714,6 +729,7 @@ impl IggyProducerBuilder {
             self.create_topic_if_not_exists,
             self.topic_partitions_count,
             self.topic_replication_factor,
+            self.retry_interval,
         )
     }
 }

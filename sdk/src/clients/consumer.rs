@@ -11,7 +11,7 @@ use crate::utils::duration::{IggyDuration, SEC_IN_MICRO};
 use crate::utils::timestamp::IggyTimestamp;
 use bytes::Bytes;
 use futures::Stream;
-use futures_util::FutureExt;
+use futures_util::{FutureExt, StreamExt};
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
@@ -31,22 +31,24 @@ pub enum AutoCommit {
     /// The auto-commit is disabled and the offset must be stored manually by the consumer.
     Disabled,
     /// The auto-commit is enabled and the offset is stored on the server depending on the mode.
-    Mode(AutoCommitMode),
+    After(AutoCommitAfter),
     /// The auto-commit is enabled and the offset is stored on the server after a certain interval.
     Interval(IggyDuration),
     /// The auto-commit is enabled and the offset is stored on the server after a certain interval or depending on the mode.
-    IntervalAndMode(IggyDuration, AutoCommitMode),
+    IntervalOrAfter(IggyDuration, AutoCommitAfter),
 }
 
 /// The auto-commit mode for storing the offset on the server.
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub enum AutoCommitMode {
+pub enum AutoCommitAfter {
     /// The offset is stored on the server when the messages are received.
-    AfterPollingMessages,
+    PollingMessages,
     /// The offset is stored on the server after all the messages are consumed.
-    AfterConsumingAllMessages,
+    ConsumingAllMessages,
     /// The offset is stored on the server after consuming each message.
-    AfterConsumingEachMessage,
+    ConsumingEachMessage,
+    /// The offset is stored on the server after consuming every Nth message.
+    EveryNthMessage(u32),
 }
 
 unsafe impl Send for IggyConsumer {}
@@ -59,7 +61,6 @@ pub struct IggyConsumer {
     consumer_name: String,
     consumer: Arc<Consumer>,
     is_consumer_group: bool,
-    consumer_group_joined: Arc<AtomicBool>,
     stream_id: Arc<Identifier>,
     topic_id: Arc<Identifier>,
     partition_id: Option<u32>,
@@ -79,9 +80,11 @@ pub struct IggyConsumer {
     store_offset_receiver: Option<flume::Receiver<u64>>,
     store_offset_after_each_message: bool,
     store_offset_after_all_messages: bool,
+    store_after_every_nth_message: u64,
     last_polled_at: Arc<AtomicU64>,
     current_partition_id: Arc<AtomicU32>,
     current_offset: Arc<AtomicU64>,
+    polled_messages_count: Arc<AtomicU64>,
 }
 
 impl IggyConsumer {
@@ -103,8 +106,9 @@ impl IggyConsumer {
     ) -> Self {
         let (store_offset_sender, store_offset_receiver) = if matches!(
             auto_commit,
-            AutoCommit::Mode(AutoCommitMode::AfterConsumingEachMessage)
-                | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingEachMessage)
+            AutoCommit::After(
+                AutoCommitAfter::ConsumingEachMessage | AutoCommitAfter::EveryNthMessage(_)
+            ) | AutoCommit::IntervalOrAfter(_, AutoCommitAfter::ConsumingEachMessage)
         ) {
             let (sender, receiver) = flume::unbounded();
             (Some(sender), Some(receiver))
@@ -131,8 +135,8 @@ impl IggyConsumer {
             auto_commit,
             auto_commit_after_polling: matches!(
                 auto_commit,
-                AutoCommit::Mode(AutoCommitMode::AfterPollingMessages)
-                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterPollingMessages)
+                AutoCommit::After(AutoCommitAfter::PollingMessages)
+                    | AutoCommit::IntervalOrAfter(_, AutoCommitAfter::PollingMessages)
             ),
             auto_join_consumer_group,
             create_consumer_group_if_not_exists,
@@ -142,18 +146,23 @@ impl IggyConsumer {
             store_offset_receiver,
             store_offset_after_each_message: matches!(
                 auto_commit,
-                AutoCommit::Mode(AutoCommitMode::AfterConsumingEachMessage)
-                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingEachMessage)
+                AutoCommit::After(AutoCommitAfter::ConsumingEachMessage)
+                    | AutoCommit::IntervalOrAfter(_, AutoCommitAfter::ConsumingEachMessage)
             ),
             store_offset_after_all_messages: matches!(
                 auto_commit,
-                AutoCommit::Mode(AutoCommitMode::AfterConsumingAllMessages)
-                    | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingAllMessages)
+                AutoCommit::After(AutoCommitAfter::ConsumingAllMessages)
+                    | AutoCommit::IntervalOrAfter(_, AutoCommitAfter::ConsumingAllMessages)
             ),
-            consumer_group_joined: Arc::new(AtomicBool::new(false)),
+            store_after_every_nth_message: match auto_commit {
+                AutoCommit::After(AutoCommitAfter::EveryNthMessage(n))
+                | AutoCommit::IntervalOrAfter(_, AutoCommitAfter::EveryNthMessage(n)) => n as u64,
+                _ => 0,
+            },
             last_polled_at: Arc::new(AtomicU64::new(0)),
             current_partition_id: Arc::new(AtomicU32::new(0)),
             current_offset: Arc::new(AtomicU64::new(0)),
+            polled_messages_count: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -176,7 +185,7 @@ impl IggyConsumer {
 
         match self.auto_commit {
             AutoCommit::Interval(interval) => self.store_offsets_in_background(interval),
-            AutoCommit::IntervalAndMode(interval, _) => self.store_offsets_in_background(interval),
+            AutoCommit::IntervalOrAfter(interval, _) => self.store_offsets_in_background(interval),
             _ => {}
         }
 
@@ -268,7 +277,7 @@ impl IggyConsumer {
         }
 
         if !self.auto_join_consumer_group {
-            info!("Auto join consumer group is disabled");
+            warn!("Auto join consumer group is disabled");
             return Ok(());
         }
 
@@ -279,14 +288,13 @@ impl IggyConsumer {
             self.topic_id.clone(),
             self.consumer.clone(),
             &self.consumer_name,
-            self.consumer_group_joined.clone(),
         )
         .await
     }
 
     async fn subscribe_events(&self) {
         trace!("Subscribing to diagnostic events");
-        let receiver;
+        let mut receiver;
         {
             let client = self.client.read().await;
             receiver = client.subscribe_events().await;
@@ -301,12 +309,11 @@ impl IggyConsumer {
         let consumer = self.consumer.clone();
         let consumer_name = self.consumer_name.clone();
         let can_poll = self.can_poll.clone();
-        let consumer_group_joined = self.consumer_group_joined.clone();
         let mut reconnected = false;
         let mut disconnected = false;
 
         tokio::spawn(async move {
-            while let Ok(event) = receiver.recv_async().await {
+            while let Some(event) = receiver.next().await {
                 trace!("Received diagnostic event: {event}");
                 match event {
                     DiagnosticEvent::Connected => {
@@ -320,9 +327,6 @@ impl IggyConsumer {
                         disconnected = true;
                         reconnected = false;
                         can_poll.store(false, ORDERING);
-                        if is_consumer_group {
-                            consumer_group_joined.store(false, ORDERING);
-                        }
                         warn!("Disconnected from the server");
                     }
                     DiagnosticEvent::SignedIn => {
@@ -350,7 +354,6 @@ impl IggyConsumer {
                             topic_id.clone(),
                             consumer.clone(),
                             &consumer_name,
-                            consumer_group_joined.clone(),
                         )
                         .await
                         {
@@ -362,9 +365,6 @@ impl IggyConsumer {
                     }
                     DiagnosticEvent::SignedOut => {
                         can_poll.store(false, ORDERING);
-                        if is_consumer_group {
-                            consumer_group_joined.store(false, ORDERING);
-                        }
                     }
                 }
             }
@@ -432,7 +432,6 @@ impl IggyConsumer {
         topic_id: Arc<Identifier>,
         consumer: Arc<Consumer>,
         consumer_name: &str,
-        consumer_group_joined: Arc<AtomicBool>,
     ) -> Result<(), IggyError> {
         let client = client.read().await;
         let (name, id) = match consumer.id.kind {
@@ -441,7 +440,7 @@ impl IggyConsumer {
         };
 
         let consumer_group_id = name.to_owned().try_into()?;
-        trace!("Validating consumer group: {consumer_group_id}");
+        trace!("Validating consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}");
         if let Err(error) = client
             .get_consumer_group(&stream_id, &topic_id, &consumer_group_id)
             .await
@@ -451,24 +450,24 @@ impl IggyConsumer {
                 return Err(error);
             }
 
-            info!("Creating consumer group: {consumer_group_id}");
+            info!("Creating consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}");
             client
                 .create_consumer_group(&stream_id, &topic_id, &name, id)
                 .await?;
         }
 
-        info!("Joining consumer group: {consumer_group_id}",);
+        info!("Joining consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}",);
         if let Err(error) = client
             .join_consumer_group(&stream_id, &topic_id, &consumer_group_id)
             .await
         {
-            error!("Failed to join consumer group: {error}");
-            consumer_group_joined.store(false, ORDERING);
+            error!("Failed to join consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}: {error}");
             return Err(error);
         }
 
-        consumer_group_joined.store(true, ORDERING);
-        info!("Joined consumer group: {consumer_group_id}",);
+        info!(
+            "Joined consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}"
+        );
         Ok(())
     }
 }
@@ -496,6 +495,13 @@ impl Stream for IggyConsumer {
         if let Some(message) = self.buffered_messages.pop_front() {
             let next_offset = message.offset + 1;
             self.next_offset.store(next_offset, ORDERING);
+            let consumed_messages_count = self.polled_messages_count.fetch_add(1, ORDERING);
+            if self.store_after_every_nth_message > 0
+                && consumed_messages_count % self.store_after_every_nth_message == 0
+            {
+                self.store_offset(message.offset);
+            }
+
             if self.buffered_messages.is_empty() {
                 if self.polling_strategy.kind == PollingKind::Offset {
                     self.polling_strategy = PollingStrategy::offset(next_offset);
@@ -546,7 +552,13 @@ impl Stream for IggyConsumer {
                             self.polling_strategy = PollingStrategy::offset(next_offset);
                         }
 
-                        if self.buffered_messages.is_empty() {
+                        let consumed_messages_count =
+                            self.polled_messages_count.fetch_add(1, ORDERING);
+                        if self.store_after_every_nth_message > 0
+                            && consumed_messages_count % self.store_after_every_nth_message == 0
+                        {
+                            self.store_offset(message.offset);
+                        } else if self.buffered_messages.is_empty() {
                             if self.store_offset_after_all_messages {
                                 self.store_offset(message.offset);
                             }
@@ -612,9 +624,9 @@ impl IggyConsumerBuilder {
             partition: partition_id,
             polling_strategy: PollingStrategy::next(),
             batch_size: 1000,
-            auto_commit: AutoCommit::IntervalAndMode(
+            auto_commit: AutoCommit::IntervalOrAfter(
                 IggyDuration::from(SEC_IN_MICRO),
-                AutoCommitMode::AfterPollingMessages,
+                AutoCommitAfter::PollingMessages,
             ),
             auto_join_consumer_group: true,
             create_consumer_group_if_not_exists: true,

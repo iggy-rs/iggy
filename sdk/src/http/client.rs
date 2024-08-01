@@ -5,8 +5,8 @@ use crate::http::config::HttpClientConfig;
 use crate::http::HttpTransport;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::models::identity_info::IdentityInfo;
+use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
-use flume::{Receiver, Sender};
 use reqwest::{Response, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
 use reqwest_retry::{policies::ExponentialBackoff, RetryTransientMiddleware};
@@ -245,7 +245,7 @@ impl HttpClient {
             api_url,
             client,
             access_token: IggySharedMut::new("".to_string()),
-            events: flume::unbounded(),
+            events: broadcast(1000),
         })
     }
 

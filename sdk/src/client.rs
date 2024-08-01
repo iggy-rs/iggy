@@ -20,8 +20,8 @@ use crate::models::user_status::UserStatus;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::utils::topic_size::MaxTopicSize;
+use async_broadcast::Receiver;
 use async_trait::async_trait;
-use flume::Receiver;
 use std::fmt::Debug;
 
 #[derive(Debug, Clone)]

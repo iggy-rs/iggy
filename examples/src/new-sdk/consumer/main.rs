@@ -3,7 +3,7 @@ use futures_util::StreamExt;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::IggyClient;
-use iggy::clients::consumer::{AutoCommit, AutoCommitMode, IggyConsumer};
+use iggy::clients::consumer::{AutoCommit, AutoCommitAfter, IggyConsumer};
 use iggy::consumer::ConsumerKind;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::messages::PolledMessage;
@@ -39,7 +39,7 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
             client.consumer_group(name, &args.stream_id, &args.topic_id)?
         }
     }
-    .auto_commit(AutoCommit::Mode(AutoCommitMode::AfterPollingMessages))
+    .auto_commit(AutoCommit::After(AutoCommitAfter::PollingMessages))
     .create_consumer_group_if_not_exists()
     .auto_join_consumer_group()
     .polling_strategy(PollingStrategy::next())

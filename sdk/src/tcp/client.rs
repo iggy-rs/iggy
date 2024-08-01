@@ -5,9 +5,9 @@ use crate::command::Command;
 use crate::diagnostic::DiagnosticEvent;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
+use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
-use flume::{Receiver, Sender};
 use std::fmt::Debug;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
@@ -176,7 +176,7 @@ impl BinaryTransport for TcpClient {
     }
 
     async fn publish_event(&self, event: DiagnosticEvent) {
-        if let Err(error) = self.events.0.send_async(event).await {
+        if let Err(error) = self.events.0.broadcast(event).await {
             error!("Failed to send a TCP diagnostic event: {error}");
         }
     }
@@ -215,7 +215,7 @@ impl TcpClient {
             config,
             stream: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
-            events: flume::unbounded(),
+            events: broadcast(1000),
         })
     }
 

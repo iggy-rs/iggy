@@ -25,7 +25,7 @@ const TENANT1_USER: &str = "tenant_1_producer";
 const TENANT2_USER: &str = "tenant_2_producer";
 const TENANT3_USER: &str = "tenant_3_producer";
 const PASSWORD: &str = "secret";
-const TOPIC: &str = "logs";
+const TOPICS: &[&str] = &["events", "logs", "notifications"];
 const PRODUCERS_COUNT: usize = 3;
 const PARTITIONS_COUNT: u32 = 3;
 const MESSAGES_COUNT: usize = 10;
@@ -74,9 +74,9 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     .await?;
 
     print_info("Creating {PRODUCERS_COUNT} producers for each tenant");
-    let producers1 = create_producers(&tenant1_client, TENANT1_STREAM, TOPIC).await?;
-    let producers2 = create_producers(&tenant2_client, TENANT2_STREAM, TOPIC).await?;
-    let producers3 = create_producers(&tenant3_client, TENANT3_STREAM, TOPIC).await?;
+    let producers1 = create_producers(&tenant1_client, TENANT1_STREAM, TOPICS).await?;
+    let producers2 = create_producers(&tenant2_client, TENANT2_STREAM, TOPICS).await?;
+    let producers3 = create_producers(&tenant3_client, TENANT3_STREAM, TOPICS).await?;
 
     print_info("Starting producers for each tenant");
     let producers1_tasks = start_producers(producers1);
@@ -98,11 +98,27 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
 fn start_producers(producers: Vec<IggyProducer>) -> Vec<JoinHandle<()>> {
     let mut tasks = Vec::new();
     let mut producer_id = 1;
+    let topics_count = TOPICS.len();
     for producer in producers {
+        if producer_id > topics_count {
+            producer_id = 1;
+        }
+
         let task = tokio::spawn(async move {
             let mut counter = 1;
-            while counter <= MESSAGES_COUNT {
-                let payload = format!("message-{producer_id}-{counter}");
+            while counter <= topics_count * MESSAGES_COUNT {
+                let message = match producer
+                    .topic()
+                    .get_string_value()
+                    .expect("Invalid topic")
+                    .as_str()
+                {
+                    "events" => "event",
+                    "logs" => "log",
+                    "notifications" => "notification",
+                    _ => panic!("Invalid topic"),
+                };
+                let payload = format!("{message}-{producer_id}-{counter}");
                 let message = Message::from_str(&payload).expect("Invalid message");
                 if let Err(error) = producer.send(vec![message]).await {
                     error!(
@@ -131,19 +147,21 @@ fn start_producers(producers: Vec<IggyProducer>) -> Vec<JoinHandle<()>> {
 async fn create_producers(
     client: &IggyClient,
     stream: &str,
-    topic: &str,
+    topics: &[&str],
 ) -> Result<Vec<IggyProducer>, IggyError> {
     let mut producers = Vec::new();
-    for _ in 0..PRODUCERS_COUNT {
-        let mut producer = client
-            .producer(stream, topic)?
-            .batch_size(10)
-            .send_interval(IggyDuration::from_str("10ms").expect("Invalid duration"))
-            .partitioning(Partitioning::balanced())
-            .create_topic_if_not_exists(PARTITIONS_COUNT, None)
-            .build();
-        producer.init().await?;
-        producers.push(producer);
+    for topic in topics {
+        for _ in 0..PRODUCERS_COUNT {
+            let mut producer = client
+                .producer(stream, topic)?
+                .batch_size(10)
+                .send_interval(IggyDuration::from_str("10ms").expect("Invalid duration"))
+                .partitioning(Partitioning::balanced())
+                .create_topic_if_not_exists(PARTITIONS_COUNT, None)
+                .build();
+            producer.init().await?;
+            producers.push(producer);
+        }
     }
     Ok(producers)
 }

@@ -5,9 +5,9 @@ use crate::command::Command;
 use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
+use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::Bytes;
-use flume::{Receiver, Sender};
 use quinn::crypto::rustls::QuicClientConfig as QuinnQuicClientConfig;
 use quinn::{ClientConfig, Connection, Endpoint, IdleTimeout, RecvStream, VarInt};
 use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified, ServerCertVerifier};
@@ -100,7 +100,7 @@ impl BinaryTransport for QuicClient {
     }
 
     async fn publish_event(&self, event: DiagnosticEvent) {
-        if let Err(error) = self.events.0.send_async(event).await {
+        if let Err(error) = self.events.0.broadcast(event).await {
             error!("Failed to send a QUIC diagnostic event: {error}");
         }
     }
@@ -155,7 +155,7 @@ impl QuicClient {
             server_address,
             connection: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
-            events: flume::unbounded(),
+            events: broadcast(1000),
         })
     }
 

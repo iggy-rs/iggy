@@ -8,6 +8,7 @@ use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::messages::{PolledMessage, PolledMessages};
 use crate::utils::crypto::Encryptor;
 use crate::utils::duration::{IggyDuration, SEC_IN_MICRO};
+use crate::utils::timestamp::IggyTimestamp;
 use bytes::Bytes;
 use futures::Stream;
 use futures_util::FutureExt;
@@ -17,6 +18,7 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
 use std::task::{Context, Poll};
+use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
@@ -62,7 +64,7 @@ pub struct IggyConsumer {
     topic_id: Arc<Identifier>,
     partition_id: Option<u32>,
     polling_strategy: PollingStrategy,
-    interval: Option<IggyDuration>,
+    interval_micros: u64,
     batch_size: u32,
     auto_commit: AutoCommit,
     auto_commit_after_polling: bool,
@@ -77,6 +79,7 @@ pub struct IggyConsumer {
     store_offset_receiver: Option<flume::Receiver<u64>>,
     store_offset_after_each_message: bool,
     store_offset_after_all_messages: bool,
+    last_polled_at: Arc<AtomicU64>,
 }
 
 impl IggyConsumer {
@@ -118,7 +121,7 @@ impl IggyConsumer {
             topic_id: Arc::new(topic_id),
             partition_id,
             polling_strategy,
-            interval: polling_interval,
+            interval_micros: polling_interval.map_or(0, |interval| interval.as_micros()),
             next_offset: Arc::new(AtomicU64::new(0)),
             last_stored_offset: Arc::new(AtomicU64::new(0)),
             poll_future: None,
@@ -146,6 +149,7 @@ impl IggyConsumer {
                     | AutoCommit::IntervalAndMode(_, AutoCommitMode::AfterConsumingAllMessages)
             ),
             consumer_group_joined: Arc::new(AtomicBool::new(false)),
+            last_polled_at: Arc::new(AtomicU64::new(0)),
         }
     }
 
@@ -366,14 +370,16 @@ impl IggyConsumer {
         let client = self.client.clone();
         let count = self.batch_size;
         let auto_commit = self.auto_commit_after_polling;
-        let interval = self.interval;
+        let interval = self.interval_micros;
+        let last_polled_at = self.last_polled_at.clone();
 
         async move {
-            if let Some(interval) = interval {
-                sleep(interval.get_duration()).await;
+            if interval > 0 {
+                Self::wait_before_polling(interval, last_polled_at.load(ORDERING)).await;
             }
 
             trace!("Sending poll messages request");
+            last_polled_at.store(IggyTimestamp::now().into(), ORDERING);
             client
                 .read()
                 .await
@@ -388,6 +394,23 @@ impl IggyConsumer {
                 )
                 .await
         }
+    }
+
+    async fn wait_before_polling(interval: u64, last_sent_at: u64) {
+        if interval == 0 {
+            return;
+        }
+
+        let now: u64 = IggyTimestamp::now().into();
+        let elapsed = now - last_sent_at;
+        if elapsed >= interval {
+            trace!("No need to wait before polling messages. {now} - {last_sent_at} = {elapsed}");
+            return;
+        }
+
+        let remaining = interval - elapsed;
+        trace!("Waiting for {remaining} microseconds before polling messages... {interval} - {elapsed} = {remaining}");
+        sleep(Duration::from_micros(remaining)).await;
     }
 
     async fn initialize_consumer_group(

@@ -47,7 +47,7 @@ impl System {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: MaxTopicSize,
         replication_factor: Option<u8>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<&Topic, IggyError> {
         self.ensure_authenticated(session)?;
         {
             let stream = self.get_stream(stream_id)?;
@@ -55,7 +55,8 @@ impl System {
                 .create_topic(session.get_user_id(), stream.stream_id)?;
         }
 
-        self.get_stream_mut(stream_id)?
+        let created_topic_id = self
+            .get_stream_mut(stream_id)?
             .create_topic(
                 topic_id,
                 name,
@@ -66,10 +67,13 @@ impl System {
                 replication_factor.unwrap_or(1),
             )
             .await?;
+
         self.metrics.increment_topics(1);
         self.metrics.increment_partitions(partitions_count);
         self.metrics.increment_segments(partitions_count);
-        Ok(())
+
+        self.get_stream(stream_id)?
+            .get_topic(&created_topic_id.try_into()?)
     }
 
     #[allow(clippy::too_many_arguments)]

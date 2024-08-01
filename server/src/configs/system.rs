@@ -14,6 +14,7 @@ pub struct SystemConfig {
     pub path: String,
     pub backup: BackupConfig,
     pub database: Option<DatabaseConfig>,
+    pub state: StateConfig,
     pub runtime: RuntimeConfig,
     pub logging: LoggingConfig,
     pub cache: CacheConfig,
@@ -117,6 +118,11 @@ pub struct SegmentConfig {
     #[serde_as(as = "DisplayFromStr")]
     pub message_expiry: IggyExpiry,
     pub archive_expired: bool,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct StateConfig {
+    pub enforce_fsync: bool,
 }
 
 impl SystemConfig {

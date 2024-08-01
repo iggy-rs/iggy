@@ -62,7 +62,7 @@ async fn get_topics(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
     )?;
-    let topics = mapper::map_topics(&topics).await;
+    let topics = mapper::map_topics(&topics);
     Ok(Json(topics))
 }
 
@@ -71,12 +71,13 @@ async fn create_topic(
     Extension(identity): Extension<Identity>,
     Path(stream_id): Path<String>,
     Json(mut command): Json<CreateTopic>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<TopicDetails>, CustomError> {
     command.stream_id = Identifier::from_str_value(&stream_id)?;
     command.validate()?;
+    let response;
     {
         let mut system = state.system.write().await;
-        system
+        let topic = system
             .create_topic(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &command.stream_id,
@@ -89,6 +90,7 @@ async fn create_topic(
                 command.replication_factor,
             )
             .await?;
+        response = Json(mapper::map_topic(topic).await);
     }
 
     let system = state.system.read().await;
@@ -96,7 +98,7 @@ async fn create_topic(
         .state
         .apply(identity.user_id, EntryCommand::CreateTopic(command))
         .await?;
-    Ok(StatusCode::CREATED)
+    Ok(response)
 }
 
 async fn update_topic(

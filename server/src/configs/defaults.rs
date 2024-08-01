@@ -10,7 +10,7 @@ use crate::configs::server::{
 use crate::configs::system::{
     BackupConfig, CacheConfig, CompatibilityConfig, CompressionConfig, EncryptionConfig,
     LoggingConfig, MessageDeduplicationConfig, PartitionConfig, RuntimeConfig, SegmentConfig,
-    StreamConfig, SystemConfig, TopicConfig,
+    StateConfig, StreamConfig, SystemConfig, TopicConfig,
 };
 use crate::configs::tcp::{TcpConfig, TcpTlsConfig};
 use std::sync::Arc;
@@ -279,6 +279,7 @@ impl Default for SystemConfig {
             topic: TopicConfig::default(),
             partition: PartitionConfig::default(),
             segment: SegmentConfig::default(),
+            state: StateConfig::default(),
             compression: CompressionConfig::default(),
             message_deduplication: MessageDeduplicationConfig::default(),
         }
@@ -403,6 +404,14 @@ impl Default for SegmentConfig {
             cache_time_indexes: SERVER_CONFIG.system.segment.cache_time_indexes,
             message_expiry: SERVER_CONFIG.system.segment.message_expiry.parse().unwrap(),
             archive_expired: SERVER_CONFIG.system.segment.archive_expired,
+        }
+    }
+}
+
+impl Default for StateConfig {
+    fn default() -> StateConfig {
+        StateConfig {
+            enforce_fsync: SERVER_CONFIG.system.state.enforce_fsync,
         }
     }
 }

@@ -53,7 +53,7 @@ pub fn map_consumer_offset(offset: &ConsumerOffsetInfo) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_client(client: &Client) -> Bytes {
+pub fn map_client(client: &Client) -> Bytes {
     let mut bytes = BytesMut::new();
     extend_client(client, &mut bytes);
     for consumer_group in &client.consumer_groups {
@@ -136,34 +136,34 @@ pub fn map_polled_messages(polled_messages: &PolledMessages) -> Bytes {
     bytes.freeze()
 }
 
-pub async fn map_stream(stream: &Stream) -> Bytes {
+pub fn map_stream(stream: &Stream) -> Bytes {
     let mut bytes = BytesMut::new();
-    extend_stream(stream, &mut bytes).await;
+    extend_stream(stream, &mut bytes);
     for topic in stream.get_topics() {
-        extend_topic(topic, &mut bytes).await;
+        extend_topic(topic, &mut bytes);
     }
     bytes.freeze()
 }
 
-pub async fn map_streams(streams: &[&Stream]) -> Bytes {
+pub fn map_streams(streams: &[&Stream]) -> Bytes {
     let mut bytes = BytesMut::new();
     for stream in streams {
-        extend_stream(stream, &mut bytes).await;
+        extend_stream(stream, &mut bytes);
     }
     bytes.freeze()
 }
 
-pub async fn map_topics(topics: &[&Topic]) -> Bytes {
+pub fn map_topics(topics: &[&Topic]) -> Bytes {
     let mut bytes = BytesMut::new();
     for topic in topics {
-        extend_topic(topic, &mut bytes).await;
+        extend_topic(topic, &mut bytes);
     }
     bytes.freeze()
 }
 
 pub async fn map_topic(topic: &Topic) -> Bytes {
     let mut bytes = BytesMut::new();
-    extend_topic(topic, &mut bytes).await;
+    extend_topic(topic, &mut bytes);
     for partition in topic.get_partitions() {
         let partition = partition.read().await;
         extend_partition(&partition, &mut bytes);
@@ -196,7 +196,7 @@ pub async fn map_consumer_groups(consumer_groups: &[&RwLock<ConsumerGroup>]) -> 
     bytes.freeze()
 }
 
-async fn extend_stream(stream: &Stream, bytes: &mut BytesMut) {
+fn extend_stream(stream: &Stream, bytes: &mut BytesMut) {
     bytes.put_u32_le(stream.stream_id);
     bytes.put_u64_le(stream.created_at.into());
     bytes.put_u32_le(stream.get_topics().len() as u32);
@@ -206,7 +206,7 @@ async fn extend_stream(stream: &Stream, bytes: &mut BytesMut) {
     bytes.put_slice(stream.name.as_bytes());
 }
 
-async fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
+fn extend_topic(topic: &Topic, bytes: &mut BytesMut) {
     bytes.put_u32_le(topic.topic_id);
     bytes.put_u64_le(topic.created_at.into());
     bytes.put_u32_le(topic.get_partitions().len() as u32);

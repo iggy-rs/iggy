@@ -108,7 +108,7 @@ pub trait UserClient {
         password: &str,
         status: UserStatus,
         permissions: Option<Permissions>,
-    ) -> Result<(), IggyError>;
+    ) -> Result<UserInfoDetails, IggyError>;
     /// Delete a user by unique ID or username.
     ///
     /// Authentication is required, and the permission to manage the users.
@@ -179,7 +179,11 @@ pub trait StreamClient {
     /// Create a new stream.
     ///
     /// Authentication is required, and the permission to manage the streams.
-    async fn create_stream(&self, name: &str, stream_id: Option<u32>) -> Result<(), IggyError>;
+    async fn create_stream(
+        &self,
+        name: &str,
+        stream_id: Option<u32>,
+    ) -> Result<StreamDetails, IggyError>;
     /// Update a stream by unique ID or name.
     ///
     /// Authentication is required, and the permission to manage the streams.
@@ -224,7 +228,7 @@ pub trait TopicClient {
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
         max_topic_size: MaxTopicSize,
-    ) -> Result<(), IggyError>;
+    ) -> Result<TopicDetails, IggyError>;
     /// Update a topic by unique ID or name.
     ///
     /// Authentication is required, and the permission to manage the topics.

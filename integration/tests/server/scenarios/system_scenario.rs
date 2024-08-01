@@ -47,10 +47,13 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert!(streams.is_empty());
 
     // 3. Create the stream
-    client
+    let stream = client
         .create_stream(STREAM_NAME, Some(STREAM_ID))
         .await
         .unwrap();
+
+    assert_eq!(stream.id, STREAM_ID);
+    assert_eq!(stream.name, STREAM_NAME);
 
     // 4. Get streams and validate that created stream exists
     let streams = client.get_streams().await.unwrap();
@@ -93,7 +96,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert!(create_stream_result.is_err());
 
     // 9. Create the topic
-    client
+    let topic = client
         .create_topic(
             &Identifier::numeric(STREAM_ID).unwrap(),
             TOPIC_NAME,
@@ -106,6 +109,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         )
         .await
         .unwrap();
+
+    assert_eq!(topic.id, TOPIC_ID);
+    assert_eq!(topic.name, TOPIC_NAME);
 
     // 10. Get topics and validate that created topic exists
     let topics = client
@@ -390,7 +396,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     assert!(consumer_groups.is_empty());
 
     // 28. Create the consumer group
-    client
+    let consumer_group = client
         .create_consumer_group(
             &Identifier::numeric(STREAM_ID).unwrap(),
             &Identifier::numeric(TOPIC_ID).unwrap(),
@@ -399,6 +405,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
         )
         .await
         .unwrap();
+
+    assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
+    assert_eq!(consumer_group.name, CONSUMER_GROUP_NAME);
 
     // 29. Get the consumer groups and validate that there is one group
     let consumer_groups = client

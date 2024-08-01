@@ -1,3 +1,4 @@
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -14,11 +15,13 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
+    let response;
     {
         let mut system = system.write().await;
-        system
+        let stream = system
             .create_stream(session, command.stream_id, &command.name)
             .await?;
+        response = mapper::map_stream(stream);
     }
 
     let system = system.read().await;
@@ -26,6 +29,6 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::CreateStream(command))
         .await?;
-    sender.send_empty_ok_response().await?;
+    sender.send_ok_response(&response).await?;
     Ok(())
 }

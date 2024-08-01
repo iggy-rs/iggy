@@ -184,7 +184,7 @@ impl UserClient for IggyClient {
         password: &str,
         status: UserStatus,
         permissions: Option<Permissions>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<UserInfoDetails, IggyError> {
         self.client
             .read()
             .await
@@ -318,7 +318,11 @@ impl StreamClient for IggyClient {
         self.client.read().await.get_streams().await
     }
 
-    async fn create_stream(&self, name: &str, stream_id: Option<u32>) -> Result<(), IggyError> {
+    async fn create_stream(
+        &self,
+        name: &str,
+        stream_id: Option<u32>,
+    ) -> Result<StreamDetails, IggyError> {
         self.client
             .read()
             .await
@@ -371,7 +375,7 @@ impl TopicClient for IggyClient {
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
         max_topic_size: MaxTopicSize,
-    ) -> Result<(), IggyError> {
+    ) -> Result<TopicDetails, IggyError> {
         self.client
             .read()
             .await

@@ -42,16 +42,17 @@ impl<B: BinaryClient> UserClient for B {
         password: &str,
         status: UserStatus,
         permissions: Option<Permissions>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<UserInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(&CreateUser {
-            username: username.to_string(),
-            password: password.to_string(),
-            status,
-            permissions,
-        })
-        .await?;
-        Ok(())
+        let response = self
+            .send_with_response(&CreateUser {
+                username: username.to_string(),
+                password: password.to_string(),
+                status,
+                permissions,
+            })
+            .await?;
+        mapper::map_user(response)
     }
 
     async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError> {

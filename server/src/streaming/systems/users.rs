@@ -168,7 +168,7 @@ impl System {
         password: &str,
         status: UserStatus,
         permissions: Option<Permissions>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<&User, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.create_user(session.get_user_id())?;
         let username = text::to_lowercase_non_whitespace(username);
@@ -190,7 +190,7 @@ impl System {
         self.users.insert(user.id, user);
         info!("Created user: {username} with ID: {user_id}.");
         self.metrics.increment_users(1);
-        Ok(())
+        self.get_user(&user_id.try_into()?)
     }
 
     pub async fn delete_user(

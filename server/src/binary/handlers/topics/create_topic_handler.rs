@@ -1,3 +1,4 @@
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -14,9 +15,10 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
+    let response;
     {
         let mut system = system.write().await;
-        system
+        let topic = system
             .create_topic(
                 session,
                 &command.stream_id,
@@ -29,6 +31,7 @@ pub async fn handle(
                 command.replication_factor,
             )
             .await?;
+        response = mapper::map_topic(topic).await;
     }
 
     let system = system.read().await;
@@ -36,6 +39,6 @@ pub async fn handle(
         .state
         .apply(session.get_user_id(), EntryCommand::CreateTopic(command))
         .await?;
-    sender.send_empty_ok_response().await?;
+    sender.send_ok_response(&response).await?;
     Ok(())
 }

@@ -1,3 +1,4 @@
+use crate::binary::mapper;
 use crate::binary::sender::Sender;
 use crate::state::command::EntryCommand;
 use crate::streaming::session::Session;
@@ -15,9 +16,10 @@ pub async fn handle(
     system: &SharedSystem,
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
+    let response;
     {
         let mut system = system.write().await;
-        system
+        let user = system
             .create_user(
                 session,
                 &command.username,
@@ -26,6 +28,7 @@ pub async fn handle(
                 command.permissions.clone(),
             )
             .await?;
+        response = mapper::map_user(user);
     }
 
     // For the security of the system, we hash the password before storing it in metadata.
@@ -42,6 +45,6 @@ pub async fn handle(
             }),
         )
         .await?;
-    sender.send_empty_ok_response().await?;
+    sender.send_ok_response(&response).await?;
     Ok(())
 }

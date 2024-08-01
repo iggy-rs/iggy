@@ -51,20 +51,21 @@ impl<B: BinaryClient> TopicClient for B {
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
         max_topic_size: MaxTopicSize,
-    ) -> Result<(), IggyError> {
+    ) -> Result<TopicDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(&CreateTopic {
-            stream_id: stream_id.clone(),
-            name: name.to_string(),
-            partitions_count,
-            compression_algorithm,
-            replication_factor,
-            topic_id,
-            message_expiry,
-            max_topic_size,
-        })
-        .await?;
-        Ok(())
+        let response = self
+            .send_with_response(&CreateTopic {
+                stream_id: stream_id.clone(),
+                name: name.to_string(),
+                partitions_count,
+                compression_algorithm,
+                replication_factor,
+                topic_id,
+                message_expiry,
+                max_topic_size,
+            })
+            .await?;
+        mapper::map_topic(response)
     }
 
     async fn update_topic(

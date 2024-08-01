@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     .create_consumer_group_if_not_exists()
     .auto_join_consumer_group()
     .polling_strategy(PollingStrategy::next())
-    .polling_interval(IggyDuration::from_str(&args.interval)?)
+    .poll_interval(IggyDuration::from_str(&args.interval)?)
     .batch_size(args.messages_per_batch)
     .build();
 
@@ -70,7 +70,7 @@ pub async fn consume_messages(
         }
 
         if let Ok(message) = message {
-            handle_message(&message)?;
+            handle_message(&message.message)?;
             consumed_batches += 1;
         } else if let Err(error) = message {
             error!("Error while handling message: {error}");

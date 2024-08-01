@@ -24,15 +24,16 @@ use tracing::{error, info, trace};
 
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
 const MAX_BATCH_SIZE: usize = 1000000;
+const RETRY_INTERVAL: Duration = Duration::from_secs(1);
 
 unsafe impl Send for IggyProducer {}
 unsafe impl Sync for IggyProducer {}
 
 pub struct IggyProducer {
     client: Arc<IggySharedMut<Box<dyn Client>>>,
-    stream: Arc<Identifier>,
+    stream_id: Arc<Identifier>,
     stream_name: String,
-    topic: Arc<Identifier>,
+    topic_id: Arc<Identifier>,
     topic_name: String,
     batch_size: Option<usize>,
     partitioning: Option<Arc<Partitioning>>,
@@ -91,9 +92,9 @@ impl IggyProducer {
     ) -> Self {
         Self {
             client: Arc::new(client),
-            stream: Arc::new(stream),
+            stream_id: Arc::new(stream),
             stream_name,
-            topic: Arc::new(topic),
+            topic_id: Arc::new(topic),
             topic_name,
             batch_size,
             partitioning: partitioning.map(Arc::new),
@@ -113,44 +114,52 @@ impl IggyProducer {
         }
     }
 
+    pub fn stream(&self) -> &Identifier {
+        &self.stream_id
+    }
+
+    pub fn topic(&self) -> &Identifier {
+        &self.topic_id
+    }
+
     /// Initializes the producer by creating the stream and topic if they do not exist etc.
     pub async fn init(&mut self) -> Result<(), IggyError> {
         let client = self.client.clone();
         let client = client.read().await;
-        if let Err(error) = client.get_stream(&self.stream).await {
+        if let Err(error) = client.get_stream(&self.stream_id).await {
             if !self.create_stream_if_not_exists {
                 error!("Stream does not exist and auto-creation is disabled.");
                 return Err(error);
             }
 
-            let (name, id) = match self.stream.kind {
+            let (name, id) = match self.stream_id.kind {
                 IdKind::Numeric => (
                     self.stream_name.to_owned(),
-                    Some(self.stream.get_u32_value()?),
+                    Some(self.stream_id.get_u32_value()?),
                 ),
-                IdKind::String => (self.stream.get_string_value()?, None),
+                IdKind::String => (self.stream_id.get_string_value()?, None),
             };
             info!("Creating stream: {name}");
             client.create_stream(&name, id).await?;
         }
 
-        if let Err(error) = client.get_topic(&self.stream, &self.topic).await {
+        if let Err(error) = client.get_topic(&self.stream_id, &self.topic_id).await {
             if !self.create_topic_if_not_exists {
                 error!("Topic does not exist and auto-creation is disabled.");
                 return Err(error);
             }
 
-            let (name, id) = match self.topic.kind {
+            let (name, id) = match self.topic_id.kind {
                 IdKind::Numeric => (
                     self.topic_name.to_owned(),
-                    Some(self.topic.get_u32_value()?),
+                    Some(self.topic_id.get_u32_value()?),
                 ),
-                IdKind::String => (self.topic.get_string_value()?, None),
+                IdKind::String => (self.topic_id.get_string_value()?, None),
             };
             info!("Creating topic: {name} for stream: {}", self.stream_name);
             client
                 .create_topic(
-                    &self.stream,
+                    &self.stream_id,
                     &self.topic_name,
                     self.topic_partitions_count,
                     CompressionAlgorithm::None,
@@ -191,6 +200,10 @@ impl IggyProducer {
                     };
 
                     let messages_count = batch.messages.len();
+                    if messages_count == 0 {
+                        continue;
+                    }
+
                     trace!("Sending {messages_count} buffered messages in the background...");
                     last_sent_at.store(IggyTimestamp::now().into(), ORDERING);
                     if let Err(error) = client
@@ -207,6 +220,9 @@ impl IggyProducer {
                         );
                         send_order.push_front(partitioning.clone());
                         buffered_messages.insert(partitioning, batch);
+                        if matches!(error, IggyError::Unauthenticated) {
+                            sleep(RETRY_INTERVAL).await;
+                        }
                         continue;
                     }
 
@@ -225,12 +241,17 @@ impl IggyProducer {
 
         if self.can_send_immediately {
             return self
-                .send_immediately(&self.stream, &self.topic, messages, None)
+                .send_immediately(&self.stream_id, &self.topic_id, messages, None)
                 .await;
         }
 
-        self.send_buffered(self.stream.clone(), self.topic.clone(), messages, None)
-            .await
+        self.send_buffered(
+            self.stream_id.clone(),
+            self.topic_id.clone(),
+            messages,
+            None,
+        )
+        .await
     }
 
     pub async fn send_with_partitioning(
@@ -245,13 +266,13 @@ impl IggyProducer {
 
         if self.can_send_immediately {
             return self
-                .send_immediately(&self.stream, &self.topic, messages, partitioning)
+                .send_immediately(&self.stream_id, &self.topic_id, messages, partitioning)
                 .await;
         }
 
         self.send_buffered(
-            self.stream.clone(),
-            self.topic.clone(),
+            self.stream_id.clone(),
+            self.topic_id.clone(),
             messages,
             partitioning,
         )
@@ -272,7 +293,7 @@ impl IggyProducer {
 
         if self.can_send_immediately {
             return self
-                .send_immediately(&self.stream, &self.topic, messages, partitioning)
+                .send_immediately(&self.stream_id, &self.topic_id, messages, partitioning)
                 .await;
         }
 
@@ -322,8 +343,8 @@ impl IggyProducer {
                 let client = self.client.read().await;
                 client
                     .send_messages(
-                        &self.stream,
-                        &self.topic,
+                        &self.stream_id,
+                        &self.topic_id,
                         &destination.partitioning,
                         &mut messages,
                     )

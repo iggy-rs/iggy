@@ -15,7 +15,7 @@ use futures_util::FutureExt;
 use std::collections::VecDeque;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::atomic::{AtomicBool, AtomicU64};
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicU64};
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
@@ -80,6 +80,8 @@ pub struct IggyConsumer {
     store_offset_after_each_message: bool,
     store_offset_after_all_messages: bool,
     last_polled_at: Arc<AtomicU64>,
+    current_partition_id: Arc<AtomicU32>,
+    current_offset: Arc<AtomicU64>,
 }
 
 impl IggyConsumer {
@@ -150,7 +152,17 @@ impl IggyConsumer {
             ),
             consumer_group_joined: Arc::new(AtomicBool::new(false)),
             last_polled_at: Arc::new(AtomicU64::new(0)),
+            current_partition_id: Arc::new(AtomicU32::new(0)),
+            current_offset: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    pub fn stream(&self) -> &Identifier {
+        &self.stream_id
+    }
+
+    pub fn topic(&self) -> &Identifier {
+        &self.topic_id
     }
 
     /// Initializes the consumer by subscribing to diagnostic events, initializing the consumer group if needed, storing the offsets in the background etc.
@@ -461,8 +473,24 @@ impl IggyConsumer {
     }
 }
 
+pub struct ReceivedMessage {
+    pub message: PolledMessage,
+    pub current_offset: u64,
+    pub partition_id: u32,
+}
+
+impl ReceivedMessage {
+    pub fn new(message: PolledMessage, current_offset: u64, partition_id: u32) -> Self {
+        Self {
+            message,
+            current_offset,
+            partition_id,
+        }
+    }
+}
+
 impl Stream for IggyConsumer {
-    type Item = Result<PolledMessage, IggyError>;
+    type Item = Result<ReceivedMessage, IggyError>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if let Some(message) = self.buffered_messages.pop_front() {
@@ -480,7 +508,11 @@ impl Stream for IggyConsumer {
                 self.store_offset(message.offset);
             }
 
-            return Poll::Ready(Some(Ok(message)));
+            return Poll::Ready(Some(Ok(ReceivedMessage::new(
+                message,
+                self.current_offset.load(ORDERING),
+                self.current_partition_id.load(ORDERING),
+            ))));
         }
 
         if self.poll_future.is_none() {
@@ -500,6 +532,10 @@ impl Stream for IggyConsumer {
                                 message.payload = Bytes::from(payload);
                             }
                         }
+                        self.current_offset
+                            .store(polled_messages.current_offset, ORDERING);
+                        self.current_partition_id
+                            .store(polled_messages.partition_id, ORDERING);
 
                         let message = polled_messages.messages.remove(0);
                         let next_offset = message.offset + 1;
@@ -519,7 +555,11 @@ impl Stream for IggyConsumer {
                         }
 
                         self.poll_future = None;
-                        return Poll::Ready(Some(Ok(message)));
+                        return Poll::Ready(Some(Ok(ReceivedMessage::new(
+                            message,
+                            self.current_offset.load(ORDERING),
+                            self.current_partition_id.load(ORDERING),
+                        ))));
                     }
                 }
                 Poll::Ready(Err(err)) => {
@@ -652,7 +692,7 @@ impl IggyConsumerBuilder {
     }
 
     /// Sets the polling interval for messages.
-    pub fn polling_interval(self, interval: IggyDuration) -> Self {
+    pub fn poll_interval(self, interval: IggyDuration) -> Self {
         Self {
             polling_interval: Some(interval),
             ..self
@@ -660,7 +700,7 @@ impl IggyConsumerBuilder {
     }
 
     /// Clears the polling interval for messages.
-    pub fn without_polling_interval(self) -> Self {
+    pub fn without_poll_interval(self) -> Self {
         Self {
             polling_interval: None,
             ..self

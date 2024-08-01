@@ -28,6 +28,18 @@ impl Permissioner {
         }
 
         let stream_permissions = stream_permissions.unwrap();
+        if stream_permissions.read_stream {
+            return Ok(());
+        }
+
+        if stream_permissions.manage_topics {
+            return Ok(());
+        }
+
+        if stream_permissions.read_topics {
+            return Ok(());
+        }
+
         if stream_permissions.poll_messages {
             return Ok(());
         }
@@ -38,7 +50,10 @@ impl Permissioner {
 
         let topic_permissions = stream_permissions.topics.as_ref().unwrap();
         if let Some(topic_permissions) = topic_permissions.get(&topic_id) {
-            return match topic_permissions.poll_messages {
+            return match topic_permissions.poll_messages
+                | topic_permissions.read_topic
+                | topic_permissions.manage_topic
+            {
                 true => Ok(()),
                 false => Err(IggyError::Unauthorized),
             };
@@ -73,6 +88,14 @@ impl Permissioner {
         }
 
         let stream_permissions = stream_permissions.unwrap();
+        if stream_permissions.manage_stream {
+            return Ok(());
+        }
+
+        if stream_permissions.manage_topics {
+            return Ok(());
+        }
+
         if stream_permissions.send_messages {
             return Ok(());
         }
@@ -83,7 +106,7 @@ impl Permissioner {
 
         let topic_permissions = stream_permissions.topics.as_ref().unwrap();
         if let Some(topic_permissions) = topic_permissions.get(&topic_id) {
-            return match topic_permissions.send_messages {
+            return match topic_permissions.send_messages | topic_permissions.manage_topic {
                 true => Ok(()),
                 false => Err(IggyError::Unauthorized),
             };

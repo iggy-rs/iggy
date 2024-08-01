@@ -5,7 +5,7 @@ use crate::clients::client::IggyClient;
 use crate::http::client::HttpClient;
 use crate::http::config::HttpClientConfig;
 use crate::quic::client::QuicClient;
-use crate::quic::config::QuicClientConfig;
+use crate::quic::config::{QuicClientConfig, QuicClientReconnectionConfig};
 use crate::tcp::client::TcpClient;
 use crate::tcp::config::{TcpClientConfig, TcpClientReconnectionConfig};
 use crate::utils::duration::IggyDuration;
@@ -61,7 +61,7 @@ impl ClientProviderConfig {
                     client_address: args.quic_client_address,
                     server_address: args.quic_server_address,
                     server_name: args.quic_server_name,
-                    reconnection: TcpClientReconnectionConfig {
+                    reconnection: QuicClientReconnectionConfig {
                         enabled: args.quic_reconnection_enabled,
                         max_retries: args.quic_reconnection_max_retries,
                         interval: IggyDuration::from_str(&args.quic_reconnection_interval).unwrap(),

@@ -1,5 +1,4 @@
 use crate::client::AutoSignIn;
-use crate::tcp::config::TcpClientReconnectionConfig;
 use crate::utils::duration::IggyDuration;
 use std::str::FromStr;
 
@@ -12,10 +11,10 @@ pub struct QuicClientConfig {
     pub server_address: String,
     /// The server name to use.
     pub server_name: String,
-    // Whether to automatically sign in when connecting.
+    /// Whether to automatically sign in when connecting.
     pub auto_sign_in: AutoSignIn,
     // Whether to automatically reconnect when disconnected.
-    pub reconnection: TcpClientReconnectionConfig,
+    pub reconnection: QuicClientReconnectionConfig,
     /// The size of the response buffer.
     pub response_buffer_size: u64,
     /// The maximum number of concurrent bidirectional streams.
@@ -60,7 +59,7 @@ impl Default for QuicClientConfig {
             server_address: "127.0.0.1:8080".to_string(),
             server_name: "localhost".to_string(),
             auto_sign_in: AutoSignIn::Disabled,
-            reconnection: TcpClientReconnectionConfig::default(),
+            reconnection: QuicClientReconnectionConfig::default(),
             response_buffer_size: 1000 * 1000 * 10,
             max_concurrent_bidi_streams: 10000,
             datagram_send_buffer_size: 100_000,

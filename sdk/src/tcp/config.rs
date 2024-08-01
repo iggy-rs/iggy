@@ -11,7 +11,7 @@ pub struct TcpClientConfig {
     pub tls_enabled: bool,
     /// The domain to use for TLS when connecting to the server.
     pub tls_domain: String,
-    // Whether to automatically sign in when connecting.
+    /// Whether to automatically sign in when connecting.
     pub auto_sign_in: AutoSignIn,
     // Whether to automatically reconnect when disconnected.
     pub reconnection: TcpClientReconnectionConfig,

@@ -581,9 +581,13 @@ async fn load_batches_by_range(
         .seek(SeekFrom::Start(index_range.start.position as u64))
         .await?;
 
-    let mut read_bytes: u64 = 0;
+    let mut read_bytes = index_range.start.position as u64;
     let mut last_batch_to_read = false;
     while !last_batch_to_read {
+        if read_bytes >= file_size {
+            break;
+        }
+
         let batch_base_offset = reader
             .read_u64_le()
             .await
@@ -613,7 +617,7 @@ async fn load_batches_by_range(
             .map_err(|_| IggyError::CannotReadBatchPayload)?;
 
         read_bytes += 8 + 4 + 4 + 8 + payload_len as u64;
-        last_batch_to_read = read_bytes == file_size || last_offset == index_last_offset;
+        last_batch_to_read = read_bytes >= file_size || last_offset == index_last_offset;
 
         let batch = RetainedMessageBatch::new(
             batch_base_offset,

@@ -12,7 +12,7 @@ clap = { version = "4.5.4", features = ["derive"] }
 clap_complete = "4.5.3"
 figlet-rs = "0.1.5"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
-keyring = "3.0.5"
+keyring = "2.3.3"
 passterm = "2.0.1"
 thiserror = "1.0.61"
 tokio = { version = "1.38.0", features = ["full"] }

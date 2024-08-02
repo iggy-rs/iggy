@@ -28,7 +28,6 @@ const PASSWORD: &str = "secret";
 const TOPICS: &[&str] = &["events", "logs", "notifications"];
 const PRODUCERS_COUNT: usize = 3;
 const PARTITIONS_COUNT: u32 = 3;
-const MESSAGES_COUNT: usize = 10;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<(), Box<dyn Error>> {
@@ -74,14 +73,35 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     .await?;
 
     print_info("Creating {PRODUCERS_COUNT} producers for each tenant");
-    let producers1 = create_producers(&tenant1_client, TENANT1_STREAM, TOPICS).await?;
-    let producers2 = create_producers(&tenant2_client, TENANT2_STREAM, TOPICS).await?;
-    let producers3 = create_producers(&tenant3_client, TENANT3_STREAM, TOPICS).await?;
+    let producers1 = create_producers(
+        &tenant1_client,
+        TENANT1_STREAM,
+        TOPICS,
+        args.messages_per_batch,
+        &args.interval,
+    )
+    .await?;
+    let producers2 = create_producers(
+        &tenant2_client,
+        TENANT2_STREAM,
+        TOPICS,
+        args.messages_per_batch,
+        &args.interval,
+    )
+    .await?;
+    let producers3 = create_producers(
+        &tenant3_client,
+        TENANT3_STREAM,
+        TOPICS,
+        args.messages_per_batch,
+        &args.interval,
+    )
+    .await?;
 
     print_info("Starting producers for each tenant");
-    let producers1_tasks = start_producers(producers1);
-    let producers2_tasks = start_producers(producers2);
-    let producers3_tasks = start_producers(producers3);
+    let producers1_tasks = start_producers(producers1, args.message_batches_limit);
+    let producers2_tasks = start_producers(producers2, args.message_batches_limit);
+    let producers3_tasks = start_producers(producers3, args.message_batches_limit);
 
     let mut tasks = Vec::new();
     tasks.extend(producers1_tasks);
@@ -95,10 +115,10 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn start_producers(producers: Vec<IggyProducer>) -> Vec<JoinHandle<()>> {
+fn start_producers(producers: Vec<IggyProducer>, batches_count: u64) -> Vec<JoinHandle<()>> {
     let mut tasks = Vec::new();
     let mut producer_id = 1;
-    let topics_count = TOPICS.len();
+    let topics_count = TOPICS.len() as u64;
     for producer in producers {
         if producer_id > topics_count {
             producer_id = 1;
@@ -106,7 +126,7 @@ fn start_producers(producers: Vec<IggyProducer>) -> Vec<JoinHandle<()>> {
 
         let task = tokio::spawn(async move {
             let mut counter = 1;
-            while counter <= topics_count * MESSAGES_COUNT {
+            while counter <= topics_count * batches_count {
                 let message = match producer
                     .topic()
                     .get_string_value()
@@ -148,14 +168,16 @@ async fn create_producers(
     client: &IggyClient,
     stream: &str,
     topics: &[&str],
+    batch_size: u32,
+    interval: &str,
 ) -> Result<Vec<IggyProducer>, IggyError> {
     let mut producers = Vec::new();
     for topic in topics {
         for _ in 0..PRODUCERS_COUNT {
             let mut producer = client
                 .producer(stream, topic)?
-                .batch_size(10)
-                .send_interval(IggyDuration::from_str("10ms").expect("Invalid duration"))
+                .batch_size(batch_size)
+                .send_interval(IggyDuration::from_str(interval).expect("Invalid duration"))
                 .partitioning(Partitioning::balanced())
                 .create_topic_if_not_exists(PARTITIONS_COUNT, None)
                 .build();

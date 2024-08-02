@@ -81,9 +81,33 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     .await?;
 
     print_info("Creating consumer for each tenant");
-    let consumers1 = create_consumers("tenant_1", &tenant1_client, TENANT1_STREAM, TOPICS).await?;
-    let consumers2 = create_consumers("tenant_2", &tenant2_client, TENANT2_STREAM, TOPICS).await?;
-    let consumers3 = create_consumers("tenant_3", &tenant3_client, TENANT3_STREAM, TOPICS).await?;
+    let consumers1 = create_consumers(
+        "tenant_1",
+        &tenant1_client,
+        TENANT1_STREAM,
+        TOPICS,
+        args.messages_per_batch,
+        &args.interval,
+    )
+    .await?;
+    let consumers2 = create_consumers(
+        "tenant_2",
+        &tenant2_client,
+        TENANT2_STREAM,
+        TOPICS,
+        args.messages_per_batch,
+        &args.interval,
+    )
+    .await?;
+    let consumers3 = create_consumers(
+        "tenant_3",
+        &tenant3_client,
+        TENANT3_STREAM,
+        TOPICS,
+        args.messages_per_batch,
+        &args.interval,
+    )
+    .await?;
 
     print_info("Starting consumers for each tenant");
     let consumer1_tasks = start_consumers(consumers1);
@@ -176,13 +200,15 @@ async fn create_consumers(
     client: &IggyClient,
     stream: &str,
     topics: &[&str],
+    batch_size: u32,
+    interval: &str,
 ) -> Result<Vec<TenantConsumer>, IggyError> {
     let mut consumers = Vec::new();
     for topic in topics {
         let mut consumer = client
             .consumer_group(CONSUMER_GROUP, stream, topic)?
-            .batch_size(10)
-            .poll_interval(IggyDuration::from_str("10ms").expect("Invalid duration"))
+            .batch_size(batch_size)
+            .poll_interval(IggyDuration::from_str(interval).expect("Invalid duration"))
             .polling_strategy(PollingStrategy::next())
             .auto_join_consumer_group()
             .auto_commit(AutoCommit::After(AutoCommitAfter::PollingMessages))

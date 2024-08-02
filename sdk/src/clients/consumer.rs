@@ -85,6 +85,7 @@ pub struct IggyConsumer {
     current_partition_id: Arc<AtomicU32>,
     current_offset: Arc<AtomicU64>,
     polled_messages_count: Arc<AtomicU64>,
+    retry_interval: IggyDuration,
 }
 
 impl IggyConsumer {
@@ -103,6 +104,7 @@ impl IggyConsumer {
         auto_join_consumer_group: bool,
         create_consumer_group_if_not_exists: bool,
         encryptor: Option<Arc<dyn Encryptor>>,
+        retry_interval: IggyDuration,
     ) -> Self {
         let (store_offset_sender, store_offset_receiver) = if matches!(
             auto_commit,
@@ -163,6 +165,7 @@ impl IggyConsumer {
             current_partition_id: Arc::new(AtomicU32::new(0)),
             current_offset: Arc::new(AtomicU64::new(0)),
             polled_messages_count: Arc::new(AtomicU64::new(0)),
+            retry_interval,
         }
     }
 
@@ -384,6 +387,7 @@ impl IggyConsumer {
         let auto_commit = self.auto_commit_after_polling;
         let interval = self.interval_micros;
         let last_polled_at = self.last_polled_at.clone();
+        let retry_interval = self.retry_interval;
 
         async move {
             if interval > 0 {
@@ -392,7 +396,7 @@ impl IggyConsumer {
 
             trace!("Sending poll messages request");
             last_polled_at.store(IggyTimestamp::now().into(), ORDERING);
-            client
+            let polled_messages = client
                 .read()
                 .await
                 .poll_messages(
@@ -404,7 +408,18 @@ impl IggyConsumer {
                     count,
                     auto_commit,
                 )
-                .await
+                .await;
+            if let Ok(polled_messages) = polled_messages {
+                return Ok(polled_messages);
+            }
+
+            let error = polled_messages.unwrap_err();
+            error!("Failed to poll messages: {error}");
+            if matches!(error, IggyError::Disconnected | IggyError::Unauthenticated) {
+                trace!("Retrying to poll messages in {retry_interval}...");
+                sleep(retry_interval.get_duration()).await;
+            }
+            Err(error)
         }
     }
 
@@ -601,6 +616,7 @@ pub struct IggyConsumerBuilder {
     auto_join_consumer_group: bool,
     create_consumer_group_if_not_exists: bool,
     encryptor: Option<Arc<dyn Encryptor>>,
+    retry_interval: IggyDuration,
 }
 
 impl IggyConsumerBuilder {
@@ -632,6 +648,7 @@ impl IggyConsumerBuilder {
             create_consumer_group_if_not_exists: true,
             encryptor,
             polling_interval,
+            retry_interval: IggyDuration::from(SEC_IN_MICRO),
         }
     }
 
@@ -735,6 +752,14 @@ impl IggyConsumerBuilder {
         }
     }
 
+    /// Sets the retry interval in case of server disconnection.
+    pub fn retry_interval(self, interval: IggyDuration) -> Self {
+        Self {
+            retry_interval: interval,
+            ..self
+        }
+    }
+
     pub fn build(self) -> IggyConsumer {
         IggyConsumer::new(
             self.client,
@@ -750,6 +775,7 @@ impl IggyConsumerBuilder {
             self.auto_join_consumer_group,
             self.create_consumer_group_if_not_exists,
             self.encryptor,
+            self.retry_interval,
         )
     }
 }

@@ -1,5 +1,6 @@
 use crate::client::Client;
 use crate::compression::compression_algorithm::CompressionAlgorithm;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::identifier::{IdKind, Identifier};
 use crate::locking::{IggySharedMut, IggySharedMutFn};
@@ -13,14 +14,15 @@ use crate::utils::topic_size::MaxTopicSize;
 use async_dropper::AsyncDrop;
 use async_trait::async_trait;
 use bytes::Bytes;
+use futures_util::StreamExt;
 use std::collections::{HashMap, VecDeque};
 use std::hash::{Hash, Hasher};
-use std::sync::atomic::AtomicU64;
+use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 
 const ORDERING: std::sync::atomic::Ordering = std::sync::atomic::Ordering::SeqCst;
 const MAX_BATCH_SIZE: usize = 1000000;
@@ -29,6 +31,8 @@ unsafe impl Send for IggyProducer {}
 unsafe impl Sync for IggyProducer {}
 
 pub struct IggyProducer {
+    initialized: bool,
+    can_send: Arc<AtomicBool>,
     client: Arc<IggySharedMut<Box<dyn Client>>>,
     stream_id: Arc<Identifier>,
     stream_name: String,
@@ -92,7 +96,9 @@ impl IggyProducer {
         retry_interval: IggyDuration,
     ) -> Self {
         Self {
+            initialized: false,
             client: Arc::new(client),
+            can_send: Arc::new(AtomicBool::new(true)),
             stream_id: Arc::new(stream),
             stream_name,
             topic_id: Arc::new(topic),
@@ -124,8 +130,13 @@ impl IggyProducer {
         &self.topic_id
     }
 
-    /// Initializes the producer by creating the stream and topic if they do not exist etc.
+    /// Initializes the producer by subscribing to diagnostic events, creating the stream and topic if they do not exist etc.
     pub async fn init(&mut self) -> Result<(), IggyError> {
+        if self.initialized {
+            return Ok(());
+        }
+
+        self.subscribe_events().await;
         let client = self.client.clone();
         let client = client.read().await;
         if let Err(error) = client.get_stream(&self.stream_id).await {
@@ -238,10 +249,53 @@ impl IggyProducer {
         Ok(())
     }
 
+    async fn subscribe_events(&self) {
+        trace!("Subscribing to diagnostic events");
+        let mut receiver;
+        {
+            let client = self.client.read().await;
+            receiver = client.subscribe_events().await;
+        }
+
+        let can_send = self.can_send.clone();
+
+        tokio::spawn(async move {
+            while let Some(event) = receiver.next().await {
+                trace!("Received diagnostic event: {event}");
+                match event {
+                    DiagnosticEvent::Connected => {
+                        can_send.store(false, ORDERING);
+                        trace!("Connected to the server");
+                    }
+                    DiagnosticEvent::Disconnected => {
+                        can_send.store(false, ORDERING);
+                        warn!("Disconnected from the server");
+                    }
+                    DiagnosticEvent::SignedIn => {
+                        can_send.store(true, ORDERING);
+                    }
+                    DiagnosticEvent::SignedOut => {
+                        can_send.store(false, ORDERING);
+                    }
+                }
+            }
+        });
+    }
+
     pub async fn send(&self, messages: Vec<Message>) -> Result<(), IggyError> {
         if messages.is_empty() {
             trace!("No messages to send.");
             return Ok(());
+        }
+
+        if !self.can_send.load(ORDERING) {
+            trace!("Trying to send messages in {}...", self.retry_interval);
+            sleep(self.retry_interval.get_duration()).await;
+        }
+
+        if !self.can_send.load(ORDERING) {
+            trace!("Trying to send messages in {}...", self.retry_interval);
+            sleep(self.retry_interval.get_duration()).await;
         }
 
         if self.can_send_immediately {
@@ -259,6 +313,16 @@ impl IggyProducer {
         .await
     }
 
+    pub async fn send_one(&self, message: Message) -> Result<(), IggyError> {
+        if !self.can_send.load(ORDERING) {
+            trace!("Trying to send message in {}...", self.retry_interval);
+            sleep(self.retry_interval.get_duration()).await;
+        }
+
+        self.send_immediately(&self.stream_id, &self.topic_id, vec![message], None)
+            .await
+    }
+
     pub async fn send_with_partitioning(
         &self,
         messages: Vec<Message>,
@@ -267,6 +331,11 @@ impl IggyProducer {
         if messages.is_empty() {
             trace!("No messages to send.");
             return Ok(());
+        }
+
+        if !self.can_send.load(ORDERING) {
+            trace!("Trying to send messages in {}...", self.retry_interval);
+            sleep(self.retry_interval.get_duration()).await;
         }
 
         if self.can_send_immediately {
@@ -294,6 +363,11 @@ impl IggyProducer {
         if messages.is_empty() {
             trace!("No messages to send.");
             return Ok(());
+        }
+
+        if !self.can_send.load(ORDERING) {
+            trace!("Trying to send messages in {}...", self.retry_interval);
+            sleep(self.retry_interval.get_duration()).await;
         }
 
         if self.can_send_immediately {

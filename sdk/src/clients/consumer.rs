@@ -61,6 +61,7 @@ pub struct IggyConsumer {
     consumer_name: String,
     consumer: Arc<Consumer>,
     is_consumer_group: bool,
+    joined_consumer_group: Arc<AtomicBool>,
     stream_id: Arc<Identifier>,
     topic_id: Arc<Identifier>,
     partition_id: Option<u32>,
@@ -121,6 +122,7 @@ impl IggyConsumer {
         Self {
             initialized: false,
             is_consumer_group: consumer.kind == ConsumerKind::ConsumerGroup,
+            joined_consumer_group: Arc::new(AtomicBool::new(false)),
             can_poll: Arc::new(AtomicBool::new(true)),
             client,
             consumer_name,
@@ -291,6 +293,7 @@ impl IggyConsumer {
             self.topic_id.clone(),
             self.consumer.clone(),
             &self.consumer_name,
+            self.joined_consumer_group.clone(),
         )
         .await
     }
@@ -312,6 +315,7 @@ impl IggyConsumer {
         let consumer = self.consumer.clone();
         let consumer_name = self.consumer_name.clone();
         let can_poll = self.can_poll.clone();
+        let joined_consumer_group = self.joined_consumer_group.clone();
         let mut reconnected = false;
         let mut disconnected = false;
 
@@ -321,6 +325,7 @@ impl IggyConsumer {
                 match event {
                     DiagnosticEvent::Connected => {
                         trace!("Connected to the server");
+                        joined_consumer_group.store(false, ORDERING);
                         if disconnected {
                             reconnected = true;
                             disconnected = false;
@@ -329,6 +334,7 @@ impl IggyConsumer {
                     DiagnosticEvent::Disconnected => {
                         disconnected = true;
                         reconnected = false;
+                        joined_consumer_group.store(false, ORDERING);
                         can_poll.store(false, ORDERING);
                         warn!("Disconnected from the server");
                     }
@@ -349,6 +355,11 @@ impl IggyConsumer {
                             continue;
                         }
 
+                        if joined_consumer_group.load(ORDERING) {
+                            can_poll.store(true, ORDERING);
+                            continue;
+                        }
+
                         info!("Rejoining consumer group");
                         if let Err(error) = Self::initialize_consumer_group(
                             client.clone(),
@@ -357,13 +368,16 @@ impl IggyConsumer {
                             topic_id.clone(),
                             consumer.clone(),
                             &consumer_name,
+                            joined_consumer_group.clone(),
                         )
                         .await
                         {
+                            joined_consumer_group.store(false, ORDERING);
                             error!("Failed to join consumer group: {error}");
                             continue;
                         }
                         info!("Rejoined consumer group");
+                        joined_consumer_group.store(true, ORDERING);
                         can_poll.store(true, ORDERING);
                     }
                     DiagnosticEvent::SignedOut => {
@@ -387,11 +401,17 @@ impl IggyConsumer {
         let auto_commit = self.auto_commit_after_polling;
         let interval = self.interval_micros;
         let last_polled_at = self.last_polled_at.clone();
+        let can_poll = self.can_poll.clone();
         let retry_interval = self.retry_interval;
 
         async move {
             if interval > 0 {
                 Self::wait_before_polling(interval, last_polled_at.load(ORDERING)).await;
+            }
+
+            if !can_poll.load(ORDERING) {
+                trace!("Trying to poll messages in {retry_interval}...");
+                sleep(retry_interval.get_duration()).await;
             }
 
             trace!("Sending poll messages request");
@@ -447,7 +467,12 @@ impl IggyConsumer {
         topic_id: Arc<Identifier>,
         consumer: Arc<Consumer>,
         consumer_name: &str,
+        joined_consumer_group: Arc<AtomicBool>,
     ) -> Result<(), IggyError> {
+        if joined_consumer_group.load(ORDERING) {
+            return Ok(());
+        }
+
         let client = client.read().await;
         let (name, id) = match consumer.id.kind {
             IdKind::Numeric => (consumer_name.to_owned(), Some(consumer.id.get_u32_value()?)),
@@ -480,6 +505,7 @@ impl IggyConsumer {
             return Err(error);
         }
 
+        joined_consumer_group.store(true, ORDERING);
         info!(
             "Joined consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}"
         );

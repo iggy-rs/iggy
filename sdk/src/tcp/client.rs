@@ -368,13 +368,11 @@ impl TcpClient {
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;
-                        self.publish_event(DiagnosticEvent::SignedIn).await;
                         info!("{NAME} client has signed in with the user credentials, username: {username}",);
                         Ok(())
                     }
                     Credentials::PersonalAccessToken(token) => {
                         self.login_with_personal_access_token(token).await?;
-                        self.publish_event(DiagnosticEvent::SignedIn).await;
                         info!("{NAME} client has signed in with a personal access token.",);
                         Ok(())
                     }

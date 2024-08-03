@@ -39,6 +39,9 @@ pub enum ClientState {
     /// The client is connected.
     #[display(fmt = "connected")]
     Connected,
+    /// The client is authenticating.
+    #[display(fmt = "authenticating")]
+    Authenticating,
     /// The client is connected and authenticated.
     #[display(fmt = "authenticated")]
     Authenticated,
@@ -58,7 +61,9 @@ pub trait BinaryTransport {
 
 async fn fail_if_not_authenticated<T: BinaryTransport>(transport: &T) -> Result<(), IggyError> {
     match transport.get_state().await {
-        ClientState::Disconnected | ClientState::Connecting => Err(IggyError::Disconnected),
+        ClientState::Disconnected | ClientState::Connecting | ClientState::Authenticating => {
+            Err(IggyError::Disconnected)
+        }
         ClientState::Connected => Err(IggyError::Unauthenticated),
         ClientState::Authenticated => Ok(()),
     }

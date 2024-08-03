@@ -200,7 +200,7 @@ impl QuicClient {
 
     async fn connect(&self) -> Result<(), IggyError> {
         match self.get_state().await {
-            ClientState::Connected | ClientState::Authenticated => {
+            ClientState::Connected | ClientState::Authenticating | ClientState::Authenticated => {
                 trace!("Client is already connected.");
                 return Ok(());
             }
@@ -279,6 +279,7 @@ impl QuicClient {
             }
             AutoSignIn::Enabled(credentials) => {
                 info!("{NAME} client is signing in...");
+                self.set_state(ClientState::Authenticating).await;
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;

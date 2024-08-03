@@ -160,6 +160,11 @@ impl BinaryTransport for TcpClient {
             return Err(error);
         }
 
+        if self.get_state().await == ClientState::Authenticating {
+            error!("Invalid authentication");
+            return Err(IggyError::Unauthenticated);
+        }
+
         if self.config.reconnection.enabled {
             self.disconnect().await?;
             info!("Reconnecting to the server...");
@@ -276,7 +281,7 @@ impl TcpClient {
 
     async fn connect(&self) -> Result<(), IggyError> {
         match self.get_state().await {
-            ClientState::Connected | ClientState::Authenticated => {
+            ClientState::Connected | ClientState::Authenticating | ClientState::Authenticated => {
                 trace!("Client is already connected.");
                 return Ok(());
             }
@@ -374,6 +379,7 @@ impl TcpClient {
             }
             AutoSignIn::Enabled(credentials) => {
                 info!("{NAME} client is signing in...");
+                self.set_state(ClientState::Authenticating).await;
                 match credentials {
                     Credentials::UsernamePassword(username, password) => {
                         self.login_user(username, password).await?;

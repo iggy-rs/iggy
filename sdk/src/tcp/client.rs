@@ -275,15 +275,16 @@ impl TcpClient {
     }
 
     async fn connect(&self) -> Result<(), IggyError> {
-        let state = self.get_state().await;
-        if matches!(state, ClientState::Connected | ClientState::Authenticated) {
-            trace!("Client is already connected.");
-            return Ok(());
-        }
-
-        if state == ClientState::Connecting {
-            trace!("Client is already connecting.");
-            return Ok(());
+        match self.get_state().await {
+            ClientState::Connected | ClientState::Authenticated => {
+                trace!("Client is already connected.");
+                return Ok(());
+            }
+            ClientState::Connecting => {
+                trace!("Client is already connecting.");
+                return Ok(());
+            }
+            _ => {}
         }
 
         self.set_state(ClientState::Connecting).await;
@@ -401,9 +402,16 @@ impl TcpClient {
     }
 
     async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
-        if self.get_state().await == ClientState::Disconnected {
-            trace!("Cannot send data. Client is not connected.");
-            return Err(IggyError::NotConnected);
+        match self.get_state().await {
+            ClientState::Disconnected => {
+                trace!("Cannot send data. Client is not connected.");
+                return Err(IggyError::NotConnected);
+            }
+            ClientState::Connecting => {
+                trace!("Cannot send data. Client is still connecting.");
+                return Err(IggyError::NotConnected);
+            }
+            _ => {}
         }
 
         let mut stream = self.stream.lock().await;

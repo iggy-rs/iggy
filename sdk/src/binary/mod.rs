@@ -57,8 +57,9 @@ pub trait BinaryTransport {
 }
 
 async fn fail_if_not_authenticated<T: BinaryTransport>(transport: &T) -> Result<(), IggyError> {
-    if transport.get_state().await != ClientState::Authenticated {
-        return Err(IggyError::Unauthenticated);
+    match transport.get_state().await {
+        ClientState::Disconnected | ClientState::Connecting => Err(IggyError::Disconnected),
+        ClientState::Connected => Err(IggyError::Unauthenticated),
+        ClientState::Authenticated => Ok(()),
     }
-    Ok(())
 }

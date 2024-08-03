@@ -611,10 +611,12 @@ async fn load_batches_by_range(
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);
         payload.put_bytes(0, payload_len);
-        reader
-            .read_exact(&mut payload)
-            .await
-            .map_err(|_| IggyError::CannotReadBatchPayload)?;
+        if let Err(error) = reader.read_exact(&mut payload).await {
+            warn!(
+                "{error}\nCannot read batch payload for batch with base offset: {batch_base_offset}, last offset delta: {last_offset_delta}, max timestamp: {max_timestamp}, batch length: {batch_length} and payload length: {payload_len}.\nProbably OS hasn't flushed the data yet, try setting `enforce_fsync = true` for partition configuration if this issue occurs again.",
+            );
+            break;
+        }
 
         read_bytes += 8 + 4 + 4 + 8 + payload_len as u64;
         last_batch_to_read = read_bytes >= file_size || last_offset == index_last_offset;

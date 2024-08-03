@@ -73,12 +73,10 @@ unsafe impl Sync for TcpTlsConnectionStream {}
 #[async_trait]
 impl ConnectionStream for TcpConnectionStream {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
-        let result = self.reader.read_exact(buf).await;
-        if let Err(error) = result {
-            return Err(IggyError::from(error));
-        }
-
-        Ok(result.unwrap())
+        self.reader.read_exact(buf).await.map_err(|error| {
+            error!("Failed to read data from the TCP connection: {error}");
+            IggyError::from(error)
+        })
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
@@ -93,21 +91,14 @@ impl ConnectionStream for TcpConnectionStream {
 #[async_trait]
 impl ConnectionStream for TcpTlsConnectionStream {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
-        let result = self.stream.read_exact(buf).await;
-        if let Err(error) = result {
-            return Err(IggyError::from(error));
-        }
-
-        Ok(result.unwrap())
+        self.stream.read_exact(buf).await.map_err(|error| {
+            error!("Failed to read data from the TCP connection: {error}");
+            IggyError::from(error)
+        })
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
-        let result = self.stream.write_all(buf).await;
-        if let Err(error) = result {
-            return Err(IggyError::from(error));
-        }
-
-        Ok(())
+        Ok(self.stream.write_all(buf).await?)
     }
 
     async fn flush(&mut self) -> Result<(), IggyError> {
@@ -342,8 +333,12 @@ impl TcpClient {
                 break;
             }
 
-            let connector =
-                tokio_native_tls::TlsConnector::from(TlsConnector::builder().build().unwrap());
+            let connector = tokio_native_tls::TlsConnector::from(
+                TlsConnector::builder().build().map_err(|error| {
+                    error!("Failed to create a TLS connector: {error}");
+                    IggyError::CannotEstablishConnection
+                })?,
+            );
             let stream = tokio_native_tls::TlsConnector::connect(
                 &connector,
                 &self.config.tls_domain,
@@ -425,23 +420,22 @@ impl TcpClient {
             trace!("Sent a TCP request with code: {code}, waiting for a response...");
 
             let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
-            let read_bytes = stream.read(&mut response_buffer).await;
-            if let Err(error) = read_bytes {
+            let read_bytes = stream.read(&mut response_buffer).await.map_err(|error| {
                 error!(
-                    "Failed to read response for TCP request with code: {code}: {}",
-                    error
+                    "Failed to read response for TCP request with code: {code}: {error}",
+                    code = code,
+                    error = error
                 );
-                return Err(IggyError::Disconnected);
-            }
+                IggyError::Disconnected
+            })?;
 
-            let read_bytes = read_bytes.unwrap();
             if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
                 error!("Received an invalid or empty response.");
                 return Err(IggyError::EmptyResponse);
             }
 
-            let status = u32::from_le_bytes(response_buffer[..4].try_into().unwrap());
-            let length = u32::from_le_bytes(response_buffer[4..].try_into().unwrap());
+            let status = u32::from_le_bytes(response_buffer[..4].try_into()?);
+            let length = u32::from_le_bytes(response_buffer[4..].try_into()?);
             return self.handle_response(status, length, stream.as_mut()).await;
         }
 

@@ -584,10 +584,6 @@ async fn load_batches_by_range(
     let mut read_bytes = index_range.start.position as u64;
     let mut last_batch_to_read = false;
     while !last_batch_to_read {
-        if read_bytes >= file_size {
-            break;
-        }
-
         let batch_base_offset = reader
             .read_u64_le()
             .await
@@ -613,7 +609,7 @@ async fn load_batches_by_range(
         payload.put_bytes(0, payload_len);
         if let Err(error) = reader.read_exact(&mut payload).await {
             warn!(
-                "{error}\nCannot read batch payload for batch with base offset: {batch_base_offset}, last offset delta: {last_offset_delta}, max timestamp: {max_timestamp}, batch length: {batch_length} and payload length: {payload_len}.\nProbably OS hasn't flushed the data yet, try setting `enforce_fsync = true` for partition configuration if this issue occurs again.",
+                "Cannot read batch payload for batch with base offset: {batch_base_offset}, last offset delta: {last_offset_delta}, max timestamp: {max_timestamp}, batch length: {batch_length} and payload length: {payload_len}.\nProbably OS hasn't flushed the data yet, try setting `enforce_fsync = true` for partition configuration if this issue occurs again.\n{error}",
             );
             break;
         }

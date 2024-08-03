@@ -1,7 +1,7 @@
 use clap::Parser;
 use futures_util::future::join_all;
 use futures_util::StreamExt;
-use iggy::client::{AutoSignIn, Client, Credentials, StreamClient, TopicClient, UserClient};
+use iggy::client::{Client, StreamClient, TopicClient, UserClient};
 use iggy::clients::client::IggyClient;
 use iggy::clients::consumer::{AutoCommit, AutoCommitAfter, IggyConsumer};
 use iggy::error::IggyError;
@@ -9,7 +9,6 @@ use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::models::permissions::{Permissions, StreamPermissions, TopicPermissions};
 use iggy::models::user_status::UserStatus;
-use iggy::tcp::client::TcpClient;
 use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use iggy::utils::duration::IggyDuration;
 use iggy_examples::shared::args::Args;
@@ -257,16 +256,8 @@ async fn create_client(
     username: &str,
     password: &str,
 ) -> Result<IggyClient, IggyError> {
-    let tcp_client = TcpClient::new(
-        address,
-        AutoSignIn::Enabled(Credentials::UsernamePassword(
-            username.to_owned(),
-            password.to_owned(),
-        )),
-    )?;
-    let client = IggyClient::builder()
-        .with_client(Box::new(tcp_client))
-        .build()?;
+    let connection_string = format!("iggy://{username}:{password}@{address}");
+    let client = IggyClient::builder_from_connection_string(&connection_string)?.build()?;
     client.connect().await?;
     Ok(client)
 }

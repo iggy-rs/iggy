@@ -28,6 +28,14 @@ impl IggyClientBuilder {
         IggyClientBuilder::default()
     }
 
+    pub fn from_connection_string(connection_string: &str) -> Result<Self, IggyError> {
+        let mut builder = Self::new();
+        builder.client = Some(Box::new(TcpClient::from_connection_string(
+            connection_string,
+        )?));
+        Ok(builder)
+    }
+
     /// Apply the provided client implementation for the specific transport. Setting client clears the client config.
     pub fn with_client(mut self, client: Box<dyn Client>) -> Self {
         self.client = Some(client);

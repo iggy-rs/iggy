@@ -1,6 +1,8 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
-use crate::client::{AutoSignIn, Client, Credentials, PersonalAccessTokenClient, UserClient};
+use crate::client::{
+    AutoSignIn, Client, ConnectionString, Credentials, PersonalAccessTokenClient, UserClient,
+};
 use crate::command::Command;
 use crate::diagnostic::DiagnosticEvent;
 use crate::error::{IggyError, IggyErrorDiscriminants};
@@ -9,6 +11,7 @@ use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
@@ -198,6 +201,12 @@ impl TcpClient {
             auto_sign_in,
             ..Default::default()
         }))
+    }
+
+    pub fn from_connection_string(connection_string: &str) -> Result<Self, IggyError> {
+        Self::create(Arc::new(
+            ConnectionString::from_str(connection_string)?.into(),
+        ))
     }
 
     /// Create a new TCP client based on the provided configuration.

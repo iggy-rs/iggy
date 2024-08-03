@@ -366,6 +366,8 @@ pub enum IggyError {
     CannotReadMaxTimestamp = 7003,
     #[error("Cannot read batch payload")]
     CannotReadBatchPayload = 7004,
+    #[error("Invalid connection string")]
+    InvalidConnectionString = 8000,
 }
 
 impl IggyError {

@@ -64,6 +64,13 @@ impl IggyClient {
         IggyClientBuilder::new()
     }
 
+    /// Creates a new `IggyClientBuilder`.
+    pub fn builder_from_connection_string(
+        connection_string: &str,
+    ) -> Result<IggyClientBuilder, IggyError> {
+        IggyClientBuilder::from_connection_string(connection_string)
+    }
+
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport.
     pub fn new(client: Box<dyn Client>) -> Self {
         let client = IggySharedMut::new(client);
@@ -72,6 +79,11 @@ impl IggyClient {
             partitioner: None,
             encryptor: None,
         }
+    }
+
+    pub fn from_connection_string(connection_string: &str) -> Result<Self, IggyError> {
+        let client = Box::new(TcpClient::from_connection_string(connection_string)?);
+        Ok(IggyClient::new(client))
     }
 
     /// Creates a new `IggyClient` with the provided client implementation for the specific transport and the optional implementations for the `partitioner` and `encryptor`.

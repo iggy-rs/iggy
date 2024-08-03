@@ -17,20 +17,32 @@ use crate::models::stream::{Stream, StreamDetails};
 use crate::models::topic::{Topic, TopicDetails};
 use crate::models::user_info::{UserInfo, UserInfoDetails};
 use crate::models::user_status::UserStatus;
+use crate::tcp::config::{TcpClientConfig, TcpClientReconnectionConfig};
+use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use crate::utils::topic_size::MaxTopicSize;
 use async_broadcast::Receiver;
 use async_trait::async_trait;
 use std::fmt::Debug;
+use std::str::FromStr;
 
-#[derive(Debug, Clone)]
+const CONNECTION_STRING_PREFIX: &str = "iggy://";
+
+#[derive(Debug)]
+pub(crate) struct ConnectionString {
+    server_address: String,
+    auto_sign_in: AutoSignIn,
+    options: ConnectionStringOptions,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum AutoSignIn {
     Disabled,
     Enabled(Credentials),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Credentials {
     UsernamePassword(String, String),
     PersonalAccessToken(String),
@@ -399,4 +411,239 @@ pub trait ConsumerGroupClient {
         topic_id: &Identifier,
         group_id: &Identifier,
     ) -> Result<(), IggyError>;
+}
+
+impl FromStr for ConnectionString {
+    type Err = IggyError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        ConnectionString::new(s)
+    }
+}
+
+impl ConnectionString {
+    pub fn new(connection_string: &str) -> Result<Self, IggyError> {
+        if connection_string.is_empty() {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        if !connection_string.starts_with(CONNECTION_STRING_PREFIX) {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        let connection_string = connection_string.replace(CONNECTION_STRING_PREFIX, "");
+        let parts = connection_string.split("@").collect::<Vec<&str>>();
+
+        if parts.len() != 2 {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        let credentials = parts[0].split(":").collect::<Vec<&str>>();
+        if credentials.len() != 2 {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        let username = credentials[0];
+        let password = credentials[1];
+        if username.is_empty() || password.is_empty() {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        let server_and_options = parts[1].split("?").collect::<Vec<&str>>();
+        if server_and_options.len() > 2 {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        let server_address = server_and_options[0];
+        if server_address.is_empty() {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        if !server_address.contains(":") {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        let port = server_address.split(":").collect::<Vec<&str>>()[1];
+        if port.is_empty() {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        if port.parse::<u16>().is_err() {
+            return Err(IggyError::InvalidConnectionString);
+        }
+
+        let connection_string_options;
+        if let Some(options) = server_and_options.get(1) {
+            connection_string_options = ConnectionString::parse_options(options)?;
+        } else {
+            connection_string_options = ConnectionStringOptions::default();
+        }
+
+        Ok(ConnectionString {
+            server_address: server_address.to_owned(),
+            auto_sign_in: AutoSignIn::Enabled(Credentials::UsernamePassword(
+                username.to_owned(),
+                password.to_owned(),
+            )),
+            options: connection_string_options,
+        })
+    }
+
+    fn parse_options(options: &str) -> Result<ConnectionStringOptions, IggyError> {
+        let options = options.split("&").collect::<Vec<&str>>();
+        let mut tls_enabled = false;
+        let mut tls_domain = "localhost".to_string();
+        let mut reconnection_retries = "unlimited".to_owned();
+        let mut reconnection_interval = "1s".to_owned();
+
+        for option in options {
+            let option_parts = option.split("=").collect::<Vec<&str>>();
+            if option_parts.len() != 2 {
+                return Err(IggyError::InvalidConnectionString);
+            }
+            match option_parts[0] {
+                "tls" => {
+                    tls_enabled = option_parts[1] == "true";
+                }
+                "tls_domain" => {
+                    tls_domain = option_parts[1].to_string();
+                }
+                "reconnection_retries" => {
+                    reconnection_retries = option_parts[1].to_string();
+                }
+                "reconnection_interval" => {
+                    reconnection_interval = option_parts[1].to_string();
+                }
+                _ => {
+                    return Err(IggyError::InvalidConnectionString);
+                }
+            }
+        }
+        Ok(ConnectionStringOptions {
+            tls_enabled,
+            tls_domain,
+            reconnection: TcpClientReconnectionConfig {
+                enabled: true,
+                max_retries: match reconnection_retries.as_str() {
+                    "unlimited" => None,
+                    _ => Some(reconnection_retries.parse().unwrap()),
+                },
+                interval: IggyDuration::from_str(reconnection_interval.as_str())
+                    .map_err(|_| IggyError::InvalidConnectionString)?,
+            },
+        })
+    }
+}
+
+#[derive(Debug, Default)]
+struct ConnectionStringOptions {
+    tls_enabled: bool,
+    tls_domain: String,
+    reconnection: TcpClientReconnectionConfig,
+}
+
+impl From<ConnectionString> for TcpClientConfig {
+    fn from(connection_string: ConnectionString) -> Self {
+        TcpClientConfig {
+            server_address: connection_string.server_address,
+            auto_sign_in: connection_string.auto_sign_in,
+            tls_enabled: connection_string.options.tls_enabled,
+            tls_domain: connection_string.options.tls_domain,
+            reconnection: connection_string.options.reconnection,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn connection_string_without_username_should_fail() {
+        let server_address = "localhost:1234";
+        let value = format!("{CONNECTION_STRING_PREFIX}:secret@{server_address}");
+        let connection_string = ConnectionString::new(&value);
+        assert!(connection_string.is_err());
+    }
+
+    #[test]
+    fn connection_string_without_password_should_fail() {
+        let server_address = "localhost:1234";
+        let value = format!("{CONNECTION_STRING_PREFIX}user1@{server_address}");
+        let connection_string = ConnectionString::new(&value);
+        assert!(connection_string.is_err());
+    }
+
+    #[test]
+    fn connection_string_without_server_address_should_fail() {
+        let value = format!("{CONNECTION_STRING_PREFIX}user:secret");
+        let connection_string = ConnectionString::new(&value);
+        assert!(connection_string.is_err());
+    }
+
+    #[test]
+    fn connection_string_without_port_should_fail() {
+        let value = format!("{CONNECTION_STRING_PREFIX}user:secret@localhost");
+        let connection_string = ConnectionString::new(&value);
+        assert!(connection_string.is_err());
+    }
+
+    #[test]
+    fn connection_string_without_options_should_be_parsed_correctly() {
+        let username = "user1";
+        let password = "secret";
+        let server_address = "localhost:1234";
+        let value = format!("{CONNECTION_STRING_PREFIX}{username}:{password}@{server_address}");
+        let connection_string = ConnectionString::new(&value);
+        assert!(connection_string.is_ok());
+        let connection_string = connection_string.unwrap();
+        assert_eq!(connection_string.server_address, server_address);
+        assert_eq!(
+            connection_string.auto_sign_in,
+            AutoSignIn::Enabled(Credentials::UsernamePassword(
+                username.to_string(),
+                password.to_string()
+            ))
+        );
+        assert!(!connection_string.options.tls_enabled);
+        assert!(connection_string.options.tls_domain.is_empty());
+        assert!(connection_string.options.reconnection.enabled);
+        assert!(connection_string.options.reconnection.max_retries.is_none());
+        assert_eq!(
+            connection_string.options.reconnection.interval,
+            IggyDuration::from_str("1s").unwrap()
+        );
+    }
+
+    #[test]
+    fn connection_string_with_options_should_be_parsed_correctly() {
+        let username = "user1";
+        let password = "secret";
+        let server_address = "localhost:1234";
+        let tls_domain = "test.com";
+        let reconnection_retries = 5;
+        let reconnection_interval = "5s";
+        let value = format!("{CONNECTION_STRING_PREFIX}{username}:{password}@{server_address}?tls=true&tls_domain={tls_domain}&reconnection_retries={reconnection_retries}&reconnection_interval={reconnection_interval}");
+        let connection_string = ConnectionString::new(&value);
+        assert!(connection_string.is_ok());
+        let connection_string = connection_string.unwrap();
+        assert_eq!(connection_string.server_address, server_address);
+        assert_eq!(
+            connection_string.auto_sign_in,
+            AutoSignIn::Enabled(Credentials::UsernamePassword(
+                username.to_string(),
+                password.to_string()
+            ))
+        );
+        assert!(connection_string.options.tls_enabled);
+        assert_eq!(connection_string.options.tls_domain, tls_domain);
+        assert!(connection_string.options.reconnection.enabled);
+        assert_eq!(
+            connection_string.options.reconnection.max_retries,
+            Some(reconnection_retries)
+        );
+        assert_eq!(
+            connection_string.options.reconnection.interval,
+            IggyDuration::from_str(reconnection_interval).unwrap()
+        );
+    }
 }

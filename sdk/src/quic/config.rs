@@ -1,4 +1,4 @@
-use crate::client::AutoSignIn;
+use crate::client::AutoLogin;
 use crate::utils::duration::IggyDuration;
 use std::str::FromStr;
 
@@ -11,8 +11,8 @@ pub struct QuicClientConfig {
     pub server_address: String,
     /// The server name to use.
     pub server_name: String,
-    /// Whether to automatically sign in when connecting.
-    pub auto_sign_in: AutoSignIn,
+    /// Whether to automatically login user after establishing connection.
+    pub auto_login: AutoLogin,
     // Whether to automatically reconnect when disconnected.
     pub reconnection: QuicClientReconnectionConfig,
     /// The size of the response buffer.
@@ -40,6 +40,7 @@ pub struct QuicClientReconnectionConfig {
     pub enabled: bool,
     pub max_retries: Option<u32>,
     pub interval: IggyDuration,
+    pub re_establish_after: IggyDuration,
 }
 
 impl Default for QuicClientReconnectionConfig {
@@ -48,6 +49,7 @@ impl Default for QuicClientReconnectionConfig {
             enabled: true,
             max_retries: None,
             interval: IggyDuration::from_str("1s").unwrap(),
+            re_establish_after: IggyDuration::from_str("5s").unwrap(),
         }
     }
 }
@@ -58,7 +60,7 @@ impl Default for QuicClientConfig {
             client_address: "127.0.0.1:0".to_string(),
             server_address: "127.0.0.1:8080".to_string(),
             server_name: "localhost".to_string(),
-            auto_sign_in: AutoSignIn::Disabled,
+            auto_login: AutoLogin::Disabled,
             reconnection: QuicClientReconnectionConfig::default(),
             response_buffer_size: 1000 * 1000 * 10,
             max_concurrent_bidi_streams: 10000,
@@ -79,7 +81,7 @@ impl Default for QuicClientConfig {
 /// - `client_address`: Default is "127.0.0.1:0" (binds to any available port).
 /// - `server_address`: Default is "127.0.0.1:8080".
 /// - `server_name`: Default is "localhost".
-/// - `auto_sign_in`: Default is AutoSignIn::Disabled.
+/// - `auto_login`: Default is AutoLogin::Disabled.
 /// - `reconnection`: Default is enabled unlimited retries and 1 second interval.
 /// - `response_buffer_size`: Default is 10MB (10,000,000 bytes).
 /// - `max_concurrent_bidi_streams`: Default is 10,000 streams.
@@ -114,8 +116,8 @@ impl QuicClientConfigBuilder {
     }
 
     /// Sets the auto sign in during connection.
-    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoSignIn) -> Self {
-        self.config.auto_sign_in = auto_sign_in;
+    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoLogin) -> Self {
+        self.config.auto_login = auto_sign_in;
         self
     }
 

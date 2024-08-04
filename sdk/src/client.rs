@@ -32,12 +32,12 @@ const CONNECTION_STRING_PREFIX: &str = "iggy://";
 #[derive(Debug)]
 pub(crate) struct ConnectionString {
     server_address: String,
-    auto_sign_in: AutoSignIn,
+    auto_login: AutoLogin,
     options: ConnectionStringOptions,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum AutoSignIn {
+pub enum AutoLogin {
     Disabled,
     Enabled(Credentials),
 }
@@ -480,7 +480,7 @@ impl ConnectionString {
 
         Ok(ConnectionString {
             server_address: server_address.to_owned(),
-            auto_sign_in: AutoSignIn::Enabled(Credentials::UsernamePassword(
+            auto_login: AutoLogin::Enabled(Credentials::UsernamePassword(
                 username.to_owned(),
                 password.to_owned(),
             )),
@@ -494,6 +494,7 @@ impl ConnectionString {
         let mut tls_domain = "localhost".to_string();
         let mut reconnection_retries = "unlimited".to_owned();
         let mut reconnection_interval = "1s".to_owned();
+        let mut re_establish_after = "5s".to_owned();
 
         for option in options {
             let option_parts = option.split("=").collect::<Vec<&str>>();
@@ -513,6 +514,9 @@ impl ConnectionString {
                 "reconnection_interval" => {
                     reconnection_interval = option_parts[1].to_string();
                 }
+                "re_establish_after" => {
+                    re_establish_after = option_parts[1].to_string();
+                }
                 _ => {
                     return Err(IggyError::InvalidConnectionString);
                 }
@@ -528,6 +532,8 @@ impl ConnectionString {
                     _ => Some(reconnection_retries.parse().unwrap()),
                 },
                 interval: IggyDuration::from_str(reconnection_interval.as_str())
+                    .map_err(|_| IggyError::InvalidConnectionString)?,
+                re_establish_after: IggyDuration::from_str(re_establish_after.as_str())
                     .map_err(|_| IggyError::InvalidConnectionString)?,
             },
         })
@@ -545,7 +551,7 @@ impl From<ConnectionString> for TcpClientConfig {
     fn from(connection_string: ConnectionString) -> Self {
         TcpClientConfig {
             server_address: connection_string.server_address,
-            auto_sign_in: connection_string.auto_sign_in,
+            auto_login: connection_string.auto_login,
             tls_enabled: connection_string.options.tls_enabled,
             tls_domain: connection_string.options.tls_domain,
             reconnection: connection_string.options.reconnection,
@@ -598,8 +604,8 @@ mod tests {
         let connection_string = connection_string.unwrap();
         assert_eq!(connection_string.server_address, server_address);
         assert_eq!(
-            connection_string.auto_sign_in,
-            AutoSignIn::Enabled(Credentials::UsernamePassword(
+            connection_string.auto_login,
+            AutoLogin::Enabled(Credentials::UsernamePassword(
                 username.to_string(),
                 password.to_string()
             ))
@@ -622,14 +628,15 @@ mod tests {
         let tls_domain = "test.com";
         let reconnection_retries = 5;
         let reconnection_interval = "5s";
-        let value = format!("{CONNECTION_STRING_PREFIX}{username}:{password}@{server_address}?tls=true&tls_domain={tls_domain}&reconnection_retries={reconnection_retries}&reconnection_interval={reconnection_interval}");
+        let re_establish_after = "10s";
+        let value = format!("{CONNECTION_STRING_PREFIX}{username}:{password}@{server_address}?tls=true&tls_domain={tls_domain}&reconnection_retries={reconnection_retries}&reconnection_interval={reconnection_interval}&re_establish_after={re_establish_after}");
         let connection_string = ConnectionString::new(&value);
         assert!(connection_string.is_ok());
         let connection_string = connection_string.unwrap();
         assert_eq!(connection_string.server_address, server_address);
         assert_eq!(
-            connection_string.auto_sign_in,
-            AutoSignIn::Enabled(Credentials::UsernamePassword(
+            connection_string.auto_login,
+            AutoLogin::Enabled(Credentials::UsernamePassword(
                 username.to_string(),
                 password.to_string()
             ))
@@ -644,6 +651,10 @@ mod tests {
         assert_eq!(
             connection_string.options.reconnection.interval,
             IggyDuration::from_str(reconnection_interval).unwrap()
+        );
+        assert_eq!(
+            connection_string.options.reconnection.re_establish_after,
+            IggyDuration::from_str(re_establish_after).unwrap()
         );
     }
 }

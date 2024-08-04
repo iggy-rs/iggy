@@ -1,4 +1,4 @@
-use crate::client::{AutoSignIn, Client, Credentials};
+use crate::client::{AutoLogin, Client, Credentials};
 use crate::client_error::ClientError;
 #[allow(deprecated)]
 use crate::clients::client::IggyClient;
@@ -65,8 +65,12 @@ impl ClientProviderConfig {
                         enabled: args.quic_reconnection_enabled,
                         max_retries: args.quic_reconnection_max_retries,
                         interval: IggyDuration::from_str(&args.quic_reconnection_interval).unwrap(),
+                        re_establish_after: IggyDuration::from_str(
+                            &args.quic_reconnection_re_establish_after,
+                        )
+                        .unwrap(),
                     },
-                    auto_sign_in: AutoSignIn::Enabled(Credentials::UsernamePassword(
+                    auto_login: AutoLogin::Enabled(Credentials::UsernamePassword(
                         args.username,
                         args.password,
                     )),
@@ -96,8 +100,12 @@ impl ClientProviderConfig {
                         enabled: args.tcp_reconnection_enabled,
                         max_retries: args.tcp_reconnection_max_retries,
                         interval: IggyDuration::from_str(&args.tcp_reconnection_interval).unwrap(),
+                        re_establish_after: IggyDuration::from_str(
+                            &args.tcp_reconnection_re_establish_after,
+                        )
+                        .unwrap(),
                     },
-                    auto_sign_in: AutoSignIn::Enabled(Credentials::UsernamePassword(
+                    auto_login: AutoLogin::Enabled(Credentials::UsernamePassword(
                         args.username,
                         args.password,
                     )),

@@ -372,15 +372,14 @@ impl IggyConsumer {
                         )
                         .await
                         {
-                            joined_consumer_group.store(false, ORDERING);
                             error!("Failed to join consumer group: {error}");
                             continue;
                         }
                         info!("Rejoined consumer group");
-                        joined_consumer_group.store(true, ORDERING);
                         can_poll.store(true, ORDERING);
                     }
                     DiagnosticEvent::SignedOut => {
+                        joined_consumer_group.store(false, ORDERING);
                         can_poll.store(false, ORDERING);
                     }
                 }
@@ -501,6 +500,7 @@ impl IggyConsumer {
             .join_consumer_group(&stream_id, &topic_id, &consumer_group_id)
             .await
         {
+            joined_consumer_group.store(false, ORDERING);
             error!("Failed to join consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}: {error}");
             return Err(error);
         }

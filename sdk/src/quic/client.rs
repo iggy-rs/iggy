@@ -1,10 +1,12 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
-use crate::client::{AutoSignIn, Client, Credentials, PersonalAccessTokenClient, UserClient};
+use crate::client::{AutoLogin, Client, Credentials, PersonalAccessTokenClient, UserClient};
 use crate::command::Command;
 use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
+use crate::utils::duration::IggyDuration;
+use crate::utils::timestamp::IggyTimestamp;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::Bytes;
@@ -34,6 +36,7 @@ pub struct QuicClient {
     pub(crate) server_address: SocketAddr,
     pub(crate) state: Mutex<ClientState>,
     events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
+    connected_at: Mutex<Option<IggyTimestamp>>,
 }
 
 unsafe impl Send for QuicClient {}
@@ -90,12 +93,13 @@ impl BinaryTransport for QuicClient {
             return Err(error);
         }
 
-        if self.config.reconnection.enabled {
-            self.disconnect().await?;
-            info!("Reconnecting to the server...");
-            self.connect().await?;
+        if !self.config.reconnection.enabled {
+            return Err(IggyError::Disconnected);
         }
 
+        self.disconnect().await?;
+        info!("Reconnecting to the server...");
+        self.connect().await?;
         self.send_raw(code, payload).await
     }
 
@@ -115,14 +119,14 @@ impl QuicClient {
         server_address: &str,
         server_name: &str,
         validate_certificate: bool,
-        auto_sign_in: AutoSignIn,
+        auto_sign_in: AutoLogin,
     ) -> Result<Self, IggyError> {
         Self::create(Arc::new(QuicClientConfig {
             client_address: client_address.to_string(),
             server_address: server_address.to_string(),
             server_name: server_name.to_string(),
             validate_certificate,
-            auto_sign_in,
+            auto_login: auto_sign_in,
             ..Default::default()
         }))
     }
@@ -156,6 +160,7 @@ impl QuicClient {
             connection: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
             events: broadcast(1000),
+            connected_at: Mutex::new(None),
         })
     }
 
@@ -212,6 +217,21 @@ impl QuicClient {
         }
 
         self.set_state(ClientState::Connecting).await;
+        if let Some(connected_at) = self.connected_at.lock().await.as_ref() {
+            let now = IggyTimestamp::now();
+            let elapsed = now.as_micros() - connected_at.as_micros();
+            let interval = self.config.reconnection.re_establish_after.as_micros();
+            trace!(
+                "Elapsed time since last connection: {}",
+                IggyDuration::from(elapsed)
+            );
+            if elapsed < interval {
+                let remaining = IggyDuration::from(interval - elapsed);
+                info!("Trying to connect to the server in: {remaining}",);
+                sleep(remaining.get_duration()).await;
+            }
+        }
+
         let mut retry_count = 0;
         let connection;
         let remote_address;
@@ -266,18 +286,19 @@ impl QuicClient {
             break;
         }
 
+        let now = IggyTimestamp::now();
+        info!("{NAME} client has connected to server: {remote_address} at {now}",);
         self.set_state(ClientState::Connected).await;
         self.connection.lock().await.replace(connection);
+        self.connected_at.lock().await.replace(now);
         self.publish_event(DiagnosticEvent::Connected).await;
 
-        info!("{NAME} client has connected to server: {remote_address}",);
-
-        match &self.config.auto_sign_in {
-            AutoSignIn::Disabled => {
+        match &self.config.auto_login {
+            AutoLogin::Disabled => {
                 info!("Automatic sign-in is disabled.");
                 Ok(())
             }
-            AutoSignIn::Enabled(credentials) => {
+            AutoLogin::Enabled(credentials) => {
                 info!("{NAME} client is signing in...");
                 self.set_state(ClientState::Authenticating).await;
                 match credentials {
@@ -303,12 +324,13 @@ impl QuicClient {
             return Ok(());
         }
 
-        info!("{} client is disconnecting from server...", NAME);
+        info!("{NAME} client is disconnecting from server...");
         self.set_state(ClientState::Disconnected).await;
         self.connection.lock().await.take();
         self.endpoint.wait_idle().await;
         self.publish_event(DiagnosticEvent::Disconnected).await;
-        info!("{} client has disconnected from server.", NAME);
+        let now = IggyTimestamp::now();
+        info!("{NAME} client has disconnected from server at: {now}.");
         Ok(())
     }
 

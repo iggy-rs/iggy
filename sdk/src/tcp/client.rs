@@ -1,12 +1,14 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
 use crate::client::{
-    AutoSignIn, Client, ConnectionString, Credentials, PersonalAccessTokenClient, UserClient,
+    AutoLogin, Client, ConnectionString, Credentials, PersonalAccessTokenClient, UserClient,
 };
 use crate::command::Command;
 use crate::diagnostic::DiagnosticEvent;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
+use crate::utils::duration::IggyDuration;
+use crate::utils::timestamp::IggyTimestamp;
 use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
@@ -34,6 +36,7 @@ pub struct TcpClient {
     pub(crate) config: Arc<TcpClientConfig>,
     pub(crate) state: Mutex<ClientState>,
     events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
+    connected_at: Mutex<Option<IggyTimestamp>>,
 }
 
 unsafe impl Send for TcpClient {}
@@ -160,17 +163,13 @@ impl BinaryTransport for TcpClient {
             return Err(error);
         }
 
-        if self.get_state().await == ClientState::Authenticating {
-            error!("Invalid authentication");
-            return Err(IggyError::Unauthenticated);
+        if !self.config.reconnection.enabled {
+            return Err(IggyError::Disconnected);
         }
 
-        if self.config.reconnection.enabled {
-            self.disconnect().await?;
-            info!("Reconnecting to the server...");
-            self.connect().await?;
-        }
-
+        self.disconnect().await?;
+        info!("Reconnecting to the server...");
+        self.connect().await?;
         self.send_raw(code, payload).await
     }
 
@@ -185,10 +184,10 @@ impl BinaryClient for TcpClient {}
 
 impl TcpClient {
     /// Create a new TCP client for the provided server address.
-    pub fn new(server_address: &str, auto_sign_in: AutoSignIn) -> Result<Self, IggyError> {
+    pub fn new(server_address: &str, auto_sign_in: AutoLogin) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
-            auto_sign_in,
+            auto_login: auto_sign_in,
             ..Default::default()
         }))
     }
@@ -197,13 +196,13 @@ impl TcpClient {
     pub fn new_tls(
         server_address: &str,
         domain: &str,
-        auto_sign_in: AutoSignIn,
+        auto_sign_in: AutoLogin,
     ) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
             tls_enabled: true,
             tls_domain: domain.to_string(),
-            auto_sign_in,
+            auto_login: auto_sign_in,
             ..Default::default()
         }))
     }
@@ -221,6 +220,7 @@ impl TcpClient {
             stream: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
             events: broadcast(1000),
+            connected_at: Mutex::new(None),
         })
     }
 
@@ -293,6 +293,21 @@ impl TcpClient {
         }
 
         self.set_state(ClientState::Connecting).await;
+        if let Some(connected_at) = self.connected_at.lock().await.as_ref() {
+            let now = IggyTimestamp::now();
+            let elapsed = now.as_micros() - connected_at.as_micros();
+            let interval = self.config.reconnection.re_establish_after.as_micros();
+            trace!(
+                "Elapsed time since last connection: {}",
+                IggyDuration::from(elapsed)
+            );
+            if elapsed < interval {
+                let remaining = IggyDuration::from(interval - elapsed);
+                info!("Trying to connect to the server in: {remaining}",);
+                sleep(remaining.get_duration()).await;
+            }
+        }
+
         let tls_enabled = self.config.tls_enabled;
         let mut retry_count = 0;
         let connection_stream: Box<dyn ConnectionStream>;
@@ -368,16 +383,18 @@ impl TcpClient {
             break;
         }
 
-        info!("{NAME} client has connected to server: {remote_address}",);
+        let now = IggyTimestamp::now();
+        info!("{NAME} client has connected to server: {remote_address} at: {now}",);
         self.stream.lock().await.replace(connection_stream);
         self.set_state(ClientState::Connected).await;
+        self.connected_at.lock().await.replace(now);
         self.publish_event(DiagnosticEvent::Connected).await;
-        match &self.config.auto_sign_in {
-            AutoSignIn::Disabled => {
+        match &self.config.auto_login {
+            AutoLogin::Disabled => {
                 info!("Automatic sign-in is disabled.");
                 Ok(())
             }
-            AutoSignIn::Enabled(credentials) => {
+            AutoLogin::Enabled(credentials) => {
                 info!("{NAME} client is signing in...");
                 self.set_state(ClientState::Authenticating).await;
                 match credentials {
@@ -401,11 +418,12 @@ impl TcpClient {
             return Ok(());
         }
 
-        info!("{} client is disconnecting from server...", NAME);
+        info!("{NAME} client is disconnecting from server...");
         self.set_state(ClientState::Disconnected).await;
         self.stream.lock().await.take();
         self.publish_event(DiagnosticEvent::Disconnected).await;
-        info!("{} client has disconnected from server.", NAME);
+        let now = IggyTimestamp::now();
+        info!("{NAME} client has disconnected from server at: {now}.");
         Ok(())
     }
 

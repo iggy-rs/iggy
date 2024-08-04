@@ -215,6 +215,9 @@ pub struct Args {
     /// The optional reconnect interval for the TCP transport
     pub tcp_reconnection_interval: String,
 
+    /// The optional re-establish after last connection interval for TCP
+    pub tcp_reconnection_re_establish_after: String,
+
     /// Flag to enable TLS for the TCP transport
     pub tcp_tls_enabled: bool,
 
@@ -238,6 +241,9 @@ pub struct Args {
 
     /// The optional reconnect interval for the QUIC transport
     pub quic_reconnection_interval: String,
+
+    /// The optional re-establish after last connection interval for QUIC
+    pub quic_reconnection_re_establish_after: String,
 
     /// The optional maximum number of concurrent bidirectional streams for QUIC
     pub quic_max_concurrent_bidi_streams: u64,
@@ -304,6 +310,7 @@ impl Default for Args {
             tcp_reconnection_enabled: true,
             tcp_reconnection_max_retries: None,
             tcp_reconnection_interval: "1s".to_string(),
+            tcp_reconnection_re_establish_after: "5s".to_string(),
             tcp_tls_enabled: false,
             tcp_tls_domain: "localhost".to_string(),
             quic_client_address: "127.0.0.1:0".to_string(),
@@ -312,6 +319,7 @@ impl Default for Args {
             quic_reconnection_enabled: true,
             quic_reconnection_max_retries: None,
             quic_reconnection_interval: "1s".to_string(),
+            quic_reconnection_re_establish_after: "5s".to_string(),
             quic_max_concurrent_bidi_streams: 10000,
             quic_datagram_send_buffer_size: 100000,
             quic_initial_mtu: 1200,

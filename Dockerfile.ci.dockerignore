@@ -1,0 +1,11 @@
+.config
+.github
+/assets
+/local_data
+/certs
+/scripts
+Dockerfile
+docker-compose.yml
+.dockerignore
+.git
+.gitignore

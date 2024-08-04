@@ -42,7 +42,7 @@ pub struct IggyProducer {
     partitioning: Option<Arc<Partitioning>>,
     encryptor: Option<Arc<dyn Encryptor>>,
     partitioner: Option<Arc<dyn Partitioner>>,
-    interval_micros: u64,
+    send_interval_micros: u64,
     create_stream_if_not_exists: bool,
     create_topic_if_not_exists: bool,
     topic_partitions_count: u32,
@@ -107,7 +107,7 @@ impl IggyProducer {
             partitioning: partitioning.map(Arc::new),
             encryptor,
             partitioner,
-            interval_micros: interval.map_or(0, |i| i.as_micros()),
+            send_interval_micros: interval.map_or(0, |i| i.as_micros()),
             create_stream_if_not_exists,
             create_topic_if_not_exists,
             topic_partitions_count,
@@ -184,7 +184,7 @@ impl IggyProducer {
                 .await?;
         }
 
-        if self.interval_micros == 0 {
+        if self.send_interval_micros == 0 {
             return Ok(());
         };
 
@@ -193,7 +193,7 @@ impl IggyProducer {
         }
 
         self.background_sender_initialized = true;
-        let interval_micros = self.interval_micros;
+        let interval_micros = self.send_interval_micros;
         let client = self.client.clone();
         let send_order = self.send_order.clone();
         let buffered_messages = self.buffered_messages.clone();
@@ -408,9 +408,9 @@ impl IggyProducer {
                     .collect::<Vec<_>>();
                 let messages_count = messages.len();
 
-                if self.interval_micros > 0 {
+                if self.send_interval_micros > 0 {
                     Self::wait_before_sending(
-                        self.interval_micros,
+                        self.send_interval_micros,
                         self.last_sent_at.load(ORDERING),
                     )
                     .await;
@@ -445,9 +445,12 @@ impl IggyProducer {
                 messages.len()
             );
             let mut messages_batch = messages.drain(..batch_size).collect::<Vec<_>>();
-            if self.interval_micros > 0 {
-                Self::wait_before_sending(self.interval_micros, self.last_sent_at.load(ORDERING))
-                    .await;
+            if self.send_interval_micros > 0 {
+                Self::wait_before_sending(
+                    self.send_interval_micros,
+                    self.last_sent_at.load(ORDERING),
+                )
+                .await;
             }
 
             self.last_sent_at
@@ -535,6 +538,7 @@ impl IggyProducer {
         if let Some(encryptor) = &self.encryptor {
             for message in messages {
                 message.payload = Bytes::from(encryptor.encrypt(&message.payload)?);
+                message.length = message.payload.len() as u32;
             }
         }
         Ok(())
@@ -609,7 +613,7 @@ pub struct IggyProducerBuilder {
     partitioning: Option<Partitioning>,
     encryptor: Option<Arc<dyn Encryptor>>,
     partitioner: Option<Arc<dyn Partitioner>>,
-    interval: Option<IggyDuration>,
+    send_interval: Option<IggyDuration>,
     create_stream_if_not_exists: bool,
     create_topic_if_not_exists: bool,
     topic_partitions_count: u32,
@@ -638,7 +642,7 @@ impl IggyProducerBuilder {
             partitioning: None,
             encryptor,
             partitioner,
-            interval: Some(IggyDuration::from(1000)),
+            send_interval: Some(IggyDuration::from(1000)),
             create_stream_if_not_exists: true,
             create_topic_if_not_exists: true,
             topic_partitions_count: 1,
@@ -680,7 +684,7 @@ impl IggyProducerBuilder {
     /// Sets the interval between sending the messages, can be combined with `batch_size`.
     pub fn send_interval(self, interval: IggyDuration) -> Self {
         Self {
-            interval: Some(interval),
+            send_interval: Some(interval),
             ..self
         }
     }
@@ -688,7 +692,7 @@ impl IggyProducerBuilder {
     /// Clears the interval.
     pub fn without_send_interval(self) -> Self {
         Self {
-            interval: None,
+            send_interval: None,
             ..self
         }
     }
@@ -798,7 +802,7 @@ impl IggyProducerBuilder {
             self.partitioning,
             self.encryptor,
             self.partitioner,
-            self.interval,
+            self.send_interval,
             self.create_stream_if_not_exists,
             self.create_topic_if_not_exists,
             self.topic_partitions_count,

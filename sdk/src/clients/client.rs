@@ -518,6 +518,7 @@ impl MessageClient for IggyClient {
             for message in &mut polled_messages.messages {
                 let payload = encryptor.decrypt(&message.payload)?;
                 message.payload = Bytes::from(payload);
+                message.length = message.payload.len() as u32;
             }
         }
 
@@ -538,6 +539,7 @@ impl MessageClient for IggyClient {
         if let Some(encryptor) = &self.encryptor {
             for message in &mut *messages {
                 message.payload = Bytes::from(encryptor.encrypt(&message.payload)?);
+                message.length = message.payload.len() as u32;
             }
         }
 

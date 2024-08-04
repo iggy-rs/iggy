@@ -180,8 +180,14 @@ fn start_consumers(consumers: Vec<TenantConsumer>) -> Vec<JoinHandle<()>> {
                     let current_offset = message.current_offset;
                     let partition_id = message.partition_id;
                     let offset = message.message.offset;
-                    let payload =
-                        std::str::from_utf8(&message.message.payload).expect("Invalid payload");
+                    let payload = std::str::from_utf8(&message.message.payload);
+                    if payload.is_err() {
+                        let error = payload.unwrap_err();
+                        error!("Error while decoding the message payload at offset: {offset}, partition ID: {partition_id}, perhaps it's encrypted? {error}");
+                        continue;
+                    }
+
+                    let payload = payload.unwrap();
                     info!("Tenant: {tenant} consumer received: {payload} from partition: {partition_id}, at offset: {offset}, current offset: {current_offset}");
                 } else if let Err(error) = message {
                     error!("Error while handling message: {error}, by: {tenant} consumer.");

@@ -110,6 +110,7 @@ impl System {
                 match payload {
                     Ok(payload) => {
                         message.payload = Bytes::from(payload);
+                        message.length = message.payload.len() as u32;
                         batch_size_bytes += message.get_size_bytes() as u64;
                     }
                     Err(error) => {

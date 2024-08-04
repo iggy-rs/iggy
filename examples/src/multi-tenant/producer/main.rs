@@ -1,6 +1,7 @@
 use clap::Parser;
 use futures_util::future::join_all;
 use iggy::client::{Client, StreamClient, UserClient};
+use iggy::clients::builder::IggyClientBuilder;
 use iggy::clients::client::IggyClient;
 use iggy::clients::producer::IggyProducer;
 use iggy::error::IggyError;
@@ -217,7 +218,7 @@ async fn create_client(
     password: &str,
 ) -> Result<IggyClient, IggyError> {
     let connection_string = format!("iggy://{username}:{password}@{address}");
-    let client = IggyClient::builder_from_connection_string(&connection_string)?.build()?;
+    let client = IggyClientBuilder::from_connection_string(&connection_string)?.build()?;
     client.connect().await?;
     Ok(client)
 }

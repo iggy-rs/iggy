@@ -66,7 +66,7 @@ pub struct IggyConsumer {
     topic_id: Arc<Identifier>,
     partition_id: Option<u32>,
     polling_strategy: PollingStrategy,
-    interval_micros: u64,
+    poll_interval_micros: u64,
     batch_size: u32,
     auto_commit: AutoCommit,
     auto_commit_after_polling: bool,
@@ -131,7 +131,7 @@ impl IggyConsumer {
             topic_id: Arc::new(topic_id),
             partition_id,
             polling_strategy,
-            interval_micros: polling_interval.map_or(0, |interval| interval.as_micros()),
+            poll_interval_micros: polling_interval.map_or(0, |interval| interval.as_micros()),
             next_offset: Arc::new(AtomicU64::new(0)),
             last_stored_offset: Arc::new(AtomicU64::new(0)),
             poll_future: None,
@@ -399,7 +399,7 @@ impl IggyConsumer {
         let client = self.client.clone();
         let count = self.batch_size;
         let auto_commit = self.auto_commit_after_polling;
-        let interval = self.interval_micros;
+        let interval = self.poll_interval_micros;
         let last_polled_at = self.last_polled_at.clone();
         let can_poll = self.can_poll.clone();
         let retry_interval = self.retry_interval;
@@ -575,8 +575,17 @@ impl Stream for IggyConsumer {
                     } else {
                         if let Some(ref encryptor) = self.encryptor {
                             for message in &mut polled_messages.messages {
-                                let payload = encryptor.decrypt(&message.payload)?;
+                                let payload = encryptor.decrypt(&message.payload);
+                                if payload.is_err() {
+                                    self.poll_future = None;
+                                    error!("Failed to decrypt the message payload at offset: {}, partition ID: {}", message.offset, polled_messages.partition_id);
+                                    let error = payload.unwrap_err();
+                                    return Poll::Ready(Some(Err(error)));
+                                }
+
+                                let payload = payload.unwrap();
                                 message.payload = Bytes::from(payload);
+                                message.length = message.payload.len() as u32;
                             }
                         }
                         self.current_offset

@@ -36,18 +36,20 @@ impl UserClient for HttpClient {
         password: &str,
         status: UserStatus,
         permissions: Option<Permissions>,
-    ) -> Result<(), IggyError> {
-        self.post(
-            PATH,
-            &CreateUser {
-                username: username.to_string(),
-                password: password.to_string(),
-                status,
-                permissions,
-            },
-        )
-        .await?;
-        Ok(())
+    ) -> Result<UserInfoDetails, IggyError> {
+        let response = self
+            .post(
+                PATH,
+                &CreateUser {
+                    username: username.to_string(),
+                    password: password.to_string(),
+                    status,
+                    permissions,
+                },
+            )
+            .await?;
+        let user = response.json().await?;
+        Ok(user)
     }
 
     async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError> {
@@ -115,7 +117,7 @@ impl UserClient for HttpClient {
                 &LoginUser {
                     username: username.to_string(),
                     password: password.to_string(),
-                    version: Some("0.5.0".to_string()),
+                    version: Some(env!("CARGO_PKG_VERSION").to_string()),
                     context: Some("".to_string()),
                 },
             )

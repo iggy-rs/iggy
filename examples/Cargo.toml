@@ -35,10 +35,27 @@ path = "src/message-headers/consumer/main.rs"
 name = "message-headers-producer"
 path = "src/message-headers/producer/main.rs"
 
+[[example]]
+name = "multi-tenant-consumer"
+path = "src/multi-tenant/consumer/main.rs"
+
+[[example]]
+name = "multi-tenant-producer"
+path = "src/multi-tenant/producer/main.rs"
+
+[[example]]
+name = "new-sdk-consumer"
+path = "src/new-sdk/consumer/main.rs"
+
+[[example]]
+name = "new-sdk-producer"
+path = "src/new-sdk/producer/main.rs"
+
 [dependencies]
 anyhow = "1.0.86"
 bytes = "1.6.0"
 clap = { version = "4.5.4", features = ["derive"] }
+futures-util = "0.3.30"
 iggy = { path = "../sdk" }
 rand = "0.8.5"
 serde = { version = "1.0.203", features = ["derive", "rc"] }

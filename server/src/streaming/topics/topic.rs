@@ -1,9 +1,11 @@
 use crate::configs::system::SystemConfig;
 use crate::streaming::partitions::partition::Partition;
+use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::storage::SystemStorage;
 use crate::streaming::topics::consumer_group::ConsumerGroup;
 use core::fmt;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
+use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::error::IggyError;
 use iggy::locking::IggySharedMut;
 use iggy::utils::byte_size::IggyByteSize;
@@ -167,6 +169,36 @@ impl Topic {
                 self.topic_id,
                 self.stream_id,
             )),
+        }
+    }
+
+    pub async fn resolve_consumer_with_partition_id(
+        &self,
+        consumer: &Consumer,
+        client_id: u32,
+        partition_id: Option<u32>,
+        calculate_partition_id: bool,
+    ) -> Result<(PollingConsumer, u32), IggyError> {
+        match consumer.kind {
+            ConsumerKind::Consumer => {
+                let partition_id = partition_id.unwrap_or(1);
+                Ok((
+                    PollingConsumer::consumer(&consumer.id, partition_id),
+                    partition_id,
+                ))
+            }
+            ConsumerKind::ConsumerGroup => {
+                let consumer_group = self.get_consumer_group(&consumer.id)?.read().await;
+                let partition_id = if calculate_partition_id {
+                    consumer_group.calculate_partition_id(client_id).await?
+                } else {
+                    consumer_group.get_current_partition_id(client_id).await?
+                };
+                Ok((
+                    PollingConsumer::consumer_group(consumer_group.group_id, client_id),
+                    partition_id,
+                ))
+            }
         }
     }
 }

@@ -78,7 +78,7 @@ pub enum PollingKind {
     First,
     /// Start polling from the last message in the partition.
     Last,
-    /// Start polling from the next message after the last polled message based on the stored consumer offset.
+    /// Start polling from the next message after the last polled message based on the stored consumer offset. Should be used with `auto_commit` set to `true`.
     Next,
 }
 
@@ -170,7 +170,7 @@ impl PollingStrategy {
         }
     }
 
-    /// Poll messages from the next message after the last polled message based on the stored consumer offset.
+    /// Poll messages from the next message after the last polled message based on the stored consumer offset. Should be used with `auto_commit` set to `true`.
     pub fn next() -> Self {
         Self {
             kind: PollingKind::Next,

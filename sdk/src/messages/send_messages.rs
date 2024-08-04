@@ -12,6 +12,7 @@ use serde_with::base64::Base64;
 use serde_with::serde_as;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::hash::{Hash, Hasher};
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -43,7 +44,7 @@ pub struct SendMessages {
 /// - `PartitionId` - the partition ID is provided by the client.
 /// - `MessagesKey` - the partition ID is calculated by the server using the hash of the provided messages key.
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Partitioning {
     /// The kind of partitioning.
     pub kind: PartitioningKind,
@@ -53,6 +54,14 @@ pub struct Partitioning {
     #[serde_as(as = "Base64")]
     /// The binary value payload.
     pub value: Vec<u8>,
+}
+
+impl Hash for Partitioning {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.kind.hash(state);
+        self.length.hash(state);
+        self.value.hash(state);
+    }
 }
 
 /// The single message to be sent. It has the following payload:
@@ -77,7 +86,7 @@ pub struct Message {
 }
 
 /// `PartitioningKind` is an enum which specifies the kind of partitioning and is used by `Partitioning`.
-#[derive(Debug, Serialize, Deserialize, PartialEq, Default, Copy, Clone)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Default, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum PartitioningKind {
     /// The partition ID is calculated by the server using the round-robin algorithm.
@@ -87,6 +96,12 @@ pub enum PartitioningKind {
     PartitionId,
     /// The partition ID is calculated by the server using the hash of the provided messages key.
     MessagesKey,
+}
+
+impl Hash for PartitioningKind {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_code().hash(state);
+    }
 }
 
 fn default_message_id() -> u128 {

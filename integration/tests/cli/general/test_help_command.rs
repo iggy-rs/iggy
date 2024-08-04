@@ -43,6 +43,16 @@ Options:
 {CLAP_INDENT}
           [default: ]
 
+      --credentials-username <CREDENTIALS_USERNAME>
+          Optional username for initial login
+{CLAP_INDENT}
+          [default: DEFAULT_ROOT_USERNAME]
+
+      --credentials-password <CREDENTIALS_PASSWORD>
+          Optional password for initial login
+{CLAP_INDENT}
+          [default: DEFAULT_ROOT_PASSWORD]
+
       --http-api-url <HTTP_API_URL>
           The optional API URL for the HTTP transport
 {CLAP_INDENT}
@@ -58,15 +68,15 @@ Options:
 {CLAP_INDENT}
           [default: 127.0.0.1:8090]
 
-      --tcp-reconnection-retries <TCP_RECONNECTION_RETRIES>
-          The optional number of reconnect retries for the TCP transport
+      --tcp-reconnection-max-retries <TCP_RECONNECTION_MAX_RETRIES>
+          The optional number of max reconnect retries for the TCP transport
 {CLAP_INDENT}
           [default: 3]
 
       --tcp-reconnection-interval <TCP_RECONNECTION_INTERVAL>
           The optional reconnect interval for the TCP transport
 {CLAP_INDENT}
-          [default: 1000]
+          [default: "1s"]
 
       --tcp-tls-enabled
           Flag to enable TLS for the TCP transport
@@ -91,15 +101,15 @@ Options:
 {CLAP_INDENT}
           [default: localhost]
 
-      --quic-reconnection-retries <QUIC_RECONNECTION_RETRIES>
-          The optional number of reconnect retries for the QUIC transport
+      --quic-reconnection-max-retries <QUIC_RECONNECTION_MAX_RETRIES>
+          The optional number of max reconnect retries for the QUIC transport
 {CLAP_INDENT}
           [default: 3]
 
       --quic-reconnection-interval <QUIC_RECONNECTION_INTERVAL>
           The optional reconnect interval for the QUIC transport
 {CLAP_INDENT}
-          [default: 1000]
+          [default: "1s"]
 
       --quic-max-concurrent-bidi-streams <QUIC_MAX_CONCURRENT_BIDI_STREAMS>
           The optional maximum number of concurrent bidirectional streams for QUIC

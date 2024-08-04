@@ -581,7 +581,7 @@ async fn load_batches_by_range(
         .seek(SeekFrom::Start(index_range.start.position as u64))
         .await?;
 
-    let mut read_bytes: u64 = 0;
+    let mut read_bytes = index_range.start.position as u64;
     let mut last_batch_to_read = false;
     while !last_batch_to_read {
         let batch_base_offset = reader
@@ -607,13 +607,15 @@ async fn load_batches_by_range(
         let payload_len = batch_length as usize;
         let mut payload = BytesMut::with_capacity(payload_len);
         payload.put_bytes(0, payload_len);
-        reader
-            .read_exact(&mut payload)
-            .await
-            .map_err(|_| IggyError::CannotReadBatchPayload)?;
+        if let Err(error) = reader.read_exact(&mut payload).await {
+            warn!(
+                "Cannot read batch payload for batch with base offset: {batch_base_offset}, last offset delta: {last_offset_delta}, max timestamp: {max_timestamp}, batch length: {batch_length} and payload length: {payload_len}.\nProbably OS hasn't flushed the data yet, try setting `enforce_fsync = true` for partition configuration if this issue occurs again.\n{error}",
+            );
+            break;
+        }
 
         read_bytes += 8 + 4 + 4 + 8 + payload_len as u64;
-        last_batch_to_read = read_bytes == file_size || last_offset == index_last_offset;
+        last_batch_to_read = read_bytes >= file_size || last_offset == index_last_offset;
 
         let batch = RetainedMessageBatch::new(
             batch_base_offset,

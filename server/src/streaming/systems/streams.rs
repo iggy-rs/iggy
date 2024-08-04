@@ -205,7 +205,7 @@ impl System {
         session: &Session,
         stream_id: Option<u32>,
         name: &str,
-    ) -> Result<(), IggyError> {
+    ) -> Result<&Stream, IggyError> {
         self.ensure_authenticated(session)?;
         self.permissioner.create_stream(session.get_user_id())?;
         let name = text::to_lowercase_non_whitespace(name);
@@ -240,7 +240,7 @@ impl System {
         self.streams_ids.insert(name, stream.stream_id);
         self.streams.insert(stream.stream_id, stream);
         self.metrics.increment_streams(1);
-        Ok(())
+        self.get_stream_by_id(id)
     }
 
     pub async fn update_stream(

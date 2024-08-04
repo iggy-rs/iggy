@@ -1,7 +1,6 @@
 use crate::bench::run_bench_and_wait_for_finish;
 use iggy::client::SystemClient;
 use iggy::clients::client::IggyClient;
-use iggy::clients::client::IggyClientBackgroundConfig;
 use iggy::utils::byte_size::IggyByteSize;
 use integration::{
     tcp_client::TcpClientFactory,
@@ -40,13 +39,7 @@ async fn should_fill_data_and_verify_after_restart() {
 
     // 4. Connect and login to newly started server
     let client = TcpClientFactory { server_addr }.create_client().await;
-    let client = IggyClient::create(
-        client,
-        IggyClientBackgroundConfig::default(),
-        None,
-        None,
-        None,
-    );
+    let client = IggyClient::create(client, None, None);
     login_root(&client).await;
 
     // 5. Save stats from the first server
@@ -78,8 +71,6 @@ async fn should_fill_data_and_verify_after_restart() {
         }
         .create_client()
         .await,
-        IggyClientBackgroundConfig::default(),
-        None,
         None,
         None,
     );

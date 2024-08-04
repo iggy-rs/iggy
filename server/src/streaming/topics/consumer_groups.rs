@@ -105,12 +105,11 @@ impl Topic {
             ConsumerGroup::new(self.topic_id, id, &name, self.partitions.len() as u32);
         self.consumer_groups.insert(id, RwLock::new(consumer_group));
         self.consumer_groups_ids.insert(name, id);
-        let consumer_group = self.get_consumer_group_by_id(id)?;
         info!(
             "Created consumer group with ID: {} for topic with ID: {} and stream with ID: {}.",
             id, self.topic_id, self.stream_id
         );
-        Ok(consumer_group)
+        self.get_consumer_group_by_id(id)
     }
 
     pub async fn delete_consumer_group(

@@ -1,6 +1,6 @@
 use bytes::Bytes;
 use iggy::client::{MessageClient, StreamClient, TopicClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer;
 use iggy::error::IggyError;
 use iggy::error::IggyError::InvalidResponse;
@@ -29,13 +29,7 @@ enum MessageToSend {
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let client = client_factory.create_client().await;
-    let client = IggyClient::create(
-        client,
-        IggyClientBackgroundConfig::default(),
-        None,
-        None,
-        None,
-    );
+    let client = IggyClient::create(client, None, None);
 
     login_root(&client).await;
     init_system(&client).await;

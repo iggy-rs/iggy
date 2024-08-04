@@ -27,17 +27,22 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
     let client = client_provider::get_raw_connected_client(client_provider_config).await?;
     let client = IggyClient::builder().with_client(client).build()?;
-    system::login_root(&client).await;
     system::init_by_producer(&args, &client).await?;
     produce_messages(&args, &client).await
 }
 
 async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dyn Error>> {
+    let interval = args.get_interval();
     info!(
-        "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
-        args.stream_id, args.topic_id, args.partition_id, args.interval
+        "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {}.",
+        args.stream_id,
+        args.topic_id,
+        args.partition_id,
+        interval.map_or("none".to_string(), |i| i.as_human_time_string())
     );
-    let mut interval = tokio::time::interval(std::time::Duration::from_millis(args.interval));
+    let stream_id = args.stream_id.clone().try_into()?;
+    let topic_id = args.topic_id.clone().try_into()?;
+    let mut interval = interval.map(|interval| tokio::time::interval(interval.get_duration()));
     let mut message_generator = MessagesGenerator::new();
     let mut sent_batches = 0;
     let partitioning = Partitioning::partition_id(args.partition_id);
@@ -45,6 +50,10 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
         if args.message_batches_limit > 0 && sent_batches == args.message_batches_limit {
             info!("Sent {sent_batches} batches of messages, exiting.");
             return Ok(());
+        }
+
+        if let Some(interval) = &mut interval {
+            interval.tick().await;
         }
 
         let mut messages = Vec::new();
@@ -68,15 +77,9 @@ async fn produce_messages(args: &Args, client: &IggyClient) -> Result<(), Box<dy
             serializable_messages.push(serializable_message);
         }
         client
-            .send_messages(
-                &args.stream_id.try_into()?,
-                &args.topic_id.try_into()?,
-                &partitioning,
-                &mut messages,
-            )
+            .send_messages(&stream_id, &topic_id, &partitioning, &mut messages)
             .await?;
         sent_batches += 1;
         info!("Sent messages: {:#?}", serializable_messages);
-        interval.tick().await;
     }
 }

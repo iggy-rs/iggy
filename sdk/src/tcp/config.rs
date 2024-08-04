@@ -1,26 +1,49 @@
+use crate::client::AutoLogin;
+use crate::utils::duration::IggyDuration;
+use std::str::FromStr;
+
 /// Configuration for the TCP client.
 #[derive(Debug, Clone)]
 pub struct TcpClientConfig {
     /// The address of the Iggy server.
     pub server_address: String,
-    /// The number of retries when connecting to the server.
-    pub reconnection_retries: u32,
-    /// The interval between retries when connecting to the server.
-    pub reconnection_interval: u64,
     /// Whether to use TLS when connecting to the server.
     pub tls_enabled: bool,
     /// The domain to use for TLS when connecting to the server.
     pub tls_domain: String,
+    /// Whether to automatically login user after establishing connection.
+    pub auto_login: AutoLogin,
+    // Whether to automatically reconnect when disconnected.
+    pub reconnection: TcpClientReconnectionConfig,
+}
+
+#[derive(Debug, Clone)]
+pub struct TcpClientReconnectionConfig {
+    pub enabled: bool,
+    pub max_retries: Option<u32>,
+    pub interval: IggyDuration,
+    pub re_establish_after: IggyDuration,
 }
 
 impl Default for TcpClientConfig {
     fn default() -> TcpClientConfig {
         TcpClientConfig {
             server_address: "127.0.0.1:8090".to_string(),
-            reconnection_retries: 3,
-            reconnection_interval: 1000,
             tls_enabled: false,
             tls_domain: "localhost".to_string(),
+            auto_login: AutoLogin::Disabled,
+            reconnection: TcpClientReconnectionConfig::default(),
+        }
+    }
+}
+
+impl Default for TcpClientReconnectionConfig {
+    fn default() -> TcpClientReconnectionConfig {
+        TcpClientReconnectionConfig {
+            enabled: true,
+            max_retries: None,
+            interval: IggyDuration::from_str("1s").unwrap(),
+            re_establish_after: IggyDuration::from_str("5s").unwrap(),
         }
     }
 }
@@ -28,8 +51,8 @@ impl Default for TcpClientConfig {
 /// Builder for the TCP client configuration.
 /// Allows configuring the TCP client with custom settings or using defaults:
 /// - `server_address`: Default is "127.0.0.1:8090"
-/// - `reconnection_retries`: Default is 3.
-/// - `reconnection_interval`: Default is 1000 ms.
+/// - `auto_login`: Default is AutoLogin::Disabled.
+/// - `reconnection`: Default is enabled unlimited retries and 1 second interval.
 /// - `tls_enabled`: Default is false.
 /// - `tls_domain`: Default is "localhost".
 #[derive(Debug, Default)]
@@ -48,15 +71,26 @@ impl TcpClientConfigBuilder {
         self
     }
 
+    /// Sets the auto sign in during connection.
+    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoLogin) -> Self {
+        self.config.auto_login = auto_sign_in;
+        self
+    }
+
+    pub fn with_enabled_reconnection(mut self) -> Self {
+        self.config.reconnection.enabled = true;
+        self
+    }
+
     /// Sets the number of retries when connecting to the server.
-    pub fn with_reconnection_retries(mut self, reconnection_retries: u32) -> Self {
-        self.config.reconnection_retries = reconnection_retries;
+    pub fn with_reconnection_max_retries(mut self, max_retries: Option<u32>) -> Self {
+        self.config.reconnection.max_retries = max_retries;
         self
     }
 
     /// Sets the interval between retries when connecting to the server.
-    pub fn with_reconnection_interval(mut self, reconnection_interval: u64) -> Self {
-        self.config.reconnection_interval = reconnection_interval;
+    pub fn with_reconnection_interval(mut self, interval: IggyDuration) -> Self {
+        self.config.reconnection.interval = interval;
         self
     }
 

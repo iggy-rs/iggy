@@ -1,6 +1,6 @@
 use crate::error::IggyError;
 use crate::identifier::Identifier;
-use crate::messages::send_messages::{Message, Partitioning};
+use crate::messages::send_messages::Message;
 use std::fmt::Debug;
 
 /// The trait represent the logic responsible for calculating the partition ID and is used by the `IggyClient`.
@@ -10,7 +10,6 @@ pub trait Partitioner: Send + Sync + Debug {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-        partitioning: &Partitioning,
         messages: &[Message],
     ) -> Result<u32, IggyError>;
 }

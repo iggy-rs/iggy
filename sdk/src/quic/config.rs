@@ -1,3 +1,7 @@
+use crate::client::AutoLogin;
+use crate::utils::duration::IggyDuration;
+use std::str::FromStr;
+
 /// Configuration for the QUIC client.
 #[derive(Debug, Clone)]
 pub struct QuicClientConfig {
@@ -7,10 +11,10 @@ pub struct QuicClientConfig {
     pub server_address: String,
     /// The server name to use.
     pub server_name: String,
-    /// The number of reconnection retries.
-    pub reconnection_retries: u32,
-    /// The interval between reconnection retries.
-    pub reconnection_interval: u64,
+    /// Whether to automatically login user after establishing connection.
+    pub auto_login: AutoLogin,
+    // Whether to automatically reconnect when disconnected.
+    pub reconnection: QuicClientReconnectionConfig,
     /// The size of the response buffer.
     pub response_buffer_size: u64,
     /// The maximum number of concurrent bidirectional streams.
@@ -31,14 +35,33 @@ pub struct QuicClientConfig {
     pub validate_certificate: bool,
 }
 
+#[derive(Debug, Clone)]
+pub struct QuicClientReconnectionConfig {
+    pub enabled: bool,
+    pub max_retries: Option<u32>,
+    pub interval: IggyDuration,
+    pub re_establish_after: IggyDuration,
+}
+
+impl Default for QuicClientReconnectionConfig {
+    fn default() -> QuicClientReconnectionConfig {
+        QuicClientReconnectionConfig {
+            enabled: true,
+            max_retries: None,
+            interval: IggyDuration::from_str("1s").unwrap(),
+            re_establish_after: IggyDuration::from_str("5s").unwrap(),
+        }
+    }
+}
+
 impl Default for QuicClientConfig {
     fn default() -> QuicClientConfig {
         QuicClientConfig {
             client_address: "127.0.0.1:0".to_string(),
             server_address: "127.0.0.1:8080".to_string(),
             server_name: "localhost".to_string(),
-            reconnection_retries: 3,
-            reconnection_interval: 1000,
+            auto_login: AutoLogin::Disabled,
+            reconnection: QuicClientReconnectionConfig::default(),
             response_buffer_size: 1000 * 1000 * 10,
             max_concurrent_bidi_streams: 10000,
             datagram_send_buffer_size: 100_000,
@@ -58,8 +81,8 @@ impl Default for QuicClientConfig {
 /// - `client_address`: Default is "127.0.0.1:0" (binds to any available port).
 /// - `server_address`: Default is "127.0.0.1:8080".
 /// - `server_name`: Default is "localhost".
-/// - `reconnection_retries`: Default is 3 attempts.
-/// - `reconnection_interval`: Default is 1000 milliseconds.
+/// - `auto_login`: Default is AutoLogin::Disabled.
+/// - `reconnection`: Default is enabled unlimited retries and 1 second interval.
 /// - `response_buffer_size`: Default is 10MB (10,000,000 bytes).
 /// - `max_concurrent_bidi_streams`: Default is 10,000 streams.
 /// - `datagram_send_buffer_size`: Default is 100,000 bytes.
@@ -92,21 +115,32 @@ impl QuicClientConfigBuilder {
         self
     }
 
+    /// Sets the auto sign in during connection.
+    pub fn with_auto_sign_in(mut self, auto_sign_in: AutoLogin) -> Self {
+        self.config.auto_login = auto_sign_in;
+        self
+    }
+
     /// Sets the server name. Defaults to "localhost".
     pub fn with_server_name(mut self, server_name: String) -> Self {
         self.config.server_name = server_name;
         self
     }
 
-    /// Sets the number of reconnection retries. Defaults to 3.
-    pub fn with_reconnection_retries(mut self, reconnection_retries: u32) -> Self {
-        self.config.reconnection_retries = reconnection_retries;
+    pub fn with_enabled_reconnection(mut self) -> Self {
+        self.config.reconnection.enabled = true;
         self
     }
 
-    /// Sets the reconnection interval in milliseconds. Defaults to 1000ms.
-    pub fn with_reconnection_interval(mut self, reconnection_interval: u64) -> Self {
-        self.config.reconnection_interval = reconnection_interval;
+    /// Sets the number of retries when connecting to the server.
+    pub fn with_reconnection_max_retries(mut self, max_retries: Option<u32>) -> Self {
+        self.config.reconnection.max_retries = max_retries;
+        self
+    }
+
+    /// Sets the interval between retries when connecting to the server.
+    pub fn with_reconnection_interval(mut self, interval: IggyDuration) -> Self {
+        self.config.reconnection.interval = interval;
         self
     }
 

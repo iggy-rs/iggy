@@ -16,8 +16,8 @@ use iggy::models::topic::TopicDetails;
 use iggy::models::user_info::{UserInfo, UserInfoDetails};
 use tokio::sync::RwLock;
 
-pub async fn map_stream(stream: &Stream) -> StreamDetails {
-    let topics = map_topics(&stream.get_topics()).await;
+pub fn map_stream(stream: &Stream) -> StreamDetails {
+    let topics = map_topics(&stream.get_topics());
     let mut stream_details = StreamDetails {
         id: stream.stream_id,
         created_at: stream.created_at,
@@ -31,7 +31,7 @@ pub async fn map_stream(stream: &Stream) -> StreamDetails {
     stream_details
 }
 
-pub async fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Stream> {
+pub fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Stream> {
     let mut streams_data = Vec::with_capacity(streams.len());
     for stream in streams {
         let stream = iggy::models::stream::Stream {
@@ -49,7 +49,7 @@ pub async fn map_streams(streams: &[&Stream]) -> Vec<iggy::models::stream::Strea
     streams_data
 }
 
-pub async fn map_topics(topics: &[&Topic]) -> Vec<iggy::models::topic::Topic> {
+pub fn map_topics(topics: &[&Topic]) -> Vec<iggy::models::topic::Topic> {
     let mut topics_data = Vec::with_capacity(topics.len());
     for topic in topics {
         let topic = iggy::models::topic::Topic {
@@ -141,7 +141,7 @@ pub fn map_personal_access_tokens(
     personal_access_tokens_data
 }
 
-pub async fn map_client(client: &Client) -> iggy::models::client_info::ClientInfoDetails {
+pub fn map_client(client: &Client) -> iggy::models::client_info::ClientInfoDetails {
     let client = iggy::models::client_info::ClientInfoDetails {
         client_id: client.client_id,
         user_id: client.user_id,

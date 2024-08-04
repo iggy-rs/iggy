@@ -126,6 +126,9 @@
         "path": "compatibility"
       }
     },
+    "state": {
+      "enforce_fsync": false
+    },
     "runtime": {
       "path": "runtime"
     },

@@ -6,7 +6,7 @@ use assert_cmd::assert::{Assert, OutputAssertExt};
 use assert_cmd::prelude::CommandCargoExt;
 use async_trait::async_trait;
 use iggy::client::{Client, SystemClient, UserClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::tcp::client::TcpClient;
 use iggy::tcp::config::TcpClientConfig;
 use iggy::users::defaults::*;
@@ -90,13 +90,7 @@ impl IggyCmdTest {
             ..TcpClientConfig::default()
         };
         let client = Box::new(TcpClient::create(Arc::new(tcp_client_config)).unwrap());
-        let client = IggyClient::create(
-            client,
-            IggyClientBackgroundConfig::default(),
-            None,
-            None,
-            None,
-        );
+        let client = IggyClient::create(client, None, None);
 
         Self { server, client }
     }

@@ -1,7 +1,7 @@
 use crate::args::simple::BenchmarkKind;
 use crate::benchmark_result::{BenchmarkResult, LatencyPercentiles};
 use iggy::client::MessageClient;
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::duration::IggyDuration;
@@ -52,13 +52,7 @@ impl Producer {
         let default_partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;
         let client = self.client_factory.create_client().await;
-        let client = IggyClient::create(
-            client,
-            IggyClientBackgroundConfig::default(),
-            None,
-            None,
-            None,
-        );
+        let client = IggyClient::create(client, None, None);
         login_root(&client).await;
         info!(
             "Producer #{} → preparing the test messages...",

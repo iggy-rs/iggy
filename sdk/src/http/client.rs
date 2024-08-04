@@ -1,9 +1,11 @@
 use crate::client::Client;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::http::config::HttpClientConfig;
 use crate::http::HttpTransport;
 use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::models::identity_info::IdentityInfo;
+use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use reqwest::{Response, Url};
 use reqwest_middleware::{ClientBuilder, ClientWithMiddleware};
@@ -29,6 +31,7 @@ pub struct HttpClient {
     pub api_url: Url,
     client: ClientWithMiddleware,
     access_token: IggySharedMut<String>,
+    events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
 }
 
 #[async_trait]
@@ -39,6 +42,10 @@ impl Client for HttpClient {
 
     async fn disconnect(&self) -> Result<(), IggyError> {
         HttpClient::disconnect(self).await
+    }
+
+    async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
+        self.events.1.clone()
     }
 }
 
@@ -238,6 +245,7 @@ impl HttpClient {
             api_url,
             client,
             access_token: IggySharedMut::new("".to_string()),
+            events: broadcast(1000),
         })
     }
 

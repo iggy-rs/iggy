@@ -1,3 +1,4 @@
+use crate::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use clap::Parser;
 use serde::{Deserialize, Serialize};
 
@@ -23,6 +24,20 @@ pub struct ArgsOptional {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub encryption_key: Option<String>,
 
+    /// Optional username for initial login
+    ///
+    /// [default: DEFAULT_ROOT_USERNAME]
+    #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credentials_username: Option<String>,
+
+    /// Optional password for initial login
+    ///
+    /// [default: DEFAULT_ROOT_PASSWORD]
+    #[arg(long)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub credentials_password: Option<String>,
+
     /// The optional API URL for the HTTP transport
     ///
     /// [default: http://localhost:3000]
@@ -44,19 +59,19 @@ pub struct ArgsOptional {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tcp_server_address: Option<String>,
 
-    /// The optional number of reconnect retries for the TCP transport
+    /// The optional number of max reconnect retries for the TCP transport
     ///
     /// [default: 3]
     #[arg(long)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tcp_reconnection_retries: Option<u32>,
+    pub tcp_reconnection_max_retries: Option<u32>,
 
     /// The optional reconnect interval for the TCP transport
     ///
-    /// [default: 1000]
+    /// [default: "1s"]
     #[arg(long)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tcp_reconnection_interval: Option<u64>,
+    pub tcp_reconnection_interval: Option<String>,
 
     /// Flag to enable TLS for the TCP transport
     #[arg(long, default_missing_value(Some("true")), num_args(0..1))]
@@ -91,19 +106,19 @@ pub struct ArgsOptional {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quic_server_name: Option<String>,
 
-    /// The optional number of reconnect retries for the QUIC transport
+    /// The optional number of max reconnect retries for the QUIC transport
     ///
     /// [default: 3]
     #[arg(long)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub quic_reconnection_retries: Option<u32>,
+    pub quic_reconnection_max_retries: Option<u32>,
 
     /// The optional reconnect interval for the QUIC transport
     ///
-    /// [default: 1000]
+    /// [default: "1s"]
     #[arg(long)]
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub quic_reconnection_interval: Option<u64>,
+    pub quic_reconnection_interval: Option<String>,
 
     /// The optional maximum number of concurrent bidirectional streams for QUIC
     ///
@@ -182,14 +197,26 @@ pub struct Args {
     /// The optional number of retries for the HTTP transport
     pub http_retries: u32,
 
+    // The optional username for initial login
+    pub username: String,
+
+    // The optional password for initial login
+    pub password: String,
+
     /// The optional client address for the TCP transport
     pub tcp_server_address: String,
 
-    /// The optional number of reconnect retries for the TCP transport
-    pub tcp_reconnection_retries: u32,
+    /// The optional number of maximum reconnect retries for the TCP transport
+    pub tcp_reconnection_enabled: bool,
+
+    /// The optional number of maximum reconnect retries for the TCP transport
+    pub tcp_reconnection_max_retries: Option<u32>,
 
     /// The optional reconnect interval for the TCP transport
-    pub tcp_reconnection_interval: u64,
+    pub tcp_reconnection_interval: String,
+
+    /// The optional re-establish after last connection interval for TCP
+    pub tcp_reconnection_re_establish_after: String,
 
     /// Flag to enable TLS for the TCP transport
     pub tcp_tls_enabled: bool,
@@ -206,11 +233,17 @@ pub struct Args {
     /// The optional server name for the QUIC transport
     pub quic_server_name: String,
 
-    /// The optional number of reconnect retries for the QUIC transport
-    pub quic_reconnection_retries: u32,
+    /// The optional number of maximum reconnect retries for the QUIC transport
+    pub quic_reconnection_enabled: bool,
+
+    /// The optional number of maximum reconnect retries for the QUIC transport
+    pub quic_reconnection_max_retries: Option<u32>,
 
     /// The optional reconnect interval for the QUIC transport
-    pub quic_reconnection_interval: u64,
+    pub quic_reconnection_interval: String,
+
+    /// The optional re-establish after last connection interval for QUIC
+    pub quic_reconnection_re_establish_after: String,
 
     /// The optional maximum number of concurrent bidirectional streams for QUIC
     pub quic_max_concurrent_bidi_streams: u64,
@@ -271,16 +304,22 @@ impl Default for Args {
             encryption_key: "".to_string(),
             http_api_url: "http://localhost:3000".to_string(),
             http_retries: 3,
+            username: DEFAULT_ROOT_USERNAME.to_string(),
+            password: DEFAULT_ROOT_PASSWORD.to_string(),
             tcp_server_address: "127.0.0.1:8090".to_string(),
-            tcp_reconnection_retries: 3,
-            tcp_reconnection_interval: 1000,
+            tcp_reconnection_enabled: true,
+            tcp_reconnection_max_retries: None,
+            tcp_reconnection_interval: "1s".to_string(),
+            tcp_reconnection_re_establish_after: "5s".to_string(),
             tcp_tls_enabled: false,
             tcp_tls_domain: "localhost".to_string(),
             quic_client_address: "127.0.0.1:0".to_string(),
             quic_server_address: "127.0.0.1:8080".to_string(),
             quic_server_name: "localhost".to_string(),
-            quic_reconnection_retries: 3,
-            quic_reconnection_interval: 1000,
+            quic_reconnection_enabled: true,
+            quic_reconnection_max_retries: None,
+            quic_reconnection_interval: "1s".to_string(),
+            quic_reconnection_re_establish_after: "5s".to_string(),
             quic_max_concurrent_bidi_streams: 10000,
             quic_datagram_send_buffer_size: 100000,
             quic_initial_mtu: 1200,
@@ -305,6 +344,12 @@ impl From<Vec<ArgsOptional>> for Args {
             if let Some(encryption_key) = optional_args.encryption_key {
                 args.encryption_key = encryption_key;
             }
+            if let Some(username) = optional_args.credentials_username {
+                args.username = username;
+            }
+            if let Some(password) = optional_args.credentials_password {
+                args.password = password;
+            }
             if let Some(http_api_url) = optional_args.http_api_url {
                 args.http_api_url = http_api_url;
             }
@@ -314,8 +359,8 @@ impl From<Vec<ArgsOptional>> for Args {
             if let Some(tcp_server_address) = optional_args.tcp_server_address {
                 args.tcp_server_address = tcp_server_address;
             }
-            if let Some(tcp_reconnection_retries) = optional_args.tcp_reconnection_retries {
-                args.tcp_reconnection_retries = tcp_reconnection_retries;
+            if let Some(tcp_reconnection_retries) = optional_args.tcp_reconnection_max_retries {
+                args.tcp_reconnection_max_retries = Some(tcp_reconnection_retries);
             }
             if let Some(tcp_reconnection_interval) = optional_args.tcp_reconnection_interval {
                 args.tcp_reconnection_interval = tcp_reconnection_interval;
@@ -335,8 +380,8 @@ impl From<Vec<ArgsOptional>> for Args {
             if let Some(quic_server_name) = optional_args.quic_server_name {
                 args.quic_server_name = quic_server_name;
             }
-            if let Some(quic_reconnection_retries) = optional_args.quic_reconnection_retries {
-                args.quic_reconnection_retries = quic_reconnection_retries;
+            if let Some(quic_reconnection_retries) = optional_args.quic_reconnection_max_retries {
+                args.quic_reconnection_max_retries = Some(quic_reconnection_retries);
             }
             if let Some(quic_reconnection_interval) = optional_args.quic_reconnection_interval {
                 args.quic_reconnection_interval = quic_reconnection_interval;

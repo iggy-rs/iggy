@@ -1,5 +1,5 @@
 use iggy::client::{ConsumerGroupClient, StreamClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::consumer::ConsumerKind;
 use iggy::identifier::Identifier;
 use iggy::models::consumer_group::ConsumerGroupDetails;
@@ -32,13 +32,7 @@ const MESSAGES_COUNT: u32 = 1000;
 
 async fn create_client(client_factory: &dyn ClientFactory) -> IggyClient {
     let client = client_factory.create_client().await;
-    IggyClient::create(
-        client,
-        IggyClientBackgroundConfig::default(),
-        None,
-        None,
-        None,
-    )
+    IggyClient::create(client, None, None)
 }
 
 async fn get_consumer_group(client: &IggyClient) -> ConsumerGroupDetails {

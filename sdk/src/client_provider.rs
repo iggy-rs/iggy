@@ -1,13 +1,15 @@
-use crate::client::Client;
+use crate::client::{AutoLogin, Client, Credentials};
 use crate::client_error::ClientError;
 #[allow(deprecated)]
 use crate::clients::client::IggyClient;
 use crate::http::client::HttpClient;
 use crate::http::config::HttpClientConfig;
 use crate::quic::client::QuicClient;
-use crate::quic::config::QuicClientConfig;
+use crate::quic::config::{QuicClientConfig, QuicClientReconnectionConfig};
 use crate::tcp::client::TcpClient;
-use crate::tcp::config::TcpClientConfig;
+use crate::tcp::config::{TcpClientConfig, TcpClientReconnectionConfig};
+use crate::utils::duration::IggyDuration;
+use std::str::FromStr;
 use std::sync::Arc;
 
 const QUIC_TRANSPORT: &str = "quic";
@@ -59,8 +61,19 @@ impl ClientProviderConfig {
                     client_address: args.quic_client_address,
                     server_address: args.quic_server_address,
                     server_name: args.quic_server_name,
-                    reconnection_retries: args.quic_reconnection_retries,
-                    reconnection_interval: args.quic_reconnection_interval,
+                    reconnection: QuicClientReconnectionConfig {
+                        enabled: args.quic_reconnection_enabled,
+                        max_retries: args.quic_reconnection_max_retries,
+                        interval: IggyDuration::from_str(&args.quic_reconnection_interval).unwrap(),
+                        re_establish_after: IggyDuration::from_str(
+                            &args.quic_reconnection_re_establish_after,
+                        )
+                        .unwrap(),
+                    },
+                    auto_login: AutoLogin::Enabled(Credentials::UsernamePassword(
+                        args.username,
+                        args.password,
+                    )),
                     response_buffer_size: args.quic_response_buffer_size,
                     max_concurrent_bidi_streams: args.quic_max_concurrent_bidi_streams,
                     datagram_send_buffer_size: args.quic_datagram_send_buffer_size,
@@ -81,10 +94,21 @@ impl ClientProviderConfig {
             TCP_TRANSPORT => {
                 config.tcp = Some(Arc::new(TcpClientConfig {
                     server_address: args.tcp_server_address,
-                    reconnection_retries: args.tcp_reconnection_retries,
-                    reconnection_interval: args.tcp_reconnection_interval,
                     tls_enabled: args.tcp_tls_enabled,
                     tls_domain: args.tcp_tls_domain,
+                    reconnection: TcpClientReconnectionConfig {
+                        enabled: args.tcp_reconnection_enabled,
+                        max_retries: args.tcp_reconnection_max_retries,
+                        interval: IggyDuration::from_str(&args.tcp_reconnection_interval).unwrap(),
+                        re_establish_after: IggyDuration::from_str(
+                            &args.tcp_reconnection_re_establish_after,
+                        )
+                        .unwrap(),
+                    },
+                    auto_login: AutoLogin::Enabled(Credentials::UsernamePassword(
+                        args.username,
+                        args.password,
+                    )),
                 }));
             }
             _ => return Err(ClientError::InvalidTransport(config.transport.clone())),

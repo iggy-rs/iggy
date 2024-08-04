@@ -1,9 +1,13 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
-use crate::client::Client;
+use crate::client::{AutoLogin, Client, Credentials, PersonalAccessTokenClient, UserClient};
 use crate::command::Command;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::quic::config::QuicClientConfig;
+use crate::utils::duration::IggyDuration;
+use crate::utils::timestamp::IggyTimestamp;
+use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::Bytes;
 use quinn::crypto::rustls::QuicClientConfig as QuinnQuicClientConfig;
@@ -17,7 +21,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
@@ -31,6 +35,8 @@ pub struct QuicClient {
     pub(crate) config: Arc<QuicClientConfig>,
     pub(crate) server_address: SocketAddr,
     pub(crate) state: Mutex<ClientState>,
+    events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
+    connected_at: Mutex<Option<IggyTimestamp>>,
 }
 
 unsafe impl Send for QuicClient {}
@@ -51,6 +57,10 @@ impl Client for QuicClient {
     async fn disconnect(&self) -> Result<(), IggyError> {
         QuicClient::disconnect(self).await
     }
+
+    async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
+        self.events.1.clone()
+    }
 }
 
 #[async_trait]
@@ -70,26 +80,33 @@ impl BinaryTransport for QuicClient {
     }
 
     async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
-        if self.get_state().await == ClientState::Disconnected {
-            return Err(IggyError::NotConnected);
+        let result = self.send_raw(code, payload.clone()).await;
+        if result.is_ok() {
+            return result;
         }
 
-        let connection = self.connection.lock().await;
-        if let Some(connection) = connection.as_ref() {
-            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
-            let (mut send, mut recv) = connection.open_bi().await?;
-            trace!("Sending a QUIC request...");
-            send.write_all(&(payload_length as u32).to_le_bytes())
-                .await?;
-            send.write_all(&code.to_le_bytes()).await?;
-            send.write_all(&payload).await?;
-            send.finish()?;
-            trace!("Sent a QUIC request, waiting for a response...");
-            return self.handle_response(&mut recv).await;
+        let error = result.unwrap_err();
+        if !matches!(
+            error,
+            IggyError::Disconnected | IggyError::EmptyResponse | IggyError::Unauthenticated
+        ) {
+            return Err(error);
         }
 
-        error!("Cannot send data. Client is not connected.");
-        Err(IggyError::NotConnected)
+        if !self.config.reconnection.enabled {
+            return Err(IggyError::Disconnected);
+        }
+
+        self.disconnect().await?;
+        info!("Reconnecting to the server...");
+        self.connect().await?;
+        self.send_raw(code, payload).await
+    }
+
+    async fn publish_event(&self, event: DiagnosticEvent) {
+        if let Err(error) = self.events.0.broadcast(event).await {
+            error!("Failed to send a QUIC diagnostic event: {error}");
+        }
     }
 }
 
@@ -102,12 +119,14 @@ impl QuicClient {
         server_address: &str,
         server_name: &str,
         validate_certificate: bool,
+        auto_sign_in: AutoLogin,
     ) -> Result<Self, IggyError> {
         Self::create(Arc::new(QuicClientConfig {
             client_address: client_address.to_string(),
             server_address: server_address.to_string(),
             server_name: server_name.to_string(),
             validate_certificate,
+            auto_login: auto_sign_in,
             ..Default::default()
         }))
     }
@@ -140,6 +159,8 @@ impl QuicClient {
             server_address,
             connection: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
+            events: broadcast(1000),
+            connected_at: Mutex::new(None),
         })
     }
 
@@ -183,16 +204,41 @@ impl QuicClient {
     }
 
     async fn connect(&self) -> Result<(), IggyError> {
-        if self.get_state().await == ClientState::Connected {
-            return Ok(());
+        match self.get_state().await {
+            ClientState::Connected | ClientState::Authenticating | ClientState::Authenticated => {
+                trace!("Client is already connected.");
+                return Ok(());
+            }
+            ClientState::Connecting => {
+                trace!("Client is already connecting.");
+                return Ok(());
+            }
+            _ => {}
+        }
+
+        self.set_state(ClientState::Connecting).await;
+        if let Some(connected_at) = self.connected_at.lock().await.as_ref() {
+            let now = IggyTimestamp::now();
+            let elapsed = now.as_micros() - connected_at.as_micros();
+            let interval = self.config.reconnection.re_establish_after.as_micros();
+            trace!(
+                "Elapsed time since last connection: {}",
+                IggyDuration::from(elapsed)
+            );
+            if elapsed < interval {
+                let remaining = IggyDuration::from(interval - elapsed);
+                info!("Trying to connect to the server in: {remaining}",);
+                sleep(remaining.get_duration()).await;
+            }
         }
 
         let mut retry_count = 0;
         let connection;
+        let remote_address;
         loop {
             info!(
-                "{} client is connecting to server: {}...",
-                NAME, self.config.server_address
+                "{NAME} client is connecting to server: {}...",
+                self.config.server_address
             );
             let connection_result = self
                 .endpoint
@@ -205,30 +251,72 @@ impl QuicClient {
                     "Failed to connect to server: {}",
                     self.config.server_address
                 );
-                if retry_count < self.config.reconnection_retries {
+                if !self.config.reconnection.enabled {
+                    warn!("Automatic reconnection is disabled.");
+                    return Err(IggyError::CannotEstablishConnection);
+                }
+
+                let unlimited_retries = self.config.reconnection.max_retries.is_none();
+                let max_retries = self.config.reconnection.max_retries.unwrap_or_default();
+                let max_retries_str =
+                    if let Some(max_retries) = self.config.reconnection.max_retries {
+                        max_retries.to_string()
+                    } else {
+                        "unlimited".to_string()
+                    };
+
+                let interval_str = self.config.reconnection.interval.as_human_time_string();
+                if unlimited_retries || retry_count < max_retries {
                     retry_count += 1;
                     info!(
-                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
-                        retry_count,
-                        self.config.reconnection_retries,
+                        "Retrying to connect to server ({retry_count}/{max_retries_str}): {} in: {interval_str}",
                         self.config.server_address,
-                        self.config.reconnection_interval
                     );
-                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
+                    sleep(self.config.reconnection.interval.get_duration()).await;
                     continue;
                 }
 
-                return Err(IggyError::NotConnected);
+                self.set_state(ClientState::Disconnected).await;
+                self.publish_event(DiagnosticEvent::Disconnected).await;
+                return Err(IggyError::CannotEstablishConnection);
             }
 
             connection = connection_result.unwrap();
+            remote_address = connection.remote_address();
             break;
         }
 
+        let now = IggyTimestamp::now();
+        info!("{NAME} client has connected to server: {remote_address} at {now}",);
         self.set_state(ClientState::Connected).await;
         self.connection.lock().await.replace(connection);
+        self.connected_at.lock().await.replace(now);
+        self.publish_event(DiagnosticEvent::Connected).await;
 
-        Ok(())
+        match &self.config.auto_login {
+            AutoLogin::Disabled => {
+                info!("Automatic sign-in is disabled.");
+                Ok(())
+            }
+            AutoLogin::Enabled(credentials) => {
+                info!("{NAME} client is signing in...");
+                self.set_state(ClientState::Authenticating).await;
+                match credentials {
+                    Credentials::UsernamePassword(username, password) => {
+                        self.login_user(username, password).await?;
+                        self.publish_event(DiagnosticEvent::SignedIn).await;
+                        info!("{NAME} client has signed in with the user credentials, username: {username}",);
+                        Ok(())
+                    }
+                    Credentials::PersonalAccessToken(token) => {
+                        self.login_with_personal_access_token(token).await?;
+                        self.publish_event(DiagnosticEvent::SignedIn).await;
+                        info!("{NAME} client has signed in with a personal access token.",);
+                        Ok(())
+                    }
+                }
+            }
+        }
     }
 
     async fn disconnect(&self) -> Result<(), IggyError> {
@@ -236,12 +324,45 @@ impl QuicClient {
             return Ok(());
         }
 
-        info!("{} client is disconnecting from server...", NAME);
+        info!("{NAME} client is disconnecting from server...");
         self.set_state(ClientState::Disconnected).await;
         self.connection.lock().await.take();
         self.endpoint.wait_idle().await;
-        info!("{} client has disconnected from server.", NAME);
+        self.publish_event(DiagnosticEvent::Disconnected).await;
+        let now = IggyTimestamp::now();
+        info!("{NAME} client has disconnected from server at: {now}.");
         Ok(())
+    }
+
+    async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
+        match self.get_state().await {
+            ClientState::Disconnected => {
+                trace!("Cannot send data. Client is not connected.");
+                return Err(IggyError::NotConnected);
+            }
+            ClientState::Connecting => {
+                trace!("Cannot send data. Client is still connecting.");
+                return Err(IggyError::NotConnected);
+            }
+            _ => {}
+        }
+
+        let connection = self.connection.lock().await;
+        if let Some(connection) = connection.as_ref() {
+            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
+            let (mut send, mut recv) = connection.open_bi().await?;
+            trace!("Sending a QUIC request with code: {code}");
+            send.write_all(&(payload_length as u32).to_le_bytes())
+                .await?;
+            send.write_all(&code.to_le_bytes()).await?;
+            send.write_all(&payload).await?;
+            send.finish()?;
+            trace!("Sent a QUIC request with code: {code}, waiting for a response...");
+            return self.handle_response(&mut recv).await;
+        }
+
+        error!("Cannot send data. Client is not connected.");
+        Err(IggyError::NotConnected)
     }
 }
 

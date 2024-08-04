@@ -1,8 +1,8 @@
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
-use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use bytes::Bytes;
+use iggy::consumer::Consumer;
 use iggy::messages::poll_messages::PollingStrategy;
 use iggy::messages::send_messages::Message;
 use iggy::messages::send_messages::Partitioning;
@@ -14,9 +14,10 @@ impl System {
     pub async fn poll_messages(
         &self,
         session: &Session,
-        consumer: PollingConsumer,
+        consumer: &Consumer,
         stream_id: &Identifier,
         topic_id: &Identifier,
+        partition_id: Option<u32>,
         args: PollingArgs,
     ) -> Result<PolledMessages, IggyError> {
         self.ensure_authenticated(session)?;
@@ -33,16 +34,12 @@ impl System {
             return Err(IggyError::NoPartitions(topic.topic_id, topic.stream_id));
         }
 
-        let partition_id = match consumer {
-            PollingConsumer::Consumer(_, partition_id) => partition_id,
-            PollingConsumer::ConsumerGroup(group_id, member_id) => {
-                let consumer_group = topic.get_consumer_group_by_id(group_id)?.read().await;
-                consumer_group.calculate_partition_id(member_id).await?
-            }
-        };
+        let (polling_consumer, partition_id) = topic
+            .resolve_consumer_with_partition_id(consumer, session.client_id, partition_id, true)
+            .await?;
 
         let mut polled_messages = topic
-            .get_messages(consumer, partition_id, args.strategy, args.count)
+            .get_messages(polling_consumer, partition_id, args.strategy, args.count)
             .await?;
 
         if polled_messages.messages.is_empty() {
@@ -52,7 +49,9 @@ impl System {
         let offset = polled_messages.messages.last().unwrap().offset;
         if args.auto_commit {
             trace!("Last offset: {} will be automatically stored for {}, stream: {}, topic: {}, partition: {}", offset, consumer, stream_id, topic_id, partition_id);
-            topic.store_consumer_offset(consumer, offset).await?;
+            topic
+                .store_consumer_offset_internal(polling_consumer, offset, partition_id)
+                .await?;
         }
 
         if self.encryptor.is_none() {
@@ -111,6 +110,7 @@ impl System {
                 match payload {
                     Ok(payload) => {
                         message.payload = Bytes::from(payload);
+                        message.length = message.payload.len() as u32;
                         batch_size_bytes += message.get_size_bytes() as u64;
                     }
                     Err(error) => {

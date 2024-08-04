@@ -20,7 +20,7 @@ pub async fn handle(
         let client = system.get_client(session, session.client_id).await?;
         {
             let client = client.read().await;
-            bytes = mapper::map_client(&client).await;
+            bytes = mapper::map_client(&client);
         }
     }
     sender.send_ok_response(&bytes).await?;

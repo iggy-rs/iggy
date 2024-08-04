@@ -8,7 +8,7 @@ impl Permissioner {
         stream_id: u32,
         topic_id: u32,
     ) -> Result<(), IggyError> {
-        self.update_topic(user_id, stream_id, topic_id)
+        self.get_topic(user_id, stream_id, topic_id)
     }
 
     pub fn delete_consumer_group(
@@ -17,7 +17,7 @@ impl Permissioner {
         stream_id: u32,
         topic_id: u32,
     ) -> Result<(), IggyError> {
-        self.update_topic(user_id, stream_id, topic_id)
+        self.get_topic(user_id, stream_id, topic_id)
     }
 
     pub fn get_consumer_group(

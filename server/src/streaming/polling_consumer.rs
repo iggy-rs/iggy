@@ -1,5 +1,4 @@
 use crate::streaming::utils::hash;
-use iggy::consumer::{Consumer, ConsumerKind};
 use iggy::identifier::{IdKind, Identifier};
 use std::fmt::{Display, Formatter};
 
@@ -10,14 +9,12 @@ pub enum PollingConsumer {
 }
 
 impl PollingConsumer {
-    pub fn from_consumer(consumer: &Consumer, client_id: u32, partition_id: Option<u32>) -> Self {
-        let consumer_id = Self::resolve_consumer_id(&consumer.id);
-        match consumer.kind {
-            ConsumerKind::Consumer => {
-                PollingConsumer::Consumer(consumer_id, partition_id.unwrap_or(0))
-            }
-            ConsumerKind::ConsumerGroup => PollingConsumer::ConsumerGroup(consumer_id, client_id),
-        }
+    pub fn consumer(consumer_id: &Identifier, partition_id: u32) -> Self {
+        PollingConsumer::Consumer(Self::resolve_consumer_id(consumer_id), partition_id)
+    }
+
+    pub fn consumer_group(consumer_group_id: u32, member_id: u32) -> Self {
+        PollingConsumer::ConsumerGroup(consumer_group_id, member_id)
     }
 
     pub fn resolve_consumer_id(identifier: &Identifier) -> u32 {
@@ -50,40 +47,35 @@ impl Display for PollingConsumer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use iggy::consumer::Consumer;
 
     #[test]
     fn given_consumer_with_numeric_id_polling_consumer_should_be_created() {
-        let consumer_id = 1;
-        let client_id = 2;
+        let consumer_id_value = 1;
         let partition_id = 3;
-        let consumer = Consumer::new(Identifier::numeric(consumer_id).unwrap());
-        let polling_consumer =
-            PollingConsumer::from_consumer(&consumer, client_id, Some(partition_id));
+        let consumer_id = Identifier::numeric(consumer_id_value).unwrap();
+        let consumer = Consumer::new(consumer_id);
+        let polling_consumer = PollingConsumer::consumer(&consumer.id, partition_id);
 
         assert_eq!(
             polling_consumer,
-            PollingConsumer::Consumer(consumer_id, partition_id)
-        );
-
-        assert_eq!(
-            consumer_id,
-            PollingConsumer::resolve_consumer_id(&consumer.id)
+            PollingConsumer::Consumer(consumer_id_value, partition_id)
         );
     }
 
     #[test]
     fn given_consumer_with_named_id_polling_consumer_should_be_created() {
         let consumer_name = "consumer";
-        let client_id = 2;
         let partition_id = 3;
-        let consumer = Consumer::new(Identifier::named(consumer_name).unwrap());
-        let polling_consumer =
-            PollingConsumer::from_consumer(&consumer, client_id, Some(partition_id));
+        let consumer_id = Identifier::named(consumer_name).unwrap();
+        let consumer = Consumer::new(consumer_id);
 
-        let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
+        let resolved_consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
+        let polling_consumer = PollingConsumer::consumer(&consumer.id, partition_id);
+
         assert_eq!(
             polling_consumer,
-            PollingConsumer::Consumer(consumer_id, partition_id)
+            PollingConsumer::Consumer(resolved_consumer_id, partition_id)
         );
     }
 
@@ -91,28 +83,15 @@ mod tests {
     fn given_consumer_group_with_numeric_id_polling_consumer_group_should_be_created() {
         let group_id = 1;
         let client_id = 2;
-        let consumer = Consumer::group(Identifier::numeric(group_id).unwrap());
-        let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
+        let polling_consumer = PollingConsumer::consumer_group(group_id, client_id);
 
-        assert_eq!(
-            polling_consumer,
-            PollingConsumer::ConsumerGroup(group_id, client_id)
-        );
-        assert_eq!(group_id, PollingConsumer::resolve_consumer_id(&consumer.id));
-    }
-
-    #[test]
-    fn given_consumer_group_with_named_id_polling_consumer_group_should_be_created() {
-        let consumer_group_name = "consumer_group";
-        let client_id = 2;
-        let consumer = Consumer::group(Identifier::named(consumer_group_name).unwrap());
-        let polling_consumer = PollingConsumer::from_consumer(&consumer, client_id, None);
-
-        let consumer_id = PollingConsumer::resolve_consumer_id(&consumer.id);
-        assert_eq!(
-            polling_consumer,
-            PollingConsumer::ConsumerGroup(consumer_id, client_id)
-        );
+        match polling_consumer {
+            PollingConsumer::ConsumerGroup(consumer_group_id, member_id) => {
+                assert_eq!(consumer_group_id, group_id);
+                assert_eq!(member_id, client_id);
+            }
+            _ => panic!("Expected ConsumerGroup"),
+        }
     }
 
     #[test]

@@ -40,7 +40,7 @@ async fn get_stream(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
     )?;
-    let stream = mapper::map_stream(stream).await;
+    let stream = mapper::map_stream(stream);
     Ok(Json(stream))
 }
 
@@ -51,7 +51,7 @@ async fn get_streams(
     let system = state.system.read().await;
     let streams =
         system.find_streams(&Session::stateless(identity.user_id, identity.ip_address))?;
-    let streams = mapper::map_streams(&streams).await;
+    let streams = mapper::map_streams(&streams);
     Ok(Json(streams))
 }
 
@@ -59,17 +59,19 @@ async fn create_stream(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
     Json(command): Json<CreateStream>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<StreamDetails>, CustomError> {
     command.validate()?;
+    let response;
     {
         let mut system = state.system.write().await;
-        system
+        let stream = system
             .create_stream(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 command.stream_id,
                 &command.name,
             )
             .await?;
+        response = Json(mapper::map_stream(stream));
     }
 
     let system = state.system.read().await;
@@ -77,7 +79,7 @@ async fn create_stream(
         .state
         .apply(identity.user_id, EntryCommand::CreateStream(command))
         .await?;
-    Ok(StatusCode::CREATED)
+    Ok(response)
 }
 
 async fn update_stream(

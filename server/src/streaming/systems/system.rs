@@ -99,24 +99,30 @@ impl System {
             false => None,
         };
 
-        let persister: Arc<dyn Persister> = match config.partition.enforce_fsync {
-            true => Arc::new(FileWithSyncPersister {}),
-            false => Arc::new(FilePersister {}),
-        };
+        let state_persister = Self::resolve_persister(config.state.enforce_fsync);
+        let partition_persister = Self::resolve_persister(config.partition.enforce_fsync);
+
         let state = Arc::new(FileState::new(
             &config.get_state_log_path(),
             &version,
-            persister.clone(),
+            state_persister,
             encryptor.clone(),
         ));
         Self::create(
             config.clone(),
-            SystemStorage::new(config, persister),
+            SystemStorage::new(config, partition_persister),
             state,
             encryptor,
             data_maintenance_config,
             pat_config,
         )
+    }
+
+    fn resolve_persister(enforce_fsync: bool) -> Arc<dyn Persister> {
+        match enforce_fsync {
+            true => Arc::new(FileWithSyncPersister),
+            false => Arc::new(FilePersister),
+        }
     }
 
     pub fn create(

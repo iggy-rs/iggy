@@ -16,7 +16,7 @@ pub async fn handle(
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
     let streams = system.find_streams(session)?;
-    let streams = mapper::map_streams(&streams).await;
-    sender.send_ok_response(&streams).await?;
+    let response = mapper::map_streams(&streams);
+    sender.send_ok_response(&response).await?;
     Ok(())
 }

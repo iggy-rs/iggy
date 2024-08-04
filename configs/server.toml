@@ -286,6 +286,12 @@ path = "compatibility"
 ## Specifies the directory where database files are stored, relative to `system.path`.
 #path = "database"
 
+[system.state]
+# Determines whether to enforce file synchronization on state updates (boolean).
+# `true` ensures immediate writing of data to disk for durability.
+# `false` allows the OS to manage write operations, which can improve performance.
+enforce_fsync = false
+
 # Runtime configuration.
 [system.runtime]
 # Path for storing runtime data.

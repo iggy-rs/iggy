@@ -1,7 +1,7 @@
 use crate::args::simple::BenchmarkKind;
 use crate::benchmark_result::{BenchmarkResult, LatencyPercentiles};
 use iggy::client::{ConsumerGroupClient, MessageClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::consumer::Consumer as IggyConsumer;
 use iggy::error::IggyError;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -48,13 +48,7 @@ impl Consumer {
         let default_partition_id: u32 = 1;
         let total_messages = (self.messages_per_batch * self.message_batches) as u64;
         let client = self.client_factory.create_client().await;
-        let client = IggyClient::create(
-            client,
-            IggyClientBackgroundConfig::default(),
-            None,
-            None,
-            None,
-        );
+        let client = IggyClient::create(client, None, None);
         login_root(&client).await;
         let stream_id = self.stream_id.try_into().unwrap();
         let topic_id = topic_id.try_into().unwrap();

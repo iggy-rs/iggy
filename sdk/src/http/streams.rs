@@ -24,16 +24,22 @@ impl StreamClient for HttpClient {
         Ok(streams)
     }
 
-    async fn create_stream(&self, name: &str, stream_id: Option<u32>) -> Result<(), IggyError> {
-        self.post(
-            PATH,
-            &CreateStream {
-                name: name.to_string(),
-                stream_id,
-            },
-        )
-        .await?;
-        Ok(())
+    async fn create_stream(
+        &self,
+        name: &str,
+        stream_id: Option<u32>,
+    ) -> Result<StreamDetails, IggyError> {
+        let response = self
+            .post(
+                PATH,
+                &CreateStream {
+                    name: name.to_string(),
+                    stream_id,
+                },
+            )
+            .await?;
+        let stream = response.json().await?;
+        Ok(stream)
     }
 
     async fn update_stream(&self, stream_id: &Identifier, name: &str) -> Result<(), IggyError> {

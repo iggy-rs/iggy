@@ -69,11 +69,12 @@ async fn create_user(
     State(state): State<Arc<AppState>>,
     Extension(identity): Extension<Identity>,
     Json(command): Json<CreateUser>,
-) -> Result<StatusCode, CustomError> {
+) -> Result<Json<UserInfoDetails>, CustomError> {
     command.validate()?;
+    let response;
     {
         let mut system = state.system.write().await;
-        system
+        let user = system
             .create_user(
                 &Session::stateless(identity.user_id, identity.ip_address),
                 &command.username,
@@ -82,6 +83,7 @@ async fn create_user(
                 command.permissions.clone(),
             )
             .await?;
+        response = Json(mapper::map_user(user));
     }
 
     // For the security of the system, we hash the password before storing it in metadata.
@@ -98,7 +100,8 @@ async fn create_user(
             }),
         )
         .await?;
-    Ok(StatusCode::NO_CONTENT)
+
+    Ok(response)
 }
 
 async fn update_user(

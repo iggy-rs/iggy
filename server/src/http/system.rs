@@ -58,7 +58,7 @@ async fn get_client(
         )
         .await?;
     let client = client.read().await;
-    let client = mapper::map_client(&client).await;
+    let client = mapper::map_client(&client);
     Ok(Json(client))
 }
 

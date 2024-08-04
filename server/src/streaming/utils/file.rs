@@ -14,7 +14,7 @@ pub async fn overwrite(path: &str) -> Result<File, std::io::Error> {
     OpenOptions::new()
         .create(true)
         .write(true)
-        .truncate(true)
+        .truncate(false)
         .open(path)
         .await
 }

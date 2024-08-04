@@ -10,7 +10,7 @@ use crate::{
 use async_trait::async_trait;
 use futures::Future;
 use iggy::client::{StreamClient, TopicClient};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::error::IggyError;
 use iggy::utils::expiry::IggyExpiry;
@@ -64,13 +64,7 @@ pub trait Benchmarkable {
         let topic_id: u32 = 1;
         let partitions_count: u32 = self.args().number_of_partitions();
         let client = self.client_factory().create_client().await;
-        let client = IggyClient::create(
-            client,
-            IggyClientBackgroundConfig::default(),
-            None,
-            None,
-            None,
-        );
+        let client = IggyClient::create(client, None, None);
         login_root(&client).await;
         let streams = client.get_streams().await?;
         for i in 1..=number_of_streams {
@@ -106,13 +100,7 @@ pub trait Benchmarkable {
         let start_stream_id = self.args().start_stream_id();
         let number_of_streams = self.args().number_of_streams();
         let client = self.client_factory().create_client().await;
-        let client = IggyClient::create(
-            client,
-            IggyClientBackgroundConfig::default(),
-            None,
-            None,
-            None,
-        );
+        let client = IggyClient::create(client, None, None);
         login_root(&client).await;
         let streams = client.get_streams().await?;
         for i in 1..=number_of_streams {

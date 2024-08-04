@@ -25,7 +25,7 @@ impl Stream {
         compression_algorithm: CompressionAlgorithm,
         max_topic_size: MaxTopicSize,
         replication_factor: u8,
-    ) -> Result<(), IggyError> {
+    ) -> Result<u32, IggyError> {
         let name = text::to_lowercase_non_whitespace(name);
         if self.topics_ids.contains_key(&name) {
             return Err(IggyError::TopicNameAlreadyExists(name, self.stream_id));
@@ -71,8 +71,7 @@ impl Stream {
         info!("Created topic {}", topic);
         self.topics_ids.insert(name, id);
         self.topics.insert(id, topic);
-
-        Ok(())
+        Ok(id)
     }
 
     pub async fn update_topic(

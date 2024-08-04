@@ -1,58 +1,55 @@
-use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::topics::topic::Topic;
+use iggy::consumer::Consumer;
 use iggy::error::IggyError;
-use iggy::locking::IggySharedMut;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::consumer_offset_info::ConsumerOffsetInfo;
 
 impl Topic {
     pub async fn store_consumer_offset(
         &self,
+        consumer: Consumer,
+        offset: u64,
+        partition_id: Option<u32>,
+        client_id: u32,
+    ) -> Result<(), IggyError> {
+        let (polling_consumer, partition_id) = self
+            .resolve_consumer_with_partition_id(&consumer, client_id, partition_id, false)
+            .await?;
+        let partition = self.get_partition(partition_id)?;
+        let partition = partition.read().await;
+        partition
+            .store_consumer_offset(polling_consumer, offset)
+            .await
+    }
+
+    pub async fn store_consumer_offset_internal(
+        &self,
         consumer: PollingConsumer,
         offset: u64,
+        partition_id: u32,
     ) -> Result<(), IggyError> {
-        let partition = self.resolve_partition(consumer).await?;
+        let partition = self.get_partition(partition_id)?;
         let partition = partition.read().await;
         partition.store_consumer_offset(consumer, offset).await
     }
 
     pub async fn get_consumer_offset(
         &self,
-        consumer: PollingConsumer,
+        consumer: &Consumer,
+        partition_id: Option<u32>,
+        client_id: u32,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
-        let partition = self.resolve_partition(consumer).await?;
+        let (polling_consumer, partition_id) = self
+            .resolve_consumer_with_partition_id(consumer, client_id, partition_id, false)
+            .await?;
+        let partition = self.get_partition(partition_id)?;
         let partition = partition.read().await;
-        let offset = partition.get_consumer_offset(consumer).await?;
+        let offset = partition.get_consumer_offset(polling_consumer).await?;
         Ok(ConsumerOffsetInfo {
             partition_id: partition.partition_id,
             current_offset: partition.current_offset,
             stored_offset: offset,
         })
-    }
-
-    async fn resolve_partition(
-        &self,
-        consumer: PollingConsumer,
-    ) -> Result<&IggySharedMut<Partition>, IggyError> {
-        let partition_id = match consumer {
-            PollingConsumer::Consumer(_, partition_id) => Ok(partition_id),
-            PollingConsumer::ConsumerGroup(group_id, member_id) => {
-                let consumer_group = self.get_consumer_group_by_id(group_id)?.read().await;
-                consumer_group.get_current_partition_id(member_id).await
-            }
-        }?;
-
-        let partition = self.partitions.get(&partition_id);
-        if partition.is_none() {
-            return Err(IggyError::PartitionNotFound(
-                partition_id,
-                self.topic_id,
-                self.stream_id,
-            ));
-        }
-
-        let partition = partition.unwrap();
-        Ok(partition)
     }
 }

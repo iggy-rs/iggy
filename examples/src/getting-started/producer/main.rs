@@ -4,13 +4,12 @@ use iggy::clients::client::IggyClient;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::users::defaults::*;
+use iggy::utils::duration::IggyDuration;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
 use std::env;
 use std::error::Error;
 use std::str::FromStr;
-use std::time::Duration;
-use tokio::time::sleep;
 use tracing::{info, warn};
 
 const STREAM_ID: u32 = 1;
@@ -64,13 +63,14 @@ async fn init_system(client: &IggyClient) {
 }
 
 async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
-    let interval = Duration::from_millis(500);
+    let duration = IggyDuration::from_str("500ms")?;
+    let mut interval = tokio::time::interval(duration.get_duration());
     info!(
-        "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {} ms.",
+        "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {}.",
         STREAM_ID,
         TOPIC_ID,
         PARTITION_ID,
-        interval.as_millis()
+        duration.as_human_time_string()
     );
 
     let mut current_id = 0;
@@ -83,6 +83,7 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
             return Ok(());
         }
 
+        interval.tick().await;
         let mut messages = Vec::new();
         for _ in 0..messages_per_batch {
             current_id += 1;
@@ -100,7 +101,6 @@ async fn produce_messages(client: &dyn Client) -> Result<(), Box<dyn Error>> {
             .await?;
         sent_batches += 1;
         info!("Sent {messages_per_batch} message(s).");
-        sleep(interval).await;
     }
 }
 

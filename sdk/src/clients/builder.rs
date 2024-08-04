@@ -1,15 +1,15 @@
 use crate::client::Client;
-use crate::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use crate::clients::client::IggyClient;
 use crate::error::IggyError;
 use crate::http::client::HttpClient;
 use crate::http::config::HttpClientConfigBuilder;
-use crate::message_handler::MessageHandler;
 use crate::partitioner::Partitioner;
 use crate::quic::client::QuicClient;
 use crate::quic::config::QuicClientConfigBuilder;
 use crate::tcp::client::TcpClient;
 use crate::tcp::config::TcpClientConfigBuilder;
 use crate::utils::crypto::Encryptor;
+use crate::utils::duration::IggyDuration;
 use std::sync::Arc;
 use tracing::error;
 
@@ -17,10 +17,8 @@ use tracing::error;
 #[derive(Debug, Default)]
 pub struct IggyClientBuilder {
     client: Option<Box<dyn Client>>,
-    background_config: Option<IggyClientBackgroundConfig>,
-    partitioner: Option<Box<dyn Partitioner>>,
-    encryptor: Option<Box<dyn Encryptor>>,
-    message_handler: Option<Box<dyn MessageHandler>>,
+    partitioner: Option<Arc<dyn Partitioner>>,
+    encryptor: Option<Arc<dyn Encryptor>>,
 }
 
 impl IggyClientBuilder {
@@ -30,6 +28,14 @@ impl IggyClientBuilder {
         IggyClientBuilder::default()
     }
 
+    pub fn from_connection_string(connection_string: &str) -> Result<Self, IggyError> {
+        let mut builder = Self::new();
+        builder.client = Some(Box::new(TcpClient::from_connection_string(
+            connection_string,
+        )?));
+        Ok(builder)
+    }
+
     /// Apply the provided client implementation for the specific transport. Setting client clears the client config.
     pub fn with_client(mut self, client: Box<dyn Client>) -> Self {
         self.client = Some(client);
@@ -37,26 +43,14 @@ impl IggyClientBuilder {
     }
 
     /// Use the custom partitioner implementation.
-    pub fn with_partitioner(mut self, partitioner: Box<dyn Partitioner>) -> Self {
+    pub fn with_partitioner(mut self, partitioner: Arc<dyn Partitioner>) -> Self {
         self.partitioner = Some(partitioner);
         self
     }
 
-    /// Apply the provided background configuration.
-    pub fn with_background_config(mut self, background_config: IggyClientBackgroundConfig) -> Self {
-        self.background_config = Some(background_config);
-        self
-    }
-
     /// Use the custom encryptor implementation.
-    pub fn with_encryptor(mut self, encryptor: Box<dyn Encryptor>) -> Self {
+    pub fn with_encryptor(mut self, encryptor: Arc<dyn Encryptor>) -> Self {
         self.encryptor = Some(encryptor);
-        self
-    }
-
-    /// Use the custom message handler implementation. This handler will be used only for `start_polling_messages` method, if neither `subscribe_to_polled_messages` (which returns the receiver for the messages channel) is called nor `on_message` closure is provided.
-    pub fn with_message_handler(mut self, message_handler: Box<dyn MessageHandler>) -> Self {
-        self.message_handler = Some(message_handler);
         self
     }
 
@@ -100,13 +94,7 @@ impl IggyClientBuilder {
             return Err(IggyError::InvalidConfiguration);
         };
 
-        Ok(IggyClient::create(
-            client,
-            self.background_config.unwrap_or_default(),
-            self.message_handler,
-            self.partitioner,
-            self.encryptor,
-        ))
+        Ok(IggyClient::create(client, self.partitioner, self.encryptor))
     }
 }
 
@@ -123,14 +111,16 @@ impl TcpClientBuilder {
         self
     }
 
-    /// Sets the number of retries when connecting to the server.
-    pub fn with_reconnection_retries(mut self, reconnection_retries: u32) -> Self {
-        self.config = self.config.with_reconnection_retries(reconnection_retries);
+    /// Sets the number of max retries when connecting to the server.
+    pub fn with_reconnection_max_retries(mut self, reconnection_retries: Option<u32>) -> Self {
+        self.config = self
+            .config
+            .with_reconnection_max_retries(reconnection_retries);
         self
     }
 
     /// Sets the interval between retries when connecting to the server.
-    pub fn with_reconnection_interval(mut self, reconnection_interval: u64) -> Self {
+    pub fn with_reconnection_interval(mut self, reconnection_interval: IggyDuration) -> Self {
         self.config = self
             .config
             .with_reconnection_interval(reconnection_interval);
@@ -171,13 +161,15 @@ impl QuicClientBuilder {
     }
 
     /// Sets the number of retries when connecting to the server.
-    pub fn with_reconnection_retries(mut self, reconnection_retries: u32) -> Self {
-        self.config = self.config.with_reconnection_retries(reconnection_retries);
+    pub fn with_reconnection_max_retries(mut self, reconnection_retries: Option<u32>) -> Self {
+        self.config = self
+            .config
+            .with_reconnection_max_retries(reconnection_retries);
         self
     }
 
     /// Sets the interval between retries when connecting to the server.
-    pub fn with_reconnection_interval(mut self, reconnection_interval: u64) -> Self {
+    pub fn with_reconnection_interval(mut self, reconnection_interval: IggyDuration) -> Self {
         self.config = self
             .config
             .with_reconnection_interval(reconnection_interval);

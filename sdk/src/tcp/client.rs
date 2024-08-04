@@ -1,14 +1,20 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{BinaryTransport, ClientState};
-use crate::client::Client;
+use crate::client::{
+    AutoLogin, Client, ConnectionString, Credentials, PersonalAccessTokenClient, UserClient,
+};
 use crate::command::Command;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::{IggyError, IggyErrorDiscriminants};
 use crate::tcp::config::TcpClientConfig;
+use crate::utils::duration::IggyDuration;
+use crate::utils::timestamp::IggyTimestamp;
+use async_broadcast::{broadcast, Receiver, Sender};
 use async_trait::async_trait;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use std::fmt::Debug;
+use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader, BufWriter};
 use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
 use tokio::net::TcpStream;
@@ -16,7 +22,7 @@ use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tokio_native_tls::native_tls::TlsConnector;
 use tokio_native_tls::TlsStream;
-use tracing::{error, info, trace};
+use tracing::{error, info, trace, warn};
 
 const REQUEST_INITIAL_BYTES_LENGTH: usize = 4;
 const RESPONSE_INITIAL_BYTES_LENGTH: usize = 8;
@@ -29,6 +35,8 @@ pub struct TcpClient {
     pub(crate) stream: Mutex<Option<Box<dyn ConnectionStream>>>,
     pub(crate) config: Arc<TcpClientConfig>,
     pub(crate) state: Mutex<ClientState>,
+    events: (Sender<DiagnosticEvent>, Receiver<DiagnosticEvent>),
+    connected_at: Mutex<Option<IggyTimestamp>>,
 }
 
 unsafe impl Send for TcpClient {}
@@ -71,12 +79,10 @@ unsafe impl Sync for TcpTlsConnectionStream {}
 #[async_trait]
 impl ConnectionStream for TcpConnectionStream {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
-        let result = self.reader.read_exact(buf).await;
-        if let Err(error) = result {
-            return Err(IggyError::from(error));
-        }
-
-        Ok(result.unwrap())
+        self.reader.read_exact(buf).await.map_err(|error| {
+            error!("Failed to read data from the TCP connection: {error}");
+            IggyError::from(error)
+        })
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
@@ -91,21 +97,14 @@ impl ConnectionStream for TcpConnectionStream {
 #[async_trait]
 impl ConnectionStream for TcpTlsConnectionStream {
     async fn read(&mut self, buf: &mut [u8]) -> Result<usize, IggyError> {
-        let result = self.stream.read_exact(buf).await;
-        if let Err(error) = result {
-            return Err(IggyError::from(error));
-        }
-
-        Ok(result.unwrap())
+        self.stream.read_exact(buf).await.map_err(|error| {
+            error!("Failed to read data from the TCP connection: {error}");
+            IggyError::from(error)
+        })
     }
 
     async fn write(&mut self, buf: &[u8]) -> Result<(), IggyError> {
-        let result = self.stream.write_all(buf).await;
-        if let Err(error) = result {
-            return Err(IggyError::from(error));
-        }
-
-        Ok(())
+        Ok(self.stream.write_all(buf).await?)
     }
 
     async fn flush(&mut self) -> Result<(), IggyError> {
@@ -128,6 +127,10 @@ impl Client for TcpClient {
     async fn disconnect(&self) -> Result<(), IggyError> {
         TcpClient::disconnect(self).await
     }
+
+    async fn subscribe_events(&self) -> Receiver<DiagnosticEvent> {
+        self.events.1.clone()
+    }
 }
 
 #[async_trait]
@@ -147,34 +150,33 @@ impl BinaryTransport for TcpClient {
     }
 
     async fn send_raw_with_response(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
-        if self.get_state().await == ClientState::Disconnected {
-            return Err(IggyError::NotConnected);
+        let result = self.send_raw(code, payload.clone()).await;
+        if result.is_ok() {
+            return result;
         }
 
-        let mut stream = self.stream.lock().await;
-        if let Some(stream) = stream.as_mut() {
-            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
-            trace!("Sending a TCP request...");
-            stream.write(&(payload_length as u32).to_le_bytes()).await?;
-            stream.write(&code.to_le_bytes()).await?;
-            stream.write(&payload).await?;
-            stream.flush().await?;
-            trace!("Sent a TCP request, waiting for a response...");
-
-            let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
-            let read_bytes = stream.read(&mut response_buffer).await?;
-            if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
-                error!("Received an invalid or empty response.");
-                return Err(IggyError::EmptyResponse);
-            }
-
-            let status = u32::from_le_bytes(response_buffer[..4].try_into().unwrap());
-            let length = u32::from_le_bytes(response_buffer[4..].try_into().unwrap());
-            return self.handle_response(status, length, stream.as_mut()).await;
+        let error = result.unwrap_err();
+        if !matches!(
+            error,
+            IggyError::Disconnected | IggyError::EmptyResponse | IggyError::Unauthenticated
+        ) {
+            return Err(error);
         }
 
-        error!("Cannot send data. Client is not connected.");
-        Err(IggyError::NotConnected)
+        if !self.config.reconnection.enabled {
+            return Err(IggyError::Disconnected);
+        }
+
+        self.disconnect().await?;
+        info!("Reconnecting to the server...");
+        self.connect().await?;
+        self.send_raw(code, payload).await
+    }
+
+    async fn publish_event(&self, event: DiagnosticEvent) {
+        if let Err(error) = self.events.0.broadcast(event).await {
+            error!("Failed to send a TCP diagnostic event: {error}");
+        }
     }
 }
 
@@ -182,21 +184,33 @@ impl BinaryClient for TcpClient {}
 
 impl TcpClient {
     /// Create a new TCP client for the provided server address.
-    pub fn new(server_address: &str) -> Result<Self, IggyError> {
+    pub fn new(server_address: &str, auto_sign_in: AutoLogin) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
+            auto_login: auto_sign_in,
             ..Default::default()
         }))
     }
 
     /// Create a new TCP client for the provided server address using TLS.
-    pub fn new_tls(server_address: &str, domain: &str) -> Result<Self, IggyError> {
+    pub fn new_tls(
+        server_address: &str,
+        domain: &str,
+        auto_sign_in: AutoLogin,
+    ) -> Result<Self, IggyError> {
         Self::create(Arc::new(TcpClientConfig {
             server_address: server_address.to_string(),
             tls_enabled: true,
             tls_domain: domain.to_string(),
+            auto_login: auto_sign_in,
             ..Default::default()
         }))
+    }
+
+    pub fn from_connection_string(connection_string: &str) -> Result<Self, IggyError> {
+        Self::create(Arc::new(
+            ConnectionString::from_str(connection_string)?.into(),
+        ))
     }
 
     /// Create a new TCP client based on the provided configuration.
@@ -205,6 +219,8 @@ impl TcpClient {
             config,
             stream: Mutex::new(None),
             state: Mutex::new(ClientState::Disconnected),
+            events: broadcast(1000),
+            connected_at: Mutex::new(None),
         })
     }
 
@@ -264,8 +280,32 @@ impl TcpClient {
     }
 
     async fn connect(&self) -> Result<(), IggyError> {
-        if self.get_state().await == ClientState::Connected {
-            return Ok(());
+        match self.get_state().await {
+            ClientState::Connected | ClientState::Authenticating | ClientState::Authenticated => {
+                trace!("Client is already connected.");
+                return Ok(());
+            }
+            ClientState::Connecting => {
+                trace!("Client is already connecting.");
+                return Ok(());
+            }
+            _ => {}
+        }
+
+        self.set_state(ClientState::Connecting).await;
+        if let Some(connected_at) = self.connected_at.lock().await.as_ref() {
+            let now = IggyTimestamp::now();
+            let elapsed = now.as_micros() - connected_at.as_micros();
+            let interval = self.config.reconnection.re_establish_after.as_micros();
+            trace!(
+                "Elapsed time since last connection: {}",
+                IggyDuration::from(elapsed)
+            );
+            if elapsed < interval {
+                let remaining = IggyDuration::from(interval - elapsed);
+                info!("Trying to connect to the server in: {remaining}",);
+                sleep(remaining.get_duration()).await;
+            }
         }
 
         let tls_enabled = self.config.tls_enabled;
@@ -274,8 +314,8 @@ impl TcpClient {
         let remote_address;
         loop {
             info!(
-                "{} client is connecting to server: {}...",
-                NAME, self.config.server_address
+                "{NAME} client is connecting to server: {}...",
+                self.config.server_address
             );
 
             let connection = TcpStream::connect(&self.config.server_address).await;
@@ -284,20 +324,34 @@ impl TcpClient {
                     "Failed to connect to server: {}",
                     self.config.server_address
                 );
-                if retry_count < self.config.reconnection_retries {
+                if !self.config.reconnection.enabled {
+                    warn!("Automatic reconnection is disabled.");
+                    return Err(IggyError::CannotEstablishConnection);
+                }
+
+                let unlimited_retries = self.config.reconnection.max_retries.is_none();
+                let max_retries = self.config.reconnection.max_retries.unwrap_or_default();
+                let max_retries_str =
+                    if let Some(max_retries) = self.config.reconnection.max_retries {
+                        max_retries.to_string()
+                    } else {
+                        "unlimited".to_string()
+                    };
+
+                let interval_str = self.config.reconnection.interval.as_human_time_string();
+                if unlimited_retries || retry_count < max_retries {
                     retry_count += 1;
                     info!(
-                        "Retrying to connect to server ({}/{}): {} in: {} ms...",
-                        retry_count,
-                        self.config.reconnection_retries,
+                        "Retrying to connect to server ({retry_count}/{max_retries_str}): {} in: {interval_str}",
                         self.config.server_address,
-                        self.config.reconnection_interval
                     );
-                    sleep(Duration::from_millis(self.config.reconnection_interval)).await;
+                    sleep(self.config.reconnection.interval.get_duration()).await;
                     continue;
                 }
 
-                return Err(IggyError::NotConnected);
+                self.set_state(ClientState::Disconnected).await;
+                self.publish_event(DiagnosticEvent::Disconnected).await;
+                return Err(IggyError::CannotEstablishConnection);
             }
 
             let stream = connection.unwrap();
@@ -308,28 +362,55 @@ impl TcpClient {
                 break;
             }
 
-            let connector =
-                tokio_native_tls::TlsConnector::from(TlsConnector::builder().build().unwrap());
+            let connector = tokio_native_tls::TlsConnector::from(
+                TlsConnector::builder().build().map_err(|error| {
+                    error!("Failed to create a TLS connector: {error}");
+                    IggyError::CannotEstablishConnection
+                })?,
+            );
             let stream = tokio_native_tls::TlsConnector::connect(
                 &connector,
                 &self.config.tls_domain,
                 stream,
             )
             .await
-            .unwrap();
+            .map_err(|error| {
+                error!("Failed to establish a TLS connection: {error}");
+                IggyError::CannotEstablishConnection
+            })?;
+
             connection_stream = Box::new(TcpTlsConnectionStream { stream });
             break;
         }
 
+        let now = IggyTimestamp::now();
+        info!("{NAME} client has connected to server: {remote_address} at: {now}",);
         self.stream.lock().await.replace(connection_stream);
         self.set_state(ClientState::Connected).await;
-
-        info!(
-            "{} client has connected to server: {}",
-            NAME, remote_address
-        );
-
-        Ok(())
+        self.connected_at.lock().await.replace(now);
+        self.publish_event(DiagnosticEvent::Connected).await;
+        match &self.config.auto_login {
+            AutoLogin::Disabled => {
+                info!("Automatic sign-in is disabled.");
+                Ok(())
+            }
+            AutoLogin::Enabled(credentials) => {
+                info!("{NAME} client is signing in...");
+                self.set_state(ClientState::Authenticating).await;
+                match credentials {
+                    Credentials::UsernamePassword(username, password) => {
+                        self.login_user(username, password).await?;
+                        info!("{NAME} client has signed in with the user credentials, username: {username}",);
+                        Ok(())
+                    }
+                    Credentials::PersonalAccessToken(token) => {
+                        self.login_with_personal_access_token(token).await?;
+                        info!("{NAME} client has signed in with a personal access token.",);
+                        Ok(())
+                    }
+                }
+            }
+        }
     }
 
     async fn disconnect(&self) -> Result<(), IggyError> {
@@ -337,10 +418,59 @@ impl TcpClient {
             return Ok(());
         }
 
-        info!("{} client is disconnecting from server...", NAME);
+        info!("{NAME} client is disconnecting from server...");
         self.set_state(ClientState::Disconnected).await;
         self.stream.lock().await.take();
-        info!("{} client has disconnected from server.", NAME);
+        self.publish_event(DiagnosticEvent::Disconnected).await;
+        let now = IggyTimestamp::now();
+        info!("{NAME} client has disconnected from server at: {now}.");
         Ok(())
+    }
+
+    async fn send_raw(&self, code: u32, payload: Bytes) -> Result<Bytes, IggyError> {
+        match self.get_state().await {
+            ClientState::Disconnected => {
+                trace!("Cannot send data. Client is not connected.");
+                return Err(IggyError::NotConnected);
+            }
+            ClientState::Connecting => {
+                trace!("Cannot send data. Client is still connecting.");
+                return Err(IggyError::NotConnected);
+            }
+            _ => {}
+        }
+
+        let mut stream = self.stream.lock().await;
+        if let Some(stream) = stream.as_mut() {
+            let payload_length = payload.len() + REQUEST_INITIAL_BYTES_LENGTH;
+            trace!("Sending a TCP request with code: {code}");
+            stream.write(&(payload_length as u32).to_le_bytes()).await?;
+            stream.write(&code.to_le_bytes()).await?;
+            stream.write(&payload).await?;
+            stream.flush().await?;
+            trace!("Sent a TCP request with code: {code}, waiting for a response...");
+
+            let mut response_buffer = [0u8; RESPONSE_INITIAL_BYTES_LENGTH];
+            let read_bytes = stream.read(&mut response_buffer).await.map_err(|error| {
+                error!(
+                    "Failed to read response for TCP request with code: {code}: {error}",
+                    code = code,
+                    error = error
+                );
+                IggyError::Disconnected
+            })?;
+
+            if read_bytes != RESPONSE_INITIAL_BYTES_LENGTH {
+                error!("Received an invalid or empty response.");
+                return Err(IggyError::EmptyResponse);
+            }
+
+            let status = u32::from_le_bytes(response_buffer[..4].try_into()?);
+            let length = u32::from_le_bytes(response_buffer[4..].try_into()?);
+            return self.handle_response(status, length, stream.as_mut()).await;
+        }
+
+        error!("Cannot send data. Client is not connected.");
+        Err(IggyError::NotConnected)
     }
 }

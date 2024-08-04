@@ -1,6 +1,7 @@
 use crate::binary::binary_client::BinaryClient;
 use crate::binary::{fail_if_not_authenticated, mapper, ClientState};
 use crate::client::UserClient;
+use crate::diagnostic::DiagnosticEvent;
 use crate::error::IggyError;
 use crate::identifier::Identifier;
 use crate::models::identity_info::IdentityInfo;
@@ -41,16 +42,17 @@ impl<B: BinaryClient> UserClient for B {
         password: &str,
         status: UserStatus,
         permissions: Option<Permissions>,
-    ) -> Result<(), IggyError> {
+    ) -> Result<UserInfoDetails, IggyError> {
         fail_if_not_authenticated(self).await?;
-        self.send_with_response(&CreateUser {
-            username: username.to_string(),
-            password: password.to_string(),
-            status,
-            permissions,
-        })
-        .await?;
-        Ok(())
+        let response = self
+            .send_with_response(&CreateUser {
+                username: username.to_string(),
+                password: password.to_string(),
+                status,
+                permissions,
+            })
+            .await?;
+        mapper::map_user(response)
     }
 
     async fn delete_user(&self, user_id: &Identifier) -> Result<(), IggyError> {
@@ -118,6 +120,7 @@ impl<B: BinaryClient> UserClient for B {
             })
             .await?;
         self.set_state(ClientState::Authenticated).await;
+        self.publish_event(DiagnosticEvent::SignedIn).await;
         mapper::map_identity_info(response)
     }
 
@@ -125,6 +128,7 @@ impl<B: BinaryClient> UserClient for B {
         fail_if_not_authenticated(self).await?;
         self.send_with_response(&LogoutUser {}).await?;
         self.set_state(ClientState::Connected).await;
+        self.publish_event(DiagnosticEvent::SignedOut).await;
         Ok(())
     }
 }

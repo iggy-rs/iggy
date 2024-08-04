@@ -44,22 +44,24 @@ impl TopicClient for HttpClient {
         topic_id: Option<u32>,
         message_expiry: IggyExpiry,
         max_topic_size: MaxTopicSize,
-    ) -> Result<(), IggyError> {
-        self.post(
-            &get_path(&stream_id.as_cow_str()),
-            &CreateTopic {
-                stream_id: stream_id.clone(),
-                name: name.to_string(),
-                partitions_count,
-                compression_algorithm,
-                replication_factor,
-                topic_id,
-                message_expiry,
-                max_topic_size,
-            },
-        )
-        .await?;
-        Ok(())
+    ) -> Result<TopicDetails, IggyError> {
+        let response = self
+            .post(
+                &get_path(&stream_id.as_cow_str()),
+                &CreateTopic {
+                    stream_id: stream_id.clone(),
+                    name: name.to_string(),
+                    partitions_count,
+                    compression_algorithm,
+                    replication_factor,
+                    topic_id,
+                    message_expiry,
+                    max_topic_size,
+                },
+            )
+            .await?;
+        let topic = response.json().await?;
+        Ok(topic)
     }
 
     async fn update_topic(

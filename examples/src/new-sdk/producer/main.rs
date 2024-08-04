@@ -1,0 +1,73 @@
+use clap::Parser;
+use iggy::client_provider;
+use iggy::client_provider::ClientProviderConfig;
+use iggy::clients::client::IggyClient;
+use iggy::clients::producer::IggyProducer;
+use iggy::messages::send_messages::{Message, Partitioning};
+use iggy::utils::duration::IggyDuration;
+use iggy_examples::shared::args::Args;
+use iggy_examples::shared::messages_generator::MessagesGenerator;
+use std::error::Error;
+use std::str::FromStr;
+use std::sync::Arc;
+use tracing::info;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<(), Box<dyn Error>> {
+    let args = Args::parse();
+    tracing_subscriber::fmt::init();
+    info!(
+        "New SDK producer has started, selected transport: {}",
+        args.transport
+    );
+    let client_provider_config = Arc::new(ClientProviderConfig::from_args(args.to_sdk_args())?);
+    let client = client_provider::get_raw_connected_client(client_provider_config).await?;
+    let client = IggyClient::builder().with_client(client).build()?;
+    let mut producer = client
+        .producer(&args.stream_id, &args.topic_id)?
+        .batch_size(args.messages_per_batch)
+        .send_interval(IggyDuration::from_str(&args.interval)?)
+        .partitioning(Partitioning::balanced())
+        .create_topic_if_not_exists(3, None)
+        .build();
+    producer.init().await?;
+    produce_messages(&args, &producer).await?;
+    Ok(())
+}
+
+async fn produce_messages(
+    args: &Args,
+    producer: &IggyProducer,
+) -> anyhow::Result<(), Box<dyn Error>> {
+    let interval = args.get_interval();
+    info!(
+        "Messages will be sent to stream: {}, topic: {}, partition: {} with interval {}.",
+        args.stream_id,
+        args.topic_id,
+        args.partition_id,
+        interval.map_or("none".to_string(), |i| i.as_human_time_string())
+    );
+    let mut message_generator = MessagesGenerator::new();
+    let mut sent_batches = 0;
+
+    loop {
+        if args.message_batches_limit > 0 && sent_batches == args.message_batches_limit {
+            info!("Sent {sent_batches} batches of messages, exiting.");
+            return Ok(());
+        }
+
+        let mut messages = Vec::new();
+        for _ in 0..args.messages_per_batch {
+            let serializable_message = message_generator.generate();
+            let json_envelope = serializable_message.to_json_envelope();
+            let message = Message::from_str(&json_envelope)?;
+            messages.push(message);
+        }
+        producer.send(messages).await?;
+        sent_batches += 1;
+        info!(
+            "Sent batch {sent_batches} of {} messages.",
+            args.messages_per_batch
+        );
+    }
+}

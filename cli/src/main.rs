@@ -61,7 +61,7 @@ use iggy::cli::{
 };
 use iggy::cli_command::{CliCommand, PRINT_TARGET};
 use iggy::client_provider::{self, ClientProviderConfig};
-use iggy::clients::client::{IggyClient, IggyClientBackgroundConfig};
+use iggy::clients::client::IggyClient;
 use iggy::utils::crypto::{Aes256GcmEncryptor, Encryptor};
 use iggy::utils::personal_access_token_expiry::PersonalAccessTokenExpiry;
 use std::sync::Arc;
@@ -312,9 +312,9 @@ async fn main() -> Result<(), IggyCmdError> {
     // Create credentials based on command line arguments and command
     let mut credentials = IggyCredentials::new(&cli_options, &iggy_args, command.login_required())?;
 
-    let encryptor: Option<Box<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
+    let encryptor: Option<Arc<dyn Encryptor>> = match iggy_args.encryption_key.is_empty() {
         true => None,
-        false => Some(Box::new(
+        false => Some(Arc::new(
             Aes256GcmEncryptor::from_base64_key(&iggy_args.encryption_key).unwrap(),
         )),
     };
@@ -323,13 +323,7 @@ async fn main() -> Result<(), IggyCmdError> {
     let client =
         client_provider::get_raw_client(client_provider_config, command.connection_required())
             .await?;
-    let client = IggyClient::create(
-        client,
-        IggyClientBackgroundConfig::default(),
-        None,
-        None,
-        encryptor,
-    );
+    let client = IggyClient::create(client, None, encryptor);
 
     credentials.set_iggy_client(&client);
     credentials.login_user().await?;

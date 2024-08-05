@@ -13,126 +13,170 @@ use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use iggy::utils::duration::IggyDuration;
 use iggy_examples::shared::args::Args;
 use std::collections::HashMap;
+use std::env;
 use std::error::Error;
 use std::str::FromStr;
 use tokio::task::JoinHandle;
 use tracing::{error, info};
 
-const TENANT1_STREAM: &str = "tenant_1";
-const TENANT2_STREAM: &str = "tenant_2";
-const TENANT3_STREAM: &str = "tenant_3";
-const TENANT1_USER: &str = "tenant_1_producer";
-const TENANT2_USER: &str = "tenant_2_producer";
-const TENANT3_USER: &str = "tenant_3_producer";
-const PASSWORD: &str = "secret";
 const TOPICS: &[&str] = &["events", "logs", "notifications"];
-const PRODUCERS_COUNT: usize = 3;
-const PARTITIONS_COUNT: u32 = 3;
+const PASSWORD: &str = "secret";
+
+struct Tenant {
+    id: u32,
+    stream: String,
+    user: String,
+    client: IggyClient,
+    producers: Vec<TenantProducer>,
+}
+
+impl Tenant {
+    pub fn new(id: u32, stream: String, user: String, client: IggyClient) -> Self {
+        Self {
+            id,
+            stream,
+            user,
+            client,
+            producers: Vec::new(),
+        }
+    }
+
+    pub fn add_producers(&mut self, producers: Vec<TenantProducer>) {
+        self.producers.extend(producers);
+    }
+}
+
+struct TenantProducer {
+    id: u32,
+    stream: String,
+    topic: String,
+    producer: IggyProducer,
+}
+
+impl TenantProducer {
+    pub fn new(id: u32, stream: String, topic: String, producer: IggyProducer) -> Self {
+        Self {
+            id,
+            stream,
+            topic,
+            producer,
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<(), Box<dyn Error>> {
     let args = Args::parse();
     tracing_subscriber::fmt::init();
-    print_info("Multi-tenant producer has started");
+    let tenants_count = env::var("TENANTS_COUNT")
+        .unwrap_or_else(|_| 3.to_string())
+        .parse::<u32>()
+        .expect("Invalid tenants count");
+
+    let producers_count = env::var("PRODUCERS_COUNT")
+        .unwrap_or_else(|_| 3.to_string())
+        .parse::<u32>()
+        .expect("Invalid producers count");
+
+    let partitions_count = env::var("PARTITIONS_COUNT")
+        .unwrap_or_else(|_| 3.to_string())
+        .parse::<u32>()
+        .expect("Invalid partitions count");
+
+    let ensure_access = env::var("ENSURE_ACCESS")
+        .unwrap_or_else(|_| "true".to_string())
+        .parse::<bool>()
+        .expect("Invalid ensure stream access");
+
+    print_info("Multi-tenant producer has started, tenants: {tenants_count}, producers: {producers_count}, partitions: {partitions_count}");
     let address = args.tcp_server_address;
 
     print_info("Creating root client to manage streams and users");
     let root_client = create_client(&address, DEFAULT_ROOT_USERNAME, DEFAULT_ROOT_PASSWORD).await?;
 
     print_info("Creating streams and users with permissions for each tenant");
-    create_stream_and_user(TENANT1_STREAM, TENANT1_USER, &root_client).await?;
-    create_stream_and_user(TENANT2_STREAM, TENANT2_USER, &root_client).await?;
-    create_stream_and_user(TENANT3_STREAM, TENANT3_USER, &root_client).await?;
+    let mut streams_with_users = HashMap::new();
+    for i in 1..=tenants_count {
+        let name = format!("tenant_{i}");
+        let stream = format!("{name}_stream");
+        let user = format!("{name}_producer");
+        create_stream_and_user(&stream, &user, &root_client).await?;
+        streams_with_users.insert(stream, user);
+    }
 
     print_info("Disconnecting root client");
     root_client.disconnect().await?;
 
     print_info("Creating clients for each tenant");
-    let tenant1_client = create_client(&address, TENANT1_USER, PASSWORD).await?;
-    let tenant2_client = create_client(&address, TENANT2_USER, PASSWORD).await?;
-    let tenant3_client = create_client(&address, TENANT3_USER, PASSWORD).await?;
+    let mut tenants = Vec::new();
+    let mut tenant_id = 1;
+    for (stream, user) in streams_with_users.into_iter() {
+        let client = create_client(&address, &user, PASSWORD).await?;
+        tenants.push(Tenant::new(tenant_id, stream, user, client));
+        tenant_id += 1;
+    }
 
-    print_info("Ensuring access to streams for each tenant");
-    ensure_stream_access(
-        &tenant1_client,
-        TENANT1_STREAM,
-        &[TENANT2_STREAM, TENANT3_STREAM],
-    )
-    .await?;
-    ensure_stream_access(
-        &tenant2_client,
-        TENANT2_STREAM,
-        &[TENANT1_STREAM, TENANT3_STREAM],
-    )
-    .await?;
-    ensure_stream_access(
-        &tenant3_client,
-        TENANT3_STREAM,
-        &[TENANT1_STREAM, TENANT2_STREAM],
-    )
-    .await?;
+    if ensure_access {
+        print_info("Ensuring access to streams for each tenant");
+        for tenant in tenants.iter() {
+            let unavailable_streams = tenants
+                .iter()
+                .filter(|t| t.stream != tenant.stream)
+                .map(|t| t.stream.as_str())
+                .collect::<Vec<_>>();
+            ensure_stream_access(&tenant.client, &tenant.stream, &unavailable_streams).await?;
+        }
+    }
 
-    print_info("Creating {PRODUCERS_COUNT} producers for each tenant");
-    let producers1 = create_producers(
-        &tenant1_client,
-        TENANT1_STREAM,
-        TOPICS,
-        args.messages_per_batch,
-        &args.interval,
-    )
-    .await?;
-    let producers2 = create_producers(
-        &tenant2_client,
-        TENANT2_STREAM,
-        TOPICS,
-        args.messages_per_batch,
-        &args.interval,
-    )
-    .await?;
-    let producers3 = create_producers(
-        &tenant3_client,
-        TENANT3_STREAM,
-        TOPICS,
-        args.messages_per_batch,
-        &args.interval,
-    )
-    .await?;
+    print_info("Creating {producers_count} producer(s) for each tenant");
+    for tenant in tenants.iter_mut() {
+        let producers = create_producers(
+            &tenant.client,
+            producers_count,
+            partitions_count,
+            &tenant.stream,
+            TOPICS,
+            args.messages_per_batch,
+            &args.interval,
+        )
+        .await?;
+        tenant.add_producers(producers);
+        info!(
+            "Created {producers_count} producer(s) for tenant stream: {}, username: {}",
+            tenant.stream, tenant.user
+        );
+    }
 
-    print_info("Starting producers for each tenant");
-    let producers1_tasks = start_producers(producers1, args.message_batches_limit);
-    let producers2_tasks = start_producers(producers2, args.message_batches_limit);
-    let producers3_tasks = start_producers(producers3, args.message_batches_limit);
-
+    print_info("Starting {producers_count} producer(s) for each tenant");
     let mut tasks = Vec::new();
-    tasks.extend(producers1_tasks);
-    tasks.extend(producers2_tasks);
-    tasks.extend(producers3_tasks);
+    for tenant in tenants.into_iter() {
+        let producers_tasks =
+            start_producers(tenant.id, tenant.producers, args.message_batches_limit);
+        tasks.extend(producers_tasks);
+    }
 
     join_all(tasks).await;
-
     print_info("Disconnecting clients");
-
     Ok(())
 }
 
-fn start_producers(producers: Vec<IggyProducer>, batches_count: u64) -> Vec<JoinHandle<()>> {
+fn start_producers(
+    tenant_id: u32,
+    producers: Vec<TenantProducer>,
+    batches_count: u64,
+) -> Vec<JoinHandle<()>> {
     let mut tasks = Vec::new();
-    let mut producer_id = 1;
-    let topics_count = TOPICS.len() as u64;
+    let topics_count = producers
+        .iter()
+        .map(|p| p.topic.as_str())
+        .collect::<Vec<_>>()
+        .len() as u64;
     for producer in producers {
-        if producer_id > topics_count {
-            producer_id = 1;
-        }
-
+        let producer_id = producer.id;
         let task = tokio::spawn(async move {
             let mut counter = 1;
             while counter <= topics_count * batches_count {
-                let message = match producer
-                    .topic()
-                    .get_string_value()
-                    .expect("Invalid topic")
-                    .as_str()
-                {
+                let message = match producer.topic.as_str() {
                     "events" => "event",
                     "logs" => "log",
                     "notifications" => "notification",
@@ -140,25 +184,20 @@ fn start_producers(producers: Vec<IggyProducer>, batches_count: u64) -> Vec<Join
                 };
                 let payload = format!("{message}-{producer_id}-{counter}");
                 let message = Message::from_str(&payload).expect("Invalid message");
-                if let Err(error) = producer.send(vec![message]).await {
+                if let Err(error) = producer.producer.send(vec![message]).await {
                     error!(
-                        "Failed to send: '{payload}' to: {} -> {} with error: {error}",
-                        producer.stream(),
-                        producer.topic(),
-                        error = error
+                        "Failed to send: '{payload}' to: {} -> {} by tenant: {tenant_id}, producer: {producer_id} with error: {error}", producer.stream, producer.topic,
                     );
                     continue;
                 }
 
                 counter += 1;
                 info!(
-                    "Sent: '{payload}' to: {} -> {}",
-                    producer.stream(),
-                    producer.topic()
+                    "Sent: '{payload}' by tenant: {tenant_id}, producer: {producer_id}, to: {} -> {}",
+                    producer.stream, producer.topic
                 );
             }
         });
-        producer_id += 1;
         tasks.push(task);
     }
     tasks
@@ -166,23 +205,30 @@ fn start_producers(producers: Vec<IggyProducer>, batches_count: u64) -> Vec<Join
 
 async fn create_producers(
     client: &IggyClient,
+    producers_count: u32,
+    partitions_count: u32,
     stream: &str,
     topics: &[&str],
     batch_size: u32,
     interval: &str,
-) -> Result<Vec<IggyProducer>, IggyError> {
+) -> Result<Vec<TenantProducer>, IggyError> {
     let mut producers = Vec::new();
     for topic in topics {
-        for _ in 0..PRODUCERS_COUNT {
+        for id in 1..=producers_count {
             let mut producer = client
                 .producer(stream, topic)?
                 .batch_size(batch_size)
                 .send_interval(IggyDuration::from_str(interval).expect("Invalid duration"))
                 .partitioning(Partitioning::balanced())
-                .create_topic_if_not_exists(PARTITIONS_COUNT, None)
+                .create_topic_if_not_exists(partitions_count, None)
                 .build();
             producer.init().await?;
-            producers.push(producer);
+            producers.push(TenantProducer::new(
+                id,
+                stream.to_owned(),
+                topic.to_string(),
+                producer,
+            ));
         }
     }
     Ok(producers)

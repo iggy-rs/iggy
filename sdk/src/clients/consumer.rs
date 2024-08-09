@@ -74,6 +74,7 @@ pub struct IggyConsumer {
     create_consumer_group_if_not_exists: bool,
     next_offset: Arc<AtomicU64>,
     last_stored_offset: Arc<AtomicU64>,
+    last_consumed_offset: Option<Arc<AtomicU64>>,
     poll_future: Option<PollMessagesFuture>,
     buffered_messages: VecDeque<PolledMessage>,
     encryptor: Option<Arc<dyn Encryptor>>,
@@ -134,6 +135,7 @@ impl IggyConsumer {
             poll_interval_micros: polling_interval.map_or(0, |interval| interval.as_micros()),
             next_offset: Arc::new(AtomicU64::new(0)),
             last_stored_offset: Arc::new(AtomicU64::new(0)),
+            last_consumed_offset: None,
             poll_future: None,
             batch_size,
             auto_commit,
@@ -608,11 +610,11 @@ impl Stream for IggyConsumer {
                             && consumed_messages_count % self.store_after_every_nth_message == 0
                         {
                             self.store_offset(message.offset);
-                        } else if self.buffered_messages.is_empty() {
-                            if self.store_offset_after_all_messages {
-                                self.store_offset(message.offset);
-                            }
                         } else if self.store_offset_after_each_message {
+                            self.store_offset(message.offset);
+                        } else if self.store_offset_after_all_messages
+                            && self.buffered_messages.is_empty()
+                        {
                             self.store_offset(message.offset);
                         }
 

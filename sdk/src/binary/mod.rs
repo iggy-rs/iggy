@@ -31,19 +31,19 @@ pub mod users;
 #[derive(Debug, Copy, Clone, PartialEq, Display)]
 pub enum ClientState {
     /// The client is disconnected.
-    #[display(fmt = "disconnected")]
+    #[display("disconnected")]
     Disconnected,
     /// The client is connecting.
-    #[display(fmt = "connecting")]
+    #[display("connecting")]
     Connecting,
     /// The client is connected.
-    #[display(fmt = "connected")]
+    #[display("connected")]
     Connected,
     /// The client is authenticating.
-    #[display(fmt = "authenticating")]
+    #[display("authenticating")]
     Authenticating,
     /// The client is connected and authenticated.
-    #[display(fmt = "authenticated")]
+    #[display("authenticated")]
     Authenticated,
 }
 

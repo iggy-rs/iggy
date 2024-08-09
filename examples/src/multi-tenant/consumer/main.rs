@@ -255,7 +255,8 @@ async fn create_consumers(
                 .poll_interval(IggyDuration::from_str(interval).expect("Invalid duration"))
                 .polling_strategy(PollingStrategy::next())
                 .auto_join_consumer_group()
-                .auto_commit(AutoCommit::After(AutoCommitAfter::ConsumingAllMessages))
+                // .auto_commit(AutoCommit::After(AutoCommitAfter::PollingMessages))
+                .auto_commit(AutoCommit::Interval(IggyDuration::from_str("3s").unwrap()))
                 .build();
             consumer.init().await?;
             consumers.push(TenantConsumer::new(

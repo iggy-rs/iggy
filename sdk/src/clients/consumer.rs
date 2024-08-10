@@ -203,7 +203,7 @@ impl IggyConsumer {
                     last_stored_offset.insert(partition_id, AtomicU64::new(0));
                 }
 
-                if offset <= stored_offset {
+                if offset <= stored_offset && offset >= 1 {
                     trace!("Offset: {offset} is less than or equal to the last stored offset: {stored_offset}. Skipping storing the offset.");
                     continue;
                 }
@@ -261,12 +261,8 @@ impl IggyConsumer {
                     trace!(
                         "Trying to store the offset: {consumed_offset}, last stored offset: {stored_offset} for partition ID: {partition_id}"
                     );
-                    if (has_stored_offset && stored_offset == 0) && consumed_offset == 0 {
-                        trace!("Last offset and next offset are 0 for partition ID: {partition_id}. Skipping storing the offset in the background.");
-                        continue;
-                    }
 
-                    if consumed_offset <= stored_offset {
+                    if consumed_offset <= stored_offset && consumed_offset >= 1 {
                         trace!("Offset: {consumed_offset} is less than or equal to the last stored offset: {stored_offset} for partition ID: {partition_id}. Skipping storing the offset in the background.");
                         continue;
                     }

@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         .parse::<bool>()
         .expect("Invalid ensure stream access");
 
-    print_info("Multi-tenant producer has started, tenants: {tenants_count}, producers: {producers_count}, partitions: {partitions_count}");
+    print_info(&format!("Multi-tenant producer has started, tenants: {tenants_count}, producers: {producers_count}, partitions: {partitions_count}"));
     let address = args.tcp_server_address;
 
     print_info("Creating root client to manage streams and users");
@@ -128,7 +128,9 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         }
     }
 
-    print_info("Creating {producers_count} producer(s) for each tenant");
+    print_info(&format!(
+        "Creating {producers_count} producer(s) for each tenant"
+    ));
     for tenant in tenants.iter_mut() {
         let producers = create_producers(
             &tenant.client,
@@ -147,7 +149,9 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         );
     }
 
-    print_info("Starting {producers_count} producer(s) for each tenant");
+    print_info(&format!(
+        "Starting {producers_count} producer(s) for each tenant"
+    ));
     let mut tasks = Vec::new();
     for tenant in tenants.into_iter() {
         let producers_tasks = start_producers(

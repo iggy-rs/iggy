@@ -455,6 +455,10 @@ impl IggyConsumer {
                 .await;
 
             if let Ok(polled_messages) = polled_messages {
+                if polled_messages.messages.is_empty() {
+                    return Ok(polled_messages);
+                }
+
                 let partition_id = polled_messages.partition_id;
                 let consumed_offset;
                 let has_consumed_offset;

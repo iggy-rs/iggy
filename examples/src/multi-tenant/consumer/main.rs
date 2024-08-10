@@ -130,7 +130,9 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         }
     }
 
-    print_info("Creating {consumers_count} consumer(s) for each tenant");
+    print_info(&format!(
+        "Creating {consumers_count} consumer(s) for each tenant"
+    ));
     for tenant in tenants.iter_mut() {
         let consumers = create_consumers(
             &tenant.client,
@@ -148,7 +150,9 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         );
     }
 
-    print_info("Starting {consumers_count} consumers(s) for each tenant");
+    print_info(&format!(
+        "Starting {consumers_count} consumers(s) for each tenant"
+    ));
     let mut tasks = Vec::new();
     for tenant in tenants.into_iter() {
         let consumer_tasks = start_consumers(tenant.id, tenant.consumers);

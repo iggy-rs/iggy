@@ -692,7 +692,7 @@ dependencies = [
  "async-trait",
  "clap",
  "colored",
- "derive_more",
+ "derive_more 0.99.18",
  "figlet-rs",
  "futures",
  "human_format",
@@ -1073,7 +1073,7 @@ checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
 name = "cli"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1420,6 +1420,28 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn 2.0.72",
+]
+
+[[package]]
+name = "derive_more"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
+dependencies = [
+ "derive_more-impl",
+]
+
+[[package]]
+name = "derive_more-impl"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
+dependencies = [
+ "convert_case 0.6.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.72",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -2240,7 +2262,7 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.6.0"
+version = "0.6.1"
 dependencies = [
  "aes-gcm",
  "anyhow",
@@ -2255,7 +2277,8 @@ dependencies = [
  "comfy-table",
  "convert_case 0.6.0",
  "crc32fast",
- "derive_more",
+ "dashmap",
+ "derive_more 1.0.0",
  "dirs",
  "fast-async-mutex",
  "flume",
@@ -2359,7 +2382,7 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "bytes",
- "derive_more",
+ "derive_more 0.99.18",
  "futures",
  "humantime",
  "iggy",
@@ -4233,7 +4256,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -4248,7 +4271,7 @@ dependencies = [
  "clap",
  "console-subscriber",
  "dashmap",
- "derive_more",
+ "derive_more 0.99.18",
  "figlet-rs",
  "figment",
  "flume",
@@ -5102,6 +5125,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0336d538f7abc86d282a4189614dfaa90810dfc2c6f6427eaf88e16311dd225d"
 
 [[package]]
+name = "unicode-xid"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f962df74c8c05a667b5ee8bcf162993134c104e96440b663c8daa176dc772d8c"
+
+[[package]]
 name = "universal-hash"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5604,9 +5633,9 @@ dependencies = [
 
 [[package]]
 name = "xxhash-rust"
-version = "0.8.11"
+version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "63658493314859b4dfdf3fb8c1defd61587839def09582db50b8a4e93afca6bb"
+checksum = "6a5cbf750400958819fb6178eaa83bee5cd9c29a26a40cc241df8c70fdd46984"
 
 [[package]]
 name = "yansi"

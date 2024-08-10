@@ -3,7 +3,7 @@ use futures_util::future::join_all;
 use futures_util::StreamExt;
 use iggy::client::{Client, StreamClient, TopicClient, UserClient};
 use iggy::clients::client::IggyClient;
-use iggy::clients::consumer::{AutoCommit, AutoCommitAfter, IggyConsumer};
+use iggy::clients::consumer::{AutoCommit, AutoCommitWhen, IggyConsumer};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         .parse::<bool>()
         .expect("Invalid ensure stream access");
 
-    print_info("Multi-tenant consumers has started, tenants: {tenants_count}, consumers: {producers_count}, partitions: {partitions_count}");
+    print_info(&format!("Multi-tenant consumers has started, tenants: {tenants_count}, consumers: {consumers_count}"));
     let address = args.tcp_server_address;
 
     print_info("Creating root client to manage streams and users");
@@ -130,7 +130,9 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         }
     }
 
-    print_info("Creating {consumers_count} consumer(s) for each tenant");
+    print_info(&format!(
+        "Creating {consumers_count} consumer(s) for each tenant"
+    ));
     for tenant in tenants.iter_mut() {
         let consumers = create_consumers(
             &tenant.client,
@@ -148,11 +150,13 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         );
     }
 
-    print_info("Starting {consumers_count} consumers(s) for each tenant");
+    print_info(&format!(
+        "Starting {consumers_count} consumers(s) for each tenant"
+    ));
     let mut tasks = Vec::new();
     for tenant in tenants.into_iter() {
-        let producers_tasks = start_consumers(tenant.id, tenant.consumers);
-        tasks.extend(producers_tasks);
+        let consumer_tasks = start_consumers(tenant.id, tenant.consumers);
+        tasks.extend(consumer_tasks);
     }
 
     join_all(tasks).await;
@@ -255,7 +259,7 @@ async fn create_consumers(
                 .poll_interval(IggyDuration::from_str(interval).expect("Invalid duration"))
                 .polling_strategy(PollingStrategy::next())
                 .auto_join_consumer_group()
-                .auto_commit(AutoCommit::After(AutoCommitAfter::PollingMessages))
+                .auto_commit(AutoCommit::When(AutoCommitWhen::PollingMessages))
                 .build();
             consumer.init().await?;
             consumers.push(TenantConsumer::new(

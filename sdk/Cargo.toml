@@ -1,6 +1,6 @@
 [package]
 name = "iggy"
-version = "0.6.0"
+version = "0.6.1"
 description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
 edition = "2021"
 license = "MIT"
@@ -28,7 +28,8 @@ chrono = { version = "0.4.38" }
 clap = { version = "4.5.4", features = ["derive"] }
 comfy-table = { version = "7.1.1", optional = true }
 crc32fast = "1.4.2"
-derive_more = "0.99.18"
+dashmap = "6.0.1"
+derive_more = { version = "1.0.0", features = ["full"] }
 dirs = "5.0.1"
 fast-async-mutex = { version = "0.6.7", optional = true }
 flume = "0.11.0"
@@ -54,7 +55,7 @@ tokio = { version = "1.38.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
 toml = "0.8.14"
 tracing = { version = "0.1.40" }
-uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
+uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
 
 [build-dependencies]
 convert_case = "0.6.0"

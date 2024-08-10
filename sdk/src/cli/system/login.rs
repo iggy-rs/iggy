@@ -2,11 +2,12 @@ use crate::cli::system::session::ServerSession;
 use crate::cli::utils::login_session_expiry::LoginSessionExpiry;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
+use crate::utils::duration::SEC_IN_MICRO;
 use anyhow::Context;
 use async_trait::async_trait;
 use tracing::{event, Level};
 
-const DEFAULT_LOGIN_SESSION_TIMEOUT: u64 = 1000 * 15 * 60;
+const DEFAULT_LOGIN_SESSION_TIMEOUT: u64 = SEC_IN_MICRO * 15 * 60;
 
 pub struct LoginCmd {
     server_session: ServerSession,

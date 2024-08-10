@@ -4,12 +4,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, PartialEq, Display, Copy, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum DiagnosticEvent {
-    #[display(fmt = "disconnected")]
+    #[display("disconnected")]
     Disconnected,
-    #[display(fmt = "connected")]
+    #[display("connected")]
     Connected,
-    #[display(fmt = "signed_in")]
+    #[display("signed_in")]
     SignedIn,
-    #[display(fmt = "signed_out")]
+    #[display("signed_out")]
     SignedOut,
 }

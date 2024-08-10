@@ -359,7 +359,7 @@ impl TestServer {
     }
 
     pub fn get_random_path() -> String {
-        format!("{}{}", LOCAL_DATA_PREFIX, Uuid::new_v4().to_u128_le())
+        format!("{}{}", LOCAL_DATA_PREFIX, Uuid::now_v7().to_u128_le())
     }
 
     pub fn get_http_api_addr(&self) -> Option<String> {

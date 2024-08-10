@@ -379,7 +379,7 @@ impl BytesSerializable for Message {
 
         let mut id = u128::from_le_bytes(bytes[..16].try_into()?);
         if id == 0 {
-            id = Uuid::new_v4().to_u128_le();
+            id = Uuid::now_v7().to_u128_le();
         }
         let headers_length = u32::from_le_bytes(bytes[16..20].try_into()?);
         let headers = if headers_length > 0 {

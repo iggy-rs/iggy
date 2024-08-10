@@ -17,6 +17,12 @@ pub struct IggyDuration {
 }
 
 impl IggyDuration {
+    pub const ONE_SECOND: IggyDuration = IggyDuration {
+        duration: Duration::from_secs(1),
+    };
+}
+
+impl IggyDuration {
     pub fn new(duration: Duration) -> IggyDuration {
         IggyDuration { duration }
     }

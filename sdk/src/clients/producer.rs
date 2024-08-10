@@ -7,20 +7,15 @@ use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::partitioner::Partitioner;
 use crate::utils::crypto::Encryptor;
-use crate::utils::duration::{IggyDuration, SEC_IN_MICRO};
+use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::timestamp::IggyTimestamp;
 use crate::utils::topic_size::MaxTopicSize;
-use async_dropper::AsyncDrop;
-use async_trait::async_trait;
 use bytes::Bytes;
 use futures_util::StreamExt;
-use std::collections::{HashMap, VecDeque};
-use std::hash::{Hash, Hasher};
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Mutex;
 use tokio::time::sleep;
 use tracing::{error, info, trace, warn};
 
@@ -47,33 +42,10 @@ pub struct IggyProducer {
     create_topic_if_not_exists: bool,
     topic_partitions_count: u32,
     topic_replication_factor: Option<u8>,
-    send_order: Arc<Mutex<VecDeque<Arc<Destination>>>>,
-    buffered_messages: Arc<Mutex<HashMap<Arc<Destination>, MessagesBatch>>>,
-    background_sender_initialized: bool,
     default_partitioning: Arc<Partitioning>,
     can_send_immediately: bool,
     last_sent_at: Arc<AtomicU64>,
     retry_interval: IggyDuration,
-}
-
-#[derive(Eq, PartialEq)]
-struct Destination {
-    stream: Arc<Identifier>,
-    topic: Arc<Identifier>,
-    partitioning: Arc<Partitioning>,
-}
-
-impl Hash for Destination {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.stream.hash(state);
-        self.topic.hash(state);
-        self.partitioning.hash(state);
-    }
-}
-
-struct MessagesBatch {
-    destination: Arc<Destination>,
-    messages: Vec<Message>,
 }
 
 impl IggyProducer {
@@ -112,9 +84,6 @@ impl IggyProducer {
             create_topic_if_not_exists,
             topic_partitions_count,
             topic_replication_factor,
-            buffered_messages: Arc::new(Mutex::new(HashMap::new())),
-            send_order: Arc::new(Mutex::new(VecDeque::new())),
-            background_sender_initialized: false,
             default_partitioning: Arc::new(Partitioning::balanced()),
             can_send_immediately: interval.is_none(),
             last_sent_at: Arc::new(AtomicU64::new(0)),
@@ -184,68 +153,7 @@ impl IggyProducer {
                 .await?;
         }
 
-        if self.send_interval_micros == 0 {
-            return Ok(());
-        };
-
-        if self.background_sender_initialized {
-            return Ok(());
-        }
-
-        self.background_sender_initialized = true;
-        let interval_micros = self.send_interval_micros;
-        let client = self.client.clone();
-        let send_order = self.send_order.clone();
-        let buffered_messages = self.buffered_messages.clone();
-        let last_sent_at = self.last_sent_at.clone();
-        let retry_interval = self.retry_interval;
-
-        tokio::spawn(async move {
-            loop {
-                if interval_micros > 0 {
-                    Self::wait_before_sending(interval_micros, last_sent_at.load(ORDERING)).await;
-                }
-
-                let client = client.read().await;
-                let mut buffered_messages = buffered_messages.lock().await;
-                let mut send_order = send_order.lock().await;
-                while let Some(partitioning) = send_order.pop_front() {
-                    let Some(mut batch) = buffered_messages.remove(&partitioning) else {
-                        continue;
-                    };
-
-                    let messages_count = batch.messages.len();
-                    if messages_count == 0 {
-                        continue;
-                    }
-
-                    trace!("Sending {messages_count} buffered messages in the background...");
-                    last_sent_at.store(IggyTimestamp::now().into(), ORDERING);
-                    if let Err(error) = client
-                        .send_messages(
-                            &batch.destination.stream,
-                            &batch.destination.topic,
-                            &batch.destination.partitioning,
-                            &mut batch.messages,
-                        )
-                        .await
-                    {
-                        error!(
-                            "Failed to send {messages_count} messages in the background: {error}"
-                        );
-                        send_order.push_front(partitioning.clone());
-                        buffered_messages.insert(partitioning, batch);
-                        if matches!(error, IggyError::Disconnected | IggyError::Unauthenticated) {
-                            trace!("Retrying to send {messages_count} buffered messages in the background in {retry_interval}...");
-                            sleep(retry_interval.get_duration()).await;
-                        }
-                        continue;
-                    }
-
-                    trace!("Sent {messages_count} buffered messages in the background.");
-                }
-            }
-        });
+        self.initialized = true;
         Ok(())
     }
 
@@ -293,11 +201,6 @@ impl IggyProducer {
             sleep(self.retry_interval.get_duration()).await;
         }
 
-        if !self.can_send.load(ORDERING) {
-            trace!("Trying to send messages in {}...", self.retry_interval);
-            sleep(self.retry_interval.get_duration()).await;
-        }
-
         if self.can_send_immediately {
             return self
                 .send_immediately(&self.stream_id, &self.topic_id, messages, None)
@@ -314,13 +217,7 @@ impl IggyProducer {
     }
 
     pub async fn send_one(&self, message: Message) -> Result<(), IggyError> {
-        if !self.can_send.load(ORDERING) {
-            trace!("Trying to send message in {}...", self.retry_interval);
-            sleep(self.retry_interval.get_duration()).await;
-        }
-
-        self.send_immediately(&self.stream_id, &self.topic_id, vec![message], None)
-            .await
+        self.send(vec![message]).await
     }
 
     pub async fn send_with_partitioning(
@@ -390,61 +287,10 @@ impl IggyProducer {
         self.encrypt_messages(&mut messages)?;
         let partitioning = self.get_partitioning(&stream, &topic, &messages, partitioning)?;
         let batch_size = self.batch_size.unwrap_or(MAX_BATCH_SIZE);
-        let destination = Arc::new(Destination {
-            stream,
-            topic,
-            partitioning,
-        });
-        let mut buffered_messages = self.buffered_messages.lock().await;
-        let messages_batch = buffered_messages.get_mut(&destination);
-        if let Some(messages_batch) = messages_batch {
-            let messages_count = messages.len();
-            trace!("Extending buffer with {messages_count} messages...");
-            messages_batch.messages.extend(messages);
-            if messages_batch.messages.len() >= batch_size {
-                let mut messages = messages_batch
-                    .messages
-                    .drain(..batch_size)
-                    .collect::<Vec<_>>();
-                let messages_count = messages.len();
-
-                if self.send_interval_micros > 0 {
-                    Self::wait_before_sending(
-                        self.send_interval_micros,
-                        self.last_sent_at.load(ORDERING),
-                    )
-                    .await;
-                }
-
-                trace!("Sending {messages_count} buffered messages...");
-                self.last_sent_at
-                    .store(IggyTimestamp::now().into(), ORDERING);
-                let client = self.client.read().await;
-                client
-                    .send_messages(
-                        &self.stream_id,
-                        &self.topic_id,
-                        &destination.partitioning,
-                        &mut messages,
-                    )
-                    .await?;
-                trace!("Sent {messages_count} buffered messages.");
-            }
-
-            if messages_batch.messages.is_empty() {
-                trace!("Removing empty messages batch.");
-                buffered_messages.remove(&destination);
-                self.send_order.lock().await.retain(|p| p != &destination);
-            }
-            return Ok(());
-        }
-
-        if messages.len() >= batch_size {
-            trace!(
-                "Sending messages {} exceeding the batch size of {batch_size}...",
-                messages.len()
-            );
-            let mut messages_batch = messages.drain(..batch_size).collect::<Vec<_>>();
+        let batches = messages.chunks_mut(batch_size);
+        let mut current_batch = 1;
+        let batches_count = batches.len();
+        for batch in batches {
             if self.send_interval_micros > 0 {
                 Self::wait_before_sending(
                     self.send_interval_micros,
@@ -453,36 +299,19 @@ impl IggyProducer {
                 .await;
             }
 
+            let messages_count = batch.len();
+            trace!(
+                "Sending {messages_count} messages ({current_batch}/{batches_count} batch(es))..."
+            );
             self.last_sent_at
                 .store(IggyTimestamp::now().into(), ORDERING);
             let client = self.client.read().await;
             client
-                .send_messages(
-                    &destination.stream,
-                    &destination.topic,
-                    &destination.partitioning,
-                    &mut messages_batch,
-                )
+                .send_messages(&self.stream_id, &self.topic_id, &partitioning, batch)
                 .await?;
-            trace!("Sent messages exceeding the batch size of {batch_size}.");
+            trace!("Sent {messages_count} messages ({current_batch}/{batches_count} batch(es)).");
+            current_batch += 1;
         }
-
-        if messages.is_empty() {
-            trace!("No messages to buffer.");
-            return Ok(());
-        }
-
-        let messages_count = messages.len();
-        trace!("Buffering {messages_count} messages...");
-        self.send_order.lock().await.push_back(destination.clone());
-        buffered_messages.insert(
-            destination.clone(),
-            MessagesBatch {
-                destination,
-                messages,
-            },
-        );
-        trace!("Buffered {messages_count} messages.");
         Ok(())
     }
 
@@ -566,42 +395,6 @@ impl IggyProducer {
     }
 }
 
-#[async_trait]
-impl AsyncDrop for IggyProducer {
-    async fn async_drop(&mut self) {
-        let mut buffered_messages = self.buffered_messages.lock().await;
-        if buffered_messages.is_empty() {
-            return;
-        }
-
-        let client = self.client.read().await;
-        let mut send_order = self.send_order.lock().await;
-        while let Some(partitioning) = send_order.pop_front() {
-            let Some(mut batch) = buffered_messages.remove(&partitioning) else {
-                continue;
-            };
-
-            let messages_count = batch.messages.len();
-            self.last_sent_at
-                .store(IggyTimestamp::now().into(), ORDERING);
-            trace!("Sending {messages_count} remaining messages...");
-            if let Err(error) = client
-                .send_messages(
-                    &batch.destination.stream,
-                    &batch.destination.topic,
-                    &batch.destination.partitioning,
-                    &mut batch.messages,
-                )
-                .await
-            {
-                error!("Failed to send {messages_count} remaining messages: {error}");
-            }
-
-            trace!("Sent {messages_count} remaining messages.");
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct IggyProducerBuilder {
     client: IggySharedMut<Box<dyn Client>>,
@@ -647,7 +440,7 @@ impl IggyProducerBuilder {
             create_topic_if_not_exists: true,
             topic_partitions_count: 1,
             topic_replication_factor: None,
-            retry_interval: IggyDuration::from(SEC_IN_MICRO),
+            retry_interval: IggyDuration::ONE_SECOND,
         }
     }
 

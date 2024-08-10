@@ -137,5 +137,5 @@ pub fn run_bench_and_wait_for_finish(
 }
 
 pub fn get_random_path() -> String {
-    format!("{}{}", BENCH_FILES_PREFIX, Uuid::new_v4().to_u128_le())
+    format!("{}{}", BENCH_FILES_PREFIX, Uuid::now_v7().to_u128_le())
 }

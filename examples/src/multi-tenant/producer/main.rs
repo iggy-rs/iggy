@@ -88,7 +88,7 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         .parse::<bool>()
         .expect("Invalid ensure stream access");
 
-    print_info("Multi-tenant producer has started, tenants: {tenants_count}, producers: {producers_count}, partitions: {partitions_count}");
+    print_info(&format!("Multi-tenant producer has started, tenants: {tenants_count}, producers: {producers_count}, partitions: {partitions_count}"));
     let address = args.tcp_server_address;
 
     print_info("Creating root client to manage streams and users");
@@ -128,7 +128,9 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         }
     }
 
-    print_info("Creating {producers_count} producer(s) for each tenant");
+    print_info(&format!(
+        "Creating {producers_count} producer(s) for each tenant"
+    ));
     for tenant in tenants.iter_mut() {
         let producers = create_producers(
             &tenant.client,
@@ -147,11 +149,17 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         );
     }
 
-    print_info("Starting {producers_count} producer(s) for each tenant");
+    print_info(&format!(
+        "Starting {producers_count} producer(s) for each tenant"
+    ));
     let mut tasks = Vec::new();
     for tenant in tenants.into_iter() {
-        let producers_tasks =
-            start_producers(tenant.id, tenant.producers, args.message_batches_limit);
+        let producers_tasks = start_producers(
+            tenant.id,
+            tenant.producers,
+            args.message_batches_limit,
+            args.messages_per_batch,
+        );
         tasks.extend(producers_tasks);
     }
 
@@ -164,6 +172,7 @@ fn start_producers(
     tenant_id: u32,
     producers: Vec<TenantProducer>,
     batches_count: u64,
+    batch_size: u32,
 ) -> Vec<JoinHandle<()>> {
     let mut tasks = Vec::new();
     let topics_count = producers
@@ -175,25 +184,43 @@ fn start_producers(
         let producer_id = producer.id;
         let task = tokio::spawn(async move {
             let mut counter = 1;
+            let mut events_id = 1;
+            let mut logs_id = 1;
+            let mut notifications_id = 1;
             while counter <= topics_count * batches_count {
-                let message = match producer.topic.as_str() {
-                    "events" => "event",
-                    "logs" => "log",
-                    "notifications" => "notification",
+                let (message_id, message) = match producer.topic.as_str() {
+                    "events" => {
+                        events_id += 1;
+                        (events_id, "event")
+                    }
+                    "logs" => {
+                        logs_id += 1;
+                        (logs_id, "log")
+                    }
+                    "notifications" => {
+                        notifications_id += 1;
+                        (notifications_id, "notification")
+                    }
                     _ => panic!("Invalid topic"),
                 };
-                let payload = format!("{message}-{producer_id}-{counter}");
-                let message = Message::from_str(&payload).expect("Invalid message");
-                if let Err(error) = producer.producer.send(vec![message]).await {
+
+                let mut messages = Vec::with_capacity(batch_size as usize);
+                for _ in 1..=batch_size {
+                    let payload = format!("{message}-{producer_id}-{message_id}");
+                    let message = Message::from_str(&payload).expect("Invalid message");
+                    messages.push(message);
+                }
+
+                if let Err(error) = producer.producer.send(messages).await {
                     error!(
-                        "Failed to send: '{payload}' to: {} -> {} by tenant: {tenant_id}, producer: {producer_id} with error: {error}", producer.stream, producer.topic,
+                        "Failed to send: {batch_size} message(s) to: {} -> {} by tenant: {tenant_id}, producer: {producer_id} with error: {error}", producer.stream, producer.topic,
                     );
                     continue;
                 }
 
                 counter += 1;
                 info!(
-                    "Sent: '{payload}' by tenant: {tenant_id}, producer: {producer_id}, to: {} -> {}",
+                    "Sent: {batch_size} message(s) by tenant: {tenant_id}, producer: {producer_id}, to: {} -> {}",
                     producer.stream, producer.topic
                 );
             }

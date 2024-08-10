@@ -45,6 +45,10 @@ impl IggyDuration {
         self.duration.as_secs() == 0
     }
 
+    pub fn one_second() -> IggyDuration {
+        IggyDuration::new(Duration::from_secs(1))
+    }
+
     //TODO(numinex) - Replace it with std::time::Duration::abs_diff when it becomes stable
     pub fn abs_diff(&self, other: IggyDuration) -> IggyDuration {
         let diff = self.duration.as_nanos().abs_diff(other.duration.as_nanos());

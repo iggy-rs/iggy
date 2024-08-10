@@ -7,7 +7,7 @@ use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::send_messages::{Message, Partitioning};
 use crate::partitioner::Partitioner;
 use crate::utils::crypto::Encryptor;
-use crate::utils::duration::{IggyDuration, SEC_IN_MICRO};
+use crate::utils::duration::IggyDuration;
 use crate::utils::expiry::IggyExpiry;
 use crate::utils::timestamp::IggyTimestamp;
 use crate::utils::topic_size::MaxTopicSize;
@@ -217,9 +217,7 @@ impl IggyProducer {
     }
 
     pub async fn send_one(&self, message: Message) -> Result<(), IggyError> {
-        let mut messages = Vec::with_capacity(1);
-        messages.push(message);
-        self.send(messages).await
+        self.send(vec![message]).await
     }
 
     pub async fn send_with_partitioning(
@@ -442,7 +440,7 @@ impl IggyProducerBuilder {
             create_topic_if_not_exists: true,
             topic_partitions_count: 1,
             topic_replication_factor: None,
-            retry_interval: IggyDuration::from(SEC_IN_MICRO),
+            retry_interval: IggyDuration::one_second(),
         }
     }
 

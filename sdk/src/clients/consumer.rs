@@ -7,7 +7,7 @@ use crate::locking::{IggySharedMut, IggySharedMutFn};
 use crate::messages::poll_messages::{PollingKind, PollingStrategy};
 use crate::models::messages::{PolledMessage, PolledMessages};
 use crate::utils::crypto::Encryptor;
-use crate::utils::duration::{IggyDuration, SEC_IN_MICRO};
+use crate::utils::duration::IggyDuration;
 use crate::utils::timestamp::IggyTimestamp;
 use bytes::Bytes;
 use dashmap::DashMap;
@@ -463,7 +463,7 @@ impl IggyConsumer {
                 let consumed_offset;
                 let has_consumed_offset;
                 if let Some(offset_entry) = last_consumed_offset.get(&partition_id) {
-                    has_consumed_offset = false;
+                    has_consumed_offset = true;
                     consumed_offset = offset_entry.value().load(ORDERING);
                 } else {
                     consumed_offset = 0;
@@ -493,10 +493,7 @@ impl IggyConsumer {
                     polled_messages.current_offset
                 );
 
-                if !polled_messages.messages.is_empty()
-                    && has_consumed_offset
-                    && polled_messages.current_offset == consumed_offset
-                {
+                if has_consumed_offset && polled_messages.current_offset == consumed_offset {
                     trace!("No new messages to consume in partition ID: {partition_id}, topic: {topic_id}, stream: {stream_id}, consumer: {consumer}");
                     if auto_commit_enabled && stored_offset < consumed_offset {
                         trace!("Auto-committing the offset: {consumed_offset} in partition ID: {partition_id}, topic: {topic_id}, stream: {stream_id}, consumer: {consumer}");
@@ -798,14 +795,14 @@ impl IggyConsumerBuilder {
             polling_strategy: PollingStrategy::next(),
             batch_size: 1000,
             auto_commit: AutoCommit::IntervalOrWhen(
-                IggyDuration::from(SEC_IN_MICRO),
+                IggyDuration::one_second(),
                 AutoCommitWhen::PollingMessages,
             ),
             auto_join_consumer_group: true,
             create_consumer_group_if_not_exists: true,
             encryptor,
             polling_interval,
-            retry_interval: IggyDuration::from(SEC_IN_MICRO),
+            retry_interval: IggyDuration::one_second(),
         }
     }
 

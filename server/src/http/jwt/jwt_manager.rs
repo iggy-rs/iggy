@@ -151,7 +151,7 @@ impl JwtManager {
             }) as u64;
         let nbf = iat + self.issuer.not_before.as_secs() as u64;
         let claims = JwtClaims {
-            jti: uuid::Uuid::new_v4().to_string(),
+            jti: uuid::Uuid::now_v7().to_string(),
             sub: user_id,
             aud: self.issuer.audience.to_string(),
             iss: self.issuer.issuer.to_string(),

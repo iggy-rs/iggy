@@ -189,6 +189,13 @@ impl Topic {
             }
             ConsumerKind::ConsumerGroup => {
                 let consumer_group = self.get_consumer_group(&consumer.id)?.read().await;
+                if let Some(partition_id) = partition_id {
+                    return Ok((
+                        PollingConsumer::consumer_group(consumer_group.group_id, client_id),
+                        partition_id,
+                    ));
+                }
+
                 let partition_id = if calculate_partition_id {
                     consumer_group.calculate_partition_id(client_id).await?
                 } else {

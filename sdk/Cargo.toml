@@ -55,7 +55,7 @@ tokio = { version = "1.38.0", features = ["full"] }
 tokio-native-tls = "0.3.1"
 toml = "0.8.14"
 tracing = { version = "0.1.40" }
-uuid = { version = "1.8.0", features = ["v4", "fast-rng"] }
+uuid = { version = "1.1.0", features = ["v7", "fast-rng", "zerocopy"] }
 
 [build-dependencies]
 convert_case = "0.6.0"

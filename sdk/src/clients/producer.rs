@@ -217,7 +217,9 @@ impl IggyProducer {
     }
 
     pub async fn send_one(&self, message: Message) -> Result<(), IggyError> {
-        self.send(vec![message]).await
+        let mut messages = Vec::with_capacity(1);
+        messages.push(message);
+        self.send(messages).await
     }
 
     pub async fn send_with_partitioning(

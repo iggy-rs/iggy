@@ -3,7 +3,7 @@ use futures_util::future::join_all;
 use futures_util::StreamExt;
 use iggy::client::{Client, StreamClient, TopicClient, UserClient};
 use iggy::clients::client::IggyClient;
-use iggy::clients::consumer::{AutoCommit, AutoCommitAfter, IggyConsumer};
+use iggy::clients::consumer::{AutoCommit, AutoCommitWhen, IggyConsumer};
 use iggy::error::IggyError;
 use iggy::identifier::Identifier;
 use iggy::messages::poll_messages::PollingStrategy;
@@ -255,8 +255,7 @@ async fn create_consumers(
                 .poll_interval(IggyDuration::from_str(interval).expect("Invalid duration"))
                 .polling_strategy(PollingStrategy::next())
                 .auto_join_consumer_group()
-                // .auto_commit(AutoCommit::After(AutoCommitAfter::PollingMessages))
-                .auto_commit(AutoCommit::Interval(IggyDuration::from_str("3s").unwrap()))
+                .auto_commit(AutoCommit::When(AutoCommitWhen::PollingMessages))
                 .build();
             consumer.init().await?;
             consumers.push(TenantConsumer::new(

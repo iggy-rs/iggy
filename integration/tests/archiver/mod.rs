@@ -14,7 +14,7 @@ pub struct DiskArchiverSetup {
 
 impl DiskArchiverSetup {
     pub async fn init() -> DiskArchiverSetup {
-        let base_path = format!("test_local_data_{}", Uuid::new_v4().to_u128_le());
+        let base_path = format!("test_local_data_{}", Uuid::now_v7().to_u128_le());
         let archive_path = format!("{}/archive", base_path);
         let config = DiskArchiverConfig {
             path: archive_path.clone(),

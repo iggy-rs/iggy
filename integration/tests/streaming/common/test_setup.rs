@@ -16,7 +16,7 @@ impl TestSetup {
     }
 
     pub async fn init_with_config(mut config: SystemConfig) -> TestSetup {
-        config.path = format!("local_data_{}", Uuid::new_v4().to_u128_le());
+        config.path = format!("local_data_{}", Uuid::now_v7().to_u128_le());
 
         let config = Arc::new(config);
         fs::create_dir(config.get_system_path()).await.unwrap();

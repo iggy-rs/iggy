@@ -26,7 +26,7 @@ impl StateSetup {
     }
 
     pub async fn create(encryption_key: Option<&[u8]>) -> StateSetup {
-        let directory_path = format!("state_{}", Uuid::new_v4().to_u128_le());
+        let directory_path = format!("state_{}", Uuid::now_v7().to_u128_le());
         let log_path = format!("{}/log", directory_path);
         create_dir(&directory_path).await.unwrap();
 

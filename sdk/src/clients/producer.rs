@@ -440,7 +440,7 @@ impl IggyProducerBuilder {
             create_topic_if_not_exists: true,
             topic_partitions_count: 1,
             topic_replication_factor: None,
-            retry_interval: IggyDuration::one_second(),
+            retry_interval: IggyDuration::ONE_SECOND,
         }
     }
 

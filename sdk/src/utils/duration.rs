@@ -17,6 +17,12 @@ pub struct IggyDuration {
 }
 
 impl IggyDuration {
+    pub const ONE_SECOND: IggyDuration = IggyDuration {
+        duration: Duration::from_secs(1),
+    };
+}
+
+impl IggyDuration {
     pub fn new(duration: Duration) -> IggyDuration {
         IggyDuration { duration }
     }
@@ -43,10 +49,6 @@ impl IggyDuration {
 
     pub fn is_zero(&self) -> bool {
         self.duration.as_secs() == 0
-    }
-
-    pub fn one_second() -> IggyDuration {
-        IggyDuration::new(Duration::from_secs(1))
     }
 
     //TODO(numinex) - Replace it with std::time::Duration::abs_diff when it becomes stable

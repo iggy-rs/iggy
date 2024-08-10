@@ -795,14 +795,14 @@ impl IggyConsumerBuilder {
             polling_strategy: PollingStrategy::next(),
             batch_size: 1000,
             auto_commit: AutoCommit::IntervalOrWhen(
-                IggyDuration::one_second(),
+                IggyDuration::ONE_SECOND,
                 AutoCommitWhen::PollingMessages,
             ),
             auto_join_consumer_group: true,
             create_consumer_group_if_not_exists: true,
             encryptor,
             polling_interval,
-            retry_interval: IggyDuration::one_second(),
+            retry_interval: IggyDuration::ONE_SECOND,
         }
     }
 

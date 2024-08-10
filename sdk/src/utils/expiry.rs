@@ -218,7 +218,7 @@ mod tests {
         );
         assert_eq!(
             IggyExpiry::from_str("1s").unwrap(),
-            IggyExpiry::ExpireDuration(IggyDuration::one_second())
+            IggyExpiry::ExpireDuration(IggyDuration::ONE_SECOND)
         );
         assert_eq!(
             IggyExpiry::from_str("15days 2min 2s").unwrap(),

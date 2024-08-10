@@ -184,17 +184,29 @@ fn start_producers(
         let producer_id = producer.id;
         let task = tokio::spawn(async move {
             let mut counter = 1;
+            let mut events_id = 1;
+            let mut logs_id = 1;
+            let mut notifications_id = 1;
             while counter <= topics_count * batches_count {
-                let message = match producer.topic.as_str() {
-                    "events" => "event",
-                    "logs" => "log",
-                    "notifications" => "notification",
+                let (message_id, message) = match producer.topic.as_str() {
+                    "events" => {
+                        events_id += 1;
+                        (events_id, "event")
+                    }
+                    "logs" => {
+                        logs_id += 1;
+                        (logs_id, "log")
+                    }
+                    "notifications" => {
+                        notifications_id += 1;
+                        (notifications_id, "notification")
+                    }
                     _ => panic!("Invalid topic"),
                 };
 
                 let mut messages = Vec::with_capacity(batch_size as usize);
                 for _ in 1..=batch_size {
-                    let payload = format!("{message}-{producer_id}-{counter}");
+                    let payload = format!("{message}-{producer_id}-{message_id}");
                     let message = Message::from_str(&payload).expect("Invalid message");
                     messages.push(message);
                 }

@@ -254,7 +254,6 @@ impl IggyConsumer {
                 for entry in last_consumed_offset.iter() {
                     let partition_id = *entry.key();
                     let consumed_offset = entry.value().load(ORDERING);
-                    let has_stored_offset = last_stored_offset.contains_key(&partition_id);
                     let stored_offset = last_stored_offset
                         .get(&partition_id)
                         .map_or(0, |offset| offset.load(ORDERING));

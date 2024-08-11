@@ -10,7 +10,7 @@ pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;
-    let server_address = iggy_cmd_test.get_sever_ip_address();
+    let server_address = iggy_cmd_test.get_tcp_server_address();
     assert!(server_address.is_some());
     let server_address = server_address.unwrap();
 
@@ -72,7 +72,7 @@ pub async fn should_be_successful() {
     iggy_cmd_test
         .execute_test(TestMeCmd::new(
             Protocol::Tcp,
-            Scenario::FailureDueToSessionTimeout,
+            Scenario::FailureDueToSessionTimeout(server_address),
         ))
         .await;
 }

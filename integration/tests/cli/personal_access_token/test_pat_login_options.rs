@@ -8,7 +8,7 @@ use predicates::str::{contains, starts_with};
 use serial_test::parallel;
 use std::fmt::{Display, Formatter, Result};
 
-const IGGY_SERVICE: &str = "iggy:127.0.0.1";
+const IGGY_SERVICE: &str = "iggy";
 
 #[derive(Debug)]
 enum UsingToken {
@@ -34,12 +34,16 @@ struct TestLoginOptions {
 }
 
 impl TestLoginOptions {
-    fn new(token_name: String, using_token: UsingToken) -> Self {
+    fn new(token_name: String, using_token: UsingToken, server_address: String) -> Self {
         Self {
             token_name: token_name.clone(),
             token_value: None,
             using_token,
-            keyring: Entry::new(IGGY_SERVICE, &token_name).unwrap_or_else(|_| {
+            keyring: Entry::new(
+                format!("{IGGY_SERVICE}:{server_address}").as_str(),
+                &token_name,
+            )
+            .unwrap_or_else(|_| {
                 panic!(
                     "Failed to get keyring service data for {} service and {} token name",
                     IGGY_SERVICE, token_name
@@ -101,16 +105,21 @@ pub async fn should_be_successful() {
     let mut iggy_cmd_test = IggyCmdTest::default();
 
     iggy_cmd_test.setup().await;
+    let server_address = iggy_cmd_test.get_tcp_server_address();
+    assert!(server_address.is_some());
+    let server_address = server_address.unwrap();
     iggy_cmd_test
         .execute_test(TestLoginOptions::new(
             String::from("sample-token"),
             UsingToken::Value,
+            server_address.clone(),
         ))
         .await;
     iggy_cmd_test
         .execute_test(TestLoginOptions::new(
             String::from("access-token"),
             UsingToken::Name,
+            server_address,
         ))
         .await;
 }

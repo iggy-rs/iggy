@@ -388,6 +388,12 @@ impl IggyError {
     }
 }
 
+impl PartialEq for IggyError {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_code() == other.as_code()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -395,7 +401,7 @@ mod tests {
     const GROUP_NAME_ERROR_CODE: u32 = 5005;
 
     #[test]
-    fn derived_sdk_error_disciminant_keeps_codes() {
+    fn derived_sdk_error_discriminant_keeps_codes() {
         assert_eq!(
             GROUP_NAME_ERROR_CODE,
             IggyError::InvalidConsumerGroupName.as_code()

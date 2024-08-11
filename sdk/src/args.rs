@@ -280,18 +280,14 @@ const TCP_TRANSPORT: &str = "tcp";
 impl Args {
     pub fn get_server_address(&self) -> Option<String> {
         match self.transport.as_str() {
-            QUIC_TRANSPORT => Some(self.quic_server_address.split(':').next().unwrap().into()),
+            QUIC_TRANSPORT => Some(self.quic_server_address.replace("localhost", "127.0.0.1")),
             HTTP_TRANSPORT => Some(
                 self.http_api_url
                     .clone()
                     .replace("http://", "")
-                    .replace("localhost", "127.0.0.1")
-                    .split(':')
-                    .next()
-                    .unwrap()
-                    .into(),
+                    .replace("localhost", "127.0.0.1"),
             ),
-            TCP_TRANSPORT => Some(self.tcp_server_address.split(':').next().unwrap().into()),
+            TCP_TRANSPORT => Some(self.tcp_server_address.replace("localhost", "127.0.0.1")),
             _ => None,
         }
     }

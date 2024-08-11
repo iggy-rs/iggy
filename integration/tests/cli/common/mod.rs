@@ -215,8 +215,8 @@ impl IggyCmdTest {
         test_case.verify_command(assert);
     }
 
-    pub(crate) fn get_sever_ip_address(&self) -> Option<String> {
-        self.server.get_server_ip_addr()
+    pub(crate) fn get_tcp_server_address(&self) -> Option<String> {
+        self.server.get_raw_tcp_addr()
     }
 }
 

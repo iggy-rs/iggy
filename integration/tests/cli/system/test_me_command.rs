@@ -20,7 +20,7 @@ pub(super) enum Scenario {
     SuccessWithCredentials,
     SuccessWithoutCredentials,
     FailureWithoutCredentials,
-    FailureDueToSessionTimeout,
+    FailureDueToSessionTimeout(String),
 }
 
 impl Protocol {
@@ -63,7 +63,7 @@ impl IggyCmdTestCase for TestMeCmd {
         match &self.scenario {
             Scenario::SuccessWithCredentials => command.with_env_credentials(),
             Scenario::FailureWithoutCredentials => command.disable_backtrace(),
-            Scenario::FailureDueToSessionTimeout => command.disable_backtrace(),
+            Scenario::FailureDueToSessionTimeout(_) => command.disable_backtrace(),
             _ => command,
         }
     }
@@ -81,8 +81,8 @@ impl IggyCmdTestCase for TestMeCmd {
                     .failure()
                     .stderr(diff("Error: CommandError(Iggy command line tool error\n\nCaused by:\n    Missing iggy server credentials)\n"));
             }
-            Scenario::FailureDueToSessionTimeout => {
-                command_state.failure().stderr(diff("Error: CommandError(Login session expired for Iggy server: 127.0.0.1, please login again or use other authentication method)\n"));
+            Scenario::FailureDueToSessionTimeout(server_address) => {
+                command_state.failure().stderr(diff(format!("Error: CommandError(Login session expired for Iggy server: {server_address}, please login again or use other authentication method)\n")));
             }
         }
     }

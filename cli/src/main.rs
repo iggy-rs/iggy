@@ -318,7 +318,10 @@ async fn main() -> Result<(), IggyCmdError> {
             Aes256GcmEncryptor::from_base64_key(&iggy_args.encryption_key).unwrap(),
         )),
     };
-    let client_provider_config = Arc::new(ClientProviderConfig::from_args(iggy_args.clone())?);
+    let client_provider_config = Arc::new(ClientProviderConfig::from_args_set_autologin(
+        iggy_args.clone(),
+        false,
+    )?);
 
     let client =
         client_provider::get_raw_client(client_provider_config, command.connection_required())

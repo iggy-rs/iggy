@@ -48,6 +48,15 @@ impl Default for ClientProviderConfig {
 impl ClientProviderConfig {
     /// Create a new `ClientProviderConfig` from the provided `Args`.
     pub fn from_args(args: crate::args::Args) -> Result<Self, ClientError> {
+        Self::from_args_set_autologin(args, true)
+    }
+
+    /// Create a new `ClientProviderConfig` from the provided `Args` with possibility to enable or disable
+    /// auto login option for TCP or QUIC protocols.
+    pub fn from_args_set_autologin(
+        args: crate::args::Args,
+        auto_login: bool,
+    ) -> Result<Self, ClientError> {
         let transport = args.transport;
         let mut config = Self {
             transport,
@@ -70,10 +79,14 @@ impl ClientProviderConfig {
                         )
                         .unwrap(),
                     },
-                    auto_login: AutoLogin::Enabled(Credentials::UsernamePassword(
-                        args.username,
-                        args.password,
-                    )),
+                    auto_login: if auto_login {
+                        AutoLogin::Enabled(Credentials::UsernamePassword(
+                            args.username,
+                            args.password,
+                        ))
+                    } else {
+                        AutoLogin::Disabled
+                    },
                     response_buffer_size: args.quic_response_buffer_size,
                     max_concurrent_bidi_streams: args.quic_max_concurrent_bidi_streams,
                     datagram_send_buffer_size: args.quic_datagram_send_buffer_size,
@@ -105,10 +118,14 @@ impl ClientProviderConfig {
                         )
                         .unwrap(),
                     },
-                    auto_login: AutoLogin::Enabled(Credentials::UsernamePassword(
-                        args.username,
-                        args.password,
-                    )),
+                    auto_login: if auto_login {
+                        AutoLogin::Enabled(Credentials::UsernamePassword(
+                            args.username,
+                            args.password,
+                        ))
+                    } else {
+                        AutoLogin::Disabled
+                    },
                 }));
             }
             _ => return Err(ClientError::InvalidTransport(config.transport.clone())),

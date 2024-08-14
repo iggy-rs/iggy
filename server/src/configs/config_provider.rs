@@ -1,5 +1,6 @@
 use crate::configs::server::ServerConfig;
 use crate::server_error::ServerError;
+use crate::IGGY_ROOT_PASSWORD_ENV;
 use async_trait::async_trait;
 use figment::{
     providers::{Format, Json, Toml},
@@ -12,6 +13,14 @@ use tracing::{debug, info};
 
 const DEFAULT_CONFIG_PROVIDER: &str = "file";
 const DEFAULT_CONFIG_PATH: &str = "configs/server.toml";
+const SECRET_KEYS: [&str; 6] = [
+    IGGY_ROOT_PASSWORD_ENV,
+    "IGGY_DATA_MAINTENANCE_ARCHIVER_S3_KEY_SECRET",
+    "IGGY_HTTP_JWT_ENCODING_SECRET",
+    "IGGY_HTTP_JWT_DECODING_SECRET",
+    "IGGY_TCP_TLS_PASSWORD",
+    "IGGY_SYSTEM_ENCRYPTION_KEY",
+];
 
 #[async_trait]
 pub trait ConfigProvider {
@@ -174,7 +183,7 @@ impl Provider for CustomEnvProvider {
         }
 
         let mut new_dict = Dict::new();
-        for (key, value) in env::vars() {
+        for (key, mut value) in env::vars() {
             let env_key = key.to_uppercase();
             if !env_key.starts_with(self.prefix.as_str()) {
                 continue;
@@ -184,10 +193,11 @@ impl Provider for CustomEnvProvider {
                 .map(|k| k.to_lowercase())
                 .collect();
             let env_var_value = Self::try_parse_value(&value);
-            info!(
-                "{} value changed to: {:?} from environment variable",
-                env_key, value
-            );
+            if SECRET_KEYS.contains(&env_key.as_str()) {
+                value = "******".to_string();
+            }
+
+            info!("{env_key} value changed to: {value} from environment variable");
             Self::insert_overridden_values_from_env(
                 &source_dict,
                 &mut new_dict,
@@ -271,7 +281,7 @@ impl ConfigProvider for FileConfigProvider {
         match config_result {
             Ok(config) => {
                 info!("Config loaded from path: '{}'", self.path);
-                info!("Using Config: {}", config);
+                info!("Using Config: {config}");
                 Ok(config)
             }
             Err(figment_error) => Err(ServerError::CannotLoadConfiguration(format!(

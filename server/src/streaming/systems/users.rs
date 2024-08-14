@@ -5,6 +5,7 @@ use crate::streaming::session::Session;
 use crate::streaming::systems::system::System;
 use crate::streaming::users::user::User;
 use crate::streaming::utils::crypto;
+use crate::{IGGY_ROOT_PASSWORD_ENV, IGGY_ROOT_USERNAME_ENV};
 use iggy::error::IggyError;
 use iggy::identifier::{IdKind, Identifier};
 use iggy::locking::IggySharedMutFn;
@@ -78,8 +79,8 @@ impl System {
     }
 
     fn create_root_user() -> User {
-        let username = env::var("IGGY_ROOT_USERNAME");
-        let password = env::var("IGGY_ROOT_PASSWORD");
+        let username = env::var(IGGY_ROOT_USERNAME_ENV);
+        let password = env::var(IGGY_ROOT_PASSWORD_ENV);
         if (username.is_ok() && password.is_err()) || (username.is_err() && password.is_ok()) {
             panic!("When providing the custom root user credentials, both username and password must be set.");
         }

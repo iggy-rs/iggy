@@ -576,6 +576,14 @@ async fn load_batches_by_range(
         return Ok(());
     }
 
+    trace!(
+        "Loading message batches by index range: {} [{}] - {} [{}], file size: {file_size}",
+        index_range.start.position,
+        index_range.start.relative_offset,
+        index_range.end.position,
+        index_range.end.relative_offset
+    );
+
     let mut reader = BufReader::with_capacity(BUF_READER_CAPACITY_BYTES, file);
     reader
         .seek(SeekFrom::Start(index_range.start.position as u64))
@@ -584,10 +592,9 @@ async fn load_batches_by_range(
     let mut read_bytes = index_range.start.position as u64;
     let mut last_batch_to_read = false;
     while !last_batch_to_read {
-        let batch_base_offset = reader
-            .read_u64_le()
-            .await
-            .map_err(|_| IggyError::CannotReadBatchBaseOffset)?;
+        let Ok(batch_base_offset) = reader.read_u64_le().await else {
+            break;
+        };
         let batch_length = reader
             .read_u32_le()
             .await

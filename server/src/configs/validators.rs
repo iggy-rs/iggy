@@ -103,10 +103,14 @@ impl Validatable<ServerError> for CacheConfig {
             );
         }
 
-        info!(
+        if self.enabled {
+            info!(
             "Cache configuration -> cache size set to {} ({:.2}% of total memory: {}, free memory: {}).",
             pretty_cache_limit, cache_percentage, pretty_total_memory, pretty_free_memory
         );
+        } else {
+            info!("Cache configuration -> cache is disabled.");
+        }
 
         Ok(())
     }

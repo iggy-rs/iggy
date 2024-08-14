@@ -126,10 +126,18 @@ impl Display for DataMaintenanceConfig {
 
 impl Display for ArchiverConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let disk = self
+            .disk
+            .as_ref()
+            .map_or("none".to_string(), |disk| disk.to_string());
+        let s3 = self
+            .s3
+            .as_ref()
+            .map_or("none".to_string(), |s3| s3.to_string());
         write!(
             f,
-            "{{ enabled: {}, kind: {:?}, disk: {:?}, s3: {:?} }}",
-            self.enabled, self.kind, self.disk, self.s3
+            "{{ enabled: {}, kind: {}, disk: {disk}, s3: {s3} }}",
+            self.enabled, self.kind,
         )
     }
 }
@@ -144,7 +152,7 @@ impl Display for S3ArchiverConfig {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{{ key_id: {}, key_secret: ******, bucket: {}, endpoint: {}. region: {} }}",
+            "{{ key_id: {}, bucket: {}, endpoint: {}. region: {} }}",
             self.key_id,
             self.bucket,
             self.endpoint.as_deref().unwrap_or_default(),

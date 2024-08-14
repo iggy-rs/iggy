@@ -245,12 +245,14 @@ impl Segment {
 
         Ok(())
     }
+
     fn store_offset_and_timestamp_index_for_batch(
         &mut self,
         batch_last_offset: u64,
         batch_max_timestamp: u64,
     ) {
         let relative_offset = (batch_last_offset - self.start_offset) as u32;
+        trace!("Storing index for relative_offset: {relative_offset}");
         match (&mut self.indexes, &mut self.time_indexes) {
             (Some(indexes), Some(time_indexes)) => {
                 indexes.push(Index {

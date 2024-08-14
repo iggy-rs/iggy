@@ -88,6 +88,7 @@ pub struct IggyConsumer {
     last_polled_at: Arc<AtomicU64>,
     current_partition_id: Arc<AtomicU32>,
     retry_interval: IggyDuration,
+    ignore_duplicates: bool,
 }
 
 impl IggyConsumer {
@@ -158,6 +159,7 @@ impl IggyConsumer {
             last_polled_at: Arc::new(AtomicU64::new(0)),
             current_partition_id: Arc::new(AtomicU32::new(0)),
             retry_interval,
+            ignore_duplicates: polling_strategy.kind == PollingKind::Next,
         }
     }
 
@@ -422,6 +424,7 @@ impl IggyConsumer {
         let retry_interval = self.retry_interval;
         let last_stored_offset = self.last_stored_offsets.clone();
         let last_consumed_offset = self.last_consumed_offsets.clone();
+        let ignore_duplicates = self.ignore_duplicates;
 
         async move {
             if interval > 0 {
@@ -464,6 +467,17 @@ impl IggyConsumer {
                     consumed_offset = 0;
                     has_consumed_offset = false;
                     last_consumed_offset.insert(partition_id, AtomicU64::new(0));
+                }
+
+                if has_consumed_offset
+                    && ignore_duplicates
+                    && consumed_offset >= polled_messages.messages[0].offset
+                {
+                    return Ok(PolledMessages {
+                        messages: EMPTY_MESSAGES,
+                        current_offset: polled_messages.current_offset,
+                        partition_id,
+                    });
                 }
 
                 let stored_offset;

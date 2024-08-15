@@ -65,6 +65,12 @@ impl CliCommand for GetConsumerOffsetCmd {
             )
         })?;
 
+        if consumer_offset.is_none() {
+            event!(target: PRINT_TARGET, Level::INFO, "Consumer offset for {} for stream with ID: {} and topic with ID: {} and partition with ID: {} was not found", self.get_consumer_info(), self.get_consumer_offset.stream_id, self.get_consumer_offset.topic_id, self.get_consumer_offset.partition_id.unwrap());
+            return Ok(());
+        }
+
+        let consumer_offset = consumer_offset.unwrap();
         let mut table = Table::new();
 
         table.set_header(vec!["Property", "Value"]);

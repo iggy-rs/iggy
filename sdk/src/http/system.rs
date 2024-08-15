@@ -22,10 +22,14 @@ impl SystemClient for HttpClient {
         Err(IggyError::FeatureUnavailable)
     }
 
-    async fn get_client(&self, client_id: u32) -> Result<ClientInfoDetails, IggyError> {
+    async fn get_client(&self, client_id: u32) -> Result<Option<ClientInfoDetails>, IggyError> {
         let response = self.get(&format!("{}/{}", CLIENTS, client_id)).await?;
+        if response.status() == 404 {
+            return Ok(None);
+        }
+
         let client = response.json().await?;
-        Ok(client)
+        Ok(Some(client))
     }
 
     async fn get_clients(&self) -> Result<Vec<ClientInfo>, IggyError> {

@@ -60,7 +60,8 @@ impl IggyCmdTestCase for TestUserPermissionsCmd {
             .get_user(&self.username.clone().try_into().unwrap())
             .await;
         assert!(user.is_ok());
-        self.user_id = Some(user.unwrap().id);
+        let user = user.unwrap().expect("User not found");
+        self.user_id = Some(user.id);
     }
 
     fn get_command(&self) -> IggyCmdCommand {
@@ -91,7 +92,7 @@ impl IggyCmdTestCase for TestUserPermissionsCmd {
             .get_user(&self.username.clone().try_into().unwrap())
             .await;
         assert!(user.is_ok());
-        let user = user.unwrap();
+        let user = user.unwrap().expect("User not found");
         assert_eq!(user.username, self.username);
         assert_eq!(
             user.permissions,

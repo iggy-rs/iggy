@@ -36,7 +36,7 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partition_id: Option<u32>,
-    ) -> Result<ConsumerOffsetInfo, IggyError> {
+    ) -> Result<Option<ConsumerOffsetInfo>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
             .send_with_response(&GetConsumerOffset {
@@ -46,6 +46,10 @@ impl<B: BinaryClient> ConsumerOffsetClient for B {
                 partition_id,
             })
             .await?;
-        mapper::map_consumer_offset(response)
+        if response.is_empty() {
+            return Ok(None);
+        }
+
+        mapper::map_consumer_offset(response).map(Some)
     }
 }

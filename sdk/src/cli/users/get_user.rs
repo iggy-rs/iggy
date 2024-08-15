@@ -141,6 +141,17 @@ impl CliCommand for GetUserCmd {
             .await
             .with_context(|| format!("Problem getting user with ID: {}", self.get_user.user_id))?;
 
+        if user.is_none() {
+            event!(
+                target: PRINT_TARGET,
+                Level::INFO,
+                "User with ID: {} was not found",
+                self.get_user.user_id
+            );
+            return Ok(());
+        }
+
+        let user = user.unwrap();
         let mut table = Table::new();
 
         table.set_header(vec!["Property", "Value"]);

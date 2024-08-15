@@ -39,8 +39,12 @@ async fn get_stream(
     let stream = system.find_stream(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
-    )?;
-    let stream = mapper::map_stream(stream);
+    );
+    if stream.is_err() {
+        return Err(CustomError::ResourceNotFound);
+    }
+
+    let stream = mapper::map_stream(stream?);
     Ok(Json(stream))
 }
 

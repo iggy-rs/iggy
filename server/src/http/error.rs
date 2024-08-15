@@ -10,6 +10,8 @@ use tracing::error;
 pub enum CustomError {
     #[error(transparent)]
     Error(#[from] IggyError),
+    #[error("Resource not found")]
+    ResourceNotFound,
 }
 
 #[derive(Debug, Serialize)]
@@ -47,6 +49,15 @@ impl IntoResponse for CustomError {
                 };
                 (status_code, Json(ErrorResponse::from_error(error)))
             }
+            CustomError::ResourceNotFound => (
+                StatusCode::NOT_FOUND,
+                Json(ErrorResponse {
+                    id: 404,
+                    code: "not_found".to_string(),
+                    reason: "Resource not found".to_string(),
+                    field: None,
+                }),
+            ),
         }
         .into_response()
     }

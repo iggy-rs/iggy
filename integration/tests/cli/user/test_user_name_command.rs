@@ -51,7 +51,8 @@ impl IggyCmdTestCase for TestUserNameCmd {
             .get_user(&self.username.as_str().try_into().unwrap())
             .await;
         assert!(user.is_ok());
-        self.user_id = Some(user.unwrap().id);
+        let user = user.unwrap().expect("User not found");
+        self.user_id = Some(user.id);
     }
 
     fn get_command(&self) -> IggyCmdCommand {

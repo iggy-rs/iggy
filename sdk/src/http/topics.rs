@@ -17,15 +17,19 @@ impl TopicClient for HttpClient {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<TopicDetails, IggyError> {
+    ) -> Result<Option<TopicDetails>, IggyError> {
         let response = self
             .get(&get_details_path(
                 &stream_id.as_cow_str(),
                 &topic_id.as_cow_str(),
             ))
             .await?;
+        if response.status() == 404 {
+            return Ok(None);
+        }
+
         let topic = response.json().await?;
-        Ok(topic)
+        Ok(Some(topic))
     }
 
     async fn get_topics(&self, stream_id: &Identifier) -> Result<Vec<Topic>, IggyError> {

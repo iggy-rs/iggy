@@ -108,10 +108,10 @@ impl IggyProducer {
         self.subscribe_events().await;
         let client = self.client.clone();
         let client = client.read().await;
-        if let Err(error) = client.get_stream(&self.stream_id).await {
+        if client.get_stream(&self.stream_id).await?.is_none() {
             if !self.create_stream_if_not_exists {
                 error!("Stream does not exist and auto-creation is disabled.");
-                return Err(error);
+                return Err(IggyError::StreamNameNotFound(self.stream_name.clone()));
             }
 
             let (name, id) = match self.stream_id.kind {
@@ -125,10 +125,17 @@ impl IggyProducer {
             client.create_stream(&name, id).await?;
         }
 
-        if let Err(error) = client.get_topic(&self.stream_id, &self.topic_id).await {
+        if client
+            .get_topic(&self.stream_id, &self.topic_id)
+            .await?
+            .is_none()
+        {
             if !self.create_topic_if_not_exists {
                 error!("Topic does not exist and auto-creation is disabled.");
-                return Err(error);
+                return Err(IggyError::TopicNameNotFound(
+                    self.topic_name.clone(),
+                    self.stream_name.clone(),
+                ));
             }
 
             let (name, id) = match self.topic_id.kind {

@@ -62,7 +62,7 @@ impl IggyCmdTestCase for TestStreamUpdateCmd {
     async fn verify_server_state(&self, client: &dyn Client) {
         let stream = client.get_stream(&self.stream_id.try_into().unwrap()).await;
         assert!(stream.is_ok());
-        let stream = stream.unwrap();
+        let stream = stream.unwrap().expect("Stream not found");
         assert_eq!(stream.name, self.new_name);
     }
 }

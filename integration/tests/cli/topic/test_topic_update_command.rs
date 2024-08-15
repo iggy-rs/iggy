@@ -184,7 +184,7 @@ impl IggyCmdTestCase for TestTopicUpdateCmd {
             )
             .await;
         assert!(topic.is_ok());
-        let topic_details = topic.unwrap();
+        let topic_details = topic.unwrap().expect("Failed to get topic");
         assert_eq!(topic_details.name, self.topic_new_name);
         assert_eq!(topic_details.id, self.topic_id);
         assert_eq!(topic_details.messages_count, 0);

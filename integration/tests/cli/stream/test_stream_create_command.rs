@@ -60,7 +60,7 @@ impl IggyCmdTestCase for TestStreamCreateCmd {
             .get_stream(&self.name.clone().try_into().unwrap())
             .await;
         assert!(stream.is_ok());
-        let stream = stream.unwrap();
+        let stream = stream.unwrap().expect("Stream not found");
         assert_eq!(stream.name, self.name);
         if let Some(stream_id) = self.stream_id {
             assert_eq!(stream.id, stream_id);

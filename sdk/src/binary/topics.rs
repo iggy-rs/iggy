@@ -20,7 +20,7 @@ impl<B: BinaryClient> TopicClient for B {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<TopicDetails, IggyError> {
+    ) -> Result<Option<TopicDetails>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
             .send_with_response(&GetTopic {
@@ -28,7 +28,11 @@ impl<B: BinaryClient> TopicClient for B {
                 topic_id: topic_id.clone(),
             })
             .await?;
-        mapper::map_topic(response)
+        if response.is_empty() {
+            return Ok(None);
+        }
+
+        mapper::map_topic(response).map(Some)
     }
 
     async fn get_topics(&self, stream_id: &Identifier) -> Result<Vec<Topic>, IggyError> {

@@ -39,7 +39,7 @@ impl ConsumerOffsetClient for HttpClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partition_id: Option<u32>,
-    ) -> Result<ConsumerOffsetInfo, IggyError> {
+    ) -> Result<Option<ConsumerOffsetInfo>, IggyError> {
         let response = self
             .get_with_query(
                 &get_path(&stream_id.as_cow_str(), &topic_id.as_cow_str()),
@@ -51,8 +51,12 @@ impl ConsumerOffsetClient for HttpClient {
                 },
             )
             .await?;
+        if response.status() == 404 {
+            return Ok(None);
+        }
+
         let offset = response.json().await?;
-        Ok(offset)
+        Ok(Some(offset))
     }
 }
 

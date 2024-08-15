@@ -25,10 +25,17 @@ pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
         interval.tick().await;
         info!("Validating if stream: {stream_id} exists..");
         let stream = client.get_stream(&stream_id).await;
-        if stream.is_ok() {
-            info!("Stream: {stream_id} was found.");
-            break;
+        if stream.is_err() {
+            continue;
         }
+
+        let stream = stream.unwrap();
+        if stream.is_none() {
+            continue;
+        }
+
+        info!("Stream: {stream_id} was found.");
+        break;
     }
     loop {
         interval.tick().await;
@@ -38,8 +45,13 @@ pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
             continue;
         }
 
-        info!("Topic: {} was found.", topic_id);
         let topic = topic.unwrap();
+        if topic.is_none() {
+            continue;
+        }
+
+        let topic = topic.unwrap();
+        info!("Topic: {} was found.", topic_id);
         if topic.partitions_count >= partition_id {
             break;
         }
@@ -54,8 +66,8 @@ pub async fn init_by_consumer(args: &Args, client: &dyn Client) {
 pub async fn init_by_producer(args: &Args, client: &dyn Client) -> Result<(), IggyError> {
     let stream_id = args.stream_id.clone().try_into()?;
     let topic_name = args.topic_id.clone();
-    let stream = client.get_stream(&stream_id).await;
-    if stream.is_ok() {
+    let stream = client.get_stream(&stream_id).await?;
+    if stream.is_some() {
         return Ok(());
     }
 

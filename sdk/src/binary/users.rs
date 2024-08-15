@@ -20,14 +20,18 @@ use crate::users::update_user::UpdateUser;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> UserClient for B {
-    async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
+    async fn get_user(&self, user_id: &Identifier) -> Result<Option<UserInfoDetails>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
             .send_with_response(&GetUser {
                 user_id: user_id.clone(),
             })
             .await?;
-        mapper::map_user(response)
+        if response.is_empty() {
+            return Ok(None);
+        }
+
+        mapper::map_user(response).map(Some)
     }
 
     async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {

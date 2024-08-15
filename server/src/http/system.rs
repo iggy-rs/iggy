@@ -56,7 +56,12 @@ async fn get_client(
             &Session::stateless(identity.user_id, identity.ip_address),
             client_id,
         )
-        .await?;
+        .await;
+    if client.is_err() {
+        return Err(CustomError::ResourceNotFound);
+    }
+
+    let client = client?;
     let client = client.read().await;
     let client = mapper::map_client(&client);
     Ok(Json(client))

@@ -171,7 +171,7 @@ impl Stream {
         self.topics_ids
             .get(name)
             .map(|topic_id| self.get_topic_by_id(*topic_id))
-            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_string(), self.stream_id))?
+            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_string(), self.name.to_owned()))?
     }
 
     fn get_topic_by_id_mut(&mut self, id: u32) -> Result<&mut Topic, IggyError> {
@@ -184,7 +184,7 @@ impl Stream {
         self.topics_ids
             .get(name)
             .and_then(|topic_id| self.topics.get_mut(topic_id))
-            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_string(), self.stream_id))
+            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_string(), self.name.to_owned()))
     }
 
     fn remove_topic_by_id(&mut self, id: u32) -> Result<Topic, IggyError> {
@@ -195,7 +195,7 @@ impl Stream {
 
         self.topics_ids
             .remove(&topic.name)
-            .ok_or_else(|| IggyError::TopicNameNotFound(topic.name.clone(), self.stream_id))?;
+            .ok_or_else(|| IggyError::TopicNameNotFound(topic.name.clone(), self.name.clone()))?;
         Ok(topic)
     }
 
@@ -203,7 +203,7 @@ impl Stream {
         let topic_id = self
             .topics_ids
             .remove(name)
-            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_owned(), self.stream_id))?;
+            .ok_or_else(|| IggyError::TopicNameNotFound(name.to_owned(), self.name.clone()))?;
 
         self.topics
             .remove(&topic_id)

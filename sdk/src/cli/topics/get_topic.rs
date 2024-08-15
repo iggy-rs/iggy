@@ -43,6 +43,12 @@ impl CliCommand for GetTopicCmd {
                 )
             })?;
 
+        if topic.is_none() {
+            event!(target: PRINT_TARGET, Level::INFO, "Topic with ID: {} in stream {} was not found", self.get_topic.topic_id, self.get_topic.stream_id);
+            return Ok(());
+        }
+
+        let topic = topic.unwrap();
         let mut table = Table::new();
 
         table.set_header(vec!["Property", "Value"]);

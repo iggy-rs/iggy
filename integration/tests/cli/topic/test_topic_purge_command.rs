@@ -99,7 +99,7 @@ impl IggyCmdTestCase for TestTopicPurgeCmd {
             )
             .await;
         assert!(topic_state.is_ok());
-        let topic_state = topic_state.unwrap();
+        let topic_state = topic_state.unwrap().expect("Topic not found");
         assert!(topic_state.size > 0);
     }
 
@@ -136,7 +136,7 @@ impl IggyCmdTestCase for TestTopicPurgeCmd {
             )
             .await;
         assert!(topic_state.is_ok());
-        let topic_state = topic_state.unwrap();
+        let topic_state = topic_state.unwrap().expect("Topic not found");
         assert_eq!(topic_state.size, 0);
 
         let topic_delete = client

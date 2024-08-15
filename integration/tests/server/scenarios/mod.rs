@@ -44,6 +44,7 @@ async fn get_consumer_group(client: &IggyClient) -> ConsumerGroupDetails {
         )
         .await
         .unwrap()
+        .expect("Failed to get consumer group")
 }
 
 async fn join_consumer_group(client: &IggyClient) {

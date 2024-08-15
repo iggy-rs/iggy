@@ -48,8 +48,12 @@ async fn get_user(
     let user = system.find_user(
         &Session::stateless(identity.user_id, identity.ip_address),
         &user_id,
-    )?;
-    let user = mapper::map_user(user);
+    );
+    if user.is_err() {
+        return Err(CustomError::ResourceNotFound);
+    }
+
+    let user = mapper::map_user(user?);
     Ok(Json(user))
 }
 

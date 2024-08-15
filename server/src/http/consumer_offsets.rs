@@ -42,8 +42,12 @@ async fn get_consumer_offset(
             &query.0.topic_id,
             query.0.partition_id,
         )
-        .await?;
-    Ok(Json(offset))
+        .await;
+    if offset.is_err() {
+        return Err(CustomError::ResourceNotFound);
+    }
+
+    Ok(Json(offset?))
 }
 
 async fn store_consumer_offset(

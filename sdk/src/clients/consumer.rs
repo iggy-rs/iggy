@@ -88,7 +88,6 @@ pub struct IggyConsumer {
     last_polled_at: Arc<AtomicU64>,
     current_partition_id: Arc<AtomicU32>,
     retry_interval: IggyDuration,
-    ignore_duplicates: bool,
 }
 
 impl IggyConsumer {
@@ -159,7 +158,6 @@ impl IggyConsumer {
             last_polled_at: Arc::new(AtomicU64::new(0)),
             current_partition_id: Arc::new(AtomicU32::new(0)),
             retry_interval,
-            ignore_duplicates: polling_strategy.kind == PollingKind::Next,
         }
     }
 
@@ -175,6 +173,26 @@ impl IggyConsumer {
     pub async fn init(&mut self) -> Result<(), IggyError> {
         if self.initialized {
             return Ok(());
+        }
+
+        {
+            let client = self.client.read().await;
+            if client.get_stream(&self.stream_id).await?.is_none() {
+                return Err(IggyError::StreamNameNotFound(
+                    self.stream_id.get_string_value().unwrap_or_default(),
+                ));
+            }
+
+            if client
+                .get_topic(&self.stream_id, &self.topic_id)
+                .await?
+                .is_none()
+            {
+                return Err(IggyError::TopicNameNotFound(
+                    self.topic_id.get_string_value().unwrap_or_default(),
+                    self.stream_id.get_string_value().unwrap_or_default(),
+                ));
+            }
         }
 
         self.subscribe_events().await;
@@ -424,7 +442,6 @@ impl IggyConsumer {
         let retry_interval = self.retry_interval;
         let last_stored_offset = self.last_stored_offsets.clone();
         let last_consumed_offset = self.last_consumed_offsets.clone();
-        let ignore_duplicates = self.ignore_duplicates;
 
         async move {
             if interval > 0 {
@@ -469,10 +486,7 @@ impl IggyConsumer {
                     last_consumed_offset.insert(partition_id, AtomicU64::new(0));
                 }
 
-                if has_consumed_offset
-                    && ignore_duplicates
-                    && consumed_offset >= polled_messages.messages[0].offset
-                {
+                if has_consumed_offset && consumed_offset >= polled_messages.messages[0].offset {
                     return Ok(PolledMessages {
                         messages: EMPTY_MESSAGES,
                         current_offset: polled_messages.current_offset,
@@ -583,13 +597,17 @@ impl IggyConsumer {
 
         let consumer_group_id = name.to_owned().try_into()?;
         trace!("Validating consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}");
-        if let Err(error) = client
+        if client
             .get_consumer_group(&stream_id, &topic_id, &consumer_group_id)
-            .await
+            .await?
+            .is_none()
         {
             if !create_consumer_group_if_not_exists {
                 error!("Consumer group does not exist and auto-creation is disabled.");
-                return Err(error);
+                return Err(IggyError::ConsumerGroupNameNotFound(
+                    name.to_owned(),
+                    topic_id.get_string_value().unwrap_or_default(),
+                ));
             }
 
             info!("Creating consumer group: {consumer_group_id} for topic: {topic_id}, stream: {stream_id}");

@@ -36,7 +36,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let user = client
         .get_user(&Identifier::named(DEFAULT_ROOT_USERNAME).unwrap())
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get user");
 
     assert_eq!(user.id, 1);
     assert!(user.created_at.as_micros() > 0);

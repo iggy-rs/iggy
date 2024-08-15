@@ -127,7 +127,7 @@ impl IggyCmdTestCase for TestPartitionCreateCmd {
             )
             .await;
         assert!(topic.is_ok());
-        let topic_details = topic.unwrap();
+        let topic_details = topic.unwrap().expect("Failed to get topic");
         assert_eq!(topic_details.name, self.topic_name);
         assert_eq!(topic_details.id, self.topic_id);
         assert_eq!(

@@ -13,14 +13,18 @@ use crate::streams::update_stream::UpdateStream;
 
 #[async_trait::async_trait]
 impl<B: BinaryClient> StreamClient for B {
-    async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
+    async fn get_stream(&self, stream_id: &Identifier) -> Result<Option<StreamDetails>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
             .send_with_response(&GetStream {
                 stream_id: stream_id.clone(),
             })
             .await?;
-        mapper::map_stream(response)
+        if response.is_empty() {
+            return Ok(None);
+        }
+
+        mapper::map_stream(response).map(Some)
     }
 
     async fn get_streams(&self) -> Result<Vec<Stream>, IggyError> {

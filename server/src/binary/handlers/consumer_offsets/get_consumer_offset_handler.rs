@@ -23,8 +23,13 @@ pub async fn handle(
             &command.topic_id,
             command.partition_id,
         )
-        .await?;
-    let offset = mapper::map_consumer_offset(&offset);
+        .await;
+    if offset.is_err() {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    }
+
+    let offset = mapper::map_consumer_offset(&offset?);
     sender.send_ok_response(&offset).await?;
     Ok(())
 }

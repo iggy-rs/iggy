@@ -18,10 +18,14 @@ const PATH: &str = "/users";
 
 #[async_trait]
 impl UserClient for HttpClient {
-    async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
+    async fn get_user(&self, user_id: &Identifier) -> Result<Option<UserInfoDetails>, IggyError> {
         let response = self.get(&format!("{PATH}/{}", user_id)).await?;
+        if response.status() == 404 {
+            return Ok(None);
+        }
+
         let user = response.json().await?;
-        Ok(user)
+        Ok(Some(user))
     }
 
     async fn get_users(&self) -> Result<Vec<UserInfo>, IggyError> {

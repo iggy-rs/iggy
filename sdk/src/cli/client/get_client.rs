@@ -35,6 +35,12 @@ impl CliCommand for GetClientCmd {
                 )
             })?;
 
+        if client_details.is_none() {
+            event!(target: PRINT_TARGET, Level::INFO, "Client with ID: {} was not found", self.get_client.client_id);
+            return Ok(());
+        }
+
+        let client_details = client_details.unwrap();
         let mut table = Table::new();
 
         table.set_header(vec!["Property", "Value"]);

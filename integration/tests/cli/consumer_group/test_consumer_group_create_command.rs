@@ -129,7 +129,9 @@ impl IggyCmdTestCase for TestConsumerGroupCreateCmd {
             )
             .await;
         assert!(consumer_group.is_ok());
-        let consumer_group_details = consumer_group.unwrap();
+        let consumer_group_details = consumer_group
+            .unwrap()
+            .expect("Failed to get consumer group");
         assert_eq!(consumer_group_details.name, self.group_name);
         if let Some(group_id) = self.group_id {
             assert_eq!(consumer_group_details.id, group_id);

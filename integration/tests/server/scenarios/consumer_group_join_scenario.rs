@@ -144,7 +144,8 @@ async fn get_consumer_group_and_validate_members(
             &Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get consumer group");
 
     assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
     assert_eq!(consumer_group.name, CONSUMER_GROUP_NAME);

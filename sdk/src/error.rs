@@ -219,7 +219,7 @@ pub enum IggyError {
     #[error("Topic with ID: {0} for stream with ID: {1} was not found.")]
     TopicIdNotFound(u32, u32) = 2010,
     #[error("Topic with name: {0} for stream with ID: {1} was not found.")]
-    TopicNameNotFound(String, u32) = 2011,
+    TopicNameNotFound(String, String) = 2011,
     #[error("Topic with ID: {0} for stream with ID: {1} already exists.")]
     TopicIdAlreadyExists(u32, u32) = 2012,
     #[error("Topic with name: {0} for stream with ID: {1} already exists.")]
@@ -335,7 +335,7 @@ pub enum IggyError {
     #[error("Invalid consumer group ID")]
     InvalidConsumerGroupId = 5002,
     #[error("Consumer group with name: {0} for topic with ID: {1} was not found.")]
-    ConsumerGroupNameNotFound(String, u32) = 5003,
+    ConsumerGroupNameNotFound(String, String) = 5003,
     #[error("Consumer group with name: {0} for topic with ID: {1} already exists.")]
     ConsumerGroupNameAlreadyExists(String, u32) = 5004,
     #[error("Invalid consumer group name")]

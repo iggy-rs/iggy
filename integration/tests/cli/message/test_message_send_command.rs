@@ -201,7 +201,7 @@ impl IggyCmdTestCase for TestMessageSendCmd {
             )
             .await;
         assert!(topic.is_ok());
-        let topic_details = topic.unwrap();
+        let topic_details = topic.unwrap().expect("Failed to get topic");
         assert_eq!(topic_details.messages_count, self.messages.len() as u64);
 
         let polled_messages = client

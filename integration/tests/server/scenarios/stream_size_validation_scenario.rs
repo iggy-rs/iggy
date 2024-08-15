@@ -199,7 +199,8 @@ async fn validate_stream(
     let stream = client
         .get_stream(&Identifier::from_str(stream_name).unwrap())
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get stream");
 
     // 2. Validate stream size and number of messages
     assert_eq!(stream.size, expected_size);
@@ -220,7 +221,8 @@ async fn validate_topic(
             &Identifier::from_str(topic_name).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get topic");
 
     // 2. Validate topic size and number of messages
     assert_eq!(topic.size, expected_size);

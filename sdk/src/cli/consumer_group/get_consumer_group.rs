@@ -45,6 +45,12 @@ impl CliCommand for GetConsumerGroupCmd {
                 )
             })?;
 
+        if consumer_group.is_none() {
+            event!(target: PRINT_TARGET, Level::INFO, "Consumer group with ID: {} was not found", self.get_consumer_group.group_id);
+            return Ok(());
+        }
+
+        let consumer_group = consumer_group.unwrap();
         let mut table = Table::new();
 
         table.set_header(vec!["Property", "Value"]);

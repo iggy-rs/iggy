@@ -99,7 +99,7 @@ impl IggyCmdTestCase for TestUserCreateCmd {
             .get_user(&self.username.as_str().try_into().unwrap())
             .await;
         assert!(user.is_ok());
-        let user = user.unwrap();
+        let user = user.unwrap().expect("User not found");
         assert_eq!(user.username, self.username);
         assert_eq!(user.status, self.status.clone().into());
         assert_eq!(

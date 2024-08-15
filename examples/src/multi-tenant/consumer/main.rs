@@ -170,13 +170,18 @@ async fn create_user(
     username: &str,
     client: &IggyClient,
 ) -> Result<(), IggyError> {
-    let stream = client.get_stream(&stream_name.try_into()?).await?;
+    let stream = client
+        .get_stream(&stream_name.try_into()?)
+        .await?
+        .expect("Stream does not exist");
     let mut topic_permissions = HashMap::new();
     for topic in topics {
         let topic_id = Identifier::named(topic)?;
         let topic = client
             .get_topic(&stream_name.try_into()?, &topic_id)
-            .await?;
+            .await?
+            .expect("Topic does not exist");
+
         topic_permissions.insert(
             topic.id,
             TopicPermissions {

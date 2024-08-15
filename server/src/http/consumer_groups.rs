@@ -42,7 +42,12 @@ async fn get_consumer_group(
         &stream_id,
         &topic_id,
         &group_id,
-    )?;
+    );
+    if consumer_group.is_err() {
+        return Err(CustomError::ResourceNotFound);
+    }
+
+    let consumer_group = consumer_group?;
     let consumer_group = consumer_group.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;
     Ok(Json(consumer_group))

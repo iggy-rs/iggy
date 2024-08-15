@@ -133,7 +133,7 @@ impl IggyCmdTestCase for TestTopicCreateCmd {
             )
             .await;
         assert!(topic.is_ok());
-        let topic_details = topic.unwrap();
+        let topic_details = topic.unwrap().expect("Topic not found");
         assert_eq!(topic_details.name, self.topic_name);
         assert_eq!(topic_details.partitions_count, self.partitions_count);
         assert_eq!(topic_details.messages_count, 0);

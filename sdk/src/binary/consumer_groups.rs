@@ -18,7 +18,7 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
         stream_id: &Identifier,
         topic_id: &Identifier,
         group_id: &Identifier,
-    ) -> Result<ConsumerGroupDetails, IggyError> {
+    ) -> Result<Option<ConsumerGroupDetails>, IggyError> {
         fail_if_not_authenticated(self).await?;
         let response = self
             .send_with_response(&GetConsumerGroup {
@@ -27,7 +27,11 @@ impl<B: BinaryClient> ConsumerGroupClient for B {
                 group_id: group_id.clone(),
             })
             .await?;
-        mapper::map_consumer_group(response)
+        if response.is_empty() {
+            return Ok(None);
+        }
+
+        mapper::map_consumer_group(response).map(Some)
     }
 
     async fn get_consumer_groups(

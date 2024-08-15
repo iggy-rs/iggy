@@ -46,8 +46,12 @@ async fn get_topic(
         &Session::stateless(identity.user_id, identity.ip_address),
         &stream_id,
         &topic_id,
-    )?;
-    let topic = mapper::map_topic(topic).await;
+    );
+    if topic.is_err() {
+        return Err(CustomError::ResourceNotFound);
+    }
+
+    let topic = mapper::map_topic(topic?).await;
     Ok(Json(topic))
 }
 

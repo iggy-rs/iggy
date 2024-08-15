@@ -3,10 +3,9 @@ use futures_util::StreamExt;
 use iggy::client_provider;
 use iggy::client_provider::ClientProviderConfig;
 use iggy::clients::client::IggyClient;
-use iggy::clients::consumer::{AutoCommit, AutoCommitWhen, IggyConsumer};
+use iggy::clients::consumer::{AutoCommit, AutoCommitWhen, IggyConsumer, ReceivedMessage};
 use iggy::consumer::ConsumerKind;
 use iggy::messages::poll_messages::PollingStrategy;
-use iggy::models::messages::PolledMessage;
 use iggy::utils::duration::IggyDuration;
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::messages::{
@@ -70,7 +69,7 @@ pub async fn consume_messages(
         }
 
         if let Ok(message) = message {
-            handle_message(&message.message)?;
+            handle_message(&message)?;
             consumed_batches += 1;
         } else if let Err(error) = message {
             error!("Error while handling message: {error}");
@@ -80,14 +79,14 @@ pub async fn consume_messages(
     Ok(())
 }
 
-fn handle_message(message: &PolledMessage) -> anyhow::Result<(), Box<dyn Error>> {
+fn handle_message(message: &ReceivedMessage) -> anyhow::Result<(), Box<dyn Error>> {
     // The payload can be of any type as it is a raw byte array. In this case it's a JSON string.
-    let json = std::str::from_utf8(&message.payload)?;
+    let json = std::str::from_utf8(&message.message.payload)?;
     // The message envelope can be used to send the different types of messages to the same topic.
     let envelope = serde_json::from_str::<Envelope>(json)?;
     info!(
-        "Handling message type: {} at offset: {}...",
-        envelope.message_type, message.offset
+        "Handling message type: {} at offset: {} in partition ID: {} with current offset: {}",
+        envelope.message_type, message.message.offset, message.partition_id, message.current_offset,
     );
     match envelope.message_type.as_str() {
         ORDER_CREATED_TYPE => {

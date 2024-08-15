@@ -14,7 +14,7 @@ impl ConsumerGroupClient for HttpClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         group_id: &Identifier,
-    ) -> Result<ConsumerGroupDetails, IggyError> {
+    ) -> Result<Option<ConsumerGroupDetails>, IggyError> {
         let response = self
             .get(&format!(
                 "{}/{}",
@@ -22,8 +22,12 @@ impl ConsumerGroupClient for HttpClient {
                 group_id
             ))
             .await?;
+        if response.status() == 404 {
+            return Ok(None);
+        }
+
         let consumer_group = response.json().await?;
-        Ok(consumer_group)
+        Ok(Some(consumer_group))
     }
 
     async fn get_consumer_groups(

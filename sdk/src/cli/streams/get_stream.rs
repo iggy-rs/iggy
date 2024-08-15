@@ -36,6 +36,12 @@ impl CliCommand for GetStreamCmd {
                 )
             })?;
 
+        if stream.is_none() {
+            event!(target: PRINT_TARGET, Level::INFO, "Stream with ID: {} was not found", self.get_stream.stream_id);
+            return Ok(());
+        }
+
+        let stream = stream.unwrap();
         let mut table = Table::new();
 
         table.set_header(vec!["Property", "Value"]);

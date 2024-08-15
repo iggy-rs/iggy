@@ -15,8 +15,13 @@ pub async fn handle(
 ) -> Result<(), IggyError> {
     debug!("session: {session}, command: {command}");
     let system = system.read().await;
-    let stream = system.find_stream(session, &command.stream_id)?;
-    let response = mapper::map_stream(stream);
+    let stream = system.find_stream(session, &command.stream_id);
+    if stream.is_err() {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    }
+
+    let response = mapper::map_stream(stream?);
     sender.send_ok_response(&response).await?;
     Ok(())
 }

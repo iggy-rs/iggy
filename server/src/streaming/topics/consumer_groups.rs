@@ -47,7 +47,7 @@ impl Topic {
         if group_id.is_none() {
             return Err(IggyError::ConsumerGroupNameNotFound(
                 name.to_string(),
-                self.topic_id,
+                self.name.to_owned(),
             ));
         }
 

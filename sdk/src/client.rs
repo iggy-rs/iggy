@@ -91,7 +91,7 @@ pub trait SystemClient {
     /// Get the info about a specific client by unique ID (not to be confused with the user).
     ///
     /// Authentication is required, and the permission to read the server info.
-    async fn get_client(&self, client_id: u32) -> Result<ClientInfoDetails, IggyError>;
+    async fn get_client(&self, client_id: u32) -> Result<Option<ClientInfoDetails>, IggyError>;
     /// Get the info about all the currently connected clients (not to be confused with the users).
     ///
     /// Authentication is required, and the permission to read the server info.
@@ -106,7 +106,7 @@ pub trait UserClient {
     /// Get the info about a specific user by unique ID or username.
     ///
     /// Authentication is required, and the permission to read the users, unless the provided user ID is the same as the authenticated user.
-    async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError>;
+    async fn get_user(&self, user_id: &Identifier) -> Result<Option<UserInfoDetails>, IggyError>;
     /// Get the info about all the users.
     ///
     /// Authentication is required, and the permission to read the users.
@@ -183,7 +183,7 @@ pub trait StreamClient {
     /// Get the info about a specific stream by unique ID or name.
     ///
     /// Authentication is required, and the permission to read the streams.
-    async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError>;
+    async fn get_stream(&self, stream_id: &Identifier) -> Result<Option<StreamDetails>, IggyError>;
     /// Get the info about all the streams.
     ///
     /// Authentication is required, and the permission to read the streams.
@@ -221,7 +221,7 @@ pub trait TopicClient {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<TopicDetails, IggyError>;
+    ) -> Result<Option<TopicDetails>, IggyError>;
     /// Get the info about all the topics.
     ///
     /// Authentication is required, and the permission to read the topics.
@@ -351,7 +351,7 @@ pub trait ConsumerOffsetClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partition_id: Option<u32>,
-    ) -> Result<ConsumerOffsetInfo, IggyError>;
+    ) -> Result<Option<ConsumerOffsetInfo>, IggyError>;
 }
 
 /// This trait defines the methods to interact with the consumer group module.
@@ -365,7 +365,7 @@ pub trait ConsumerGroupClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         group_id: &Identifier,
-    ) -> Result<ConsumerGroupDetails, IggyError>;
+    ) -> Result<Option<ConsumerGroupDetails>, IggyError>;
     /// Get the info about all the consumer groups for the given stream and topic by unique IDs or names.
     ///
     /// Authentication is required, and the permission to read the streams or topics.

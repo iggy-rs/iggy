@@ -69,7 +69,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let stream = client
         .get_stream(&Identifier::numeric(STREAM_ID).unwrap())
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get stream");
+
     assert_eq!(stream.id, STREAM_ID);
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 0);
@@ -81,7 +83,9 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let stream = client
         .get_stream(&Identifier::named(STREAM_NAME).unwrap())
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get stream");
+
     assert_eq!(stream.id, STREAM_ID);
     assert_eq!(stream.name, STREAM_NAME);
 
@@ -140,7 +144,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             &Identifier::numeric(TOPIC_ID).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get topic");
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
@@ -164,7 +169,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             &Identifier::named(TOPIC_NAME).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get topic");
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
 
@@ -172,7 +178,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let stream = client
         .get_stream(&Identifier::numeric(STREAM_ID).unwrap())
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get stream");
     assert_eq!(stream.id, STREAM_ID);
     assert_eq!(stream.name, STREAM_NAME);
     assert_eq!(stream.topics_count, 1);
@@ -279,7 +286,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             &Identifier::named(TOPIC_NAME).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get topic");
     assert_eq!(topic.id, TOPIC_ID);
     assert_eq!(topic.name, TOPIC_NAME);
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
@@ -317,7 +325,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             Some(PARTITION_ID),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get consumer offset");
     assert_eq!(offset.partition_id, PARTITION_ID);
     assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
     assert_eq!(offset.stored_offset, 0);
@@ -344,7 +353,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             Some(PARTITION_ID),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get consumer offset");
     assert_eq!(offset.partition_id, PARTITION_ID);
     assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
     assert_eq!(offset.stored_offset, stored_offset);
@@ -379,7 +389,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             Some(PARTITION_ID),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get consumer offset");
     assert_eq!(offset.partition_id, PARTITION_ID);
     assert_eq!(offset.current_offset, (MESSAGES_COUNT - 1) as u64);
     assert_eq!(offset.stored_offset, expected_last_offset);
@@ -432,7 +443,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             &Identifier::numeric(CONSUMER_GROUP_ID).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get consumer group");
 
     assert_eq!(consumer_group.id, CONSUMER_GROUP_ID);
     assert_eq!(consumer_group.partitions_count, PARTITIONS_COUNT);
@@ -519,7 +531,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             &Identifier::numeric(TOPIC_ID).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get topic");
 
     assert_eq!(topic.partitions_count, 2 * PARTITIONS_COUNT);
 
@@ -539,7 +552,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             &Identifier::numeric(TOPIC_ID).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get topic");
 
     assert_eq!(topic.partitions_count, PARTITIONS_COUNT);
 
@@ -569,7 +583,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             &Identifier::numeric(TOPIC_ID).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get topic");
 
     assert_eq!(updated_topic.name, updated_topic_name);
     assert_eq!(
@@ -621,7 +636,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let updated_stream = client
         .get_stream(&Identifier::numeric(STREAM_ID).unwrap())
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get stream");
 
     assert_eq!(updated_stream.name, updated_stream_name);
 
@@ -679,7 +695,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let stream = client
         .get_stream(&Identifier::numeric(stream_id).unwrap())
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get stream");
 
     assert_eq!(stream.id, stream_id);
     assert_eq!(stream.name, stream_name);
@@ -707,7 +724,8 @@ pub async fn run(client_factory: &dyn ClientFactory) {
             &Identifier::numeric(topic_id).unwrap(),
         )
         .await
-        .unwrap();
+        .unwrap()
+        .expect("Failed to get topic");
 
     assert_eq!(topic.id, topic_id);
     assert_eq!(topic.name, topic_name);

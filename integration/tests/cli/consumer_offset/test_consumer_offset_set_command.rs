@@ -180,7 +180,7 @@ impl IggyCmdTestCase for TestConsumerOffsetSetCmd {
             )
             .await;
         assert!(offset.is_ok());
-        let offset = offset.unwrap();
+        let offset = offset.unwrap().expect("Failed to get consumer offset");
         assert_eq!(offset.stored_offset, self.stored_offset);
 
         let topic = client

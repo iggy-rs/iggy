@@ -78,7 +78,7 @@ impl IggyCmdTestCase for TestStreamPurgeCmd {
 
         let stream_state = client.get_stream(&self.stream_id.try_into().unwrap()).await;
         assert!(stream_state.is_ok());
-        let stream_state = stream_state.unwrap();
+        let stream_state = stream_state.unwrap().expect("Stream not found");
         assert!(stream_state.size > 0);
     }
 
@@ -107,7 +107,7 @@ impl IggyCmdTestCase for TestStreamPurgeCmd {
     async fn verify_server_state(&self, client: &dyn Client) {
         let stream_state = client.get_stream(&self.stream_id.try_into().unwrap()).await;
         assert!(stream_state.is_ok());
-        let stream_state = stream_state.unwrap();
+        let stream_state = stream_state.unwrap().expect("Stream not found");
         assert_eq!(stream_state.size, 0);
 
         let stream_delete = client

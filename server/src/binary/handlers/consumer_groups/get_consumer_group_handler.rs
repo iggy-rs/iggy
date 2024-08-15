@@ -20,8 +20,13 @@ pub async fn handle(
         &command.stream_id,
         &command.topic_id,
         &command.group_id,
-    )?;
-    let consumer_group = consumer_group.read().await;
+    );
+    if consumer_group.is_err() {
+        sender.send_empty_ok_response().await?;
+        return Ok(());
+    }
+
+    let consumer_group = consumer_group?.read().await;
     let consumer_group = mapper::map_consumer_group(&consumer_group).await;
     sender.send_ok_response(&consumer_group).await?;
     Ok(())

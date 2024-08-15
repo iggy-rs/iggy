@@ -182,7 +182,7 @@ impl Client for IggyClient {
 
 #[async_trait]
 impl UserClient for IggyClient {
-    async fn get_user(&self, user_id: &Identifier) -> Result<UserInfoDetails, IggyError> {
+    async fn get_user(&self, user_id: &Identifier) -> Result<Option<UserInfoDetails>, IggyError> {
         self.client.read().await.get_user(user_id).await
     }
 
@@ -307,7 +307,7 @@ impl SystemClient for IggyClient {
         self.client.read().await.get_me().await
     }
 
-    async fn get_client(&self, client_id: u32) -> Result<ClientInfoDetails, IggyError> {
+    async fn get_client(&self, client_id: u32) -> Result<Option<ClientInfoDetails>, IggyError> {
         self.client.read().await.get_client(client_id).await
     }
 
@@ -322,7 +322,7 @@ impl SystemClient for IggyClient {
 
 #[async_trait]
 impl StreamClient for IggyClient {
-    async fn get_stream(&self, stream_id: &Identifier) -> Result<StreamDetails, IggyError> {
+    async fn get_stream(&self, stream_id: &Identifier) -> Result<Option<StreamDetails>, IggyError> {
         self.client.read().await.get_stream(stream_id).await
     }
 
@@ -365,7 +365,7 @@ impl TopicClient for IggyClient {
         &self,
         stream_id: &Identifier,
         topic_id: &Identifier,
-    ) -> Result<TopicDetails, IggyError> {
+    ) -> Result<Option<TopicDetails>, IggyError> {
         self.client
             .read()
             .await
@@ -574,7 +574,7 @@ impl ConsumerOffsetClient for IggyClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         partition_id: Option<u32>,
-    ) -> Result<ConsumerOffsetInfo, IggyError> {
+    ) -> Result<Option<ConsumerOffsetInfo>, IggyError> {
         self.client
             .read()
             .await
@@ -590,7 +590,7 @@ impl ConsumerGroupClient for IggyClient {
         stream_id: &Identifier,
         topic_id: &Identifier,
         group_id: &Identifier,
-    ) -> Result<ConsumerGroupDetails, IggyError> {
+    ) -> Result<Option<ConsumerGroupDetails>, IggyError> {
         self.client
             .read()
             .await

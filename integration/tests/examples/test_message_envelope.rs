@@ -40,7 +40,6 @@ async fn should_successfully_execute() {
         .execute_test(TestMessageEnvelope {
             expected_producer_output: vec![
                 "Message envelope producer has started, selected transport: tcp",
-                "Received an invalid response with status: 1010 (stream_name_not_found).",
                 "Stream does not exist, creating...",
                 "Messages will be sent to stream: example-stream, topic: example-topic, partition: 1 with interval 1ms.",
             ],

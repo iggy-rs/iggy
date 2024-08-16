@@ -1072,24 +1072,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1462739cb27611015575c0c11df5df7601141071f07518d56fcc1be504cbec97"
 
 [[package]]
-name = "cli"
-version = "0.5.10"
-dependencies = [
- "anyhow",
- "clap",
- "clap_complete",
- "figlet-rs",
- "iggy",
- "keyring",
- "passterm",
- "thiserror",
- "tokio",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "cmake"
 version = "0.1.50"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2306,6 +2288,24 @@ dependencies = [
  "toml",
  "tracing",
  "uuid",
+]
+
+[[package]]
+name = "iggy-cli"
+version = "0.5.10"
+dependencies = [
+ "anyhow",
+ "clap",
+ "clap_complete",
+ "figlet-rs",
+ "iggy",
+ "keyring",
+ "passterm",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
 ]
 
 [[package]]

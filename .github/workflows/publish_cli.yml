@@ -1,0 +1,98 @@
+name: publish_cli
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+env:
+  GITHUB_TOKEN: ${{ github.token }}
+  CARGO_TERM_COLOR: always
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if cli/Cargo.toml and Cargo.lock are changed
+        uses: tj-actions/changed-files@v44
+        id: all_changed_files
+        with:
+          files: |
+            Cargo.lock
+            cli/Cargo.toml
+
+      - name: Extract iggy-cli version from Cargo.toml
+        if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock cli/Cargo.toml' }}
+        id: extract_version
+        run: |
+          version=$(cargo pkgid -p iggy-cli | cut -d@ -f2)
+          echo "iggy_cli_version=$version" >> "$GITHUB_OUTPUT"
+          echo "::notice ::Version from Cargo.toml $version"
+
+      - name: Check if version is a Git tag
+        uses: mukunku/tag-exists-action@v1.6.0
+        if: ${{ steps.all_changed_files.outputs.all_changed_files == 'Cargo.lock cli/Cargo.toml' }}
+        id: check_git_tag
+        with:
+          tag: "iggy-cli-${{ steps.extract_version.outputs.iggy_cli_version }}"
+
+      - name: Print message
+        if: ${{ steps.check_git_tag.outputs.exists == 'true' }}
+        run: |
+          echo "::notice ::Tag iggy-cli-${{ steps.extract_version.outputs.iggy_cli_version }} exists, skipping tag creation"
+
+      - name: Create tag
+        if: ${{ steps.check_git_tag.outputs.exists == 'false' }}
+        id: tagging
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git tag -a iggy-cli-${{ steps.extract_version.outputs.iggy_cli_version }} -m "iggy-cli-${{ steps.extract_version.outputs.iggy_cli_version }}"
+          git push origin iggy-cli-${{ steps.extract_version.outputs.iggy_cli_version }}
+          echo "::notice ::Created iggy-cli-${{ steps.extract_version.outputs.iggy_cli_version }} tag"
+          echo "tag_created=true" >> "$GITHUB_OUTPUT"
+    outputs:
+      iggy_cli_version: ${{ steps.extract_version.outputs.iggy_cli_version }}
+      tag_created: ${{ steps.tagging.outputs.tag_created }}
+
+  publish:
+    name: Publish CLI on crates.io
+    needs: tag
+    if: ${{ needs.tag.outputs.tag_created == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: stable
+            override: true
+
+      - name: publish
+        run: |
+          cargo login "${{ secrets.CARGO_REGISTRY_TOKEN }}"
+          cargo publish -p iggy-cli
+
+  finalize_cli:
+    runs-on: ubuntu-latest
+    needs:
+      - publish
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Everything is fine
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: exit 0
+      - name: Something went wrong
+        if: ${{ contains(needs.*.result, 'failure') }}
+        uses: JasonEtco/create-an-issue@v2.9.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_BOT_CONTEXT_STRING: "publish to crates.io"
+        with:
+          filename: .github/BOT_ISSUE_TEMPLATE.md

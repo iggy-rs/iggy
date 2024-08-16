@@ -305,6 +305,6 @@ Then, run the benchmarking app with the desired options:
 These benchmarks would start the server with the default configuration, create a stream, topic and partition, and then send or poll the messages. The default configuration is optimized for the best performance, so you might want to tweak it for your needs. If you need more options, please refer to `iggy-bench` subcommands `help` and `examples`.
 For example, to run the benchmark for the already started server, provide the additional argument `--server-address 0.0.0.0:8090`.
 
-Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 3000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 10000 MB/s for reads**. These results have been achieved on Ryzen 9 7950X with 64 GB RAM and gen 4 NVMe SSD.
+Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 3000 MB/s (e.g. 3M of 1 KB msg/sec) throughput for writes and 10000 MB/s for reads**. These results have been achieved on Ryzen 9 7950X with 64 GB RAM and gen 4 NVMe SSD.
 
 ---

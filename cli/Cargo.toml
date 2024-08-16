@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "iggy-cli"
 version = "0.5.10"
 edition = "2021"
 authors = ["bartosz.ciesla@gmail.com"]
@@ -11,7 +11,7 @@ anyhow = "1.0.86"
 clap = { version = "4.5.4", features = ["derive"] }
 clap_complete = "4.5.16"
 figlet-rs = "0.1.5"
-iggy = { path = "../sdk", features = ["iggy-cli"] }
+iggy = { path = "../sdk", features = ["iggy-cli"], version = "0.6.10" }
 keyring = "2.3.3"
 passterm = "2.0.1"
 thiserror = "1.0.61"

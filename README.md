@@ -64,6 +64,7 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 - **Consumer groups** providing the message ordering and horizontal scaling across the connected clients
 - **Message expiry** with auto deletion based on the configurable **retention policy**
 - Additional features such as **server side message deduplication**
+- **Multi-tenant** support thanks to the concept of **streams** grouping the **topics**
 - **TLS** support for all transport protocols (TCP, QUIC, HTTPS)
 - Optional server-side as well as client-side **data encryption** using AES-256-GCM
 - Optional metadata support in the form of **message headers**
@@ -76,10 +77,9 @@ The name is an abbreviation for the Italian Greyhound - small yet extremely fast
 
 ## Roadmap
 
-- Streaming server caching and I/O improvements
 - Low level optimizations (zero-copy etc.)
+- Shared-nothing design and io_uring support
 - Clustering & data replication
-- Rich console CLI
 - Advanced Web UI
 - Developer friendly SDK supporting multiple languages
 - Plugins & extensions support
@@ -197,11 +197,7 @@ To see the detailed logs from the CLI/server, run it with `RUST_LOG=trace` envir
 
 ![files structure](assets/files_structure.png)*Files structure*
 
-![server start](assets/server_start.png)*Server start*
-
-![cli_start](assets/cli_start.png)*CLI start*
-
-![server restart](assets/server_restart.png)*Server restart*
+![server](assets/server.png)*Server*
 
 ---
 
@@ -216,6 +212,55 @@ You might start multiple producers and consumers at the same time to see how the
 By default, the consumer will poll the messages using the `next` available offset with auto commit enabled, to store its offset on the server. With this approach, you can easily achieve *at-most-once* delivery.
 
 ![sample](assets/sample.png)
+
+---
+
+## SDK
+
+Iggy comes with the Rust SDK, which is available on [crates.io](https://crates.io/crates/iggy).
+
+The SDK provides both, low-level client for the specific transport, which includes the message sending and polling along with all the administrative actions such as managing the streams, topics, users etc., as well as the high-level client, which abstracts the low-level details and provides the easy-to-use API for both, message producers and consumers.
+
+You can find the more examples, including the multi-tenant one under the `examples` directory.
+```rust
+// Create the Iggy client
+let client = IggyClient::from_connection_string("iggy://user:secret@localhost:8090")?;
+
+// Create a producer for the given stream and one of its topics
+let mut producer = client
+    .producer("dev01", "events")?
+    .batch_size(1000)
+    .send_interval(IggyDuration::from_str("1ms")?)
+    .partitioning(Partitioning::balanced())
+    .build();
+
+producer.init().await?;
+
+// Send some messages to the topic
+let messages = vec![Message::from_str("Hello Iggy.rs")?];
+producer.send(messages).await?;
+
+// Create a consumer for the given stream and one of its topics
+let mut consumer = client
+	.consumer_group("my_app", "dev01", "events")?
+	.auto_commit(AutoCommit::IntervalOrWhen(
+		IggyDuration::from_str("1s")?,
+		AutoCommitWhen::ConsumingAllMessages,
+	))
+	.create_consumer_group_if_not_exists()
+	.auto_join_consumer_group()
+	.polling_strategy(PollingStrategy::next())
+	.poll_interval(IggyDuration::from_str("1ms")?)
+	.batch_size(1000)
+	.build();
+
+consumer.init().await?;
+
+// Start consuming the messages
+while let Some(message) = consumer.next().await {
+    // Handle the message
+}
+```
 
 ---
 
@@ -260,6 +305,6 @@ Then, run the benchmarking app with the desired options:
 These benchmarks would start the server with the default configuration, create a stream, topic and partition, and then send or poll the messages. The default configuration is optimized for the best performance, so you might want to tweak it for your needs. If you need more options, please refer to `iggy-bench` subcommands `help` and `examples`.
 For example, to run the benchmark for the already started server, provide the additional argument `--server-address 0.0.0.0:8090`.
 
-Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 4000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 6000 MB/s for reads**. These results have been achieved on Apple M1 Max with 64 GB RAM.
+Depending on the hardware, transport protocol (`quic`, `tcp` or `http`) and payload size (`messages-per-batch * message-size`) you might expect **over 3000 MB/s (e.g. 4M of 1 KB msg/sec) throughput for writes and 10000 MB/s for reads**. These results have been achieved on Ryzen 9 7950X with 64 GB RAM and gen 4 NVMe SSD.
 
 ---

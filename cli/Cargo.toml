@@ -1,6 +1,6 @@
 [package]
 name = "iggy-cli"
-version = "0.5.10"
+version = "0.5.11"
 edition = "2021"
 authors = ["bartosz.ciesla@gmail.com"]
 repository = "https://github.com/iggy-rs/iggy"

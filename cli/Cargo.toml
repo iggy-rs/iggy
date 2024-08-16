@@ -5,6 +5,9 @@ edition = "2021"
 authors = ["bartosz.ciesla@gmail.com"]
 repository = "https://github.com/iggy-rs/iggy"
 homepage = "https://iggy.rs"
+description = "CLI for Iggy message streaming platform"
+license = "MIT"
+keywords = ["iggy", "cli", "messaging", "streaming"]
 
 [dependencies]
 anyhow = "1.0.86"

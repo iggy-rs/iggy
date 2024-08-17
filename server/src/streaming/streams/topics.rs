@@ -1,3 +1,4 @@
+use crate::configs::system::SystemConfig;
 use crate::streaming::streams::stream::Stream;
 use crate::streaming::topics::topic::Topic;
 use iggy::compression::compression_algorithm::CompressionAlgorithm;
@@ -26,6 +27,7 @@ impl Stream {
         max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<u32, IggyError> {
+        let max_topic_size = get_max_topic_size(max_topic_size, &self.config)?;
         let name = text::to_lowercase_non_whitespace(name);
         if self.topics_ids.contains_key(&name) {
             return Err(IggyError::TopicNameAlreadyExists(name, self.stream_id));
@@ -83,6 +85,7 @@ impl Stream {
         max_topic_size: MaxTopicSize,
         replication_factor: u8,
     ) -> Result<(), IggyError> {
+        let max_topic_size = get_max_topic_size(max_topic_size, &self.config)?;
         let topic_id;
         {
             let topic = self.get_topic(id)?;
@@ -112,9 +115,9 @@ impl Stream {
             self.topics_ids.insert(updated_name.clone(), topic_id);
             let topic = self.get_topic_mut(id)?;
 
-            let max_topic_size = match max_topic_size {
-                MaxTopicSize::ServerDefault => topic.config.topic.max_size,
-                _ => max_topic_size,
+            let message_expiry = match message_expiry {
+                IggyExpiry::ServerDefault => topic.config.segment.message_expiry,
+                _ => message_expiry,
             };
 
             topic.name = updated_name;
@@ -226,6 +229,25 @@ impl Stream {
     }
 }
 
+fn get_max_topic_size(
+    max_topic_size: MaxTopicSize,
+    config: &SystemConfig,
+) -> Result<MaxTopicSize, IggyError> {
+    match max_topic_size {
+        MaxTopicSize::ServerDefault => Ok(config.topic.max_size),
+        _ => {
+            if max_topic_size.as_bytes_u64() >= config.segment.size.as_bytes_u64() {
+                Ok(max_topic_size)
+            } else {
+                Err(IggyError::InvalidTopicSize(
+                    max_topic_size,
+                    config.segment.size,
+                ))
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -242,8 +264,9 @@ mod tests {
         let topic_name = "test_topic";
         let message_expiry = IggyExpiry::NeverExpire;
         let compression_algorithm = CompressionAlgorithm::None;
-        let max_topic_size = MaxTopicSize::Custom(IggyByteSize::from(100));
         let config = Arc::new(SystemConfig::default());
+        let max_topic_size = 2 * config.segment.size.as_bytes_u64();
+        let max_topic_size = MaxTopicSize::Custom(IggyByteSize::from(max_topic_size));
         let storage = Arc::new(get_test_system_storage());
         let mut stream = Stream::create(stream_id, stream_name, config, storage);
         stream

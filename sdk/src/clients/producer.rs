@@ -42,6 +42,8 @@ pub struct IggyProducer {
     create_topic_if_not_exists: bool,
     topic_partitions_count: u32,
     topic_replication_factor: Option<u8>,
+    topic_message_expiry: IggyExpiry,
+    topic_max_size: MaxTopicSize,
     default_partitioning: Arc<Partitioning>,
     can_send_immediately: bool,
     last_sent_at: Arc<AtomicU64>,
@@ -65,6 +67,8 @@ impl IggyProducer {
         create_topic_if_not_exists: bool,
         topic_partitions_count: u32,
         topic_replication_factor: Option<u8>,
+        topic_message_expiry: IggyExpiry,
+        topic_max_size: MaxTopicSize,
         retry_interval: IggyDuration,
     ) -> Self {
         Self {
@@ -84,6 +88,8 @@ impl IggyProducer {
             create_topic_if_not_exists,
             topic_partitions_count,
             topic_replication_factor,
+            topic_message_expiry,
+            topic_max_size,
             default_partitioning: Arc::new(Partitioning::balanced()),
             can_send_immediately: interval.is_none(),
             last_sent_at: Arc::new(AtomicU64::new(0)),
@@ -154,8 +160,8 @@ impl IggyProducer {
                     CompressionAlgorithm::None,
                     self.topic_replication_factor,
                     id,
-                    IggyExpiry::ServerDefault,
-                    MaxTopicSize::ServerDefault,
+                    self.topic_message_expiry,
+                    self.topic_max_size,
                 )
                 .await?;
         }
@@ -419,6 +425,8 @@ pub struct IggyProducerBuilder {
     topic_partitions_count: u32,
     topic_replication_factor: Option<u8>,
     retry_interval: IggyDuration,
+    pub topic_message_expiry: IggyExpiry,
+    pub topic_max_size: MaxTopicSize,
 }
 
 impl IggyProducerBuilder {
@@ -448,6 +456,8 @@ impl IggyProducerBuilder {
             topic_partitions_count: 1,
             topic_replication_factor: None,
             retry_interval: IggyDuration::ONE_SECOND,
+            topic_message_expiry: IggyExpiry::ServerDefault,
+            topic_max_size: MaxTopicSize::ServerDefault,
         }
     }
 
@@ -566,11 +576,15 @@ impl IggyProducerBuilder {
         self,
         partitions_count: u32,
         replication_factor: Option<u8>,
+        message_expiry: IggyExpiry,
+        max_size: MaxTopicSize,
     ) -> Self {
         Self {
             create_topic_if_not_exists: true,
             topic_partitions_count: partitions_count,
             topic_replication_factor: replication_factor,
+            topic_message_expiry: message_expiry,
+            topic_max_size: max_size,
             ..self
         }
     }
@@ -607,6 +621,8 @@ impl IggyProducerBuilder {
             self.create_topic_if_not_exists,
             self.topic_partitions_count,
             self.topic_replication_factor,
+            self.topic_message_expiry,
+            self.topic_max_size,
             self.retry_interval,
         )
     }

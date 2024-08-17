@@ -11,6 +11,8 @@ use iggy::models::permissions::{Permissions, StreamPermissions};
 use iggy::models::user_status::UserStatus;
 use iggy::users::defaults::{DEFAULT_ROOT_PASSWORD, DEFAULT_ROOT_USERNAME};
 use iggy::utils::duration::IggyDuration;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use iggy_examples::shared::args::Args;
 use std::collections::HashMap;
 use std::env;
@@ -247,7 +249,12 @@ async fn create_producers(
                 .batch_size(batch_size)
                 .send_interval(IggyDuration::from_str(interval).expect("Invalid duration"))
                 .partitioning(Partitioning::balanced())
-                .create_topic_if_not_exists(partitions_count, None)
+                .create_topic_if_not_exists(
+                    partitions_count,
+                    None,
+                    IggyExpiry::ServerDefault,
+                    MaxTopicSize::ServerDefault,
+                )
                 .build();
             producer.init().await?;
             producers.push(TenantProducer::new(

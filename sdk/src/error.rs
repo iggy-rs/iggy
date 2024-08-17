@@ -1,3 +1,5 @@
+use crate::utils::byte_size::IggyByteSize;
+use crate::utils::topic_size::MaxTopicSize;
 use strum::{EnumDiscriminants, FromRepr, IntoStaticStr};
 use thiserror::Error;
 
@@ -194,6 +196,8 @@ pub enum IggyError {
     MissingTopics(u32) = 1017,
     #[error("Missing partitions for topic with ID: {0} for stream with ID: {1}.")]
     MissingPartitions(u32, u32) = 1018,
+    #[error("Max topic size cannot be lower than segment size. Max topic size: {0} < segment size: {1}.")]
+    InvalidTopicSize(MaxTopicSize, IggyByteSize) = 1019,
     #[error("Cannot create topics directory for stream with ID: {0}, Path: {1}")]
     CannotCreateTopicsDirectory(u32, String) = 2000,
     #[error(

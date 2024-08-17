@@ -5,6 +5,8 @@ use iggy::clients::client::IggyClient;
 use iggy::clients::producer::IggyProducer;
 use iggy::messages::send_messages::{Message, Partitioning};
 use iggy::utils::duration::IggyDuration;
+use iggy::utils::expiry::IggyExpiry;
+use iggy::utils::topic_size::MaxTopicSize;
 use iggy_examples::shared::args::Args;
 use iggy_examples::shared::messages_generator::MessagesGenerator;
 use std::error::Error;
@@ -28,7 +30,12 @@ async fn main() -> anyhow::Result<(), Box<dyn Error>> {
         .batch_size(args.messages_per_batch)
         .send_interval(IggyDuration::from_str(&args.interval)?)
         .partitioning(Partitioning::balanced())
-        .create_topic_if_not_exists(3, None)
+        .create_topic_if_not_exists(
+            3,
+            None,
+            IggyExpiry::ServerDefault,
+            MaxTopicSize::ServerDefault,
+        )
         .build();
     producer.init().await?;
     produce_messages(&args, &producer).await?;

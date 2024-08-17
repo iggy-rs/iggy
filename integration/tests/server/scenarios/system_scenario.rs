@@ -561,7 +561,7 @@ pub async fn run(client_factory: &dyn ClientFactory) {
     let updated_topic_name = format!("{}-updated", TOPIC_NAME);
     let updated_message_expiry = 1000;
     let message_expiry_duration = updated_message_expiry.into();
-    let updated_max_topic_size = MaxTopicSize::Custom(IggyByteSize::from(0x1337));
+    let updated_max_topic_size = MaxTopicSize::Custom(IggyByteSize::from_str("2 GB").unwrap());
     let updated_replication_factor = 5;
 
     client

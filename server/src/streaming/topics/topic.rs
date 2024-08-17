@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::info;
 
 const ALMOST_FULL_THRESHOLD: f64 = 0.9;
 
@@ -110,9 +111,9 @@ impl Topic {
             consumer_groups_ids: HashMap::new(),
             current_consumer_group_id: AtomicU32::new(1),
             current_partition_id: AtomicU32::new(1),
-            message_expiry: match config.segment.message_expiry {
-                IggyExpiry::NeverExpire => message_expiry,
-                value => value,
+            message_expiry: match message_expiry {
+                IggyExpiry::ServerDefault => config.segment.message_expiry,
+                _ => message_expiry,
             },
             compression_algorithm,
             max_topic_size: match max_topic_size {
@@ -123,6 +124,11 @@ impl Topic {
             config,
             created_at: IggyTimestamp::now(),
         };
+
+        info!(
+            "Received message expiry: {}, set expiry: {}",
+            message_expiry, topic.message_expiry
+        );
 
         topic.add_partitions(partitions_count)?;
         Ok(topic)

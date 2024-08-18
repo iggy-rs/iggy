@@ -1,9 +1,10 @@
 name: publish_cli
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - master
+  workflow_run:
+    workflows: [ "publish_sdk" ]
+    types:
+      - completed
 
 env:
   GITHUB_TOKEN: ${{ github.token }}
@@ -70,8 +71,8 @@ jobs:
 
       - uses: actions-rs/toolchain@v1
         with:
-            toolchain: stable
-            override: true
+          toolchain: stable
+          override: true
 
       - name: publish
         run: |

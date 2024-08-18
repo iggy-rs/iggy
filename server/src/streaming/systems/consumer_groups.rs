@@ -15,11 +15,10 @@ impl System {
         group_id: &Identifier,
     ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id)?;
         self.permissioner.get_consumer_group(
             session.get_user_id(),
-            stream.stream_id,
+            topic.stream_id,
             topic.topic_id,
         )?;
 
@@ -33,11 +32,10 @@ impl System {
         topic_id: &Identifier,
     ) -> Result<Vec<&RwLock<ConsumerGroup>>, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id)?;
         self.permissioner.get_consumer_groups(
             session.get_user_id(),
-            stream.stream_id,
+            topic.stream_id,
             topic.topic_id,
         )?;
 
@@ -54,11 +52,10 @@ impl System {
     ) -> Result<&RwLock<ConsumerGroup>, IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
             self.permissioner.create_consumer_group(
                 session.get_user_id(),
-                stream.stream_id,
+                topic.stream_id,
                 topic.topic_id,
             )?;
         }
@@ -78,14 +75,13 @@ impl System {
         let stream_id_value;
         let topic_id_value;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
             self.permissioner.delete_consumer_group(
                 session.get_user_id(),
-                stream.stream_id,
+                topic.stream_id,
                 topic.topic_id,
             )?;
-            stream_id_value = stream.stream_id;
+            stream_id_value = topic.stream_id;
             topic_id_value = topic.topic_id;
         }
 
@@ -124,14 +120,13 @@ impl System {
         let stream_id_value;
         let topic_id_value;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
             self.permissioner.join_consumer_group(
                 session.get_user_id(),
-                stream.stream_id,
+                topic.stream_id,
                 topic.topic_id,
             )?;
-            stream_id_value = stream.stream_id;
+            stream_id_value = topic.stream_id;
             topic_id_value = topic.topic_id;
         }
 
@@ -167,11 +162,10 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
             self.permissioner.leave_consumer_group(
                 session.get_user_id(),
-                stream.stream_id,
+                topic.stream_id,
                 topic.topic_id,
             )?;
         }

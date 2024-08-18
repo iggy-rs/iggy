@@ -288,16 +288,14 @@ async fn ensure_stream_topics_access(
         let topic_id = Identifier::named(topic)?;
         client
             .get_topic(&available_stream.try_into()?, &topic_id)
-            .await
-            .unwrap_or_else(|_| {
-                panic!("No access to topic: {topic} in stream: {available_stream}")
-            });
+            .await?
+            .unwrap_or_else(|| panic!("No access to topic: {topic} in stream: {available_stream}"));
         info!("Ensured access to topic: {topic} in stream: {available_stream}");
         for stream in unavailable_streams {
             if client
                 .get_topic(&Identifier::named(stream)?, &topic_id)
-                .await
-                .is_err()
+                .await?
+                .is_none()
             {
                 info!("Ensured no access to topic: {topic} in stream: {stream}");
             } else {

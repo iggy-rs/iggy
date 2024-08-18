@@ -275,14 +275,14 @@ async fn ensure_stream_access(
 ) -> Result<(), IggyError> {
     client
         .get_stream(&available_stream.try_into()?)
-        .await
-        .unwrap_or_else(|_| panic!("No access to stream: {available_stream}"));
+        .await?
+        .unwrap_or_else(|| panic!("No access to stream: {available_stream}"));
     info!("Ensured access to stream: {available_stream}");
     for stream in unavailable_streams {
         if client
             .get_stream(&Identifier::named(stream)?)
-            .await
-            .is_err()
+            .await?
+            .is_none()
         {
             info!("Ensured no access to stream: {stream}");
         } else {

@@ -113,13 +113,17 @@ impl System {
 
     pub fn find_user(&self, session: &Session, user_id: &Identifier) -> Result<&User, IggyError> {
         self.ensure_authenticated(session)?;
-        let user = self.get_user(user_id)?;
-        let session_user_id = session.get_user_id();
-        if user.id != session_user_id {
-            self.permissioner.get_user(session_user_id)?;
+        let user = self.get_user(user_id);
+        if let Ok(user) = user {
+            let session_user_id = session.get_user_id();
+            if user.id != session_user_id {
+                self.permissioner.get_user(session_user_id)?;
+            }
+
+            return Ok(user);
         }
 
-        Ok(user)
+        user
     }
 
     pub fn get_user(&self, user_id: &Identifier) -> Result<&User, IggyError> {

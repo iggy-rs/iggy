@@ -16,11 +16,15 @@ impl System {
         topic_id: &Identifier,
     ) -> Result<&Topic, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
-        self.permissioner
-            .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)?;
-        Ok(topic)
+        let stream = self.find_stream(session, stream_id)?;
+        let topic = stream.get_topic(topic_id);
+        if let Ok(topic) = topic {
+            self.permissioner
+                .get_topic(session.get_user_id(), stream.stream_id, topic.topic_id)?;
+            return Ok(topic);
+        }
+
+        topic
     }
 
     pub fn find_topics(

@@ -64,6 +64,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ahash"
+version = "0.8.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e89da841a80418a9b391ebaea17f5c112ffaaa96f621d2c285b5174da76b9011"
+dependencies = [
+ "cfg-if",
+ "getrandom",
+ "once_cell",
+ "serde",
+ "version_check",
+ "zerocopy",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1922,7 +1936,7 @@ version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 dependencies = [
- "ahash",
+ "ahash 0.7.8",
 ]
 
 [[package]]
@@ -2245,9 +2259,10 @@ dependencies = [
 
 [[package]]
 name = "iggy"
-version = "0.6.11"
+version = "0.6.12"
 dependencies = [
  "aes-gcm",
+ "ahash 0.8.11",
  "anyhow",
  "async-broadcast 0.7.1",
  "async-dropper",
@@ -2293,8 +2308,9 @@ dependencies = [
 
 [[package]]
 name = "iggy-cli"
-version = "0.5.11"
+version = "0.5.12"
 dependencies = [
+ "ahash 0.8.11",
  "anyhow",
  "clap",
  "clap_complete",
@@ -2313,6 +2329,7 @@ dependencies = [
 name = "iggy_examples"
 version = "0.0.4"
 dependencies = [
+ "ahash 0.8.11",
  "anyhow",
  "bytes",
  "clap",
@@ -2380,6 +2397,7 @@ dependencies = [
 name = "integration"
 version = "0.0.1"
 dependencies = [
+ "ahash 0.8.11",
  "assert_cmd",
  "async-trait",
  "bytes",
@@ -4225,8 +4243,9 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.4.13"
+version = "0.4.14"
 dependencies = [
+ "ahash 0.8.11",
  "anyhow",
  "async-stream",
  "async-trait",

@@ -1,9 +1,8 @@
-use std::collections::HashMap;
-
 use crate::cli::common::{
     IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, TestUserId, CLAP_INDENT,
     USAGE_PREFIX,
 };
+use ahash::AHashMap;
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
@@ -75,10 +74,10 @@ impl TestUserGetCmd {
 
                 if let Some(topic_id) = self.check_topic_perms {
                     stream_perms.topics =
-                        Some(HashMap::from([(topic_id, TopicPermissions::default())]));
+                        Some(AHashMap::from([(topic_id, TopicPermissions::default())]));
                 };
 
-                permissions.streams = Some(HashMap::from([(stream_id, stream_perms)]));
+                permissions.streams = Some(AHashMap::from([(stream_id, stream_perms)]));
             }
 
             Some(permissions)

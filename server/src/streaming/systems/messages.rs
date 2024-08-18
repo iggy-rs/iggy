@@ -25,10 +25,9 @@ impl System {
             return Err(IggyError::InvalidMessagesCount);
         }
 
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id)?;
         self.permissioner
-            .poll_messages(session.get_user_id(), stream.stream_id, topic.topic_id)?;
+            .poll_messages(session.get_user_id(), topic.stream_id, topic.topic_id)?;
 
         if !topic.has_partitions() {
             return Err(IggyError::NoPartitions(topic.topic_id, topic.stream_id));
@@ -94,11 +93,10 @@ impl System {
         messages: Vec<Message>,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(&stream_id)?;
-        let topic = stream.get_topic(&topic_id)?;
+        let topic = self.find_topic(session, &stream_id, &topic_id)?;
         self.permissioner.append_messages(
             session.get_user_id(),
-            stream.stream_id,
+            topic.stream_id,
             topic.topic_id,
         )?;
 

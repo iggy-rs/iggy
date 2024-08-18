@@ -1,17 +1,16 @@
 use crate::streaming::users::user::User;
+use ahash::{AHashMap, AHashSet};
 use iggy::models::permissions::{GlobalPermissions, Permissions, StreamPermissions};
 use iggy::models::user_info::UserId;
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
 
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Default)]
 pub struct Permissioner {
-    pub(super) users_permissions: HashMap<UserId, GlobalPermissions>,
-    pub(super) users_streams_permissions: HashMap<(UserId, u32), StreamPermissions>,
-    pub(super) users_that_can_poll_messages_from_all_streams: HashSet<UserId>,
-    pub(super) users_that_can_send_messages_to_all_streams: HashSet<UserId>,
-    pub(super) users_that_can_poll_messages_from_specific_streams: HashSet<(UserId, u32)>,
-    pub(super) users_that_can_send_messages_to_specific_streams: HashSet<(UserId, u32)>,
+    pub(super) users_permissions: AHashMap<UserId, GlobalPermissions>,
+    pub(super) users_streams_permissions: AHashMap<(UserId, u32), StreamPermissions>,
+    pub(super) users_that_can_poll_messages_from_all_streams: AHashSet<UserId>,
+    pub(super) users_that_can_send_messages_to_all_streams: AHashSet<UserId>,
+    pub(super) users_that_can_poll_messages_from_specific_streams: AHashSet<(UserId, u32)>,
+    pub(super) users_that_can_send_messages_to_specific_streams: AHashSet<(UserId, u32)>,
 }
 
 impl Permissioner {

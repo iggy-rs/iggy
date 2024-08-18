@@ -94,11 +94,10 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
             self.permissioner.update_topic(
                 session.get_user_id(),
-                stream.stream_id,
+                topic.stream_id,
                 topic.topic_id,
             )?;
         }
@@ -129,14 +128,13 @@ impl System {
         self.ensure_authenticated(session)?;
         let stream_id_value;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
             self.permissioner.delete_topic(
                 session.get_user_id(),
-                stream.stream_id,
+                topic.stream_id,
                 topic.topic_id,
             )?;
-            stream_id_value = stream.stream_id;
+            stream_id_value = topic.stream_id;
         }
 
         let topic = self
@@ -163,10 +161,9 @@ impl System {
         stream_id: &Identifier,
         topic_id: &Identifier,
     ) -> Result<(), IggyError> {
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id)?;
         self.permissioner
-            .purge_topic(session.get_user_id(), stream.stream_id, topic.topic_id)?;
+            .purge_topic(session.get_user_id(), topic.stream_id, topic.topic_id)?;
         topic.purge().await
     }
 }

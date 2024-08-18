@@ -16,11 +16,10 @@ impl System {
         offset: u64,
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id)?;
         self.permissioner.store_consumer_offset(
             session.get_user_id(),
-            stream.stream_id,
+            topic.stream_id,
             topic.topic_id,
         )?;
 
@@ -38,11 +37,10 @@ impl System {
         partition_id: Option<u32>,
     ) -> Result<ConsumerOffsetInfo, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(stream_id)?;
-        let topic = stream.get_topic(topic_id)?;
+        let topic = self.find_topic(session, stream_id, topic_id)?;
         self.permissioner.get_consumer_offset(
             session.get_user_id(),
-            stream.stream_id,
+            topic.stream_id,
             topic.topic_id,
         )?;
 

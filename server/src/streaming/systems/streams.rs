@@ -139,10 +139,14 @@ impl System {
         identifier: &Identifier,
     ) -> Result<&Stream, IggyError> {
         self.ensure_authenticated(session)?;
-        let stream = self.get_stream(identifier)?;
-        self.permissioner
-            .get_stream(session.get_user_id(), stream.stream_id)?;
-        Ok(stream)
+        let stream = self.get_stream(identifier);
+        if let Ok(stream) = stream {
+            self.permissioner
+                .get_stream(session.get_user_id(), stream.stream_id)?;
+            return Ok(stream);
+        }
+
+        stream
     }
 
     pub fn get_stream(&self, identifier: &Identifier) -> Result<&Stream, IggyError> {

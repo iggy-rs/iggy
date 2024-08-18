@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.4.13"
+version = "0.4.14"
 edition = "2021"
 build = "src/build.rs"
 
@@ -10,6 +10,7 @@ jemalloc = ["dep:tikv-jemallocator"]
 tokio-console = ["dep:console-subscriber", "tokio/tracing"]
 
 [dependencies]
+ahash = { version = "0.8.11" }
 anyhow = "1.0.86"
 async-stream = "0.3.5"
 async-trait = "0.1.80"

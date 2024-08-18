@@ -2,6 +2,7 @@ use crate::cli::common::{
     IggyCmdCommand, IggyCmdTest, IggyCmdTestCase, TestHelpCmd, CLAP_INDENT, USAGE_PREFIX,
 };
 use crate::cli::user::common::PermissionsTestArgs;
+use ahash::AHashMap;
 use assert_cmd::assert::Assert;
 use async_trait::async_trait;
 use iggy::client::Client;
@@ -9,7 +10,6 @@ use iggy::models::permissions::{GlobalPermissions, StreamPermissions, TopicPermi
 use iggy::models::{permissions::Permissions, user_status::UserStatus};
 use predicates::str::diff;
 use serial_test::parallel;
-use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 enum UserStatusTest {
@@ -175,7 +175,7 @@ pub async fn should_be_successful() {
                 vec![String::from("3")],
                 Some(Permissions {
                     global: GlobalPermissions::default(),
-                    streams: Some(HashMap::from([(3u32, StreamPermissions::default())])),
+                    streams: Some(AHashMap::from([(3u32, StreamPermissions::default())])),
                 }),
             ),
         ))
@@ -190,10 +190,10 @@ pub async fn should_be_successful() {
                 vec![String::from("1#1:m_top,r_top,p_msg,s_msg")],
                 Some(Permissions {
                     global: GlobalPermissions::default(),
-                    streams: Some(HashMap::from([(
+                    streams: Some(AHashMap::from([(
                         1u32,
                         StreamPermissions {
-                            topics: Some(HashMap::from([(
+                            topics: Some(AHashMap::from([(
                                 1,
                                 TopicPermissions {
                                     manage_topic: true,
@@ -230,10 +230,10 @@ pub async fn should_be_successful() {
                         poll_messages: false,
                         send_messages: false,
                     },
-                    streams: Some(HashMap::from([(
+                    streams: Some(AHashMap::from([(
                         2u32,
                         StreamPermissions {
-                            topics: Some(HashMap::from([(
+                            topics: Some(AHashMap::from([(
                                 1,
                                 TopicPermissions {
                                     manage_topic: false,

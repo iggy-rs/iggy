@@ -1,8 +1,8 @@
 use crate::bytes_serializable::BytesSerializable;
 use crate::error::IggyError;
+use ahash::AHashMap;
 use bytes::{Buf, BufMut, Bytes, BytesMut};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fmt::Display;
 
 /// `Permissions` is used to define the permissions of a user.
@@ -15,7 +15,7 @@ pub struct Permissions {
     pub global: GlobalPermissions,
 
     /// Stream permissions are applied to a specific stream.
-    pub streams: Option<HashMap<u32, StreamPermissions>>,
+    pub streams: Option<AHashMap<u32, StreamPermissions>>,
 }
 
 /// `GlobalPermissions` are applied to all streams without a need to specify them one by one in the `streams` field.
@@ -122,7 +122,7 @@ pub struct StreamPermissions {
     pub send_messages: bool,
 
     /// The `topics` field allows to define the granular permissions for each topic of a stream.
-    pub topics: Option<HashMap<u32, TopicPermissions>>,
+    pub topics: Option<AHashMap<u32, TopicPermissions>>,
 }
 
 /// `TopicPermissions` are applied to a specific topic of a stream. This is the lowest level of permissions.
@@ -274,7 +274,7 @@ impl BytesSerializable for Permissions {
         let send_messages = bytes.get_u8() == 1;
         let mut streams = None;
         if bytes.get_u8() == 1 {
-            let mut streams_map = HashMap::new();
+            let mut streams_map = AHashMap::new();
             loop {
                 let stream_id = bytes.get_u32_le();
                 let manage_stream = bytes.get_u8() == 1;
@@ -285,7 +285,7 @@ impl BytesSerializable for Permissions {
                 let send_messages = bytes.get_u8() == 1;
                 let mut topics = None;
                 if bytes.get_u8() == 1 {
-                    let mut topics_map = HashMap::new();
+                    let mut topics_map = AHashMap::new();
                     loop {
                         let topic_id = bytes.get_u32_le();
                         let manage_topic = bytes.get_u8() == 1;
@@ -362,7 +362,7 @@ mod tests {
                 poll_messages: true,
                 send_messages: true,
             },
-            streams: Some(HashMap::from([
+            streams: Some(AHashMap::from([
                 (
                     1,
                     StreamPermissions {
@@ -372,7 +372,7 @@ mod tests {
                         read_topics: true,
                         poll_messages: true,
                         send_messages: true,
-                        topics: Some(HashMap::from([
+                        topics: Some(AHashMap::from([
                             (
                                 1,
                                 TopicPermissions {

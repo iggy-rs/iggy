@@ -132,8 +132,7 @@ impl System {
 
         let group_id;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
 
             {
                 let consumer_group = topic.get_consumer_group(consumer_group_id)?;

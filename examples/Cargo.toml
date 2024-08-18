@@ -52,6 +52,7 @@ name = "new-sdk-producer"
 path = "src/new-sdk/producer/main.rs"
 
 [dependencies]
+ahash = { version = "0.8.11", features = ["serde"] }
 anyhow = "1.0.86"
 bytes = "1.6.0"
 clap = { version = "4.5.4", features = ["derive"] }

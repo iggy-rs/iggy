@@ -1,3 +1,4 @@
+use ahash::AHashMap;
 use clap::Parser;
 use futures_util::future::join_all;
 use iggy::client::{Client, StreamClient, UserClient};
@@ -310,7 +311,7 @@ async fn create_stream_and_user(
 ) -> Result<(), IggyError> {
     let stream = client.create_stream(stream_name, None).await?;
     info!("Created stream: {stream_name} with ID: {}", stream.id);
-    let mut streams_permissions = HashMap::new();
+    let mut streams_permissions = AHashMap::new();
     streams_permissions.insert(
         stream.id,
         StreamPermissions {

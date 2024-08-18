@@ -13,11 +13,10 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
             self.permissioner.create_partitions(
                 session.get_user_id(),
-                stream.stream_id,
+                topic.stream_id,
                 topic.topic_id,
             )?;
         }
@@ -39,11 +38,10 @@ impl System {
     ) -> Result<(), IggyError> {
         self.ensure_authenticated(session)?;
         {
-            let stream = self.get_stream(stream_id)?;
-            let topic = stream.get_topic(topic_id)?;
+            let topic = self.find_topic(session, stream_id, topic_id)?;
             self.permissioner.delete_partitions(
                 session.get_user_id(),
-                stream.stream_id,
+                topic.stream_id,
                 topic.topic_id,
             )?;
         }

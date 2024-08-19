@@ -8,6 +8,8 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
+      - run: |
+          sudo apt-get update --yes && sudo apt-get install --yes libdbus-1-dev pkg-config
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: clechasseur/rs-cargo@v2
@@ -28,6 +30,8 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
+      - run: |
+          sudo apt-get update --yes && sudo apt-get install --yes libdbus-1-dev pkg-config
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: clechasseur/rs-cargo@v2
@@ -48,6 +52,8 @@ jobs:
     name: Test documentation
     runs-on: ubuntu-latest
     steps:
+      - run: |
+          sudo apt-get update --yes && sudo apt-get install --yes libdbus-1-dev pkg-config
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --doc

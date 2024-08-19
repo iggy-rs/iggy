@@ -26,7 +26,7 @@ jobs:
 
       - name: Install gnome-keyring and keyutils on Linux
         run: |
-          sudo apt-get update --yes && sudo apt-get install --yes gnome-keyring keyutils
+          sudo apt-get update --yes && sudo apt-get install --yes gnome-keyring keyutils libdbus-1-dev pkg-config
           rm -f $HOME/.local/share/keyrings/*
           echo -n "test" | gnome-keyring-daemon --unlock
 

@@ -11,7 +11,7 @@ jobs:
   check_commit_message:
     runs-on: ubuntu-latest
     outputs:
-        should_skip: ${{ steps.check_skip.outputs.skip == 'true' }}
+      should_skip: ${{ steps.check_skip.outputs.skip == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -88,7 +88,9 @@ jobs:
           key: "v2"
 
       - name: Build (PR)
-        run: cargo build
+        run: |
+          sudo apt-get update --yes && sudo apt-get install --yes libdbus-1-dev pkg-config
+          cargo build
 
       - uses: JarvusInnovations/background-action@v1
         name: Run iggy-server in background (PR)

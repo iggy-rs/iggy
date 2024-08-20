@@ -116,7 +116,7 @@ jobs:
   build_and_test_macos:
     needs: sanity
     name: build and test macOS-aarch64
-    runs-on: flyci-macos-large-latest-m1
+    runs-on: macos-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

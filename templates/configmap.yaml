@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "iggy.fullname" . }}-config
+  labels:
+    {{- include "iggy.labels" . | nindent 4 }}
+data:
+  server.toml: |
+    [data_maintenance.archiver]
+    enabled = {{ .Values.config.data_maintenance.archiver.enabled }}
+
+    [http]
+    enabled = {{ .Values.config.http.enabled }}
+    address = "0.0.0.0:3000"
+
+    [tcp]
+    enabled = {{ .Values.config.tcp.enabled }}
+    address = "0.0.0.0:8090"
+
+    [quic]
+    enabled = {{ .Values.config.quic.enabled }}
+    address = "0.0.0.0:8080"
+
+    [system]
+    path = "{{ .Values.config.system.path }}"

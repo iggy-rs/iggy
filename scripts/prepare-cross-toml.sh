@@ -17,6 +17,12 @@ readonly USER_NAME
 echo "Preparing ${CROSS_TOML_FILE} file for user ${USER_NAME} with UID ${USER_UID} and GID ${USER_GID}."
 
 cat << EOF > "${CROSS_TOML_FILE}"
+[build]
+pre-build = [
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get --assume-yes install libdbus-1-dev:$CROSS_DEB_ARCH pkg-config:$CROSS_DEB_ARCH"
+]
+
 [build.env]
 passthrough = ["IGGY_SYSTEM_PATH", "IGGY_CI_BUILD", "RUST_BACKTRACE=1"]
 

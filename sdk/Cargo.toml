@@ -41,7 +41,7 @@ keyring = { version = "2.3.3", optional = true }
 lazy_static = "1.4.0"
 openssl = { version = "0.10.64", features = ["vendored"] }
 passterm = { version = "2.0.1", optional = true }
-quinn = { version = "0.11.1" }
+quinn = { version = "0.11.3" }
 regex = "1.10.4"
 reqwest = { version = "0.12.4", features = ["json"] }
 reqwest-middleware = { version = "0.3.2", features = ["json"] }

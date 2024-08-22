@@ -88,9 +88,7 @@ jobs:
           key: "v2"
 
       - name: Build (PR)
-        run: |
-          sudo apt-get update --yes && sudo apt-get install --yes libdbus-1-dev pkg-config
-          cargo build
+        run: cargo build
 
       - uses: JarvusInnovations/background-action@v1
         name: Run iggy-server in background (PR)

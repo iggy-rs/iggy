@@ -11,7 +11,7 @@ jobs:
   check_commit_message:
     runs-on: ubuntu-latest
     outputs:
-        should_skip: ${{ steps.check_skip.outputs.skip == 'true' }}
+      should_skip: ${{ steps.check_skip.outputs.skip == 'true' }}
     steps:
       - uses: actions/checkout@v4
         with:

@@ -44,7 +44,7 @@ impl CliCommand for DeletePersonalAccessTokenCmd {
         let entry = Entry::new(&server_address, &self.delete_token.name)?;
         event!(target: PRINT_TARGET, Level::DEBUG,"Checking token presence under service: {} and name: {}",
                 server_address, self.delete_token.name);
-        if let Err(e) = entry.delete_password() {
+        if let Err(e) = entry.delete_credential() {
             event!(target: PRINT_TARGET, Level::DEBUG, "{}", e);
         };
 

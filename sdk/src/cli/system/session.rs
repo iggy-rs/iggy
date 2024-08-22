@@ -50,6 +50,6 @@ impl ServerSession {
 
     pub fn delete(&self) -> Result<()> {
         let entry = Entry::new(&self.get_service_name(), &self.get_token_name())?;
-        entry.delete_password()
+        entry.delete_credential()
     }
 }

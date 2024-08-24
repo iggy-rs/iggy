@@ -1,20 +1,13 @@
 FROM ubuntu:latest
 
-ARG IGGY_CMD_PATH
-RUN test -n "$IGGY_CMD_PATH" || (echo "IGGY_CMD_PATH not set" && false)
-
 ARG IGGY_SERVER_PATH
 RUN test -n "$IGGY_SERVER_PATH" || (echo "IGGY_SERVER_PATH not set" && false)
 
 WORKDIR /iggy
 
 COPY configs ./configs
-COPY ${IGGY_CMD_PATH} ./
 COPY ${IGGY_SERVER_PATH} ./
 
-RUN chmod +x ./iggy
 RUN chmod +x ./iggy-server
-
-RUN ln -sf /iggy/iggy /usr/bin/iggy
 
 CMD ["/iggy/iggy-server"]

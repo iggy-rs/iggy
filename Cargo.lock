@@ -4301,7 +4301,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.4.14"
+version = "0.4.20"
 dependencies = [
  "ahash 0.8.11",
  "anyhow",

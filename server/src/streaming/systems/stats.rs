@@ -4,7 +4,7 @@ use iggy::error::IggyError;
 use iggy::locking::IggySharedMutFn;
 use iggy::models::stats::Stats;
 use std::sync::OnceLock;
-use sysinfo::{Pid, System as SysinfoSystem};
+use sysinfo::{Pid, ProcessesToUpdate, System as SysinfoSystem};
 use tokio::sync::Mutex;
 
 fn sysinfo() -> &'static Mutex<SysinfoSystem> {
@@ -26,11 +26,11 @@ impl System {
     pub async fn get_stats_bypass_auth(&self) -> Result<Stats, IggyError> {
         let mut sys = sysinfo().lock().await;
         let process_id = std::process::id();
-        sys.refresh_cpu();
+        sys.refresh_cpu_all();
         sys.refresh_memory();
-        sys.refresh_process(Pid::from_u32(process_id));
+        sys.refresh_processes(ProcessesToUpdate::Some(&[Pid::from_u32(process_id)]));
 
-        let total_cpu_usage = sys.global_cpu_info().cpu_usage();
+        let total_cpu_usage = sys.global_cpu_usage();
         let total_memory = sys.total_memory().into();
         let available_memory = sys.available_memory().into();
         let clients_count = self.client_manager.read().await.get_clients().len() as u32;

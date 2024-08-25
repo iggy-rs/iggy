@@ -4,6 +4,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub(crate) enum CmdToolError {
     MissingCredentials,
+    #[cfg(feature = "login-session")]
     MissingServerAddress,
 }
 
@@ -13,6 +14,7 @@ impl Display for CmdToolError {
             Self::MissingCredentials => {
                 write!(f, "Missing iggy server credentials")
             }
+            #[cfg(feature = "login-session")]
             Self::MissingServerAddress => {
                 write!(f, "Missing iggy server address")
             }

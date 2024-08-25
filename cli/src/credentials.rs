@@ -3,14 +3,21 @@ use crate::error::{CmdToolError, IggyCmdError};
 use anyhow::{bail, Context};
 use iggy::args::Args;
 use iggy::cli::system::session::ServerSession;
-use iggy::cli_command::PRINT_TARGET;
 use iggy::client::{PersonalAccessTokenClient, UserClient};
 use iggy::clients::client::IggyClient;
 use iggy::error::IggyError;
-use keyring::Entry;
 use passterm::{isatty, prompt_password_stdin, prompt_password_tty, Stream};
 use std::env::var;
-use tracing::{event, Level};
+
+#[cfg(feature = "login-session")]
+mod credentials_login_session {
+    pub(crate) use iggy::cli_command::PRINT_TARGET;
+    pub(crate) use keyring::Entry;
+    pub(crate) use tracing::{event, Level};
+}
+
+#[cfg(feature = "login-session")]
+use credentials_login_session::*;
 
 static ENV_IGGY_USERNAME: &str = "IGGY_USERNAME";
 static ENV_IGGY_PASSWORD: &str = "IGGY_PASSWORD";
@@ -57,8 +64,9 @@ impl<'a> IggyCredentials<'a> {
             }
         }
 
+        #[cfg(feature = "login-session")]
         if let Some(token_name) = &cli_options.token_name {
-            match iggy_args.get_server_address() {
+            return match iggy_args.get_server_address() {
                 Some(server_address) => {
                     let server_address = format!("iggy:{}", server_address);
                     event!(target: PRINT_TARGET, Level::DEBUG,"Checking token presence under service: {} and name: {}",
@@ -73,8 +81,10 @@ impl<'a> IggyCredentials<'a> {
                     })
                 }
                 None => Err(IggyCmdError::CmdToolError(CmdToolError::MissingServerAddress).into()),
-            }
-        } else if let Some(token) = &cli_options.token {
+            };
+        }
+
+        if let Some(token) = &cli_options.token {
             Ok(Self {
                 credentials: Some(Credentials::PersonalAccessToken(token.clone())),
                 iggy_client: None,

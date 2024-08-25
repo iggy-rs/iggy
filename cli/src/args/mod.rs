@@ -17,9 +17,12 @@ use crate::args::{
     partition::PartitionAction,
     personal_access_token::PersonalAccessTokenAction,
     stream::StreamAction,
-    system::{LoginArgs, PingArgs, StatsArgs},
+    system::{PingArgs, StatsArgs},
     topic::TopicAction,
 };
+
+#[cfg(feature = "login-session")]
+use crate::args::system::LoginArgs;
 
 use self::user::UserAction;
 
@@ -80,6 +83,7 @@ pub(crate) struct CliOptions {
     #[clap(short, long, group = "credentials")]
     pub(crate) token: Option<String>,
 
+    #[cfg(feature = "login-session")]
     /// Iggy server personal access token name
     ///
     /// When personal access token is created using command line tool and stored
@@ -154,6 +158,7 @@ pub(crate) enum Command {
     /// context operations
     #[command(subcommand, visible_alias = "ctx")]
     Context(ContextAction),
+    #[cfg(feature = "login-session")]
     /// login to Iggy server
     ///
     /// Command logs in to Iggy server using provided credentials and stores session token
@@ -161,6 +166,7 @@ pub(crate) enum Command {
     /// subsequent commands until logout command is executed.
     #[clap(verbatim_doc_comment, visible_alias = "li")]
     Login(LoginArgs),
+    #[cfg(feature = "login-session")]
     /// logout from Iggy server
     ///
     /// Command logs out from Iggy server and removes session token from platform-specific
@@ -218,6 +224,7 @@ impl IggyMergedConsoleArgs {
             username: args.cli.username.or(context.username),
             password: args.cli.password.or(context.password),
             token: args.cli.token.or(context.token),
+            #[cfg(feature = "login-session")]
             token_name: args.cli.token_name.or(context.token_name),
             generator: args.cli.generator,
         };

@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Check if Cargo.toml and Cargo.lock are changed
-        uses: tj-actions/changed-files@v44
+        uses: tj-actions/changed-files@v45
         id: all_changed_files
         with:
           files: |

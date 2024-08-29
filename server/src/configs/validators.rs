@@ -15,7 +15,7 @@ use iggy::utils::byte_size::IggyByteSize;
 use iggy::utils::expiry::IggyExpiry;
 use iggy::utils::topic_size::MaxTopicSize;
 use iggy::validatable::Validatable;
-use sysinfo::System;
+use sysinfo::{Pid, ProcessesToUpdate, System};
 use tracing::{info, warn};
 
 impl Validatable<ServerError> for ServerConfig {
@@ -80,7 +80,9 @@ impl Validatable<ServerError> for CacheConfig {
         let limit_bytes = self.size.clone().into();
         let mut sys = System::new_all();
         sys.refresh_all();
-        sys.refresh_processes();
+        sys.refresh_processes(ProcessesToUpdate::Some(&[
+            Pid::from_u32(std::process::id()),
+        ]));
         let total_memory = sys.total_memory();
         let free_memory = sys.free_memory();
         let cache_percentage = (limit_bytes as f64 / total_memory as f64) * 100.0;

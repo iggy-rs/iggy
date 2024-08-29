@@ -48,7 +48,7 @@ sled = "0.34.7"
 static-toml = "1.2.0"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.2", features = ["derive"] }
-sysinfo = "0.30.12"
+sysinfo = "0.31.3"
 thiserror = "1.0.61"
 tokio = { version = "1.38.0", features = ["full"] }
 tokio-native-tls = "0.3.1"

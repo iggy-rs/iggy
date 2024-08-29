@@ -10,7 +10,7 @@ pub async fn should_help_match() {
         .execute_test_for_help_command(TestHelpCmd::new(
             vec!["help"],
             format!(
-                r#"Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second.
+                r#"CLI for Iggy message streaming platform
 
 {USAGE_PREFIX} [OPTIONS] [COMMAND]
 

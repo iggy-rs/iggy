@@ -1,13 +1,14 @@
 [package]
 name = "iggy-cli"
-version = "0.5.13"
+version = "0.5.14"
 edition = "2021"
 authors = ["bartosz.ciesla@gmail.com"]
 repository = "https://github.com/iggy-rs/iggy"
 homepage = "https://iggy.rs"
-description = "Iggy is the persistent message streaming platform written in Rust, supporting QUIC, TCP and HTTP transport protocols, capable of processing millions of messages per second."
+description = "CLI for Iggy message streaming platform"
 license = "MIT"
 keywords = ["iggy", "cli", "messaging", "streaming"]
+readme = "../README.md"
 
 [features]
 default = ["login-session"]

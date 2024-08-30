@@ -1,3 +1,4 @@
+use clap::builder::NonEmptyStringValueParser;
 use clap::{ArgGroup, Args, Subcommand};
 use iggy::error::IggyError;
 use iggy::error::IggyError::InvalidFormat;
@@ -159,7 +160,6 @@ pub(crate) struct PollMessagesArgs {
     #[clap(verbatim_doc_comment)]
     #[clap(short, long, default_value_t = Identifier::default(), value_parser = clap::value_parser!(Identifier))]
     pub(crate) consumer: Identifier,
-
     /// Include the message headers in the output
     ///
     /// Flag indicates whether to include headers in the output
@@ -167,6 +167,17 @@ pub(crate) struct PollMessagesArgs {
     #[clap(verbatim_doc_comment)]
     #[clap(short, long, default_value_t = false)]
     pub(crate) show_headers: bool,
+    /// Store polled message into file in binary format
+    ///
+    /// Polled messages will be stored in the file in binary format.
+    /// File can be used to replay the messages later. If the file
+    /// already exists, the messages will be appended to the file.
+    /// If the file does not exist, it will be created.
+    /// If the file is not specified, the messages will be printed
+    /// to the standard output.
+    #[clap(verbatim_doc_comment)]
+    #[clap(long, value_parser = NonEmptyStringValueParser::new())]
+    pub(crate) output_file: Option<String>,
 }
 
 #[derive(Debug, Clone, Args)]

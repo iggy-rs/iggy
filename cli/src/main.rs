@@ -258,6 +258,7 @@ fn get_command(
                 poll_args.next,
                 poll_args.consumer.clone(),
                 poll_args.show_headers,
+                poll_args.output_file.clone(),
             )),
             MessageAction::Flush(flush_args) => Box::new(FlushMessagesCmd::new(
                 flush_args.stream_id.clone(),

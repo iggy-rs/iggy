@@ -166,8 +166,13 @@ impl IggyCmdTestCase for TestMessagePollCmd {
             TestTopicId::Named => self.topic_name.clone(),
         };
 
-        let message = format!("Executing poll messages from topic ID: {} and stream with ID: {}\nPolled messages from topic with ID: {} and stream with ID: {} (from partition with ID: {})\nPolled {} messages",
-            topic_id, stream_id, topic_id, stream_id, self.partition_id, self.message_count);
+        let polled_status = match self.message_count {
+            1 => "Polled 1 message".into(),
+            _ => format!("Polled {} messages", self.message_count),
+        };
+
+        let message = format!("Executing poll messages from topic ID: {} and stream with ID: {}\nPolled messages from topic with ID: {} and stream with ID: {} (from partition with ID: {})\n{polled_status}",
+            topic_id, stream_id, topic_id, stream_id, self.partition_id);
 
         let mut status = command_state.success().stdout(starts_with(message));
 
@@ -402,6 +407,16 @@ Options:
           Flag indicates whether to include headers in the output
           after polling the messages.
 
+      --output-file <OUTPUT_FILE>
+          Store polled message into file in binary format
+{CLAP_INDENT}
+          Polled messages will be stored in the file in binary format.
+          File can be used to replay the messages later. If the file
+          already exists, the messages will be appended to the file.
+          If the file does not exist, it will be created.
+          If the file is not specified, the messages will be printed
+          to the standard output.
+
   -h, --help
           Print help (see a summary with '-h')
 "#,
@@ -437,6 +452,7 @@ Options:
   -n, --next                           Polling strategy - start polling from the next message
   -c, --consumer <CONSUMER>            Regular consumer which will poll messages [default: 1]
   -s, --show-headers                   Include the message headers in the output
+      --output-file <OUTPUT_FILE>      Store polled message into file in binary format
   -h, --help                           Print help (see more with '--help')
 "#,
             ),

@@ -1,8 +1,10 @@
+use crate::bytes_serializable::BytesSerializable;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::consumer::Consumer;
 use crate::identifier::Identifier;
 use crate::messages::poll_messages::{PollMessages, PollingStrategy};
+use crate::messages::send_messages::Message;
 use crate::models::header::{HeaderKey, HeaderKind};
 use crate::models::messages::PolledMessages;
 use crate::utils::timestamp::IggyTimestamp;
@@ -12,11 +14,13 @@ use async_trait::async_trait;
 use comfy_table::{Cell, CellAlignment, Row, Table};
 use std::collections::HashSet;
 use std::mem::size_of_val;
+use tokio::io::AsyncWriteExt;
 use tracing::{event, Level};
 
 pub struct PollMessagesCmd {
     poll_messages: PollMessages,
     show_headers: bool,
+    output_file: Option<String>,
 }
 
 impl PollMessagesCmd {
@@ -33,6 +37,7 @@ impl PollMessagesCmd {
         next: bool,
         consumer: Identifier,
         show_headers: bool,
+        output_file: Option<String>,
     ) -> Self {
         let strategy = match (offset, first, last, next) {
             (Some(offset), false, false, false) => PollingStrategy::offset(offset),
@@ -52,6 +57,7 @@ impl PollMessagesCmd {
                 auto_commit,
             },
             show_headers,
+            output_file,
         }
     }
 
@@ -177,17 +183,48 @@ impl CliCommand for PollMessagesCmd {
                 .sum::<u64>(),
         );
 
-        event!(target: PRINT_TARGET, Level::INFO, "Polled {} messages of total size {polled_size}, it took {}", messages.messages.len(), elapsed.as_human_time_string());
+        let message_count_message = match messages.messages.len() {
+            1 => "1 message".into(),
+            count => format!("{} messages", count),
+        };
+        event!(target: PRINT_TARGET, Level::INFO, "Polled {message_count_message} of total size {polled_size}, it took {}", elapsed.as_human_time_string());
 
-        let message_header_keys = self.create_message_header_keys(&messages);
+        if let Some(output_file) = &self.output_file {
+            event!(target: PRINT_TARGET, Level::INFO, "Storing messages to {output_file} binary file");
 
-        let mut table = Table::new();
-        let table_header = Self::create_table_header(&message_header_keys);
-        let table_content = Self::create_table_content(&messages, &message_header_keys);
-        table.set_header(table_header);
-        table.add_rows(table_content);
+            let mut saved_size = 0;
+            let mut file = tokio::fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .open(output_file)
+                .await
+                .with_context(|| format!("Problem opening file for writing: {output_file}"))?;
 
-        event!(target: PRINT_TARGET, Level::INFO, "{table}");
+            for message in messages.messages.iter() {
+                let message = Message::new(
+                    Some(message.id),
+                    message.payload.clone(),
+                    message.headers.clone(),
+                );
+                saved_size += message.get_size_bytes();
+
+                file.write_all(&message.to_bytes())
+                    .await
+                    .with_context(|| format!("Problem writing message to file: {output_file}"))?;
+            }
+
+            event!(target: PRINT_TARGET, Level::INFO, "Stored {message_count_message} of total size {saved_size} B to {output_file} binary file");
+        } else {
+            let message_header_keys = self.create_message_header_keys(&messages);
+
+            let mut table = Table::new();
+            let table_header = Self::create_table_header(&message_header_keys);
+            let table_content = Self::create_table_content(&messages, &message_header_keys);
+            table.set_header(table_header);
+            table.add_rows(table_content);
+
+            event!(target: PRINT_TARGET, Level::INFO, "{table}");
+        }
 
         Ok(())
     }

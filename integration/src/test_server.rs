@@ -43,25 +43,25 @@ pub trait ClientFactory: Sync + Send {
 
 #[derive(Debug, Clone, Copy, PartialEq, Display)]
 pub enum Transport {
-    #[display(fmt = "http")]
+    #[display("http")]
     Http,
 
-    #[display(fmt = "quic")]
+    #[display("quic")]
     Quic,
 
-    #[display(fmt = "tcp")]
+    #[display("tcp")]
     Tcp,
 }
 
 #[derive(Display, Debug)]
 enum ServerProtocolAddr {
-    #[display(fmt = "RAW_TCP:{_0}")]
+    #[display("RAW_TCP:{_0}")]
     RawTcp(SocketAddr),
 
-    #[display(fmt = "HTTP_TCP:{_0}")]
+    #[display("HTTP_TCP:{_0}")]
     HttpTcp(SocketAddr),
 
-    #[display(fmt = "QUIC_UDP:{_0}")]
+    #[display("QUIC_UDP:{_0}")]
     QuicUdp(SocketAddr),
 }
 

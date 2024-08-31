@@ -2,12 +2,12 @@ use derive_more::Display;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Display)]
 pub enum BenchmarkKind {
-    #[display(fmt = "send messages")]
+    #[display("send messages")]
     Send,
-    #[display(fmt = "poll messages")]
+    #[display("poll messages")]
     Poll,
-    #[display(fmt = "send and poll messages")]
+    #[display("send and poll messages")]
     SendAndPoll,
-    #[display(fmt = "consumer group poll")]
+    #[display("consumer group poll")]
     ConsumerGroupPoll,
 }

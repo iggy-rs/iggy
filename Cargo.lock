@@ -708,7 +708,7 @@ dependencies = [
  "async-trait",
  "clap",
  "colored",
- "derive_more 0.99.18",
+ "derive_more",
  "figlet-rs",
  "futures",
  "human_format",
@@ -1209,12 +1209,6 @@ checksum = "f7144d30dcf0fafbce74250a3963025d8d52177934239851c917d29f1df280c2"
 
 [[package]]
 name = "convert_case"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
-
-[[package]]
-name = "convert_case"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec182b0ca2f35d8fc196cf3404988fd8b8c739a4d270ff118a398feb0cbec1ca"
@@ -1435,19 +1429,6 @@ dependencies = [
 
 [[package]]
 name = "derive_more"
-version = "0.99.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f33878137e4dafd7fa914ad4e259e18a4e8e532b9617a2d0150262bf53abfce"
-dependencies = [
- "convert_case 0.4.0",
- "proc-macro2",
- "quote",
- "rustc_version",
- "syn 2.0.75",
-]
-
-[[package]]
-name = "derive_more"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a9b99b9cbbe49445b21764dc0625032a89b145a2642e67603e1c936f5458d05"
@@ -1461,7 +1442,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb7330aeadfbe296029522e6c40f315320aba36fc43a5b3632f3795348f3bd22"
 dependencies = [
- "convert_case 0.6.0",
+ "convert_case",
  "proc-macro2",
  "quote",
  "syn 2.0.75",
@@ -2300,10 +2281,10 @@ dependencies = [
  "chrono",
  "clap",
  "comfy-table",
- "convert_case 0.6.0",
+ "convert_case",
  "crc32fast",
  "dashmap",
- "derive_more 1.0.0",
+ "derive_more",
  "dirs",
  "fast-async-mutex",
  "flume",
@@ -2428,7 +2409,7 @@ dependencies = [
  "assert_cmd",
  "async-trait",
  "bytes",
- "derive_more 0.99.18",
+ "derive_more",
  "futures",
  "humantime",
  "iggy",
@@ -4317,7 +4298,7 @@ dependencies = [
  "clap",
  "console-subscriber",
  "dashmap",
- "derive_more 0.99.18",
+ "derive_more",
  "figlet-rs",
  "figment",
  "flume",
@@ -4498,7 +4479,7 @@ version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cf47a76b3a01cafdeebf4feeb2691f28398a4ac028e6dd33fd61ed04306950c"
 dependencies = [
- "convert_case 0.6.0",
+ "convert_case",
  "proc-macro-error",
  "proc-macro2",
  "quote",

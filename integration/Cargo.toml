@@ -13,7 +13,7 @@ futures = "0.3.30"
 humantime = "2.1.0"
 iggy = { path = "../sdk", features = ["iggy-cli"] }
 keyring = "2.3.3"
-libc = "0.2.155"
+libc = "0.2.158"
 predicates = "3.1.0"
 regex = "1.10.4"
 serial_test = "3.1.1"

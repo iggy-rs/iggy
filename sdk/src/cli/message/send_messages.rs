@@ -1,3 +1,4 @@
+use crate::bytes_serializable::BytesSerializable;
 use crate::cli_command::{CliCommand, PRINT_TARGET};
 use crate::client::Client;
 use crate::identifier::Identifier;
@@ -5,8 +6,10 @@ use crate::messages::send_messages::{Message, Partitioning};
 use crate::models::header::{HeaderKey, HeaderValue};
 use anyhow::Context;
 use async_trait::async_trait;
+use bytes::Bytes;
 use std::collections::HashMap;
 use std::io::{self, Read};
+use tokio::io::AsyncReadExt;
 use tracing::{event, Level};
 
 pub struct SendMessagesCmd {
@@ -15,6 +18,7 @@ pub struct SendMessagesCmd {
     partitioning: Partitioning,
     messages: Option<Vec<String>>,
     headers: Vec<(HeaderKey, HeaderValue)>,
+    input_file: Option<String>,
 }
 
 impl SendMessagesCmd {
@@ -25,6 +29,7 @@ impl SendMessagesCmd {
         message_key: Option<String>,
         messages: Option<Vec<String>>,
         headers: Vec<(HeaderKey, HeaderValue)>,
+        input_file: Option<String>,
     ) -> Self {
         let partitioning = match (partition_id, message_key) {
             (Some(_), Some(_)) => unreachable!(),
@@ -44,6 +49,7 @@ impl SendMessagesCmd {
             partitioning,
             messages,
             headers,
+            input_file,
         }
     }
 
@@ -73,18 +79,61 @@ impl CliCommand for SendMessagesCmd {
     }
 
     async fn execute_cmd(&mut self, client: &dyn Client) -> anyhow::Result<(), anyhow::Error> {
-        let mut messages = match &self.messages {
-            Some(messages) => messages
-                .iter()
-                .map(|s| Message::new(None, s.clone().into(), self.get_headers()))
-                .collect::<Vec<_>>(),
-            None => {
-                let input = self.read_message_from_stdin()?;
+        let mut messages = if let Some(input_file) = &self.input_file {
+            let mut file = tokio::fs::OpenOptions::new()
+                .read(true)
+                .open(input_file)
+                .await
+                .with_context(|| format!("Problem opening file for reading: {input_file}"))?;
+            let mut buffer = Vec::new();
+            file.read_to_end(&mut buffer)
+                .await
+                .with_context(|| format!("Problem reading file: {input_file}"))?;
 
-                input
-                    .lines()
-                    .map(|m| Message::new(None, String::from(m).into(), self.get_headers()))
-                    .collect()
+            event!(target: PRINT_TARGET, Level::INFO,
+                "Read {} bytes from {} file", buffer.len(), input_file,
+            );
+
+            let mut messages: Vec<Message> = Vec::new();
+            let mut bytes_read = 0usize;
+            let all_messages_bytes: Bytes = buffer.into();
+
+            while bytes_read < all_messages_bytes.len() {
+                let message_bytes = all_messages_bytes.slice(bytes_read..);
+                let message = Message::from_bytes(message_bytes);
+                match message {
+                    Ok(message) => {
+                        let message_size = message.get_size_bytes() as usize;
+                        messages.push(message);
+                        bytes_read += message_size;
+                    }
+                    Err(e) => {
+                        event!(target: PRINT_TARGET, Level::ERROR,
+                            "Failed to parse message from bytes: {e} at offset {bytes_read}",
+                        );
+                        break;
+                    }
+                }
+            }
+            event!(target: PRINT_TARGET, Level::INFO,
+                "Created {} messages using {bytes_read} bytes", messages.len(),
+            );
+
+            messages
+        } else {
+            match &self.messages {
+                Some(messages) => messages
+                    .iter()
+                    .map(|s| Message::new(None, s.clone().into(), self.get_headers()))
+                    .collect::<Vec<_>>(),
+                None => {
+                    let input = self.read_message_from_stdin()?;
+
+                    input
+                        .lines()
+                        .map(|m| Message::new(None, String::from(m).into(), self.get_headers()))
+                        .collect()
+                }
             }
         };
 

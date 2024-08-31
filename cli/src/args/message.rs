@@ -80,8 +80,8 @@ pub(crate) struct SendMessagesArgs {
     /// spaces, it should be enclosed in quotes. Limit of the messages and size
     /// of each message is defined by the used shell.
     #[clap(verbatim_doc_comment)]
+    #[clap(group = "input_messages")]
     pub(crate) messages: Option<Vec<String>>,
-
     /// Comma separated list of key:kind:value, sent as header with the message
     ///
     /// Headers are comma seperated key-value pairs that can be sent with the message.
@@ -90,6 +90,17 @@ pub(crate) struct SendMessagesArgs {
     #[clap(verbatim_doc_comment)]
     #[clap(short = 'H', long, value_parser = parse_key_val, value_delimiter = ',')]
     pub(crate) headers: Vec<(HeaderKey, HeaderValue)>,
+    /// Input file with messages to be sent
+    ///
+    /// File should contain messages stored in binary format. If the file does
+    /// not exist, the command will fail. If the file is not specified, the command
+    /// will read the messages from the standard input and each line will
+    /// be sent as a separate message. If the file is specified, the messages
+    /// will be read from the file and sent as is. Option cannot be used
+    /// with the messages option (messages given as command line arguments).
+    #[clap(verbatim_doc_comment)]
+    #[clap(long, value_parser = NonEmptyStringValueParser::new(), group = "input_messages")]
+    pub(crate) input_file: Option<String>,
 }
 
 /// Parse Header Key, Kind and Value from the string separated by a ':'

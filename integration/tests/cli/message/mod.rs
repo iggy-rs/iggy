@@ -2,4 +2,6 @@ mod test_message_flush_command;
 mod test_message_help_command;
 mod test_message_poll_command;
 mod test_message_poll_to_file_command;
+mod test_message_reply_via_file;
 mod test_message_send_command;
+mod test_message_send_from_file_command;

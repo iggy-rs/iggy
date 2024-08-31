@@ -1,5 +1,5 @@
 use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
-use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::sizeable::Sizeable;
 use crate::streaming::topics::topic::Topic;
@@ -15,7 +15,7 @@ use iggy::utils::timestamp::IggyTimestamp;
 use std::collections::HashMap;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use tracing::{debug, info, trace, warn};
+use tracing::{info, trace, warn};
 
 impl Topic {
     pub fn get_messages_count(&self) -> u64 {
@@ -59,7 +59,7 @@ impl Topic {
 
         let messages = messages
             .into_iter()
-            .map(|msg| msg.try_into())
+            .map(|msg| msg.to_polled_message())
             .collect::<Result<Vec<_>, IggyError>>()?;
         Ok(PolledMessages {
             partition_id,
@@ -175,12 +175,12 @@ impl Topic {
             };
 
             trace!(
-                "Loading messages to cache for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}...",
-                partition.partition_id,
-                partition.topic_id,
-                partition.stream_id,
-                end_offset
-            );
+               "Loading messages to cache for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}...",
+               partition.partition_id,
+               partition.topic_id,
+               partition.stream_id,
+               end_offset
+           );
 
             let partition_size_bytes = partition.get_size_bytes();
             let cache_limit_bytes = self.config.cache.size.clone().into();
@@ -191,34 +191,25 @@ impl Topic {
             let size_to_fetch_from_disk = (cache_limit_bytes as f64
                 * (partition_size_bytes as f64 / total_size_on_disk_bytes as f64))
                 as u64;
-
             let messages = partition
-                .get_newest_messages_by_size(size_to_fetch_from_disk)
+                .get_newest_messages_by_size(size_to_fetch_from_disk as u64)
                 .await?;
-
-            if messages.is_empty() {
-                debug!(
-                    "No messages found on disk for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}",
-                    partition.partition_id, partition.topic_id, partition.stream_id, end_offset
-                );
-                continue;
-            }
 
             let sum: u64 = messages.iter().map(|m| m.get_size_bytes() as u64).sum();
             if !Self::cache_integrity_check(&messages) {
                 warn!(
-                    "Cache integrity check failed for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}. Emptying cache...",
-                    partition.partition_id, partition.topic_id, partition.stream_id, end_offset
-                );
+                   "Cache integrity check failed for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}. Emptying cache...",
+                   partition.partition_id, partition.topic_id, partition.stream_id, end_offset
+               );
             } else if let Some(cache) = &mut partition.cache {
                 for message in &messages {
                     cache.push_safe(message.clone());
                 }
 
                 info!(
-                    "Loaded {} messages ({} bytes) to cache for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}.",
-                    messages.len(), sum, partition.partition_id, partition.topic_id, partition.stream_id, end_offset
-                );
+                   "Loaded {} messages ({} bytes) to cache for partition ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}.",
+                   messages.len(), sum, partition.partition_id, partition.topic_id, partition.stream_id, end_offset
+               );
             } else {
                 warn!(
                     "Cache is invalid for ID: {}, topic ID: {}, stream ID: {}, offset: 0 to {}",
@@ -230,19 +221,32 @@ impl Topic {
         Ok(())
     }
 
-    fn cache_integrity_check(cache: &[Arc<RetainedMessageBatch>]) -> bool {
+    fn cache_integrity_check(cache: &[Arc<RetainedMessage>]) -> bool {
         if cache.is_empty() {
             warn!("Cache is empty!");
             return false;
         }
 
+        let first_offset = cache[0].offset;
+        let last_offset = cache[cache.len() - 1].offset;
+
         for i in 1..cache.len() {
-            if cache[i].get_last_offset() <= cache[i - 1].get_last_offset() {
-                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}",
-                        i, cache[i].get_last_offset(), i-1, cache[i-1].get_last_offset());
+            if cache[i].offset != cache[i - 1].offset + 1 {
+                warn!("Offsets are not subsequent at index {} offset {}, for previous index {} offset is {}", i, cache[i].offset, i-1, cache[i-1].offset);
                 return false;
             }
         }
+
+        let expected_messages_count: u64 = last_offset - first_offset + 1;
+        if cache.len() != expected_messages_count as usize {
+            warn!(
+                "Messages count is in cache ({}) not equal to expected messages count ({})",
+                cache.len(),
+                expected_messages_count
+            );
+            return false;
+        }
+
         true
     }
 

@@ -17,7 +17,7 @@ const T2_NAME: &str = "test-topic-2";
 const MESSAGE_PAYLOAD_SIZE_BYTES: u64 = 57;
 const MSG_SIZE: u64 = 16 + 8 + 8 + 4 + 4 + 4 + 1 + MESSAGE_PAYLOAD_SIZE_BYTES; // number of bytes in a single message
 const MSGS_COUNT: u64 = 117; // number of messages in a single topic after one pass of appending
-const MSGS_SIZE: u64 = MSG_SIZE * MSGS_COUNT + 8 + 4 + 8 + 4; // number of bytes in a single topic after one pass of appending
+const MSGS_SIZE: u64 = MSG_SIZE * MSGS_COUNT; // number of bytes in a single topic after one pass of appending
 
 pub async fn run(client_factory: &dyn ClientFactory) {
     let _ = tracing_subscriber::fmt::try_init();

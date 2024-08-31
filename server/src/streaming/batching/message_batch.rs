@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use crate::streaming::batching::batch_filter::BatchItemizer;
 use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::models::messages::RetainedMessage;
@@ -9,6 +7,8 @@ use iggy::error::IggyError::{
     MissingLengthRetainedMessageBatch, MissingMaxTimestampRetainedMessageBatch,
     MissingPayloadRetainedMessageBatch,
 };
+
+pub const RETAINED_BATCH_OVERHEAD: u32 = 8 + 8 + 4 + 4;
 
 use crate::streaming::sizeable::Sizeable;
 #[derive(Debug, Clone)]
@@ -87,16 +87,7 @@ where
 
 impl Sizeable for RetainedMessageBatch {
     fn get_size_bytes(&self) -> u32 {
-        8 + 4 + 8 + 4 + self.length
-    }
-}
-
-impl<T> Sizeable for T
-where
-    T: Deref<Target = RetainedMessageBatch>,
-{
-    fn get_size_bytes(&self) -> u32 {
-        8 + 4 + 8 + 4 + self.length
+        RETAINED_BATCH_OVERHEAD as u32 + self.length
     }
 }
 

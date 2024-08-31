@@ -234,7 +234,7 @@ impl SegmentStorage for NoopSegmentStorage {
     async fn save_batches(
         &self,
         _segment: &Segment,
-        _batches: &[Arc<RetainedMessageBatch>],
+        _batch: RetainedMessageBatch,
     ) -> Result<u32, IggyError> {
         Ok(0)
     }
@@ -260,7 +260,7 @@ impl SegmentStorage for NoopSegmentStorage {
         Ok(None)
     }
 
-    async fn save_index(&self, _segment: &Segment) -> Result<(), IggyError> {
+    async fn save_index(&self, _index_path: &str, _index: Index) -> Result<(), IggyError> {
         Ok(())
     }
 
@@ -283,7 +283,7 @@ impl SegmentStorage for NoopSegmentStorage {
         Ok(None)
     }
 
-    async fn save_time_index(&self, _segment: &Segment) -> Result<(), IggyError> {
+    async fn save_time_index(&self, _index_path: &str, _index: TimeIndex) -> Result<(), IggyError> {
         Ok(())
     }
 }

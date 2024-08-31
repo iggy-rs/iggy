@@ -1,11 +1,9 @@
 use crate::streaming::batching::appendable_batch_info::AppendableBatchInfo;
-use crate::streaming::batching::batch_filter::BatchItemizer;
-use crate::streaming::batching::message_batch::RetainedMessageBatch;
+use crate::streaming::batching::iterator::IntoMessagesIterator;
 use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::partitions::partition::Partition;
 use crate::streaming::polling_consumer::PollingConsumer;
 use crate::streaming::segments::segment::Segment;
-use bytes::BytesMut;
 use iggy::messages::send_messages::Message;
 use iggy::models::messages::POLLED_MESSAGE_METADATA;
 use iggy::utils::timestamp::IggyTimestamp;
@@ -15,7 +13,6 @@ use std::time::Duration;
 use tracing::{trace, warn};
 
 const EMPTY_MESSAGES: Vec<RetainedMessage> = vec![];
-const EMPTY_BATCHES: Vec<RetainedMessageBatch> = vec![];
 
 impl Partition {
     pub fn get_messages_count(&self) -> u64 {
@@ -26,14 +23,14 @@ impl Partition {
         &self,
         timestamp: IggyTimestamp,
         count: u32,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Getting messages by timestamp: {} for partition: {}...",
             timestamp,
             self.partition_id
         );
         if self.segments.is_empty() {
-            return Ok(EMPTY_MESSAGES);
+            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         let timestamp = timestamp.as_micros();
@@ -128,18 +125,18 @@ impl Partition {
         &self,
         start_offset: u64,
         count: u32,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Getting messages for start offset: {} for partition: {}...",
             start_offset,
             self.partition_id
         );
         if self.segments.is_empty() {
-            return Ok(EMPTY_MESSAGES);
+            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         if start_offset > self.current_offset {
-            return Ok(EMPTY_MESSAGES);
+            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         let end_offset = self.get_end_offset(start_offset, count);
@@ -151,17 +148,23 @@ impl Partition {
 
         let segments = self.filter_segments_by_offsets(start_offset, end_offset);
         match segments.len() {
-            0 => Ok(EMPTY_MESSAGES),
+            0 => Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect()),
             1 => segments[0].get_messages(start_offset, count).await,
             _ => Self::get_messages_from_segments(segments, start_offset, count).await,
         }
     }
 
-    pub async fn get_first_messages(&self, count: u32) -> Result<Vec<RetainedMessage>, IggyError> {
+    pub async fn get_first_messages(
+        &self,
+        count: u32,
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         self.get_messages_by_offset(0, count).await
     }
 
-    pub async fn get_last_messages(&self, count: u32) -> Result<Vec<RetainedMessage>, IggyError> {
+    pub async fn get_last_messages(
+        &self,
+        count: u32,
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let mut count = count as u64;
         if count > self.current_offset + 1 {
             count = self.current_offset + 1
@@ -176,7 +179,7 @@ impl Partition {
         &self,
         consumer: PollingConsumer,
         count: u32,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let (consumer_offsets, consumer_id) = match consumer {
             PollingConsumer::Consumer(consumer_id, _) => (&self.consumer_offsets, consumer_id),
             PollingConsumer::ConsumerGroup(group_id, _) => (&self.consumer_group_offsets, group_id),
@@ -200,7 +203,7 @@ impl Partition {
                 consumer_offset.offset,
                 self.partition_id
             );
-            return Ok(EMPTY_MESSAGES);
+            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         let offset = consumer_offset.offset + 1;
@@ -242,7 +245,7 @@ impl Partition {
         segments: Vec<&Segment>,
         offset: u64,
         count: u32,
-    ) -> Result<Vec<RetainedMessage>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         let mut messages = Vec::with_capacity(segments.len());
         for segment in segments {
             let segment_messages = segment.get_messages(offset, count).await?;
@@ -258,13 +261,13 @@ impl Partition {
         &self,
         start_offset: u64,
         end_offset: u64,
-    ) -> Option<Vec<RetainedMessage>> {
+    ) -> Option<Vec<Arc<RetainedMessage>>> {
         let cache = self.cache.as_ref()?;
         if cache.is_empty() || start_offset > end_offset || end_offset > self.current_offset {
             return None;
         }
 
-        let first_buffered_offset = cache[0].base_offset;
+        let first_buffered_offset = cache[0].offset;
         trace!(
             "First buffered offset: {} for partition: {}",
             first_buffered_offset,
@@ -280,7 +283,7 @@ impl Partition {
     pub async fn get_newest_messages_by_size(
         &self,
         size_bytes: u64,
-    ) -> Result<Vec<Arc<RetainedMessageBatch>>, IggyError> {
+    ) -> Result<Vec<Arc<RetainedMessage>>, IggyError> {
         trace!(
             "Getting messages for size: {} bytes for partition: {}...",
             size_bytes,
@@ -288,7 +291,7 @@ impl Partition {
         );
 
         if self.segments.is_empty() {
-            return Ok(EMPTY_BATCHES.into_iter().map(Arc::new).collect());
+            return Ok(EMPTY_MESSAGES.into_iter().map(Arc::new).collect());
         }
 
         let mut remaining_size = size_bytes;
@@ -317,11 +320,19 @@ impl Partition {
                 break;
             }
         }
-
-        Ok(batches)
+        let mut retained_messages = Vec::new();
+        for batch in batches {
+            let messages = batch.into_messages_iter().map(Arc::new).collect::<Vec<_>>();
+            retained_messages.extend(messages);
+        }
+        Ok(retained_messages)
     }
 
-    fn load_messages_from_cache(&self, start_offset: u64, end_offset: u64) -> Vec<RetainedMessage> {
+    fn load_messages_from_cache(
+        &self,
+        start_offset: u64,
+        end_offset: u64,
+    ) -> Vec<Arc<RetainedMessage>> {
         trace!(
             "Loading messages from cache, start offset: {}, end offset: {}...",
             start_offset,
@@ -329,41 +340,33 @@ impl Partition {
         );
 
         if self.cache.is_none() || start_offset > end_offset {
-            return EMPTY_MESSAGES;
+            return EMPTY_MESSAGES.into_iter().map(Arc::new).collect();
         }
 
         let cache = self.cache.as_ref().unwrap();
         if cache.is_empty() {
-            return EMPTY_MESSAGES;
+            return EMPTY_MESSAGES.into_iter().map(Arc::new).collect();
         }
 
-        let mut slice_start = 0;
-        for idx in (0..cache.len()).rev() {
-            if cache[idx].base_offset <= start_offset {
-                slice_start = idx;
-                break;
-            }
-        }
-        let messages_count = (start_offset + end_offset) as usize;
-        let messages = cache
-            .iter()
-            .skip(slice_start)
-            .filter(|batch| {
-                batch.is_contained_or_overlapping_within_offset_range(start_offset, end_offset)
-            })
-            .to_messages_with_filter(messages_count, &|msg| {
-                msg.offset >= start_offset && msg.offset <= end_offset
-            });
+        let first_offset = cache[0].offset;
+        let start_index = (start_offset - first_offset) as usize;
+        let end_index = usize::min(cache.len(), (end_offset - first_offset + 1) as usize);
+        let expected_messages_count = end_index - start_index;
 
-        let expected_messages_count = (end_offset - start_offset + 1) as usize;
+        let mut messages = Vec::with_capacity(expected_messages_count);
+        for i in start_index..end_index {
+            messages.push(cache[i].clone());
+        }
+
         if messages.len() != expected_messages_count {
             warn!(
                 "Loaded {} messages from cache, expected {}.",
                 messages.len(),
                 expected_messages_count
             );
-            return EMPTY_MESSAGES;
+            return EMPTY_MESSAGES.into_iter().map(Arc::new).collect();
         }
+
         trace!(
             "Loaded {} messages from cache, start offset: {}, end offset: {}...",
             messages.len(),
@@ -404,9 +407,7 @@ impl Partition {
         let mut max_timestamp = 0;
         let mut min_timestamp = 0;
 
-        let mut buffer = BytesMut::with_capacity(batch_size as usize);
-        let mut batch_builder = RetainedMessageBatch::builder();
-        batch_builder = batch_builder.base_offset(base_offset);
+        let mut retained_messages = Vec::with_capacity(messages.len());
         if let Some(message_deduplicator) = &self.message_deduplicator {
             for message in messages {
                 if !message_deduplicator.try_insert(&message.id).await {
@@ -422,8 +423,9 @@ impl Partition {
                     min_timestamp = max_timestamp;
                 }
                 let message_offset = base_offset + messages_count as u64;
-                let message = RetainedMessage::new(message_offset, max_timestamp, message);
-                message.extend(&mut buffer);
+                let message =
+                    Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
+                retained_messages.push(message.clone());
                 messages_count += 1;
             }
         } else {
@@ -434,8 +436,9 @@ impl Partition {
                     min_timestamp = max_timestamp;
                 }
                 let message_offset = base_offset + messages_count as u64;
-                let message = RetainedMessage::new(message_offset, max_timestamp, message);
-                message.extend(&mut buffer);
+                let message =
+                    Arc::new(RetainedMessage::new(message_offset, max_timestamp, message));
+                retained_messages.push(message.clone());
                 messages_count += 1;
             }
         }
@@ -452,7 +455,6 @@ impl Partition {
         self.update_avg_timestamp_delta(avg_timestamp_delta, min_alpha, max_alpha, dynamic_range);
 
         let last_offset = base_offset + (messages_count - 1) as u64;
-        let last_offset_delta = messages_count - 1;
         if self.should_increment_offset {
             self.current_offset = last_offset;
         } else {
@@ -460,21 +462,15 @@ impl Partition {
             self.current_offset = last_offset;
         }
 
-        let batch = Arc::new(
-            batch_builder
-                .max_timestamp(max_timestamp)
-                .last_offset_delta(last_offset_delta)
-                .length(buffer.len() as u32)
-                .payload(buffer.freeze())
-                .build()?,
-        );
         {
             let last_segment = self.segments.last_mut().ok_or(IggyError::SegmentNotFound)?;
-            last_segment.append_batch(batch.clone()).await?;
+            last_segment
+                .append_batch(batch_size, messages_count, &retained_messages)
+                .await?;
         }
 
         if let Some(cache) = &mut self.cache {
-            cache.append(batch);
+            cache.extend(retained_messages);
         }
 
         self.unsaved_messages_count += messages_count;

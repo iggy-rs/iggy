@@ -1,8 +1,8 @@
 use crate::configs::system::SystemConfig;
-use crate::streaming::batching::message_batch::RetainedMessageBatch;
 use crate::streaming::cache::buffer::SmartCache;
 use crate::streaming::cache::memory_tracker::CacheMemoryTracker;
 use crate::streaming::deduplication::message_deduplicator::MessageDeduplicator;
+use crate::streaming::models::messages::RetainedMessage;
 use crate::streaming::segments::segment::Segment;
 use crate::streaming::storage::SystemStorage;
 use dashmap::DashMap;
@@ -23,7 +23,7 @@ pub struct Partition {
     pub consumer_offsets_path: String,
     pub consumer_group_offsets_path: String,
     pub current_offset: u64,
-    pub cache: Option<SmartCache<Arc<RetainedMessageBatch>>>,
+    pub cache: Option<SmartCache<Arc<RetainedMessage>>>,
     pub cached_memory_tracker: Option<Arc<CacheMemoryTracker>>,
     pub message_deduplicator: Option<MessageDeduplicator>,
     pub unsaved_messages_count: u32,

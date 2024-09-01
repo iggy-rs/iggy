@@ -66,7 +66,7 @@ impl BytesSerializable for FlushUnsavedBuffer {
         bytes.freeze()
     }
 
-    fn from_bytes(bytes: bytes::Bytes) -> Result<Self, IggyError>
+    fn from_bytes(bytes: Bytes) -> Result<Self, IggyError>
     where
         Self: Sized,
     {
